@@ -1,4 +1,3 @@
-using Revise
 using Test, PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
 const Cont = PseudoArcLengthContinuation
 

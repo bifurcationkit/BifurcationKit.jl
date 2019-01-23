@@ -1,4 +1,4 @@
-using PseudoArcLengthContinuation, LinearMaps
+using PseudoArcLengthContinuation
 const Cont  =  PseudoArcLengthContinuation
 
 function test_newton()

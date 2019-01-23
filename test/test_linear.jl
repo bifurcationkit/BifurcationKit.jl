@@ -1,4 +1,4 @@
-using PseudoArcLengthContinuation, LinearAlgebra
+using Test, PseudoArcLengthContinuation, LinearAlgebra
 
 # test the type BorderedVector
 z_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),1.0)

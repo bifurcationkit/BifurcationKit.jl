@@ -13,6 +13,12 @@ git-tree-sha1 = "055eb2690182ebc31087859c3dd8598371d3ef9e"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 version = "0.5.3"
 
+[[BlockArrays]]
+deps = ["Base64", "LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "68a477c2f2ddbbe518dc31a42aaf2df38bdfd93c"
+uuid = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
+version = "0.7.0"
+
 [[CodecZlib]]
 deps = ["BinaryProvider", "Libdl", "Test", "TranscodingStreams"]
 git-tree-sha1 = "e3df104c84dfc108f0ca203fd7f5bbdc98641ae9"
@@ -117,8 +123,20 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 deps = ["Libdl"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
+[[LinearMaps]]
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "ea9bb3d793917bced9c98da5ed8b6f449c4a74ba"
+uuid = "7a12625a-238d-50fd-b39a-03d52299707e"
+version = "2.3.0"
+
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[MacroTools]]
+deps = ["Compat"]
+git-tree-sha1 = "c443e1c8d58a4e9f61b708ad0a88286c7042145b"
+uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+version = "0.4.4"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -220,6 +238,12 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[Setfield]]
+deps = ["InteractiveUtils", "MacroTools", "Test"]
+git-tree-sha1 = "a7d21e4a6dac5cb54f8ea2e157ac5d5bd762889b"
+uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+version = "0.3.2"
 
 [[SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]

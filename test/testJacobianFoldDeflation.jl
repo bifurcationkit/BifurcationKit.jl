@@ -1,4 +1,3 @@
-using Revise
 using Test, PseudoArcLengthContinuation, LinearAlgebra
 const Cont = PseudoArcLengthContinuation
 
