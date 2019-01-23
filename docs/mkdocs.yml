@@ -1,0 +1,25 @@
+site_name:        PseudoArcLengthContinuation.jl
+repo_url:         https://github.com/rveltz/PseudoArcLengthContinuation.jl
+edit_uri:         https://github.com/rveltz/PseudoArcLengthContinuation.jl/blob/master/docs/src/index.md
+site_description: Pseudo Arc Length Continuation in Julia
+site_author:      rveltz
+
+theme: readthedocs
+
+extra_css:
+  - assets/style.css
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML
+  - assets/mathjaxhelper.js
+
+markdown_extensions:
+  - extra
+  - tables
+  - fenced_code
+  - mdx_math
+
+docs_dir: 'build'
+
+pages:
+  - Home: index.md
