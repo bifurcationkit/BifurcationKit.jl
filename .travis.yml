@@ -14,7 +14,7 @@ matrix:
     - julia: nightly
 # uncomment the following lines to override the default test script
 script:
-  - julia -e 'import Pkg; Pkg.add("Pkg");using Pkg; Pkg.test("PseudoArcLengthContinuation"; coverage=true)'   
+        - julia -e 'import Pkg; Pkg.add("Pkg"); Pkg.add("Test");using Pkg; Pkg.test("PseudoArcLengthContinuation"; coverage=true)'   
 after_success:
 # push coverage results to Codecov and Coveralls
   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder()); Coveralls.submit(Coveralls.process_folder())'

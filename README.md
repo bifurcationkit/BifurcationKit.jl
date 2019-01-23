@@ -1,6 +1,6 @@
 # PseudoArcLengthContinuation.jl
 
-[![Build Status](https://travis-ci.com/rveltz/PseudoArcLengthContinuation.svg?token=JVdfPsGga24TLMZxCLqE&branch=master)
+![Build Status](https://travis-ci.com/rveltz/PseudoArcLengthContinuation.svg?token=JVdfPsGga24TLMZxCLqE&branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/rveltz/PseudoArcLengthContinuation.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/PseudoArcLengthContinuation.jl?branch=master)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/latest) 
 
