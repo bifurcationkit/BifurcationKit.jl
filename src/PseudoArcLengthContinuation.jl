@@ -4,12 +4,12 @@ module PseudoArcLengthContinuation
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
 	include("LinearBorderSolver.jl")
+	include("DeflationOperator.jl")
 	include("Newton.jl")
 	include("utils.jl")
 	include("FoldCont.jl")
 	include("HopfCont.jl")
-	include("DeflationOperator.jl")
-	include("../src/periodicorbit/PeriodicOrbit.jl")
+	include("periodicorbit/PeriodicOrbit.jl")
 
 
 	export	ContinuationPar, continuation, continuationFold, continuationHopf

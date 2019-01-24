@@ -1,5 +1,4 @@
-using Pkg, Test
-cd(Pkg.dir("PseudoArcLengthContinuation")*"/test/")
+using Test
 include("test_linear.jl")
 include("simple_continuation.jl")
 include("test_newton.jl")

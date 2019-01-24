@@ -1,6 +1,4 @@
 using KrylovKit, Parameters, RecursiveArrayTools
-include("../src/LinearBorderSolver.jl")
-include("../src/Newton.jl")
 
 function FoldPoint(br::ContResult, index::Int64)
 	@assert br.bifpoint[index][1] == :fold "The index provided does not refer to a Fold point"

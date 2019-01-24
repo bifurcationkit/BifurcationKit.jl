@@ -1,5 +1,4 @@
 using KrylovKit, Parameters, RecursiveArrayTools, LinearAlgebra
-include("../src/LinearBorderSolver.jl")
 
 """
 For an initial guess from the index of a bifurcation point located in ContResult.bifpoint

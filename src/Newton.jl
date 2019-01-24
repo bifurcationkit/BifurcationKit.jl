@@ -1,7 +1,3 @@
-include("../src/LinearSolver.jl")
-include("../src/EigSolver.jl")
-include("../src/DeflationOperator.jl")
-include("../src/LinearSolver.jl")
 
 @with_kw mutable struct NewtonPar{T, S <: LinearSolver, E <: EigenSolver}
 	tol::T   		 = 1e-10
