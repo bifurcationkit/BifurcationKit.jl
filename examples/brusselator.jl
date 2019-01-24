@@ -173,14 +173,14 @@ ind_hopf = 1
                 (x, p) -> Jac_mat(x, a, b, l = p),
 				br, ind_hopf,
 				NewtonPar(verbose = true))
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], "from l = ",hopfpt[end-1],"\n")
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
 
 br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) ->   F_bru(x, a, β, l = p),
 			(x, p, β) -> Jac_mat(x, a, β, l = p),
 			br, ind_hopf,
 			b,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=true)))
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=false)), verbosity = 0)
 Cont.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
 #################################################################################################### Continuation of Periodic Orbit
 function plotPeriodic(outpof,n,M)

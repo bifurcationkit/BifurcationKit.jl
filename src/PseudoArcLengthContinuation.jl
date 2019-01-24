@@ -63,7 +63,7 @@ module PseudoArcLengthContinuation
 		dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
 
 		# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
-		
+
 		tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
 				BorderedVector(tau_old.u * contparams.theta/length(tau_old.u),
 				 				tau_old.p * (1 - contparams.theta)),

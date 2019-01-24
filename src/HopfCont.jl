@@ -181,8 +181,8 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `eigenvec_ad` guess for the -iω eigenvector at p1_0
 - `options::NewtonPar`
 """
-function continuationHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, p2_0, eigenvec, eigenvec_ad, options_cont::ContinuationPar)
-	@warn "Bad way it create a struct for every p2"
+function continuationHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, p2_0, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...)
+	@warn "Bad way it creates a struct for every p2"
 	# Jacobian for the hopf problem
 	Jac_hopf_MA(u0::Vector, p2, pb) = (return (u0, pb))
 
@@ -208,10 +208,10 @@ function continuationHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, p2
 						opt_hopf_cont,
 						plot = true,
 						printsolution = u -> u[end-1],
-						plotsolution = (x;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ))
+						plotsolution = (x;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ) ; kwargs...)
 end
 
-continuationHopf(F::Function, J, hopfpointguess::AbstractVector, p2_0, eigenvec, eigenvec_ad, options_cont::ContinuationPar) = continuationHopf(F, J, (x, p1, p2)->transpose(J(x, p1, p2)), hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont)
+continuationHopf(F::Function, J, hopfpointguess::AbstractVector, p2_0, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) = continuationHopf(F, J, (x, p1, p2)->transpose(J(x, p1, p2)), hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; kwargs...)
 
 """
 Simplified call for continuation of Hopf point. More precisely, the call is as follows `continuationHopf(F, J, Jt, br::ContResult, index::Int64, options)` where the parameters are as for `continuationHopf` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
@@ -219,12 +219,12 @@ Simplified call for continuation of Hopf point. More precisely, the call is as f
 !!! warning "Eigenvectors`"
     This simplified call has been written when the eigenvectors are organised in a 2d Array `evec` where `evec[:,2]` is the second eigenvector in the list.
 """
-function continuationHopf(F::Function, J, Jt, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar)
+function continuationHopf(F::Function, J, Jt, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = br.eig[bifpt[2]][2][:, bifpt[end] ]
 	eigenvec_ad = conj.(eigenvec)
-	return continuationHopf(F, J, Jt, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont)
+	return continuationHopf(F, J, Jt, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; kwargs...)
 end
 
-continuationHopf(F::Function, J, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar) = continuationHopf(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_hopf, p2_0, options_cont::ContinuationPar)
+continuationHopf(F::Function, J, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationHopf(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_hopf, p2_0, options_cont::ContinuationPar ; kwargs...)
