@@ -5,6 +5,8 @@ source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 d2source_term(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
+println("\n\n\n--> Test Fold continuation")
+
 function F_chan(x, α, β = 0.)
 	f = similar(x)
 	N = length(x)
@@ -32,6 +34,7 @@ end
 Jac_fd(u0, α, β) = Cont.finiteDifferences(u->F_chan(u,α, β),u0)
 
 # not really precise Finite Differences, I don't really undertand why
+n = 101
 sol = rand(n)
 sol[end] = sol[1]
 J_fold_fd = Jac_fd(sol,3,0.01)
@@ -76,7 +79,8 @@ br_nat, u1 = @time Cont.continuation(
 				out,0.,opts_br0,plot = false, verbosity = 0)
 
 # Cont.plotBranch(br)
-# Cont.plotBranch(br_nat, marker = :d)
+# Cont.plotBranch!(br_tg, marker = :d)
+# Cont.plotBranch!(br_nat, marker = :d)
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0,(x,y)->dot(x,y),1.0,[out])

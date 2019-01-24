@@ -2,6 +2,7 @@ using PseudoArcLengthContinuation
 const Cont  =  PseudoArcLengthContinuation
 
 function test_newton()
+  println("--> Test Newton method")
   N = 2
   x0 = ones(N) .+ rand(N) * 0.1
   F(x) = x.^3 .- 1.0

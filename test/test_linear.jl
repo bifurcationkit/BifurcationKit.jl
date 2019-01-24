@@ -6,6 +6,7 @@ tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
 z_pred = z_pred + 2tau_pred
 
 # test the linear solver LinearBorderSolver
+println("--> Test linear Bordered solver")
 J0 = rand(10,10) * 0.1 + I
 rhs = rand(10)
 sol_explicit = J0 \ rhs

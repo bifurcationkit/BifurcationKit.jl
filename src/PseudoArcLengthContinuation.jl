@@ -62,7 +62,14 @@ module PseudoArcLengthContinuation
 		epsi = contparams.finDiffEps
 		dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
 
-		tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta)
+		# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
+		
+		tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
+				BorderedVector(tau_old.u * contparams.theta/length(tau_old.u),
+				 				tau_old.p * (1 - contparams.theta)),
+								0 * z_old.u, 1.0, contparams.theta;
+									solver = contparams.newtonOptions.linsolve)
+		tau = BorderedVector(tauu, taup)
 		tau2 = z_new - z_old
 		b = sign((tau.p) * convert(T, tau2.p))
 		((b<0) && verbosity > 1) && printstyled("Inversion\n", color=:red)
@@ -297,8 +304,10 @@ module PseudoArcLengthContinuation
 				end
 
 				# to be improved later (allocations, ...)
-				copyto!(z_old, z_new) 		# z_old   = 0 * z_old   + z_new
-				copyto!(tau_old, tau_new)	# tau_old = 0 * tau_old + tau_new
+				# copyto!(z_old, z_new) 		# z_old   = 0 * z_old   + z_new
+				# copyto!(tau_old, tau_new)	# tau_old = 0 * tau_old + tau_new
+				z_old   = 0 * z_old   + z_new
+				tau_old = 0 * tau_old + tau_new
 
 				if contParams.computeEigenValues
 					# number of eigenvalues to be computed
