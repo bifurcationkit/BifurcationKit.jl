@@ -8,6 +8,8 @@ This package aims at solving equations $F(u,\lambda)=0$ where $\lambda \in\mathb
 
 The current package focuses on large scale problem and multiple hardwares. Hence, the goal is to use Matrix Free methods on GPU or a cluster to solve non linear PDE (for example).
 
+**If you use this package for your work, please cite it!! Open source development will die otherwise.**
+
 ## Installation 
 
 To install it, please run

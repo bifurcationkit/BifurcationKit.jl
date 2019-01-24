@@ -17,13 +17,10 @@ makedocs(doctest = false,
 					]
 	)
 
-
-# ENV["DOCUMENTER_DEBUG"] = true
-# ENV["TRAVIS_REPO_SLUG"] = "github.com/rveltz/PseudoArcLengthContinuation.jl.git"
-
 deploydocs(
 	# deps   = Deps.pip("mkdocs", "python-markdown-math", "mkdocs-cinder", "pygments"),
 	repo   = "github.com/rveltz/PseudoArcLengthContinuation.jl.git",
 	osname = "linux",
-	target = "build"
+	# target = "build",
+	julia = "1.0.3"
 )
