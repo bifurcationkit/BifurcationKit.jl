@@ -2,7 +2,7 @@
 
 ![Build Status](https://travis-ci.com/rveltz/PseudoArcLengthContinuation.svg?token=JVdfPsGga24TLMZxCLqE&branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/rveltz/PseudoArcLengthContinuation.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/PseudoArcLengthContinuation.jl?branch=master)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/latest) 
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev)
 
 This package aims at solving equations $F(u,\lambda)=0$ where $\lambda \in\mathbb R$ starting from an initial guess $(u_0,\lambda_0)$. It relies on the pseudo arclength continuation algorithm which provides a *predictor* $(u_1,\lambda_1)$ from $(u_0,\lambda_0)$. A Newton method is then used to correct this predictor.
 

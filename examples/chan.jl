@@ -115,11 +115,12 @@ plot!(outdef2, label="deflation-2")
 # Cont.plotBranch(br_fold, marker=:d, xlabel="beta", ylabel = "alpha")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
 opts_br0.newtonOptions.verbose = true
+indfold = 3
 outfold, hist, flag = @time Cont.newtonFold((x, α) -> F_chan(x, α, 0.01),
 										(x, α) -> Jac_mat(x, α, 0.01),
-										br, 1, #index of the fold point
+										br, indfold, #index of the fold point
 										opts_br0.newtonOptions)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 	optcontfold.newtonOptions.tol = 1e-8
