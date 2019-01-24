@@ -173,7 +173,7 @@ ind_hopf = 1
                 (x, p) -> Jac_mat(x, a, b, l = p),
 				br, ind_hopf,
 				NewtonPar(verbose = true))
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], "\n")
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], "from l = ",hopfpt[end-1],"\n")
 
 br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) ->   F_bru(x, a, β, l = p),
@@ -233,19 +233,20 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	println("--> T = ", outpo_f[end])
 	plotPeriodic(outpo_f,n,M)
 
-# stability
-Jfloquet = 	Cont.JacobianPeriodicFD(poTrap(l_hopf + 0.01), outpo_f, 1.0) |> sparse
-# df = ones(2n*M); df[end-2n+1:end].=0;Bfloquet = spdiagm(0 => df);
-using Arpack
-reseig = Arpack.eigs(Jfloquet, Bfloquet, nev = 10, which = :LM, tol = 1e-8)
-# res = KrylovKit.geneigsolve(Jfloquet, Bfloquet)
-eis = eig_KrylovKit{Float64}(which = :LM, tol = 1e-4 )
-eis(Jfloquet, 100)
+# # stability
+# Jfloquet = 	Cont.JacobianPeriodicFD(poTrap(l_hopf + 0.01), outpo_f, 1.0) |> sparse
+# # df = ones(2n*M); df[end-2n+1:end].=0;Bfloquet = spdiagm(0 => df);
+# using Arpack
+# reseig = Arpack.eigs(Jfloquet, Bfloquet, nev = 10, which = :LM, tol = 1e-8)
+# # res = KrylovKit.geneigsolve(Jfloquet, Bfloquet)
+# eis = eig_KrylovKit{Float64}(which = :LM, tol = 1e-4 )
+# eis(Jfloquet, 100)
+#
+# Jmono = x -> Cont.FloquetPeriodicFD(poTrap(1.3), upo.u, x)
+# 	KrylovKit.eigsolve(Jmono,rand(2n),10, :LM)
 
-Jmono = x -> Cont.FloquetPeriodicFD(poTrap(1.3), upo.u, x)
-	KrylovKit.eigsolve(Jmono,rand(2n),10, :LM)
-
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true, eigsolve = Cont.FloquetFD2(poTrap)), detect_bifurcation = true)
+# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true, eigsolve = Cont.FloquetFD2(poTrap)), detect_bifurcation = true)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
 	br_pok2, upo , _= @time Cont.continuation(
 							(x, p) ->  poTrap(p)(x),
 							(x, p) ->  poTrap(p)(x, :jacsparse),
@@ -256,14 +257,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2
 							printsolution = u -> u[end])
 
 # branches = []
-push!(branches,br_pok1)
-
-Cont.plotBranch(branches, ylabel="T", xlabel = "l", label="")
-
-
-fsp =  @time poTrap(l_hopf + 0.01)(orbitguess_f, :jacsparse)
-
-
+# push!(branches,br_pok1)
+# Cont.plotBranch(branches, ylabel="T", xlabel = "l", label="")
 #################################################################################################### Example pde2path
 a = 1.5
 b = 4.1

@@ -23,7 +23,7 @@ using BlockArrays, SparseArrays
 end
 
 """
-This encodes the functional for finite differences using the Trapezoidal rule
+This encodes the functional for finding periodic orbits based on finite differences using the Trapezoidal rule
 """
 function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype) where {vectype <: AbstractVector, S, N}
     M = poPb.M
@@ -45,7 +45,7 @@ function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype) where {vectype <:
 end
 
 """
-Matrix free expression of the Jacobian computed at `u0` and applied to `du`.
+Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
 function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype, du) where {vectype, S, N}
     M = poPb.M
@@ -58,7 +58,7 @@ function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype, du) where {vectyp
     outc = similar(u0c)
 
     for ii=2:M
-        outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .*( apply(poPb.J(u0c[:, ii]), duc[:, ii]) .+ apply(poPb.J(u0c[:, ii-1]), duc[:, ii-1]) )
+        outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .* (apply(poPb.J(u0c[:, ii]), duc[:, ii]) .+ apply(poPb.J(u0c[:, ii-1]), duc[:, ii-1]) )
     end
 
     # closure condition
@@ -126,6 +126,7 @@ end
 
 ####################################################################################################
 # Computation of Floquet Coefficients
+# THIS IS WORK IN PROGRESS, DOES NOT WORK WELL YET
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
 """
