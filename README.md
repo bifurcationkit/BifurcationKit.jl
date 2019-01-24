@@ -21,7 +21,7 @@ To install it, please run
 - Fold / Hopf bifurcation detection
 - Fold / Hopf with MatrixFree / Sparse Jacobian continuation with Minimally Augmented formulation
 - Periodic orbit computation and continuation using Simple Shooting (not very stable yet) or Finite Differences.
-- custom state means, can we use something else than `AbstractVector`
+- Custom state means, can we use something else than `AbstractVector`
 
 
 |Feature|Matrix Free|Custom state|
