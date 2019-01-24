@@ -1,8 +1,6 @@
 using Documenter, PseudoArcLengthContinuation
 
 makedocs(doctest = false,
-	clean = true,
-	format = :html,
 	sitename = "Pseudo Arc Length Continuation in Julia",
 	pages = Any[
 						"Home" => "index.md",
@@ -18,9 +16,5 @@ makedocs(doctest = false,
 	)
 
 deploydocs(
-	# deps   = Deps.pip("mkdocs", "python-markdown-math", "mkdocs-cinder", "pygments"),
-	repo   = "github.com/rveltz/PseudoArcLengthContinuation.jl.git",
-	osname = "linux",
-	# target = "build",
-	julia = "1.0.3"
+	repo   = "github.com/rveltz/PseudoArcLengthContinuation.git",
 )
