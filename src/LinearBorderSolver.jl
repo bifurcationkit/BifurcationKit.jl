@@ -1,4 +1,3 @@
-include("../src/LinearSolver.jl")
 # structure for Bordered vectors
 import Base: +, -, *, copy, copyto!
 import LinearAlgebra: norm

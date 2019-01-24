@@ -1,6 +1,3 @@
-include("../src/LinearSolver.jl")
-include("../src/EigSolver.jl")
-include("../src/Newton.jl")
 
 using RecursiveArrayTools # for bifurcation point handling
 

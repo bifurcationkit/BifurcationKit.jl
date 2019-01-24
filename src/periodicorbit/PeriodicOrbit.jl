@@ -1,5 +1,3 @@
-include("../../src/Newton.jl")
-
 abstract type PeriodicOrbit end
 
 include("SimpleShooting.jl")
