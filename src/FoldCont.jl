@@ -134,9 +134,9 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x, p) where {vectype, S
 	#
     # # the constraint is σ = <w, Jv> / n
     # σ = -dot(w, apply(fp.J(x, p), v)) / n
-	#
-	# # @show σ1 σ2 σ
-	# # we should have σ1 = σ2 = σ
+	# #
+	# @show σ1 σ2 σ
+	# # # we should have σ1 = σ2 = σ
 
     return fp.F(x, p), σ1
 end

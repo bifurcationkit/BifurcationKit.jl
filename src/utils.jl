@@ -167,7 +167,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 		push!(contResult.bifpoint, (:fold,
 							length(branch)-1,
 							branch[1, end-1],
-							printsolution(z.u), z.u, tau.u ./ norm(tau.u), 0))
+							printsolution(z.u), copy(z.u), copy(tau.u) / norm(tau.u), 0))
 	end
 
 	# update number of unstable eigenvalues
@@ -187,15 +187,34 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Hopf / BP bifurcation point detection based on eigenvalue distribution
 	if size(branch)[2] > 1
 		if abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 1
-			push!(contResult.bifpoint, (:bp, length(branch)-1, branch[1, end-1], printsolution(z.u), z.u, tau.u ./ norm(tau.u), ind_bif))
+			push!(contResult.bifpoint, (:bp,
+								length(branch)-1,
+								branch[1, end-1],
+								printsolution(z.u),
+								z.u,
+								tau.u ./ norm(tau.u), ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
 			if abs(contResult.n_imag[end] - contResult.n_imag[end-1]) == 2
-				push!(contResult.bifpoint, (:hopf, length(branch)-1, branch[1, end-1], printsolution(z.u), z.u, 0tau.u, ind_bif))
+				push!(contResult.bifpoint, (:hopf,
+									length(branch)-1,
+									branch[1, end-1],
+									printsolution(z.u),
+									copy(z.u), 0tau.u, ind_bif))
 			else
-				push!(contResult.bifpoint, (:bp, length(branch)-1, branch[1, end-1], printsolution(z.u), z.u, tau.u ./ norm(tau.u), n_unstable))
+				push!(contResult.bifpoint, (:bp,
+									length(branch)-1,
+									branch[1, end-1],
+									printsolution(z.u),
+									copy(z.u),
+									copy(tau.u) / norm(tau.u), n_unstable))
 			end
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) >2
-			push!(contResult.bifpoint, (:nd, length(branch)-1, branch[1, end-1], printsolution(z.u), z.u, tau.u ./ norm(tau.u), ind_bif))
+			push!(contResult.bifpoint, (:nd,
+							length(branch)-1,
+							branch[1, end-1],
+							printsolution(z.u),
+							copy(z.u),
+							copy(tau.u) / norm(tau.u), ind_bif))
 		end
 	end
 end

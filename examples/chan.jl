@@ -44,7 +44,7 @@ n = 101
 							opt_newton)
 
 
-opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = true, plot_every_n_steps = 40)
+opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = true, plot_every_n_steps = 40)
 	opts_br0.newtonOptions.maxIter = 70
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 150
@@ -83,44 +83,45 @@ outdef2, _, _ = @time Cont.newtonDeflated(
 plot!(outdef2, label="deflation-2")
 ###################################################################################################
 # Continuation of the Fold Point using Dense method
-foldpt = FoldPoint(br.bifpoint[3])
-	phi_guess = foldpt[n+1:2n]
-	foldPb = (u, β)->FoldProblemMooreSpence(
-					(x, α)->F_chan(x, α, β),
-					(x, α)->(Jac_mat(x, α, β)),
-					phi_guess,
-					opts_br0.newtonOptions.linsolve)(u)
-
-Jac_fold_fd(u0, β) = Cont.finiteDifferences( u-> foldPb(u, β), u0)
-
-opt_fold = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-	outfold, hist, flag = @time Cont.newton(
-						x ->      foldPb(x, 0.01),
-						x -> Jac_fold_fd(x, 0.01),
-						foldpt,
-						opt_fold)
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01\n")
-
-opt_fold_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0.0, a = 2., theta = 0.4)
-	opt_fold_cont.maxSteps = 70
-
-	br_fold, u1_fold = @time Cont.continuation(
-					(x, β) ->      foldPb(x, β),
-					(x, β) -> Jac_fold_fd(x, β),
-					outfold, 0.01,
-					opt_fold_cont, plot = true,
-					printsolution = u -> u[end])
-
-Cont.plotBranch(br_fold, marker=:d, xlabel="beta", ylabel = "alpha")
+# foldpt = FoldPoint(br.bifpoint[3])
+# foldpt = vcat(br.bifpoint[3][5],br.bifpoint[3][3])
+# 	phi_guess = foldpt[n+1:2n]
+# 	foldPb = (u, β)->FoldProblemMooreSpence(
+# 					(x, α)->F_chan(x, α, β),
+# 					(x, α)->(Jac_mat(x, α, β)),
+# 					phi_guess,
+# 					opts_br0.newtonOptions.linsolve)(u)
+#
+# Jac_fold_fd(u0, β) = Cont.finiteDifferences( u-> foldPb(u, β), u0)
+#
+# opt_fold = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
+# 	outfold, hist, flag = @time Cont.newton(
+# 						x ->      foldPb(x, 0.01),
+# 						x -> Jac_fold_fd(x, 0.01),
+# 						foldpt,
+# 						opt_fold)
+# 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01\n")
+#
+# opt_fold_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0.0, a = 2., theta = 0.4)
+# 	opt_fold_cont.maxSteps = 70
+#
+# 	br_fold, u1_fold = @time Cont.continuation(
+# 					(x, β) ->      foldPb(x, β),
+# 					(x, β) -> Jac_fold_fd(x, β),
+# 					outfold, 0.01,
+# 					opt_fold_cont, plot = true,
+# 					printsolution = u -> u[end])
+#
+# Cont.plotBranch(br_fold, marker=:d, xlabel="beta", ylabel = "alpha")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
-
+opts_br0.newtonOptions.verbose = true
 outfold, hist, flag = @time Cont.newtonFold((x, α) -> F_chan(x, α, 0.01),
 										(x, α) -> Jac_mat(x, α, 0.01),
-										br, 3, #index of the fold point
+										br, 1, #index of the fold point
 										opts_br0.newtonOptions)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 	optcontfold.newtonOptions.tol = 1e-8
 	outfoldco, hist, flag = @time Cont.continuationFold(
 						(x, α, β) ->  F_chan(x, α, β),
@@ -128,10 +129,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1,
 						br, 3,
 						0.01,
 						optcontfold)
-
-optcontfold.newtonOptions == opts_br0.newtonOptions
-
-Cont.plotBranch(outfoldco;xlabel="b", ylabel="a")
+Cont.plotBranch(outfoldco, marker=:d, xlabel="beta", ylabel = "alpha")
 ###################################################################################################
 # GMRES example
 

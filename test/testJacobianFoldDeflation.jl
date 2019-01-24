@@ -38,9 +38,6 @@ J_fold_fd = Jac_fd(sol,3,0.01)
 J_fold_exp = Jac_mat(sol,3,0.01)
 @test (J_fold_exp - J_fold_fd) |> x->norm(x,Inf64) < 1e-2
 
-using Plots
-Plots.heatmap(J_fold_exp - J_fold_fd)
-
 (J_fold_exp - J_fold_fd)[10,10]
 
 n = 101
@@ -52,15 +49,15 @@ n = 101
 							x -> F_chan(x,a, 0.01),
 							x -> Jac_mat(x,a, 0.01),
 							sol,
-							opt_newton)
+							opt_newton, normN = x->norm(x,Inf64))
 
 # test with secant continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detect_fold = true, secant = true)
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detect_fold = true, secant = true, plot_every_n_steps = 50)
 br, u1 = @time Cont.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
 				printsolution = x->norm(x,Inf64),
-				out,a,opts_br0,plot = false, verbosity = 0)
+				out, a, opts_br0, plot = false, verbosity = 0)
 
 # test with tangent continuation
 opts_br0.secant = false
@@ -107,15 +104,32 @@ println("--> Test jacobian expression for deflated problem")
 @test norm(res_fd - res_explicit,Inf64) < 1e-7
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
-foldpt = vcat(br.bifpoint[3][5],br.bifpoint[3][3])
+indfold = 3
+foldpt = vcat(br.bifpoint[indfold][5],br.bifpoint[indfold][3])
 foldpb = FoldProblemMinimallyAugmented(
 					(x, α) ->   F_chan(x, α, 0.01),
 					(x, α) -> (Jac_mat(x, α, 0.01)),
 					(x, α) -> transpose(Jac_mat(x, α, 0.01)),
-					rand(n),
-					rand(n),
+					br.bifpoint[indfold][6],
+					br.bifpoint[indfold][6],
 					opts_br0.newtonOptions.linsolve)
 foldpb(foldpt)
+
+
+outfold, _ = newtonFold((x, p) -> F_chan(x, p, 0.01),
+			(x, p) -> Jac_mat(x, p, 0.01),
+			foldpt,
+			br.bifpoint[indfold][6],
+			NewtonPar(verbose=true) )
+	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
+
+# self defined Fold Problem
+indfold = 2
+outfold, _ = newton(x->foldpb(x),
+			# (x, α) -> Jac_mat(x, α, 0.01),
+			foldpt,
+			NewtonPar(verbose=true) )
+	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
 
 rhs = rand(n+1)
 Jac_fold_fdMA(u0) = Cont.finiteDifferences( u-> foldpb(u), u0)
