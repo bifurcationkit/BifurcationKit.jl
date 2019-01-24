@@ -24,7 +24,10 @@ makedocs(doctest = false,
 deploydocs(
 	# deps   = Deps.pip("mkdocs", "python-markdown-math", "mkdocs-cinder", "pygments"),
 	repo   = "github.com/rveltz/PseudoArcLengthContinuation.jl.git",
-	# julia  = "1.0",
-	# osname = "linux",
+	julia  = "1.0.3",
+	osname = "linux",
+	target = "build",
+	deps   = nothing,
+	make = nothing
 )
 

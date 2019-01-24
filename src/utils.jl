@@ -164,7 +164,10 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detect_fold && size(branch)[2] > 2 && (branch[1, end] - branch[1, end-1])* (branch[1, end-1] - branch[1, end-2]) < 0
 		(verbosity > 1) && printstyled(color=:red, "Fold bifurcation point!! between $(branch[1, end-1]) and  $(branch[1, end]) \n")
-		push!(contResult.bifpoint, (:fold, length(branch)-1, branch[1, end-1], printsolution(z.u), z.u, tau.u ./ norm(tau.u), 0))
+		push!(contResult.bifpoint, (:fold,
+							length(branch)-1,
+							branch[1, end-1],
+							printsolution(z.u), z.u, tau.u ./ norm(tau.u), 0))
 	end
 
 	# update number of unstable eigenvalues
