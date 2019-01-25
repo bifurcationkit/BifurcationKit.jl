@@ -16,5 +16,5 @@ makedocs(doctest = false,
 	)
 
 deploydocs(
-	repo   = "github.com/rveltz/PseudoArcLengthContinuation.git",
+	repo   = "github.com/rveltz/PseudoArcLengthContinuation.jl.git",
 )
