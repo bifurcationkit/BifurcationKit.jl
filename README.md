@@ -14,7 +14,7 @@ The current package focuses on large scale problem and multiple hardwares. Hence
 
 To install it, please run
 
-`] add PseudoArcLengthContinuation.jl`
+`] add https://github.com/rveltz/PseudoArcLengthContinuation.jl`
 
 ## Main features
 
