@@ -174,7 +174,7 @@ with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 function newtonPsArcLength(F::Function, Jh,
 						z0::M, tau0::M, z_pred::M,
 						options::ContinuationPar{T};
-						linearalgo = :bordered) where {T, vectype, M<:BorderedVector{vectype, T}}
+						linearalgo = :bordering) where {T, vectype, M<:BorderedVector{vectype, T}}
 
 	# Rename parameters
 	newtonOpts = options.newtonOptions
@@ -187,7 +187,7 @@ function newtonPsArcLength(F::Function, Jh,
 	ds      = convert(eltype(z0.p), options.ds)
 	epsi    = convert(eltype(z0.p), options.finDiffEps)
 
-	N(x, p) = arcLengthEq(x-z0.u, p-z0.p, tau0.u, tau0.p, theta, ds)
+	N = (x, p) -> arcLengthEq(x - z0.u, p - z0.p, tau0.u, tau0.p, theta, ds)
 
 	# Initialise iterations
 	x = copy(z_pred.u);  l = z_pred.p

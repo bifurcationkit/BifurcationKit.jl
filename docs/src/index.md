@@ -8,7 +8,10 @@ Finally, we leave it to the user to take advantage of automatic differentiation.
 
 ## Other softwares
 
-We were inspired by [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). One can also mention the venerable AUTO, or also, [MATCONT](http://www.matcont.ugent.be/) or [Trilinos](https://trilinos.org/). Most continuation softwares are listed on [DSWeb](https://dsweb.siam.org/Software).
+We were inspired by [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). One can also mention the venerable AUTO, or also, [MATCONT](http://www.matcont.ugent.be/) and [COCO](https://sourceforge.net/projects/cocotools/) or [Trilinos](https://trilinos.org/). Most continuation softwares are listed on [DSWeb](https://dsweb.siam.org/Software). There is also this MATLAB continuation [code](https://www.dropbox.com/s/inqwpl0mp7o1oy0/AvitabileICMNS2016Workshop.zip?dl=0) by [D. Avitabile](https://www.maths.nottingham.ac.uk/plp/pmzda/index.html).
+
+
+In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl) to PyDSTools, and also [Bifurcations.jl](https://github.com/tkf/Bifurcations.jl).
 
 One design choice is that we try not to require `u` to be a subtype of an `AbstractArray` as this would forbid the use of spectral methods (like the one from `ApproxFun.jl`) or some GPU package, *e.g.* `ArrayFire.jl`. So far, our implementation does not allow this for Fold / Hopf continuation and computation of periodic orbits. It will be improved later.
 
