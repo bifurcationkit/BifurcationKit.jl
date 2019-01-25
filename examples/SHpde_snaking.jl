@@ -1,5 +1,4 @@
 using Revise
-using JLD2, FileIO
 using SparseArrays, LinearAlgebra, DiffEqOperators
 using PseudoArcLengthContinuation
 using Plots
@@ -8,6 +7,7 @@ const Cont = PseudoArcLengthContinuation
 # case of the SH equation
 
 nx = 400; Lx = 50; hx = 2*Lx/nx
+const X = -Lx .+ 2Lx/nx*(1:nx) |> collect
 BC = :periodic
 Dxx = sparse(DerivativeOperator{Float64}(2, 2, hx, nx, BC, BC))
 Lsh = -(I+Dxx)^2
@@ -24,17 +24,14 @@ Fpde = (u, p)-> R_SH(u, p, 2., Lsh)
 # jacobian version with full matrix, waste of ressources!!
 Jac_fd(u0, alpha) = Cont.finiteDifferences(u->Fpde(u, alpha), u0)
 
-solfile = load("snakingPDE.jld2")
-u0 = solfile["u0"]
-
-sol_ = copy(u0)
-	opt_new = Cont.NewtonPar(verbose = true, tol = 1e-10)
+sol0 = 1.65cos.(X) .* exp.(-X.^2/(2*5^2))
+	opt_new = Cont.NewtonPar(verbose = true, tol = 1e-11)
 	# allocations 26.47k, 0.038s, tol = 1e-10
-	sol_, hist, flag = @time Cont.newton(
+	sol1, hist, flag = @time Cont.newton(
 				u ->   R_SH(u, 0.7, 2., Lsh),
 				u -> Jac_sp(u, 0.7, 2., Lsh),
-				u0, opt_new)
-	Plots.plot(sol_)
+				sol0, opt_new)
+	Plots.plot(X,sol1)
 
 if 1==0
 	# this is for testing
@@ -54,16 +51,16 @@ end
 opts = Cont.ContinuationPar(dsmin = 0.0001,
 			dsmax = 0.0035,
 			ds = -0.001,
-			doArcLengthScaling = true,
-			a = 0.1,
-			NewtonOptions = opt_new,
-			detect_fold = true,
-			maxSteps = 1200,
-			theta = .5)
+			doArcLengthScaling = false,
+			a = 0.5,
+			newtonOptions = opt_new,
+			detect_fold = false,
+			maxSteps = 2340,
+			theta = .5, plot_every_n_steps = 200)
 	@assert opts.a<=1.5 "sinon ca peut changer le sens du time step"
-	opts.NewtonOptions.maxIter = 100
-	opts.NewtonOptions.tol = 1e-9
-	opts.NewtonOptions.damped = false
+	opts.newtonOptions.maxIter = 100
+	opts.newtonOptions.tol = 1e-9
+	opts.newtonOptions.damped = false
 	# opts.detect_fold = true
 
 	# opts.maxSteps = 180
@@ -71,9 +68,9 @@ opts = Cont.ContinuationPar(dsmin = 0.0001,
 	br, u1 = @time Cont.continuation(
 					(x, p)->  R_SH(x, p, 2., Lsh),
 					(x, p)->Jac_sp(x, p, 2., Lsh),
-					sol_, 0.7, opts,
+					sol1, 0.7, opts,
 					plot = true,
-					plotsolution = (x;kwargs...)->(plot!(x, subplot=4, ylabel="solution", label="")))
+					plotsolution = (x;kwargs...)->(plot!(X, x, subplot=4, ylabel="solution", label="")))
 #####################################################
 # case with computation of eigenvalues
 # opt_new = Cont.NewtonPar(linsolve = Default(),	eigsolve = eig_KrylovKit{Float64}())

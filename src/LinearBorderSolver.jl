@@ -123,6 +123,6 @@ function linearBorderedSolver(J, dR,
 		dX = x1 .- dl .* x2
 
 		return dX, dl, (it1, it2)
-	end	
+	end
 	error("--> Algorithm $algo for Bordered Linear Systems is not implemented")
 end
