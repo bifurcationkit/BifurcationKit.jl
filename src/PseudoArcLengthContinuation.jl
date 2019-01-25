@@ -63,18 +63,14 @@ module PseudoArcLengthContinuation
 		dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
 
 		# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
-
 		tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
-				BorderedVector(tau_old.u * contparams.theta/length(tau_old.u),
+				BorderedVector(tau_old.u * contparams.theta / length(tau_old.u),
 				 				tau_old.p * (1 - contparams.theta)),
-								0 * z_old.u, 1.0, contparams.theta;
-									solver = contparams.newtonOptions.linsolve)
+								0 * z_old.u, 1.0, contparams.theta,
+								solver = contparams.newtonOptions.linsolve)
 		tau = BorderedVector(tauu, taup)
-		tau2 = z_new - z_old
-		b = sign((tau.p) * convert(T, tau2.p))
-		((b<0) && verbosity > 1) && printstyled("Inversion\n", color=:red)
-
-		α = T(1) / normtheta(tau, contparams.theta)
+		b = sign((tau.p) * convert(T, z_new.p - z_old.p))
+		α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
 		return α * tau
 	end
 	################################################################################################
@@ -116,7 +112,7 @@ module PseudoArcLengthContinuation
 			contparams.ds = sign(contparams.ds) * contparams.dsmax
 		end
 
-		contparams.doArcLengthScaling && arcLengthScaling(contparams, tau)
+		contparams.doArcLengthScaling && arcLengthScaling(contparams, tau, verbosity)
 		@assert abs(contparams.ds) >= contparams.dsmin
 		return false
 	end
@@ -304,10 +300,8 @@ module PseudoArcLengthContinuation
 				end
 
 				# to be improved later (allocations, ...)
-				# copyto!(z_old, z_new) 		# z_old   = 0 * z_old   + z_new
-				# copyto!(tau_old, tau_new)	# tau_old = 0 * tau_old + tau_new
-				z_old   = 0 * z_old   + z_new
-				tau_old = 0 * tau_old + tau_new
+				copyto!(z_old, z_new) 		# z_old   = 0 * z_old   + z_new
+				copyto!(tau_old, tau_new)	# tau_old = 0 * tau_old + tau_new
 
 				if contParams.computeEigenValues
 					# number of eigenvalues to be computed
@@ -328,7 +322,7 @@ module PseudoArcLengthContinuation
 				finaliseSolution(z_old.u, tau_old.u, step, contRes)
 			else
 				(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
-				println(fval)
+				(verbosity > 0) && println("--> Newton Residuals history = ", fval)
 		  	end
 
 			step += 1

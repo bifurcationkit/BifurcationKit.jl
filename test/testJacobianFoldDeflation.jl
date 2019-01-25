@@ -105,7 +105,7 @@ Jacdfsolver = DeflatedLinearSolver()
 res_explicit = Jacdfsolver(Jacdf(1.1out,chanDefPb,opt_def.linsolve),rhs)[1]
 
 println("--> Test jacobian expression for deflated problem")
-@test norm(res_fd - res_explicit,Inf64) < 1e-7
+@test norm(res_fd - res_explicit,Inf64) < 1e-6
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 indfold = 3

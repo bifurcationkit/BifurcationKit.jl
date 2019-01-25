@@ -34,7 +34,7 @@ end
 	dsgrow::T	= 1.1
 
 	# parameters for scaling arclength step size
-	theta::T              = 1.0
+	theta::T              = 1.0 # parameter in the dot product used for the extended system
     doArcLengthScaling    = false
     gGoal::T              = 0.5
     gMax::T               = 0.8
@@ -174,7 +174,8 @@ with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 function newtonPsArcLength(F::Function, Jh,
 						z0::M, tau0::M, z_pred::M,
 						options::ContinuationPar{T};
-						linearalgo = :bordering) where {T, vectype, M<:BorderedVector{vectype, T}}
+						linearalgo = :bordering,
+						normN = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
 
 	# Rename parameters
 	newtonOpts = options.newtonOptions
@@ -200,7 +201,7 @@ function newtonPsArcLength(F::Function, Jh,
 	dl   = T(0.)
 	dFdl = (F(x, l + epsi) - res_f) / epsi
 
-	res     = sqrt(norm(res_f)^2 + res_n^2)
+	res     = sqrt(normN(res_f)^2 + res_n^2)
 	resHist = [res]
 	it = 0
 
@@ -225,7 +226,7 @@ function newtonPsArcLength(F::Function, Jh,
 				l_pred = l - alpha * up
 				res_f .= F(x_pred, l_pred)
 				res_n  = N(x_pred, l_pred)
-				res = sqrt(norm(res_f)^2 + res_n^2)
+				res = sqrt(normN(res_f)^2 + res_n^2)
 
 				if res < resHist[end]
 					if (res < resHist[end]/2) & (alpha < 1)
@@ -244,7 +245,7 @@ function newtonPsArcLength(F::Function, Jh,
 
 			res_f .= F(x, l)
 			res_n  = N(x, l)
-			res = sqrt(norm(res_f)^2 + res_n^2)
+			res = sqrt(normN(res_f)^2 + res_n^2)
 		end
 		# Book-keeping
 		push!(resHist, res)
@@ -254,18 +255,3 @@ function newtonPsArcLength(F::Function, Jh,
 	end
 	return BorderedVector(x, l), resHist, resHist[end] < nltol, it
 end
-
-# """
-# 		`newtonBordered2((F, dF, N, dN, z0, p0, options)`
-# This is the classical matrix-free Newton GMRES Solver used to solve `F(z, p) = 0` together
-# with the scalar equation `N(z, p) = 0`.
-# """
-# function newtonBordered2(F::Function, dF, N::Function, dN, z0, p0, options::NewtonPar{T}, solver::S = Default()) where {T, S <: BorderedLinearSolver}
-# 	@error "WIP"
-#
-# 	function Fb(x::BorderedVector{v,T}) where {v,T}
-# 		BorderedVector(F(x.u, x.p), N(x.u, x.p))
-# 	end
-#
-# 	x0 = BorderedVector(z0, p0)
-# end

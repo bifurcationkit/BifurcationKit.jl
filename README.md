@@ -46,3 +46,4 @@ To install it, please run
 - [ ] Inplace implementation
 - [ ] Provide a way to add constraints and combine functionals
 - [ ] Improve `computeHopf` and `computeFold` to allow for general state (not `AbstractArray`). Also, the implementation allocates a new `struct` for each parameter.
+- [ ] write continuation loop as an iterator
