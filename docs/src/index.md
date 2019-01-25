@@ -663,3 +663,126 @@ It is likely that the kink in the branch is caused by a spurious branch switchin
 A more complete diagram is the following where we computed the 3 branches of periodic orbits off the Hopf points.
 
 ![](bru-po-cont-3br.png)
+
+# Example 4: nonlinear pendulum with `ApproxFun`
+
+We reconsider the first example using the package `ApproxFun.jl` which allows very precise function approximation. We start with some imports:
+
+```julia
+using ApproxFun, LinearAlgebra
+
+using PseudoArcLengthContinuation, Plots
+const Cont = PseudoArcLengthContinuationusing PseudoArcLengthContinuation, Plots
+const Cont = PseudoArcLengthContinuation
+```
+
+We then need to overwrite some functions of `ApproxFun`:
+
+```julia
+# specific methods for ApproxFun
+import Base: length, eltype, copyto!
+import LinearAlgebra: norm, dot
+
+eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
+length(x::ApproxFun.Fun) = length(x.coefficients)
+
+norm(x::ApproxFun.Fun, p::Real) = (@show p;norm(x.coefficients, p))
+norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
+norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
+
+dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
+dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3]*y[3])
+
+copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = y.coefficients)
+```
+
+We can easily write our functional with boundary conditions in a convenient manner using `ApproxFun`:
+
+```julia
+source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
+dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+
+function F_chan(u, alpha::Float64, beta = 0.01)
+	return [Fun(u(0.), domain(sol)) - beta,
+		Fun(u(1.), domain(sol)) - beta,
+		Δ * u + alpha * source_term(u, b = beta)]
+end
+
+function Jac_chan(u, alpha, beta = 0.01)
+	return [Evaluation(u.space, 0.),
+		Evaluation(u.space, 1.),
+		Δ + alpha * dsource_term(u, b = beta)]
+end
+```
+
+We want to call a Newton solver. We first need an initial guess and the Laplacian operator:
+
+```julia
+sol = Fun(x -> x * (1-x), Interval(0.0, 1.0))
+const Δ = Derivative(sol.space, 2)
+```
+
+Finally, we need to define some parameters for the Newton iterations. This is done by calling
+
+```julia
+opt_newton = Cont.NewtonPar(tol = 1e-12, verbose = true)
+```
+
+We call the Newton solver:
+
+```julia
+opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
+	out, hist, flag = @time Cont.newton(
+				x -> F_chan(x, 3.0, 0.01),
+				u -> Jac_chan(u, 3.0, 0.01),
+				sol, opt_new, normN = x -> norm(x, Inf64))
+```
+and you should see
+
+```
+Newton Iterations 
+   Iterations      Func-count      f(x)      Linear-Iterations
+
+        0                1     1.5707e+00         0
+        1                2     1.1546e-01         1
+        2                3     8.0149e-04         1
+        3                4     3.9038e-08         1
+        4                5     4.6975e-13         1
+  0.080470 seconds (329.42 k allocations: 12.979 MiB)
+```
+
+We can now perform numerical continuation wrt the parameter `a`. Again, we need to define some parameters for the continuation:
+
+```julia
+opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 1.0, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+	opts_br0.newtonOptions.damped  = false
+	opts_br0.detect_fold = true
+	opts_br0.maxSteps = 143
+```
+
+We also provide a function to check how the `ApproxFun` solution vector grows:
+
+```julia
+function finalise_solution(z, tau, step, contResult)
+	printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
+	# chop!(z, 1e-14);chop!(tau, 1e-14)
+end
+```
+
+Then, we can call the continuation routine
+
+```julia
+br, u1 = @time Cont.continuation(
+		(x, p) -> F_chan(x, p, 0.01),
+		(x, p) -> Jac_chan(x, p, 0.01),
+		out, 3.0, opts_br0,
+		plot = true,
+		finaliseSolution = finalise_solution,
+		plotsolution = (x;kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"))
+```
+and you should see 
+
+![](chan-af-bif-diag.png)
+
+
+

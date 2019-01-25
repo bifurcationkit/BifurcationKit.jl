@@ -1,6 +1,5 @@
-
 using RecursiveArrayTools # for bifurcation point handling
-
+import Base: show
 ###############################################################################################
 # Structure to hold result
 @with_kw struct ContResult{T, vectype, eigenvectype}
@@ -22,6 +21,17 @@ using RecursiveArrayTools # for bifurcation point handling
 
 	# number of eigenvalues with positive real part
 	n_unstable::Vector{Int64}
+end
+
+function show(io::IO, br::PseudoArcLengthContinuation.ContResult)
+	println(io, "Branch number of points: ", length(br.branch))
+	if length(br.bifpoint) >0
+		println(io, "Bifurcation points:")
+		for ii in eachindex(br.bifpoint)
+			bp  = br.bifpoint[ii]
+			println(io, "- ", bp[1], " point, at p = ", bp[3])
+		end
+	end
 end
 ###############################################################################################
 function displayIteration(i, funceval, residual, itlinear = 0)
