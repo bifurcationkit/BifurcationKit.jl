@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "A word on performance",
     "category": "section",
-    "text": "The examples which follow have not been written with the goal of performance but rather simplicity. One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.For example, in the first example below, one could use BandedMatrices.jl for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favoured. Porting them to GPU would be another option."
+    "text": "The examples which follow have not been written with the goal of performance but rather simplicity. One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.For example, in the first example below, one could use BandedMatrices.jl for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option."
 },
 
 {
@@ -117,7 +117,15 @@ var documenterSearchIndex = {"docs": [
     "page": "Linear Solvers",
     "title": "Linear solvers",
     "category": "section",
-    "text": ""
+    "text": "The linear solvers are subtypes of LinearSolver. Basically, one must provide a way of inverting the Jacobian J or computing J \\ x.Here is an example of the simplest of them (see src/LinearSolver.jl) to give you an idea, the backslash operator:struct Default <: LinearSolver end\n\n# solves the equation J * out = x\nfunction (l::Default)(J, x)\n    return J \\ x, true, 1\nendNote that for newton to work, you must return 3 arguments. The first one is the result, the second one is whether the computation was successful and the third is the number of iterations required to perform the computation.You can call it like (and it will be called like this in newton)ls = Default()\nls(rand(2,2), rand(2))You can instead define struct myLinearSolver <: LinearSolver end and write (l::myLinearSolver)(J, x) where this function would implement GMRES or whatever you prefer."
+},
+
+{
+    "location": "linearsolver/#Eigen-solvers-1",
+    "page": "Linear Solvers",
+    "title": "Eigen solvers",
+    "category": "section",
+    "text": "The eigen solvers are subtypes of EigenSolver. Basically, one must provide a way of computing the eigen elements of the Jacobian J.Here is an example of the simplest of them (see src/EigSolver.jl) to give you an idea:@with_kw struct Default_eig <: EigenSolver\n    dim  = 200\n    maxiter = 100\nend\n\nfunction (l::Default_eig)(J, nev::Int64)\n    F = eigen(Array(J))\n    I = sortperm(F.values, by = x-> real(x), rev = true)\n    return F.values[I[1:nev]], F.vectors[:, I[1:nev]]\nendwarning: Eigenvalues\nThe eigenvalues must be ordered by increasing real part for the detection of bifurcations to work properly.note: Eigenvectors\nThe eigenvectors must be a 2d array for the simplified calls newtonHopf and newtonFold to work properly."
 },
 
 {
@@ -237,7 +245,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Fold / Hopf Continuation",
     "title": "PseudoArcLengthContinuation.continuationFold",
     "category": "function",
-    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\n(x, p1, p2)-> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2)-> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\nSimplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
+    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\nSimplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
 },
 
 {
@@ -269,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Periodic Orbits",
     "title": "Periodic orbits",
     "category": "section",
-    "text": "Several ways for finding periodic orbits. A simple shooting algorithm (quite unstable) is provided for different scheme. For example, we have ShootingProblemMid for the implicit Mid Point (order 2 in time), ShootingProblemBE for Backward Euler and ShootingProblemTrap for the trapezoidal rule.Finally, we also have a method were we compute M slices of the periodic orbit. This requires more memory than the previous method but seems more general."
+    "text": "Several ways for finding periodic orbits. A simple shooting algorithm (quite unstable) is provided for different scheme. For example, we have ShootingProblemMid for the implicit Mid Point (order 2 in time), ShootingProblemBE for Backward Euler and ShootingProblemTrap for the trapezoidal rule.Finally, we also have a method were we compute M slices of the periodic orbit. This requires more memory than the previous method but seems more general. This is implemented by PeriodicOrbitTrap for which the problem of finding periodic orbit is discretized using Finite Differences based on a trapezoidal rule."
 },
 
 {
@@ -277,7 +285,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Periodic Orbits",
     "title": "Computation with newton",
     "category": "section",
-    "text": "Have a look at the examples."
+    "text": "Have a look at the Brusselator example."
 },
 
 {
@@ -285,7 +293,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Periodic Orbits",
     "title": "Continuation",
     "category": "section",
-    "text": "Have a look at the examples."
+    "text": "Have a look at the Brusselator example."
 },
 
 {
@@ -337,6 +345,30 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library/#Library-1",
+    "page": "Library",
+    "title": "Library",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.PeriodicOrbitTrap",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.PeriodicOrbitTrap",
+    "category": "type",
+    "text": "pb = PeriodicOrbitTrap(F, J, ϕ, xπ, M::Int, linsolve, options_newton)\n\nThis structure implements Finite Differences based on Trapezoidal rule to locate periodic orbits. The arguements are as follows\n\nF vector field\nJ jacobian of the vector field\nϕ used for the Poincare section\nxπ used for the Poincare section\nM::Int number of slices in [0,2π]\nlinsolve <: LinearSolver  linear solver\noptions_newton::NewtonPar options for Newton algorithm\n\nYou can then call pb(orbitguess) to apply the functional to a guess. Note that orbitguess must be of size M * N + 1 where N is the number of unknowns in the state space and orbitguess[M*N+1] is an estimate of the period of the limit cycle.\n\nThe scheme is as follows, one look for T = x[end] and  x_i+1 - x_i - frach2 left(F(x_i+1) + F(x_i)right) = 0\n\nwhere h = T/M. Finally, the phase of the periodic orbit is constraint by\n\nlangle x1 - xpi phirangle\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#Structs-1",
+    "page": "Library",
+    "title": "Structs",
+    "category": "section",
+    "text": "PeriodicOrbitTrap"
+},
+
+{
     "location": "library/#PseudoArcLengthContinuation.newton",
     "page": "Library",
     "title": "PseudoArcLengthContinuation.newton",
@@ -353,6 +385,54 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library/#Newton-1",
+    "page": "Library",
+    "title": "Newton",
+    "category": "section",
+    "text": "newtonnewtonDeflated"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.newtonFold-Tuple{Function,Any,Any,AbstractArray{T,1} where T,AbstractArray{T,1} where T,NewtonPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.newtonFold",
+    "category": "method",
+    "text": "This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows\n\n(x, p)-> F(x, p) where p is the parameter associated to the Fold point\nJ = (x, p)-> d_xF(x, p) associated jacobian\nJt = (x, p) -> transpose(d_xF(x, p)) associated jacobian, it should be implenented otherwise\nfoldpointguess initial guess (x0, p0) for the Fold point. It should be a Vector\neigenvec guess for the 0 eigenvector\noptions::NewtonPar\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.newtonFold-Tuple{Function,Any,Any,ContResult,Int64,NewtonPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.newtonFold",
+    "category": "method",
+    "text": "Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows newtonFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as usual except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.newtonHopf-Tuple{Function,Any,Any,AbstractArray{T,1} where T,Any,Any,NewtonPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.newtonHopf",
+    "category": "method",
+    "text": "This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows\n\nF  = (x, p) -> F(x, p) where p is the parameter associated to the Hopf point\nJ  = (x, p) -> d_xF(x, p) associated jacobian\nJt = (x, p) -> transpose(d_xF(x, p)) associated jacobian\nhopfpointguess initial guess (x0, p0) for the Hopf point. It should be a AbstractVector or a BorderedVector.\neigenvec guess for the  iω eigenvector\neigenvec_ad guess for the -iω eigenvector\noptions::NewtonPar\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.newtonHopf-Tuple{Any,Any,Any,ContResult,Int64,NewtonPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.newtonHopf",
+    "category": "method",
+    "text": "Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows newtonHopf(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as usual except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\nwarning: Eigenvectors`\nThis simplified call has been written when the eigenvectors are organised in a 2d Array evec where evec[:,2] is the second eigenvector in the list.\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#Newton-for-Fold-/-Hopf-1",
+    "page": "Library",
+    "title": "Newton for Fold / Hopf",
+    "category": "section",
+    "text": "newtonFold(F::Function, J, Jt, foldpointguess::AbstractVector, eigenvec::AbstractVector, options::NewtonPar)newtonFold(F::Function, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar)newtonHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, eigenvec, eigenvec_ad, options::NewtonPar)newtonHopf(F, J, Jt, br::ContResult, ind_hopf::Int64, options::NewtonPar)"
+},
+
+{
     "location": "library/#PseudoArcLengthContinuation.continuation",
     "page": "Library",
     "title": "PseudoArcLengthContinuation.continuation",
@@ -361,11 +441,83 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library/#Functions-1",
+    "location": "library/#Continuation-1",
     "page": "Library",
-    "title": "Functions",
+    "title": "Continuation",
     "category": "section",
-    "text": "newtonnewtonDeflatednewtonFoldnewtonHopfcontinuationcontinuationFoldcontinuationHopf"
+    "text": "continuation"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.continuationFold-Tuple{Function,Any,Any,AbstractArray{T,1} where T,Real,AbstractArray{T,1} where T,ContinuationPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.continuationFold",
+    "category": "method",
+    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.continuationFold-Tuple{Function,Any,Any,ContResult,Int64,Real,ContinuationPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.continuationFold",
+    "category": "method",
+    "text": "Simplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.continuationHopf-Tuple{Function,Any,Any,AbstractArray{T,1} where T,Any,Any,Any,ContinuationPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.continuationHopf",
+    "category": "method",
+    "text": "codim 2 continuation of Hopf points. This function turns an initial guess for a Hopf point into a curve of Hopf points based on a Minimally Augmented formulation. The arguments are as follows\n\n(x, p1, p2)-> F(x, p1, p2) where p is the parameter associated to the hopf point\nJ = (x, p1, p2)-> d_xF(x, p1, p2) associated jacobian\nhopfpointguess initial guess (x0, p10) for the Hopf point. It should be a Vector or a BorderedVector\np2 parameter p2 for which hopfpointguess is a good guess\neigenvec guess for the iω eigenvector at p1_0\neigenvec_ad guess for the -iω eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.continuationHopf-Tuple{Function,Any,Any,ContResult,Int64,Real,ContinuationPar}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.continuationHopf",
+    "category": "method",
+    "text": "Simplified call for continuation of Hopf point. More precisely, the call is as follows continuationHopf(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationHopf except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\nwarning: Eigenvectors`\nThis simplified call has been written when the eigenvectors are organised in a 2d Array evec where evec[:,2] is the second eigenvector in the list.\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#Continuation-for-Fold-/-Hopf-1",
+    "page": "Library",
+    "title": "Continuation for Fold / Hopf",
+    "category": "section",
+    "text": "continuationFold(F::Function, J, Jt, foldpointguess::AbstractVector, p2_0::Real, eigenvec::AbstractVector, options_cont::ContinuationPar ; kwargs...)continuationFold(F::Function, J, Jt, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)continuationHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, p2_0, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...)continuationHopf(F::Function, J, Jt, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.plotBranch-Tuple{ContResult}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.plotBranch",
+    "category": "method",
+    "text": "Plot the branch of solutions from a ContResult. You can also pass parameters like plotBranch(br, marker = :dot). For the continuation diagram, the legend is as follows (:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.plotBranch!-Tuple{ContResult}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.plotBranch!",
+    "category": "method",
+    "text": "Append to the current plot the plot of the branch of solutions from a ContResult. You can also pass parameters like plotBranch!(br, marker = :dot)\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#PseudoArcLengthContinuation.plotBranch-Tuple{Array{T,1} where T}",
+    "page": "Library",
+    "title": "PseudoArcLengthContinuation.plotBranch",
+    "category": "method",
+    "text": "Plot all the branches contained in brs in a single figure. Convenient when many bifurcation diagram have been computed.\n\n\n\n\n\n"
+},
+
+{
+    "location": "library/#Plotting-1",
+    "page": "Library",
+    "title": "Plotting",
+    "category": "section",
+    "text": "plotBranch(contres::ContResult; kwargs...)plotBranch!(contres::ContResult; kwargs...)plotBranch(brs::Vector; kwargs...)"
 },
 
 ]}
