@@ -10,12 +10,10 @@ abstract type EigenSolver end
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-@with_kw struct Default_eig <: EigenSolver
-    dim  = 200
-    maxiter = 100
-end
+struct Default_eig <: EigenSolver end
 
 function (l::Default_eig)(J, nev::Int64)
+    # I put Array so we can call it on small sparse matrices
     F = eigen(Array(J))
     I = sortperm(F.values, by = x-> real(x), rev = true)
     return F.values[I[1:nev]], F.vectors[:, I[1:nev]]
