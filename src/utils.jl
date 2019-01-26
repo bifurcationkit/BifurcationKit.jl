@@ -99,46 +99,31 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>1
-		for ii=2:length(contres.bifpoint)
-
-			scatter!([contres.bifpoint[ii][2]], [contres.bifpoint[ii][4]], label="", subplot=3, color = colorbif[contres.bifpoint[ii][1]], markersize=3, markerstrokewidth=0)
-		end
+		scatter!(map(x->x[2],contres.bifpoint[2:end]), map(x->x[4],contres.bifpoint[2:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3) |> display
 	end
 
 	if contparms.computeEigenValues
 		for ii=1:length(contres.eig)
-			# scatter!(ones(length(contres.eig[ii][1]))*ii, real.(contres.eig[ii][1]), subplot=5, label="", markersize = 2, color=:black)
 			scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=5, label="", markersize = 1, color=:black)
 		end
 	end
 	plotuserfunction(sol.u)
 
-
-	# contour(reshape(sol, n, n), label = "", title="solution", aspect_ratio=:equal)#, ylims=(minimum(branch[4, :])*1.1, maximum(branch[4, :])*1.1))
-
-	# x=linspace(0.01, 1, 100)
-# 	z2 = z + 0.05*tau
-# 	plot!(-(x.^3/3+1.0e-1)./x, x, subplot=1, xlim=(1.5minimum(branch[1, :]), 0), ylims=(0, 1.5maximum(branch[2, :])), label="")
-# 	plot!([z.p, z2.p], [z.u[1], z2.u[1]], marker=:o, color=:green, label="")
-	display(title!(""))
+display(title!(""))
 end
 
 """
-Plot the branch of solutions from a `ContResult`. You can also pass paramters like `plotBranch(br, marker = :dot)`
+Plot the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch(br, marker = :dot)`.
+For the continuation diagram, the legend is as follows `(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)`
 """
 function plotBranch(contres::ContResult; kwargs...)
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
-	branch = contres.branch
-	plot(branch[1, :], branch[2, :]; kwargs...)
-
-	# add the bifurcation points along the branch
-	if length(contres.bifpoint)>=1
-		for ii=1:length(contres.bifpoint)
-			scatter!([contres.bifpoint[ii][3]], [contres.bifpoint[ii][4]], label="", color = colorbif[contres.bifpoint[ii][1]], markersize=3, markerstrokewidth=0) |> display
-		end
-	end
+	plot([],[],label="")
+	plotBranch!(contres; kwargs...)
 end
 
+"""
+Plot all the branches contained in `brs` in a single figure. Convenient when many bifurcation diagram have been computed.
+"""
 function plotBranch(brs::Vector; kwargs...)
 	plotBranch(brs[1]; kwargs...)
 	for ii=2:length(brs)
@@ -147,10 +132,10 @@ function plotBranch(brs::Vector; kwargs...)
 end
 
 """
-Append to the current plot the plot of the branch of solutions from a `ContResult`. You can also pass paramters like `plotBranch!(br, marker = :dot)`
+Append to the current plot the plot of the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch!(br, marker = :dot)`
 """
 function plotBranch!(contres::ContResult; kwargs...)
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
+	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)
 	branch = contres.branch
 	if length(contres.stability) > 2
 		plot!(branch[1, :], branch[2, :], linewidth = 1 .+ 3contres.stability ; kwargs...)
@@ -159,9 +144,9 @@ function plotBranch!(contres::ContResult; kwargs...)
 	end
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>=1
-		for ii=1:length(contres.bifpoint)
-			(contres.bifpoint[ii][1] != :none) && scatter!([contres.bifpoint[ii][3]], [contres.bifpoint[ii][4]], label="", color = colorbif[contres.bifpoint[ii][1]], markersize=3, markerstrokewidth=0) |> display
-		end
+		id = 1
+		contres.bifpoint[1][1] == :none ? id = 2 : id = 1
+		scatter!(map(x->x[3],contres.bifpoint[id:end]), map(x->x[4],contres.bifpoint[id:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
 	end
 end
 ###############################################################################################

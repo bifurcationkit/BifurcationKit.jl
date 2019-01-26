@@ -19,7 +19,7 @@ One design choice is that we try not to require `u` to be a subtype of an `Abstr
 
 The examples which follow have not been written with the goal of performance but rather simplicity. One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.
 
-For example, in the first example below, one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favoured. Porting them to GPU would be another option.
+For example, in the first example below, one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.
 
 
 # Example 1: nonlinear pendulum

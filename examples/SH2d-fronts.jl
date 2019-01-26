@@ -50,10 +50,10 @@ sol0 = [exp(-0((x-lx)^2)/lx^2) .* (cos(x) .+
 		sol0 .*= 1.7
 		heatmap(sol0', color=:viridis)
 
-opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100, linsolve = Default(), eigsolve = eig_KrylovKit{Float64}(dim =100, maxiter=100))
+opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100, linsolve = Default(), eigsolve = eig_KrylovKit{Float64}())
 	sol_hexa, hist, flag = @time Cont.newton(
-				x->F_sh(x, -.1, 1.3),
-				u->dF_sh(u, -.1, 1.3),
+				x -> F_sh(x, -.1, 1.3),
+				u -> dF_sh(u, -.1, 1.3),
 				vec(sol0),
 				opt_new)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
@@ -71,8 +71,8 @@ deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 opt_new.maxIter = 250
 outdef, _, flag, _ = @time Cont.newtonDeflated(
-				x-> F_sh(x, -.1, 1.3),
-				u->dF_sh(u, -.1, 1.3),
+				x -> F_sh(x, -.1, 1.3),
+				u -> dF_sh(u, -.1, 1.3),
 				0.4vec(sol_hexa) .* vec([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
 
 				opt_new, deflationOp, normN = x->norm(x, Inf64))
@@ -82,14 +82,14 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 
 heatmapsol(deflationOp.roots[4])
 ###################################################################################################
-opts_cont = ContinuationPar{Float64, Default, eig_KrylovKit{Float64}}(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = true)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = true)
 	opts_cont.newtonOptions.tol = 1e-9
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 450
 
 	br, u1 = @time Cont.continuation(
 		(x, p) -> F_sh(x, p, 1.3), (x, p) -> dF_sh(x, p, 1.3),
-		deflationOp.roots[3],
+		deflationOp.roots[2],
 		-0.1,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)->(heatmap!(X, Y, reshape(x, Nx, Ny)', color=:viridis, subplot=4, label="")),
@@ -102,4 +102,8 @@ opts_cont = ContinuationPar{Float64, Default, eig_KrylovKit{Float64}}(dsmin = 0.
 # Cont.plotBranch(branches[1])
 # Cont.plotBranch!(branches[7], ylabel="max U")
 
-Cont.plotBranch!(br)
+Cont.plotBranch(br)
+
+
+ls = vcat(fill(:dash,5),fill(:solid,5))
+plot(rand(10),linestyle = ls)

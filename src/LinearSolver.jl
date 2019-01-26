@@ -42,16 +42,15 @@ end
 # Solvers for KrylovKit
 ####################################################################################################
 @with_kw mutable struct GMRES_KrylovKit{T} <: LinearSolver
-    dim::Int64 = 20         # Krylov Dimension
-    tol::T  = T(1e-12)      # absolute tolerance for solver
-    rtol::T = T(1e-12)      # relative tolerance for solver
+    dim::Int64 = KrylovDefaults.krylovdim # Krylov Dimension
+    atol::T  = T(KrylovDefaults.tol)     # absolute tolerance for solver
+    rtol::T = T(KrylovDefaults.tol)      # relative tolerance for solver
     restart::Int64 = 200    # number of restarts
-    maxiter::Int64 = 100
+    maxiter::Int64 = KrylovDefaults.maxiter
     verbose::Int = 0
 end
 
 function (l::GMRES_KrylovKit{T})(J, rhs) where T
-    J_map = v -> J(v)
-    res, info = KrylovKit.linsolve(J_map, rhs, rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter)#, tol = l.tol)
+    res, info = KrylovKit.linsolve(J, rhs, rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol)
     return res, true, info.numops
 end

@@ -50,10 +50,10 @@ end
 # Solvers for KrylovKit
 ####################################################################################################
 @with_kw struct eig_KrylovKit{T} <: EigenSolver
-    dim::Int64 = 100        # Krylov Dimension
+    dim::Int64 = KrylovDefaults.krylovdim        # Krylov Dimension
     tol::T = T(1e-4)        # tolerance for solver
     restart::Int64 = 200    # number of restarts
-    maxiter::Int64 = 100
+    maxiter::Int64 = KrylovDefaults.maxiter
     verbose::Int = 0
     which = :LR
 end

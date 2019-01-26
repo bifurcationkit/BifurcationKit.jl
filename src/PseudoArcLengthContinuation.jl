@@ -12,7 +12,7 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/PeriodicOrbit.jl")
 
 
-	export	ContinuationPar, continuation, continuationFold, continuationHopf
+	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf
 	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
@@ -21,6 +21,7 @@ module PseudoArcLengthContinuation
 			FoldLinearSolveMooreSpence, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 	export  ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
+	export plotBranch, plotBranch!
 
 	################################################################################################
 	# equation of the arc length constraint

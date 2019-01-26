@@ -270,8 +270,8 @@ newtonFold(F::Function, br::ContResult, ind_fold::Int64, options::NewtonPar) = n
 
 """
 codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
-- `(x, p1, p2)-> F(x, p1, p2)` where `p` is the parameter associated to the Fold point
-- `J = (x, p1, p2)-> d_xF(x, p1, p2)` associated jacobian
+- `F = (x, p1, p2) -> F(x, p1, p2)` where `p` is the parameter associated to the Fold point
+- `J = (x, p1, p2) -> d_xF(x, p1, p2)` associated jacobian
 - `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `Vector`
 - `p2` parameter p2 for which foldpointguess is a good guess
 - `eigenvec` guess for the 0 eigenvector at p1_0

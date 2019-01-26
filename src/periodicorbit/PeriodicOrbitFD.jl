@@ -4,6 +4,27 @@ using BlockArrays, SparseArrays
 ####################################################################################################
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit. This is not a shooting method!
 
+"""
+	pb = PeriodicOrbitTrap(F, J, ϕ, xπ, M::Int, linsolve, options_newton)
+This structure implements Finite Differences based on Trapezoidal rule to locate periodic orbits. The arguements are as follows
+- F vector field
+- J jacobian of the vector field
+- ϕ used for the Poincare section
+- xπ used for the Poincare section
+- M::Int number of slices in [0,2π]
+- linsolve <: LinearSolver  linear solver
+- options_newton::NewtonPar options for Newton algorithm
+
+You can then call pb(orbitguess) to apply the functional to a guess. Note that orbitguess must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
+
+The scheme is as follows, one look for `T = x[end]` and
+ ``x_{i+1} - x_{i} - \\frac{h}{2} \\left(F(x_{i+1}) + F(x_i)\\right) = 0``
+
+where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
+
+ ``\\langle x[1] - x\\pi, \\phi\\rangle.``
+
+"""
 @with_kw struct PeriodicOrbitTrap{vectype, S <: LinearSolver, N} <: PeriodicOrbit
     # Function F(x, p) = 0
     F::Function
