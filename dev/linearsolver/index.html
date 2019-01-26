@@ -5,12 +5,10 @@
 function (l::Default)(J, x)
     return J \ x, true, 1
 end</code></pre><p>Note that for <code>newton</code> to work, you must return 3 arguments. The first one is the result, the second one is whether the computation was successful and the third is the number of iterations required to perform the computation.</p><p>You can call it like (and it will be called like this in <a href="../library/#PseudoArcLengthContinuation.newton"><code>newton</code></a>)</p><pre><code class="language-julia">ls = Default()
-ls(rand(2,2), rand(2))</code></pre><p>You can instead define <code>struct myLinearSolver &lt;: LinearSolver end</code> and write <code>(l::myLinearSolver)(J, x)</code> where this function would implement GMRES or whatever you prefer.</p><h1><a class="nav-anchor" id="Eigen-solvers-1" href="#Eigen-solvers-1">Eigen solvers</a></h1><p>The eigen solvers are subtypes of <code>EigenSolver</code>. Basically, one must provide a way of computing the eigen elements of the Jacobian <code>J</code>.</p><p>Here is an example of the simplest of them (see <code>src/EigSolver.jl</code>) to give you an idea:</p><pre><code class="language-julia">@with_kw struct Default_eig &lt;: EigenSolver
-    dim  = 200
-    maxiter = 100
-end
+ls(rand(2,2), rand(2))</code></pre><p>You can instead define <code>struct myLinearSolver &lt;: LinearSolver end</code> and write <code>(l::myLinearSolver)(J, x)</code> where this function would implement GMRES or whatever you prefer.</p><h1><a class="nav-anchor" id="Eigen-solvers-1" href="#Eigen-solvers-1">Eigen solvers</a></h1><p>The eigen solvers are subtypes of <code>EigenSolver</code>. Basically, one must provide a way of computing the eigen elements of the Jacobian <code>J</code>.</p><p>Here is an example of the simplest of them (see <code>src/EigSolver.jl</code>) to give you an idea:</p><pre><code class="language-julia">struct Default_eig &lt;: EigenSolver end
 
 function (l::Default_eig)(J, nev::Int64)
+	# I put Array so we can call it on small sparse matrices
     F = eigen(Array(J))
     I = sortperm(F.values, by = x-&gt; real(x), rev = true)
     return F.values[I[1:nev]], F.vectors[:, I[1:nev]]

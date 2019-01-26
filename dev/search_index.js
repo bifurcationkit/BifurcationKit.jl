@@ -125,7 +125,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Linear Solvers",
     "title": "Eigen solvers",
     "category": "section",
-    "text": "The eigen solvers are subtypes of EigenSolver. Basically, one must provide a way of computing the eigen elements of the Jacobian J.Here is an example of the simplest of them (see src/EigSolver.jl) to give you an idea:@with_kw struct Default_eig <: EigenSolver\n    dim  = 200\n    maxiter = 100\nend\n\nfunction (l::Default_eig)(J, nev::Int64)\n    F = eigen(Array(J))\n    I = sortperm(F.values, by = x-> real(x), rev = true)\n    return F.values[I[1:nev]], F.vectors[:, I[1:nev]]\nendwarning: Eigenvalues\nThe eigenvalues must be ordered by increasing real part for the detection of bifurcations to work properly.note: Eigenvectors\nThe eigenvectors must be a 2d array for the simplified calls newtonHopf and newtonFold to work properly."
+    "text": "The eigen solvers are subtypes of EigenSolver. Basically, one must provide a way of computing the eigen elements of the Jacobian J.Here is an example of the simplest of them (see src/EigSolver.jl) to give you an idea:struct Default_eig <: EigenSolver end\n\nfunction (l::Default_eig)(J, nev::Int64)\n	# I put Array so we can call it on small sparse matrices\n    F = eigen(Array(J))\n    I = sortperm(F.values, by = x-> real(x), rev = true)\n    return F.values[I[1:nev]], F.vectors[:, I[1:nev]]\nendwarning: Eigenvalues\nThe eigenvalues must be ordered by increasing real part for the detection of bifurcations to work properly.note: Eigenvectors\nThe eigenvectors must be a 2d array for the simplified calls newtonHopf and newtonFold to work properly."
 },
 
 {
