@@ -37,10 +37,7 @@ outit = ls(J0, x0)
 # test the eigen solvers for matrix free formulations
 out = Arpack.eigs(J0, nev = 20, which = :LR)
 
-eil = PseudoArcLengthContinuation.eig_KrylovKit(tol = 1e-6)
+eil = PseudoArcLengthContinuation.eig_KrylovKit(tol = 1e-9)
 outkk = eil(J0, 20)
-eil = PseudoArcLengthContinuation.eig_MF_KrylovKit(tol = 1e-6, x₀ = x0)
+eil = PseudoArcLengthContinuation.eig_MF_KrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
-
-@test norm(out[1] - outkk[1][1:20]) < 1e-6
-@test norm(out[1] - outkkmf[1][1:20]) < 1e-6
