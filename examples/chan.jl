@@ -81,38 +81,6 @@ outdef2, _, _ = @time Cont.newtonDeflated(
 						outdef1.*(1 .+ 0.01*rand(n)),
 						opt_def, deflationOp)
 plot!(outdef2, label="deflation-2")
-###################################################################################################
-# Continuation of the Fold Point using Dense method
-# foldpt = FoldPoint(br.bifpoint[3])
-# foldpt = vcat(br.bifpoint[3][5],br.bifpoint[3][3])
-# 	phi_guess = foldpt[n+1:2n]
-# 	foldPb = (u, β)->FoldProblemMooreSpence(
-# 					(x, α)->F_chan(x, α, β),
-# 					(x, α)->(Jac_mat(x, α, β)),
-# 					phi_guess,
-# 					opts_br0.newtonOptions.linsolve)(u)
-#
-# Jac_fold_fd(u0, β) = Cont.finiteDifferences( u-> foldPb(u, β), u0)
-#
-# opt_fold = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-# 	outfold, hist, flag = @time Cont.newton(
-# 						x ->      foldPb(x, 0.01),
-# 						x -> Jac_fold_fd(x, 0.01),
-# 						foldpt,
-# 						opt_fold)
-# 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01\n")
-#
-# opt_fold_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0.0, a = 2., theta = 0.4)
-# 	opt_fold_cont.maxSteps = 70
-#
-# 	br_fold, u1_fold = @time Cont.continuation(
-# 					(x, β) ->      foldPb(x, β),
-# 					(x, β) -> Jac_fold_fd(x, β),
-# 					outfold, 0.01,
-# 					opt_fold_cont, plot = true,
-# 					printsolution = u -> u[end])
-#
-# Cont.plotBranch(br_fold, marker=:d, xlabel="beta", ylabel = "alpha")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
 opts_br0.newtonOptions.verbose = true
 indfold = 3

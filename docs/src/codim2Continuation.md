@@ -4,7 +4,7 @@ For this to work, it is important to have an analytical expression for the jacob
 
 ## The case of the Fold point
 
-One a Fold point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. Several methods have been implemented namely **Moore Spence** and **Minimally Augmented**. A simplified interface is provided for the use of the later but the former one is fully functional.
+One a Fold point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. We have implemented a **Minimally Augmented** formulation. A simplified interface is provided for its use of the later.
 
 ### Newton refinement
 
@@ -19,7 +19,7 @@ outfold, hist, flag = @time Cont.newtonFold((x,p) -> F(x, p),
 
 ## The case of the Hopf point
 
-One a Hopf point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. Several method have been implemented but we focus on the **Minimally Augmented** one. A simplified interface is provided for the use of this method.
+One a Hopf point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. We have implemented a **Minimally Augmented** formulation. A simplified interface is provided for its use of the later.
 
 ### Newton refinement
 

@@ -17,8 +17,7 @@ module PseudoArcLengthContinuation
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
 			Default_eig, Default_eig_sp, eig_IterativeSolvers, eig_KrylovKit
-	export	FoldPoint, FoldProblemMooreSpence, FoldProblemMinimallyAugmented,
-			FoldLinearSolveMooreSpence, FoldLinearSolveMinAug, foldPoint
+	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 	export  ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
 	export plotBranch, plotBranch!
