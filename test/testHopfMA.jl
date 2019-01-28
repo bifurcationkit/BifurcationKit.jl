@@ -242,8 +242,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt[1:2n],
 			M,
-			opt_newton.linsolve,
-			opt_newton)
+			opt_newton.linsolve)
 
 
 jac_PO_fd = Cont.finiteDifferences(x->poTrap(l_hopf + 0.01)(x), orbitguess_f)

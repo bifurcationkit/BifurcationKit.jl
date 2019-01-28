@@ -170,7 +170,7 @@ ind_hopf = 1
 	hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 	outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
-                (x, p) -> Jac_mat(x, a, b, l = p),
+				(x, p) -> Jac_mat(x, a, b, l = p),
 				br, ind_hopf,
 				NewtonPar(verbose = true))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
@@ -180,7 +180,7 @@ br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) -> Jac_mat(x, a, β, l = p),
 			br, ind_hopf,
 			b,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=false)), verbosity = 0)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=false)), verbosity = 2)
 Cont.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
 #################################################################################################### Continuation of Periodic Orbit
 function plotPeriodic(outpof,n,M)
@@ -189,12 +189,12 @@ function plotPeriodic(outpof,n,M)
 			heatmap(outpo[n+2:end,:]))
 end
 
-ind_hopf = 1
+ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 l_hopf = hopfpt[end-1]
 ωH     = hopfpt[end] |> abs
-M = 50
+M = 35
 
 
 orbitguess = zeros(2n, M)
@@ -217,8 +217,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt[1:2n],
 			M,
-			opt_newton.linsolve,
-			opt_newton)
+			opt_newton.linsolve)
 
 poTrap(l_hopf + 0.01)(orbitguess_f) |> plot
 

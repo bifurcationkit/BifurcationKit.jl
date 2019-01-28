@@ -5,7 +5,7 @@ using BlockArrays, SparseArrays
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit. This is not a shooting method!
 
 """
-	pb = PeriodicOrbitTrap(F, J, ϕ, xπ, M::Int, linsolve, options_newton)
+	pb = PeriodicOrbitTrap(F, J, ϕ, xπ, M::Int, linsolve)
 This structure implements Finite Differences based on Trapezoidal rule to locate periodic orbits. The arguements are as follows
 - F vector field
 - J jacobian of the vector field
@@ -13,7 +13,6 @@ This structure implements Finite Differences based on Trapezoidal rule to locate
 - xπ used for the Poincare section
 - M::Int number of slices in [0,2π]
 - linsolve <: LinearSolver  linear solver
-- options_newton::NewtonPar options for Newton algorithm
 
 You can then call pb(orbitguess) to apply the functional to a guess. Note that orbitguess must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
 
@@ -25,7 +24,7 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
  ``\\langle x[1] - x\\pi, \\phi\\rangle.``
 
 """
-@with_kw struct PeriodicOrbitTrap{vectype, S <: LinearSolver, N} <: PeriodicOrbit
+@with_kw struct PeriodicOrbitTrap{vectype, S <: LinearSolver} <: PeriodicOrbit
     # Function F(x, p) = 0
     F::Function
 
@@ -40,13 +39,12 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
     M::Int = 100
 
     linsolve::S
-    options_newton::NewtonPar{N}
 end
 
 """
 This encodes the functional for finding periodic orbits based on finite differences using the Trapezoidal rule
 """
-function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype) where {vectype <: AbstractVector, S, N}
+function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype) where {vectype <: AbstractVector, S}
     M = poPb.M
     N = div(length(u0) - 1, M)
     T = u0[end]
@@ -68,7 +66,7 @@ end
 """
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
-function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype, du) where {vectype, S, N}
+function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, du) where {vectype, S}
     M = poPb.M
     N = div(length(u0) - 1, M)
     T = u0[end]
@@ -94,7 +92,7 @@ end
 """
 Sparse Matrix expression expression of the Jacobian for the periodic problem computed at the space-time guess: `u0`
 """
-function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S, N}, u0::vectype, γ = 1.0) where {vectype, S, N}
+function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ = 1.0) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
     N = div(length(u0) - 1, M)
@@ -122,7 +120,7 @@ function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S, N}, u0::vectype,
 end
 
 
-function (poPb::PeriodicOrbitTrap{vectype, S, N})(u0::vectype, tp::Symbol = :jacobian) where {vectype, S, N}
+function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacobian) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
     N = div(length(u0) - 1, M)
@@ -151,7 +149,7 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
 """
-function FloquetPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S, N}, u0::vectype, du::vectype) where {vectype, S, N}
+function FloquetPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, du::vectype) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
     N = div(length(u0)-1, M)

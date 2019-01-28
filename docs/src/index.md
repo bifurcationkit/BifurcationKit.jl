@@ -595,8 +595,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt[1:2n],
 			M,
-			opt_newton.linsolve,
-			opt_newton)
+			opt_newton.linsolve)
 ```
 
 The functional is `x -> poTrap(l_hopf + 0.01)(x)` at parameter `l_hopf + 0.01`. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at `(x,p)` is computed like this

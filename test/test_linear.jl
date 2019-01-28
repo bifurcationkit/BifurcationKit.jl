@@ -24,9 +24,9 @@ out = ls(J0, x0)
 
 ls = GMRES_KrylovKit{Float64}(rtol = 1e-9, dim = 100)
 outkk = ls(J0, x0)
-@test norm(out[1] - outkk[1], Inf64) < 1e-9
+@test norm(out[1] - outkk[1], Inf64) < 1e-7
 outkk = ls(Jmf, x0)
-@test norm(out[1] - outkk[1], Inf64) < 1e-9
+@test norm(out[1] - outkk[1], Inf64) < 1e-7
 
 
 ls = GMRES_IterativeSolvers{Float64}(N = 100, tol = 1e-9)
@@ -42,5 +42,5 @@ outkk = eil(J0, 20)
 eil = PseudoArcLengthContinuation.eig_MF_KrylovKit(tol = 1e-6, x₀ = x0)
 outkkmf = eil(Jmf, 20)
 
-@test norm(out[1] - outkk[1][1:20]) < 1e-7
-@test norm(out[1] - outkkmf[1][1:20]) < 1e-7
+@test norm(out[1] - outkk[1][1:20]) < 1e-6
+@test norm(out[1] - outkkmf[1][1:20]) < 1e-6
