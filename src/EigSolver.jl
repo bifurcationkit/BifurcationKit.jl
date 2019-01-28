@@ -40,6 +40,7 @@ end
 end
 
 function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
+    # for now, we don't have an eigensolver for non hermitian matrices
     @assert 1==0 "not implemented"
     return res[1], length(res)>1, res[2].iters
 end
@@ -57,6 +58,23 @@ end
 end
 
 function (l::eig_KrylovKit{T})(J, nev::Int64) where T
+    @assert typeof(J) <:  AbstractMatrix
     vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol)
+    return vals, vec, true, info.numops
+end
+
+# Matrix-Free version, needs to specify an example of rhs x₀
+@with_kw struct eig_MF_KrylovKit{T, vectype} <: EigenSolver
+    dim::Int64 = KrylovDefaults.krylovdim        # Krylov Dimension
+    tol::T = T(1e-4)        # tolerance for solver
+    restart::Int64 = 200    # number of restarts
+    maxiter::Int64 = KrylovDefaults.maxiter
+    verbose::Int = 0
+    which = :LR
+    x₀::vectype
+end
+
+function (l::eig_MF_KrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
+    vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol)
     return vals, vec, true, info.numops
 end
