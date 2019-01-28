@@ -312,8 +312,7 @@ end</code></pre><p>We want to make two remarks. The first is that an initial gue
 			real.(vec_hopf),
 			hopfpt[1:2n],
 			M,
-			opt_newton.linsolve,
-			opt_newton)</code></pre><p>The functional is <code>x -&gt; poTrap(l_hopf + 0.01)(x)</code> at parameter <code>l_hopf + 0.01</code>. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at <code>(x,p)</code> is computed like this</p><p><code>poTrap(p)(x, :jacsparse)</code></p><p>while the Matrix Free version is</p><p><code>dx -&gt; poTrap(p)(x, dx)</code></p><p>We use Newton solve:</p><pre><code class="language-julia">opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
+			opt_newton.linsolve)</code></pre><p>The functional is <code>x -&gt; poTrap(l_hopf + 0.01)(x)</code> at parameter <code>l_hopf + 0.01</code>. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at <code>(x,p)</code> is computed like this</p><p><code>poTrap(p)(x, :jacsparse)</code></p><p>while the Matrix Free version is</p><p><code>dx -&gt; poTrap(p)(x, dx)</code></p><p>We use Newton solve:</p><pre><code class="language-julia">opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
 			x -&gt;  poTrap(l_hopf + 0.01)(x),
 			x -&gt;  poTrap(l_hopf + 0.01)(x, :jacsparse),
