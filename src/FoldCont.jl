@@ -7,98 +7,6 @@ function FoldPoint(br::ContResult, index::Int64)
 	return vcat(bifpoint[5], bifpoint[3])
 end
 
-###################################################################################################
-
-struct FoldProblemMooreSpence{vectype, S <: LinearSolver}
-    F::Function # Function F(x, p) = 0
-    J::Function # Jacobian of F wrt x
-    tau::vectype
-    linsolve::S
-end
-
-FoldPoint(x, ϕ, p::T) where {T <: Number} = vcat(x, ϕ, p)
-
-# formulation of the Fold Problem as a Moore-Spence system for quadratic turning point, see Govaerts 2000, Numerical methods for bifurcations of dynamical equilibria
-
-# formulation of the Fold Problem as a Moore-Spence system for quadratic turning point, see Govaerts 2000, Numerical methods for bifurcations of dynamical equilibria
-function (fp::FoldProblemMooreSpence{vectype, S})(u::ArrayPartition) where {vectype, S <: LinearSolver}
-    x = u.x[1]
-    ϕ = u.x[2]
-    p = u.x[3][1]
-    return FoldPoint(fp.F(x, p), apply(fp.J(x, p), ϕ), dot(fp.tau, ϕ)-1)
-end
-
-function (fp::FoldProblemMooreSpence{vectype, S})(u::Vector) where {vectype, S <: LinearSolver}
-    N = div(length(u)-1, 2)
-    x = @view u[1:N]
-    ϕ = @view u[N+1:2N]
-    p =  u[end]
-    return vcat(fp.F(x, p), apply(fp.J(x, p), ϕ), dot(fp.tau, ϕ)-1)
-end
-
-# Method to solve the associated linear system
-mutable struct FoldLinearSolveMooreSpence <: LinearSolver
-    d2F::Function # Hessian of F
-end
-
-"""
-Implementation of the algorithm of LOCA from Salinger etal. 2002
-"""
-function (foldl::FoldLinearSolveMooreSpence)(Jfold, v::Vector{T}) where {T}
-	@assert 1==0 "WIP Function not tested"
-    N = div(length(v)-1, 2)
-    # the jacobian should just be a tuple composed, we extract the functions
-    # the Jacobian J is expressed at (x, p)
-    x = @view Jfold[1][1:N]
-    ϕ = @view Jfold[1][N+1:2N]
-    p = Jfold[1][2N+1]
-
-    Fhandle = Jfold[2].F
-    J = Jfold[2].J
-    tau = Jfold[2].tau
-
-    Jϕ = apply(J(x, p), ϕ)
-
-    δ = 1e-9
-    ϵ1, ϵ2, ϵ3 = δ, δ, δ
-    # ϵ1 = δ * (abs(p) + δ)
-
-    fp = (Fhandle(x, p + ϵ1) - Fhandle(x, p - ϵ1)) / (2ϵ1)
-
-
-    # formules dans https://trilinos.org/docs/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MooreSpence_1_1SalingerBordering.html
-
-    # voir aussi https://trilinos.org/docs/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MooreSpence_1_1ExtendedGroup.html ainsi que https://trilinos.org/docs/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MooreSpence_1_1PhippsBordering.html
-
-    F = @view v[1:N]
-    G = @view v[N+1:2N]
-    h = v[2N+1]
-
-    A = Jfold[2].linsolve(J(x, p), F)[1]
-    b = Jfold[2].linsolve(J(x, p), fp)[1]
-
-    # ϵ2 = δ * (norm(x) / norm(A) + δ)
-    # ϵ3 = δ * (norm(x) / norm(b) + δ)
-
-
-    dxJvA = (apply(J(x + ϵ2 * A, p), ϕ) - apply(J(x - ϵ2 * A, p), ϕ)) / (2ϵ2)
-    dxJvb = (apply(J(x + ϵ2 * b, p), ϕ) - apply(J(x - ϵ2 * b, p), ϕ)) / (2ϵ2)
-
-    # dxJvA = foldl.d2F(x, p, ϕ, A)
-    # dxJvb = foldl.d2F(x, p, ϕ, b)
-
-    dJvdp = (apply(J(x, p + ϵ3), ϕ)      - apply(J(x, p - ϵ3), ϕ)) / (2ϵ3)
-
-    C = Jfold[2].linsolve(J(x, p), dxJvA - G )[1]
-    d = Jfold[2].linsolve(J(x, p), dxJvb - dJvdp )[1]
-
-    z = (h + dot(tau, C)) / dot(tau, d)
-
-    X =  A - b * z
-    Y = -C + d * z
-
-    return vcat(X, Y, z), true, 1
-end
 #################################################################################################### Method using Minimally Augmented formulation
 
 struct FoldProblemMinimallyAugmented{vectype, S <: LinearSolver}
@@ -154,10 +62,8 @@ struct FoldLinearSolveMinAug <: LinearSolver end
 
 function (foldl::FoldLinearSolveMinAug)(x, p, pbMA::FoldProblemMinimallyAugmented, du, debug_ = false)
 	# We solve Jfold⋅res = du where Jfold = d_xF(x,p)
-    # the jacobian should just be a tuple, we extract the functions
     # the Jacobian J is expressed at (x, p)
-    # the jacobian expression of the Fold problem is [J dpF ; σx σp]
-
+    # the Jacobian expression of the Fold problem is [J dpF ; σx σp]
     ############### Extraction of function names #################
 
     F = pbMA.F
@@ -186,9 +92,10 @@ function (foldl::FoldLinearSolveMinAug)(x, p, pbMA::FoldProblemMinimallyAugmente
 
     # the case of sigma_x is a bit more involved
     σx = zero(x)
-    e = zero(x)
+    e  = zero(x)
 
-    for ii=1:length(x)
+    # this is the part which does not work if x is not AbstractVector. Maybe use CartesianIndices
+    for ii in CartesianIndices(x)
         e .= 0 .* e
         e[ii] = 1.0
         d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / (2ϵ2)

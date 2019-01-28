@@ -34,10 +34,10 @@ To install it, please run
 | Branching point detection | Y | Y |
 | Fold detection | Y | Y |
 | Hopf detection | Y | Y |
-| Fold continuation | Y | N |
-| Hopf continuation | Y | N |
-| Periodic Orbit Newton | Y | N |
-| Periodic Orbit continuation | Y | N |
+| Fold continuation | Y | `AbstractVector` |
+| Hopf continuation | Y | `AbstractVector` |
+| Periodic Orbit Newton | Y | `AbstractVector` |
+| Periodic Orbit continuation | Y | `AbstractVector` |
 
 ## To do
 - [ ] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
