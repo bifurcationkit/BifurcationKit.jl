@@ -33,14 +33,14 @@ module PseudoArcLengthContinuation
 		return dottheta(z, tau, xi) - ds
 	end
 	################################################################################################
-	function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
 		if contparams.natural
-			res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions)
+			res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
 			return BorderedVector(res[1], z_pred.p), res[2], res[3], res[4]
 		else
 			return newtonPsArcLength(Fhandle, Jhandle,
 								z_old, tau_old, z_pred,
-								contparams; linearalgo = linearalgo)
+								contparams; linearalgo = linearalgo, normN = normC)
 		end
 	end
 	################################################################################################
@@ -124,7 +124,7 @@ module PseudoArcLengthContinuation
 	end
 	################################################################################################
 	"""
-		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, printsolution = norm, plotsolution::Function = (x;kwargs...)->nothing, finaliseSolution::Function = (x, y)-> nothing, linearalgo   = :bordered, verbosity = 2)
+		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x;kwargs...)->nothing, finaliseSolution::Function = (x, y)-> nothing, linearalgo   = :bordered, verbosity = 2)
 
 	Compute the continuation curve associated to the functional `F` and its jacobian `J`. The parameters are as follows
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
@@ -137,6 +137,7 @@ module PseudoArcLengthContinuation
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> nothing` Function called at the end of each continuation step
 	- `linearalgo   = :bordered`
 	- `verbosity` controls the amount of information printed during the continuation process.
+	- 'normC = norm' norm to be used in the different Newton solves
 
 	The function outputs
 	- `contres::ContResult` structure which contains the computed branch
@@ -179,7 +180,8 @@ module PseudoArcLengthContinuation
 						contParams::ContinuationPar{T, S, E};
 						linearalgo   = :bordering,
 						plot = false,
-						printsolution = norm,
+						printsolution::Function = norm,
+						normC::Function = norm,
 						plotsolution::Function = (x;kwargs...)->nothing,
 						finaliseSolution::Function = (z, tau, step, contResult)-> nothing,
 						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
@@ -210,7 +212,7 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold=true, color=:red)
 		## Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold=true, color=:magenta)
-		u0, fval, exitflag, it_number = newton( x -> Fhandle(x, p0),  u->Jhandle(u, p0), u0, newtonOptions)
+		u0, fval, exitflag, it_number = newton( x -> Fhandle(x, p0),  u->Jhandle(u, p0), u0, newtonOptions, normN = normC)
 		(exitflag == false) && error("Failed to converge initial guess")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0), initial step")
@@ -245,9 +247,7 @@ module PseudoArcLengthContinuation
 
 
 		(verbosity > 0) && printstyled("\n*********** COMPUTING TANGENTS *************", bold=true, color=:magenta)
-		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),
-												u->Jhandle(u, p0 + contParams.ds / 50),
-												u0, newtonOptions)
+		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),u->Jhandle(u, p0 + contParams.ds / 50), u0, newtonOptions, normN = normC)
 		(exitflag == false) && error("Failed to converge Newton algo for initial tangent")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
@@ -278,7 +278,7 @@ module PseudoArcLengthContinuation
 		  	# Corrector
 			z_new, fval, exitflag, it_number  = corrector(Fhandle, Jhandle,
 					 z_old, tau_old, z_pred, contParams,
-					 linearalgo)
+					 linearalgo, normC = normC)
 
 			# Successful step
 		  	if exitflag == true

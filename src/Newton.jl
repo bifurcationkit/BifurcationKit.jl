@@ -95,7 +95,7 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 - flag of convergence
 - number of iterations
 """
-function newton(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}; normN = norm) where T
+function newton(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}; normN::Function = norm) where T
 	# Rename parameters
 	nltol       = options.tol
 	nlmaxit     = options.maxIter
@@ -175,7 +175,7 @@ function newtonPsArcLength(F::Function, Jh,
 						z0::M, tau0::M, z_pred::M,
 						options::ContinuationPar{T};
 						linearalgo = :bordering,
-						normN = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
+						normN::Function = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
 
 	# Rename parameters
 	newtonOpts = options.newtonOptions

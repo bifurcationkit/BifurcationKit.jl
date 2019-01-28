@@ -10,6 +10,7 @@ function test_newton()
 
   opts = Cont.NewtonPar(verbose = false, maxIter = 8)
   sol, hist, flag, _ = @time Cont.newton(F, Jac, x0, opts)
+  sol, hist, flag, _ = @time Cont.newton(F, Jac, x0, opts, normN = x->norm(x,Inf64))
 end
 
 test_newton()

@@ -2,9 +2,9 @@
 import Base: +, -, *, copy, copyto!
 import LinearAlgebra: norm
 
-mutable struct BorderedVector{vectype, T}
-	u::vectype
-	p::T
+mutable struct BorderedVector{vectype1, vectype2}
+	u::vectype1
+	p::vectype2
 end
 copy(b::BorderedVector{vectype, T}) where {vectype, T} = BorderedVector(copy(b.u), b.p)
 norm(b::BorderedVector{vectype, T}) where {vectype, T} = sqrt(norm(b.u)^2 + b.p^2)
