@@ -155,12 +155,12 @@ Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb))
 # dot(res22[2n+1:4n], res12[2n+1:4n])
 #
 # newton convergence toward
-outhopf, _, flag, _ = @time newton(u -> hopfvariable(b)(u),
+outhopf, _, flag, _ = @time Cont.newton(u -> hopfvariable(b)(u),
 							u -> Jac_hopf_fdMA(u, b),
 							hopfpt, NewtonPar(verbose = true))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], " - ", hopfpt[end-1:end], "\n")
 
-outhopf, _, flag, _ = @time newton(u -> hopfvariable(b)(u),
+outhopf, _, flag, _ = @time Cont.newton(u -> hopfvariable(b)(u),
 							x -> Jac_hopf_MA(x, hopfvariable(b)),
 							hopfpt, NewtonPar(verbose = true, linsolve = HopfLinearSolveMinAug(), eigsolve = Default_eig()))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], " - ", hopfpt[end-1:end], "\n")
@@ -205,7 +205,18 @@ println("--> test jacobian expression for Hopf Minimally Augmented")
 # C = jac_hopf_fd[end-1:end,end-1:end]
 # println("--> dp, dom = ",(C - sigma' * X2m) \ (rhs[end-1:end] - sigma' * X1))
 # println("--> dp, dom FD = ",sol_fd[end-1:end])
+outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
+		(x, p) -> Jac_sp(x, a, b, l = p),
+		br, ind_hopf,
+		NewtonPar(verbose = true))
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
 
+br_hopf, u1_hopf = @time Cont.continuationHopf(
+			(x, p, β) ->   F_bru(x, a, β, l = p),
+			(x, p, β) ->  Jac_sp(x, a, β, l = p),
+			br, ind_hopf,
+			b,
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose=false)), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
@@ -241,3 +252,24 @@ jac_PO_sp =  poTrap(l_hopf + 0.01)(orbitguess_f, :jacsparse)
 # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
 println("--> test jacobian expression for Periodic Orbit solve problem")
 @test norm(jac_PO_fd - jac_PO_sp, Inf64) < 1e-5
+
+
+# newton to find Periodic orbit
+opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
+	outpo_f, hist, flag = @time Cont.newton(
+						x ->  poTrap(l_hopf + 0.01)(x),
+						x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
+						orbitguess_f,
+						opt_po)
+	println("--> T = ", outpo_f[end])
+
+# continuation of periodic orbits
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, secant = true, theta = 0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = false))
+	br_pok2, upo , _= @time Cont.continuation(
+							(x, p) ->  poTrap(p)(x),
+							(x, p) ->  poTrap(p)(x, :jacsparse),
+							outpo_f, l_hopf + 0.01,
+							opts_po_cont,
+							plot = false,
+							plotsolution = (x;kwargs...)->heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
+							printsolution = u -> u[end], verbosity = 0)

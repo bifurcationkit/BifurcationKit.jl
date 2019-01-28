@@ -44,40 +44,6 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 end
 ###############################################################################################
 """
-Solve in x the linear system
-J * x = rhs
-It returns the solution and a flag for convergence
-"""
-function linearSolve(J, rhs; Pl = Identity(), tol = 1e-12, solver = :default, verbose = false, maxiter = 200)
-	TY = eltype(rhs)
-	if (solver == :default) || (solver == :default_backslash)
-		return J \ rhs, true, 1
-
-	elseif solver == :gmres
-		res = IterativeSolvers.gmres(J, rhs, Pl = Pl, tol = TY(tol), log = true, verbose = false, restart = 200, maxiter = maxiter)
-		(res[2].iters>= maxiter) && printstyled("IterativeSolvers.gmres iterated maxIter =$(res[2].iters) times without achieving the desired tolerance.\n", color=:red)
-		return res[1], length(res)>1, res[2].iters
-
-	elseif solver == :bicgstabl
-		res = IterativeSolvers.bicgstabl(J, rhs, Pl = Pl, tol = TY(tol), log = true, verbose = false)
-		return res[1], length(res)>1, res[2].iters
-
-	elseif solver == :minres
-		res = IterativeSolvers.minres(J, rhs, Pl = Pl, tol = TY(tol), log = true, verbose = false)
-		return res[1], length(res)>1, res[2].iters
-
-	elseif solver == :gpugmres
-		res = gmresGPU(J, rhs, 20, tol = TY(tol), out = 0, maxIter = 2)
-		return res[1], length(res)>1, res[4]
-
-	elseif solver == :gmresmethods
-		res = KrylovMethods.gmres(x->J*x, rhs, maxiter, tol = TY(tol), out = 0, maxIter = 3)
-		return res[1], length(res)>1, length(res[5])
-
-	end
-end
-###############################################################################################
-"""
 Plot the continued branch of solutions
 """
 function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction::Function) where {T, vectype, M<:BorderedVector{vectype, T}}
@@ -252,7 +218,7 @@ function saveSolution(filename, sol, p, i::Int64, branch, contParam)
 end
 ###############################################################################################
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.
-apply(A::AbstractMatrix, x::AbstractVector) = A*x
+apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
 
 apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)

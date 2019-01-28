@@ -83,8 +83,8 @@ br_nat, u1 = @time Cont.continuation(
 # Cont.plotBranch!(br_nat, marker = :d)
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
-deflationOp = DeflationOperator(2.0,(x,y)->dot(x,y),1.0,[out])
-chanDefPb = DeflatedProblem(x -> F_chan(x,a, 0.01),x -> Jac_mat(x,a, 0.01),deflationOp)
+deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])
+chanDefPb   = DeflatedProblem(x -> F_chan(x,a, 0.01),x -> Jac_mat(x,a, 0.01),deflationOp)
 
 opt_def = opt_newton
 opt_def.tol = 1e-10
@@ -106,6 +106,16 @@ res_explicit = Jacdfsolver(Jacdf(1.1out,chanDefPb,opt_def.linsolve),rhs)[1]
 
 println("--> Test jacobian expression for deflated problem")
 @test norm(res_fd - res_explicit,Inf64) < 1e-6
+
+opt_def = opt_newton
+opt_def.tol = 1e-10
+opt_def.maxIter = 1000
+
+outdef1, _, _ = @time Cont.newtonDeflated(
+						x -> F_chan(x, a, 0.01),
+						x -> Jac_mat(x, a, 0.01),
+						out.*(1 .+ 0.01*rand(n)),
+						opt_def, deflationOp)
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 indfold = 3
@@ -120,16 +130,26 @@ foldpb = FoldProblemMinimallyAugmented(
 foldpb(foldpt)
 
 
-outfold, _ = newtonFold((x, p) -> F_chan(x, p, 0.01),
+outfold, _ = Cont.newtonFold((x, p) -> F_chan(x, p, 0.01),
 			(x, p) -> Jac_mat(x, p, 0.01),
 			foldpt,
 			br.bifpoint[indfold][6],
 			NewtonPar(verbose=true) )
 	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
 
+# continuation of the fold point
+optcontfold = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 3)
+	optcontfold.newtonOptions.tol = 1e-8
+	outfoldco, hist, flag = @time Cont.continuationFold(
+						(x, α, β) ->  F_chan(x, α, β),
+						(x, α, β) -> Jac_mat(x, α, β),
+						br, indfold,
+						0.01,
+						optcontfold, plot = false)
+
 # self defined Fold Problem
 indfold = 2
-outfold, _ = newton(x->foldpb(x),
+outfold, _ = Cont.newton(x->foldpb(x),
 			# (x, α) -> Jac_mat(x, α, 0.01),
 			foldpt,
 			NewtonPar(verbose=true) )

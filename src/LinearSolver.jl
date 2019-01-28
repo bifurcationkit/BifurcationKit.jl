@@ -26,16 +26,16 @@ end
     restart::Int64 = 200    # number of restarts
     maxiter::Int64 = 100
     N = 0                   # dimension of the problem
-    verbose = true
-    log = truex
+    verbose = false
+    log = true
 end
 
 function (l::GMRES_IterativeSolvers{T})(J, rhs) where T
-    J_map = (v) -> J(v)
+    J_map = v -> apply(J, v)
     Jmap = LinearMap{eltype(rhs)}(J_map, l.N, l.N ; ismutating = false)
     res = IterativeSolvers.gmres(Jmap, rhs, tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter)
     (res[2].iters >= l.maxiter) && printstyled("IterativeSolvers.gmres iterated maxIter =$(res[2].iters) times without achieving the desired tolerance.\n", color=:red)
-    return res[1], length(res)>1, res[2].iters
+    return res[1], length(res) > 1, res[2].iters
 end
 
 ####################################################################################################
@@ -43,9 +43,9 @@ end
 ####################################################################################################
 @with_kw mutable struct GMRES_KrylovKit{T} <: LinearSolver
     dim::Int64 = KrylovDefaults.krylovdim # Krylov Dimension
-    atol::T  = T(KrylovDefaults.tol)     # absolute tolerance for solver
-    rtol::T = T(KrylovDefaults.tol)      # relative tolerance for solver
-    restart::Int64 = 200    # number of restarts
+    atol::T  = T(KrylovDefaults.tol)      # absolute tolerance for solver
+    rtol::T  = T(KrylovDefaults.tol)      # relative tolerance for solver
+    restart::Int64 = 200                  # number of restarts
     maxiter::Int64 = KrylovDefaults.maxiter
     verbose::Int = 0
 end
