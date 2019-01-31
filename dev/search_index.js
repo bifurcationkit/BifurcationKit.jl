@@ -205,7 +205,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Fold / Hopf Continuation",
     "title": "Newton refinement",
     "category": "section",
-    "text": "Let us say that ind_fold is the index in br.bifpoint of a Fold point. This guess can be refined by calling the simplified interface. More precisions are provided below for an advanced usage.outfold, hist, flag = @time Cont.newtonFold((x,p) -> F(x, p),\n							(x, p) -> Jac(x, p),\n							br, ind_fold,\n							opt_newton)"
+    "text": "Let us say that ind_fold is the index in br.bifpoint of a Fold point. This guess can be refined by calling the simplified interface. More precisions are provided below for an advanced usage.outfold, hist, flag = @time Cont.newtonFold((x,p) -> F(x, p),\n							(x, p) -> Jac(x, p),\n							br, ind_fold,\n							opt_newton)It is important to note that for improved performance, the hessian should be provided. This is by far the fastest for the computations. Reader interested in this advanced usage should look at the example example/chan.jl. Although it is a simple problem, many different use case are shown in a simple setting."
 },
 
 {
@@ -225,11 +225,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "codim2Continuation/#PseudoArcLengthContinuation.newtonFold-Union{Tuple{vectype}, Tuple{T}, Tuple{Any,Any,Any,Any,Union{BorderedVector{vectype,T}, Array{T,1} where T},Any,NewtonPar}} where vectype where T",
+    "page": "Fold / Hopf Continuation",
+    "title": "PseudoArcLengthContinuation.newtonFold",
+    "category": "method",
+    "text": "This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows\n\nF   = (x, p) -> F(x, p) where p is the parameter associated to the Fold point\ndF  = (x, p) -> d_xF(x, p) associated jacobian\ndFt = (x, p) -> transpose(d_xF(x, p)) associated jacobian, it should be implemented in an efficient manner. For matrix-free methods, tranpose is not readily available.\nd2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2) a bilinear operator representing the hessian of F. It has to provide an expression for d2F(x,p)[v1,v2].\nfoldpointguess initial guess (x0, p0) for the Fold point. It should be a Vector\neigenvec guess for the 0 eigenvector\noptions::NewtonPar\n\n\n\n\n\n"
+},
+
+{
     "location": "codim2Continuation/#PseudoArcLengthContinuation.newtonFold",
     "page": "Fold / Hopf Continuation",
     "title": "PseudoArcLengthContinuation.newtonFold",
     "category": "function",
-    "text": "This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows\n\n(x, p)-> F(x, p) where p is the parameter associated to the Fold point\nJ = (x, p)-> d_xF(x, p) associated jacobian\nJt = (x, p) -> transpose(d_xF(x, p)) associated jacobian, it should be implenented otherwise\nfoldpointguess initial guess (x0, p0) for the Fold point. It should be a Vector\neigenvec guess for the 0 eigenvector\noptions::NewtonPar\n\n\n\n\n\nSimplified call to refine an initial guess for a Fold point. More precisely, the call is as follows newtonFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as usual except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
+    "text": "This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows\n\nF   = (x, p) -> F(x, p) where p is the parameter associated to the Fold point\ndF  = (x, p) -> d_xF(x, p) associated jacobian\ndFt = (x, p) -> transpose(d_xF(x, p)) associated jacobian, it should be implemented in an efficient manner. For matrix-free methods, tranpose is not readily available.\nd2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2) a bilinear operator representing the hessian of F. It has to provide an expression for d2F(x,p)[v1,v2].\nfoldpointguess initial guess (x0, p0) for the Fold point. It should be a Vector\neigenvec guess for the 0 eigenvector\noptions::NewtonPar\n\n\n\n\n\ncall when hessian is unknown, finite differences are then used\n\n\n\n\n\nSimplified call to refine an initial guess for a Fold point. More precisely, the call is as follows\n\n`newtonFold(F, J, Jt, br::ContResult, index::Int64, options)`\n\nor\n\n`newtonFold(F, J, Jt, d2F, br::ContResult, index::Int64, options)`\n\nwhen the Hessian is known. The parameters are as usual except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
 },
 
 {
@@ -245,7 +253,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Fold / Hopf Continuation",
     "title": "PseudoArcLengthContinuation.continuationFold",
     "category": "function",
-    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\nSimplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
+    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nJt = (x, p1, p2) -> transpose(d_xF(x, p1, p2)) associated jacobian\nd2F = (x, p1, p2, v1, v2) -> d2F(x, p1, p2, v1, v2) this is the hessian of F computed at (x, p1, p2) and evaluated at (v1, v2).\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\ncodim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\nwarning: Hessian\nThe hessian of F in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6\n\n\n\n\n\nSimplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
 },
 
 {
@@ -261,7 +269,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Fold / Hopf Continuation",
     "title": "Functions",
     "category": "section",
-    "text": "newtonFoldnewtonHopfcontinuationFoldcontinuationHopf"
+    "text": "newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}newtonFoldnewtonHopfcontinuationFoldcontinuationHopf"
 },
 
 {
@@ -393,22 +401,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library/#PseudoArcLengthContinuation.newtonFold-Tuple{Function,Any,Any,AbstractArray{T,1} where T,AbstractArray{T,1} where T,NewtonPar}",
-    "page": "Library",
-    "title": "PseudoArcLengthContinuation.newtonFold",
-    "category": "method",
-    "text": "This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows\n\n(x, p)-> F(x, p) where p is the parameter associated to the Fold point\nJ = (x, p)-> d_xF(x, p) associated jacobian\nJt = (x, p) -> transpose(d_xF(x, p)) associated jacobian, it should be implenented otherwise\nfoldpointguess initial guess (x0, p0) for the Fold point. It should be a Vector\neigenvec guess for the 0 eigenvector\noptions::NewtonPar\n\n\n\n\n\n"
-},
-
-{
-    "location": "library/#PseudoArcLengthContinuation.newtonFold-Tuple{Function,Any,Any,ContResult,Int64,NewtonPar}",
-    "page": "Library",
-    "title": "PseudoArcLengthContinuation.newtonFold",
-    "category": "method",
-    "text": "Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows newtonFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as usual except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
-},
-
-{
     "location": "library/#PseudoArcLengthContinuation.newtonHopf-Tuple{Function,Any,Any,AbstractArray{T,1} where T,Any,Any,NewtonPar}",
     "page": "Library",
     "title": "PseudoArcLengthContinuation.newtonHopf",
@@ -429,7 +421,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Library",
     "title": "Newton for Fold / Hopf",
     "category": "section",
-    "text": "newtonFold(F::Function, J, Jt, foldpointguess::AbstractVector, eigenvec::AbstractVector, options::NewtonPar)newtonFold(F::Function, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar)newtonHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, eigenvec, eigenvec_ad, options::NewtonPar)newtonHopf(F, J, Jt, br::ContResult, ind_hopf::Int64, options::NewtonPar)"
+    "text": "newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}newtonFold(F::Function, J, Jt, foldpointguess::AbstractVector, eigenvec::AbstractVector, options::NewtonPar)newtonFold(F::Function, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar)newtonHopf(F::Function, J, Jt, hopfpointguess::AbstractVector, eigenvec, eigenvec_ad, options::NewtonPar)newtonHopf(F, J, Jt, br::ContResult, ind_hopf::Int64, options::NewtonPar)"
 },
 
 {
@@ -446,22 +438,6 @@ var documenterSearchIndex = {"docs": [
     "title": "Continuation",
     "category": "section",
     "text": "continuation"
-},
-
-{
-    "location": "library/#PseudoArcLengthContinuation.continuationFold-Tuple{Function,Any,Any,AbstractArray{T,1} where T,Real,AbstractArray{T,1} where T,ContinuationPar}",
-    "page": "Library",
-    "title": "PseudoArcLengthContinuation.continuationFold",
-    "category": "method",
-    "text": "codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows\n\nF = (x, p1, p2) -> F(x, p1, p2) where p is the parameter associated to the Fold point\nJ = (x, p1, p2) -> d_xF(x, p1, p2) associated jacobian\nfoldpointguess initial guess (x0, p10) for the Fold point. It should be a Vector\np2 parameter p2 for which foldpointguess is a good guess\neigenvec guess for the 0 eigenvector at p1_0\noptions::NewtonPar\n\n\n\n\n\n"
-},
-
-{
-    "location": "library/#PseudoArcLengthContinuation.continuationFold-Tuple{Function,Any,Any,ContResult,Int64,Real,ContinuationPar}",
-    "page": "Library",
-    "title": "PseudoArcLengthContinuation.continuationFold",
-    "category": "method",
-    "text": "Simplified call for continuation of Fold point. More precisely, the call is as follows continuationFold(F, J, Jt, br::ContResult, index::Int64, options) where the parameters are as for continuationFold except that you have to pass the branch br from the result of a call to continuation with detection of bifurcations enabled and index is the index of bifurcation point in br you want to refine.\n\n\n\n\n\n"
 },
 
 {
