@@ -12,7 +12,7 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/PeriodicOrbit.jl")
 
 
-	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf
+	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedVector
 	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
@@ -173,17 +173,17 @@ module PseudoArcLengthContinuation
 
 	When solving the Bordered system ``F(x,p) = 0,\\ N(x, p)=0``, one faces the issue of solving the Bordered linear system ``\\begin{bmatrix} J & a    ; b^T & c\\end{bmatrix}\\begin{bmatrix}X ;  y\\end{bmatrix} =\\begin{bmatrix}R ; n\\end{bmatrix}``. This can be solved in many ways via bordering (which requires to Jacobian inverses) or by forming the bordered matrix (which works well for sparse matrices). The choice of method is set by the argument `linearalgo`. Have a look at the function `linearBorderedSolver` for more information.
 	"""
-	function continuation(Fhandle::Function,
+	function continuation(Fhandle,
 						Jhandle,
 						u0,
 						p0::Real,
 						contParams::ContinuationPar{T, S, E};
 						linearalgo   = :bordering,
 						plot = false,
-						printsolution::Function = norm,
-						normC::Function = norm,
-						plotsolution::Function = (x;kwargs...)->nothing,
-						finaliseSolution::Function = (z, tau, step, contResult)-> nothing,
+						printsolution = norm,
+						normC = norm,
+						plotsolution = (x;kwargs...)->nothing,
+						finaliseSolution = (z, tau, step, contResult)-> nothing,
 						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
 		################################################################################################
 		## Rename parameters
@@ -253,10 +253,10 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
 		finaliseSolution(u_pred, u_pred, 1, contRes)
 
-		duds = (u_pred - u0) / (contParams.ds/50);	dpds = convert(eltype(u0), 1.0)
+		duds = (u_pred - u0) * (1 / (contParams.ds/50));	dpds = convert(eltype(u0), 1.0)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
-		duds .= duds ./ α; dpds = dpds / α
+		duds = duds * (1/ α); dpds = dpds / α
 
 		## Initialise continuation
 		step = 0

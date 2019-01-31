@@ -17,6 +17,8 @@ outfold, hist, flag = @time Cont.newtonFold((x,p) -> F(x, p),
 							opt_newton)
 ```
 
+It is important to note that for improved performance, the hessian should be provided. This is by far the fastest for the computations. Reader interested in this advanced usage should look at the example `example/chan.jl`. Although it is a simple problem, many different use case are shown in a simple setting.
+
 ## The case of the Hopf point
 
 One a Hopf point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. We have implemented a **Minimally Augmented** formulation. A simplified interface is provided for its use of the later.
@@ -34,6 +36,10 @@ outfold, hist, flag = @time Cont.newtonHopf((x,p) -> F(x, p),
 
 
 ## Functions
+
+```@docs
+newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
+```
 
 ```@docs
 newtonFold

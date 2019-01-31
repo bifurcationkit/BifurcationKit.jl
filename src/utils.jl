@@ -46,7 +46,7 @@ end
 """
 Plot the continued branch of solutions
 """
-function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction::Function) where {T, vectype, M<:BorderedVector{vectype, T}}
+function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedVector{vectype, T}}
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
 	branch = contres.branch
 
@@ -180,16 +180,17 @@ end
 """
 Compute Jacobian by Finite Differences
 """
-function finiteDifferences(F::Function, x::AbstractVector)
+function finiteDifferences(F, x::AbstractVector)
 	f = F(x)
 	epsi = 1e-9
 	N = length(x)
 	J = zeros(N, N)
 	x1 = copy(x)
 	for i=1:N
-		x1 .= x
+		# x1 .= x
 		x1[i] += epsi
-		J[:, i] .= (F(x1) - F(x))/epsi
+		J[:, i] .= (F(x1) .- F(x)) / epsi
+		x1[i] -= epsi
 	end
 	return J
 end

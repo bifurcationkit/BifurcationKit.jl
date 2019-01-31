@@ -34,7 +34,7 @@ To install it, please run
 | Branching point detection | Y | Y |
 | Fold detection | Y | Y |
 | Hopf detection | Y | Y |
-| Fold continuation | Y | `AbstractVector` |
+| Fold continuation | Y | Y |
 | Hopf continuation | Y | `AbstractVector` |
 | Periodic Orbit Newton | Y | `AbstractVector` |
 | Periodic Orbit continuation | Y | `AbstractVector` |

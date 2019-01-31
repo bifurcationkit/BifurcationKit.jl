@@ -95,7 +95,7 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 - flag of convergence
 - number of iterations
 """
-function newton(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}; normN::Function = norm) where T
+function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) where T
 	# Rename parameters
 	nltol       = options.tol
 	nlmaxit     = options.maxIter
@@ -123,7 +123,7 @@ function newton(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}; normN::F
 		# x .= x .- d
 		minus_!(x,d)
 
-		f .= Fhandle(x)
+		copyto!(f,Fhandle(x))
 		res = normN(f)
 
 		neval += 1
@@ -137,7 +137,7 @@ function newton(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}; normN::F
 end
 
 #simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
-function newton(Fhandle::Function, x0, options:: NewtonPar{T};kwargs...) where T
+function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
 	Jhandle = u-> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
 end
@@ -147,7 +147,7 @@ end
 
 This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
 """
-function newtonDeflated(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
 
@@ -162,7 +162,7 @@ function newtonDeflated(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}, 
 						opt_def;kwargs...)
 end
 
-function newtonDeflated(Fhandle::Function, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
 	Jhandle = u-> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end
@@ -171,12 +171,11 @@ end
 This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` together
 with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 """
-function newtonPsArcLength(F::Function, Jh,
+function newtonPsArcLength(F, Jh,
 						z0::M, tau0::M, z_pred::M,
 						options::ContinuationPar{T};
 						linearalgo = :bordering,
-						normN::Function = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
-
+						normN = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
 	# Rename parameters
 	newtonOpts = options.newtonOptions
 	nltol   = newtonOpts.tol
@@ -211,7 +210,7 @@ function newtonPsArcLength(F::Function, Jh,
 
 	# Main loop
 	while (res > nltol) & (it < nlmaxit) & step_ok
-		dFdl .= (F(x, l+epsi) - F(x, l)) / epsi
+		copyto!(dFdl, (F(x, l+epsi) - F(x, l)) / epsi)
 
 		J = Jh(x, l)
 		u, up, liniter = linearBorderedSolver(J, dFdl,
@@ -240,10 +239,10 @@ function newtonPsArcLength(F::Function, Jh,
 				end
 			end
 		else
-			x .= x .- u
+			minus_!(x, u) 	# x .= x .- u
 			l = l - up
 
-			res_f .= F(x, l)
+			copyto!(res_f, F(x, l))
 			res_n  = N(x, l)
 			res = sqrt(normN(res_f)^2 + res_n^2)
 		end

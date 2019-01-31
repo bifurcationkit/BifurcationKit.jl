@@ -44,7 +44,7 @@ n = 101
 							opt_newton)
 
 
-opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = true, plot_every_n_steps = 40)
+opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40)
 	opts_br0.newtonOptions.maxIter = 70
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 150
@@ -83,12 +83,14 @@ outdef2, _, _ = @time Cont.newtonDeflated(
 plot!(outdef2, label="deflation-2")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
 opts_br0.newtonOptions.verbose = true
+opts_br0.newtonOptions.tol = 1e-10
 indfold = 3
+
 outfold, hist, flag = @time Cont.newtonFold((x, α) -> F_chan(x, α, 0.01),
 										(x, α) -> Jac_mat(x, α, 0.01),
 										br, indfold, #index of the fold point
 										opts_br0.newtonOptions)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 	optcontfold.newtonOptions.tol = 1e-8
@@ -99,6 +101,27 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1,
 						0.01,
 						optcontfold)
 Cont.plotBranch(outfoldco, marker=:d, xlabel="beta", ylabel = "alpha")
+################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
+d2F(x,p,u,v; b = 0.01) = p * d2source_term.(x; b = b) .* u .* v
+
+outfold, hist, flag = @time Cont.newtonFold((x, α) -> F_chan(x, α, 0.01),
+										(x, α) -> Jac_mat(x, α, 0.01),
+										(x, α) -> transpose(Jac_mat(x, α, 0.01)),
+										d2F,
+										br, indfold, #index of the fold point
+										opts_br0.newtonOptions)
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
+
+outfoldco, hist, flag = @time Cont.continuationFold(
+					(x, α, β) ->  F_chan(x, α, β),
+					(x, α, β) -> Jac_mat(x, α, β),
+					(x, α, β) -> transpose(Jac_mat(x, α, β)),
+					β ->((x, α, v1, v2) -> d2F(x,α,v1,v2; b = β)),
+					br, 3,
+					0.01,
+					optcontfold)
 ###################################################################################################
 # GMRES example
 
@@ -121,3 +144,13 @@ ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 							x -> (dx -> dF_chan(x, dx, a, 0.01)),
 							sol,
 							opt_newton_mf)
+
+
+a = BorderedVector(ones(2,3),1.)
+
+b = BorderedVector(a, 2.)
+
+2*b
+similar(a)
+
+similar(b)

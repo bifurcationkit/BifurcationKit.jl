@@ -18,6 +18,10 @@ newtonDeflated
 ```
 
 ## Newton for Fold / Hopf
+```@docs
+newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
+```
+
 
 ```@docs
 newtonFold(F::Function, J, Jt, foldpointguess::AbstractVector, eigenvec::AbstractVector, options::NewtonPar)
