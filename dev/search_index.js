@@ -197,7 +197,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Fold / Hopf Continuation",
     "title": "The case of the Fold point",
     "category": "section",
-    "text": "One a Fold point have been detected after a call to br, _ = continuation(...), it can be refined with the use of newton iterations. We have implemented a Minimally Augmented formulation. A simplified interface is provided for its use of the later."
+    "text": "Once a Fold point have been detected after a call to br, _ = continuation(...), it can be refined with the use of newton iterations. We have implemented a Minimally Augmented formulation. A simplified interface is provided."
 },
 
 {
