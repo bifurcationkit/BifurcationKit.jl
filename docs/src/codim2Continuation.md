@@ -4,7 +4,7 @@ For this to work, it is important to have an analytical expression for the jacob
 
 ## The case of the Fold point
 
-One a Fold point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. We have implemented a **Minimally Augmented** formulation. A simplified interface is provided for its use of the later.
+Once a Fold point have been detected after a call to `br, _ = continuation(...)`, it can be refined with the use of `newton` iterations. We have implemented a **Minimally Augmented** formulation. A simplified interface is provided.
 
 ### Newton refinement
 
