@@ -178,11 +178,11 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `dF  = (x, p) -> d_xF(x, p)` associated jacobian
 - `dFt = (x, p) -> transpose(d_xF(x, p))` associated jacobian, it should be implemented in an efficient manner. For matrix-free methods, `tranpose` is not readily available.
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
-- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `Vector`
+- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `AbstractArray` or a `BorderedVector`
 - `eigenvec` guess for the 0 eigenvector
 - `options::NewtonPar`
 """
-function newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
+function newtonFold(F, J, Jt, d2F, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
 
 	foldvariable = FoldProblemMinimallyAugmented(
 						(x, p) ->  F(x, p),
@@ -208,7 +208,7 @@ end
  """
 call when hessian is unknown, finite differences are then used
  """
-function newtonFold(F, J, Jt, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
+function newtonFold(F, J, Jt, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
 
 	foldvariable = FoldProblemMinimallyAugmented(
 						(x, p) ->  F(x, p),
@@ -287,7 +287,7 @@ codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `options::NewtonPar`
 """
-function continuationFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::AbstractVector, options_cont::ContinuationPar) where {T,vectype}
+function continuationFold(F, J, Jt, d2F, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::Union{AbstractArray, BorderedVector{vectype, T}}, options_cont::ContinuationPar ;kwargs...) where {T,vectype}
 	@warn "Bad way it creates a struct for every p2"
 	# Jacobian for the Fold problem
 	Jac_fold_MA(u0, pb, hess) = (return (u0, pb, hess))
@@ -313,7 +313,7 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedV
 						opt_fold_cont,
 						plot = true,
 						printsolution = u -> u.p,
-						plotsolution = (x;kwargs...)->(xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  ) )
+						plotsolution = (x;kwargs...)->(xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  ) ;kwargs...)
 end
 
 """
@@ -329,7 +329,7 @@ codim 2 continuation of Fold points. This function turns an initial guess for a 
 !!! warning "Hessian"
     The hessian of `F` in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, Jt, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::AbstractVector, options_cont::ContinuationPar ;kwargs...) where {T,vectype}
+function continuationFold(F, J, Jt, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::Union{AbstractArray, BorderedVector{vectype, T}}, options_cont::ContinuationPar ;kwargs...) where {T,vectype}
 	@warn "Bad way it creates a struct for every p2"
 	# Jacobian for the Fold problem
 	Jac_fold_MA(u0::Vector, p2, pb) = (return (u0, pb, x -> x))
@@ -358,9 +358,9 @@ function continuationFold(F, J, Jt, foldpointguess::Union{Vector, BorderedVector
 						plotsolution = (x;kwargs...)->(xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  );kwargs... )
 end
 
-continuationFold(F, J, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::AbstractVector, options_cont::ContinuationPar ; kwargs...)  where {T,vectype} = continuationFold(F, J, (x, p1, p2)->transpose(J(x, p1, p2)), foldpointguess, p2_0, eigenvec, options_cont ; kwargs...)
+continuationFold(F, J, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::Union{AbstractArray, BorderedVector{vectype, T}}, options_cont::ContinuationPar ; kwargs...)  where {T,vectype} = continuationFold(F, J, (x, p1, p2)->transpose(J(x, p1, p2)), foldpointguess, p2_0, eigenvec, options_cont ; kwargs...)
 
-function continuationFold(F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::AbstractVector, options::ContinuationPar ; kwargs...)  where {T,vectype}
+function continuationFold(F, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, p2_0::Real, eigenvec::Union{AbstractArray, BorderedVector{vectype, T}}, options::ContinuationPar ; kwargs...)  where {T,vectype}
 	return continuationFold(F,
 							(x0, p) -> finiteDifferences(x -> F(x, p), x0),
 							foldpointguess, p2_0,

@@ -1,15 +1,21 @@
 using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
+const Cont = PseudoArcLengthContinuation
 
 # test the type BorderedVector
 z_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),1.0)
 tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
-z_pred = z_pred + 2tau_pred
+z_pred = z_pred + 2 * tau_pred
+z_pred = z_pred - 2.0 * tau_pred / 3.
+dot(z_pred, tau_pred)
+Cont.dottheta(z_pred, tau_pred, 0.1)
 
 # test the linear solver LinearBorderSolver
 println("--> Test linear Bordered solver")
 J0 = rand(10,10) * 0.1 + I
 rhs = rand(10)
 sol_explicit = J0 \ rhs
+sol_bd1, sol_bd2, _ = PseudoArcLengthContinuation.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
+
 sol_bd1, sol_bd2, _ = PseudoArcLengthContinuation.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
 
 @test norm(sol_explicit[1:end-1] - sol_bd1, Inf64) < 1e-12
@@ -41,3 +47,7 @@ eil = PseudoArcLengthContinuation.eig_KrylovKit(tol = 1e-9)
 outkk = eil(J0, 20)
 eil = PseudoArcLengthContinuation.eig_MF_KrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
+
+eil = PseudoArcLengthContinuation.Default_eig_sp()
+outdefault = eil(J0, 20)
+@test norm(out[1] - outdefault[1], Inf64) < 1e-7

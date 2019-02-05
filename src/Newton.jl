@@ -5,7 +5,7 @@
 	alpha::T         = 1.0        # damping
 	almin::T         = 0.001      # minimal damping
 	verbose          = false
-	damped           = false
+	linesearch       = false
 	linsolve::S 	 = Default()
 	eigsolve::E 	 = Default_eig()
 end
@@ -215,10 +215,10 @@ function newtonPsArcLength(F, Jh,
 		J = Jh(x, l)
 		u, up, liniter = linearBorderedSolver(J, dFdl,
 						tau0, res_f, res_n, theta,
-						solver = newtonOpts.linsolve,
+						newtonOpts.linsolve,
 						algo = linearalgo)
 
-		if newtonOpts.damped
+		if newtonOpts.linesearch
 			step_ok = false
 			while (step_ok == false) & (alpha > almin)
 				x_pred = x - alpha * u

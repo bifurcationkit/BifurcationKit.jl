@@ -67,7 +67,7 @@ module PseudoArcLengthContinuation
 				BorderedVector(tau_old.u * contparams.theta / length(tau_old.u),
 				 				tau_old.p * (1 - contparams.theta)),
 								0 * z_old.u, 1.0, contparams.theta,
-								solver = contparams.newtonOptions.linsolve)
+								contparams.newtonOptions.linsolve)
 		tau = BorderedVector(tauu, taup)
 		b = sign((tau.p) * convert(T, z_new.p - z_old.p))
 		α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
@@ -124,7 +124,7 @@ module PseudoArcLengthContinuation
 	end
 	################################################################################################
 	"""
-		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x;kwargs...)->nothing, finaliseSolution::Function = (x, y)-> nothing, linearalgo   = :bordered, verbosity = 2)
+		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x;kwargs...)->nothing, finaliseSolution::Function = (x, y)-> nothing, linearalgo   = :bordering, verbosity = 2)
 
 	Compute the continuation curve associated to the functional `F` and its jacobian `J`. The parameters are as follows
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
@@ -135,7 +135,7 @@ module PseudoArcLengthContinuation
 	- `printsolution = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
 	- `plotsolution::Function = (x; kwargs...)->nothing` function implementing the plotting of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> nothing` Function called at the end of each continuation step
-	- `linearalgo   = :bordered`
+	- `linearalgo   = :bordering`. Must belong to `[:bordering, :full]`
 	- `verbosity` controls the amount of information printed during the continuation process.
 	- 'normC = norm' norm to be used in the different Newton solves
 
@@ -256,7 +256,7 @@ module PseudoArcLengthContinuation
 		duds = (u_pred - u0) * (1 / (contParams.ds/50));	dpds = convert(eltype(u0), 1.0)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
-		duds = duds * (1/ α); dpds = dpds / α
+		duds = duds / α; dpds = dpds / α
 
 		## Initialise continuation
 		step = 0
