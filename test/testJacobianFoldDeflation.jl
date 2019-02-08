@@ -84,6 +84,10 @@ br_nat, u1 = @time Cont.continuation(
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])
+
+# quick test of scalardM deflation
+Cont.scalardM(deflationOp, sol, 5sol)
+
 chanDefPb   = DeflatedProblem(x -> F_chan(x,a, 0.01),x -> Jac_mat(x,a, 0.01),deflationOp)
 
 opt_def = opt_newton

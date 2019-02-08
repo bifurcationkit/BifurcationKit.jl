@@ -15,12 +15,14 @@ dot(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype
 similar(b::BorderedVector{vectype, T}) where {T, vectype} = BorderedVector(similar(b.u), similar(b.p))
 similar(b::BorderedVector{vectype, T}) where {T <: Real, vectype} = BorderedVector(similar(b.u), T(0))
 ################################################################################
-minus_!(x,y) = (x .= x .- y)
+minus_!(x,y) = (x .= x .- y) # necessary to put a . for ApproxFun to work
+minus_!(x::AbstractArray,y::AbstractArray) = (x .= x .- y)
 minus_!(x::T,y::T) where {T <:Real} = (x = x - y)
-function minus_!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real }
-	# minus_!(x.u, y.u)
-	x.u = x.u - y.u
+function minus_!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real}
+	minus_!(x.u, y.u)
+	# x.u .= x.u .- y.u
 
+	# Carefull here. If I uncomment the line below, then x.p will be left unaffected
 	# minus_!(x.p, y.p)
 	x.p = x.p - y.p
 end
@@ -33,13 +35,12 @@ function (*)(a::Real, cp::BorderedVector{vectype, T}) where {vectype, T}
 end
 (*)(cp::BorderedVector{vectype, T}, a::Real) where {vectype, T} = (*)(a, cp)
 ################################################################################
-function (/)(a::Real, cp::BorderedVector{vectype, T}) where {vectype, T}
+function (/)(cp::BorderedVector{vectype, T}, a::Real) where {vectype, T}
      newx = (cp.u) / a
      newy = (cp.p) / a
      result = BorderedVector(newx, newy)
      return result
 end
-(/)(cp::BorderedVector{vectype, T}, a::Real) where {vectype, T} = (/)(a, cp)
 ################################################################################
 function (-)(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T}
     newx = a.u - b.u
@@ -56,8 +57,7 @@ function (+)(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where
 end
 ################################################################################
 function dottheta(u1, u2, p1::T, p2::T, theta::T) where T
-	return dot(u1, u2) * theta/length(u1) + p1*p2*(1-theta)
-	# return dot(u1, u2) * xi^2/length(u1) + p1*p2
+	return dot(u1, u2) * theta / length(u1) + p1 * p2 * (1 - theta)
 end
 ################################################################################
 function normtheta(u, p::T, theta::T) where T
@@ -74,8 +74,9 @@ end
 ################################################################################
 """
 This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
+It requires the state space to be Vector like.
 """
-function getBorderedLinearSystemFull(J, dR, tau::BorderedVector{vectype, T}, theta::T) where {vectype, T}
+function getBorderedLinearSystemFull(J, dR::AbstractVector, tau::BorderedVector{vectype, T}, theta::T) where {vectype, T}
 	N = length(tau.u)
 	A = spzeros(N+1, N+1)
 	A[1:N, 1:N] .= J
@@ -83,17 +84,6 @@ function getBorderedLinearSystemFull(J, dR, tau::BorderedVector{vectype, T}, the
 	A[end, 1:N] .= tau.u .* theta/length(tau.u)
 	A[end, end]  = tau.p * (1-theta)
 	return A
-end
-################################################################################
-"""
-Compute the tangent in the case of continuation with tangent prediction from bordered system
-"""
-function getTangent(J, dR, tau::BorderedVector{vectype, T}, theta::T, solver::S) where {vectype, T, S <: LinearSolver}
-	@assert 1==0 "Old code, soon to be removed"
-	N = length(tau.u)
-	A = getJacArcLength(J, dR, tau, theta)
-	out = A \ vcat(zeros(N), 1)
-	return BorderedVector(out[1:end-1], out[end])
 end
 ################################################################################
 # solve in dX, dl
@@ -112,8 +102,8 @@ end
 
 
 # solve in dX, dl
-# J  * dX + a * dl = R
-# b' * dX + c * dl = n
+# J  * dX + a * dR = R
+# dz.u' * dX + dz.p * dl = n
 function linearBorderedSolver(J, dR,
 							dz::BorderedVector{vectype, T}, R, n::T, theta::T, solver::S;
 							algo=:bordering)  where {T, vectype, S <: LinearSolver}

@@ -197,10 +197,10 @@ function newtonPsArcLength(F, Jh,
 	# println("------> NewtBordered, resn = $res_n, ", arcLengthEq(z_pred-z0, tau0, xi, ds))
 
 	dX   = similar(res_f)
-	dl   = T(0.)
+	dl   = T(0)
 	dFdl = (F(x, l + epsi) - res_f) / epsi
 
-	res     = sqrt(normN(res_f)^2 + res_n^2)
+	res     = max(normN(res_f), abs(res_n))
 	resHist = [res]
 	it = 0
 
@@ -225,7 +225,7 @@ function newtonPsArcLength(F, Jh,
 				l_pred = l - alpha * up
 				res_f .= F(x_pred, l_pred)
 				res_n  = N(x_pred, l_pred)
-				res = sqrt(normN(res_f)^2 + res_n^2)
+				res = max(normN(res_f), abs(res_n))
 
 				if res < resHist[end]
 					if (res < resHist[end]/2) & (alpha < 1)

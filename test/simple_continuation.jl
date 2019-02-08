@@ -11,6 +11,7 @@ opts.newtonOptions.tol     = 1e-8
 opts.newtonOptions.verbose = false
 
 br1, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0)
+show(br1)
 
 br2, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, printsolution = x -> norm(x,2))
 
@@ -26,6 +27,11 @@ opts.newtonOptions.linesearch = false
 br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64), linearalgo = :bordering)
 
 br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64), linearalgo = :full)
+
+# test for stopping continuation based on user defined function
+finaliseSolution = (z, tau, step, contResult) -> (step < 20)
+br5a, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, finaliseSolution = finaliseSolution)
+@test length(br5a.branch) == 22
 
 # test for different predictors
 opts.secant = true

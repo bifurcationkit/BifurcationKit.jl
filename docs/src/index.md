@@ -753,8 +753,8 @@ Newton Iterations
 We can now perform numerical continuation wrt the parameter `a`. Again, we need to define some parameters for the continuation:
 
 ```julia
-opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 1.0, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
-	opts_br0.newtonOptions.damped  = false
+opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143
 ```

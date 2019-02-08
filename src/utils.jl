@@ -187,7 +187,6 @@ function finiteDifferences(F, x::AbstractVector)
 	J = zeros(N, N)
 	x1 = copy(x)
 	for i=1:N
-		# x1 .= x
 		x1[i] += epsi
 		J[:, i] .= (F(x1) .- F(x)) / epsi
 		x1[i] -= epsi
@@ -202,20 +201,18 @@ Save solution / data in JLD2 file
 - `p` is the parameter
 - `i` is the index of the solution to be saved
 """
-function saveSolution(filename, sol, p, i::Int64, branch, contParam)
+function saveSolution(filename, sol, p, i::Int64, br::ContResult, contParam)
 	# create a group in the JLD format
 	jldopen(filename*".jld2", "a+") do file
-		# file["branch"] = branch
 	    mygroup = JLD2.Group(file, "sol-$i")
 	    mygroup["sol"] = sol
 		mygroup["param"] = p
 	end
 
 	jldopen(filename*"-branch.jld2", "w") do file
-		file["branch"] = branch
+		file["branch"] = br
 		file["contParam"] = contParam
 	end
-
 end
 ###############################################################################################
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.

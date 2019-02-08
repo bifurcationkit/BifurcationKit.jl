@@ -4,10 +4,21 @@ const Cont = PseudoArcLengthContinuation
 # test the type BorderedVector
 z_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),1.0)
 tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
-z_pred = z_pred + 2 * tau_pred
+Cont.minus_!(z_pred, 2 * tau_pred)
+
 z_pred = z_pred - 2.0 * tau_pred / 3.
+z_pred / 2.0
+z_pred * 2.0
+2.0 * z_pred
 dot(z_pred, tau_pred)
 Cont.dottheta(z_pred, tau_pred, 0.1)
+Cont.dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
+
+z = BorderedVector(z_pred, rand(10))
+z2 = BorderedVector(z_pred, rand(10))
+2 * z
+z / 2.
+
 
 # test the linear solver LinearBorderSolver
 println("--> Test linear Bordered solver")

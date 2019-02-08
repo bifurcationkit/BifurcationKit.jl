@@ -28,11 +28,6 @@ module PseudoArcLengthContinuation
 		return dottheta(u, du, p, dp, xi) - ds
 	end
 	################################################################################################
-	function arcLengthEq(z::M, tau::M, xi::T, ds::T) where {T, vectype, M<:BorderedVector{vectype, T}}
-		@assert 1==0
-		return dottheta(z, tau, xi) - ds
-	end
-	################################################################################################
 	function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
 		if contparams.natural
 			res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
@@ -134,7 +129,7 @@ module PseudoArcLengthContinuation
 	- `plot = false` whether to plot the solution while computing
 	- `printsolution = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
 	- `plotsolution::Function = (x; kwargs...)->nothing` function implementing the plotting of the solution.
-	- `finaliseSolution::Function = (z, tau, step, contResult) -> nothing` Function called at the end of each continuation step
+	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation step (stop it by returning false) or saving personal data...
 	- `linearalgo   = :bordering`. Must belong to `[:bordering, :full]`
 	- `verbosity` controls the amount of information printed during the continuation process.
 	- 'normC = norm' norm to be used in the different Newton solves
@@ -171,7 +166,7 @@ module PseudoArcLengthContinuation
 
 	## Bordered linear solver
 
-	When solving the Bordered system ``F(x,p) = 0,\\ N(x, p)=0``, one faces the issue of solving the Bordered linear system ``\\begin{bmatrix} J & a    ; b^T & c\\end{bmatrix}\\begin{bmatrix}X ;  y\\end{bmatrix} =\\begin{bmatrix}R ; n\\end{bmatrix}``. This can be solved in many ways via bordering (which requires to Jacobian inverses) or by forming the bordered matrix (which works well for sparse matrices). The choice of method is set by the argument `linearalgo`. Have a look at the function `linearBorderedSolver` for more information.
+	When solving the Bordered system ``F(x,p) = 0,\\ N(x, p)=0``, one faces the issue of solving the Bordered linear system ``\\begin{bmatrix} J & a    ; b^T & c\\end{bmatrix}\\begin{bmatrix}X ;  y\\end{bmatrix} =\\begin{bmatrix}R ; n\\end{bmatrix}``. This can be solved in many ways via bordering (which requires two Jacobian inverses) or by forming the bordered matrix (which works well for sparse matrices). The choice of method is set by the argument `linearalgo`. Have a look at the function `linearBorderedSolver` for more information.
 	"""
 	function continuation(Fhandle,
 						Jhandle,
@@ -183,7 +178,7 @@ module PseudoArcLengthContinuation
 						printsolution = norm,
 						normC = norm,
 						plotsolution = (x;kwargs...)->nothing,
-						finaliseSolution = (z, tau, step, contResult)-> nothing,
+						finaliseSolution = (z, tau, step, contResult) -> true,
 						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
 		################################################################################################
 		## Rename parameters
@@ -207,13 +202,15 @@ module PseudoArcLengthContinuation
 		z_pred   = BorderedVector(copy(u0), p0)
 		tau_pred = BorderedVector(copy(u0), p0)
 		tau_new  = BorderedVector(copy(u0), p0)
+
+		# filename to save the computations
 		filename = "branch-"*string(Dates.now())
 
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold=true, color=:red)
 		## Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold=true, color=:magenta)
 		u0, fval, exitflag, it_number = newton( x -> Fhandle(x, p0),  u->Jhandle(u, p0), u0, newtonOptions, normN = normC)
-		(exitflag == false) && error("Failed to converge initial guess")
+		(exitflag == false) && error("Newton failed to converge initial guess")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0), initial step")
 
@@ -248,12 +245,12 @@ module PseudoArcLengthContinuation
 
 		(verbosity > 0) && printstyled("\n*********** COMPUTING TANGENTS *************", bold=true, color=:magenta)
 		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),u->Jhandle(u, p0 + contParams.ds / 50), u0, newtonOptions, normN = normC)
-		(exitflag == false) && error("Failed to converge Newton algo for initial tangent")
+		(exitflag == false) && error("Newton failed to converge for the computation of the initial tangent")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
 		finaliseSolution(u_pred, u_pred, 1, contRes)
 
-		duds = (u_pred - u0) * (1 / (contParams.ds/50));	dpds = convert(eltype(u0), 1.0)
+		duds = (u_pred - u0) / (contParams.ds/50);	dpds = convert(eltype(u0), 1.0)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
 		duds = duds / α; dpds = dpds / α
@@ -261,6 +258,7 @@ module PseudoArcLengthContinuation
 		## Initialise continuation
 		step = 0
 		continuationFailed = false
+		# number of iterations for newton correction
 		it_number = 0
 
 		z_old     = BorderedVector(copy(u_pred), p0)
@@ -316,10 +314,11 @@ module PseudoArcLengthContinuation
 				# Saving Solution
 				if contParams.save
 					(verbosity > 0) && printstyled("--> Solving solution in file\n", color=:green)
-					saveSolution(filename, z_old.u, z_old.p, step, contRes.branch, contParams)
+					saveSolution(filename, z_old.u, z_old.p, step, contRes, contParams)
 				end
 
-				finaliseSolution(z_old.u, tau_old.u, step, contRes)
+				# call user defined finaliseSolution function. If returns false, stop continuation
+				!finaliseSolution(z_old.u, tau_old.u, step, contRes) && (step = maxSteps)
 			else
 				(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 				(verbosity > 0) && println("--> Newton Residuals history = ", fval)
