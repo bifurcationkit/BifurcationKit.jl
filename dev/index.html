@@ -381,8 +381,8 @@ const Δ = Derivative(sol.space, 2)</code></pre><p>Finally, we need to define so
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     4.6975e-13         1
-  0.080470 seconds (329.42 k allocations: 12.979 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to define some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 1.0, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
-	opts_br0.newtonOptions.damped  = false
+  0.080470 seconds (329.42 k allocations: 12.979 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to define some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143</code></pre><p>We also provide a function to check how the <code>ApproxFun</code> solution vector grows:</p><pre><code class="language-julia">function finalise_solution(z, tau, step, contResult)
 	printstyled(color=:red,&quot;--&gt; AF length = &quot;, (z, tau) .|&gt; length ,&quot;\n&quot;)
