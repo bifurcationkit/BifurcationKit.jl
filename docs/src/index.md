@@ -680,7 +680,7 @@ We then need to overwrite some functions of `ApproxFun`:
 ```julia
 # specific methods for ApproxFun
 import Base: length, eltype, copyto!
-import LinearAlgebra: norm, dot
+import LinearAlgebra: norm, dot, axpy!, rmul!
 
 eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
@@ -690,9 +690,12 @@ norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
 norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
 
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
-dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3]*y[3])
+dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
-copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = y.coefficients)
+axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y)
+rmul!(y::ApproxFun.Fun, b::Float64) = (y .= b .* y)
+
+copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = copy(y.coefficients))
 ```
 
 We can easily write our functional with boundary conditions in a convenient manner using `ApproxFun`:
@@ -747,13 +750,13 @@ Newton Iterations
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     4.6975e-13         1
-  0.080470 seconds (329.42 k allocations: 12.979 MiB)
+  0.079482 seconds (344.44 k allocations: 13.856 MiB)
 ```
 
 We can now perform numerical continuation wrt the parameter `a`. Again, we need to define some parameters for the continuation:
 
 ```julia
-opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.7, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143
@@ -765,6 +768,7 @@ We also provide a function to check how the `ApproxFun` solution vector grows:
 function finalise_solution(z, tau, step, contResult)
 	printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
 	# chop!(z, 1e-14);chop!(tau, 1e-14)
+	true
 end
 ```
 
@@ -777,7 +781,8 @@ br, u1 = @time Cont.continuation(
 		out, 3.0, opts_br0,
 		plot = true,
 		finaliseSolution = finalise_solution,
-		plotsolution = (x;kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"))
+		plotsolution = (x; kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"),
+		normC = x -> norm(x, Inf64))
 ```
 and you should see 
 

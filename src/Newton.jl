@@ -1,4 +1,3 @@
-
 @with_kw mutable struct NewtonPar{T, S <: LinearSolver, E <: EigenSolver}
 	tol::T   		 = 1e-10
 	maxIter::Int  	 = 50
@@ -87,10 +86,12 @@ end
 """
 		newton(F, J, x0, options, normN = norm)
 
-This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `Default()` which is the operator backslash which works well for Sparse / Dense matrices. Iterative solver (GMRES) are also implemented. You should implement your own for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`
+This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `Default()` which is the operator backslash which works well for Sparse / Dense matrices. Iterative solver (GMRES) are also implemented. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable provided are as follows:
+- `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
+- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolve`
 
 # Output:
-- solution
+- solution:
 - history of residuals
 - flag of convergence
 - number of iterations
@@ -121,9 +122,9 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 
 		# Update solution
 		# x .= x .- d
-		minus_!(x,d)
+		minus!(x, d)
 
-		copyto!(f,Fhandle(x))
+		copyto!(f, Fhandle(x))
 		res = normN(f)
 
 		neval += 1
@@ -138,7 +139,7 @@ end
 
 #simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
 function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
-	Jhandle = u-> finiteDifferences(Fhandle, u)
+	Jhandle = u -> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
 end
 
@@ -147,7 +148,7 @@ end
 
 This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
 """
-function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs...) where {T, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
 
@@ -157,13 +158,13 @@ function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::Def
 	# Rename parameters
 	opt_def = @set options.linsolve = DeflatedLinearSolver()
 	return newton(u -> deflatedPb(u),
-						u-> Jacdf(u, deflatedPb, options.linsolve),
-						x0,
-						opt_def;kwargs...)
+				u-> Jacdf(u, deflatedPb, options.linsolve),
+				x0,
+				opt_def; kwargs...)
 end
 
 function newtonDeflated(Fhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
-	Jhandle = u-> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
+	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end
 
@@ -210,7 +211,7 @@ function newtonPsArcLength(F, Jh,
 
 	# Main loop
 	while (res > nltol) & (it < nlmaxit) & step_ok
-		copyto!(dFdl, (F(x, l+epsi) - F(x, l)) / epsi)
+		copyto!(dFdl, (F(x, l + epsi) - F(x, l)) / epsi)
 
 		J = Jh(x, l)
 		u, up, liniter = linearBorderedSolver(J, dFdl,
@@ -239,12 +240,13 @@ function newtonPsArcLength(F, Jh,
 				end
 			end
 		else
-			minus_!(x, u) 	# x .= x .- u
+			minus!(x, u) 	# x .= x .- u
 			l = l - up
 
 			copyto!(res_f, F(x, l))
+
 			res_n  = N(x, l)
-			res = sqrt(normN(res_f)^2 + res_n^2)
+			res = max(normN(res_f), res_n)
 		end
 		# Book-keeping
 		push!(resHist, res)

@@ -7,7 +7,7 @@ const Cont = PseudoArcLengthContinuation
 ####################################################################################################
 # specific methods for ApproxFun
 import Base: length, eltype, copyto!
-import LinearAlgebra: norm, dot
+import LinearAlgebra: norm, dot, axpy!, rmul!
 
 eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
@@ -19,7 +19,10 @@ norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
-copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = y.coefficients)
+axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y)
+rmul!(y::ApproxFun.Fun, b::Float64) = (y .= b .* y)
+
+copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = copy(y.coefficients))
 ####################################################################################################
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -46,6 +49,7 @@ end
 function finalise_solution(z, tau, step, contResult)
 	printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
 	# chop!(z, 1e-14);chop!(tau, 1e-14)
+	true
 end
 
 sol = Fun( x-> x * (1-x), Interval(0.0, 1.0))
@@ -58,18 +62,19 @@ opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 				sol, opt_new, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.5, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.7, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143
 
 	br, u1 = @time Cont.continuation(
-								(x, p) -> F_chan(x, p, 0.01),
-								(x, p) -> Jac_chan(x, p, 0.01),
-								out, 3.0, opts_br0,
-								plot = true,
-								finaliseSolution = finalise_solution,
-								plotsolution = (x;kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"))
+					(x, p) -> F_chan(x, p, 0.01),
+					(x, p) -> Jac_chan(x, p, 0.01),
+					out, 3.0, opts_br0,
+					plot = true,
+					finaliseSolution = finalise_solution,
+					plotsolution = (x; kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"),
+					normC = x -> norm(x, Inf64))
 
 
 # plot(br.branch[2,:])

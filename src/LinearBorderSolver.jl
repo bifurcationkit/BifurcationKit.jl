@@ -1,59 +1,48 @@
 # structure for Bordered vectors
-import Base: +, -, *, /, copy, copyto!
-import LinearAlgebra: norm, dot, length, similar
+import Base: copy, copyto!
+import LinearAlgebra: norm, dot, length, similar, axpy!, rmul!
 
 mutable struct BorderedVector{vectype1, vectype2}
 	u::vectype1
 	p::vectype2
 end
-copy(b::BorderedVector{vectype, T})   where {vectype, T} = BorderedVector(copy(b.u), b.p)
-length(b::BorderedVector{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
-norm(b::BorderedVector{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u,p), norm(b.p,p))
-copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p))
-copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p)
-dot(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T} = dot(a.u, b.u) + dot(a.p, b.p)
+
+# copy(b::BorderedVector{vectype, T})   where {vectype, T} = BorderedVector(copy(b.u), b.p)
+
 similar(b::BorderedVector{vectype, T}) where {T, vectype} = BorderedVector(similar(b.u), similar(b.p))
 similar(b::BorderedVector{vectype, T}) where {T <: Real, vectype} = BorderedVector(similar(b.u), T(0))
-################################################################################
-minus_!(x,y) = (x .= x .- y) # necessary to put a . for ApproxFun to work
-minus_!(x::AbstractArray,y::AbstractArray) = (x .= x .- y)
-minus_!(x::T,y::T) where {T <:Real} = (x = x - y)
-function minus_!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real}
-	minus_!(x.u, y.u)
-	# x.u .= x.u .- y.u
 
+copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p))
+copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p)
+
+
+length(b::BorderedVector{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
+
+dot(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T} = dot(a.u, b.u) + dot(a.p, b.p)
+
+norm(b::BorderedVector{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
+################################################################################
+function rmul!(A::BorderedVector{vectype, T}, b::T) where {vectype, T <:Real}
+	# Scale an array A by a scalar b overwriting A in-place
+	rmul!(A.u, b)
+	A.p = A.p * b
+end
+################################################################################
+function axpy!(a::T, X::BorderedVector{vectype, T}, Y::BorderedVector{vectype, T}) where {vectype, T <:Real}
+	# Overwrite Y with a*X + Y, where a is a scalar
+	axpy!(a, X.u, Y.u)
+	Y.p = a * X.p + Y.p
+end
+################################################################################
+# this function is actually axpy!(-1, y, x)
+minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
+minus!(x::AbstractArray, y::AbstractArray) = (x .= x .- y)
+minus!(x::T, y::T) where {T <:Real} = (x = x - y)
+function minus!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real}
+	minus!(x.u, y.u)
 	# Carefull here. If I uncomment the line below, then x.p will be left unaffected
 	# minus_!(x.p, y.p)
 	x.p = x.p - y.p
-end
-################################################################################
-function (*)(a::Real, cp::BorderedVector{vectype, T}) where {vectype, T}
-     newx = a * (cp.u)
-     newy = a * (cp.p)
-     result = BorderedVector(newx, newy)
-     return result
-end
-(*)(cp::BorderedVector{vectype, T}, a::Real) where {vectype, T} = (*)(a, cp)
-################################################################################
-function (/)(cp::BorderedVector{vectype, T}, a::Real) where {vectype, T}
-     newx = (cp.u) / a
-     newy = (cp.p) / a
-     result = BorderedVector(newx, newy)
-     return result
-end
-################################################################################
-function (-)(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T}
-    newx = a.u - b.u
-    newy = a.p - b.p
-    result  = BorderedVector(newx, newy)
-    return result
-end
-################################################################################
-function (+)(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T}
-    newx = a.u + b.u
-    newy = a.p + b.p
-    result  = BorderedVector(newx, newy)
-    return result
 end
 ################################################################################
 function dottheta(u1, u2, p1::T, p2::T, theta::T) where T

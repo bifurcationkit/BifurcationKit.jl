@@ -39,19 +39,22 @@ module PseudoArcLengthContinuation
 		end
 	end
 	################################################################################################
-	function getPredictor(z_old::M, tau::M, contparams) where {T, vectype, M<:BorderedVector{vectype, T}}
-		return z_old + contparams.ds * tau
+	function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M<:BorderedVector{vectype, T}}
+		# we perform z_pred = z_old + contparams.ds * tau
+		copyto!(z_pred, z_old)
+		axpy!(contparams.ds, tau, z_pred)
 	end
 	################################################################################################
-	function getTangentSecant(z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
 		(verbosity > 0) && println("--> predictor = Secant")
-		# secant predictor
-		tau = z_new - z_old
-		α = sign(contparams.ds) / normtheta(tau, contparams.theta)
-		return α * tau
+		# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
+		copyto!(tau_new, z_new)
+		minus!(tau_new, z_old)
+		α = sign(contparams.ds) / normtheta(tau_new, contparams.theta)
+		rmul!(tau_new, α)
 	end
 	################################################################################################
-	function getTangentBordered(z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
 		(verbosity > 0) && println("--> predictor = Tangent")
 		# tangent predictor
 		epsi = contparams.finDiffEps
@@ -66,7 +69,9 @@ module PseudoArcLengthContinuation
 		tau = BorderedVector(tauu, taup)
 		b = sign((tau.p) * convert(T, z_new.p - z_old.p))
 		α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
-		return α * tau
+		# tau_new = α * tau
+		copyto!(tau_new, tau)
+		rmul!(tau_new, α)
 	end
 	################################################################################################
 	function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
@@ -145,7 +150,7 @@ module PseudoArcLengthContinuation
 	The pseudo arclength continuation method solve the equation ``F(x,p) = 0`` (or dimension N) together with the pseudo-arclength consraint ``N(x, p) = \\frac{\\theta}{length(u)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve is parametrised by ``s`` so that ``(x(s),p(s))`` is a curve of solution to ``F(x,p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the solution curve, we solve an equation of dimension N+1 which is called a Bordered system.
 
 	!!! warning "Parameter `theta`"
-	    The parameter `theta` in the type `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems in which cases the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured to much.
+	    The parameter `theta` in the type `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems in which cases the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
 
 	The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the type `ContinuationPar`.
 
@@ -197,12 +202,6 @@ module PseudoArcLengthContinuation
 			contParams.computeEigenValues = true
 		end
 
-
-		# variables to hold the predictor
-		z_pred   = BorderedVector(copy(u0), p0)
-		tau_pred = BorderedVector(copy(u0), p0)
-		tau_new  = BorderedVector(copy(u0), p0)
-
 		# filename to save the computations
 		filename = "branch-"*string(Dates.now())
 
@@ -210,7 +209,7 @@ module PseudoArcLengthContinuation
 		## Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold=true, color=:magenta)
 		u0, fval, exitflag, it_number = newton( x -> Fhandle(x, p0),  u->Jhandle(u, p0), u0, newtonOptions, normN = normC)
-		(exitflag == false) && error("Newton failed to converge initial guess")
+		!exitflag && error("Newton failed to converge initial guess")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0), initial step")
 
@@ -243,14 +242,14 @@ module PseudoArcLengthContinuation
 		finaliseSolution(u0, u0, 0, contRes)
 
 
-		(verbosity > 0) && printstyled("\n*********** COMPUTING TANGENTS *************", bold=true, color=:magenta)
-		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),u->Jhandle(u, p0 + contParams.ds / 50), u0, newtonOptions, normN = normC)
-		(exitflag == false) && error("Newton failed to converge for the computation of the initial tangent")
+		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold=true, color=:magenta)
+		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),u->Jhandle(u, p0 + contParams.ds / T(50)), u0, newtonOptions, normN = normC)
+		!exitflag && error("Newton failed to converge for the computation of the initial tangent")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
 		finaliseSolution(u_pred, u_pred, 1, contRes)
 
-		duds = (u_pred - u0) / (contParams.ds/50);	dpds = convert(eltype(u0), 1.0)
+		duds = (u_pred - u0) / (contParams.ds / T(50));	dpds = T(1.0)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
 		duds = duds / α; dpds = dpds / α
@@ -261,14 +260,19 @@ module PseudoArcLengthContinuation
 		# number of iterations for newton correction
 		it_number = 0
 
+		# variables to hold the predictor
+		z_pred   = BorderedVector(copy(u0), p0)
+		tau_pred = BorderedVector(copy(u0), p0)
+		tau_new  = BorderedVector(copy(u0), p0)
+
 		z_old     = BorderedVector(copy(u_pred), p0)
 		tau_old   = BorderedVector(copy(duds), dpds)
 
 		(verbosity > 0) && println("--> Start continuation from p = ", z_old.p)
 		## Main continuation loop
 		while (step < maxSteps) & ~continuationFailed & (z_old.p < contParams.pMax) & (z_old.p > contParams.pMin)
-			# predictor
-			z_pred =  getPredictor(z_old, tau_old, contParams)
+			# predictor: z_pred
+			getPredictor!(z_pred, z_old, tau_old, contParams)
 			(verbosity > 0) && println("########################################################################")
 			(verbosity > 0) && @printf("Start of Continuation Step %d : Parameter: p1 = %2.4e from %2.4e\n", step, z_pred.p, z_old.p)
 			(length(contRes.branch[4, :])>1 && (verbosity > 0)) && @printf("Current step size  = %2.4e   Previous step size = %2.4e\n", contParams.ds, contRes.branch[4, end-1])
@@ -283,9 +287,9 @@ module PseudoArcLengthContinuation
 				(verbosity > 0) && printstyled("--> Step Converged in $it_number Nonlinear Solver Iterations!\n", color=:green)
 				# get predictor
 				if contParams.secant
-					tau_new = getTangentSecant(z_new, z_old, contParams, verbosity)
+					getTangentSecant!(tau_new, z_new, z_old, contParams, verbosity)
 				else
-					tau_new = getTangentBordered(z_new, z_old, tau_old, Fhandle, Jhandle, contParams, verbosity)
+					getTangentBordered!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, verbosity)
 				end
 
 		  		# Output
@@ -297,9 +301,8 @@ module PseudoArcLengthContinuation
 					detectBifucation(contParams, contRes, z_old, tau_old, printsolution, verbosity)
 				end
 
-				# to be improved later (allocations, ...)
-				copyto!(z_old, z_new) 		# z_old   = 0 * z_old   + z_new
-				copyto!(tau_old, tau_new)	# tau_old = 0 * tau_old + tau_new
+				copyto!(z_old, z_new)
+				copyto!(tau_old, tau_new)
 
 				if contParams.computeEigenValues
 					# number of eigenvalues to be computed
