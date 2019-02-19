@@ -5,6 +5,9 @@ k = 2
 N = 10
 F = (x, p) -> p .* x .+ x.^(k+1)/(k+1) .+ 1.0e-2
 Jac_m = (x, p) -> diagm(0 => p  .+ x.^k)
+
+normInf = x -> norm(x,Inf64)
+
 opts = PseudoArcLengthContinuation.ContinuationPar(dsmax = 0.02, dsmin=1e-2, ds=0.0001, maxSteps = 140, pMin = -3)
 x0 = 0.01 * ones(N)
 opts.newtonOptions.tol     = 1e-8
@@ -16,17 +19,17 @@ show(br1)
 br2, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, printsolution = x -> norm(x,2))
 
 # test for different norms
-br3, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64))
+br3, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf)
 
 # test for linesearch in Newton method
 opts.newtonOptions.linesearch = true
-br4, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64))
+br4, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf) # (19.03 k allocations: 1.254 MiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts.newtonOptions.linesearch = false
-br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64), linearalgo = :bordering)
+br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = :bordering)
 
-br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = x -> norm(x,Inf64), linearalgo = :full)
+br5, sol, _ = @time PseudoArcLengthContinuation.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = :full)
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult) -> (step < 20)

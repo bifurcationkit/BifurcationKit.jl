@@ -120,8 +120,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 		J = Jhandle(x)
 		d, flag, itlinear = options.linsolve(J, f)
 
-		# Update solution
-		# x .= x .- d
+		# Update solution: x .= x .- d
 		minus!(x, d)
 
 		copyto!(f, Fhandle(x))
@@ -192,10 +191,10 @@ function newtonPsArcLength(F, Jh,
 
 	# Initialise iterations
 	x = copy(z_pred.u);  l = z_pred.p
+	x_pred = copy(x)
 
 	# Initialise residuals
 	res_f = F(x, l);  res_n = N(x, l)
-	# println("------> NewtBordered, resn = $res_n, ", arcLengthEq(z_pred-z0, tau0, xi, ds))
 
 	dX   = similar(res_f)
 	dl   = T(0)
@@ -221,19 +220,23 @@ function newtonPsArcLength(F, Jh,
 
 		if newtonOpts.linesearch
 			step_ok = false
-			while (step_ok == false) & (alpha > almin)
-				x_pred = x - alpha * u
+			while !step_ok & (alpha > almin)
+				# x_pred = x - alpha * u
+				copyto!(x_pred, x)
+				axpy!(-alpha, u, x_pred)
+
 				l_pred = l - alpha * up
-				res_f .= F(x_pred, l_pred)
+				copyto!(res_f, F(x_pred, l_pred))
+
 				res_n  = N(x_pred, l_pred)
 				res = max(normN(res_f), abs(res_n))
 
 				if res < resHist[end]
-					if (res < resHist[end]/2) & (alpha < 1)
+					if (res < resHist[end] / 2) & (alpha < 1)
 						alpha *=2
 					end
 					step_ok = true
-					x .= x_pred
+					copyto!(x, x_pred)
 					l  = l_pred
 				else
 					alpha /= 2
