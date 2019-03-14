@@ -40,7 +40,7 @@ To install it, please run
 | Periodic Orbit continuation | Y | `AbstractVector` |
 
 ## To do
-- [ ] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
+- [x] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
 - [ ] Compute Hopf Normal Form
 - [ ] Implement Preconditioner for the Matrix Free computation of Periodic Orbits based on Finite Differences
 - [ ] Inplace implementation

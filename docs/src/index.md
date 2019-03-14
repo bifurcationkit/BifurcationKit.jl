@@ -8,7 +8,7 @@ Finally, we leave it to the user to take advantage of automatic differentiation.
 
 ## Other softwares
 
-We were inspired by [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). One can also mention the venerable AUTO, or also, [MATCONT](http://www.matcont.ugent.be/) and [COCO](https://sourceforge.net/projects/cocotools/) or [Trilinos](https://trilinos.org/). Most continuation softwares are listed on [DSWeb](https://dsweb.siam.org/Software). There is also this MATLAB continuation [code](https://www.dropbox.com/s/inqwpl0mp7o1oy0/AvitabileICMNS2016Workshop.zip?dl=0) by [D. Avitabile](https://www.maths.nottingham.ac.uk/plp/pmzda/index.html).
+We were inspired by [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). One can also mention the venerable AUTO, or also, [XPPAUT](http://www.math.pitt.edu/~bard/xpp/xpp.html), [MATCONT](http://www.matcont.ugent.be/) and [COCO](https://sourceforge.net/projects/cocotools/) or [Trilinos](https://trilinos.org/). Most continuation softwares are listed on [DSWeb](https://dsweb.siam.org/Software). There is also this MATLAB continuation [code](https://www.dropbox.com/s/inqwpl0mp7o1oy0/AvitabileICMNS2016Workshop.zip?dl=0) by [D. Avitabile](https://www.maths.nottingham.ac.uk/plp/pmzda/index.html).
 
 
 In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl) to PyDSTools, and also [Bifurcations.jl](https://github.com/tkf/Bifurcations.jl).
@@ -462,27 +462,28 @@ Finally, to monitor if the solution is constant in space, we will use the follow
 function finalise_solution(z, tau, step, contResult)
 	n = div(length(z), 2)
 	printstyled(color=:red, "--> Solution constant = ", norm(diff(z[1:n])), " - ", norm(diff(z[n+1:2n])), "\n")
+	return true
 end
 ```
 
 We can now compute to equilibrium and its stability
 
 ```julia
-n = 101
+n = 301
 
 a = 2.
 b = 5.45
 
 sol0 = vcat(a * ones(n), b/a * ones(n))
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolve = eig_KrylovKit(tol=1e-6, dim = 60))
 	out, hist, flag = @time Cont.newton(
 		x -> F_bru(x, a, b),
 		x -> Jac_sp(x, a, b),
 		sol0,
 		opt_newton)
 		
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 16, plot_every_n_steps = 50)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 41, plot_every_n_steps = 50, newtonOptions = opt_newton)
 	opts_br0.newtonOptions.maxIter = 20
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 280
@@ -496,7 +497,7 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8
 		plot = true,
 		plotsolution = (x;kwargs...)->(N = div(length(x), 2);plot!(x[1:N], subplot=4, label="");plot!(x[N+1:2N], subplot=4, label="")),
 		finaliseSolution = finalise_solution,
-		printsolution = x->norm(x, Inf64))		
+		printsolution = x -> norm(x, Inf64))		
 ```
 
 We obtain the following bifurcation diagram with 3 Hopf bifurcation points
@@ -511,17 +512,17 @@ We use the bifurcation points guesses located in `br.bifpoint` to turn them into
 ind_hopf = 1
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
-outhopf, hist, flag = Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
-            (x, p) -> Jac_mat(x, a, b, l = p),
-			br, ind_hopf,
-			NewtonPar(verbose = false))
+outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
+				(x, p) -> Jac_sp(x, a, b, l = p),
+				br, ind_hopf,
+				opt_newton)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], "\n")
 ```
 
 which produces
 
 ```julia
---> We found a Hopf Point at l = 0.5232588119320768, ω = 2.139509289549472
+--> We found a Hopf Point at l = 0.5164377051987692, ω = 2.13950928953342, from l = 0.5197012664156633
 ```
 
 We can also perform a Hopf continuation with respect to parameters `l, β`
@@ -529,7 +530,7 @@ We can also perform a Hopf continuation with respect to parameters `l, β`
 ```julia
 br_hopf, u1_hopf = @time Cont.continuationHopf(
 	(x, p, β) ->   F_bru(x, a, β, l = p),
-	(x, p, β) -> Jac_mat(x, a, β, l = p),
+	(x, p, β) -> Jac_sp(x, a, β, l = p),
 	br, ind_hopf,
 	b,
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=true)))
@@ -560,15 +561,15 @@ l_hopf = hopfpt[end-1]
 ωH     = hopfpt[end] |> abs
 
 # number of time slices for the periodic orbit
-M = 35
+M = 100
 
 orbitguess = zeros(2n, M)
 phase = []; scalphase = []
-vec_hopf = br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
+vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
 	orbitguess[:, ii] .= real.(hopfpt[1:2n] +
-		26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.279)))
+		26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.235)))
 	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
 end
 ```
@@ -578,7 +579,7 @@ We want to make two remarks. The first is that an initial guess is composed of a
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 ```
 
-The second remark concerns the phase `0.279` written above. To account for the additional parameter, periodic orbit localisation using Shooting methods or Finite Differences methods add an additional constraint. In the present case, this constraint is
+The second remark concerns the phase `0.235` written above. To account for the additional parameter, periodic orbit localisation using Shooting methods or Finite Differences methods add an additional constraint. In the present case, this constraint is
 
 $$< u(0) - u_{hopf}, \phi> = 0$$
 
@@ -615,24 +616,23 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 			x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
 			orbitguess_f,
 			opt_po)
-	println("--> T = ", outpo_f[end])
+	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 ```
 
 and obtain
 
 ```julia
-Newton Iterations
+Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     2.8606e-01         0
-        1                2     8.4743e-03         1
-        2                3     4.4453e-03         1
-        3                4     1.2891e-04         1
-        4                5     4.4295e-07         1
-        5                6     3.5476e-12         1
-  6.605374 seconds (96.14 k allocations: 2.031 GiB, 5.14% gc time)
---> T = 3.04216754648728
+        0                1     9.7352e-02         0
+        1                2     2.2367e-02         1
+        2                3     5.1125e-04         1
+        3                4     6.4370e-06         1
+        4                5     5.8870e-10         1
+ 25.460922 seconds (5.09 M allocations: 22.759 GiB, 31.76% gc time)
+--> T = 2.978950450406386, amplitude = 0.35069253154451707
 ```
 
 and

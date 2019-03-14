@@ -29,7 +29,7 @@ function show(io::IO, br::PseudoArcLengthContinuation.ContResult)
 		println(io, "Bifurcation points:")
 		for ii in eachindex(br.bifpoint)
 			bp  = br.bifpoint[ii]
-			println(io, "- ", bp[1], " point, at p = ", bp[3])
+			println(io, "- $ii, ", bp[1], " point, at p = ", bp[3])
 		end
 	end
 end

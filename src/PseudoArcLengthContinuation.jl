@@ -1,5 +1,5 @@
 module PseudoArcLengthContinuation
-	using Parameters, IterativeSolvers, Plots, JLD2, Printf, Dates, LinearMaps, Setfield, BlockArrays
+	using Parameters, Plots, JLD2, Printf, Dates, LinearMaps, Setfield, BlockArrays
 
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
@@ -11,12 +11,11 @@ module PseudoArcLengthContinuation
 	include("HopfCont.jl")
 	include("periodicorbit/PeriodicOrbit.jl")
 
-
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedVector
 	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
-			Default_eig, Default_eig_sp, eig_IterativeSolvers, eig_KrylovKit, eig_MF_KrylovKit
+			Default_eig, Default_eig_sp, eig_IterativeSolvers, eig_KrylovKit, eig_MF_KrylovKit, getEigenVector
 	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 	export  ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
@@ -24,7 +23,7 @@ module PseudoArcLengthContinuation
 
 	################################################################################################
 	# equation of the arc length constraint
-	function arcLengthEq(u, p, du, dp, xi, ds)
+	@inline function arcLengthEq(u, p, du, dp, xi, ds)
 		return dottheta(u, du, p, dp, xi) - ds
 	end
 	################################################################################################
@@ -33,7 +32,7 @@ module PseudoArcLengthContinuation
 			res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
 			return BorderedVector(res[1], z_pred.p), res[2], res[3], res[4]
 		else
-			return newtonPsArcLength(Fhandle, Jhandle,
+			return newtonPseudoArcLength(Fhandle, Jhandle,
 								z_old, tau_old, z_pred,
 								contparams; linearalgo = linearalgo, normN = normC)
 		end
@@ -182,7 +181,7 @@ module PseudoArcLengthContinuation
 						plot = false,
 						printsolution = norm,
 						normC = norm,
-						plotsolution = (x;kwargs...)->nothing,
+						plotsolution = (x;kwargs...) -> nothing,
 						finaliseSolution = (z, tau, step, contResult) -> true,
 						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
 		################################################################################################
@@ -208,7 +207,7 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold=true, color=:red)
 		## Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold=true, color=:magenta)
-		u0, fval, exitflag, it_number = newton( x -> Fhandle(x, p0),  u->Jhandle(u, p0), u0, newtonOptions, normN = normC)
+		u0, fval, exitflag, it_number = newton(x -> Fhandle(x, p0),  u -> Jhandle(u, p0), u0, newtonOptions, normN = normC)
 		!exitflag && error("Newton failed to converge initial guess")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0), initial step")
@@ -243,7 +242,7 @@ module PseudoArcLengthContinuation
 
 
 		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold=true, color=:magenta)
-		u_pred, fval, exitflag, it_number = newton( x -> Fhandle(x, p0 + contParams.ds/50),u->Jhandle(u, p0 + contParams.ds / T(50)), u0, newtonOptions, normN = normC)
+		u_pred, fval, exitflag, it_number = newton(x -> Fhandle(x, p0 + contParams.ds / T(50)),u -> Jhandle(u, p0 + contParams.ds / T(50)), u0, newtonOptions, normN = normC)
 		!exitflag && error("Newton failed to converge for the computation of the initial tangent")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")

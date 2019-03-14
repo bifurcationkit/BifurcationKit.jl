@@ -171,7 +171,7 @@ end
 This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` together
 with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 """
-function newtonPsArcLength(F, Jh,
+function newtonPseudoArcLength(F, Jh,
 						z0::M, tau0::M, z_pred::M,
 						options::ContinuationPar{T};
 						linearalgo = :bordering,

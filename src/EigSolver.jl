@@ -3,6 +3,8 @@ using IterativeSolvers, KrylovKit, Parameters, Arpack, LinearAlgebra
 
 abstract type EigenSolver end
 
+# the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
+getEigenVector(eigsolve::EigenSolver, vecs, n::Int) = vecs[:, n]
 
 ####################################################################################################
 # Solvers for default \ operator (backslash)
@@ -26,7 +28,6 @@ function (l::Default_eig_sp)(J, nev::Int64)
     λ, ϕ = Arpack.eigs(J, nev = nev, which = :LR)
     return λ, ϕ
 end
-
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
@@ -41,10 +42,9 @@ end
 
 function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
     # for now, we don't have an eigensolver for non hermitian matrices
-    @assert 1==0 "not implemented"
+    @assert 1==0 "Not implemented: IterativeSolvers does not have an eigensolver yet!"
     return res[1], length(res)>1, res[2].iters
 end
-
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
@@ -63,6 +63,8 @@ function (l::eig_KrylovKit{T})(J, nev::Int64) where T
     return vals, vec, true, info.numops
 end
 
+getEigenVector(eigsolve::eig_KrylovKit{T}, vecs, n::Int) where T = vecs[n]
+
 # Matrix-Free version, needs to specify an example of rhs x₀
 @with_kw struct eig_MF_KrylovKit{T, vectype} <: EigenSolver
     dim::Int64 = KrylovDefaults.krylovdim        # Krylov Dimension
@@ -78,3 +80,5 @@ function (l::eig_MF_KrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
     vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol)
     return vals, vec, true, info.numops
 end
+
+getEigenVector(eigsolve::eig_MF_KrylovKit{T, vectype}, vecs, n::Int) where {T, vectype} = vecs[n]

@@ -32,6 +32,7 @@ function axpy!(a::T, X::BorderedVector{vectype, T}, Y::BorderedVector{vectype, T
 	# Overwrite Y with a*X + Y, where a is a scalar
 	axpy!(a, X.u, Y.u)
 	Y.p = a * X.p + Y.p
+	return Y
 end
 ################################################################################
 # this function is actually axpy!(-1, y, x)
@@ -46,7 +47,7 @@ function minus!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) whe
 end
 ################################################################################
 function dottheta(u1, u2, p1::T, p2::T, theta::T) where T
-	return dot(u1, u2) * theta / length(u1) + p1 * p2 * (1 - theta)
+	return dot(u1, u2) * theta / length(u1) + p1 * p2 * (one(T) - theta)
 end
 ################################################################################
 function normtheta(u, p::T, theta::T) where T
@@ -71,7 +72,7 @@ function getBorderedLinearSystemFull(J, dR::AbstractVector, tau::BorderedVector{
 	A[1:N, 1:N] .= J
 	A[1:N, end] .= dR
 	A[end, 1:N] .= tau.u .* theta/length(tau.u)
-	A[end, end]  = tau.p * (1-theta)
+	A[end, end]  = tau.p * (one(T)-theta)
 	return A
 end
 ################################################################################
@@ -105,7 +106,7 @@ function linearBorderedSolver(J, dR,
 
 	if algo == :bordering
 		xiu = theta / length(dz.u)
-		xip = (1-theta)
+		xip = (one(T)-theta)
 
 		x1, _, it1 = solver(J,  R)
 		x2, _, it2 = solver(J, dR)

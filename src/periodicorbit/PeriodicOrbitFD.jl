@@ -42,7 +42,7 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
 end
 
 """
-This encodes the functional for finding periodic orbits based on finite differences using the Trapezoidal rule
+This encodes the previous functional for finding periodic orbits based on finite differences using the Trapezoidal rule
 """
 function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype) where {vectype <: AbstractVector, S}
     M = poPb.M
@@ -99,7 +99,7 @@ function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ
     T = u0[end]
     h = T / M
 
-	J = BlockArray(spzeros(M * N ,M * N), N * ones(Int64,M),  N * ones(Int64,M))
+	J = BlockArray(spzeros(M * N, M * N), N * ones(Int64,M),  N * ones(Int64,M))
 
 	In = spdiagm( 0 => ones(N))
 	On = spzeros(N, N)
@@ -119,27 +119,46 @@ function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ
 	return J
 end
 
+"""
+Function waiting to be accepted to BlockArrays.jl
+"""
+function blockToSparse(J::AbstractBlockArray)
+	nl, nc = size(J.blocks)
+    # form the first line of blocks
+    res = J[Block(1,1)]
+    for j=2:nc
+        res = hcat(res,J[Block(1,j)])
+    end
+    # continue with the other lines
+    for i=2:nl
+        line = J[Block(i,1)]
+        for j=2:nc
+            line = hcat(line,J[Block(i,j)])
+        end
+        res = vcat(res,line)
+    end
+    return res
+end
 
-function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacobian) where {vectype, S}
+function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacsparse) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
     N = div(length(u0) - 1, M)
     T = u0[end]
     h = T / M
-
-	J = JacobianPeriodicFD(poPb, u0)
+	J_block = JacobianPeriodicFD(poPb, u0)
 
 	# we now set up the last line / column
 	δ = 1e-9
     dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
 
 	# this bad for performance. Get converted to SparseMatrix at the next line
+	J = blockToSparse(J_block)
 	J = hcat(J, dTFper[1:end-1])
-	J = vcat(J, spzeros(1, N*M+1))
+	J = vcat(J, spzeros(1, N*M+1)) # this line is 5% of compute time
 
 	J[N*M+1, 1:N] .=  poPb.ϕ
 	J[N*M+1, N*M+1] = dTFper[end]
-
 	return J
 end
 

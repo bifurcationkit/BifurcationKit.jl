@@ -160,9 +160,8 @@ function newtonHopf(F, J, Jt, br::ContResult, ind_hopf::Int64, options::NewtonPa
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt[2]][1][bifpt[end]])
-
-	eigenvec = br.eig[bifpt[2]][2][:, bifpt[end]]
-	eigenvec_ad = conj.(br.eig[bifpt[2]][2][:, bifpt[end]])
+	eigenvec = getEigenVector(options.eigsolve ,br.eig[bifpt[2]][2] ,bifpt[end])
+	eigenvec_ad = conj.(eigenvec)
 
 	# solve the hopf equations
 	outhopf, hist, flag =  newtonHopf(F, J, Jt, hopfpointguess, eigenvec, eigenvec_ad, options)
@@ -222,7 +221,7 @@ Simplified call for continuation of Hopf point. More precisely, the call is as f
 function continuationHopf(F, J, Jt, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
-	eigenvec = br.eig[bifpt[2]][2][:, bifpt[end] ]
+	eigenvec = getEigenVector(options_cont.newtonOptions.eigsolve ,br.eig[bifpt[2]][2] ,bifpt[end])
 	eigenvec_ad = conj.(eigenvec)
 	return continuationHopf(F, J, Jt, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; kwargs...)
 end
