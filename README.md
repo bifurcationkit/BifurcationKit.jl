@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/rveltz/PseudoArcLengthContinuation.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/PseudoArcLengthContinuation.jl?branch=master)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev)
 
-This package aims at solving equations F(u,λ)=0 where λ∈ℝ starting from an initial guess (u0,λ0). It relies on the pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from (u0,λ0). A Newton method is then used to correct this predictor.
+This Julia package aims at solving equations F(u,λ)=0 where λ∈ℝ starting from an initial guess (u0,λ0). It relies on the pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from (u0,λ0). A Newton method is then used to correct this predictor.
 
 The current package focuses on large scale problem and multiple hardwares. Hence, the goal is to use Matrix Free methods on GPU or a cluster to solve non linear PDE (for example).
 

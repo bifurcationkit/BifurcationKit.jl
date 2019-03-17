@@ -63,6 +63,22 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100, linsolve = D
 
 heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
+
+# using Arpack
+# J0 = dF_sh(sol_hexa, -.1, 1.3)
+# Arpack.eigs(J0, nev = 10, which = :LR, sigma = 0.)
+#
+# using KrylovKit
+# @time KrylovKit.eigsolve(J0,10, :LR)
+#
+# using ArnoldiMethod
+# decomp,_ = @time ArnoldiMethod.partialschur(x -> J0\x, nev = 10, which = LR(), tol=1e-6)
+# partialeigen(decomp)
+#
+# using IterativeSolvers
+# IterativeSolvers.ei
+
+
 # 0.7*vec(sol1 .* exp.(vec(exp.(-0*X.^2 .- X'.^2/50.))))
 # 0.3*sol_hexa .* vec(1 .-exp.(-0X.^2 .- (X.-lx)'.^2/(2*8^2))) p = -.175
 ###################################################################################################

@@ -585,7 +585,7 @@ $$< u(0) - u_{hopf}, \phi> = 0$$
 
 where `u_{hopf} = hopfpt[1:2n]` and $\phi$ is `real.(vec_hopf)`. This is akin to a Poincare section.
 
-This constraint fixes the phase of the periodic orbit. By plotting `plot(phase, scalphase)`, one can find the phase `0.279`. We can now use Newton iterations to find a periodic orbit.
+This constraint fixes the phase of the periodic orbit. By plotting `plot(phase, scalphase)`, one can find the phase `0.235`. We can now use Newton iterations to find a periodic orbit.
 
 We first create a functional which holds the problem
 
@@ -789,4 +789,4 @@ and you should see
 ![](chan-af-bif-diag.png)
 
 
-
+# Example 5: 2d - Gross-Pitaevski equation on GPU
