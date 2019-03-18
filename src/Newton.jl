@@ -33,7 +33,7 @@ end
 	dsgrow::T	= 1.1
 
 	# parameters for scaling arclength step size
-	theta::T              = 1.0 # parameter in the dot product used for the extended system
+	theta::T              = 0.5 # parameter in the dot product used for the extended system
     doArcLengthScaling    = false
     gGoal::T              = 0.5
     gMax::T               = 0.8

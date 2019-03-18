@@ -16,6 +16,10 @@ To install it, please run
 
 `] add https://github.com/rveltz/PseudoArcLengthContinuation.jl`
 
+## Website
+
+The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuation.jl)
+
 ## Main features
 
 - Matrix Free Newton solver with generic linear / eigen solver. Idem for the arc-length continuation
