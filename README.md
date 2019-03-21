@@ -8,7 +8,21 @@ This Julia package aims at solving equations F(u,λ)=0 where λ∈ℝ starting f
 
 The current package focuses on large scale problem and multiple hardwares. Hence, the goal is to use Matrix Free methods on GPU or a cluster to solve non linear PDE (for example).
 
-**If you use this package for your work, please cite it!! Open source development strongly depends on this.**
+**If you use this package for your work, please cite it!! Open source development strongly depends on this. It is hosted on HAL-Inria as follows:**
+
+```
+@misc{veltz:hal-02071874,
+  TITLE = {{PseudoArcLengthContinuation.jl}},
+  AUTHOR = {Veltz, Romain},
+  URL = {https://hal.inria.fr/hal-02071874},
+  YEAR = {2019},
+  MONTH = Mar,
+  KEYWORDS = {Pseudo Arclength Continuation},
+  PDF = {https://hal.inria.fr/hal-02071874/file/PseudoArcLengthContinuation.jl-master.zip},
+  HAL_ID = {hal-02071874},
+  HAL_VERSION = {v1},
+}
+```
 
 ## Installation 
 
@@ -18,7 +32,7 @@ To install it, please run
 
 ## Website
 
-The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuation.jl)
+The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuation.jl).
 
 ## Main features
 

@@ -120,6 +120,7 @@ module PseudoArcLengthContinuation
 		nev_ = max(sum( real.(contResult.eig[end][1]) .> 0) + 2, contparams.nev)
 		eig_elements = contparams.newtonOptions.eigsolve(J, contparams.nev)
 		(mod(step, contparams.save_eig_every_n_steps) == 0 ) && push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))
+		eig_elements
 	end
 	################################################################################################
 	"""
@@ -305,9 +306,9 @@ module PseudoArcLengthContinuation
 
 				if contParams.computeEigenValues
 					# number of eigenvalues to be computed
-					computeEigenvalues(contParams, contRes, Jhandle(z_old.u, z_old.p),  step)
+					res = computeEigenvalues(contParams, contRes, Jhandle(z_old.u, z_old.p),  step)
 					push!(contRes.stability, mapreduce(x->real(x)<0, *, contRes.eig[end][1]))
-
+					(verbosity > 0) && printstyled(color=:green,"--> Computed ",contParams.nev," eigenvalues in ",res[end]," iterations\n")
 				end
 
 		  		# Plotting

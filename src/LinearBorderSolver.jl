@@ -79,8 +79,7 @@ end
 # solve in dX, dl
 # J  * dX + a * dl = R
 # b' * dX + c * dl = n
-function linearBorderedSolver(J, a, b, c::T, R, n::T,
-							solver::S)  where {vectype, T, S <: LinearSolver}
+function linearBorderedSolver(J, a, b, c::T, R, n::T, solver::S)  where {vectype, T, S <: LinearSolver}
 		x1, _, it1 = solver(J, R)
 		x2, _, it2 = solver(J, a)
 
@@ -89,8 +88,7 @@ function linearBorderedSolver(J, a, b, c::T, R, n::T,
 
 		return dX, dl, (it1, it2)
 end
-
-
+################################################################################
 # solve in dX, dl
 # J  * dX + a * dR = R
 # dz.u' * dX + dz.p * dl = n
@@ -106,13 +104,13 @@ function linearBorderedSolver(J, dR,
 
 	if algo == :bordering
 		xiu = theta / length(dz.u)
-		xip = (one(T)-theta)
+		xip = one(T)-theta
 
 		x1, _, it1 = solver(J,  R)
 		x2, _, it2 = solver(J, dR)
 
 		dl = (n - dot(dz.u, x1) * xiu) / (dz.p * xip - dot(dz.u, x2) * xiu)
-		dX = x1 - dl * x2
+		dX = x1 .- dl .* x2
 
 		return dX, dl, (it1, it2)
 	end
