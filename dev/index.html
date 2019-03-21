@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · Pseudo Arc Length Continuation in Julia</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>Pseudo Arc Length Continuation in Julia</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href>Home</a><ul class="internal"><li><a class="toctext" href="#Other-softwares-1">Other softwares</a></li><li><a class="toctext" href="#A-word-on-performance-1">A word on performance</a></li><li class="toplevel"><a class="toctext" href="#Example-1:-nonlinear-pendulum-1">Example 1: nonlinear pendulum</a></li><li><a class="toctext" href="#Continuation-of-Fold-points-1">Continuation of Fold points</a></li><li><a class="toctext" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a></li><li class="toplevel"><a class="toctext" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></li><li><a class="toctext" href="#Snaking-computed-with-deflation-1">Snaking computed with deflation</a></li><li class="toplevel"><a class="toctext" href="#Example-3:-Brusselator-in-1d-1">Example 3: Brusselator in 1d</a></li><li><a class="toctext" href="#Continuation-of-Hopf-points-1">Continuation of Hopf points</a></li><li><a class="toctext" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></li><li class="toplevel"><a class="toctext" href="#Example-4:-nonlinear-pendulum-with-ApproxFun-1">Example 4: nonlinear pendulum with <code>ApproxFun</code></a></li><li class="toplevel"><a class="toctext" href="#Example-5:-2d-Gross-Pitaevski-equation-on-GPU-1">Example 5: 2d - Gross-Pitaevski equation on GPU</a></li></ul></li><li><span class="toctext">Advanced Usage</span><ul><li><a class="toctext" href="linearsolver/">Linear Solvers</a></li><li><a class="toctext" href="detectionBifurcation/">Bifurcations</a></li><li><a class="toctext" href="codim2Continuation/">Fold / Hopf Continuation</a></li><li><a class="toctext" href="periodicOrbitCont/">Periodic Orbits</a></li></ul></li><li><a class="toctext" href="faq/">Frequently Asked Questions</a></li><li><a class="toctext" href="library/">Library</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Home</a></li></ul><a class="edit-page" href="https://github.com/rveltz/PseudoArcLengthContinuation.jl/blob/master/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Home</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="PseudoArcLengthContinuation.jl-1" href="#PseudoArcLengthContinuation.jl-1">PseudoArcLengthContinuation.jl</a></h1><p>This package aims at solving equations <span>$F(u,\lambda)=0$</span> where <span>$\lambda \in\mathbb R$</span> starting from an initial guess <span>$(u_0,\lambda_0)$</span>. It relies on the pseudo arclength continuation algorithm which provides a <em>predictor</em> <span>$(u_1,\lambda_1)$</span> from <span>$(u_0,\lambda_0)$</span>. A Newton method is then used to correct this predictor.</p><p>The current package focuses on large scale problem and multiple hardware. Hence, the goal is to use Matrix Free / Sparse methods on GPU or a cluster in order to solve non linear equations (PDE for example).</p><p>Finally, we leave it to the user to take advantage of automatic differentiation.</p><h2><a class="nav-anchor" id="Other-softwares-1" href="#Other-softwares-1">Other softwares</a></h2><p>We were inspired by <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. One can also mention the venerable AUTO, or also, <a href="http://www.math.pitt.edu/~bard/xpp/xpp.html">XPPAUT</a>, <a href="http://www.matcont.ugent.be/">MATCONT</a> and <a href="https://sourceforge.net/projects/cocotools/">COCO</a> or <a href="https://trilinos.org/">Trilinos</a>. Most continuation softwares are listed on <a href="https://dsweb.siam.org/Software">DSWeb</a>. There is also this MATLAB continuation <a href="https://www.dropbox.com/s/inqwpl0mp7o1oy0/AvitabileICMNS2016Workshop.zip?dl=0">code</a> by <a href="https://www.maths.nottingham.ac.uk/plp/pmzda/index.html">D. Avitabile</a>.</p><p>In Julia, we have for now a <a href="https://github.com/JuliaDiffEq/PyDSTool.jl">wrapper</a> to PyDSTools, and also <a href="https://github.com/tkf/Bifurcations.jl">Bifurcations.jl</a>.</p><p>One design choice is that we try not to require <code>u</code> to be a subtype of an <code>AbstractArray</code> as this would forbid the use of spectral methods (like the one from <code>ApproxFun.jl</code>) or some GPU package, <em>e.g.</em> <code>ArrayFire.jl</code>. So far, our implementation does not allow this for Fold / Hopf continuation and computation of periodic orbits. It will be improved later.</p><h2><a class="nav-anchor" id="A-word-on-performance-1" href="#A-word-on-performance-1">A word on performance</a></h2><p>The examples which follow have not been written with the goal of performance but rather simplicity. One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.</p><p>For example, in the first example below, one could use <code>BandedMatrices.jl</code> for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.</p><h1><a class="nav-anchor" id="Example-1:-nonlinear-pendulum-1" href="#Example-1:-nonlinear-pendulum-1">Example 1: nonlinear pendulum</a></h1><p>This is a simple example in which we aim at solving <span>$\Delta\theta+\alpha f(\theta,\beta)=0$</span> with boundary conditions <span>$\theta(0) = \theta(1)=0$</span>. This example is coded in <code>examples/chan.jl</code> ; it is a basic example from the Trilinos library. We start with some imports:</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Home · Pseudo Arc Length Continuation in Julia</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>Pseudo Arc Length Continuation in Julia</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href>Home</a><ul class="internal"><li><a class="toctext" href="#Other-softwares-1">Other softwares</a></li><li><a class="toctext" href="#A-word-on-performance-1">A word on performance</a></li><li class="toplevel"><a class="toctext" href="#Example-1:-nonlinear-pendulum-1">Example 1: nonlinear pendulum</a></li><li><a class="toctext" href="#Continuation-of-Fold-points-1">Continuation of Fold points</a></li><li><a class="toctext" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a></li><li class="toplevel"><a class="toctext" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></li><li><a class="toctext" href="#Snaking-computed-with-deflation-1">Snaking computed with deflation</a></li><li class="toplevel"><a class="toctext" href="#Example-3:-Brusselator-in-1d-1">Example 3: Brusselator in 1d</a></li><li><a class="toctext" href="#Continuation-of-Hopf-points-1">Continuation of Hopf points</a></li><li><a class="toctext" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></li><li class="toplevel"><a class="toctext" href="#Example-4:-nonlinear-pendulum-with-ApproxFun-1">Example 4: nonlinear pendulum with <code>ApproxFun</code></a></li><li class="toplevel"><a class="toctext" href="#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1">Example 5: the Swift-Hohenberg equation on the GPU</a></li><li><a class="toctext" href="#Computing-the-inverse-of-the-differential-operator-1">Computing the inverse of the differential operator</a></li><li><a class="toctext" href="#Functions-for-LinearAlgebra-on-the-GPU-1">Functions for LinearAlgebra on the GPU</a></li><li><a class="toctext" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></li><li><a class="toctext" href="#Computation-of-the-branches-1">Computation of the branches</a></li></ul></li><li><span class="toctext">Advanced Usage</span><ul><li><a class="toctext" href="linearsolver/">Linear Solvers</a></li><li><a class="toctext" href="detectionBifurcation/">Bifurcations</a></li><li><a class="toctext" href="codim2Continuation/">Fold / Hopf Continuation</a></li><li><a class="toctext" href="periodicOrbitCont/">Periodic Orbits</a></li></ul></li><li><a class="toctext" href="faq/">Frequently Asked Questions</a></li><li><a class="toctext" href="library/">Library</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Home</a></li></ul><a class="edit-page" href="https://github.com/rveltz/PseudoArcLengthContinuation.jl/blob/master/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Home</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="PseudoArcLengthContinuation.jl-1" href="#PseudoArcLengthContinuation.jl-1">PseudoArcLengthContinuation.jl</a></h1><p>This package aims at solving equations <span>$F(u,\lambda)=0$</span> where <span>$\lambda \in\mathbb R$</span> starting from an initial guess <span>$(u_0,\lambda_0)$</span>. It relies on the pseudo arclength continuation algorithm which provides a <em>predictor</em> <span>$(u_1,\lambda_1)$</span> from <span>$(u_0,\lambda_0)$</span>. A Newton method is then used to correct this predictor.</p><p>The current package focuses on large scale problem and multiple hardware. Hence, the goal is to use Matrix Free / Sparse methods on GPU or a cluster in order to solve non linear equations (PDE for example).</p><p>Finally, we leave it to the user to take advantage of automatic differentiation.</p><h2><a class="nav-anchor" id="Other-softwares-1" href="#Other-softwares-1">Other softwares</a></h2><p>We were inspired by <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. One can also mention the venerable AUTO, or also, <a href="http://www.math.pitt.edu/~bard/xpp/xpp.html">XPPAUT</a>, <a href="http://www.matcont.ugent.be/">MATCONT</a> and <a href="https://sourceforge.net/projects/cocotools/">COCO</a> or <a href="https://trilinos.org/">Trilinos</a>. Most continuation softwares are listed on <a href="https://dsweb.siam.org/Software">DSWeb</a>. There is also this MATLAB continuation <a href="https://www.dropbox.com/s/inqwpl0mp7o1oy0/AvitabileICMNS2016Workshop.zip?dl=0">code</a> by <a href="https://www.maths.nottingham.ac.uk/plp/pmzda/index.html">D. Avitabile</a>.</p><p>In Julia, we have for now a <a href="https://github.com/JuliaDiffEq/PyDSTool.jl">wrapper</a> to PyDSTools, and also <a href="https://github.com/tkf/Bifurcations.jl">Bifurcations.jl</a>.</p><p>One design choice is that we try not to require <code>u</code> to be a subtype of an <code>AbstractArray</code> as this would forbid the use of spectral methods (like the one from <code>ApproxFun.jl</code>) or some GPU package, <em>e.g.</em> <code>ArrayFire.jl</code>. So far, our implementation does not allow this for Fold / Hopf continuation and computation of periodic orbits. It will be improved later.</p><h2><a class="nav-anchor" id="A-word-on-performance-1" href="#A-word-on-performance-1">A word on performance</a></h2><p>The examples which follow have not been written with the goal of performance but rather simplicity. One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.</p><p>For example, in the first example below, one could use <code>BandedMatrices.jl</code> for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.</p><h1><a class="nav-anchor" id="Example-1:-nonlinear-pendulum-1" href="#Example-1:-nonlinear-pendulum-1">Example 1: nonlinear pendulum</a></h1><p>This is a simple example in which we aim at solving <span>$\Delta\theta+\alpha f(\theta,\beta)=0$</span> with boundary conditions <span>$\theta(0) = \theta(1)=0$</span>. This example is coded in <code>examples/chan.jl</code> ; it is a basic example from the Trilinos library. We start with some imports:</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
 const Cont = PseudoArcLengthContinuation
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -132,18 +132,24 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100)
 				vec(sol0),
 				opt_new)
 	println(&quot;--&gt; norm(sol) = &quot;,norm(sol_hexa,Inf64))
-	heatmapsol(sol_hexa)</code></pre><p>which produces the results</p><pre><code class="language-julia">  Newton Iterations
+	heatmapsol(sol_hexa)</code></pre><p>which produces the results</p><pre><code class="language-julia">Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
-
-       23               24     5.3390e+00         1
-       24               25     2.1593e+01         1
-       25               26     5.7336e+00         1
-       26               27     1.3178e+00         1
-       27               28     1.9094e-01         1
-       28               29     7.3575e-03         1
-       29               30     1.3292e-05         1
-       30               31     1.4949e-10         1
-  2.832685 seconds (185.83 k allocations: 1.568 GiB, 3.05% gc time)</code></pre><p>with</p><p><img src="sh2dhexa.png" alt/></p><p>We can now continue this solution</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015,ds= -0.0051, pMax = 0.2, pMin = -1.0, save = false, theta = 0.1, plotevery_n_steps = 3, newtonOptions = opt_new)
+        0                1     7.7310e+02         0
+        1                2     7.3084e+03         1
+        2                3     2.1595e+03         1
+        3                4     1.4173e+04         1
+        4                5     4.1951e+03         1
+        5                6     1.2394e+03         1
+        6                7     3.6414e+02         1
+        7                8     1.0659e+02         1
+        8                9     3.1291e+01         1
+        9               10     1.3202e+01         1
+       10               11     2.6793e+00         1
+       11               12     3.2728e-01         1
+       12               13     1.2491e-02         1
+       13               14     2.7447e-05         1
+       14               15     2.2626e-10         1
+  1.413734 seconds (45.47 k allocations: 749.631 MiB, 3.60% gc time)</code></pre><p>with</p><p><img src="sh2dhexa.png" alt/></p><p>We can now continue this solution</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015,ds= -0.0051, pMax = 0.2, pMin = -1.0, save = false, theta = 0.1, plotevery_n_steps = 3, newtonOptions = opt_new)
 	opts_cont.detect_fold = true
 	opts_cont.maxSteps = 340
 
@@ -398,4 +404,123 @@ end</code></pre><p>Then, we can call the continuation routine</p><pre><code clas
 		plot = true,
 		finaliseSolution = finalise_solution,
 		plotsolution = (x; kwargs...) -&gt; plot!(x, subplot = 4, label = &quot;l = $(length(x))&quot;),
-		normC = x -&gt; norm(x, Inf64))</code></pre><p>and you should see </p><p><img src="chan-af-bif-diag.png" alt/></p><h1><a class="nav-anchor" id="Example-5:-2d-Gross-Pitaevski-equation-on-GPU-1" href="#Example-5:-2d-Gross-Pitaevski-equation-on-GPU-1">Example 5: 2d - Gross-Pitaevski equation on GPU</a></h1><footer><hr/><a class="next" href="linearsolver/"><span class="direction">Next</span><span class="title">Linear Solvers</span></a></footer></article></body></html>
+		normC = x -&gt; norm(x, Inf64))</code></pre><p>and you should see </p><p><img src="chan-af-bif-diag.png" alt/></p><h1><a class="nav-anchor" id="Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1" href="#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1">Example 5: the Swift-Hohenberg equation on the GPU</a></h1><p>Here we give an example where the continuation can be done <strong>entirely</strong> on the GPU. </p><p>We choose the 2d Swift-Hohenberg as an example and consider a larger grid. Solving the sparse linear problem in <span>$v$</span></p><div>\[-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs\]</div><p>with a <strong>direct</strong> solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads</p>$<p>-v + L * (d * v) = L*rhs $</p><p>where <span>$L = ((I+\Delta)^2 + I)^{-1}$</span> is very well conditioned and <span>$d := l+1+2\nu v-3v^2$</span>. Hence, to solve the previous equation, only a few GMRES iterations are required. </p><h2><a class="nav-anchor" id="Computing-the-inverse-of-the-differential-operator-1" href="#Computing-the-inverse-of-the-differential-operator-1">Computing the inverse of the differential operator</a></h2><p>The issue now is to compute <code>L</code> but this is easy using Fourier transforms.</p><p>Hence, that&#39;s why we slightly modify the above Example 2. by considering <strong>periodic</strong> boundary conditions. Let us now show how to compute <code>L</code>. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to <code>L</code> is $ l<em>1 = 1+(1-k</em>x^2-k_y^2)^2$ which is pre-computed in the structure <code>SHLinearOp</code>. Then the effect of <code>L</code> on <code>u</code> is as simple as <code>real.(ifft( l1 .* fft(u) ))</code> and the inverse <code>L\u</code> is <code>real.(ifft( fft(u) ./ l1 ))</code>. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.</p><pre><code class="language-julia">using AbstractFFTs, FFTW, KrylovKit
+
+# Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it 
+# in the Newton iterations.
+struct SHLinearOp &lt;: Cont.LinearSolver
+	tmp_real         # temporary
+	tmp_complex      # temporary
+	l1
+	fftplan
+	ifftplan
+end
+
+function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
+	# AF is a type, it could be CuArray{TY} to run the following on GPU
+	k1 = vcat(collect(0:Nx/2), collect(Nx/2+1:Nx-1) .- Nx)
+	k2 = vcat(collect(0:Ny/2), collect(Ny/2+1:Ny-1) .- Ny)
+	d2 = [(1-(pi/lx * kx)^2 - (pi/ly * ky)^2)^2 + 1. for kx in k1, ky in k2]
+	tmpc = Complex.(AF(zeros(Nx,Ny)))
+	return SHLinearOp(AF(zeros(Nx,Ny)),tmpc,AF(d2),plan_fft!(tmpc),plan_ifft!(tmpc))
+end
+
+import Base: *, \
+
+function *(c::SHLinearOp, u)
+	c.tmp_complex .= Complex.(u)
+	c.fftplan * c.tmp_complex
+	c.tmp_complex .= c.l1 .* c.tmp_complex
+	c.ifftplan * c.tmp_complex
+	c.tmp_real .= real.(c.tmp_complex)
+	return copy(c.tmp_real)
+end
+
+function \(c::SHLinearOp, u)
+	c.tmp_complex .= Complex.(u)
+	c.fftplan * c.tmp_complex
+	c.tmp_complex .=  c.tmp_complex ./ c.l1
+	c.ifftplan * c.tmp_complex
+	c.tmp_real .= real.(c.tmp_complex)
+	return copy(c.tmp_real)
+end</code></pre><p>Now that we have our operator <code>L</code>, we can give our functional:</p><pre><code class="language-julia">function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
+	return -(shlop * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
+end</code></pre><h2><a class="nav-anchor" id="Functions-for-LinearAlgebra-on-the-GPU-1" href="#Functions-for-LinearAlgebra-on-the-GPU-1">Functions for LinearAlgebra on the GPU</a></h2><p>We plan to use <code>KrylovKit</code> on the GPU. For this to work, we need to overload some functions for <code>CuArray.jl</code>. Note that this will be removed in the future when <code>CuArrays</code> improves.</p><pre><code class="language-julia">using CuArrays
+CuArrays.allowscalar(false)
+import LinearAlgebra: mul!, axpby!
+mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
+mul!(x::CuArray, y::T, α::CuArray) where {T &lt;: Number} = (x .= α .* y)
+axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)
+
+AF = CuArray{TY}
+TY = Float64</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
+const Cont = PseudoArcLengthContinuation
+
+# to simplify plotting of the solution
+heatmapsol(x) = heatmap(reshape(Array(x)), Nx, Ny)&#39;, color=:viridis)
+
+Nx = 1024
+Ny = 1024
+lx = 8pi
+ly = 2*2pi/sqrt(3)
+
+X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
+Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
+
+sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
+		sol0 .= sol0 .- minimum(vec(sol0))
+		sol0 ./= maximum(vec(sol0))
+		sol0 = sol0 .- 0.25
+		sol0 .*= 1.7
+		heatmap(sol0, color=:viridis)
+		
+L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	</code></pre><p>Before applying a Newton solver, we need to show how to solve the linear equation arising in the Newton Algorithm.</p><pre><code class="language-julia">function (sh::SHLinearOp)(J, rhs)
+	u, l, ν = J
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+	res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs )
+	return res, true, info.numops
+end</code></pre><h2><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h2><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">pt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L, eigsolve = Leig)
+	sol_hexa, hist, flag = @time Cont.newton(
+				x -&gt; F_shfft(x, -.1, 1.3, shlop = L),
+				u -&gt; (u, -0.1, 1.3),
+				AF(sol0),
+				opt_new, normN = x-&gt;maximum(abs.(x)))
+	println(&quot;--&gt; norm(sol) = &quot;, maximum(abs.(sol_hexa)))
+	heatmapsol(sol_hexa)</code></pre><p>You should see this:</p><pre><code class="language-julia"> Newton Iterations 
+   Iterations      Func-count      f(x)      Linear-Iterations
+
+        0                1     2.7382e-01         0
+        1                2     1.2891e+02        13
+        2                3     3.8139e+01        25
+        3                4     1.0740e+01        20
+        4                5     2.8787e+00        17
+        5                6     7.7522e-01        14
+        6                7     1.9542e-01        12
+        7                8     3.0292e-02        12
+        8                9     1.1597e-03        12
+        9               10     2.4577e-06        13
+       10               11     7.5879e-07        10
+  3.855506 seconds (490.05 k allocations: 50.543 MiB, 5.45% gc time)
+--&gt; norm(sol) = 1.26017611779702</code></pre><p><strong>Note that this is about the same computation time as in Example 2 but for a problem almost 100x larger!</strong></p><p>The solution is:</p><p><img src="SH-GPU.png" alt/></p><p>We can also use the deflation technique on the GPU as follows</p><pre><code class="language-julia">deflationOp = DeflationOperator(2.0, (x, y)-&gt;dot(x, y), 1.0, [sol_hexa])
+
+opt_new.maxIter = 250
+outdef, _, flag, _ = @time Cont.newtonDeflated(
+				x -&gt; F_shfft(x, -.1, 1.3, shlop = L),
+				u -&gt; (u, -0.1, 1.3),
+				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
+				opt_new, deflationOp, normN = x-&gt;maximum(abs.(x)))
+		println(&quot;--&gt; norm(sol) = &quot;, norm(outdef))
+		heatmapsol(outdef) |&gt; display
+		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="SH-GPU-deflation.png" alt/></p><h2><a class="nav-anchor" id="Computation-of-the-branches-1" href="#Computation-of-the-branches-1">Computation of the branches</a></h2><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+	opts_cont.newtonOptions.tol = 1e-6
+	opts_cont.newtonOptions.maxIter = 50
+	opts_cont.maxSteps = 80
+
+	br, u1 = @time Cont.continuation(
+		(u, p) -&gt; F_shfft(u, p, 1.3, shlop = L),
+		(u, p) -&gt; (u, p, 1.3, L),
+		deflationOp.roots[1],
+		-0.1,
+		opts_cont, plot = true,
+		plotsolution = (x;kwargs...)-&gt;heatmap!(reshape(Array(x), Nx, Ny)&#39;, color=:viridis, subplot=4),
+		printsolution = x-&gt;maximum(abs.(x)), normC = x-&gt;maximum(abs.(x)))</code></pre><p><img src="SH-GPU-br-hexa.pdf" alt/></p><footer><hr/><a class="next" href="linearsolver/"><span class="direction">Next</span><span class="title">Linear Solvers</span></a></footer></article></body></html>
