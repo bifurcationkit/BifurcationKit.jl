@@ -807,16 +807,26 @@ $$-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs$$
 
 with a **direct** solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads
 
-$$ -v + L * (d * v) = L*rhs $$
+$$-v + L * (d * v) = L*rhs$$
 
-where $L = ((I+\Delta)^2 + I)^{-1}$ is very well conditioned and $d := l+1+2\nu v-3v^2$. Hence, to solve the previous equation, only a few GMRES iterations are required. 
+where 
+
+$$L = ((I+\Delta)^2 + I)^{-1}$$
+
+is very well conditioned and 
+
+$$d := l+1+2\nu v-3v^2.$$ 
+
+Hence, to solve the previous equation, only a few GMRES iterations are required. 
 
 ## Computing the inverse of the differential operator
 The issue now is to compute `L` but this is easy using Fourier transforms.
 
 
 Hence, that's why we slightly modify the above Example 2. by considering **periodic** boundary conditions. Let us now show how to compute `L`. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to `L` is
-$$ l_1 = 1+(1-k_x^2-k_y^2)^2$$
+
+$$l_1 = 1+(1-k_x^2-k_y^2)^2$$
+
 which is pre-computed in the structure `SHLinearOp `. Then the effect of `L` on `u` is as simple as `real.(ifft( l1 .* fft(u) ))` and the inverse `L\u` is `real.(ifft( fft(u) ./ l1 ))`. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.
 
 ```julia
@@ -1006,5 +1016,5 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0
 		printsolution = x->maximum(abs.(x)), normC = x->maximum(abs.(x)))
 ```
 
-![](SH-GPU-br-hexa.pdf)
+![](GPUbranch.png)
 
