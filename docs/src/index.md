@@ -276,19 +276,26 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100)
 which produces the results
 
 ```julia
-  Newton Iterations
+Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
-
-       23               24     5.3390e+00         1
-       24               25     2.1593e+01         1
-       25               26     5.7336e+00         1
-       26               27     1.3178e+00         1
-       27               28     1.9094e-01         1
-       28               29     7.3575e-03         1
-       29               30     1.3292e-05         1
-       30               31     1.4949e-10         1
-  2.832685 seconds (185.83 k allocations: 1.568 GiB, 3.05% gc time)
+        0                1     7.7310e+02         0
+        1                2     7.3084e+03         1
+        2                3     2.1595e+03         1
+        3                4     1.4173e+04         1
+        4                5     4.1951e+03         1
+        5                6     1.2394e+03         1
+        6                7     3.6414e+02         1
+        7                8     1.0659e+02         1
+        8                9     3.1291e+01         1
+        9               10     1.3202e+01         1
+       10               11     2.6793e+00         1
+       11               12     3.2728e-01         1
+       12               13     1.2491e-02         1
+       13               14     2.7447e-05         1
+       14               15     2.2626e-10         1
+  1.413734 seconds (45.47 k allocations: 749.631 MiB, 3.60% gc time)
 ```
+  
 with
 
 ![](sh2dhexa.png)
@@ -789,4 +796,215 @@ and you should see
 ![](chan-af-bif-diag.png)
 
 
-# Example 5: 2d - Gross-Pitaevski equation on GPU
+# Example 5: the Swift-Hohenberg equation on the GPU
+
+Here we give an example where the continuation can be done **entirely** on the GPU. 
+
+
+We choose the 2d Swift-Hohenberg as an example and consider a larger grid. Solving the sparse linear problem in $v$
+
+$$-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs$$
+
+with a **direct** solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads
+
+$$ -v + L * (d * v) = L*rhs $$
+
+where $L = ((I+\Delta)^2 + I)^{-1}$ is very well conditioned and $d := l+1+2\nu v-3v^2$. Hence, to solve the previous equation, only a few GMRES iterations are required. 
+
+## Computing the inverse of the differential operator
+The issue now is to compute `L` but this is easy using Fourier transforms.
+
+
+Hence, that's why we slightly modify the above Example 2. by considering **periodic** boundary conditions. Let us now show how to compute `L`. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to `L` is
+$$ l_1 = 1+(1-k_x^2-k_y^2)^2$$
+which is pre-computed in the structure `SHLinearOp `. Then the effect of `L` on `u` is as simple as `real.(ifft( l1 .* fft(u) ))` and the inverse `L\u` is `real.(ifft( fft(u) ./ l1 ))`. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.
+
+```julia
+using AbstractFFTs, FFTW, KrylovKit
+
+# Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it 
+# in the Newton iterations.
+struct SHLinearOp <: Cont.LinearSolver
+	tmp_real         # temporary
+	tmp_complex      # temporary
+	l1
+	fftplan
+	ifftplan
+end
+
+function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
+	# AF is a type, it could be CuArray{TY} to run the following on GPU
+	k1 = vcat(collect(0:Nx/2), collect(Nx/2+1:Nx-1) .- Nx)
+	k2 = vcat(collect(0:Ny/2), collect(Ny/2+1:Ny-1) .- Ny)
+	d2 = [(1-(pi/lx * kx)^2 - (pi/ly * ky)^2)^2 + 1. for kx in k1, ky in k2]
+	tmpc = Complex.(AF(zeros(Nx,Ny)))
+	return SHLinearOp(AF(zeros(Nx,Ny)),tmpc,AF(d2),plan_fft!(tmpc),plan_ifft!(tmpc))
+end
+
+import Base: *, \
+
+function *(c::SHLinearOp, u)
+	c.tmp_complex .= Complex.(u)
+	c.fftplan * c.tmp_complex
+	c.tmp_complex .= c.l1 .* c.tmp_complex
+	c.ifftplan * c.tmp_complex
+	c.tmp_real .= real.(c.tmp_complex)
+	return copy(c.tmp_real)
+end
+
+function \(c::SHLinearOp, u)
+	c.tmp_complex .= Complex.(u)
+	c.fftplan * c.tmp_complex
+	c.tmp_complex .=  c.tmp_complex ./ c.l1
+	c.ifftplan * c.tmp_complex
+	c.tmp_real .= real.(c.tmp_complex)
+	return copy(c.tmp_real)
+end
+```
+
+Now that we have our operator `L`, we can give our functional:
+
+```julia
+function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
+	return -(shlop * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
+end
+```
+
+## Functions for LinearAlgebra on the GPU
+
+We plan to use `KrylovKit` on the GPU. For this to work, we need to overload some functions for `CuArray.jl`. Note that this will be removed in the future when `CuArrays` improves.
+
+```julia
+using CuArrays
+CuArrays.allowscalar(false)
+import LinearAlgebra: mul!, axpby!
+mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
+mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
+axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
+
+AF = CuArray{TY}
+TY = Float64
+```
+
+We can now define our operator `L` and an initial guess `sol0`.
+
+```julia
+using PseudoArcLengthContinuation, LinearAlgebra, Plots
+const Cont = PseudoArcLengthContinuation
+
+# to simplify plotting of the solution
+heatmapsol(x) = heatmap(reshape(Array(x)), Nx, Ny)', color=:viridis)
+
+Nx = 1024
+Ny = 1024
+lx = 8pi
+ly = 2*2pi/sqrt(3)
+
+X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
+Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
+
+sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
+		sol0 .= sol0 .- minimum(vec(sol0))
+		sol0 ./= maximum(vec(sol0))
+		sol0 = sol0 .- 0.25
+		sol0 .*= 1.7
+		heatmap(sol0, color=:viridis)
+		
+L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	
+``` 
+
+Before applying a Newton solver, we need to show how to solve the linear equation arising in the Newton Algorithm.
+
+```julia
+function (sh::SHLinearOp)(J, rhs)
+	u, l, ν = J
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs )
+	return res, true, info.numops
+end
+```
+## Newton iterations and deflation
+
+We are now ready to perform Newton iterations:
+
+```julia
+pt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L, eigsolve = Leig)
+	sol_hexa, hist, flag = @time Cont.newton(
+				x -> F_shfft(x, -.1, 1.3, shlop = L),
+				u -> (u, -0.1, 1.3),
+				AF(sol0),
+				opt_new, normN = x->maximum(abs.(x)))
+	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
+	heatmapsol(sol_hexa)
+```
+
+You should see this:
+
+```julia
+ Newton Iterations 
+   Iterations      Func-count      f(x)      Linear-Iterations
+
+        0                1     2.7382e-01         0
+        1                2     1.2891e+02        13
+        2                3     3.8139e+01        25
+        3                4     1.0740e+01        20
+        4                5     2.8787e+00        17
+        5                6     7.7522e-01        14
+        6                7     1.9542e-01        12
+        7                8     3.0292e-02        12
+        8                9     1.1597e-03        12
+        9               10     2.4577e-06        13
+       10               11     7.5879e-07        10
+  3.855506 seconds (490.05 k allocations: 50.543 MiB, 5.45% gc time)
+--> norm(sol) = 1.26017611779702
+```
+
+**Note that this is about the same computation time as in Example 2 but for a problem almost 100x larger!**
+
+The solution is:
+
+![](SH-GPU.png)
+
+We can also use the deflation technique on the GPU as follows
+
+```julia
+deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
+
+opt_new.maxIter = 250
+outdef, _, flag, _ = @time Cont.newtonDeflated(
+				x -> F_shfft(x, -.1, 1.3, shlop = L),
+				u -> (u, -0.1, 1.3),
+				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
+				opt_new, deflationOp, normN = x->maximum(abs.(x)))
+		println("--> norm(sol) = ", norm(outdef))
+		heatmapsol(outdef) |> display
+		flag && push!(deflationOp, outdef)
+```
+
+and get:
+
+![](SH-GPU-deflation.png)
+
+
+## Computation of the branches 
+
+Finally, we can perform continuation of the branches on the GPU:
+
+```julia
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+	opts_cont.newtonOptions.tol = 1e-6
+	opts_cont.newtonOptions.maxIter = 50
+	opts_cont.maxSteps = 80
+
+	br, u1 = @time Cont.continuation(
+		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
+		(u, p) -> (u, p, 1.3, L),
+		deflationOp.roots[1],
+		-0.1,
+		opts_cont, plot = true,
+		plotsolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)', color=:viridis, subplot=4),
+		printsolution = x->maximum(abs.(x)), normC = x->maximum(abs.(x)))
+```
+
+![](SH-GPU-br-hexa.pdf)
+
