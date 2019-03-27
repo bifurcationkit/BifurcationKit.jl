@@ -37,7 +37,7 @@ Jac_fd(u0, α, β) = Cont.finiteDifferences(u->F_chan(u,α, β),u0)
 n = 101
 sol = rand(n)
 sol[end] = sol[1]
-J_fold_fd = Jac_fd(sol,3,0.01)
+J_fold_fd  = Jac_fd(sol,3,0.01)
 J_fold_exp = Jac_mat(sol,3,0.01)
 @test (J_fold_exp - J_fold_fd) |> x->norm(x,Inf64) < 1e-2
 
@@ -78,9 +78,6 @@ br_nat, u1 = @time Cont.continuation(
 				printsolution = x->norm(x,Inf64),
 				out,0.,opts_br0,plot = false, verbosity = 0)
 
-# Cont.plotBranch(br)
-# Cont.plotBranch!(br_tg, marker = :d)
-# Cont.plotBranch!(br_nat, marker = :d)
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])

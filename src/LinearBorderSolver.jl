@@ -12,6 +12,7 @@ end
 similar(b::BorderedVector{vectype, T}) where {T, vectype} = BorderedVector(similar(b.u), similar(b.p))
 similar(b::BorderedVector{vectype, T}) where {T <: Real, vectype} = BorderedVector(similar(b.u), T(0))
 
+copy(b::BorderedVector{vectype, T}) where {vectype, T } =  BorderedVector(copy(b.u), copy(b.p))
 copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p))
 copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p)
 
@@ -62,6 +63,20 @@ function normtheta(a::BorderedVector{vectype, T}, theta::T) where {vectype, T}
 	return normtheta(a.u, a.p, theta)
 end
 ################################################################################
+struct borderedLinearOperator
+	J
+	a
+	b
+	c
+end
+
+function (Lb::borderedLinearOperator)(x::BorderedVector{vectype, T}) where {vectype, T <: Real}
+	out = similar(x)
+	out.u .= apply(Lb.J, x.u) .+ Lb.a .* x.p
+	out.p = dot(Lb.b, x.u) + Lb.c * x.p
+	return out
+end
+################################################################################
 """
 This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
 It requires the state space to be Vector like.
@@ -100,9 +115,13 @@ function linearBorderedSolver(J, dR,
 		Aarc = getBorderedLinearSystemFull(J, dR, dz, theta)
 		res = Aarc \ vcat(R, n)
 		return res[1:end-1], res[end], 1
-	end
 
-	if algo == :bordering
+	elseif algo == :fullMatrixFree
+		bordedOp = borderedLinearOperator(J, dR, dz.u .* theta/length(dz.u), dz.p * (one(T)-theta))
+		reslinear, _, it = solver(bordedOp,  BorderedVector(R, n))
+		return reslinear.u, reslinear.p, it
+
+	elseif algo == :bordering
 		xiu = theta / length(dz.u)
 		xip = one(T)-theta
 

@@ -905,10 +905,10 @@ const Cont = PseudoArcLengthContinuation
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x)), Nx, Ny)', color=:viridis)
 
-Nx = 1024
-Ny = 1024
-lx = 8pi
-ly = 2*2pi/sqrt(3)
+Nx = 2^10
+Ny = 2^10
+lx = 8pi * 2
+ly = 2*2pi/sqrt(3) * 2
 
 X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
 Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
@@ -929,7 +929,7 @@ Before applying a Newton solver, we need to show how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs )
+	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6) 
 	return res, true, info.numops
 end
 ```
@@ -938,7 +938,7 @@ end
 We are now ready to perform Newton iterations:
 
 ```julia
-pt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L, eigsolve = Leig)
+pt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -> F_shfft(x, -.1, 1.3, shlop = L),
 				u -> (u, -0.1, 1.3),
@@ -954,18 +954,18 @@ You should see this:
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     2.7382e-01         0
-        1                2     1.2891e+02        13
-        2                3     3.8139e+01        25
-        3                4     1.0740e+01        20
-        4                5     2.8787e+00        17
-        5                6     7.7522e-01        14
-        6                7     1.9542e-01        12
-        7                8     3.0292e-02        12
-        8                9     1.1597e-03        12
-        9               10     2.4577e-06        13
-       10               11     7.5879e-07        10
-  3.855506 seconds (490.05 k allocations: 50.543 MiB, 5.45% gc time)
+        0                1     2.7383e-01         0
+        1                2     1.2891e+02        14
+        2                3     3.8139e+01        70
+        3                4     1.0740e+01        37
+        4                5     2.8787e+00        22
+        5                6     7.7522e-01        17
+        6                7     1.9542e-01        13
+        7                8     3.0292e-02        13
+        8                9     1.1594e-03        12
+        9               10     1.8842e-06        11
+       10               11     4.2642e-08        10
+  2.261527 seconds (555.45 k allocations: 44.849 MiB, 1.61% gc time)
 --> norm(sol) = 1.26017611779702
 ```
 
@@ -1008,7 +1008,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0
 
 	br, u1 = @time Cont.continuation(
 		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
-		(u, p) -> (u, p, 1.3, L),
+		(u, p) -> (u, p, 1.3),
 		deflationOp.roots[1],
 		-0.1,
 		opts_cont, plot = true,

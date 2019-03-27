@@ -6,9 +6,9 @@
 
 This Julia package aims at solving equations F(u,λ)=0 where λ∈ℝ starting from an initial guess (u0,λ0). It relies on the pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from (u0,λ0). A Newton method is then used to correct this predictor.
 
-The current package focuses on large scale problem and multiple hardwares. Hence, the goal is to use Matrix Free methods on GPU or a cluster to solve non linear PDE (for example).
+The current package focuses on large scale problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1)) or on a **cluster** to solve non linear PDE (for example).
 
-**If you use this package for your work, please cite it!! Open source development strongly depends on this. It is hosted on HAL-Inria as follows:**
+**If you use this package for your work, please cite it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:**
 
 ```
 @misc{veltz:hal-02071874,
@@ -36,28 +36,29 @@ The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuat
 
 ## Main features
 
-- Matrix Free Newton solver with generic linear / eigen solver. Idem for the arc-length continuation
+- Matrix Free Newton solver with generic linear / eigen solver. Idem for the arc-length continuation.
 - Matrix Free Newton solver with deflation. It can be used for branch switching for example.
 - Fold / Hopf bifurcation detection
-- Fold / Hopf with MatrixFree / Sparse Jacobian continuation with Minimally Augmented formulation
+- Fold / Hopf with MatrixFree / Sparse Jacobian continuation with Minimally Augmented. formulation.
 - Periodic orbit computation and continuation using Simple Shooting (not very stable yet) or Finite Differences.
-- Custom state means, can we use something else than `AbstractVector`
+
+Custom state means, can we use something else than `AbstractVector`:
 
 
-|Feature|Matrix Free|Custom state|
-|---|---|---|
-| Newton | Y | Y |
-| Newton + Deflation| Y | Y |
-| Continuation (Natural, Secant, Tangent) | Y | Y |
-| Branching point detection | Y | Y |
-| Fold detection | Y | Y |
-| Hopf detection | Y | Y |
-| Fold continuation | Y | Y |
-| Hopf continuation | Y | `AbstractVector` |
-| Periodic Orbit Newton | Y | `AbstractVector` |
-| Periodic Orbit continuation | Y | `AbstractVector` |
+|Feature|Matrix Free|Custom state| Example |
+|---|---|---|---|
+| Newton | Y | Y |1 - 5 |
+| Newton + Deflation| Y | Y | 1, 2, 5|
+| Continuation (Natural, Secant, Tangent) | Y | Y | 1 - 5 |
+| Branching point detection | Y | Y |  |
+| Fold detection | Y | Y | 1 - 5 |
+| Hopf detection | Y | Y | 3 |
+| Fold continuation | Y | Y | 1 |
+| Hopf continuation | Y | `AbstractVector` | 3 |
+| Periodic Orbit Newton | Y | `AbstractVector` | 3 |
+| Periodic Orbit continuation | Y | `AbstractVector` | 3 |
 
-## To do
+## To do or grab
 - [x] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
 - [ ] Compute Hopf Normal Form
 - [ ] Implement Preconditioner for the Matrix Free computation of Periodic Orbits based on Finite Differences
