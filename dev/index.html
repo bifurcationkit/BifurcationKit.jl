@@ -52,8 +52,8 @@ outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
 				(x, α) -&gt; Jac_mat(x, α, 0.01),
 				br, 3, #index of the fold point
 				opts_br0.newtonOptions)
-		flag &amp;&amp; printstyled(color=:red,&quot;--&gt; We found a Fold Point at α = &quot;, outfold[end], &quot;, β = 0.01\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia">  0.085458 seconds (98.05 k allocations: 40.414 MiB, 21.55% gc time)
---&gt; We found a Fold Point at α = 3.1556507316136138, β = 0.01</code></pre><p>We can also continue this fold point in the plane <span>$(a,b)$</span> performing a Fold Point Continuation. In the present case, we find a Cusp point.</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
+		flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p, &quot;, β = 0.01, from &quot;, br.bifpoint[indfold][3],&quot;\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia">  0.085458 seconds (98.05 k allocations: 40.414 MiB, 21.55% gc time)
+--&gt; We found a Fold Point at α = 3.1556507316107947, β = 0.01, from 3.155651011218501</code></pre><p>We can also continue this fold point in the plane <span>$(a,b)$</span> performing a Fold Point Continuation. In the present case, we find a Cusp point.</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
 	optcontfold.newtonOptions.tol = 1e-8
 	outfoldco, hist, flag = @time Cont.continuationFold(
 		(x, α, β) -&gt;  F_chan(x, α, β),
@@ -149,7 +149,7 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100)
        12               13     1.2491e-02         1
        13               14     2.7447e-05         1
        14               15     2.2626e-10         1
-  1.413734 seconds (45.47 k allocations: 749.631 MiB, 3.60% gc time)</code></pre><p>with</p><p><img src="sh2dhexa.png" alt/></p><p>We can now continue this solution</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015,ds= -0.0051, pMax = 0.2, pMin = -1.0, save = false, theta = 0.1, plotevery_n_steps = 3, newtonOptions = opt_new)
+  1.413734 seconds (45.47 k allocations: 749.631 MiB, 3.60% gc time)</code></pre><p>with</p><p><img src="sh2dhexa.png" alt/></p><p>We can now continue this solution</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015,ds= -0.0051, pMax = 0.2, pMin = -1.0, save = false, theta = 0.1, plot_every_n_steps = 3, newtonOptions = opt_new)
 	opts_cont.detect_fold = true
 	opts_cont.maxSteps = 340
 
@@ -157,22 +157,22 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 100)
 		(x,p) -&gt; F_sh(x,p,1.3),
 		(x,p) -&gt; dF_sh(x,p,1.3),
 		sol_hexa,0.099,opts_cont,plot = true,
-		plotsolution = (x;kwargs...) -&gt; (N = Int(sqrt(length(x)));heatmap!(reshape(x,N,N),color=:viridis,subplot=4,label=&quot;&quot;)),
+		plotsolution = (x;kwargs...)-&gt;(heatmap!(X, Y, reshape(x, Nx, Ny)&#39;, color=:viridis, subplot=4, label=&quot;&quot;)),
 		printsolution = x -&gt; norm(x,Inf64))</code></pre><p>with result:</p><p><img src="sh2dbrhexa.png" alt/></p><h2><a class="nav-anchor" id="Snaking-computed-with-deflation-1" href="#Snaking-computed-with-deflation-1">Snaking computed with deflation</a></h2><p>We know that there is snaking near the left fold. Let us look for other solutions like fronts. The problem is that if the guess is not precise enough, the newton iterations will converge to the solution with hexagons <code>sol_hexa</code>. We appeal to the technique initiated by P. Farrell and use a <strong>deflated problem</strong>. More precisely, we apply the newton iterations to the following functional <span>$u\to\left(\frac{1}{\|u-sol_{hexa}\|^2}+\sigma\right)F_{sh}(u)$</span> which penalizes <code>sol_hexa</code>.</p><pre><code class="language-julia">deflationOp = DeflationOperator(2.0,(x,y) -&gt; dot(x,y),1.0,[sol_hexa])
 opt_new.maxIter = 250
 outdef, _,flag,_ = @time Cont.newtonDeflated(
 				x -&gt; F_sh(x,-.1,1.3),
 				u -&gt; dF_sh(u,-.1,1.3),
 				0.2vec(sol_hexa) .* vec([exp.(-(x+lx)^2/25) for x in X, y in Y]),
-				opt_new,deflationOp,normS = x -&gt; norm(x,Inf64))
+				opt_new,deflationOp, normN = x -&gt; norm(x,Inf64))
 		heatmapsol(outdef) |&gt; display
 		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>which gives:</p><p><img src="sh2dfrontleft.png" alt/></p><p>Note that <code>push!(deflationOp, outdef)</code> deflates the newly found solution so that by repeating the process we find another one:</p><pre><code class="language-julia">outdef, _,flag,_ = @time Cont.newtonDeflated(
 				x -&gt; F_sh(x,-.1,1.3),
 				u -&gt; dF_sh(u,-.1,1.3),
 				0.2vec(sol_hexa) .* vec([exp.(-(x)^2/25) for x in X, y in Y]),
-				opt_new,deflationOp,normS = x -&gt; norm(x,Inf64))
+				opt_new,deflationOp, normN = x -&gt; norm(x,Inf64))
 		heatmapsol(outdef) |&gt; display
-		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p><img src="sh2dfrontmiddle.png" alt/></p><p>Again, repeating this from random guesses, we find several more solutions, like for example</p><p><img src="sh2dsol4.png" alt/></p><p><img src="sh2dsol5.png" alt/></p><p>We can now continue the solutions located in <code>deflationOp.roots</code></p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005,ds= -0.0015, pMax = -0.01, pMin = -1.0, theta = 0.5, plotevery_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true)
+		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p><img src="sh2dfrontmiddle.png" alt/></p><p>Again, repeating this from random guesses, we find several more solutions, like for example</p><p><img src="sh2dsol4.png" alt/></p><p><img src="sh2dsol5.png" alt/></p><p>We can now continue the solutions located in <code>deflationOp.roots</code></p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005,ds= -0.0015, pMax = -0.01, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true)
 	opts_cont.newtonOptions.tol = 1e-9
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 450
@@ -282,12 +282,12 @@ outhopf, hist, flag = @time Cont.newtonHopf((x, p) -&gt;  F_bru(x, a, b, l = p),
 				(x, p) -&gt; Jac_sp(x, a, b, l = p),
 				br, ind_hopf,
 				opt_newton)
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, outhopf[end-1], &quot;, ω = &quot;, outhopf[end], &quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 0.5164377051987692, ω = 2.13950928953342, from l = 0.5197012664156633</code></pre><p>We can also perform a Hopf continuation with respect to parameters <code>l, β</code></p><pre><code class="language-julia">br_hopf, u1_hopf = @time Cont.continuationHopf(
-	(x, p, β) -&gt;   F_bru(x, a, β, l = p),
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, outhopf[end-1], &quot;, ω = &quot;, outhopf[end], &quot;, from l = &quot;,hopfpt[end-1],&quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 0.5164377051987692, ω = 2.13950928953342, from l = 0.5197012664156633</code></pre><p>We can also perform a Hopf continuation with respect to parameters <code>l, β</code></p><pre><code class="language-julia">br_hopf, u1_hopf = @time Cont.continuationHopf(
+	(x, p, β) -&gt;  F_bru(x, a, β, l = p),
 	(x, p, β) -&gt; Jac_sp(x, a, β, l = p),
 	br, ind_hopf,
 	b,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=true)))</code></pre><p>which gives using <code>Cont.plotBranch(br_hopf, xlabel=&quot;beta&quot;, ylabel = &quot;l&quot;)</code></p><p><img src="bru-hopf-cont.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-periodic-orbits-1" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></h2><p>Finally, we can perform continuation of periodic orbits branching from the Hopf bifurcation points. Note that we did not compute the Hopf normal form, so we need an educated guess for the periodic orbit. We first create the initial guess for the periodic orbit:</p><pre><code class="language-julia">function plotPeriodic(outpof,n,M)
+	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = opt_newton))</code></pre><p>which gives using <code>Cont.plotBranch(br_hopf, xlabel=&quot;beta&quot;, ylabel = &quot;l&quot;)</code></p><p><img src="bru-hopf-cont.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-periodic-orbits-1" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></h2><p>Finally, we can perform continuation of periodic orbits branching from the Hopf bifurcation points. Note that we did not compute the Hopf normal form, so we need an educated guess for the periodic orbit. We first create the initial guess for the periodic orbit:</p><pre><code class="language-julia">function plotPeriodic(outpof,n,M)
 	outpo = reshape(outpof[1:end-1], 2n, M)
 	plot(heatmap(outpo[1:n,:], xlabel=&quot;Time&quot;), heatmap(outpo[n+2:end,:]))
 end
@@ -390,7 +390,7 @@ const Δ = Derivative(sol.space, 2)</code></pre><p>Finally, we need to define so
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     4.6975e-13         1
-  0.079482 seconds (344.44 k allocations: 13.856 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to define some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.0001, dsmax = 0.1, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.7, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
+  0.079482 seconds (344.44 k allocations: 13.856 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to define some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143</code></pre><p>We also provide a function to check how the <code>ApproxFun</code> solution vector grows:</p><pre><code class="language-julia">function finalise_solution(z, tau, step, contResult)
