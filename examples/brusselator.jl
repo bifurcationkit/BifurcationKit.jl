@@ -94,10 +94,11 @@ end
 function finalise_solution(z, tau, step, contResult)
 	n = div(length(z), 2)
 	printstyled(color=:red, "--> Solution constant = ", norm(diff(z[1:n])), " - ", norm(diff(z[n+1:2n])), "\n")
+	return true
 end
 
-n = 101
-# const Δ = spdiagm(0=>2ones(N), -1=>0ones(N-1), 1=>-ones(N-1))
+n = 301
+# const Δ = spdiagm(0 => 2ones(N), -1 => 0ones(N-1), 1 => -ones(N-1))
 Jac_fd(u0, α, β, l = l) = Cont.finiteDifferences(u->F_bru(u, α, β, l=l), u0)
 
 a = 2.
@@ -105,7 +106,7 @@ b = 5.45
 
 sol0 = vcat(a * ones(n), b/a * ones(n))
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolve = eig_KrylovKit(tol=1e-6, dim = 60))
 	# ca fait dans les 60.2k Allocations
 	out, hist, flag = @time Cont.newton(
 		x -> F_bru(x, a, b),
@@ -113,7 +114,7 @@ opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
 		sol0,
 		opt_newton)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 16, plot_every_n_steps = 50)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 41, plot_every_n_steps = 50, newtonOptions = opt_newton)
 	opts_br0.newtonOptions.maxIter = 20
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 280
@@ -127,12 +128,15 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8
 		plot = true,
 		plotsolution = (x;kwargs...)->(N = div(length(x), 2);plot!(x[1:N], subplot=4, label="");plot!(x[N+1:2N], subplot=4, label="")),
 		finaliseSolution = finalise_solution,
-		printsolution = x->norm(x, Inf64))
+		printsolution = x -> norm(x, Inf64))
 
-# J0 = Jac_mat(sol0, a, 16) |> sparse
-# using Arpack, ArnoldiMethod
-# @time eigs(J0, nev = 10, which = :SM, sigma = 0.01, maxiter=10000)
+# J0 = Jac_sp(sol0, a, 16) |> sparse
+# using Arpack, ArnoldiMethod, KrylovKit
+# @time Arpack.eigs(J0, nev = 10, which = :LR)
 # @time sort(eigen(Array(J0)).values, by = x -> abs(x), rev = false)[1:15]
+# @time KrylovKit.eigsolve(J0, 10, :LR, tol = 1e-6)
+#
+# @time opt_newton.eigsolve(J0,10)
 #################################################################################################### Continuation of the Hopf Point using Dense method
 # ind_hopf = 1
 # hopfpt = Cont.HopfPoint(br, ind_hopf)
@@ -170,23 +174,23 @@ ind_hopf = 1
 	hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 	outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
-				(x, p) -> Jac_mat(x, a, b, l = p),
+				(x, p) -> Jac_sp(x, a, b, l = p),
 				br, ind_hopf,
-				NewtonPar(verbose = true))
+				opt_newton)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
 
 br_hopf, u1_hopf = @time Cont.continuationHopf(
-			(x, p, β) ->   F_bru(x, a, β, l = p),
-			(x, p, β) -> Jac_mat(x, a, β, l = p),
+			(x, p, β) ->  F_bru(x, a, β, l = p),
+			(x, p, β) -> Jac_sp(x, a, β, l = p),
 			br, ind_hopf,
 			b,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = NewtonPar(verbose=false)), verbosity = 2)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = opt_newton), verbosity = 2)
 Cont.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
 #################################################################################################### Continuation of Periodic Orbit
 function plotPeriodic(outpof,n,M)
 	outpo = reshape(outpof[1:end-1], 2n, M)
-	plot(heatmap(outpo[1:n,:], ylabel="Time"),
-			heatmap(outpo[n+2:end,:]))
+	plot(heatmap(outpo[1:n,:]', ylabel="Time"),
+			heatmap(outpo[n+2:end,:]'))
 end
 
 ind_hopf = 2
@@ -194,19 +198,24 @@ hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 l_hopf = hopfpt[end-1]
 ωH     = hopfpt[end] |> abs
-M = 35
+M = 100
 
 
 orbitguess = zeros(2n, M)
 plot([0, 1], [0, 0])
 	phase = []; scalphase = []
-	vec_hopf = br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
+	vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
+
+	# br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
 	for ii=1:M
 	t = (ii-1)/(M-1)
+	# use phase 0.279 for default_eig()
 	orbitguess[:, ii] .= real.(hopfpt[1:2n] +
-						26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.279))) #k=1
+						26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - .235))) #k=1
 	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
 end
+	phmin = findmin(abs.(scalphase))
+	println("--> min phase for ", phase[phmin[2]])
 	plot!(phase, scalphase)
 
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
@@ -229,7 +238,7 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 						x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
 						orbitguess_f,
 						opt_po)
-	println("--> T = ", outpo_f[end])
+	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 
 # # stability
@@ -245,19 +254,29 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 # 	KrylovKit.eigsolve(Jmono,rand(2n),10, :LM)
 
 # opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true, eigsolve = Cont.FloquetFD2(poTrap)), detect_bifurcation = true)
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
 	br_pok2, upo , _= @time Cont.continuation(
 							(x, p) ->  poTrap(p)(x),
 							(x, p) ->  poTrap(p)(x, :jacsparse),
 							outpo_f, l_hopf + 0.01,
 							opts_po_cont,
 							plot = true,
-							plotsolution = (x;kwargs...)->heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
+							plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
 							printsolution = u -> u[end])
 
 # branches = []
 # push!(branches,br_pok1)
 # Cont.plotBranch(branches, ylabel="T", xlabel = "l", label="")
+##########################################################################################
+# Matrix-Free computation, useless without a preconditionner
+opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolve = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
+	outpo_f, hist, flag = @time Cont.newton(
+						x ->  poTrap(l_hopf + 0.01)(x),
+						x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),
+						orbitguess_f,
+						opt_po)
+	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
+	plotPeriodic(outpo_f,n,M)
 #################################################################################################### Example pde2path
 a = 1.5
 b = 4.1

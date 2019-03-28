@@ -147,10 +147,10 @@ module PseudoArcLengthContinuation
 
 	## Bordered system of equations
 
-	The pseudo arclength continuation method solve the equation ``F(x,p) = 0`` (or dimension N) together with the pseudo-arclength consraint ``N(x, p) = \\frac{\\theta}{length(u)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve is parametrised by ``s`` so that ``(x(s),p(s))`` is a curve of solution to ``F(x,p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the solution curve, we solve an equation of dimension N+1 which is called a Bordered system.
+	The pseudo arclength continuation method solves the equation ``F(x,p) = 0`` (or dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(u)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve is parametrised by ``s`` so that ``(x(s),p(s))`` is a curve of solutions to ``F(x,p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the curve of solutions, we need solve an equation of dimension N+1 which is called a Bordered system.
 
 	!!! warning "Parameter `theta`"
-	    The parameter `theta` in the type `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems in which cases the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
+	    The parameter `theta` in the type `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
 
 	The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the type `ContinuationPar`.
 
@@ -164,7 +164,7 @@ module PseudoArcLengthContinuation
 
 	## Natural continuation
 
-	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning Point but it can be faster to compute than the constrained case. This is set by the field `natural` in the type ContinuationPar`
+	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the field `natural` in the type ContinuationPar`
 
 	## Tangent computation (step 4)
 	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the field `secant` in the type `ContinuationPar`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. If `secant` is set to `false`, another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information.
@@ -338,5 +338,4 @@ module PseudoArcLengthContinuation
 	end
 
 	continuation(Fhandle::Function, u0, p0::Real, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: LinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p)->finiteDifferences(u->Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
-
 end
