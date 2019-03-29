@@ -7,6 +7,7 @@ tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
 Cont.minus!(z_pred, tau_pred)
 
 axpy!(2. /3, tau_pred, z_pred)
+axpby!(2. /3, tau_pred, 1.0, z_pred)
 dot(z_pred, tau_pred)
 Cont.dottheta(z_pred, tau_pred, 0.1)
 Cont.dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)

@@ -54,7 +54,7 @@ opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1,
 					(x, p) -> (Jac_mat(x, p, 0.01)),
 					out, a, opts_br0,
 					printsolution = x -> norm(x, Inf64),
-					plot = true,
+					plot = false,
 					plotsolution = (x;kwargs...) -> (plot!(x, subplot=4, ylabel="solution", label="")))
 ###################################################################################################
 # Example with deflation technique
@@ -97,10 +97,10 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1,
 	outfoldco, hist, flag = @time Cont.continuationFold(
 						(x, α, β) ->  F_chan(x, α, β),
 						(x, α, β) -> Jac_mat(x, α, β),
-						br, 3,
+						br, indfold,
 						0.01,
 						optcontfold)
-Cont.plotBranch(outfoldco, marker=:d, xlabel="beta", ylabel = "alpha")
+Cont.plotBranch(outfoldco, marker=:d, xlabel="beta", ylabel = "alpha", label = "");title!("")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x,p,u,v; b = 0.01) = p * d2source_term.(x; b = b) .* u .* v
 
@@ -118,8 +118,8 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 					(x, α, β) ->  F_chan(x, α, β),
 					(x, α, β) -> Jac_mat(x, α, β),
 					(x, α, β) -> transpose(Jac_mat(x, α, β)),
-					β ->((x, α, v1, v2) -> d2F(x,α,v1,v2; b = β)),
-					br, 3,
+					β -> ((x, α, v1, v2) -> d2F(x,α,v1,v2; b = β)),
+					br, indfold,
 					0.01,
 					optcontfold)
 ###################################################################################################
@@ -138,7 +138,6 @@ end
 
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
-	# ca fait dans les 63.59k Allocations
 	out_mf, hist, flag = @time Cont.newton(
 							x -> F_chan(x, a, 0.01),
 							x -> (dx -> dF_chan(x, dx, a, 0.01)),

@@ -249,10 +249,13 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
 		finaliseSolution(u_pred, u_pred, 1, contRes)
 
-		duds = (u_pred - u0) / (contParams.ds / T(50));	dpds = T(1.0)
+		duds = copy(u_pred)
+		axpby!(-1/ (contParams.ds / T(50)), u0, 1/ (contParams.ds / T(50)),duds)
+		# duds = (u_pred - u0) / (contParams.ds / T(50));
+		dpds = T(1.0)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
-		duds = duds / α; dpds = dpds / α
+		rmul!(duds, 1 / α); dpds = dpds / α
 
 		## Initialise continuation
 		step = 0

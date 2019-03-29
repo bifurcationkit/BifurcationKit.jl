@@ -1,6 +1,6 @@
 # structure for Bordered vectors
-import Base: copy, copyto!
-import LinearAlgebra: norm, dot, length, similar, axpy!, rmul!
+import Base: copy, copyto!, eltype
+import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!
 
 mutable struct BorderedVector{vectype1, vectype2}
 	u::vectype1
@@ -9,8 +9,10 @@ end
 
 # copy(b::BorderedVector{vectype, T})   where {vectype, T} = BorderedVector(copy(b.u), b.p)
 
-similar(b::BorderedVector{vectype, T}) where {T, vectype} = BorderedVector(similar(b.u), similar(b.p))
-similar(b::BorderedVector{vectype, T}) where {T <: Real, vectype} = BorderedVector(similar(b.u), T(0))
+
+eltype(b::BorderedVector{vectype, T}) where {T, vectype} = T
+similar(b::BorderedVector{vectype, T}, ::Type{S} = T) where {S, T, vectype} = BorderedVector(similar(b.u, S), similar(b.p, S))
+similar(b::BorderedVector{vectype, T}, ::Type{S} = T) where {S, T <: Real, vectype} = BorderedVector(similar(b.u, S), S(0))
 
 copy(b::BorderedVector{vectype, T}) where {vectype, T } =  BorderedVector(copy(b.u), copy(b.p))
 copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p))
@@ -33,6 +35,13 @@ function axpy!(a::T, X::BorderedVector{vectype, T}, Y::BorderedVector{vectype, T
 	# Overwrite Y with a*X + Y, where a is a scalar
 	axpy!(a, X.u, Y.u)
 	Y.p = a * X.p + Y.p
+	return Y
+end
+################################################################################
+function axpby!(a::T, X::BorderedVector{vectype, T}, b::T, Y::BorderedVector{vectype, T}) where {vectype, T <:Real}
+	# Overwrite Y with a*X + b*Y, where a is a scalar
+	axpby!(a, X.u, b, Y.u)
+	Y.p = a * X.p + b * Y.p
 	return Y
 end
 ################################################################################
