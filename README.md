@@ -53,7 +53,7 @@ Custom state means, can we use something else than `AbstractVector`:
 | Branching point detection | Y | Y |  |
 | Fold detection | Y | Y | 1 - 5 |
 | Hopf detection | Y | Y | 3 |
-| Fold continuation | Y | Y | 1 |
+| Fold continuation | Y | `AbstractArray` | 1 |
 | Hopf continuation | Y | `AbstractVector` | 3 |
 | Periodic Orbit Newton | Y | `AbstractVector` | 3 |
 | Periodic Orbit continuation | Y | `AbstractVector` | 3 |

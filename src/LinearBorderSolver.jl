@@ -1,5 +1,5 @@
 # structure for Bordered vectors
-import Base: copy, copyto!, eltype
+import Base: copy, copyto!, eltype, zero
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!
 
 mutable struct BorderedVector{vectype1, vectype2}
@@ -24,6 +24,8 @@ length(b::BorderedVector{vectype, T}) where {vectype, T} = length(b.u) + length(
 dot(a::BorderedVector{vectype, T}, b::BorderedVector{vectype, T}) where {vectype, T} = dot(a.u, b.u) + dot(a.p, b.p)
 
 norm(b::BorderedVector{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
+
+zero(b::BorderedVector{vectype, T}) where {vectype, T } = BorderedVector(zero(b.u), zero(b.p))
 ################################################################################
 function rmul!(A::BorderedVector{vectype, T}, b::T) where {vectype, T <:Real}
 	# Scale an array A by a scalar b overwriting A in-place
@@ -46,14 +48,35 @@ function axpby!(a::T, X::BorderedVector{vectype, T}, b::T, Y::BorderedVector{vec
 end
 ################################################################################
 # this function is actually axpy!(-1, y, x)
-minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
-minus!(x::AbstractArray, y::AbstractArray) = (x .= x .- y)
-minus!(x::T, y::T) where {T <:Real} = (x = x - y)
+"""
+	minus!(x,y)
+computes x-y into x and return x
+"""
+@inline minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
+@inline minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
+@inline minus!(x::T, y::T) where {T <:Real} = (x = x - y)
 function minus!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real}
 	minus!(x.u, y.u)
 	# Carefull here. If I uncomment the line below, then x.p will be left unaffected
 	# minus_!(x.p, y.p)
 	x.p = x.p - y.p
+	return x
+end
+################################################################################
+# this function is actually axpy!(-1, y, x)
+"""
+	minus(x,y)
+returns x-y
+"""
+@inline minus(x, y) = (return x .- y) # necessary to put a dot .= for ApproxFun to work
+@inline minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
+@inline minus(x::T, y::T) where {T <:Real} = (return x - y)
+@inline minus(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real} = (return BorderedVector(minus(x.u, y.u), x.p - y.p))
+################################################################################
+function normalize(x)
+	out = copy(x)
+	rmul!(out, norm(x))
+	return out
 end
 ################################################################################
 function dottheta(u1, u2, p1::T, p2::T, theta::T) where T
@@ -108,8 +131,9 @@ function linearBorderedSolver(J, a, b, c::T, R, n::T, solver::S)  where {vectype
 		x2, _, it2 = solver(J, a)
 
 		dl = (n - dot(b, x1)) / (c - dot(b, x2))
-		dX = x1 .- dl .* x2
-
+		# dX = x1 .- dl .* x2
+		dX = copy(x1); axpy!(-dl, x2, dX)
+		
 		return dX, dl, (it1, it2)
 end
 ################################################################################
@@ -126,19 +150,21 @@ function linearBorderedSolver(J, dR,
 		return res[1:end-1], res[end], 1
 
 	elseif algo == :fullMatrixFree
+		@assert 1==0 "WIP"
 		bordedOp = borderedLinearOperator(J, dR, dz.u .* theta/length(dz.u), dz.p * (one(T)-theta))
 		reslinear, _, it = solver(bordedOp,  BorderedVector(R, n))
 		return reslinear.u, reslinear.p, it
 
 	elseif algo == :bordering
 		xiu = theta / length(dz.u)
-		xip = one(T)-theta
+		xip = one(T) - theta
 
 		x1, _, it1 = solver(J,  R)
 		x2, _, it2 = solver(J, dR)
 
 		dl = (n - dot(dz.u, x1) * xiu) / (dz.p * xip - dot(dz.u, x2) * xiu)
-		dX = x1 .- dl .* x2
+		# dX = x1 .- dl .* x2
+		dX = copy(x1); axpy!(-dl, x2, dX)
 
 		return dX, dl, (it1, it2)
 	end

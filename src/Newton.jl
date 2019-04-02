@@ -187,7 +187,7 @@ function newtonPseudoArcLength(F, Jh,
 	ds      = convert(eltype(z0.p), options.ds)
 	epsi    = convert(eltype(z0.p), options.finDiffEps)
 
-	N = (x, p) -> arcLengthEq(x - z0.u, p - z0.p, tau0.u, tau0.p, theta, ds)
+	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
 
 	# Initialise iterations
 	x = copy(z_pred.u);  l = z_pred.p
@@ -198,7 +198,11 @@ function newtonPseudoArcLength(F, Jh,
 
 	dX   = similar(res_f)
 	dl   = T(0)
-	dFdl = (F(x, l + epsi) - res_f) / epsi
+
+	# dFdl = (F(x, l + epsi) - res_f) / epsi
+	dFdl = copy(F(x, l + epsi))
+	minus!(dFdl, res_f); rmul!(dFdl, T(1) / epsi)
+
 
 	res     = max(normN(res_f), abs(res_n))
 	resHist = [res]
@@ -210,7 +214,8 @@ function newtonPseudoArcLength(F, Jh,
 
 	# Main loop
 	while (res > nltol) & (it < nlmaxit) & step_ok
-		copyto!(dFdl, (F(x, l + epsi) - F(x, l)) / epsi)
+		# copyto!(dFdl, (F(x, l + epsi) - F(x, l)) / epsi)
+		copyto!(dFdl, F(x, l + epsi)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / epsi)
 
 		J = Jh(x, l)
 		u, up, liniter = linearBorderedSolver(J, dFdl,

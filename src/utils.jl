@@ -120,12 +120,15 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	branch = contResult.branch
 
 	# Fold point detection based on continuation parameter monotony
-	if contparams.detect_fold && size(branch)[2] > 2 && (branch[1, end] - branch[1, end-1])* (branch[1, end-1] - branch[1, end-2]) < 0
+	if contparams.detect_fold && size(branch)[2] > 2 && (branch[1, end] - branch[1, end-1]) * (branch[1, end-1] - branch[1, end-2]) < 0
 		(verbosity > 1) && printstyled(color=:red, "Fold bifurcation point!! between $(branch[1, end-1]) and  $(branch[1, end]) \n")
 		push!(contResult.bifpoint, (:fold,
 							length(branch)-1,
 							branch[1, end-1],
-							printsolution(z.u), copy(z.u), copy(tau.u) / norm(tau.u), 0))
+							printsolution(z.u), copy(z.u), normalize(tau.u), 0))
+	end
+	if contparams.detect_bifurcation == false
+		return
 	end
 
 	# update number of unstable eigenvalues
@@ -145,26 +148,27 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Hopf / BP bifurcation point detection based on eigenvalue distribution
 	if size(branch)[2] > 1
 		if abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 1
+			@show  branch
 			push!(contResult.bifpoint, (:bp,
 								length(branch)-1,
 								branch[1, end-1],
 								printsolution(z.u),
-								z.u,
-								tau.u ./ norm(tau.u), ind_bif))
+								copy(z.u),
+								normalize(tau.u), ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
 			if abs(contResult.n_imag[end] - contResult.n_imag[end-1]) == 2
 				push!(contResult.bifpoint, (:hopf,
 									length(branch)-1,
 									branch[1, end-1],
 									printsolution(z.u),
-									copy(z.u), 0tau.u, ind_bif))
+									copy(z.u), zero(tau.u), ind_bif))
 			else
 				push!(contResult.bifpoint, (:bp,
 									length(branch)-1,
 									branch[1, end-1],
 									printsolution(z.u),
 									copy(z.u),
-									copy(tau.u) / norm(tau.u), n_unstable))
+									normalize(tau.u), n_unstable))
 			end
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) >2
 			push!(contResult.bifpoint, (:nd,
@@ -172,7 +176,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 							branch[1, end-1],
 							printsolution(z.u),
 							copy(z.u),
-							copy(tau.u) / norm(tau.u), ind_bif))
+							normalize(tau.u), ind_bif))
 		end
 	end
 end

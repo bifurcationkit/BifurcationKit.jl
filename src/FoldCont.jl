@@ -1,9 +1,9 @@
-using KrylovKit, Parameters, RecursiveArrayTools
-
 function FoldPoint(br::ContResult, index::Int64)
+	##"Fonction utile? Only used L381!!"
 	@assert br.bifpoint[index][1] == :fold "The index provided does not refer to a Fold point"
 	bifpoint = br.bifpoint[index]
 	return vcat(bifpoint[5], bifpoint[3])
+	return BorderedVector(bifpoint[5], bifpoint[3])
 end
 
 #################################################################################################### Method using Minimally Augmented formulation
@@ -30,7 +30,7 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p) where {v
     n = 1.0
     v_ = fp.linsolve(fp.J(x, p), -a)[1]
     σ1 = n / dot(b, v_)
-    v = σ1 * v_
+    # v = σ1 * v_
 
     # # # we solve J'w + b σ2 = 0 with <a, w> = n
     # w_ = fp.linsolve(fp.Jadjoint(x, p), -b)[1]
@@ -183,7 +183,6 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `options::NewtonPar`
 """
 function newtonFold(F, J, Jt, d2F, foldpointguess::Union{AbstractArray, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
-
 	foldvariable = FoldProblemMinimallyAugmented(
 						(x, p) ->  F(x, p),
 						(x, p) ->  J(x, p),
@@ -305,15 +304,14 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::Union{AbstractArray, Bo
 	foldPb = (u, p2) -> foldvariable(p2)(u)
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolve = FoldLinearSolveMinAug(d2F_is_given = true)
-
+	@show typeof(foldpointguess)
 	# solve the Fold equations
 	return continuation((x, p2) -> foldPb(x, p2),
 						(x, p2) -> Jac_fold_MA(x, foldvariable(p2), d2F(p2)),
 						foldpointguess, p2_0,
 						opt_fold_cont,
-						plot = true,
 						printsolution = u -> u.p,
-						plotsolution = (x;kwargs...)->(xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  ) ;kwargs...)
+						plotsolution = (x;kwargs...) -> (xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  ) ;kwargs...)
 end
 
 """
@@ -348,12 +346,12 @@ function continuationFold(F, J, Jt, foldpointguess::Union{AbstractArray, Bordere
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolve = FoldLinearSolveMinAug(d2F_is_given = false)
 
+	@show typeof(foldpointguess)
 	# solve the Fold equations
 	return continuation((x, p2) -> foldPb(x, p2),
 						(x, p2) -> Jac_fold_MA(x, p2, foldvariable(p2)),
 						foldpointguess, p2_0,
 						opt_fold_cont,
-						plot = true,
 						printsolution = u -> u[end],
 						plotsolution = (x;kwargs...)->(xlabel!("p2", subplot=1);ylabel!("p1", subplot=1)  );kwargs... )
 end
@@ -385,6 +383,6 @@ function continuationFold(F, J, Jt, br::ContResult, ind_fold::Int64, p2_0::Real,
 	return continuationFold(F, J, Jt, foldpointguess, p2_0, eigenvec, options_cont ;kwargs...)
 end
 
-continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, J, (x, p1, p2)->transpose(J(x, p1, p2)), br, ind_fold, p2_0, options_cont::ContinuationPar ; kwargs...)
+continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_fold, p2_0, options_cont::ContinuationPar ; kwargs...)
 
 continuationFold(F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, (x0, p1, p2) -> finiteDifferences(x -> F(x, p1, p2), x0), br, ind_fold, p2_0, options_cont::ContinuationPar ; kwargs...)
