@@ -48,9 +48,11 @@ sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]</code></pre><p>and parameters</p><pre><cod
 	return J
 end
 
+indfold = 2
+
 outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
 				(x, α) -&gt; Jac_mat(x, α, 0.01),
-				br, 3, #index of the fold point
+				br, indfold, #index of the fold point
 				opts_br0.newtonOptions)
 		flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p, &quot;, β = 0.01, from &quot;, br.bifpoint[indfold][3],&quot;\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia">  0.085458 seconds (98.05 k allocations: 40.414 MiB, 21.55% gc time)
 --&gt; We found a Fold Point at α = 3.1556507316107947, β = 0.01, from 3.155651011218501</code></pre><p>We can also continue this fold point in the plane <span>$(a,b)$</span> performing a Fold Point Continuation. In the present case, we find a Cusp point.</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
@@ -58,7 +60,7 @@ outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
 	outfoldco, hist, flag = @time Cont.continuationFold(
 		(x, α, β) -&gt;  F_chan(x, α, β),
 		(x, α, β) -&gt; Jac_mat(x, α, β),
-		br, 3,
+		br, indfold,
 		0.01,
 		optcontfold)
 
