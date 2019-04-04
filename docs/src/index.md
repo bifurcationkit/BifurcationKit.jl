@@ -135,9 +135,11 @@ function Jac_mat(u, α, β = 0.)
 	return J
 end
 
+indfold = 2
+
 outfold, hist, flag = @time Cont.newtonFold((x,α) -> F_chan(x, α, 0.01),
 				(x, α) -> Jac_mat(x, α, 0.01),
-				br, 3, #index of the fold point
+				br, indfold, #index of the fold point
 				opts_br0.newtonOptions)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
 ```
@@ -157,7 +159,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, 
 	outfoldco, hist, flag = @time Cont.continuationFold(
 		(x, α, β) ->  F_chan(x, α, β),
 		(x, α, β) -> Jac_mat(x, α, β),
-		br, 3,
+		br, indfold,
 		0.01,
 		optcontfold)
 

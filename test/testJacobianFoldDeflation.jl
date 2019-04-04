@@ -113,33 +113,33 @@ opt_def.tol = 1e-10
 opt_def.maxIter = 1000
 
 outdef1, _, _ = @time Cont.newtonDeflated(
-						x -> F_chan(x, a, 0.01),
-						x -> Jac_mat(x, a, 0.01),
-						out.*(1 .+ 0.01*rand(n)),
-						opt_def, deflationOp)
+		x -> F_chan(x, a, 0.01),
+		x -> Jac_mat(x, a, 0.01),
+		out.*(1 .+ 0.01*rand(n)),
+		opt_def, deflationOp)
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
-indfold = 3
-foldpt = vcat(br.bifpoint[indfold][5],br.bifpoint[indfold][3])
+indfold = 1
+foldpt = FoldPoint(br, indfold)
 foldpb = FoldProblemMinimallyAugmented(
-					(x, α) ->   F_chan(x, α, 0.01),
-					(x, α) -> (Jac_mat(x, α, 0.01)),
-					(x, α) -> transpose(Jac_mat(x, α, 0.01)),
-					br.bifpoint[indfold][6],
-					br.bifpoint[indfold][6],
-					opts_br0.newtonOptions.linsolve)
-foldpb(foldpt)
+		(x, α) ->   F_chan(x, α, 0.01),
+		(x, α) -> (Jac_mat(x, α, 0.01)),
+		(x, α) -> transpose(Jac_mat(x, α, 0.01)),
+		br.bifpoint[indfold][6],
+		br.bifpoint[indfold][6],
+		opts_br0.newtonOptions.linsolve)
+foldpb(foldpt) |> norm
 
-
-outfold, _ = Cont.newtonFold((x, p) -> F_chan(x, p, 0.01),
-			(x, p) -> Jac_mat(x, p, 0.01),
-			foldpt,
-			br.bifpoint[indfold][6],
-			NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
+outfold, _ = Cont.newtonFold(
+		(x, p) -> F_chan(x, p, 0.01),
+		(x, p) -> Jac_mat(x, p, 0.01),
+		foldpt,
+		br.bifpoint[indfold][6],
+		NewtonPar(verbose=true) )
+	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold][3])
 
 # continuation of the fold point
-optcontfold = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 3)
+optcontfold = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 5)
 	optcontfold.newtonOptions.tol = 1e-8
 	outfoldco, hist, flag = @time Cont.continuationFold(
 						(x, α, β) ->  F_chan(x, α, β),
@@ -148,22 +148,30 @@ optcontfold = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax =
 						0.01,
 						optcontfold, plot = false)
 
-# self defined Fold Problem
-indfold = 2
-outfold, _ = Cont.newton(x->foldpb(x),
+# user defined Fold Problem
+indfold = 1
+
+# we define the following wrappers to be able to use finite differences
+Bd2Vec(x) = vcat(x.u, x.p)
+Vec2Bd(x) = BorderedVector(x[1:end-1], x[end])
+foldpbVec(x) = Bd2Vec(foldpb(Vec2Bd(x)))
+
+outfold, _ = Cont.newton(x -> foldpbVec(x),
 			# (x, α) -> Jac_mat(x, α, 0.01),
-			foldpt,
+			Bd2Vec(foldpt),
 			NewtonPar(verbose=true) )
 	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
 
 rhs = rand(n+1)
-Jac_fold_fdMA(u0) = Cont.finiteDifferences( u-> foldpb(u), u0)
-J_fold_fd = Jac_fold_fdMA(foldpt)
+Jac_fold_fdMA(u0) = Cont.finiteDifferences( u-> foldpbVec(u), u0)
+J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
-Jac_fold_MA(u0, β, pb::FoldProblemMinimallyAugmented) = (return (u0, pb))
+Jac_fold_MA(u0, β, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, x->x))
 jacFoldSolver = FoldLinearSolveMinAug()
-res_explicit = jacFoldSolver(Jac_fold_MA(foldpt,0.01,foldpb),rhs, true)
+res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, 0.01, foldpb), Vec2Bd(rhs), true)
+
+Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
 # test whether the Jacobian Matrix for the Fold problem is correct
 println("--> FD σp = ", J_fold_fd[end,end])
@@ -177,7 +185,7 @@ println("--> MA σp = ", res_explicit[end][end,end])
 
 # check our solution of the bordered problem
 res_exp = res_explicit[end] \ rhs
-@test norm(res_exp - res_explicit[1],Inf64) < 1e-8
+@test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-8
 ####################################################################################################
 # Use of different eigensolvers
 opt_newton = Cont.NewtonPar(tol = 1e-8, verbose = false, eigsolve = eig_KrylovKit{Float64}())

@@ -340,5 +340,5 @@ module PseudoArcLengthContinuation
 	  return contRes, z_old, tau_old
 	end
 
-	continuation(Fhandle::Function, u0, p0::Real, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: LinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p)->finiteDifferences(u->Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
+	continuation(Fhandle::Function, u0, p0::Real, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: LinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p)-> finiteDifferences(u->Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
 end

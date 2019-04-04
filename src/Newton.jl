@@ -132,7 +132,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 
 		verbose && displayIteration(it, neval, res, itlinear)
 	end
-	(resHist[end] > nltol) && printstyled("\n--> Newton algorithm failed to converge, res = ", res[end], color=:red)
+	(resHist[end] > nltol) && printstyled("\n--> Newton algorithm failed to converge, residual = ", res[end], color=:red)
 	return x, resHist, resHist[end] < nltol, it
 end
 
