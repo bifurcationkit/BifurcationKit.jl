@@ -17,7 +17,7 @@ struct FoldProblemMinimallyAugmented{vectype, S <: LinearSolver}
     linsolve::S
 end
 
-function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p) where {vectype, S <: LinearSolver}
+function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where {vectype, S <: LinearSolver, T}
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter for which the jacobian is singular
@@ -28,7 +28,7 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p) where {v
 
     # we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
-    n = 1.0
+    n = T(1)
     v = fp.linsolve(fp.J(x, p), a)[1]
     σ1 = -n / dot(b, v)
 
@@ -46,10 +46,10 @@ end
 	d2F_is_known = false
  end
 
-function foldMALinearSolver(x, p, pbMA::FoldProblemMinimallyAugmented,
+function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 							duu, dup, d2F;
 							debug_ = false,
-							d2F_is_known = false)
+							d2F_is_known = false) where T
 	# We solve Jfold⋅res = du := [duu, dup]
     # the Jacobian J is expressed at (x, p)
     # the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
@@ -61,7 +61,7 @@ function foldMALinearSolver(x, p, pbMA::FoldProblemMinimallyAugmented,
     a = pbMA.a
     b = pbMA.b
 
-	n = 1.0
+	n = T(1)
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	v = pbMA.linsolve(J(x, p), a)[1]
@@ -74,11 +74,11 @@ function foldMALinearSolver(x, p, pbMA::FoldProblemMinimallyAugmented,
     σ2 = -n / dot(a, w)
 	rmul!(w, -σ2)
 
-	δ = 1e-8
-    ϵ1, ϵ2, ϵ3 = δ, δ, δ
+	δ = T(1e-8)
+    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
     ################### computation of σx σp ####################
-    dpF = minus(F(x, p + ϵ1), F(x, p - ϵ1)); rmul!(dpF, one(p) / (2ϵ1))
-    dJvdp = minus(apply(J(x, p + ϵ3), v), apply(J(x, p - ϵ3), v)); rmul!(dJvdp, one(p) / (2ϵ3))
+    dpF = minus(F(x, p + ϵ1), F(x, p - ϵ1)); rmul!(dpF, one(p) / T(2ϵ1))
+    dJvdp = minus(apply(J(x, p + ϵ3), v), apply(J(x, p - ϵ3), v)); rmul!(dJvdp, one(p) / T(2ϵ3))
     σp = -dot(w, dJvdp) / n
 
 	if d2F_is_known == false
@@ -90,11 +90,11 @@ function foldMALinearSolver(x, p, pbMA::FoldProblemMinimallyAugmented,
 
 		# this is the part which does not work if x is not AbstractArray. We use CartesianIndices to support AbstractArray as a type for the solution we are looking for
 		for ii in CartesianIndices(x)
-			e[ii] = 1.0
+			e[ii] = T(1)
 			# d2Fve := d2F(x,p)[v,e]
-			d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / (2ϵ2)
+			d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / T(2ϵ2)
 			σx[ii] = -dot(w, d2Fve) / n
-			e[ii] = 0.0
+			e[ii] = T(0)
 		end
 
 		########## Resolution of the bordered linear system ########
@@ -258,7 +258,7 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedVector{vectype,
 		foldpointguess, p2_0,
 		opt_fold_cont,
 		printsolution = u -> u.p,
-		plotsolution = (x;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ); kwargs...)
+		plotsolution = (x; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ); kwargs...)
 end
 
 """
@@ -301,9 +301,9 @@ function continuationFold(F, J, Jt, br::ContResult, ind_fold::Int64, p2_0::Real,
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt[end-1]
-	return continuationFold(F, J, Jt, foldpointguess, p2_0, eigenvec, options_cont ;kwargs...)
+	return continuationFold(F, J, Jt, foldpointguess, p2_0, eigenvec, options_cont; kwargs...)
 end
 
-continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_fold, p2_0, options_cont::ContinuationPar ; kwargs...)
+continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_fold, p2_0, options_cont::ContinuationPar; kwargs...)
 
-continuationFold(F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, (x0, p1, p2) -> finiteDifferences(x -> F(x, p1, p2), x0), br, ind_fold, p2_0, options_cont::ContinuationPar ; kwargs...)
+continuationFold(F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, (x0, p1, p2) -> finiteDifferences(x -> F(x, p1, p2), x0), br, ind_fold, p2_0, options_cont::ContinuationPar; kwargs...)
