@@ -284,7 +284,7 @@ outhopf, hist, flag = @time Cont.newtonHopf((x, p) -&gt;  F_bru(x, a, b, l = p),
 				(x, p) -&gt; Jac_sp(x, a, b, l = p),
 				br, ind_hopf,
 				opt_newton)
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, outhopf[end-1], &quot;, ω = &quot;, outhopf[end], &quot;, from l = &quot;,hopfpt[end-1],&quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 0.5164377051987692, ω = 2.13950928953342, from l = 0.5197012664156633</code></pre><p>We can also perform a Hopf continuation with respect to parameters <code>l, β</code></p><pre><code class="language-julia">br_hopf, u1_hopf = @time Cont.continuationHopf(
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, outhopf.p[1], &quot;, ω = &quot;, outhopf.p[2], &quot;, from l = &quot;,hopfpt.p[1],&quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 0.5164377051987692, ω = 2.13950928953342, from l = 0.5197012664156633</code></pre><p>We can also perform a Hopf continuation with respect to parameters <code>l, β</code></p><pre><code class="language-julia">br_hopf, u1_hopf = @time Cont.continuationHopf(
 	(x, p, β) -&gt;  F_bru(x, a, β, l = p),
 	(x, p, β) -&gt; Jac_sp(x, a, β, l = p),
 	br, ind_hopf,
@@ -299,10 +299,10 @@ ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 # bifurcation parameter
-l_hopf = hopfpt[end-1]
+l_hopf = hopfpt.p[1]
 
 # Hopf frequency
-ωH     = hopfpt[end] |&gt; abs
+ωH     = hopfpt.p[2] |&gt; abs
 
 # number of time slices for the periodic orbit
 M = 100
@@ -312,14 +312,14 @@ phase = []; scalphase = []
 vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
-	orbitguess[:, ii] .= real.(hopfpt[1:2n] +
+	orbitguess[:, ii] .= real.(hopfpt.u +
 		26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.235)))
-	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
+	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))
 end</code></pre><p>We want to make two remarks. The first is that an initial guess is composed of a space time solution and of the guess for the period of the solution:</p><pre><code class="language-julia">orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |&gt; vec</code></pre><p>The second remark concerns the phase <code>0.235</code> written above. To account for the additional parameter, periodic orbit localisation using Shooting methods or Finite Differences methods add an additional constraint. In the present case, this constraint is</p><div>\[&lt; u(0) - u_{hopf}, \phi&gt; = 0\]</div><p>where <code>u_{hopf} = hopfpt[1:2n]</code> and <span>$\phi$</span> is <code>real.(vec_hopf)</code>. This is akin to a Poincare section.</p><p>This constraint fixes the phase of the periodic orbit. By plotting <code>plot(phase, scalphase)</code>, one can find the phase <code>0.235</code>. We can now use Newton iterations to find a periodic orbit.</p><p>We first create a functional which holds the problem</p><pre><code class="language-julia">poTrap = l-&gt; PeriodicOrbitTrap(
 			x-&gt; F_bru(x, a, b, l = l),
 			x-&gt; Jac_sp(x, a, b, l = l),
 			real.(vec_hopf),
-			hopfpt[1:2n],
+			hopfpt.u,
 			M,
 			opt_newton.linsolve)</code></pre><p>The functional is <code>x -&gt; poTrap(l_hopf + 0.01)(x)</code> at parameter <code>l_hopf + 0.01</code>. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at <code>(x,p)</code> is computed like this</p><p><code>poTrap(p)(x, :jacsparse)</code></p><p>while the Matrix Free version is</p><p><code>dx -&gt; poTrap(p)(x, dx)</code></p><p>We use Newton solve:</p><pre><code class="language-julia">opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
