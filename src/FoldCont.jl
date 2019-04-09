@@ -22,7 +22,7 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter for which the jacobian is singular
     # The equations are those of minimally augmented formulation of the turning point problem
-    # The jacobian of the MA problem is solved with a minimally augmented method
+    # The jacobian of the MA problem is solved with a bordering method
     a = fp.a
     b = fp.b
 
@@ -53,6 +53,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 	# We solve Jfold⋅res = du := [duu, dup]
     # the Jacobian J is expressed at (x, p)
     # the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
+	# we recall the expression of σx = -< w ,d2F(x,p)[v, x2]>
     ############### Extraction of function names #################
 
     F = pbMA.F
@@ -231,7 +232,7 @@ codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `options::NewtonPar`
 """
-function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedVector{vectype, T}, p2_0::Real, eigenvec, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,vectype}
+function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedVector{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,vectype}
 	@warn "Bad way it creates a struct for every p2"
 	# Jacobian for the Fold problem
 	# @assert 1==0 "sur de ce qui suit?"
@@ -274,7 +275,7 @@ codim 2 continuation of Fold points. This function turns an initial guess for a 
 !!! warning "Hessian"
     The hessian of `F` in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-continuationFold(F, J, Jt, foldpointguess::BorderedVector{vectype, T}, p2_0::Real, eigenvec, options_cont::ContinuationPar ;kwargs...) where {T,vectype} = continuationFold(F, J, Jt, x -> x, foldpointguess, p2_0, eigenvec, options_cont ; d2F_is_known = false, kwargs...)
+continuationFold(F, J, Jt, foldpointguess::BorderedVector{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ;kwargs...) where {T,vectype} = continuationFold(F, J, Jt, x -> x, foldpointguess, p2_0, eigenvec, options_cont ; d2F_is_known = false, kwargs...)
 
 
 continuationFold(F, J, foldpointguess::BorderedVector{vectype, T}, p2_0::Real, eigenvec, options_cont::ContinuationPar ; kwargs...)  where {T,vectype} = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), foldpointguess, p2_0, eigenvec, options_cont ; kwargs...)
@@ -288,13 +289,15 @@ function continuationFold(F, foldpointguess::BorderedVector{vectype, T}, p2_0::R
 end
 
 """
-Simplified call for continuation of Fold point. More precisely, the call is as follows `continuationFold(F, J, Jt, br::ContResult, index::Int64, options)` where the parameters are as for `continuationFold` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+Simplified call for continuation of Fold point. More precisely, the call is as follows `continuationFold(F, J, Jt, d2F, br::ContResult, index::Int64, options)` where the parameters are as for `continuationFold` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+
+Simplified calls are also provided but at the cost of using finite differences.
 """
 function continuationFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
 	foldpointguess = BorderedVector(br.bifpoint[ind_fold][5], br.bifpoint[ind_fold][3])
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt[end-1]
-	return continuationFold(F, J, Jt, d2F, foldpointguess, p2_0, eigenvec, options_cont ;kwargs...)
+	return continuationFold(F, J, Jt, d2F, foldpointguess, p2_0, eigenvec, options_cont ;d2F_is_known = true, kwargs...)
 end
 
 function continuationFold(F, J, Jt, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)

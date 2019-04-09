@@ -525,7 +525,7 @@ outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
 				(x, p) -> Jac_sp(x, a, b, l = p),
 				br, ind_hopf,
 				opt_newton)
-flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
+flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], ", from l = ",hopfpt.p[1],"\n")
 ```
 
 which produces
@@ -564,10 +564,10 @@ ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 # bifurcation parameter
-l_hopf = hopfpt[end-1]
+l_hopf = hopfpt.p[1]
 
 # Hopf frequency
-ωH     = hopfpt[end] |> abs
+ωH     = hopfpt.p[2] |> abs
 
 # number of time slices for the periodic orbit
 M = 100
@@ -577,9 +577,9 @@ phase = []; scalphase = []
 vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
-	orbitguess[:, ii] .= real.(hopfpt[1:2n] +
+	orbitguess[:, ii] .= real.(hopfpt.u +
 		26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.235)))
-	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
+	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))
 end
 ```
 We want to make two remarks. The first is that an initial guess is composed of a space time solution and of the guess for the period of the solution:
@@ -603,7 +603,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			x-> F_bru(x, a, b, l = l),
 			x-> Jac_sp(x, a, b, l = l),
 			real.(vec_hopf),
-			hopfpt[1:2n],
+			hopfpt.u,
 			M,
 			opt_newton.linsolve)
 ```

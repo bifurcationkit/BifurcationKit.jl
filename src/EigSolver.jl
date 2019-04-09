@@ -18,7 +18,7 @@ function (l::Default_eig)(J, nev::Int64)
     # I put Array so we can call it on small sparse matrices
     F = eigen(Array(J))
     I = sortperm(F.values, by = x-> real(x), rev = true)
-    return F.values[I[1:nev]], F.vectors[:, I[1:nev]]
+    return F.values[I[1:nev]], F.vectors[:, I[1:nev]], 1
 end
 
 # case of sparse matrices
@@ -26,7 +26,7 @@ struct Default_eig_sp <: EigenSolver end
 
 function (l::Default_eig_sp)(J, nev::Int64)
     λ, ϕ = Arpack.eigs(J, nev = nev, which = :LR)
-    return λ, ϕ
+    return λ, ϕ, 1
 end
 ####################################################################################################
 # Solvers for IterativeSolvers

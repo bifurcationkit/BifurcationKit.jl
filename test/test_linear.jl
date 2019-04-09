@@ -14,7 +14,12 @@ Cont.dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
 
 z = BorderedVector(z_pred, rand(10))
 z2 = BorderedVector(z_pred, rand(10))
+zero(z2);zero(z_pred)
+@test length(z_pred) == 11
 
+copyto!(z,z2)
+Cont.minus(z.u,z2.u);Cont.minus!(z.u,z2.u)
+Cont.minus(1.,2.);Cont.minus!(1.,2.)
 
 
 # test the linear solver LinearBorderSolver

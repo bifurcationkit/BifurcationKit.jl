@@ -14,9 +14,9 @@ eltype(b::BorderedVector{vectype, T}) where {T, vectype} = T
 similar(b::BorderedVector{vectype, T}, ::Type{S} = T) where {S, T, vectype} = BorderedVector(similar(b.u, S), similar(b.p, S))
 similar(b::BorderedVector{vectype, T}, ::Type{S} = T) where {S, T <: Real, vectype} = BorderedVector(similar(b.u, S), S(0))
 
-copy(b::BorderedVector{vectype, T}) where {vectype, T } =  BorderedVector(copy(b.u), copy(b.p))
-copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p))
-copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p)
+copy(b::BorderedVector{vectype, T}) where {vectype, T} =  BorderedVector(copy(b.u), copy(b.p))
+copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p);dest)
+copyto!(dest::BorderedVector{vectype, T}, src::BorderedVector{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
 
 
 length(b::BorderedVector{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
@@ -27,19 +27,39 @@ norm(b::BorderedVector{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, 
 
 zero(b::BorderedVector{vectype, T}) where {vectype, T } = BorderedVector(zero(b.u), zero(b.p))
 ################################################################################
+function rmul!(A::BorderedVector{vectype, Tv}, b::T) where {vectype, T <:Real, Tv}
+	# Scale an array A by a scalar b overwriting A in-place
+	rmul!(A.u, b)
+	rmul!(A.p, b)
+end
+
 function rmul!(A::BorderedVector{vectype, T}, b::T) where {vectype, T <:Real}
 	# Scale an array A by a scalar b overwriting A in-place
 	rmul!(A.u, b)
 	A.p = A.p * b
 end
 ################################################################################
+function axpy!(a::T, X::BorderedVector{vectype, Tv}, Y::BorderedVector{vectype, Tv}) where {vectype, T <:Real, Tv}
+	# Overwrite Y with a*X + b*Y, where a, b are scalar
+	axpy!(a, X.u, Y.u)
+	axpy!(a, X.p, Y.p)
+	return Y
+end
+
 function axpy!(a::T, X::BorderedVector{vectype, T}, Y::BorderedVector{vectype, T}) where {vectype, T <:Real}
-	# Overwrite Y with a*X + Y, where a is a scalar
+	# Overwrite Y with a*X + b*Y, where a, b are scalar
 	axpy!(a, X.u, Y.u)
 	Y.p = a * X.p + Y.p
 	return Y
 end
 ################################################################################
+function axpby!(a::T, X::BorderedVector{vectype, Tv}, b::T, Y::BorderedVector{vectype, Tv}) where {vectype, T <: Real, Tv}
+	# Overwrite Y with a*X + b*Y, where a, b are scalar
+	axpby!(a, X.u, b, Y.u)
+	axpby!(a, X.p, b, Y.p)
+	return Y
+end
+
 function axpby!(a::T, X::BorderedVector{vectype, T}, b::T, Y::BorderedVector{vectype, T}) where {vectype, T <:Real}
 	# Overwrite Y with a*X + b*Y, where a is a scalar
 	axpby!(a, X.u, b, Y.u)
@@ -55,6 +75,7 @@ computes x-y into x and return x
 @inline minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
 @inline minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 @inline minus!(x::T, y::T) where {T <:Real} = (x = x - y)
+minus!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T}=(minus!(x.u, y.u);minus!(x.p, y.p))
 function minus!(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real}
 	minus!(x.u, y.u)
 	# Carefull here. If I uncomment the line below, then x.p will be left unaffected
@@ -71,6 +92,7 @@ returns x-y
 @inline minus(x, y) = (return x .- y) # necessary to put a dot .= for ApproxFun to work
 @inline minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 @inline minus(x::T, y::T) where {T <:Real} = (return x - y)
+@inline minus(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T} = (return BorderedVector(minus(x.u, y.u), minus(x.p, y.p)))
 @inline minus(x::BorderedVector{vectype, T},y::BorderedVector{vectype, T}) where {vectype, T <: Real} = (return BorderedVector(minus(x.u, y.u), x.p - y.p))
 ################################################################################
 function normalize(x)
@@ -95,19 +117,19 @@ function normtheta(a::BorderedVector{vectype, T}, theta::T) where {vectype, T}
 	return normtheta(a.u, a.p, theta)
 end
 ################################################################################
-struct borderedLinearOperator
-	J
-	a
-	b
-	c
-end
-
-function (Lb::borderedLinearOperator)(x::BorderedVector{vectype, T}) where {vectype, T <: Real}
-	out = similar(x)
-	out.u .= apply(Lb.J, x.u) .+ Lb.a .* x.p
-	out.p = dot(Lb.b, x.u) + Lb.c * x.p
-	return out
-end
+# struct borderedLinearOperator
+# 	J
+# 	a
+# 	b
+# 	c
+# end
+#
+# function (Lb::borderedLinearOperator)(x::BorderedVector{vectype, T}) where {vectype, T <: Real}
+# 	out = similar(x)
+# 	out.u .= apply(Lb.J, x.u) .+ Lb.a .* x.p
+# 	out.p = dot(Lb.b, x.u) + Lb.c * x.p
+# 	return out
+# end
 ################################################################################
 """
 This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
@@ -126,20 +148,21 @@ end
 # solve in dX, dl
 # J  * dX + a * dl = R
 # b' * dX + c * dl = n
-function linearBorderedSolver(J, a, b, c::T, R, n::T, solver::S)  where {vectype, T, S <: LinearSolver}
-		x1, _, it1 = solver(J, R)
-		x2, _, it2 = solver(J, a)
+function linearBorderedSolver(J, a, b, c::T, R, n::T, solver::S; shift::Ts = 0.0)  where {vectype, T, S <: LinearSolver, Ts <: Number}
+		x1, _, it1 = solver(J, R, shift)
+		x2, _, it2 = solver(J, a, shift)
 
 		dl = (n - dot(b, x1)) / (c - dot(b, x2))
 		# dX = x1 .- dl .* x2
 		dX = copy(x1); axpy!(-dl, x2, dX)
-		
+
 		return dX, dl, (it1, it2)
 end
 ################################################################################
 # solve in dX, dl
 # J  * dX + a * dR = R
 # dz.u' * dX + dz.p * dl = n
+# The following function is essentially used by newtonPseudoArcLength
 function linearBorderedSolver(J, dR,
 							dz::BorderedVector{vectype, T}, R, n::T, theta::T, solver::S;
 							algo=:bordering)  where {T, vectype, S <: LinearSolver}

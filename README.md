@@ -53,16 +53,20 @@ Custom state means, can we use something else than `AbstractVector`:
 | Branching point detection | Y | Y |  |
 | Fold detection | Y | Y | 1 - 5 |
 | Hopf detection | Y | Y | 3 |
-| Fold continuation | Y | `AbstractArray` | 1 |
-| Hopf continuation | Y | `AbstractVector` | 3 |
-| Periodic Orbit Newton | Y | `AbstractVector` | 3 |
-| Periodic Orbit continuation | Y | `AbstractVector` | 3 |
+| Fold continuation | Y | Y | 1 |
+| Hopf continuation | Y | `AbstractArray` | 3 |
+| Periodic Orbit Newton | N | `AbstractVector` | 3 |
+| Periodic Orbit continuation | N | `AbstractVector` | 3 |
+| Fold of Periodic Orbit continuation | N | `AbstractVector` |  |
 
 ## To do or grab
+Without a priority order:
+
 - [x] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
+- [ ] Provide a way to add constraints and combine functionals
+- [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
+- [ ] Improve data structure for `newtonFold, newtonHopf`. Also, the implementation allocates a new `struct` for each parameter.
 - [ ] Compute Hopf Normal Form
 - [ ] Implement Preconditioner for the Matrix Free computation of Periodic Orbits based on Finite Differences
 - [ ] Inplace implementation
-- [ ] Provide a way to add constraints and combine functionals
-- [ ] Improve `computeHopf` to allow for general state (not `AbstractArray`). Also, the implementation allocates a new `struct` for each parameter.
-- [ ] write continuation loop as an iterator
+- [ ] Write continuation loop as an iterator

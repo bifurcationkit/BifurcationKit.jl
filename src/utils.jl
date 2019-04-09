@@ -223,5 +223,5 @@ end
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
 
-apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)
-apply!(y, f, x) = copyto!(y, f(x))
+# apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)
+# apply!(y, f, x) = copyto!(y, f(x))

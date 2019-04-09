@@ -124,7 +124,7 @@ module PseudoArcLengthContinuation
 	end
 	################################################################################################
 	"""
-		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x;kwargs...)->nothing, finaliseSolution::Function = (x, y)-> nothing, linearalgo   = :bordering, verbosity = 2)
+		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x; kwargs...)->nothing, finaliseSolution::Function = (z, tau, step, contResult) -> true, linearalgo   = :bordering, verbosity = 2)
 
 	Compute the continuation curve associated to the functional `F` and its jacobian `J`. The parameters are as follows
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
@@ -250,12 +250,13 @@ module PseudoArcLengthContinuation
 		finaliseSolution(u_pred, u_pred, 1, contRes)
 
 		duds = copy(u_pred)
-		axpby!(-1/ (contParams.ds / T(50)), u0, 1/ (contParams.ds / T(50)),duds)
+		axpby!(-T(1)/ (contParams.ds / T(50)), u0, T(1)/ (contParams.ds / T(50)), duds)
 		# duds = (u_pred - u0) / (contParams.ds / T(50));
-		dpds = T(1.0)
+		dpds = T(1)
 		α = normtheta(duds, dpds, contParams.theta)
+		@assert typeof(α) == T
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
-		rmul!(duds, 1 / α); dpds = dpds / α
+		rmul!(duds, T(1) / α); dpds = dpds / α
 
 		## Initialise continuation
 		step = 0

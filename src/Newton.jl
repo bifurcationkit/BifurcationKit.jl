@@ -190,7 +190,8 @@ function newtonPseudoArcLength(F, Jh,
 	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
 
 	# Initialise iterations
-	x = copy(z_pred.u);  l = z_pred.p
+	x = copy(z_pred.u)
+	l = z_pred.p
 	x_pred = copy(x)
 
 	# Initialise residuals
