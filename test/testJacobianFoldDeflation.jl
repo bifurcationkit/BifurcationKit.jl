@@ -26,7 +26,7 @@ function Jac_mat(u, α, β = 0.)
 	for i = 2:N-1
 		J[i,i-1] = (N-1)^2
 		J[i,i+1] = J[i,i-1]
-    	J[i,i] = -2 * J[i,i-1] + α * dsource_term(u[i],b = β)
+		J[i,i] = -2 * J[i,i-1] + α * dsource_term(u[i],b = β)
 	end
 	return J
 end

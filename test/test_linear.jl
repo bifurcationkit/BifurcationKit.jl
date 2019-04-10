@@ -1,10 +1,11 @@
 using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
 const Cont = PseudoArcLengthContinuation
-
-# test the type BorderedVector
+####################################################################################################
+# test the type BorderedVector and the different methods associated to it
 z_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),1.0)
 tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
 Cont.minus!(z_pred, tau_pred)
+Cont.eltype(z_pred)
 
 axpy!(2. /3, tau_pred, z_pred)
 axpby!(2. /3, tau_pred, 1.0, z_pred)
@@ -20,8 +21,7 @@ zero(z2);zero(z_pred)
 copyto!(z,z2)
 Cont.minus(z.u,z2.u);Cont.minus!(z.u,z2.u)
 Cont.minus(1.,2.);Cont.minus!(1.,2.)
-
-
+####################################################################################################
 # test the linear solver LinearBorderSolver
 println("--> Test linear Bordered solver")
 J0 = rand(10,10) * 0.1 + I
@@ -33,7 +33,7 @@ sol_bd1, sol_bd2, _ = PseudoArcLengthContinuation.linearBorderedSolver(J0[1:end-
 
 @test norm(sol_explicit[1:end-1] - sol_bd1, Inf64) < 1e-12
 @test norm(sol_explicit[end] - sol_bd2, Inf64) < 1e-12
-
+####################################################################################################
 # test the linear solvers for matrix free formulations
 J0 = I + sprand(100,100,0.1)
 Jmf = x -> J0*x
@@ -51,8 +51,7 @@ outkk = ls(Jmf, x0)
 ls = GMRES_IterativeSolvers{Float64}(N = 100, tol = 1e-9)
 outit = ls(J0, x0)
 @test norm(out[1] - outit[1], Inf64) < 1e-7
-
-
+####################################################################################################
 # test the eigen solvers for matrix free formulations
 out = Arpack.eigs(J0, nev = 20, which = :LR)
 

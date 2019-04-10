@@ -208,8 +208,8 @@ Save solution / data in JLD2 file
 function saveSolution(filename, sol, p, i::Int64, br::ContResult, contParam)
 	# create a group in the JLD format
 	jldopen(filename*".jld2", "a+") do file
-	    mygroup = JLD2.Group(file, "sol-$i")
-	    mygroup["sol"] = sol
+		mygroup = JLD2.Group(file, "sol-$i")
+		mygroup["sol"] = sol
 		mygroup["param"] = p
 	end
 

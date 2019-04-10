@@ -3,6 +3,7 @@ module PseudoArcLengthContinuation
 
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
+	include("BorderedVectors.jl")
 	include("LinearBorderSolver.jl")
 	include("DeflationOperator.jl")
 	include("Newton.jl")
@@ -78,8 +79,8 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && print("Theta changes from $(contparams.theta) to ")
 		if (g > contparams.gMax)
 			contparams.theta = contparams.gGoal / tau.p * sqrt( abs(1.0 - g*g) / abs(1.0 - tau.p^2) )
-		    if (contparams.theta < contparams.thetaMin)
-		      contparams.theta = contparams.thetaMin;
+			if (contparams.theta < contparams.thetaMin)
+			  contparams.theta = contparams.thetaMin;
 		  end
 		end
 		print("$(contparams.theta)\n")
@@ -124,16 +125,16 @@ module PseudoArcLengthContinuation
 	end
 	################################################################################################
 	"""
-		continuation(F::Function, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x; kwargs...)->nothing, finaliseSolution::Function = (z, tau, step, contResult) -> true, linearalgo   = :bordering, verbosity = 2)
+		continuation(F, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x; kwargs...)->nothing, finaliseSolution::Function = (z, tau, step, contResult) -> true, linearalgo = :bordering, verbosity = 2)
 
 	Compute the continuation curve associated to the functional `F` and its jacobian `J`. The parameters are as follows
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
-	- `J = (x, p) -> d_xF(x, p)` its associated jacobian
+	- `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
 	- `u0` initial guess
 	- `contParams` parameters for continuation, with type `ContinuationPar`
 	- `plot = false` whether to plot the solution while computing
 	- `printsolution = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
-	- `plotsolution::Function = (x; kwargs...)->nothing` function implementing the plotting of the solution.
+	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plotting of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation step (stop it by returning false) or saving personal data...
 	- `linearalgo   = :bordering`. Must belong to `[:bordering, :full]`
 	- `verbosity` controls the amount of information printed during the continuation process.

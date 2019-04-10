@@ -34,11 +34,11 @@ end
 
 	# parameters for scaling arclength step size
 	theta::T              = 0.5 # parameter in the dot product used for the extended system
-    doArcLengthScaling    = false
-    gGoal::T              = 0.5
-    gMax::T               = 0.8
-    thetaMin::T           = 1.0e-3
-    isFirstRescale        = true
+	doArcLengthScaling    = false
+	gGoal::T              = 0.5
+	gMax::T               = 0.8
+	thetaMin::T           = 1.0e-3
+	isFirstRescale        = true
 	a::T                  = 0.5  # aggressiveness factor
 	tangentFactorExponent::T = 1.5
 
@@ -88,7 +88,7 @@ end
 
 This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `Default()` which is the operator backslash which works well for Sparse / Dense matrices. Iterative solver (GMRES) are also implemented. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable provided are as follows:
 - `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
-- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolve`
+- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolve`. The Jacobian can be a matrix or an out of place function.
 
 # Output:
 - solution:
@@ -172,10 +172,12 @@ This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` toge
 with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 """
 function newtonPseudoArcLength(F, Jh,
-						z0::M, tau0::M, z_pred::M,
+						z0::BorderedVector{vectype, T},
+						tau0::BorderedVector{vectype, T},
+						z_pred::BorderedVector{vectype, T},
 						options::ContinuationPar{T};
 						linearalgo = :bordering,
-						normN = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
+						normN = norm) where {T, vectype}
 	# Rename parameters
 	newtonOpts = options.newtonOptions
 	nltol   = newtonOpts.tol

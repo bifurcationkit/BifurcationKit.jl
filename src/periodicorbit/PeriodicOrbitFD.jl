@@ -25,41 +25,41 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
 
 """
 @with_kw struct PeriodicOrbitTrap{vectype, S <: LinearSolver} <: PeriodicOrbit
-    # Function F(x, p) = 0
-    F::Function
+	# Function F(x, p) = 0
+	F::Function
 
-    # Jacobian of F wrt x
-    J::Function
+	# Jacobian of F wrt x
+	J::Function
 
-    # variables to define a Poincare Section
-    ϕ::vectype
-    xπ::vectype
+	# variables to define a Poincare Section
+	ϕ::vectype
+	xπ::vectype
 
-    # discretisation of the time interval
-    M::Int = 100
+	# discretisation of the time interval
+	M::Int = 100
 
-    linsolve::S
+	linsolve::S
 end
 
 """
 This encodes the previous functional for finding periodic orbits based on finite differences using the Trapezoidal rule
 """
 function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype) where {vectype <: AbstractVector, S}
-    M = poPb.M
-    N = div(length(u0) - 1, M)
-    T = u0[end]
-    h = T / M
+	M = poPb.M
+	N = div(length(u0) - 1, M)
+	T = u0[end]
+	h = T / M
 
-    u0c = reshape(u0[1:end-1], N, M)
-    outc = similar(u0c)
-    for ii=2:M
-        outc[:, ii] .= (u0c[:, ii] .- u0c[:, ii-1]) .- h/2 .* (poPb.F(u0c[:, ii]) .+ poPb.F(u0c[:, ii-1]))
-    end
+	u0c = reshape(u0[1:end-1], N, M)
+	outc = similar(u0c)
+	for ii=2:M
+		outc[:, ii] .= (u0c[:, ii] .- u0c[:, ii-1]) .- h/2 .* (poPb.F(u0c[:, ii]) .+ poPb.F(u0c[:, ii-1]))
+	end
 
-    # closure condition ensuring a periodic orbit
-    outc[:, 1] .= u0c[:, M] .- u0c[:, 1]
+	# closure condition ensuring a periodic orbit
+	outc[:, 1] .= u0c[:, M] .- u0c[:, 1]
 
-    return vcat(vec(outc),
+	return vcat(vec(outc),
 			dot(u0c[:, 1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
 end
 
@@ -67,25 +67,25 @@ end
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
 function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, du) where {vectype, S}
-    M = poPb.M
-    N = div(length(u0) - 1, M)
-    T = u0[end]
-    h = T / M
+	M = poPb.M
+	N = div(length(u0) - 1, M)
+	T = u0[end]
+	h = T / M
 
-    u0c = reshape(u0[1:end-1], N, M)
-    duc = reshape(du[1:end-1], N, M)
-    outc = similar(u0c)
+	u0c = reshape(u0[1:end-1], N, M)
+	duc = reshape(du[1:end-1], N, M)
+	outc = similar(u0c)
 
-    for ii=2:M
-        outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .* (apply(poPb.J(u0c[:, ii]), duc[:, ii]) .+ apply(poPb.J(u0c[:, ii-1]), duc[:, ii-1]) )
-    end
+	for ii=2:M
+		outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .* (apply(poPb.J(u0c[:, ii]), duc[:, ii]) .+ apply(poPb.J(u0c[:, ii-1]), duc[:, ii-1]) )
+	end
 
-    # closure condition
-    outc[:, 1] .= duc[:, M] .- duc[:, 1]
+	# closure condition
+	outc[:, 1] .= duc[:, M] .- duc[:, 1]
 
-    δ = 1e-9
-    dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
-    return vcat(vec(outc) .+ dTFper[1:end-1] .* du[end],
+	δ = 1e-9
+	dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
+	return vcat(vec(outc) .+ dTFper[1:end-1] .* du[end],
 				dot(duc[:, 1], poPb.ϕ) + dTFper[end] * du[end])
 end
 
@@ -95,9 +95,9 @@ Sparse Matrix expression expression of the Jacobian for the periodic problem com
 function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ = 1.0) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
-    N = div(length(u0) - 1, M)
-    T = u0[end]
-    h = T / M
+	N = div(length(u0) - 1, M)
+	T = u0[end]
+	h = T / M
 
 	J = BlockArray(spzeros(M * N, M * N), N * ones(Int64,M),  N * ones(Int64,M))
 
@@ -105,7 +105,7 @@ function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ
 	On = spzeros(N, N)
 
 	u0c = reshape(u0[1:end-1], N, M)
-    outc = similar(u0c)
+	outc = similar(u0c)
 
 	for ii=2:M
 		Jn = In - h/2 .* poPb.J(u0c[:, ii])
@@ -124,33 +124,33 @@ Function waiting to be accepted to BlockArrays.jl
 """
 function blockToSparse(J::AbstractBlockArray)
 	nl, nc = size(J.blocks)
-    # form the first line of blocks
-    res = J[Block(1,1)]
-    for j=2:nc
-        res = hcat(res,J[Block(1,j)])
-    end
-    # continue with the other lines
-    for i=2:nl
-        line = J[Block(i,1)]
-        for j=2:nc
-            line = hcat(line,J[Block(i,j)])
-        end
-        res = vcat(res,line)
-    end
-    return res
+	# form the first line of blocks
+	res = J[Block(1,1)]
+	for j=2:nc
+		res = hcat(res,J[Block(1,j)])
+	end
+	# continue with the other lines
+	for i=2:nl
+		line = J[Block(i,1)]
+		for j=2:nc
+			line = hcat(line,J[Block(i,j)])
+		end
+		res = vcat(res,line)
+	end
+	return res
 end
 
 function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacsparse) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
-    N = div(length(u0) - 1, M)
-    T = u0[end]
-    h = T / M
+	N = div(length(u0) - 1, M)
+	T = u0[end]
+	h = T / M
 	J_block = JacobianPeriodicFD(poPb, u0)
 
 	# we now set up the last line / column
 	δ = 1e-9
-    dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
+	dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
 
 	# this bad for performance. Get converted to SparseMatrix at the next line
 	J = blockToSparse(J_block)
@@ -171,9 +171,9 @@ Matrix-Free expression expression of the Monodromy matrix for the periodic probl
 function FloquetPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, du::vectype) where {vectype, S}
 	# extraction of various constants
 	M = poPb.M
-    N = div(length(u0)-1, M)
-    T = u0[end]
-    h = T / M
+	N = div(length(u0)-1, M)
+	T = u0[end]
+	h = T / M
 
 	out = copy(du)
 

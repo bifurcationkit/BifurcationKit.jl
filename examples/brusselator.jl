@@ -97,7 +97,7 @@ function finalise_solution(z, tau, step, contResult)
 	return true
 end
 
-n = 301
+n = 101
 # const Δ = spdiagm(0 => 2ones(N), -1 => 0ones(N-1), 1 => -ones(N-1))
 Jac_fd(u0, α, β, l = l) = Cont.finiteDifferences(u->F_bru(u, α, β, l=l), u0)
 
@@ -135,49 +135,16 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8
 # @time Arpack.eigs(J0, nev = 10, which = :LR)
 # @time sort(eigen(Array(J0)).values, by = x -> abs(x), rev = false)[1:15]
 # @time KrylovKit.eigsolve(J0, 10, :LR, tol = 1e-6)
-#
 # @time opt_newton.eigsolve(J0,10)
-#################################################################################################### Continuation of the Hopf Point using Dense method
-# ind_hopf = 1
-# hopfpt = Cont.HopfPoint(br, ind_hopf)
-# 	hopfvariable = β -> HopfProblemMinimallyAugmented(
-# 					(x, p) ->   F_bru(x, a, β, l = p),
-# 					(x, p) -> Jac_mat(x, a, β, l = p),
-# 					(x, p) -> transpose(Jac_mat(x, a, β, l = p)),
-# 					br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1],
-# 					br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]],
-# 					opts_br0.newtonOptions.linsolve)
-# 	hopfPb = (u, p)->hopfvariable(p)(u)
-#
-# Jac_hopf_fdMA(u0, α) = Cont.finiteDifferences( u-> hopfPb(u, α), u0)
-# # cas des differences finies ~ 190s
-# opt_hopf = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-# 	outhopf, hist, flag = @time Cont.newton(
-# 						x ->        hopfPb(x, b),
-# 						x -> Jac_hopf_fdMA(x, b),
-# 						hopfpt,
-# 						opt_hopf)
-# 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], "\n")
-#
-# opt_hopf_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 14.1, pMin = 0.0, a = 2., theta = 0.4)
-# 	opt_hopf_cont.maxSteps = 70
-# 	opt_hopf_cont.newtonOptions.verbose = true
-#
-# 	br_hopf, u1_hopf = @time Cont.continuation(
-# 					(x, β) ->        hopfPb(x, β),
-# 					(x, β) -> Jac_hopf_fdMA(x, β),
-# 					outhopf, b,
-# 					opt_hopf_cont, plot = true,
-# 					printsolution = u -> u[end-1])
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
 	hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 	outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
-				(x, p) -> Jac_sp(x, a, b, l = p),
-				br, ind_hopf,
-				opt_newton)
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], ", from l = ",hopfpt[end-1],"\n")
+			(x, p) -> Jac_sp(x, a, b, l = p),
+			br, ind_hopf,
+			opt_newton)
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], ", from l = ",hopfpt.p[1],"\n")
 
 br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) ->  F_bru(x, a, β, l = p),
@@ -196,8 +163,8 @@ end
 ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
-l_hopf = hopfpt[end-1]
-ωH     = hopfpt[end] |> abs
+l_hopf = hopfpt.p[1]
+ωH     = hopfpt.p[end] |> abs
 M = 100
 
 
@@ -210,9 +177,9 @@ plot([0, 1], [0, 0])
 	for ii=1:M
 	t = (ii-1)/(M-1)
 	# use phase 0.279 for default_eig()
-	orbitguess[:, ii] .= real.(hopfpt[1:2n] +
+	orbitguess[:, ii] .= real.(hopfpt.u +
 						26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - .235))) #k=1
-	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
+	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))
 end
 	phmin = findmin(abs.(scalphase))
 	println("--> min phase for ", phase[phmin[2]])
@@ -224,7 +191,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			x-> F_bru(x, a, b, l = l),
 			x-> Jac_sp(x, a, b, l = l),
 			real.(vec_hopf),
-			hopfpt[1:2n],
+			hopfpt.u,
 			M,
 			opt_newton.linsolve)
 
@@ -234,137 +201,29 @@ plot(heatmap(orbitguess[1:n,:], ylabel="Time"),heatmap(orbitguess[n+2:end,:]))
 
 opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
-						x ->  poTrap(l_hopf + 0.01)(x),
-						x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
-						orbitguess_f,
-						opt_po)
+			x ->  poTrap(l_hopf + 0.01)(x),
+			x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
+			orbitguess_f,
+			opt_po)
 	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 
-# # stability
-# Jfloquet = 	Cont.JacobianPeriodicFD(poTrap(l_hopf + 0.01), outpo_f, 1.0) |> sparse
-# # df = ones(2n*M); df[end-2n+1:end].=0;Bfloquet = spdiagm(0 => df);
-# using Arpack
-# reseig = Arpack.eigs(Jfloquet, Bfloquet, nev = 10, which = :LM, tol = 1e-8)
-# # res = KrylovKit.geneigsolve(Jfloquet, Bfloquet)
-# eis = eig_KrylovKit{Float64}(which = :LM, tol = 1e-4 )
-# eis(Jfloquet, 100)
-#
-# Jmono = x -> Cont.FloquetPeriodicFD(poTrap(1.3), upo.u, x)
-# 	KrylovKit.eigsolve(Jmono,rand(2n),10, :LM)
-
-# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true, eigsolve = Cont.FloquetFD2(poTrap)), detect_bifurcation = true)
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
 	br_pok2, upo , _= @time Cont.continuation(
-							(x, p) ->  poTrap(p)(x),
-							(x, p) ->  poTrap(p)(x, :jacsparse),
-							outpo_f, l_hopf + 0.01,
-							opts_po_cont,
-							plot = true,
-							plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
-							printsolution = u -> u[end])
-
-# branches = []
-# push!(branches,br_pok1)
-# Cont.plotBranch(branches, ylabel="T", xlabel = "l", label="")
+			(x, p) ->  poTrap(p)(x),
+			(x, p) ->  poTrap(p)(x, :jacsparse),
+			outpo_f, l_hopf + 0.01,
+			opts_po_cont,
+			plot = true,
+			plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
+			printsolution = u -> u[end])
 ##########################################################################################
 # Matrix-Free computation, useless without a preconditionner
 opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolve = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
 	outpo_f, hist, flag = @time Cont.newton(
-						x ->  poTrap(l_hopf + 0.01)(x),
-						x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),
-						orbitguess_f,
-						opt_po)
+			x ->  poTrap(l_hopf + 0.01)(x),
+			x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),
+			orbitguess_f,
+			opt_po)
 	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
-#################################################################################################### Example pde2path
-a = 1.5
-b = 4.1
-l0 = 1.4
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
-	# ca fait dans les 60.2k Allocations
-	out, hist, flag = @time Cont.newton(
-		x -> F_bru(x, a, b; D1 = 0.01, D2 = 0.1, l = l0),
-		x -> Jac_mat(x, a, b; D1 = 0.01, D2 = 0.1, l = l0),
-		vcat(a*ones(n),b/a*ones(n)),
-		opt_newton)
-		plot(out)
-
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.001, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 16, plot_every_n_steps = 50)
-	opts_br0.newtonOptions.maxIter = 20
-	opts_br0.newtonOptions.tol = 1e-8
-	opts_br0.maxSteps = 540
-
-	br2, _ = @time Cont.continuation(
-		(x, p) ->   F_bru(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-		(x, p) -> Jac_mat(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-		out,
-		a,
-		opts_br0,
-		plot = true,
-		plotsolution = (x;kwargs...)->(N = div(length(x), 2);plot!(x[1:N], subplot=4, label="");plot!(x[N+1:2N], subplot=4, label="")),
-		finaliseSolution = finalise_solution,
-		printsolution = x->norm(x))
-
-
-outhopf,_ = newtonHopf(
-	(x, p) ->   F_bru(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-	(x, p) -> Jac_mat(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-	(x, p) -> transpose(Jac_mat(x, p, b; D1 = 0.01, D2 = 0.1, l = l0)),
-	br2, 1,
-	NewtonPar(verbose = true))
-	flag && printstyled(color=:red, "--> We found a Hopf Point at a = ", outhopf[end-1], ", ω = ", outhopf[end], "\n")
-
-#####
-ind_hopf = 1
-hopfpt = Cont.HopfPoint(br2, ind_hopf)
-
-p_hopf = outhopf[end-1]
-ωH     = outhopf[end] |> abs
-
-M = 35
-
-orbitguess = zeros(2n, M)
-plot([0, 1], [0, 0])
-	tt = []; phase = []
-	vec_hopf = br2.eig[br2.bifpoint[ind_hopf][2]][2][:, br2.bifpoint[ind_hopf][end]+1]
-	for ii=1:M
-		t = (ii-1)/(M-1)
-		orbitguess[:, ii] .= real.(hopfpt[1:2n] +
-							11*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.230)))
-		push!(tt, t);push!(phase, dot(orbitguess[:, ii]- hopfpt[1:2n], real.(vec_hopf)))
-	end
-	plot!(tt, phase) |> display
-	orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
-
-poTrap = p -> PeriodicOrbitTrap(
-			x ->  F_bru(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-			x -> Jac_sp(x, p, b; D1 = 0.01, D2 = 0.1, l = l0),
-			real.(vec_hopf),
-			hopfpt[1:2n],
-			M,
-			opt_newton.linsolve,
-			opt_newton)
-
-poTrap(p_hopf + 0.01)(orbitguess_f) |> plot
-
-plotPeriodic(orbitguess_f,n,M)
-
-opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
-	outpo, hist, flag = @time Cont.newton(
-						x ->  poTrap(p_hopf + 0.01)(x),
-						x -> poTrap(p_hopf + 0.01)(x,:jacsparse),
-						orbitguess_f,
-						opt_po)
-	println("--> T = ", outpo[end])
-	plotPeriodic(outpo,n,M)
-
-
-using DifferentialEquations
-tspan = (0.0, 10.)
-prob  = ODEProblem((x,p,t)->F_bru(x, p, b; D1 = 0.01, D2 = 0.1, l = l0), hopfpt[1:2n], tspan, p_hopf - 0.0)
-sol   = @time solve(prob, Tsit5(), progress=true);
-plot(sol.t, map(norm, sol.u))
-plot(sol.u[end])
-
-heatmap(sol.u)

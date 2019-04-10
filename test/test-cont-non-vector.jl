@@ -6,7 +6,7 @@ const Cont = PseudoArcLengthContinuation
 # We start with a simple Fold problem
 using LinearAlgebra
 function F0(x::Vector, r)
-    out = r .+  x .- x.^3
+	out = r .+  x .- x.^3
 end
 
 opt_newton0 = Cont.NewtonPar(tol = 1e-11, verbose = true)
@@ -40,10 +40,10 @@ outfold, hist, flag = @time Cont.newtonFold(
 # Here is a more involved example
 
 function Fb(x::BorderedVector, r, s = 1.0)
-    out = similar(x)
-    out.u = r .+  s .* x.u .- (x.u).^3
-    out.p = x.p - 0.0
-    out
+	out = similar(x)
+	out.u = r .+  s .* x.u .- (x.u).^3
+	out.p = x.p - 0.0
+	out
 end
 
 # there is no finite differences defined, so we need to provide a linearsolve
@@ -65,12 +65,12 @@ end
 struct linsolveBd <: Cont.LinearSolver end
 
 function (l::linsolveBd)(J, dx)
-    x = J.x
+	x = J.x
 	r = J.r
-    out = similar(dx)
-    out.u = dx.u ./ (J.s .- 3 .* (x.u).^2)
-    out.p = dx.p
-    out, true, 1
+	out = similar(dx)
+	out.u = dx.u ./ (J.s .- 3 .* (x.u).^2)
+	out.p = dx.p
+	out, true, 1
 end
 
 sol = BorderedVector([0.8], 0.0)

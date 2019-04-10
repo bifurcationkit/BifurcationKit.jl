@@ -1,4 +1,5 @@
-using Parameters
+using Parameters, Setfield
+
 """
 For an initial guess from the index of a bifurcation point located in ContResult.bifpoint
 """
@@ -12,36 +13,36 @@ function HopfPoint(br::ContResult, index::Int64)
 end
 
 struct HopfProblemMinimallyAugmented{vectype, S <: LinearSolver}
-    F 					# Function F(x, p) = 0
-    J 					# Jacobian of F wrt x
-    Jadjoint  			# Adjoint of the Jacobian of F
-    a::vectype			# close to null vector of (J - iω I)^*
-    b::vectype			# close to null vector of J - iω I
-    linsolve::S
+	F 					# Function F(x, p) = 0
+	J 					# Jacobian of F wrt x
+	Jadjoint  			# Adjoint of the Jacobian of F
+	a::vectype			# close to null vector of (J - iω I)^*
+	b::vectype			# close to null vector of J - iω I
+	linsolve::S
 end
 
 function (fp::HopfProblemMinimallyAugmented{vectype, S})(x, p::T, ω::T) where {vectype, S <: LinearSolver, T}
-    # These are minimally augmented turning point equations
-    # The jacobian will be inverted using a bordering method
-    a = fp.a
-    b = fp.b
+	# These are minimally augmented turning point equations
+	# The jacobian will be inverted using a bordering method
+	a = fp.a
+	b = fp.b
 
-    # we solve (J+iω)v + a σ1 = 0 with <b, v> = n
-    n = T(1)
-    v, σ1, _ = linearBorderedSolver(fp.J(x, p),
+	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
+	n = T(1)
+	v, σ1, _ = linearBorderedSolver(fp.J(x, p),
 	 								a, b,
 									T(0), zero(x), n,
 									fp.linsolve; shift = Complex{T}(0, ω))
 
-    # we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
+	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
 	# we find sigma2 = conj(sigma1)
-    # w, σ2, _ = linearBorderedSolver(fp.J(x, p) - Complex(0, ω) * I, b, a, 0., zeros(N), n, fp.linsolve)
+	# w, σ2, _ = linearBorderedSolver(fp.J(x, p) - Complex(0, ω) * I, b, a, 0., zeros(N), n, fp.linsolve)
 
-    # the constraint is σ = <w, Jv> / n
-    # σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v)) / n
+	# the constraint is σ = <w, Jv> / n
+	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v)) / n
 	# we should have σ = σ1
 
-    return fp.F(x, p), real(σ1), imag(σ1)
+	return fp.F(x, p), real(σ1), imag(σ1)
 end
 
 function (hopfpb::HopfProblemMinimallyAugmented{vectypeC, S})(x::BorderedVector{vectypeR, T}) where {vectypeC, vectypeR, S <: LinearSolver, T}
@@ -59,39 +60,39 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	 						duu, dup, duω, d2F;
 							debug_ = false,
 							d2F_is_known = false) where T
-    # N = length(du) - 2
-    # the jacobian should just be a tuple
-    # the Jacobian J is expressed at (x, p)
-    # the jacobian expression of the hopf problem is
+	# N = length(du) - 2
+	# the jacobian should just be a tuple
+	# the Jacobian J is expressed at (x, p)
+	# the jacobian expression of the hopf problem is
 	#					[ J dpF   0
 	#					 σx  σp  σω]
 	########## Resolution of the bordered linear system ########
-	# J * dX      + dpF * dp           = du => dX = x1 - dp * x2
+	# J * dX	  + dpF * dp		   = du => dX = x1 - dp * x2
 	# The second equation
-	#    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
+	#	<σx, dX> +  σp * dp + σω * dω = du[end-1:end]
 	# thus becomes
 	#   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
 	# This 2x2 system is then solved to get (dp, dω)
-    ############### Extraction of function names #################
-    Fhandle = pbMA.F
-    J = pbMA.J
-    Jadjoint = pbMA.Jadjoint
-    a = pbMA.a
-    b = pbMA.b
+	############### Extraction of function names #################
+	Fhandle = pbMA.F
+	J = pbMA.J
+	Jadjoint = pbMA.Jadjoint
+	a = pbMA.a
+	b = pbMA.b
 
-    δ = T(1e-9)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+	δ = T(1e-9)
+	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 
-    # we solve Jv + a σ1 = 0 with <b, v> = n
-    n = T(1)
-    v, σ1, _ = linearBorderedSolver(J(x, p), a, b, T(0), zero(x), n, pbMA.linsolve; shift = Complex{T}(0, ω))
+	# we solve Jv + a σ1 = 0 with <b, v> = n
+	n = T(1)
+	v, σ1, _ = linearBorderedSolver(J(x, p), a, b, T(0), zero(x), n, pbMA.linsolve; shift = Complex{T}(0, ω))
 
-    w, σ2, _ = linearBorderedSolver(Jadjoint(x, p), b, a, T(0), zero(x), n, pbMA.linsolve; shift = -Complex{T}(0, ω))
+	w, σ2, _ = linearBorderedSolver(Jadjoint(x, p), b, a, T(0), zero(x), n, pbMA.linsolve; shift = -Complex{T}(0, ω))
 
-    ################### computation of σx σp ####################
-    dpF   = (Fhandle(x, p + ϵ1)     - Fhandle(x, p - ϵ1)) / T(2ϵ1)
-    dJvdp = (apply(J(x, p + ϵ3), v) - apply(J(x, p - ϵ3), v)) / T(2ϵ3)
-    σp = -dot(w, dJvdp) / n
+	################### computation of σx σp ####################
+	dpF   = (Fhandle(x, p + ϵ1)	 - Fhandle(x, p - ϵ1)) / T(2ϵ1)
+	dJvdp = (apply(J(x, p + ϵ3), v) - apply(J(x, p - ϵ3), v)) / T(2ϵ3)
+	σp = -dot(w, dJvdp) / n
 
 	# case of sigma_omega
 	σω = -dot(w, Complex{T}(0, 1) * v) / n
@@ -99,20 +100,20 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	x1, _, it1 = pbMA.linsolve(J(x, p), duu)
 	x2, _, it2 = pbMA.linsolve(J(x, p), dpF)
 
-    # the case of ∂_xσ is a bit more involved
+	# the case of ∂_xσ is a bit more involved
 	# we first need to compute the value of ∂_xσ written σx
 	# σx = zeros(Complex{T}, length(x))
 	σx = similar(x, Complex{T})
 
 	if d2F_is_known == false
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
-	    e = zero(x)
-	    for ii in CartesianIndices(x)
-	        e[ii] = T(1)
-	        d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / T(2ϵ2)
-	        σx[ii] = -dot(w, d2Fve) / n
+		e = zero(x)
+		for ii in CartesianIndices(x)
+			e[ii] = T(1)
+			d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / T(2ϵ2)
+			σx[ii] = -dot(w, d2Fve) / n
 			e[ii] = T(0)
-	    end
+		end
 		σxx1 = dot(σx, x1)
 		σxx2 = dot(σx, x2)
 	else
@@ -148,13 +149,14 @@ function (hopfl::HopfLinearSolveMinAug)(Jhopf, du::BorderedVector{vectype, T}; d
 	end
 end
 
+################################################################################################### Newton / Continuation functions
 """
 This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F  = (x, p) -> F(x, p)` where `p` is the parameter associated to the Hopf point
 - `J  = (x, p) -> d_xF(x, p)` associated jacobian
 - `Jt = (x, p) -> transpose(d_xF(x, p))` associated jacobian
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
-- `hopfpointguess` initial guess (x_0, p_0) for the Hopf point. It should be a `AbstractVector` or a `BorderedVector`.
+- `hopfpointguess` initial guess (x_0, p_0) for the Hopf point. It should a `BorderedVector` as given by the function HopfPoint.
 - `eigenvec` guess for the  iω eigenvector
 - `eigenvec_ad` guess for the -iω eigenvector
 - `options::NewtonPar`
@@ -168,8 +170,8 @@ function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedVector{vectypeR, T}, 
 		eigenvec_ad,
 		options.linsolve)
 	hopfPb = u -> hopfvariable(u)
+
 	# Jacobian for the Hopf problem
-	# Jac_hopf_fdMA(u0) = Cont.finiteDifferences( u-> hopfPb(u), u0)
 	Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb, d2F))
 
 	# options for the Newton Solver
@@ -177,9 +179,9 @@ function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedVector{vectypeR, T}, 
 
 	# solve the hopf equations
 	return newton(x ->  hopfPb(x),
-		x -> Jac_hopf_MA(x, hopfvariable),
-		hopfpointguess,
-		opt_hopf, normN = normN)
+				x -> Jac_hopf_MA(x, hopfvariable),
+				hopfpointguess,
+				opt_hopf, normN = normN)
 end
 
 """
@@ -187,10 +189,20 @@ call when hessian is unknown, finite differences are then used
 """
 newtonHopf(F, J, Jt, hopfpointguess::BorderedVector{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, Jt, x -> x, hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
 
-"""
-Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows `newtonHopf(F, J, Jt, d2F, br::ContResult, index::Int64, options)` where the parameters are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+newtonHopf(F, J, hopfpointguess::BorderedVector{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, (x, p) -> transpose(J(x, p)), hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
 
-!!! warning "Eigenvectors`"
+"""
+Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
+
+	`newtonHopf(F, J, Jt, br::ContResult, index::Int64, options)`
+
+or
+
+	`newtonHopf(F, J, Jt, d2F, br::ContResult, index::Int64, options)`
+
+when the Hessian d2F is known. The parameters are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+
+!!! warning "Eigenvectors"
     This simplified call has been written when the eigenvectors are organised in a 2d Array `evec` where `evec[:,2]` is the second eigenvector in the list.
 """
 function newtonHopf(F, J, Jt, d2F, br::ContResult, ind_hopf::Int64, options::NewtonPar ; d2F_is_known = true)
@@ -261,7 +273,7 @@ Simplified call for continuation of Hopf point. More precisely, the call is as f
 
 Simplified calls are also provided but at the cost of using finite differences.
 
-!!! warning "Eigenvectors`"
+!!! warning "Eigenvectors"
     This simplified call has been written when the eigenvectors are organised in a 2d Array `evec` where `evec[:,2]` is the second eigenvector in the list.
 """
 function continuationHopf(F, J, Jt, d2F, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...)

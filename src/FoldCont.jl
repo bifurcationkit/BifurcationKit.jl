@@ -1,4 +1,4 @@
-using Setfield
+using Parameters, Setfield
 
 function FoldPoint(br::ContResult, index::Int64)
 	@assert br.bifpoint[index][1] == :fold "The index provided does not refer to a Fold point"
@@ -6,33 +6,32 @@ function FoldPoint(br::ContResult, index::Int64)
 	return BorderedVector(bifpoint[5], bifpoint[3])
 end
 
-#################################################################################################### Method using Minimally Augmented formulation
-
+####################################################################################################Method using Minimally Augmented formulation
 struct FoldProblemMinimallyAugmented{vectype, S <: LinearSolver}
-    F 					# Function F(x, p) = 0
-    J 					# Jacobian of F wrt x
-    Jadjoint			# Adjoint of the Jacobian of F
-    a::vectype			# close to null vector of J^T
-    b::vectype			# close to null vector of J
-    linsolve::S
+	F 					# Function F(x, p) = 0
+	J 					# Jacobian of F wrt x
+	Jadjoint			# Adjoint of the Jacobian of F
+	a::vectype			# close to null vector of J^T
+	b::vectype			# close to null vector of J
+	linsolve::S
 end
 
 function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where {vectype, S <: LinearSolver, T}
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter for which the jacobian is singular
-    # The equations are those of minimally augmented formulation of the turning point problem
-    # The jacobian of the MA problem is solved with a bordering method
-    a = fp.a
-    b = fp.b
+	# The equations are those of minimally augmented formulation of the turning point problem
+	# The jacobian of the MA problem is solved with a bordering method
+	a = fp.a
+	b = fp.b
 
-    # we solve Jv + a σ1 = 0 with <b, v> = n
+	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
-    n = T(1)
-    v = fp.linsolve(fp.J(x, p), a)[1]
-    σ1 = -n / dot(b, v)
+	n = T(1)
+	v = fp.linsolve(fp.J(x, p), a)[1]
+	σ1 = -n / dot(b, v)
 
-    return fp.F(x, p), σ1
+	return fp.F(x, p), σ1
 end
 
 function (foldpb::FoldProblemMinimallyAugmented{vectype, S})(x::BorderedVector{vectype, T}) where {vectype, S <: LinearSolver, T}
@@ -51,36 +50,36 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 							debug_ = false,
 							d2F_is_known = false) where T
 	# We solve Jfold⋅res = du := [duu, dup]
-    # the Jacobian J is expressed at (x, p)
-    # the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
+	# the Jacobian J is expressed at (x, p)
+	# the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
 	# we recall the expression of σx = -< w ,d2F(x,p)[v, x2]>
-    ############### Extraction of function names #################
+	############### Extraction of function names #################
 
-    F = pbMA.F
-    J = pbMA.J
-    Jadjoint = pbMA.Jadjoint
-    a = pbMA.a
-    b = pbMA.b
+	F = pbMA.F
+	J = pbMA.J
+	Jadjoint = pbMA.Jadjoint
+	a = pbMA.a
+	b = pbMA.b
 
 	n = T(1)
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	v = pbMA.linsolve(J(x, p), a)[1]
-    σ1 = -n / dot(b, v)
+	σ1 = -n / dot(b, v)
 	rmul!(v, -σ1)
 
-    # we solve J'w + b σ2 = 0 with <a, w> = n
+	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J\b with σ2 = -n/<a, J^{-1}b>
-    w = pbMA.linsolve(Jadjoint(x, p), b)[1]
-    σ2 = -n / dot(a, w)
+	w = pbMA.linsolve(Jadjoint(x, p), b)[1]
+	σ2 = -n / dot(a, w)
 	rmul!(w, -σ2)
 
 	δ = T(1e-8)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
-    ################### computation of σx σp ####################
-    dpF = minus(F(x, p + ϵ1), F(x, p - ϵ1)); rmul!(dpF, one(p) / T(2ϵ1))
-    dJvdp = minus(apply(J(x, p + ϵ3), v), apply(J(x, p - ϵ3), v)); rmul!(dJvdp, one(p) / T(2ϵ3))
-    σp = -dot(w, dJvdp) / n
+	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+	################### computation of σx σp ####################
+	dpF = minus(F(x, p + ϵ1), F(x, p - ϵ1)); rmul!(dpF, one(p) / T(2ϵ1))
+	dJvdp = minus(apply(J(x, p + ϵ3), v), apply(J(x, p - ϵ3), v)); rmul!(dJvdp, one(p) / T(2ϵ3))
+	σp = -dot(w, dJvdp) / n
 
 	if d2F_is_known == false
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
@@ -122,7 +121,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 	end
 
 	if debug_
-    	return dX, dsig, true, sum(it), 0., [J(x, p) dpF ; σx' σp]
+		return dX, dsig, true, sum(it), 0., [J(x, p) dpF ; σx' σp]
 	else
 		return dX, dsig, true, sum(it), 0.
 	end
@@ -150,7 +149,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `dF  = (x, p) -> d_xF(x, p)` associated jacobian
 - `dFt = (x, p) -> transpose(d_xF(x, p))` associated jacobian, it should be implemented in an efficient manner. For matrix-free methods, `tranpose` is not readily available.
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
-- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `AbstractArray` or a `BorderedVector`
+- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedVector` as given by the function FoldPoint
 - `eigenvec` guess for the 0 eigenvector
 - `options::NewtonPar`
 """
@@ -223,7 +222,7 @@ newtonFold(F, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...) = 
 
 """
 codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
-- `F = (x, p1, p2) ->    F(x, p1, p2)` where `p` is the parameter associated to the Fold point
+- `F = (x, p1, p2) ->	F(x, p1, p2)` where `p` is the parameter associated to the Fold point
 - `J = (x, p1, p2) -> d_xF(x, p1, p2)` associated jacobian
 - `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` associated jacobian
 - `d2F = (x, p1, p2, v1, v2) -> d2F(x, p1, p2, v1, v2)` this is the hessian of `F` computed at `(x, p1, p2)` and evaluated at `(v1, v2)`.
@@ -273,7 +272,7 @@ codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 
 !!! warning "Hessian"
-    The hessian of `F` in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+	The hessian of `F` in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 continuationFold(F, J, Jt, foldpointguess::BorderedVector{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ;kwargs...) where {T,vectype} = continuationFold(F, J, Jt, x -> x, foldpointguess, p2_0, eigenvec, options_cont ; d2F_is_known = false, kwargs...)
 

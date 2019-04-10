@@ -52,19 +52,15 @@ opts = Cont.ContinuationPar(dsmin = 0.0001,
 			dsmax = 0.0035,
 			ds = -0.001,
 			doArcLengthScaling = false,
-			a = 0.5,
+			a = 0.2,
 			newtonOptions = opt_new,
-			detect_fold = false,
-			maxSteps = 2340,
-			theta = .5, plot_every_n_steps = 200)
+			detect_fold = true, detect_bifurcation = false,
+			maxSteps = 2080,
+			theta = .4, plot_every_n_steps = 200)
 	@assert opts.a<=1.5 "sinon ca peut changer le sens du time step"
 	opts.newtonOptions.maxIter = 100
 	opts.newtonOptions.tol = 1e-9
-	opts.newtonOptions.damped = false
-	# opts.detect_fold = true
-
-	# opts.maxSteps = 180
-	# opts.theta = .5
+	opts.newtonOptions.linesearch = false
 	br, u1 = @time Cont.continuation(
 					(x, p)->  R_SH(x, p, 2., Lsh),
 					(x, p)->Jac_sp(x, p, 2., Lsh),

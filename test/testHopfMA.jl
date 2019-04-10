@@ -274,8 +274,8 @@ br_hopf, u1_hopf = @time Cont.continuationHopf(
 ind_hopf = 2
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
-l_hopf = hopfpt.p[1]
-ωH     = hopfpt.p[2] |> abs
+l_hopf  = hopfpt.p[1]
+ωH		= hopfpt.p[2] |> abs
 M = 30
 
 
