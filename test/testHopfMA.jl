@@ -183,7 +183,7 @@ sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, hopfvariable(b)), BorderedVe
 println("--> test jacobian expression for Hopf Minimally Augmented")
 @test Bd2Vec(sol_ma) - sol_fd |> x->norm(x, Inf64) < 1e-3
 
-@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-4
+@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-3
 
 # dF = jac_hopf_fd[:,end-1]
 # sig_vec_re = jac_hopf_fd[end-1,1:end-2]
