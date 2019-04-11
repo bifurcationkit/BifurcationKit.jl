@@ -86,9 +86,11 @@ end
 """
 		newton(F, J, x0, options, normN = norm)
 
-This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `Default()` which is the operator backslash which works well for Sparse / Dense matrices. Iterative solver (GMRES) are also implemented. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable provided are as follows:
+This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolve = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. Iterative solver (GMRES) are also provided. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable which need to be passed are as follows:
 - `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
 - `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolve`. The Jacobian can be a matrix or an out of place function.
+
+Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
 
 # Output:
 - solution:
@@ -136,7 +138,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 	return x, resHist, resHist[end] < nltol, it
 end
 
-#simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
+# simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
 function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
 	Jhandle = u -> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)

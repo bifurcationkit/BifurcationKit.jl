@@ -2,10 +2,11 @@ import Base: push!
 
 """
 DeflationOperator with structure
-- power
+- power `p`
 - dot function
 - shift
 - roots
+The deflation operator is is ``M(u) = \\frac{1}{\\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^p)}``
 """
 struct DeflationOperator{T <: Real, vectype}
 	power::T
@@ -19,10 +20,9 @@ push!(df::DeflationOperator{T, vectype}, v::vectype) where {T, vectype} = push!(
 
 function (df::DeflationOperator{T, vectype})(u) where {T, vectype}
 	nrm  = u -> df.dot(u, u)
-	@assert length(df.roots) >0 "You need to specify some roots for deflation to work"
+	@assert length(df.roots) > 0 "You need to specify some roots for deflation to work"
 	out = 1 / nrm(u - df.roots[1])^df.power + df.shift
 	for ii = 2:length(df.roots)
-		n = length(df.roots[ii])
 		out *= 1 / nrm(u - df.roots[ii])^df.power + df.shift
 	end
 	return out
@@ -61,21 +61,19 @@ function (df::DeflatedProblem{T, vectype, def})(u) where {T, vectype, def <: Def
 end
 
 ###################################################################################################
-# Linear Solver
+# Linear operator
 # function jac(df::DeflatedProblem, u)
 #	 J = df.J(u)
 # end
 
-struct DeflatedLinearSolver <: LinearSolver
-
-end
+struct DeflatedLinearSolver <: LinearSolver end
 
 """
-Implement the solve for the linear solver
+Implement the linear solver for the deflated problem
 """
 function (dfl::DeflatedLinearSolver)(J, rhs)
 	# the expression of the Functional is now
-	# F(u) / Π_i(dot(u - root_i, u - root_i) + shift)^power := F(u) / M(u)
+	# F(u) / Π_i(dot(u - root_i, u - root_i)^power + shift) := F(u) / M(u)
 	# the expression of the differential is
 	# dF(u)⋅du * M(u) + F(u) dM(u)⋅du
 
@@ -87,7 +85,7 @@ function (dfl::DeflatedLinearSolver)(J, rhs)
 	Fu = defPb.F(u)
 	Mu = defPb.M(u)
 
-	# linear solve for the deflated problem. We note that the Mu ∈ R
+	# linear solve for the deflated problem. We note that Mu ∈ R
 	# hence dM(u)⋅du is a scalar
 	# M(u) * dF(u)⋅h + F(u) dM(u)⋅h = rhs
 	h1, _, it1 = linsolve(defPb.J(u), rhs)

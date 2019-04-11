@@ -171,7 +171,7 @@ M = 100
 orbitguess = zeros(2n, M)
 plot([0, 1], [0, 0])
 	phase = []; scalphase = []
-	vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
+	vec_hopf = getEigenVector(opt_newton.eigsolve, br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 
 	# br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
 	for ii=1:M

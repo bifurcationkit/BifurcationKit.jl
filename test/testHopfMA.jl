@@ -183,7 +183,7 @@ sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, hopfvariable(b)), BorderedVe
 println("--> test jacobian expression for Hopf Minimally Augmented")
 @test Bd2Vec(sol_ma) - sol_fd |> x->norm(x, Inf64) < 1e-3
 
-@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-4
+@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-3
 
 # dF = jac_hopf_fd[:,end-1]
 # sig_vec_re = jac_hopf_fd[end-1,1:end-2]
@@ -309,19 +309,61 @@ println("--> test jacobian expression for Periodic Orbit solve problem")
 # newton to find Periodic orbit
 opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
-						x ->  poTrap(l_hopf + 0.01)(x),
-						x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
-						orbitguess_f,
-						opt_po)
+			x ->  poTrap(l_hopf + 0.01)(x),
+			x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
+			orbitguess_f,
+			opt_po)
 	println("--> T = ", outpo_f[end])
 
 # continuation of periodic orbits
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, secant = true, theta = 0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = false))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, secant = true, theta = 0.1, plot_every_n_steps = 4, newtonOptions = NewtonPar(verbose = false))
 	br_pok2, upo , _= @time Cont.continuation(
-							(x, p) ->  poTrap(p)(x),
-							(x, p) ->  poTrap(p)(x, :jacsparse),
-							outpo_f, l_hopf + 0.01,
-							opts_po_cont,
-							plot = false,
-							plotsolution = (x;kwargs...)->heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
-							printsolution = u -> u[end], verbosity = 0)
+			(x, p) ->  poTrap(p)(x),
+			(x, p) ->  poTrap(p)(x, :jacsparse),
+			outpo_f, l_hopf + 0.01,
+			opts_po_cont,
+			plot = false,
+			verbosity = 0)
+#################################################################################################### Periodic Orbit computation, with Simple Shooting
+poShoot = l-> ShootingProblemTrap(
+			x-> F_bru(x, a, b, l = l),
+			x-> Jac_sp(x, a, b, l = l),
+			real.(vec_hopf),
+			hopfpt.u,
+			M,
+			Default(),
+			NewtonPar())
+orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
+poShoot(l_hopf + 0.01)(orbitguess_f)
+poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true))
+println("--> T = ", poshoot[end])
+
+poShoot = l-> ShootingProblemBE(
+			x-> F_bru(x, a, b, l = l),
+			x-> Jac_sp(x, a, b, l = l),
+			real.(vec_hopf),
+			hopfpt.u,
+			M,
+			Default(),
+			NewtonPar())
+orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
+poShoot(l_hopf + 0.01)(orbitguess_f)
+poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true))
+println("--> T = ", poshoot[end])
+
+poShoot = l-> ShootingProblemMid(
+			x-> F_bru(x, a, b, l = l),
+			x-> Jac_sp(x, a, b, l = l),
+			real.(vec_hopf),
+			hopfpt.u,
+			M,
+			Default(),
+			NewtonPar())
+orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
+poShoot(l_hopf + 0.01)(orbitguess_f)
+poshoot, _ = newton(
+			u -> poShoot(l_hopf + 0.01)(u),
+			# u -> (u, poShoot(l_hopf + 0.01)),
+			orbitguess_f,
+			NewtonPar(verbose = true, maxIter = 1))
+println("--> T = ", poshoot[end])

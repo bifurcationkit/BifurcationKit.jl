@@ -4,8 +4,7 @@ using IterativeSolvers, KrylovKit, Parameters, Arpack, LinearAlgebra
 abstract type EigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
-getEigenVector(eigsolve::EigenSolver, vecs, n::Int) = vecs[:, n]
-
+getEigenVector(eigsolve::ES, vecs, n::Int) where {ES <: EigenSolver} = vecs[:, n]
 ####################################################################################################
 # Solvers for default \ operator (backslash)
 ####################################################################################################
