@@ -26,16 +26,16 @@ sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]</code></pre><p>and parameters</p><pre><cod
         4                5     5.9356e-11         1
         5                6     5.8117e-12         1
   0.102035 seconds (119.04 k allocations: 7.815 MiB)</code></pre><p>Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to define some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1)
+	opts_br0.detect_fold = true
 	# options for the newton solver
 	opts_br0.newtonOptions.maxIter = 20
 	opts_br0.newtonOptions.tol = 1e-8
-	opts_br0.detect_fold = true
-	opts_br0.maxSteps = 150</code></pre><p>Then, we can call the continuation routine</p><pre><code class="language-julia">br, u1 = @time Cont.continuation((x,p) -&gt; F_chan(x,p, 0.01),
+	opts_br0.maxSteps = 150</code></pre><p>Then, we can call the continuation routine</p><pre><code class="language-julia">br, u1 = Cont.continuation((x,p) -&gt; F_chan(x,p, 0.01),
 	out, a,
 	opts_br0,
 	printsolution = x -&gt; norm(x,Inf64),
 	plot = true,
-	plotsolution = (x;kwargs...) -&gt; (plot!(x,subplot=4,ylabel=&quot;solution&quot;,label=&quot;&quot;)))</code></pre><p>and you should see <img src="chan-ex.png" alt/></p><p>The top left figure is the norm of the solution as function of the parameter <code>a</code>. The bottom left figure is the norm of the solution as function of iteration number. The bottom right is the solution for the current value of the parameter.</p><div class="admonition note"><div class="admonition-title">Bif. point detection</div><div class="admonition-text"><p>Krylov Two Fold points were detected. This can be seen by looking at <code>br.bifpoint</code> or by the black 	dots on the continuation plots.</p></div></div><h2><a class="nav-anchor" id="Continuation-of-Fold-points-1" href="#Continuation-of-Fold-points-1">Continuation of Fold points</a></h2><p>We can for example take the first Fold point and create an initial guess to locate it precisely. However, this only works when the jacobian is computed precisely:</p><pre><code class="language-julia">function Jac_mat(u, α, β = 0.)
+	plotsolution = (x;kwargs...) -&gt; (plot!(x,subplot=4,ylabel=&quot;solution&quot;,label=&quot;&quot;)))</code></pre><p>and you should see <img src="chan-ex.png" alt/></p><p>The top left figure is the norm of the solution as function of the parameter <code>a</code>, it can be changed by passing a different <code>printsolution</code> to <code>continuation</code>. The bottom left figure is the norm of the solution as function of iteration number. The bottom right is the solution for the current value of the parameter.</p><div class="admonition note"><div class="admonition-title">Bif. point detection</div><div class="admonition-text"><p>Two Fold points were detected. This can be seen by looking at <code>br.bifpoint</code> or by the black 	dots on the continuation plots.</p></div></div><h2><a class="nav-anchor" id="Continuation-of-Fold-points-1" href="#Continuation-of-Fold-points-1">Continuation of Fold points</a></h2><p>We can also take the first Fold point and create an initial guess to locate it precisely. However, this only works when the jacobian is computed precisely:</p><pre><code class="language-julia">function Jac_mat(u, α, β = 0.)
 	n = length(u)
 	J = zeros(n, n)
 	J[1, 1] = 1.0
@@ -48,6 +48,7 @@ sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]</code></pre><p>and parameters</p><pre><cod
 	return J
 end
 
+# index of the Fold in br.bifpoint
 indfold = 2
 
 outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
@@ -64,7 +65,7 @@ outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
 		0.01,
 		optcontfold)
 
-Cont.plotBranch(outfoldco;xlabel=&quot;b&quot;,ylabel=&quot;a&quot;)</code></pre><p>which produces</p><p><img src="chan-cusp.png" alt/></p><h2><a class="nav-anchor" id="Using-GMRES-or-another-linear-solver-1" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a></h2><p>We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of <code>LinearSolver</code>. Some basic linear solvers have been implemented from <code>KrylovKit.jl</code> and <code>IterativeSolvers.jl</code>, we can use them here. Note that we can implement preconditioners with this. The same functionality is present for the eigensolver.</p><pre><code class="language-julia"># very easy to write since we have F_chan. Could use Automatic Differentiation as well
+Cont.plotBranch(outfoldco;xlabel=&quot;b&quot;,ylabel=&quot;a&quot;)</code></pre><p>This produces:</p><p><img src="chan-cusp.png" alt/></p><h2><a class="nav-anchor" id="Using-GMRES-or-another-linear-solver-1" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a></h2><p>We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of <code>LinearSolver</code>. Some basic linear solvers have been implemented from <code>KrylovKit.jl</code> and <code>IterativeSolvers.jl</code>, we can use them here. Note that we can implement preconditioners with this. The same functionality is present for the eigensolver.</p><pre><code class="language-julia"># very easy to write since we have F_chan. We could use Automatic Differentiation as well
 function dF_chan(x, dx, α, β = 0.)
 	out = similar(x)
 	n = length(x)
@@ -76,13 +77,16 @@ function dF_chan(x, dx, α, β = 0.)
 	return out
 end
 
+# we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
-	out_mf, hist, flag = @time Cont.newton(
-		x -&gt; F_chan(x, a, 0.01),
-		x -&gt; (dx -&gt; dF_chan(x, dx, a, 0.01)),
-		sol,
-		opt_newton_mf)</code></pre><p>which gives:</p><pre><code class="language-julia">Newton Iterations
+# and pass it to the newton parameters
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
+# we can then call the newton solver
+out_mf, hist, flag = @time Cont.newton(
+	x -&gt; F_chan(x, a, 0.01),
+	x -&gt; (dx -&gt; dF_chan(x, dx, a, 0.01)),
+	sol,
+	opt_newton_mf)</code></pre><p>which gives:</p><pre><code class="language-julia">Newton Iterations
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     2.3440e+01         0
@@ -90,7 +94,7 @@ ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
         2                3     1.6267e-02        98
         3                4     2.4336e-06        73
         4                5     6.2617e-12        73
-  0.336398 seconds (1.15 M allocations: 54.539 MiB, 7.93% gc time)</code></pre><h1><a class="nav-anchor" id="Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></h1><p>We look at the following PDE </p><div>\[0=-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3\]</div><p>with periodic boundary conditions. This example is in the file <code>example/SH2d-fronts.jl</code>. It is extracted from <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. We use a Sparse Matrix to express the operator <span>$L_1=(I+\Delta)^2$</span></p><pre><code class="language-julia">using DiffEqOperators
+  0.336398 seconds (1.15 M allocations: 54.539 MiB, 7.93% gc time)</code></pre><h1><a class="nav-anchor" id="Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></h1><p>We study the following PDE </p><div>\[0=-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3\]</div><p>with periodic boundary conditions. This example is in the file <code>example/SH2d-fronts.jl</code>. It is extracted from <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. We use a Sparse Matrix to express the operator <span>$L_1=(I+\Delta)^2$</span></p><pre><code class="language-julia">using DiffEqOperators
 using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
 const Cont = PseudoArcLengthContinuation
 
@@ -246,8 +250,8 @@ end</code></pre><p>For computing periodic orbits, we will need a Sparse represen
 	end
 	return spdiagm(0 =&gt; diag, 1 =&gt; diagp1, -1 =&gt; diagm1, n =&gt; diagpn, -n =&gt; diagmn)
 end</code></pre><p>Finally, to monitor if the solution is constant in space, we will use the following callback</p><pre><code class="language-julia">function finalise_solution(z, tau, step, contResult)
-	n = div(length(z), 2)
-	printstyled(color=:red, &quot;--&gt; Solution constant = &quot;, norm(diff(z[1:n])), &quot; - &quot;, norm(diff(z[n+1:2n])), &quot;\n&quot;)
+	n = div(length(z.u), 2)
+	printstyled(color=:red, &quot;--&gt; Solution constant = &quot;, norm(diff(z.u[1:n])), &quot; - &quot;, norm(diff(z.u[n+1:2n])), &quot;\n&quot;)
 	return true
 end</code></pre><p>We can now compute to equilibrium and its stability</p><pre><code class="language-julia">n = 301
 
@@ -277,7 +281,8 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8
 		plot = true,
 		plotsolution = (x;kwargs...)-&gt;(N = div(length(x), 2);plot!(x[1:N], subplot=4, label=&quot;&quot;);plot!(x[N+1:2N], subplot=4, label=&quot;&quot;)),
 		finaliseSolution = finalise_solution,
-		printsolution = x -&gt; norm(x, Inf64))		</code></pre><p>We obtain the following bifurcation diagram with 3 Hopf bifurcation points</p><p><img src="bru-sol-hopf.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-Hopf-points-1" href="#Continuation-of-Hopf-points-1">Continuation of Hopf points</a></h2><p>We use the bifurcation points guesses located in <code>br.bifpoint</code> to turn them into precise bifurcation points. For the first one, we have</p><pre><code class="language-julia">ind_hopf = 1
+		printsolution = x -&gt; norm(x, Inf64))		</code></pre><p>We obtain the following bifurcation diagram with 3 Hopf bifurcation points</p><p><img src="bru-sol-hopf.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-Hopf-points-1" href="#Continuation-of-Hopf-points-1">Continuation of Hopf points</a></h2><p>We use the bifurcation points guesses located in <code>br.bifpoint</code> to turn them into precise bifurcation points. For the first one, we have</p><pre><code class="language-julia"># index of the Hopf point in br.bifpoint
+ind_hopf = 1
 hopfpt = Cont.HopfPoint(br, ind_hopf)
 
 outhopf, hist, flag = @time Cont.newtonHopf((x, p) -&gt;  F_bru(x, a, b, l = p),
@@ -289,7 +294,7 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l 
 	(x, p, β) -&gt; Jac_sp(x, a, β, l = p),
 	br, ind_hopf,
 	b,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = opt_newton))</code></pre><p>which gives using <code>Cont.plotBranch(br_hopf, xlabel=&quot;beta&quot;, ylabel = &quot;l&quot;)</code></p><p><img src="bru-hopf-cont.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-periodic-orbits-1" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></h2><p>Finally, we can perform continuation of periodic orbits branching from the Hopf bifurcation points. Note that we did not compute the Hopf normal form, so we need an educated guess for the periodic orbit. We first create the initial guess for the periodic orbit:</p><pre><code class="language-julia">function plotPeriodic(outpof,n,M)
+	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = opt_newton))</code></pre><p>which gives using <code>Cont.plotBranch(br_hopf, xlabel=&quot;beta&quot;, ylabel = &quot;l&quot;)</code></p><p><img src="bru-hopf-cont.png" alt/></p><h2><a class="nav-anchor" id="Continuation-of-periodic-orbits-1" href="#Continuation-of-periodic-orbits-1">Continuation of periodic orbits</a></h2><p>Finally, we can perform continuation of periodic orbits branching from the Hopf bifurcation points. Note that the Hopf normal form is not included in the current version of the package, so we need an educated guess for the periodic orbit. We first create the initial guess for the periodic orbit:</p><pre><code class="language-julia">function plotPeriodic(outpof,n,M)
 	outpo = reshape(outpof[1:end-1], 2n, M)
 	plot(heatmap(outpo[1:n,:], xlabel=&quot;Time&quot;), heatmap(outpo[n+2:end,:]))
 end
@@ -315,7 +320,7 @@ for ii=1:M
 	orbitguess[:, ii] .= real.(hopfpt.u +
 		26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - 0.235)))
 	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))
-end</code></pre><p>We want to make two remarks. The first is that an initial guess is composed of a space time solution and of the guess for the period of the solution:</p><pre><code class="language-julia">orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |&gt; vec</code></pre><p>The second remark concerns the phase <code>0.235</code> written above. To account for the additional parameter, periodic orbit localisation using Shooting methods or Finite Differences methods add an additional constraint. In the present case, this constraint is</p><div>\[&lt; u(0) - u_{hopf}, \phi&gt; = 0\]</div><p>where <code>u_{hopf} = hopfpt[1:2n]</code> and <span>$\phi$</span> is <code>real.(vec_hopf)</code>. This is akin to a Poincare section.</p><p>This constraint fixes the phase of the periodic orbit. By plotting <code>plot(phase, scalphase)</code>, one can find the phase <code>0.235</code>. We can now use Newton iterations to find a periodic orbit.</p><p>We first create a functional which holds the problem</p><pre><code class="language-julia">poTrap = l-&gt; PeriodicOrbitTrap(
+end</code></pre><p>We want to make two remarks. The first is that an initial guess is composed of a space time solution and of the guess for the period of the solution:</p><pre><code class="language-julia">orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |&gt; vec</code></pre><p>The second remark concerns the phase <code>0.235</code> written above. To account for the additional parameter, periodic orbit localisation using Shooting methods or Finite Differences methods requires an additional constraint. In the present case, this constraint is</p><div>\[&lt; u(0) - u_{hopf}, \phi&gt; = 0\]</div><p>where <code>u_{hopf} = hopfpt[1:2n]</code> and <span>$\phi$</span> is <code>real.(vec_hopf)</code>. This is akin to a Poincare section.</p><p>This constraint fixes the phase of the periodic orbit. By plotting <code>plot(phase, scalphase)</code>, one can find the phase <code>0.235</code>. We can now use Newton iterations to find a periodic orbit.</p><p>We first create a functional which holds the problem</p><pre><code class="language-julia">poTrap = l-&gt; PeriodicOrbitTrap(
 			x-&gt; F_bru(x, a, b, l = l),
 			x-&gt; Jac_sp(x, a, b, l = l),
 			real.(vec_hopf),
@@ -345,13 +350,12 @@ end</code></pre><p>We want to make two remarks. The first is that an initial gue
 		opts_po_cont,
 		plot = true,
 		plotsolution = (x;kwargs...)-&gt;heatmap!(reshape(x[1:end-1], 2*n, M)&#39;, subplot=4, ylabel=&quot;time&quot;),
-		printsolution = u -&gt; u[end])</code></pre><p>to obtain the period of the orbit as function of <code>l</code></p><p><img src="bru-po-cont.png" alt/></p><p>It is likely that the kink in the branch is caused by a spurious branch switching. This can be probably resolved using larger <code>dsmax</code>.</p><p>A more complete diagram is the following where we computed the 3 branches of periodic orbits off the Hopf points.</p><p><img src="bru-po-cont-3br.png" alt/></p><h1><a class="nav-anchor" id="Example-4:-nonlinear-pendulum-with-ApproxFun-1" href="#Example-4:-nonlinear-pendulum-with-ApproxFun-1">Example 4: nonlinear pendulum with <code>ApproxFun</code></a></h1><p>We reconsider the first example using the package <code>ApproxFun.jl</code> which allows very precise function approximation. We start with some imports:</p><pre><code class="language-julia">using ApproxFun, LinearAlgebra
+		printsolution = u -&gt; u[end])</code></pre><p>to obtain the period of the orbit as function of <code>l</code></p><p><img src="bru-po-cont.png" alt/></p><p>It is likely that the kink in the branch is caused by a spurious branch switching. This can be probably resolved using larger <code>dsmax</code>.</p><p>A more complete diagram is the following where we computed the 3 branches of periodic orbits off the Hopf points.</p><p><img src="bru-po-cont-3br.png" alt/></p><h1><a class="nav-anchor" id="Example-4:-nonlinear-pendulum-with-ApproxFun-1" href="#Example-4:-nonlinear-pendulum-with-ApproxFun-1">Example 4: nonlinear pendulum with <code>ApproxFun</code></a></h1><p>We reconsider the first example using the package <code>ApproxFun.jl</code> which allows very precise function approximation. We start with some imports:</p><pre><code class="language-julia">using ApproxFun, LinearAlgebra, Parameters
 
 using PseudoArcLengthContinuation, Plots
-const Cont = PseudoArcLengthContinuationusing PseudoArcLengthContinuation, Plots
 const Cont = PseudoArcLengthContinuation</code></pre><p>We then need to overwrite some functions of <code>ApproxFun</code>:</p><pre><code class="language-julia"># specific methods for ApproxFun
 import Base: length, eltype, copyto!
-import LinearAlgebra: norm, dot, axpy!, rmul!
+import LinearAlgebra: norm, dot, axpy!, rmul!, axpby!
 
 eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
@@ -364,6 +368,7 @@ dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
 axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y)
+axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a .* x .+ b.* y)
 rmul!(y::ApproxFun.Fun, b::Float64) = (y .= b .* y)
 
 copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = copy(y.coefficients))</code></pre><p>We can easily write our functional with boundary conditions in a convenient manner using <code>ApproxFun</code>:</p><pre><code class="language-julia">source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -397,7 +402,7 @@ const Δ = Derivative(sol.space, 2)</code></pre><p>Finally, we need to define so
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143</code></pre><p>We also provide a function to check how the <code>ApproxFun</code> solution vector grows:</p><pre><code class="language-julia">function finalise_solution(z, tau, step, contResult)
 	printstyled(color=:red,&quot;--&gt; AF length = &quot;, (z, tau) .|&gt; length ,&quot;\n&quot;)
-	# chop!(z, 1e-14);chop!(tau, 1e-14)
+	# chop!(z.u, 1e-14);chop!(tau.u, 1e-14)
 	true
 end</code></pre><p>Then, we can call the continuation routine</p><pre><code class="language-julia">br, u1 = @time Cont.continuation(
 		(x, p) -&gt; F_chan(x, p, 0.01),
@@ -406,7 +411,7 @@ end</code></pre><p>Then, we can call the continuation routine</p><pre><code clas
 		plot = true,
 		finaliseSolution = finalise_solution,
 		plotsolution = (x; kwargs...) -&gt; plot!(x, subplot = 4, label = &quot;l = $(length(x))&quot;),
-		normC = x -&gt; norm(x, Inf64))</code></pre><p>and you should see </p><p><img src="chan-af-bif-diag.png" alt/></p><h1><a class="nav-anchor" id="Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1" href="#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1">Example 5: the Swift-Hohenberg equation on the GPU</a></h1><p>Here we give an example where the continuation can be done <strong>entirely</strong> on the GPU. </p><p>We choose the 2d Swift-Hohenberg as an example and consider a larger grid. Solving the sparse linear problem in <span>$v$</span></p><div>\[-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs\]</div><p>with a <strong>direct</strong> solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads</p><div>\[-v + L * (d * v) = L*rhs\]</div><p>where </p><div>\[L = ((I+\Delta)^2 + I)^{-1}\]</div><p>is very well conditioned and </p><div>\[d := l+1+2\nu v-3v^2.\]</div><p>Hence, to solve the previous equation, only a few GMRES iterations are required. </p><h2><a class="nav-anchor" id="Computing-the-inverse-of-the-differential-operator-1" href="#Computing-the-inverse-of-the-differential-operator-1">Computing the inverse of the differential operator</a></h2><p>The issue now is to compute <code>L</code> but this is easy using Fourier transforms.</p><p>Hence, that&#39;s why we slightly modify the above Example 2. by considering <strong>periodic</strong> boundary conditions. Let us now show how to compute <code>L</code>. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to <code>L</code> is</p><div>\[l_1 = 1+(1-k_x^2-k_y^2)^2\]</div><p>which is pre-computed in the structure <code>SHLinearOp</code>. Then the effect of <code>L</code> on <code>u</code> is as simple as <code>real.(ifft( l1 .* fft(u) ))</code> and the inverse <code>L\u</code> is <code>real.(ifft( fft(u) ./ l1 ))</code>. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.</p><pre><code class="language-julia">using AbstractFFTs, FFTW, KrylovKit
+		normC = x -&gt; norm(x, Inf64))</code></pre><p>and you should see </p><p><img src="chan-af-bif-diag.png" alt/></p><h1><a class="nav-anchor" id="Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1" href="#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1">Example 5: the Swift-Hohenberg equation on the GPU</a></h1><p>Here we give an example where the continuation can be done <strong>entirely</strong> on the GPU.</p><p>We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See <strong>Example 2</strong> above for more details. Solving the sparse linear problem in <span>$v$</span></p><div>\[-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs\]</div><p>with a <strong>direct</strong> solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads</p><div>\[-v + L * (d * v) = L*rhs\]</div><p>where </p><div>\[L = ((I+\Delta)^2 + I)^{-1}\]</div><p>is very well conditioned and </p><div>\[d := l+1+2\nu v-3v^2.\]</div><p>Hence, to solve the previous equation, only a few GMRES iterations are required. </p><h2><a class="nav-anchor" id="Computing-the-inverse-of-the-differential-operator-1" href="#Computing-the-inverse-of-the-differential-operator-1">Computing the inverse of the differential operator</a></h2><p>The issue now is to compute <code>L</code> but this is easy using Fourier transforms.</p><p>Hence, that&#39;s why we slightly modify the above Example 2. by considering <strong>periodic</strong> boundary conditions. Let us now show how to compute <code>L</code>. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to <code>L</code> is</p><div>\[l_1 = 1+(1-k_x^2-k_y^2)^2\]</div><p>which is pre-computed in the structure <code>SHLinearOp</code>. Then the effect of <code>L</code> on <code>u</code> is as simple as <code>real.(ifft( l1 .* fft(u) ))</code> and the inverse <code>L\u</code> is <code>real.(ifft( fft(u) ./ l1 ))</code>. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.</p><pre><code class="language-julia">using AbstractFFTs, FFTW, KrylovKit
 
 # Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it 
 # in the Newton iterations.
@@ -454,12 +459,12 @@ mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
 mul!(x::CuArray, y::T, α::CuArray) where {T &lt;: Number} = (x .= α .* y)
 axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)
 
-AF = CuArray{TY}
-TY = Float64</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
+TY = Float64
+AF = CuArray{TY}</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
 const Cont = PseudoArcLengthContinuation
 
 # to simplify plotting of the solution
-heatmapsol(x) = heatmap(reshape(Array(x)), Nx, Ny)&#39;, color=:viridis)
+heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)&#39;, color=:viridis)
 
 Nx = 2^10
 Ny = 2^10
@@ -481,7 +486,7 @@ L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	</code></pre><p>Before applying a Newton
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 	res, info = res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6) 
 	return res, true, info.numops
-end</code></pre><h2><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h2><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">pt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
+end</code></pre><h2><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h2><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -&gt; F_shfft(x, -.1, 1.3, shlop = L),
 				u -&gt; (u, -0.1, 1.3),
