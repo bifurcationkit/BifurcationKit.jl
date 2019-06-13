@@ -38,7 +38,7 @@ outfold, hist, flag = @time Cont.newtonHopf((x,p) -> F(x, p),
 ## Functions
 
 ```@docs
-newtonFold(F, J, Jt, d2F, foldpointguess::Union{Vector, BorderedVector{vectype, T}}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
+newtonFold(F, J, Jt, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype}
 ```
 
 ```@docs
