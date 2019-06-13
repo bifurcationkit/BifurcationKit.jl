@@ -6,7 +6,7 @@
 # 	c::Tc
 # end
 #
-# function (Lb::borderedLinearOperator{Tj, Ta, Tb, Tc})(x::BorderedVector{Ta, Tc}) where {Tj, Ta, Tb, Tc, Tc <: Number}
+# function (Lb::borderedLinearOperator{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc, Tc <: Number}
 # 	out = similar(x)
 # 	out.u .= apply(Lb.J, x.u) .+ Lb.a .* x.p
 # 	out.p = dot(Lb.b, x.u) + Lb.c * x.p
@@ -17,15 +17,23 @@
 # struct BorderingLS <: LinearBorderSolver end
 #
 # function (lbs::BorderingLS)(J::borderedLinearOperator{Tj, Ta, Tb, Tc},
-# 									rhs::BorderedVector{Ta, Tc})
+# 									rhs::BorderedArray{Ta, Tc})
 #
 # end
+# BorderingBLS
+# FullBLS
+# FullSparseBLS
+# NestedBLS
+
+
+######
+# A mettre dans ContParam
 ################################################################################
 """
 This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
 It requires the state space to be Vector like.
 """
-function getBorderedLinearSystemFull(J, dR::AbstractVector, tau::BorderedVector{vectype, T}, theta::T) where {vectype, T}
+function getBorderedLinearSystemFull(J, dR::AbstractVector, tau::BorderedArray{vectype, T}, theta::T) where {vectype, T}
 	N = length(tau.u)
 	A = spzeros(N+1, N+1)
 	A[1:N, 1:N] .= J
@@ -54,7 +62,7 @@ end
 # dz.u' * dX + dz.p * dl = n
 # The following function is essentially used by newtonPseudoArcLength
 function linearBorderedSolver(J, dR,
-							dz::BorderedVector{vectype, T}, R, n::T, theta::T, solver::S;
+							dz::BorderedArray{vectype, T}, R, n::T, theta::T, solver::S;
 							algo=:bordering)  where {T, vectype, S <: LinearSolver}
 	# for debugging purposes, we keep a version using finite differences
 	if algo == :full
@@ -65,7 +73,7 @@ function linearBorderedSolver(J, dR,
 	elseif algo == :fullMatrixFree
 		@assert 1==0 "WIP"
 		bordedOp = borderedLinearOperator(J, dR, dz.u .* theta/length(dz.u), dz.p * (one(T)-theta))
-		reslinear, _, it = solver(bordedOp,  BorderedVector(R, n))
+		reslinear, _, it = solver(bordedOp,  BorderedArray(R, n))
 		return reslinear.u, reslinear.p, it
 
 	elseif algo == :bordering

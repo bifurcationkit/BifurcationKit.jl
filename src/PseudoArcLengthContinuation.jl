@@ -12,7 +12,7 @@ module PseudoArcLengthContinuation
 	include("HopfCont.jl")
 	include("periodicorbit/PeriodicOrbit.jl")
 
-	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedVector
+	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray
 	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
@@ -28,10 +28,10 @@ module PseudoArcLengthContinuation
 		return dottheta(u, du, p, dp, xi) - ds
 	end
 	################################################################################################
-	function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}}
 		if contparams.natural
 			res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
-			return BorderedVector(res[1], z_pred.p), res[2], res[3], res[4]
+			return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 		else
 			return newtonPseudoArcLength(Fhandle, Jhandle,
 								z_old, tau_old, z_pred,
@@ -39,13 +39,13 @@ module PseudoArcLengthContinuation
 		end
 	end
 	################################################################################################
-	function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M<:BorderedArray{vectype, T}}
 		# we perform z_pred = z_old + contparams.ds * tau
 		copyto!(z_pred, z_old)
 		axpy!(contparams.ds, tau, z_pred)
 	end
 	################################################################################################
-	function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 		(verbosity > 0) && println("--> predictor = Secant")
 		# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 		copyto!(tau_new, z_new)
@@ -54,7 +54,7 @@ module PseudoArcLengthContinuation
 		rmul!(tau_new, α)
 	end
 	################################################################################################
-	function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 		(verbosity > 0) && println("--> predictor = Tangent")
 		# tangent predictor
 		epsi = contparams.finDiffEps
@@ -62,11 +62,11 @@ module PseudoArcLengthContinuation
 
 		# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
 		tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
-				BorderedVector(tau_old.u * contparams.theta / length(tau_old.u),
+				BorderedArray(tau_old.u * contparams.theta / length(tau_old.u),
 				 				tau_old.p * (1 - contparams.theta)),
 								0 * z_old.u, 1.0, contparams.theta,
 								contparams.newtonOptions.linsolve)
-		tau = BorderedVector(tauu, taup)
+		tau = BorderedArray(tauu, taup)
 		b = sign((tau.p) * convert(T, z_new.p - z_old.p))
 		α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
 		# tau_new = α * tau
@@ -74,7 +74,7 @@ module PseudoArcLengthContinuation
 		rmul!(tau_new, α)
 	end
 	################################################################################################
-	function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 		g = abs(tau.p * contparams.theta)
 		(verbosity > 0) && print("Theta changes from $(contparams.theta) to ")
 		if (g > contparams.gMax)
@@ -87,7 +87,7 @@ module PseudoArcLengthContinuation
 		@show g
 	end
 	################################################################################################
-	function stepSizeControl(contparams, converged::Bool, it_number::Int64, tau::M, branch, verbosity) where {T, vectype, M<:BorderedVector{vectype, T}}
+	function stepSizeControl(contparams, converged::Bool, it_number::Int64, tau::M, branch, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 		if converged == false
 			(verbosity > 0) && abs(contparams.ds) <= contparams.dsmin && (printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red);return true)
 			contparams.ds = sign(contparams.ds) * max(abs(contparams.ds) / 2, contparams.dsmin);
@@ -131,29 +131,29 @@ module PseudoArcLengthContinuation
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
 	- `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
 	- `u0` initial guess
-	- `contParams` parameters for continuation, with type `ContinuationPar`
+	- `contParams` parameters for continuation, with struct `ContinuationPar`
 	- `plot = false` whether to plot the solution while computing
-	- `printsolution = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
-	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plotting of the solution.
+	- `printsolution::Function = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
+	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plot of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation step (stop it by returning false) or saving personal data...
-	- `linearalgo   = :bordering`. Must belong to `[:bordering, :full]`
+	- `linearalgo = :bordering`. Must belong to `[:bordering, :full]`. Used to control the way the extended linear system associated to the continuation problem is solved.
 	- `verbosity` controls the amount of information printed during the continuation process.
-	- 'normC = norm' norm to be used in the different Newton solves
+	- `normC = norm` norm used in the different Newton solves
 
 	The function outputs
 	- `contres::ContResult` structure which contains the computed branch
-	- `u::BorderedVector` the last solution computed on the branch
+	- `u::BorderedArray` the last solution computed on the branch
 
 	# Method
 
 	## Bordered system of equations
 
-	The pseudo arclength continuation method solves the equation ``F(x,p) = 0`` (or dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(u)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve is parametrised by ``s`` so that ``(x(s),p(s))`` is a curve of solutions to ``F(x,p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the curve of solutions, we need solve an equation of dimension N+1 which is called a Bordered system.
+	The pseudo arclength continuation method solves the equation ``F(x,p) = 0`` (or dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve is parametrised by ``s`` so that ``(x(s),p(s))`` is a curve of solutions to ``F(x,p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the curve of solutions, we need solve an equation of dimension N+1 which is called a Bordered system.
 
 	!!! warning "Parameter `theta`"
-	    The parameter `theta` in the type `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
+	    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
 
-	The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the type `ContinuationPar`.
+	The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`.
 
 	## Algorithm
 
@@ -165,10 +165,10 @@ module PseudoArcLengthContinuation
 
 	## Natural continuation
 
-	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the field `natural` in the type ContinuationPar`
+	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the field `natural` in the struct `ContinuationPar`
 
 	## Tangent computation (step 4)
-	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the field `secant` in the type `ContinuationPar`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. If `secant` is set to `false`, another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information.
+	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the field `secant` in the struct `ContinuationPar`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. If `secant` is set to `false`, another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information.
 
 	## Bordered linear solver
 
@@ -240,7 +240,7 @@ module PseudoArcLengthContinuation
 					n_unstable = [0],
 					eig = [([Complex{T}(1)], zeros(Complex{T}, 2, 2), 0)])
 		end
-		finaliseSolution(u0, u0, 0, contRes)
+		# finaliseSolution(u0, u0, 0, contRes)
 
 
 		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold=true, color=:magenta)
@@ -248,7 +248,7 @@ module PseudoArcLengthContinuation
 		!exitflag && error("Newton failed to converge for the computation of the initial tangent")
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
-		finaliseSolution(u_pred, u_pred, 1, contRes)
+		# finaliseSolution(u_pred, u_pred, 1, contRes)
 
 		duds = copy(u_pred)
 		axpby!(-T(1)/ (contParams.ds / T(50)), u0, T(1)/ (contParams.ds / T(50)), duds)
@@ -266,12 +266,12 @@ module PseudoArcLengthContinuation
 		it_number = 0
 
 		# variables to hold the predictor
-		z_pred   = BorderedVector(copy(u0), p0)
-		tau_pred = BorderedVector(copy(u0), p0)
-		tau_new  = BorderedVector(copy(u0), p0)
+		z_pred   = BorderedArray(copy(u0), p0)
+		tau_pred = BorderedArray(copy(u0), p0)
+		tau_new  = BorderedArray(copy(u0), p0)
 
-		z_old     = BorderedVector(copy(u_pred), p0)
-		tau_old   = BorderedVector(copy(duds), dpds)
+		z_old     = BorderedArray(copy(u_pred), p0)
+		tau_old   = BorderedArray(copy(duds), dpds)
 
 		(verbosity > 0) && println("--> Start continuation from p = ", z_old.p)
 		## Main continuation loop
@@ -279,8 +279,8 @@ module PseudoArcLengthContinuation
 			# predictor: z_pred
 			getPredictor!(z_pred, z_old, tau_old, contParams)
 			(verbosity > 0) && println("########################################################################")
-			(verbosity > 0) && @printf("Start of Continuation Step %d : Parameter: p1 = %2.4e from %2.4e\n", step, z_pred.p, z_old.p)
-			(length(contRes.branch[4, :])>1 && (verbosity > 0)) && @printf("Current step size  = %2.4e   Previous step size = %2.4e\n", contParams.ds, contRes.branch[4, end-1])
+			(verbosity > 0) && @printf("Start of Continuation Step %d: Parameter: p1 = %2.4e --> %2.4e\n", step, z_old.p, z_pred.p)
+			(length(contRes.branch[4, :])>1 && (verbosity > 0)) && @printf("Step size  = %2.4e --> %2.4e\n", contRes.branch[4, end-1], contParams.ds)
 
 		  	# Corrector
 			z_new, fval, exitflag, it_number  = corrector(Fhandle, Jhandle,
@@ -326,7 +326,7 @@ module PseudoArcLengthContinuation
 				end
 
 				# call user defined finaliseSolution function. If returns false, stop continuation
-				!finaliseSolution(z_old.u, tau_old.u, step, contRes) && (step = maxSteps)
+				!finaliseSolution(z_old, tau_old, step, contRes) && (step = maxSteps)
 			else
 				(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 				(verbosity > 0) && println("--> Newton Residuals history = ", fval)

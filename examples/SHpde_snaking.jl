@@ -18,7 +18,7 @@ function R_SH(u, p, b, L1)
 end
 
 SHJac = (u, v, p, b, L1) -> L1*v .+ (-p .+ 3*b .* u.^2 .- 5*u.^4) .* v
-Jac_sp = (u, p, b, L1) -> L1 + spdiagm(0 => -p .+ 3*b .* u.^2 .- 5*u.^4)
+Jac_sp = (u, p, b, L1) -> L1 + spdiagm(0 => -p .+ 3*b .* u.^2 .- 5 .* u.^4)
 
 Fpde = (u, p)-> R_SH(u, p, 2., Lsh)
 # jacobian version with full matrix, waste of ressources!!

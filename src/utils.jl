@@ -35,7 +35,7 @@ function show(io::IO, br::PseudoArcLengthContinuation.ContResult)
 end
 ###############################################################################################
 function displayIteration(i, funceval, residual, itlinear = 0)
-(i == 0) && println("\n Newton Iterations \n   Iterations      Func-count      f(x)      Linear-Iterations\n")
+	(i == 0) && println("\n Newton Iterations \n   Iterations      Func-count      f(x)      Linear-Iterations\n")
 	if length(itlinear)==1
 		@printf("%9d %16d %14.4e %9d\n", i, funceval, residual, itlinear);
 	else
@@ -46,7 +46,7 @@ end
 """
 Plot the continued branch of solutions
 """
-function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedVector{vectype, T}}
+function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedArray{vectype, T}}
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
 	branch = contres.branch
 
@@ -58,10 +58,9 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 	Plots.plot(layout=l)
 
 	# plot the branch of solutions
-	plotBranch!(contres,  xlabel="p", ylabel="|x|", label="", subplot=1 )
-
-	plot!(branch[1, :], xlabel="s", ylabel="p", label="", subplot=2)
-	plot!(branch[2, :], xlabel="it", ylabel="|x|",	label="", subplot=3)
+	plotBranch!(contres, xlabel="p", ylabel="|x|", label="", subplot=1)
+	plot!(branch[1, :],	 xlabel="s", ylabel="p",   label="", subplot=2)
+	plot!(branch[2, :], xlabel="it", ylabel="|x|", label="", subplot=3)
 
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>1
@@ -73,7 +72,7 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 			scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=5, label="", markersize = 1, color=:black)
 		end
 	end
-	plotuserfunction(sol.u)
+	plotuserfunction(sol.u, subplot = 4)
 
 display(title!(""))
 end

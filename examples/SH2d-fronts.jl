@@ -89,7 +89,7 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 
 heatmapsol(deflationOp.roots[2])
 ###################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
 	opts_cont.newtonOptions.tol = 1e-9
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 450

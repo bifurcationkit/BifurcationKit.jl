@@ -9,7 +9,7 @@ function HopfPoint(br::ContResult, index::Int64)
 	eigRes   = br.eig
 	p = bifpoint[3]
 	ω = abs(imag(eigRes[bifpoint[2]][1][bifpoint[end]]))
-	return BorderedVector(bifpoint[5], [p, ω] )
+	return BorderedArray(bifpoint[5], [p, ω] )
 end
 
 struct HopfProblemMinimallyAugmented{vectype, S <: LinearSolver}
@@ -45,9 +45,9 @@ function (fp::HopfProblemMinimallyAugmented{vectype, S})(x, p::T, ω::T) where {
 	return fp.F(x, p), real(σ1), imag(σ1)
 end
 
-function (hopfpb::HopfProblemMinimallyAugmented{vectypeC, S})(x::BorderedVector{vectypeR, T}) where {vectypeC, vectypeR, S <: LinearSolver, T}
+function (hopfpb::HopfProblemMinimallyAugmented{vectypeC, S})(x::BorderedArray{vectypeR, T}) where {vectypeC, vectypeR, S <: LinearSolver, T}
 	res = hopfpb(x.u, x.p[1], x.p[2])
-	return BorderedVector(res[1], [res[2], res[3]])
+	return BorderedArray(res[1], [res[2], res[3]])
 end
 
 # Method to solve the associated linear system
@@ -136,16 +136,16 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 
 end
 
-function (hopfl::HopfLinearSolveMinAug)(Jhopf, du::BorderedVector{vectype, T}; debug_ = false)  where {vectype, T}
+function (hopfl::HopfLinearSolveMinAug)(Jhopf, du::BorderedArray{vectype, T}; debug_ = false)  where {vectype, T}
 	out = hopfMALinearSolver((Jhopf[1]).u, (Jhopf[1]).p[1], (Jhopf[1]).p[2], Jhopf[2],
 		 						du.u, du.p[1], du.p[2],
 								Jhopf[3]; 		# -> this is the hessian d2F;
 								debug_ = debug_,
 								d2F_is_known = hopfl.d2F_is_known)
 	if debug_ == false
-		return BorderedVector(out[1], [out[2], out[3]]), out[4], out[5]
+		return BorderedArray(out[1], [out[2], out[3]]), out[4], out[5]
 	else
-		return BorderedVector(out[1], [out[2], out[3]]), out[4], out[5], out[6]
+		return BorderedArray(out[1], [out[2], out[3]]), out[4], out[5], out[6]
 	end
 end
 
@@ -156,12 +156,12 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 - `J  = (x, p) -> d_xF(x, p)` associated jacobian
 - `Jt = (x, p) -> transpose(d_xF(x, p))` associated jacobian
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
-- `hopfpointguess` initial guess (x_0, p_0) for the Hopf point. It should a `BorderedVector` as given by the function HopfPoint.
+- `hopfpointguess` initial guess (x_0, p_0) for the Hopf point. It should a `BorderedArray` as given by the function HopfPoint.
 - `eigenvec` guess for the  iω eigenvector
 - `eigenvec_ad` guess for the -iω eigenvector
 - `options::NewtonPar`
 """
-function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedVector{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm, d2F_is_known = true) where {vectypeR, T}
+function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm, d2F_is_known = true) where {vectypeR, T}
 	hopfvariable = HopfProblemMinimallyAugmented(
 		(x, p) -> F(x, p),
 		(x, p) -> J(x, p),
@@ -187,9 +187,9 @@ end
 """
 call when hessian is unknown, finite differences are then used
 """
-newtonHopf(F, J, Jt, hopfpointguess::BorderedVector{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, Jt, x -> x, hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
+newtonHopf(F, J, Jt, hopfpointguess::BorderedArray{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, Jt, x -> x, hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
 
-newtonHopf(F, J, hopfpointguess::BorderedVector{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, (x, p) -> transpose(J(x, p)), hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
+newtonHopf(F, J, hopfpointguess::BorderedArray{vectype, T}, eigenvec, eigenvec_ad, options::NewtonPar; normN = norm) where {T,vectype} = newtonHopf(F, J, (x, p) -> transpose(J(x, p)), hopfpointguess, eigenvec, eigenvec_ad, options; normN = normN, d2F_is_known = false)
 
 """
 Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
@@ -227,13 +227,13 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `J = (x, p1, p2)-> d_xF(x, p1, p2)` associated jacobian
 - `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` associated jacobian
 - `d2F = (x, p1, p2, v1, v2) -> d2F(x, p1, p2, v1, v2)` this is the hessian of `F` computed at `(x, p1, p2)` and evaluated at `(v1, v2)`.
-- `hopfpointguess` initial guess (x_0, p1_0) for the Hopf point. It should be a `Vector` or a `BorderedVector`
+- `hopfpointguess` initial guess (x_0, p1_0) for the Hopf point. It should be a `Vector` or a `BorderedArray`
 - `p2` parameter p2 for which hopfpointguess is a good guess
 - `eigenvec` guess for the iω eigenvector at p1_0
 - `eigenvec_ad` guess for the -iω eigenvector at p1_0
 - `options::NewtonPar`
 """
-function continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedVector{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,Tb,vectype}
+function continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,Tb,vectype}
 	@warn "Bad way it creates a struct for every p2"
 	# Jacobian for the hopf problem
 	Jac_hopf_MA(u0, pb, hess) = (return (u0, pb, hess))
@@ -264,9 +264,9 @@ function continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedVector{vectype,
 		plotsolution = (x;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ) ; kwargs...)
 end
 
-continuationHopf(F, J, Jt, hopfpointguess::BorderedVector{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) where {T, Tb, vectype} = continuationHopf(F, J, Jt, x -> x, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; d2F_is_known = false, kwargs...)
+continuationHopf(F, J, Jt, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) where {T, Tb, vectype} = continuationHopf(F, J, Jt, x -> x, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; d2F_is_known = false, kwargs...)
 
-continuationHopf(F, J, Jt, hopfpointguess::BorderedVector{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) where {T, Tb, vectype} = continuationHopf(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; kwargs...)
+continuationHopf(F, J, Jt, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) where {T, Tb, vectype} = continuationHopf(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; kwargs...)
 
 """
 Simplified call for continuation of Hopf point. More precisely, the call is as follows `continuationHopf(F, J, Jt, d2F, br::ContResult, index::Int64, options)` where the parameters are as for `continuationHopf` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.

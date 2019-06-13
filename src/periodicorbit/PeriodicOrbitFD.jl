@@ -168,35 +168,35 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
 """
-function FloquetPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, du::vectype) where {vectype, S}
-	# extraction of various constants
-	M = poPb.M
-	N = div(length(u0)-1, M)
-	T = u0[end]
-	h = T / M
-
-	out = copy(du)
-
-	u0c = reshape(u0[1:end-1], N, M)
-
-	for ii=2:M
-		out .= out./h .+ 1/2 .* apply(poPb.J(u0c[:, ii-1]), out)
-		res, _ = poPb.linsolve(I/h - 1/2 * poPb.J(u0c[:, ii]), out)
-		res .= out
-	end
-	return out
-end
-
-struct FloquetFD <: EigenSolver
-	poPb
-end
-
-function (fl::FloquetFD)(J, sol, nev)
-	@show sol.p
-	@show length(sol.u)
-	Jmono = x -> FloquetPeriodicFD(fl.poPb(sol.p), sol.u, x)
-	n = div(length(sol.u)-1, 50)
-	@show n
-	vals, vec, info = KrylovKit.eigsolve(Jmono,rand(n),15, :LM)
-	return log.(vals), vec, true, info.numops
-end
+# function FloquetPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, du::vectype) where {vectype, S}
+# 	# extraction of various constants
+# 	M = poPb.M
+# 	N = div(length(u0)-1, M)
+# 	T = u0[end]
+# 	h = T / M
+#
+# 	out = copy(du)
+#
+# 	u0c = reshape(u0[1:end-1], N, M)
+#
+# 	for ii = 2:M
+# 		out .= out./h .+ 1/2 .* apply(poPb.J(u0c[:, ii-1]), out)
+# 		res, _ = poPb.linsolve(I/h - 1/2 * poPb.J(u0c[:, ii]), out)
+# 		res .= out
+# 	end
+# 	return out
+# end
+#
+# struct FloquetFD <: EigenSolver
+# 	poPb
+# end
+#
+# function (fl::FloquetFD)(J, sol, nev)
+# 	# @show sol.p
+# 	# @show length(sol.u)
+# 	Jmono = x -> FloquetPeriodicFD(fl.poPb, sol, x)
+# 	n = div(length(sol)-1, fl.poPb.M)
+# 	@show n
+# 	vals, vec, info = KrylovKit.eigsolve(Jmono,rand(n),15, :LM)
+# 	return log.(vals), vec, true, info.numops
+# end

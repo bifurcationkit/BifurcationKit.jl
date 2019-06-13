@@ -153,7 +153,7 @@ indfold = 1
 
 # we define the following wrappers to be able to use finite differences
 Bd2Vec(x) = vcat(x.u, x.p)
-Vec2Bd(x) = BorderedVector(x[1:end-1], x[end])
+Vec2Bd(x) = BorderedArray(x[1:end-1], x[end])
 foldpbVec(x) = Bd2Vec(foldpb(Vec2Bd(x)))
 
 outfold, _ = Cont.newton(x -> foldpbVec(x),

@@ -39,7 +39,7 @@ outfold, hist, flag = @time Cont.newtonFold(
 ####################################################################################################
 # Here is a more involved example
 
-function Fb(x::BorderedVector, r, s = 1.0)
+function Fb(x::BorderedArray, r, s = 1.0)
 	out = similar(x)
 	out.u = r .+  s .* x.u .- (x.u).^3
 	out.p = x.p - 0.0
@@ -73,7 +73,7 @@ function (l::linsolveBd)(J, dx)
 	out, true, 1
 end
 
-sol = BorderedVector([0.8], 0.0)
+sol = BorderedArray([0.8], 0.0)
 
 opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true,
 		linsolve = linsolveBd())
@@ -100,7 +100,7 @@ outfold, hist, flag = @time Cont.newtonFold(
 	(x, r) -> Fb(x, r),
 	(x, r) -> jacobian(x, r, 1.),
 	(x, r) -> jacobian(x, r, 1.),
-	(x, r, v1, v2) -> BorderedVector(-6 .* x.u .* v1.u .* v2.u, 0.),
+	(x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),
 	br, 1, #index of the fold point
 	opts_br.newtonOptions)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.bifpoint[1][3],"\n")
@@ -109,7 +109,7 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 	(x, r, s) -> Fb(x, r, s),
 	(x, r, s) -> jacobian(x, r, s),
 	(x, r, s) -> jacobian(x, r, s),
-	s -> ((x, r, v1, v2) -> BorderedVector(-6 .* x.u .* v1.u .* v2.u, 0.)),
+	s -> ((x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.)),
 	br, 1,
 	1.0, plot = false,
 	opts_br)

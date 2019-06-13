@@ -64,6 +64,7 @@ end
 
 function (l::GMRES_KrylovKit{T})(J, rhs) where T
 	res, info = KrylovKit.linsolve(J, rhs, rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol)
+	info.converged == 0 && (@warn "GMRES solver did not converge")
 	return res, true, info.numops
 end
 

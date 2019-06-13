@@ -112,7 +112,7 @@ hopfvariable = β -> HopfProblemMinimallyAugmented(
 hopfvariable(b)(hopfpt) |> norm
 
 Bd2Vec(x) = vcat(x.u, x.p)
-Vec2Bd(x) = BorderedVector(x[1:end-2], x[end-1:end])
+Vec2Bd(x) = BorderedArray(x[1:end-2], x[end-1:end])
 hopfpbVec(x, p) = Bd2Vec(hopfvariable(p)(Vec2Bd(x)))
 
 # finite differences Jacobian
@@ -178,7 +178,7 @@ jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), b)
 sol_fd = jac_hopf_fd \ rhs
 # create a linear solver
 hopfls = HopfLinearSolveMinAug()
-sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, hopfvariable(b)), BorderedVector(rhs[1:end-2],rhs[end-1:end]),debug_ = true)
+sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, hopfvariable(b)), BorderedArray(rhs[1:end-2],rhs[end-1:end]),debug_ = true)
 
 println("--> test jacobian expression for Hopf Minimally Augmented")
 @test Bd2Vec(sol_ma) - sol_fd |> x->norm(x, Inf64) < 1e-3
@@ -314,6 +314,10 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 			orbitguess_f,
 			opt_po)
 	println("--> T = ", outpo_f[end])
+
+# calcul des exposants de Floquet
+# floquetES = Cont.FloquetFD(poTrap(l_hopf + 0.01))
+# floquetES(poTrap(l_hopf + 0.01), outpo_f, 10 )
 
 # continuation of periodic orbits
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, secant = true, theta = 0.1, plot_every_n_steps = 4, newtonOptions = NewtonPar(verbose = false))

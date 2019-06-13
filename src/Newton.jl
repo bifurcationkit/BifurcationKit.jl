@@ -69,7 +69,7 @@ end
 	@assert dsmax>0
 
 	# handling bifucation points
-	detect_fold = false
+	detect_fold = true
 	detect_bifurcation = false
 end
 
@@ -174,9 +174,9 @@ This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` toge
 with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
 """
 function newtonPseudoArcLength(F, Jh,
-						z0::BorderedVector{vectype, T},
-						tau0::BorderedVector{vectype, T},
-						z_pred::BorderedVector{vectype, T},
+						z0::BorderedArray{vectype, T},
+						tau0::BorderedArray{vectype, T},
+						z_pred::BorderedArray{vectype, T},
 						options::ContinuationPar{T};
 						linearalgo = :bordering,
 						normN = norm) where {T, vectype}
@@ -267,5 +267,5 @@ function newtonPseudoArcLength(F, Jh,
 		verbose && displayIteration(it, 1, res, liniter)
 
 	end
-	return BorderedVector(x, l), resHist, resHist[end] < nltol, it
+	return BorderedArray(x, l), resHist, resHist[end] < nltol, it
 end

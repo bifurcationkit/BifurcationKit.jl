@@ -92,8 +92,8 @@ end
 
 
 function finalise_solution(z, tau, step, contResult)
-	n = div(length(z), 2)
-	printstyled(color=:red, "--> Solution constant = ", norm(diff(z[1:n])), " - ", norm(diff(z[n+1:2n])), "\n")
+	n = div(length(z.u), 2)
+	printstyled(color=:red, "--> Solution constant = ", norm(diff(z.u[1:n])), " - ", norm(diff(z.u[n+1:2n])), "\n")
 	return true
 end
 

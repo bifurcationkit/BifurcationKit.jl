@@ -1,9 +1,9 @@
 using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
 const Cont = PseudoArcLengthContinuation
 ####################################################################################################
-# test the type BorderedVector and the different methods associated to it
-z_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),1.0)
-tau_pred = PseudoArcLengthContinuation.BorderedVector(rand(10),2.0)
+# test the type BorderedArray and the different methods associated to it
+z_pred = PseudoArcLengthContinuation.BorderedArray(rand(10),1.0)
+tau_pred = PseudoArcLengthContinuation.BorderedArray(rand(10),2.0)
 Cont.minus!(z_pred, tau_pred)
 Cont.eltype(z_pred)
 
@@ -13,8 +13,8 @@ dot(z_pred, tau_pred)
 Cont.dottheta(z_pred, tau_pred, 0.1)
 Cont.dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
 
-z = BorderedVector(z_pred, rand(10))
-z2 = BorderedVector(z_pred, rand(10))
+z = BorderedArray(z_pred, rand(10))
+z2 = BorderedArray(z_pred, rand(10))
 zero(z2);zero(z_pred)
 @test length(z_pred) == 11
 
