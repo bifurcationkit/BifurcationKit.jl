@@ -58,14 +58,18 @@ module PseudoArcLengthContinuation
 		(verbosity > 0) && println("--> predictor = Tangent")
 		# tangent predictor
 		epsi = contparams.finDiffEps
-		dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
+		# dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
+		dFdl = similar(z_old.u)
+		copyto!(dFdl, F(z_old.u, z_old.p + epsi))
+		minus!(dFdl, F(z_old.u, z_old.p))
+		rmul!(dFdl, 1/epsi)
 
 		# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
+		new_tau = copy(tau_old)
+		rmul!(new_tau, contparams.theta / length(tau_old.u), 1 - contparams.theta)
 		tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
-				BorderedArray(tau_old.u * contparams.theta / length(tau_old.u),
-				 				tau_old.p * (1 - contparams.theta)),
-								0 * z_old.u, 1.0, contparams.theta,
-								contparams.newtonOptions.linsolve)
+				new_tau, zero(z_old.u), 1.0, contparams.theta,
+				contparams.newtonOptions.linsolve)
 		tau = BorderedArray(tauu, taup)
 		b = sign((tau.p) * convert(T, z_new.p - z_old.p))
 		α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)

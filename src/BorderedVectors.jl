@@ -1,4 +1,4 @@
-# structure for Bordered vectors
+# structure for Bordered arrays
 import Base: copy, copyto!, eltype, zero
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!
 
@@ -24,17 +24,18 @@ norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p
 
 zero(b::BorderedArray{vectype, T}) where {vectype, T } = BorderedArray(zero(b.u), zero(b.p))
 ################################################################################
-function rmul!(A::BorderedArray{vectype, Tv}, b::T) where {vectype, T <:Real, Tv}
+function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <:Real, Tv}
 	# Scale an array A by a scalar b overwriting A in-place
-	rmul!(A.u, b)
+	rmul!(A.u, a)
 	rmul!(A.p, b)
 end
 
-function rmul!(A::BorderedArray{vectype, T}, b::T) where {vectype, T <:Real}
+function rmul!(A::BorderedArray{vectype, T}, a::T, b::T) where {vectype, T <:Real}
 	# Scale an array A by a scalar b overwriting A in-place
-	rmul!(A.u, b)
+	rmul!(A.u, a)
 	A.p = A.p * b
 end
+rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <:Real, Tv} = rmul!(A, a, a)
 ################################################################################
 function axpy!(a::T, X::BorderedArray{vectype, Tv}, Y::BorderedArray{vectype, Tv}) where {vectype, T <:Real, Tv}
 	# Overwrite Y with a*X + b*Y, where a, b are scalar
@@ -72,10 +73,10 @@ computes x-y into x and return x
 @inline minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
 @inline minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 @inline minus!(x::T, y::T) where {T <:Real} = (x = x - y)
-minus!(x::BorderedArray{vectype, T},y::BorderedArray{vectype, T}) where {vectype, T}=(minus!(x.u, y.u);minus!(x.p, y.p))
-function minus!(x::BorderedArray{vectype, T},y::BorderedArray{vectype, T}) where {vectype, T <: Real}
+minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u);minus!(x.p, y.p))
+function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real}
 	minus!(x.u, y.u)
-	# Carefull here. If I uncomment the line below, then x.p will be left unaffected
+	# Carefull here. If I use the line below, then x.p will be left unaffected
 	# minus_!(x.p, y.p)
 	x.p = x.p - y.p
 	return x
@@ -89,8 +90,8 @@ returns x-y
 @inline minus(x, y) = (return x .- y) # necessary to put a dot .= for ApproxFun to work
 @inline minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 @inline minus(x::T, y::T) where {T <:Real} = (return x - y)
-@inline minus(x::BorderedArray{vectype, T},y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
-@inline minus(x::BorderedArray{vectype, T},y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
+@inline minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
+@inline minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
 ################################################################################
 function normalize(x)
 	out = copy(x)

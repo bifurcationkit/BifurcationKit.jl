@@ -29,8 +29,10 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
 	v = fp.linsolve(fp.J(x, p), a)[1]
-	σ1 = -n / dot(b, v)
+	bv = dot(b, v)
+	bv == T(0) && (@error "Error with Method using Minimally Augmented formulation for Fold")
 
+	σ1 = -n / bv
 	return fp.F(x, p), σ1
 end
 
@@ -42,13 +44,13 @@ end
 # Method to invert the jacobian of the fold problem. The only parameter which affects inverting the jacobian of the fold MA problem is whether the hessian is known analytically
 @with_kw struct FoldLinearSolveMinAug <: LinearSolver
 	# whether the Hessian is known analytically
-	d2F_is_known = false
+	d2F_is_known::Bool = false
  end
 
 function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 							duu, dup, d2F;
-							debug_ = false,
-							d2F_is_known = false) where T
+							debug_::Bool = false,
+							d2F_is_known::Bool = false) where T
 	# We solve Jfold⋅res = du := [duu, dup]
 	# the Jacobian J is expressed at (x, p)
 	# the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
@@ -127,7 +129,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 	end
 end
 
-function (foldl::FoldLinearSolveMinAug)(Jfold, du::BorderedArray{vectype, T}, debug_ = false) where {vectype, T}
+function (foldl::FoldLinearSolveMinAug)(Jfold, du::BorderedArray{vectype, T}, debug_::Bool = false) where {vectype, T}
 	out =  foldMALinearSolver(Jfold[1].u,
 				 Jfold[1].p,
 				 Jfold[2],
@@ -153,13 +155,15 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `eigenvec` guess for the 0 eigenvector
 - `options::NewtonPar`
 """
-function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm, d2F_is_known = true ) where {T,vectype}
+function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm, d2F_is_known::Bool = true ) where {T,vectype}
+	# rmul!(eigenvec, 1.0 / normN(eigenvec))
+
 	foldvariable = FoldProblemMinimallyAugmented(
 		(x, p) ->  F(x, p),
 		(x, p) ->  J(x, p),
 		(x, p) -> Jt(x, p),
-		eigenvec,
-		eigenvec,
+		copy(eigenvec),
+		copy(eigenvec),
 		options.linsolve)
 
 	foldPb = u -> foldvariable(u)
@@ -175,6 +179,7 @@ function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, ei
 				foldpointguess,
 				opt_fold, normN = normN)
 end
+
  """
 call when hessian is unknown, finite differences are then used
  """
@@ -244,8 +249,8 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, 
 		(x, p1) ->  F(x, p1, p2),
 		(x, p1) ->  J(x, p1, p2),
 		(x, p1) -> Jt(x, p1, p2),
-		eigenvec,
-		eigenvec,
+		copy(eigenvec),
+		copy(eigenvec),
 		options_newton.linsolve)
 	foldPb = (u, p2) -> foldvariable(p2)(u)
 	println("--> Start Fold continuation with Hessian known? = ", d2F_is_known)

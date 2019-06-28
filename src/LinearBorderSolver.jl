@@ -24,10 +24,6 @@
 # FullBLS
 # FullSparseBLS
 # NestedBLS
-
-
-######
-# A mettre dans ContParam
 ################################################################################
 """
 This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.

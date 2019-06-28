@@ -3,14 +3,13 @@ import Base: push!
 """
 DeflationOperator with structure
 - power `p`
-- dot function
+- dot function, this function has to be bilinear and symmetric for the linear solver
 - shift
 - roots
 The deflation operator is is ``M(u) = \\frac{1}{\\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^p)}``
 """
 struct DeflationOperator{T <: Real, vectype}
 	power::T
-	# this function has to be bilinear and symmetric for the linear solver
 	dot::Function
 	shift::T
 	roots::Vector{vectype}
@@ -18,7 +17,7 @@ end
 
 push!(df::DeflationOperator{T, vectype}, v::vectype) where {T, vectype} = push!(df.roots, v)
 
-function (df::DeflationOperator{T, vectype})(u) where {T, vectype}
+function (df::DeflationOperator{T, vectype})(u::vectype) where {T, vectype}
 	nrm  = u -> df.dot(u, u)
 	@assert length(df.roots) > 0 "You need to specify some roots for deflation to work"
 	out = 1 / nrm(u - df.roots[1])^df.power + df.shift
@@ -28,23 +27,24 @@ function (df::DeflationOperator{T, vectype})(u) where {T, vectype}
 	return out
 end
 
-function scalardM(df::DeflationOperator{T, vectype}, u, du) where {T, vectype}
+function scalardM(df::DeflationOperator{T, vectype}, u::vectype, du::vectype) where {T, vectype}
 	# the deflation operator is Mu = 1/Π_i(shift + norm(u-ri)^p)
 	# its differntial is -alpha(u, du) / Mu^2
 	# the goal of this function is to compute alpha(u, du)
 	delta = 1e-8
 	return (df(u + delta * du) - df(u))/delta
 
-	Mu = df(u)
-	p  = df.power
-	@assert length(df.roots) >0 "You need to specify some roots for deflation to work"
-	out = 0.0
-	for ii = 1:length(df.roots)
-		αi = 1 / (1 / nrm(u-df.roots[ii])^p + df.shift)
-		αi *= p / nrm(u-df.roots[ii])^(p+1)
-		out += αi * 2df.dot(u-df.roots[ii], du)
-	end
-	return out * Mu
+	# exact differentiation, not used
+	# Mu = df(u)
+	# p  = df.power
+	# @assert length(df.roots) >0 "You need to specify some roots for deflation to work"
+	# out = 0.0
+	# for ii = 1:length(df.roots)
+	# 	αi = 1 / (1 / nrm(u-df.roots[ii])^p + df.shift)
+	# 	αi *= p / nrm(u-df.roots[ii])^(p+1)
+	# 	out += αi * 2df.dot(u-df.roots[ii], du)
+	# end
+	# return out * Mu
 end
 
 struct DeflatedProblem{T, vectype, def <: DeflationOperator{T, vectype}}
@@ -56,7 +56,7 @@ end
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{T, vectype, def})(u) where {T, vectype, def <: DeflationOperator{T, vectype}}
+function (df::DeflatedProblem{T, vectype, def})(u::vectype) where {T, vectype, def <: DeflationOperator{T, vectype}}
 	return df.M(u) * df.F(u)
 end
 

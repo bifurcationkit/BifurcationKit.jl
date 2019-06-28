@@ -21,7 +21,7 @@ end
 # this function is used to solve (J + shift I) * x = rhs
 # this is only used for the Hopf Newton / Continuation
 function (l::Default)(J, rhs, shift::R) where {R <: Number}
-	if shift == 0.0
+	if shift == R(0)
 		return l(J, rhs)
 	else
 		return (J + shift * I) \ rhs, true, 1

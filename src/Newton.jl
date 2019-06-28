@@ -1,5 +1,5 @@
 @with_kw mutable struct NewtonPar{T, S <: LinearSolver, E <: EigenSolver}
-	tol::T   		 = 1e-10
+	tol::T			 = 1e-10
 	maxIter::Int  	 = 50
 	alpha::T         = 1.0        # damping
 	almin::T         = 0.001      # minimal damping
@@ -207,7 +207,6 @@ function newtonPseudoArcLength(F, Jh,
 	# dFdl = (F(x, l + epsi) - res_f) / epsi
 	dFdl = copy(F(x, l + epsi))
 	minus!(dFdl, res_f); rmul!(dFdl, T(1) / epsi)
-
 
 	res     = max(normN(res_f), abs(res_n))
 	resHist = [res]

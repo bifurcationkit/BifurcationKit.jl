@@ -138,10 +138,10 @@ end
 
 function (hopfl::HopfLinearSolveMinAug)(Jhopf, du::BorderedArray{vectype, T}; debug_ = false)  where {vectype, T}
 	out = hopfMALinearSolver((Jhopf[1]).u, (Jhopf[1]).p[1], (Jhopf[1]).p[2], Jhopf[2],
-		 						du.u, du.p[1], du.p[2],
-								Jhopf[3]; 		# -> this is the hessian d2F;
-								debug_ = debug_,
-								d2F_is_known = hopfl.d2F_is_known)
+				du.u, du.p[1], du.p[2],
+				Jhopf[3]; 		# -> this is the hessian d2F;
+				debug_ = debug_,
+				d2F_is_known = hopfl.d2F_is_known)
 	if debug_ == false
 		return BorderedArray(out[1], [out[2], out[3]]), out[4], out[5]
 	else
@@ -166,8 +166,8 @@ function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectypeR, T}, e
 		(x, p) -> F(x, p),
 		(x, p) -> J(x, p),
 		(x, p) -> Jt(x, p),
-		eigenvec,
-		eigenvec_ad,
+		copy(eigenvec),
+		copy(eigenvec_ad),
 		options.linsolve)
 	hopfPb = u -> hopfvariable(u)
 
@@ -245,8 +245,8 @@ function continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectype, 
 		(x, p1) -> F(x, p1, p2),
 		(x, p1) -> J(x, p1, p2),
 		(x, p1) -> Jt(x, p1, p2),
-		eigenvec,
-		eigenvec_ad,
+		copy(eigenvec),
+		copy(eigenvec_ad),
 		options_newton.linsolve)
 
 	hopfPb = (u, p2) -> hopfvariable(p2)(u)
