@@ -9,7 +9,7 @@
 	eigsolve::E 	 = Default_eig()
 end
 
-# this function is to simplify calls to NewtonPar
+# this function is used to simplify calls to NewtonPar
 function NewtonPar(; kwargs...)
 	if haskey(kwargs, :linsolve)
 		tls = typeof(kwargs[:linsolve])
@@ -50,8 +50,10 @@ end
 	pMin::T	= -1.0
 	pMax::T	=  1.0
 
-	# Newton solver parameters
+	# maximum number of continuation steps
 	maxSteps       = 100
+
+	# Newton solver parameters
 	finDiffEps::T  = 1e-9 		#constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar{T, S, E}()
 	optNonlinIter  = 5
@@ -60,11 +62,11 @@ end
 
 	# parameters for eigenvalues
  	computeEigenValues = false
+	shift = 0.1					# shift used for eigenvalues computation
 	nev = 3 					# number of eigenvalues
 	save_eig_every_n_steps = 1	# what steps do we keep the eigenvalues
 
 	plot_every_n_steps = 3
-	shift = 0.1
 	@assert dsmin>0
 	@assert dsmax>0
 
@@ -149,7 +151,7 @@ end
 
 This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
 """
-function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs...) where {T, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
 
@@ -164,7 +166,8 @@ function newtonDeflated(Fhandle, Jhandle, x0, options:: NewtonPar{T}, defOp::Def
 				opt_def; kwargs...)
 end
 
-function newtonDeflated(Fhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+# simplified call when no Jacobian is given
+function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
 	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end

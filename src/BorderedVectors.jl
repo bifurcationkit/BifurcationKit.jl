@@ -28,12 +28,14 @@ function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <:Re
 	# Scale an array A by a scalar b overwriting A in-place
 	rmul!(A.u, a)
 	rmul!(A.p, b)
+	return A
 end
 
 function rmul!(A::BorderedArray{vectype, T}, a::T, b::T) where {vectype, T <:Real}
 	# Scale an array A by a scalar b overwriting A in-place
 	rmul!(A.u, a)
 	A.p = A.p * b
+	return A
 end
 rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <:Real, Tv} = rmul!(A, a, a)
 ################################################################################

@@ -83,7 +83,7 @@ br_nat, u1 = @time Cont.continuation(
 deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])
 
 # quick test of scalardM deflation
-Cont.scalardM(deflationOp, sol, 5sol)
+# Cont.scalardM(deflationOp, sol, 5sol)
 
 chanDefPb   = DeflatedProblem(x -> F_chan(x,a, 0.01),x -> Jac_mat(x,a, 0.01),deflationOp)
 
@@ -97,16 +97,16 @@ outdef1, _,_ = @time Cont.newton(
 
 # we now compare the jacobians for the deflated problem either using finite differences or the explicit jacobian
 rhs = rand(n)
-J_def_fd = Cont.finiteDifferences(u->chanDefPb(u),1.1out)
+J_def_fd = Cont.finiteDifferences(u->chanDefPb(u),1.5*out)
 res_fd =  J_def_fd \ rhs
 
 Jacdf = (u0, pb::DeflatedProblem,ls = opt_def.linsolve ) -> (return (u0, pb, ls))
 Jacdfsolver = DeflatedLinearSolver()
 
-res_explicit = Jacdfsolver(Jacdf(1.1out,chanDefPb,opt_def.linsolve),rhs)[1]
+res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolve),rhs)[1]
 
 println("--> Test jacobian expression for deflated problem")
-@test norm(res_fd - res_explicit,Inf64) < 1e-6
+@test norm(res_fd - res_explicit,Inf64) < 1e-4
 
 opt_def = opt_newton
 opt_def.tol = 1e-10

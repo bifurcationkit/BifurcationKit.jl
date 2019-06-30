@@ -1,4 +1,8 @@
 ################################################################################
+# structure to save the bordered linear system with matrix
+# [ J		a]
+# [b'		c]
+#
 # struct borderedLinearOperator{Tj, Ta, Tb, Tc}
 # 	J::Tj
 # 	a::Ta
@@ -26,7 +30,7 @@
 # NestedBLS
 ################################################################################
 """
-This function extract the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
+This function builds the jacobian of the bordered system. This is helpful when using Sparse Matrices. Indeed, solving the bordered system requires computing two inverses in the general case. Here by augmenting the sparse Jacobian, there is only one inverse to be computed.
 It requires the state space to be Vector like.
 """
 function getBorderedLinearSystemFull(J, dR::AbstractVector, tau::BorderedArray{vectype, T}, theta::T) where {vectype, T}

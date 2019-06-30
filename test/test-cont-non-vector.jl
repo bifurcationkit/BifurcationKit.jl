@@ -1,5 +1,5 @@
 # this test is designed to test the ability of the package to use a state space that is not an AbstractArray.
-using Test
+using Test, Random
 using PseudoArcLengthContinuation
 const Cont = PseudoArcLengthContinuation
 ####################################################################################################
@@ -21,14 +21,14 @@ opts_br0 = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= -0.01, pMax = 4.
 	opts_br0.maxSteps = 150
 
 	br0, u1 = @time Cont.continuation(
-		(x, r) -> F0(x, r),
+		F0,
 		out0, 1.0,
 		opts_br0, printsolution = x -> x[1])
 
 # plotBranch(br0);title!("a")
 
 outfold, hist, flag = @time Cont.newtonFold(
-	(x, r) -> F0(x, r),
+	F0,
 	# (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 	# (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 	# (x, r, v1, v2) -> -6 .* x .* v1 .* v2,
@@ -113,3 +113,23 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 	br, 1,
 	1.0, plot = false,
 	opts_br)
+
+# try with newtonDeflation
+printstyled(color=:green, "--> test with Newton deflation 1")
+deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zero(sol)])
+soldef0 = BorderedArray([0.1], 0.0)
+soldef1, _, _ = @time Cont.newtonDeflated(
+	x -> Fb(x, 0., 1.),
+	x -> jacobian(x, 0., 1.),
+	soldef0,
+	opt_newton, deflationOp)
+
+push!(deflationOp, soldef1)
+
+Random.seed!(1231)
+printstyled(color=:green, "--> test with Newton deflation 2")
+soldef2, _, _ = @time Cont.newtonDeflated(
+	x -> Fb(x, 0., 1.),
+	x -> jacobian(x, 0., 1.),
+	rmul!(soldef0,rand()),
+	opt_newton, deflationOp)

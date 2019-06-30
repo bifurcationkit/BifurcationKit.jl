@@ -1,6 +1,11 @@
 using RecursiveArrayTools # for bifurcation point handling
 import Base: show
-###############################################################################################
+####################################################################################################
+# Structure to hold current state of the algorithm
+struct ContCache
+
+end
+####################################################################################################
 # Structure to hold result
 @with_kw struct ContResult{T, vectype, eigenvectype}
 	# this vector is used to hold (param, printsolution(u), Newton iterations, ds)
@@ -33,7 +38,7 @@ function show(io::IO, br::PseudoArcLengthContinuation.ContResult)
 		end
 	end
 end
-###############################################################################################
+####################################################################################################
 function displayIteration(i, funceval, residual, itlinear = 0)
 	(i == 0) && println("\n Newton Iterations \n   Iterations      Func-count      f(x)      Linear-Iterations\n")
 	if length(itlinear)==1
@@ -42,7 +47,7 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 		@printf("%9d %16d %14.4e (%6d, %6d)\n", i, funceval, residual, itlinear[1], itlinear[2]);
 	end
 end
-###############################################################################################
+####################################################################################################
 """
 Plot the continued branch of solutions
 """
@@ -114,7 +119,7 @@ function plotBranch!(contres::ContResult; kwargs...)
 		scatter!(map(x->x[3],contres.bifpoint[id:end]), map(x->x[4],contres.bifpoint[id:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
 	end
 end
-###############################################################################################
+####################################################################################################
 function detectBifucation(contparams, contResult, z, tau, printsolution, verbosity)
 	branch = contResult.branch
 
@@ -179,7 +184,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 		end
 	end
 end
-###############################################################################################
+####################################################################################################
 """
 Compute Jacobian by Finite Differences
 """
@@ -196,7 +201,7 @@ function finiteDifferences(F, x::AbstractVector)
 	end
 	return J
 end
-###############################################################################################
+####################################################################################################
 """
 Save solution / data in JLD2 file
 - `filename` is for example "example.jld2"
@@ -217,7 +222,7 @@ function saveSolution(filename, sol, p, i::Int64, br::ContResult, contParam)
 		file["contParam"] = contParam
 	end
 end
-###############################################################################################
+####################################################################################################
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
