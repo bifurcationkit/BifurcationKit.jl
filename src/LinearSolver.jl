@@ -22,7 +22,7 @@ end
 # this is only used for the Hopf Newton / Continuation
 function (l::Default)(J, rhs, shift::R) where {R <: Number}
 	if shift == R(0)
-		return l(J, rhs)
+		return J \ rhs, true, 1
 	else
 		return (J + shift * I) \ rhs, true, 1
 	end

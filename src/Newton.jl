@@ -101,10 +101,8 @@ Simplified calls are provided, for example when `J` is not passed. It then compu
 - number of iterations
 """
 function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) where T
-	# Rename parameters
-	nltol       = options.tol
-	nlmaxit     = options.maxIter
-	verbose     = options.verbose
+	# Extract parameters
+	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialise iterations
 	x = copy(x0)
@@ -119,8 +117,11 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 	# Displaying results
 	verbose && displayIteration(it, neval, res)
 
+	# parameter for linesearch
+	step_ok = true
+
 	# Main loop
-	while (res > nltol) & (it < nlmaxit)
+	while (res > tol) & (it < maxIter)
 		J = Jhandle(x)
 		d, flag, itlinear = options.linsolve(J, f)
 
@@ -136,8 +137,8 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 
 		verbose && displayIteration(it, neval, res, itlinear)
 	end
-	(resHist[end] > nltol) && printstyled("\n--> Newton algorithm failed to converge, residual = ", res[end], color=:red)
-	return x, resHist, resHist[end] < nltol, it
+	(resHist[end] > tol) && printstyled("\n--> Newton algorithm failed to converge, residual = ", res[end], color=:red)
+	return x, resHist, resHist[end] < tol, it
 end
 
 # simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
@@ -183,16 +184,10 @@ function newtonPseudoArcLength(F, Jh,
 						options::ContinuationPar{T};
 						linearalgo = :bordering,
 						normN = norm) where {T, vectype}
-	# Rename parameters
+	# Extract parameters
 	newtonOpts = options.newtonOptions
-	nltol   = newtonOpts.tol
-	nlmaxit = newtonOpts.maxIter
-	verbose = newtonOpts.verbose
-	alpha   = convert(eltype(z0.p), newtonOpts.alpha)
-	almin   = convert(eltype(z0.p), newtonOpts.almin)
-	theta   = convert(eltype(z0.p), options.theta)
-	ds      = convert(eltype(z0.p), options.ds)
-	epsi    = convert(eltype(z0.p), options.finDiffEps)
+	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
+	@unpack theta, ds, finDiffEps = options
 
 	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
 
@@ -207,9 +202,9 @@ function newtonPseudoArcLength(F, Jh,
 	dX   = similar(res_f)
 	dl   = T(0)
 
-	# dFdl = (F(x, l + epsi) - res_f) / epsi
-	dFdl = copy(F(x, l + epsi))
-	minus!(dFdl, res_f); rmul!(dFdl, T(1) / epsi)
+	# dFdl = (F(x, l + finDiffEps) - res_f) / finDiffEps
+	dFdl = copy(F(x, l + finDiffEps))
+	minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
 
 	res     = max(normN(res_f), abs(res_n))
 	resHist = [res]
@@ -220,9 +215,9 @@ function newtonPseudoArcLength(F, Jh,
 	step_ok = true
 
 	# Main loop
-	while (res > nltol) & (it < nlmaxit) & step_ok
+	while (res > tol) & (it < maxIter) & step_ok
 		# copyto!(dFdl, (F(x, l + epsi) - F(x, l)) / epsi)
-		copyto!(dFdl, F(x, l + epsi)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / epsi)
+		copyto!(dFdl, F(x, l + finDiffEps)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
 
 		J = Jh(x, l)
 		u, up, liniter = linearBorderedSolver(J, dFdl,
@@ -230,7 +225,7 @@ function newtonPseudoArcLength(F, Jh,
 						newtonOpts.linsolve,
 						algo = linearalgo)
 
-		if newtonOpts.linesearch
+		if linesearch
 			step_ok = false
 			while !step_ok & (alpha > almin)
 				# x_pred = x - alpha * u
@@ -269,5 +264,5 @@ function newtonPseudoArcLength(F, Jh,
 		verbose && displayIteration(it, 1, res, liniter)
 
 	end
-	return BorderedArray(x, l), resHist, resHist[end] < nltol, it
+	return BorderedArray(x, l), resHist, resHist[end] < tol, it
 end
