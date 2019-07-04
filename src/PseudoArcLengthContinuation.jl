@@ -124,7 +124,13 @@ module PseudoArcLengthContinuation
 	function computeEigenvalues(contparams, contResult, J, step)
 		nev_ = max(sum( real.(contResult.eig[end][1]) .> 0) + 2, contparams.nev)
 		eig_elements = contparams.newtonOptions.eigsolve(J, contparams.nev)
-		(mod(step, contparams.save_eig_every_n_steps) == 0 ) && push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))
+		if mod(step, contparams.save_eig_every_n_steps) == 0
+			if contparams.save_eigenvectors
+				push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))
+			else
+				push!(contResult.eig, (eig_elements[1], empty(eig_elements[2]), step + 1))
+			end
+		end
 		eig_elements
 	end
 	################################################################################################
@@ -228,6 +234,9 @@ module PseudoArcLengthContinuation
 				n_imag = [0],
 				n_unstable = [0],
 				eig = [(evsol[1], evsol[2], 0)] )
+			if !contParams.save_eigenvectors
+				empty!(contRes.eig[1][2])
+			end
 			# whether the current solution is stable
 			contRes.stability[1] = mapreduce(x->real(x)<0, *, evsol[1])
 			contRes.n_unstable[1] = mapreduce(x->round(real(x), digits=6) > 0, +, evsol[1])

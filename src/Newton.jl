@@ -64,7 +64,8 @@ end
  	computeEigenValues = false
 	shift = 0.1					# shift used for eigenvalues computation
 	nev = 3 					# number of eigenvalues
-	save_eig_every_n_steps = 1	# what steps do we keep the eigenvalues
+	save_eig_every_n_steps = 1	# what steps do we keep the eigenvectors
+	save_eigenvectors	= true	# useful options because if puts a high memory pressure 
 
 	plot_every_n_steps = 3
 	@assert dsmin>0
