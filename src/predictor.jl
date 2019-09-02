@@ -16,7 +16,7 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams
 	end
 end
 ################################################################################################
-function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M<:BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we perform z_pred = z_old + contparams.ds * tau
 	copyto!(z_pred, z_old)
 	axpy!(contparams.ds, tau, z_pred)

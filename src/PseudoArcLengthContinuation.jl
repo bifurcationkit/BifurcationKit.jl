@@ -88,40 +88,40 @@ module PseudoArcLengthContinuation
 						finaliseSolution = (z, tau, step, contResult) -> true,
 						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
 		################################################################################################
-		## get parameters
+		## Get parameters
 		@unpack pMin, pMax, maxSteps, newtonOptions = contParams
 		epsi = contParams.finDiffEps
 
 		check!(contParams)
 
-		# filename to save the computations
+		# Filename to save the computations
 		filename = "branch-" * string(Dates.now())
 
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
 
-		## Converge initial guess
+		# Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
-		u0, fval, exitflag, it_number = newton(x -> Fhandle(x, p0),
+		u0, fval, isconverged, it_number = newton(x -> Fhandle(x, p0),
 												x -> Jhandle(x, p0),
 												u0, newtonOptions, normN = normC)
-		@assert exitflag "Newton failed to converge initial guess"
+		@assert isconverged "Newton failed to converge initial guess"
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0), initial step")
 
-		# save data and hold general information
+		# Save data and hold general information
 		if contParams.computeEigenValues
-			# eigen elements computation
+			# Eigen elements computation
 			evsol =  newtonOptions.eigsolve(Jhandle(u0, p0), contParams.nev)
 			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, evsol, contParams)
 		else
 			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, 0, contParams)
 		end
 
-		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold=true, color=:magenta)
-		u_pred, fval, exitflag, it_number = newton(x -> Fhandle(x, p0 + contParams.ds / T(50)),
+		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
+		u_pred, fval, isconverged, it_number = newton(x -> Fhandle(x, p0 + contParams.ds / T(50)),
 													x -> Jhandle(x, p0 + contParams.ds / T(50)),
 													u0, newtonOptions, normN = normC)
-		@assert exitflag "Newton failed to converge for the computation of the initial tangent"
+		@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
 
@@ -140,7 +140,7 @@ module PseudoArcLengthContinuation
 		# number of iterations for newton correction
 		it_number = 0
 
-		# variables to hold the predictor
+		# Variables to hold the predictor
 		z_pred   = BorderedArray(copy(u0), p0)
 		tau_pred = BorderedArray(copy(u0), p0)
 		tau_new  = BorderedArray(copy(u0), p0)
@@ -152,19 +152,19 @@ module PseudoArcLengthContinuation
 
 		## Main continuation loop
 		while (step < maxSteps) & ~continuationFailed & (z_old.p < contParams.pMax) & (z_old.p > contParams.pMin)
-			# predictor: z_pred
+			# Predictor: z_pred
 			getPredictor!(z_pred, z_old, tau_old, contParams)
 			(verbosity > 0) && println("########################################################################")
 			(verbosity > 0) && @printf("Start of Continuation Step %d: Parameter: p1 = %2.4e --> %2.4e\n", step, z_old.p, z_pred.p)
 			(length(contRes.branch[4, :])>1 && (verbosity > 0)) && @printf("Step size  = %2.4e --> %2.4e\n", contRes.branch[4, end-1], contParams.ds)
 
-			# Corrector
-			z_new, fval, exitflag, it_number  = corrector(Fhandle, Jhandle,
-					 z_old, tau_old, z_pred, contParams,
-					 linearalgo, normC = normC)
+			# Corrector, ie newton correction
+			z_new, fval, isconverged, it_number  = corrector(Fhandle, Jhandle,
+					z_old, tau_old, z_pred, contParams,
+					linearalgo, normC = normC)
 
 			# Successful step
-			if exitflag == true
+			if isconverged
 				(verbosity > 0) && printstyled("--> Step Converged in $it_number Nonlinear Solver Iterations!\n", color=:green)
 				# get predictor
 
@@ -174,11 +174,11 @@ module PseudoArcLengthContinuation
 					getTangentBordered!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, verbosity)
 				end
 
-		  		# Output
+				# Output
 				push!(contRes.branch, vcat(z_new.p, printsolution(z_new.u), it_number, contParams.ds))
 
 				# Detection of codim 1 bifurcation points
-				# this should be there before the old z is re-written
+				# This should be there before the old z is re-written
 				if contParams.detect_fold || contParams.detect_bifurcation
 					detectBifucation(contParams, contRes, z_old, tau_old, printsolution, verbosity)
 				end
@@ -202,21 +202,21 @@ module PseudoArcLengthContinuation
 					saveSolution(filename, z_old.u, z_old.p, step, contRes, contParams)
 				end
 
-				# call user saved finaliseSolution function. If returns false, stop continuation
+				# Call user saved finaliseSolution function. If returns false, stop continuation
 				!finaliseSolution(z_old, tau_old, step, contRes) && (step = maxSteps)
 			else
 				(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 				(verbosity > 0) && println("--> Newton Residuals history = ", fval)
-		  	end
+			end
 
 			step += 1
-			continuationFailed = stepSizeControl(contParams, exitflag, it_number, tau_old, contRes.branch, verbosity)
-	  end # while
-	  plot && plotBranchCont(contRes, z_old, contParams, plotsolution)
+			continuationFailed = stepSizeControl(contParams, isconverged, it_number, tau_old, contRes.branch, verbosity)
+		end # while
+		plot && plotBranchCont(contRes, z_old, contParams, plotsolution)
 
-	  # we remove the initial guesses that are meaningless
-	  popfirst!(contRes.bifpoint)
-	  return contRes, z_old, tau_old
+		# we remove the initial guesses that are meaningless
+		popfirst!(contRes.bifpoint)
+		return contRes, z_old, tau_old
 	end
 
 	continuation(Fhandle::Function, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: LinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
