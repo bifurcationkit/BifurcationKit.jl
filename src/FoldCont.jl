@@ -13,7 +13,7 @@ struct FoldProblemMinimallyAugmented{vectype, S <: LinearSolver}
 	Jadjoint			# Adjoint of the Jacobian of F
 	a::vectype			# close to null vector of J^T
 	b::vectype			# close to null vector of J
-	linsolve::S
+	linsolve::S			# linear solver
 end
 
 function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where {vectype, S <: LinearSolver, T}
@@ -28,7 +28,7 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
-	v = fp.linsolve(fp.J(x, p), a)[1]
+	v, _, _ = fp.linsolve(fp.J(x, p), a)
 	bv = dot(b, v)
 	bv == T(0) && (@error "Error with Method using Minimally Augmented formulation for Fold")
 
@@ -180,9 +180,8 @@ function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, ei
 				opt_fold, normN = normN)
 end
 
- """
-call when hessian is unknown, finite differences are then used
- """
+
+# calls when hessian is unknown, finite differences are then used
 newtonFold(F, J, Jt, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype} = newtonFold(F, J, Jt, x -> x, foldpointguess, eigenvec, options; normN = normN, d2F_is_known = false)
 
 newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype} = newtonFold(F, J, (x, p) -> transpose(J(x, p)), foldpointguess, eigenvec, options; normN = normN)
@@ -190,13 +189,13 @@ newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::N
 """
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	`newtonFold(F, J, Jt, br::ContResult, index::Int64, options)`
+	`newtonFold(F, J, Jt, br::ContResult, index::Int64, options::NewtonPar)`
 
 or
 
-	`newtonFold(F, J, Jt, d2F, br::ContResult, index::Int64, options)`
+	`newtonFold(F, J, Jt, d2F, br::ContResult, index::Int64, options::NewtonPar)`
 
-when the Hessian d2F is known. The parameters are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+whether the Hessian d2F is known analytically or not. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
 """
 function newtonFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, options::NewtonPar;kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
@@ -226,20 +225,19 @@ newtonFold(F, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...) = 
 
 
 """
-codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
+Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `F = (x, p1, p2) ->	F(x, p1, p2)` where `p` is the parameter associated to the Fold point
 - `J = (x, p1, p2) -> d_xF(x, p1, p2)` associated jacobian
 - `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` associated jacobian
 - `d2F = (x, p1, p2, v1, v2) -> d2F(x, p1, p2, v1, v2)` this is the hessian of `F` computed at `(x, p1, p2)` and evaluated at `(v1, v2)`.
 - `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as given by the function FoldPoint
-- `p2` parameter p2 for which foldpointguess is a good guess
+- `p2` parameter p2 for which `foldpointguess` is a good guess
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `options::NewtonPar`
 """
 function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,vectype}
-	@warn "Bad way it creates a struct for every p2"
-	# Jacobian for the Fold problem
-	# @assert 1==0 "sur de ce qui suit?"
+	#TODO Bad way it creates a struct for every p2
+	# Jacobian for the Fold problem	
 	Jac_fold_MA(u0, pb, hess) = (return (u0, pb, hess))
 
 	# options for the Newton Solver inheritated from the ones the user provided

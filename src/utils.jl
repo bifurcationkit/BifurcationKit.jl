@@ -1,11 +1,6 @@
 using RecursiveArrayTools # for bifurcation point handling
 import Base: show
 ####################################################################################################
-# Structure to hold current state of the algorithm
-struct ContCache
-
-end
-####################################################################################################
 # Structure to hold result
 @with_kw struct ContResult{T, vectype, eigenvectype}
 	# this vector is used to hold (param, printsolution(u), Newton iterations, ds)
@@ -120,6 +115,19 @@ function plotBranch!(contres::ContResult; kwargs...)
 	end
 end
 ####################################################################################################
+function computeEigenvalues(contparams, contResult, J, step)
+	nev_ = max(sum( real.(contResult.eig[end][1]) .> 0) + 2, contparams.nev)
+	eig_elements = contparams.newtonOptions.eigsolve(J, contparams.nev)
+	if mod(step, contparams.save_eig_every_n_steps) == 0
+		if contparams.save_eigenvectors
+			push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))
+		else
+			push!(contResult.eig, (eig_elements[1], empty(eig_elements[2]), step + 1))
+		end
+	end
+	eig_elements
+end
+
 function detectBifucation(contparams, contResult, z, tau, printsolution, verbosity)
 	branch = contResult.branch
 
@@ -152,7 +160,6 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Hopf / BP bifurcation point detection based on eigenvalue distribution
 	if size(branch)[2] > 1
 		if abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 1
-			@show  branch
 			push!(contResult.bifpoint, (:bp,
 								length(branch)-1,
 								branch[1, end-1],
@@ -182,6 +189,37 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 							copy(z.u),
 							normalize(tau.u), ind_bif))
 		end
+	end
+end
+
+function initContRes(br, u0, evsol, contParams)
+	T = eltype(br)
+	if contParams.computeEigenValues
+		contRes = ContResult{T, typeof(u0), typeof(evsol[2])}(
+			branch = br,
+			bifpoint = [(:none, 0, T(0.), T(0.), u0, u0, 0)],
+			n_imag = [0],
+			n_unstable = [0],
+			eig = [(evsol[1], evsol[2], 0)] )
+		if !contParams.save_eigenvectors
+			empty!(contRes.eig[1][2])
+		end
+		# whether the current solution is stable
+		contRes.stability[1] = mapreduce(x->real(x)<0, *, evsol[1])
+		contRes.n_unstable[1] = mapreduce(x->round(real(x), digits=6) > 0, +, evsol[1])
+		if length(evsol[1][1:contRes.n_unstable[1]])>0
+			contRes.n_imag[1] = mapreduce(x->round(imag(x), digits=6) > 0, +, evsol[1][1:contRes.n_unstable[1]])
+		else
+			contRes.n_imag[1] = 0
+		end
+		return contRes
+	else
+		return ContResult{T, typeof(u0), Array{Complex{T}, 2}}(
+				branch = br,
+				bifpoint = [(:none, 0, T(0.), T(0.), u0, u0, 0)],
+				n_imag = [0],
+				n_unstable = [0],
+				eig = [([Complex{T}(1)], zeros(Complex{T}, 2, 2), 0)])
 	end
 end
 ####################################################################################################

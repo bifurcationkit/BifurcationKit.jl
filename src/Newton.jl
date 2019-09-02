@@ -65,7 +65,7 @@ end
 	shift = 0.1					# shift used for eigenvalues computation
 	nev = 3 					# number of eigenvalues
 	save_eig_every_n_steps = 1	# what steps do we keep the eigenvectors
-	save_eigenvectors	= true	# useful options because if puts a high memory pressure 
+	save_eigenvectors	= true	# useful options because if puts a high memory pressure
 
 	plot_every_n_steps = 3
 	@assert dsmin>0
@@ -74,6 +74,18 @@ end
 	# handling bifucation points
 	detect_fold = true
 	detect_bifurcation = false
+end
+
+# check the logic of the parameters
+function check!(contParams::ContinuationPar)
+	# if we chose a natural continuation, we disable to computation of the tangent by a Bordered system and turn to finite differences.
+	if contParams.natural
+		contParams.secant = true
+	end
+
+	if contParams.detect_bifurcation
+		contParams.computeEigenValues = true
+	end
 end
 
 # this function is to simplify calls to ContinuationPar

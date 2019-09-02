@@ -2,8 +2,8 @@ using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
 const Cont = PseudoArcLengthContinuation
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
-z_pred = PseudoArcLengthContinuation.BorderedArray(rand(10),1.0)
-tau_pred = PseudoArcLengthContinuation.BorderedArray(rand(10),2.0)
+z_pred = BorderedArray(rand(10),1.0)
+tau_pred = BorderedArray(rand(10),2.0)
 Cont.minus!(z_pred, tau_pred)
 Cont.eltype(z_pred)
 
@@ -27,9 +27,9 @@ println("--> Test linear Bordered solver")
 J0 = rand(10,10) * 0.1 + I
 rhs = rand(10)
 sol_explicit = J0 \ rhs
-sol_bd1, sol_bd2, _ = PseudoArcLengthContinuation.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
+sol_bd1, sol_bd2, _ = Cont.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
 
-sol_bd1, sol_bd2, _ = PseudoArcLengthContinuation.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
+sol_bd1, sol_bd2, _ = Cont.linearBorderedSolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], Default())
 
 @test norm(sol_explicit[1:end-1] - sol_bd1, Inf64) < 1e-12
 @test norm(sol_explicit[end] - sol_bd2, Inf64) < 1e-12
@@ -55,11 +55,11 @@ outit = ls(J0, x0)
 # test the eigen solvers for matrix free formulations
 out = Arpack.eigs(J0, nev = 20, which = :LR)
 
-eil = PseudoArcLengthContinuation.eig_KrylovKit(tol = 1e-9)
+eil = Cont.eig_KrylovKit(tol = 1e-9)
 outkk = eil(J0, 20)
-eil = PseudoArcLengthContinuation.eig_MF_KrylovKit(tol = 1e-9, x₀ = x0)
+eil = Cont.eig_MF_KrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
 
-eil = PseudoArcLengthContinuation.Default_eig_sp()
+eil = Cont.Default_eig_sp()
 outdefault = eil(J0, 20)
 @test norm(out[1] - outdefault[1], Inf64) < 1e-7

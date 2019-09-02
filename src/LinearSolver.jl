@@ -46,7 +46,7 @@ function (l::GMRES_IterativeSolvers{T})(J, rhs, shift::Ts = T(0)) where {T, Ts}
 	J_map = v -> apply(J, v) .+ shift .* v
 	Jmap = LinearMap{Ts}(J_map, l.N, l.N ; ismutating = false)
 	res = IterativeSolvers.gmres(Jmap, rhs, tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter)
-	(res[2].iters >= l.maxiter) && printstyled("IterativeSolvers.gmres iterated maxIter =$(res[2].iters) times without achieving the desired tolerance.\n", color=:red)
+	(res[2].iters >= l.maxiter) && (@warn "IterativeSolvers.gmres iterated maxIter =$(res[2].iters) times without achieving the desired tolerance.\n")
 	return res[1], length(res) > 1, res[2].iters
 end
 
@@ -65,7 +65,7 @@ end
 function (l::GMRES_KrylovKit{T})(J, rhs) where T
 	res, info = KrylovKit.linsolve(J, rhs, rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol)
 	info.converged == 0 && (@warn "GMRES solver did not converge")
-	return res, true, info.numops
+	return res, true, info.numiter
 end
 
 # this function is used to solve (J + shift I) * x = rhs
@@ -73,5 +73,5 @@ end
 # function (l::GMRES_KrylovKit{T})(J, rhs, shift::Ts) where {T, Ts}
 #	 @assert 1==0 "WIP"
 #	 res, info = KrylovKit.linsolve(J, rhs, rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol)
-#	 return res, true, info.numops
+#	 return res, true, info.numiter
 # end

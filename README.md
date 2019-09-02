@@ -39,7 +39,7 @@ The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuat
 - Matrix Free Newton solver with generic linear / eigen solver. Idem for the arc-length continuation.
 - Matrix Free Newton solver with deflation. It can be used for branch switching for example.
 - Fold / Hopf bifurcation detection.
-- Fold / Hopf with MatrixFree / Sparse Jacobian continuation with Minimally Augmented. formulation.
+- Fold / Hopf with Matrix Free / Sparse Jacobian continuation with Minimally Augmented formulation.
 - Periodic orbit computation and continuation using Simple Shooting (not very stable yet) or Finite Differences.
 
 Custom state means, we can use something else than `AbstractVector`:
