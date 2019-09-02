@@ -13,7 +13,7 @@ We were inspired by [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/p
 
 In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl) to PyDSTools, and also [Bifurcations.jl](https://github.com/tkf/Bifurcations.jl).
 
-One design choice is that we try not to require `u` to be a subtype of an `AbstractArray` as this would forbid the use of spectral methods (like the one from `ApproxFun.jl`) or some GPU package, *e.g.* `ArrayFire.jl`. So far, our implementation does not allow this for Fold / Hopf continuation and computation of periodic orbits. It will be improved later.
+One design choice is that we do not require `u` to be a subtype of an `AbstractArray` as this would forbid the use of spectral methods like the one from `ApproxFun.jl`. So far, our implementation does not allow this for Hopf continuation and computation of periodic orbits. It will be improved later.
 
 ## A word on performance
 
@@ -59,7 +59,7 @@ and parameters
 ```julia
 a = 3.3
 ```
-Finally, we need to define some parameters for the Newton iterations. This is done by calling
+Finally, we need to provide some parameters for the Newton iterations. This is done by calling
 
 ```julia
 opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
@@ -88,7 +88,7 @@ Newton Iterations
   0.102035 seconds (119.04 k allocations: 7.815 MiB)
 ```
 
-Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. We can now perform numerical continuation wrt the parameter `a`. Again, we need to define some parameters for the continuation:
+Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. We can now perform numerical continuation wrt the parameter `a`. Again, we need to provide some parameters for the continuation:
 
 ```julia
 opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1)
@@ -257,7 +257,7 @@ function dF_sh(u, l=-0.15, ν=1.3)
 end
 ```
 
-We first look for hexagonal patterns. This done with
+We first look for hexagonal patterns. This is done with
 
 ```julia
 X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
@@ -738,7 +738,7 @@ sol = Fun(x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol.space, 2)
 ```
 
-Finally, we need to define some parameters for the Newton iterations. This is done by calling
+Finally, we need to provide some parameters for the Newton iterations. This is done by calling
 
 ```julia
 opt_newton = Cont.NewtonPar(tol = 1e-12, verbose = true)
@@ -767,7 +767,7 @@ Newton Iterations
   0.079482 seconds (344.44 k allocations: 13.856 MiB)
 ```
 
-We can now perform numerical continuation wrt the parameter `a`. Again, we need to define some parameters for the continuation:
+We can now perform numerical continuation wrt the parameter `a`. Again, we need to provide some parameters for the continuation:
 
 ```julia
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
@@ -805,16 +805,16 @@ and you should see
 
 # Example 5: the Swift-Hohenberg equation on the GPU
 
-Here we give an example where the continuation can be done **entirely** on the GPU.
+Here we give an example where the continuation can be done **entirely** on the GPU, *e.g.* on a single Tesla K80.
 
 
 We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See **Example 2** above for more details. Solving the sparse linear problem in $v$
 
-$$-(I+\Delta)^2 v+l\cdot v +2\nu uv-3u^2v = rhs$$
+$$-(I+\Delta)^2 v+(l +2\nu u-3u^2)v = rhs$$
 
-with a **direct** solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian. However, this problem reads
+with a **direct** solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian operator. However, the above problem is equivalent to:
 
-$$-v + L * (d * v) = L*rhs$$
+$$-v + L \cdot (d \cdot v) = L\cdot rhs$$
 
 where 
 
@@ -824,7 +824,7 @@ is very well conditioned and
 
 $$d := l+1+2\nu v-3v^2.$$ 
 
-Hence, to solve the previous equation, only a few GMRES iterations are required. 
+Hence, to solve the previous equation, only a **few** GMRES iterations are required. 
 
 ## Computing the inverse of the differential operator
 The issue now is to compute `L` but this is easy using Fourier transforms.
@@ -887,9 +887,12 @@ function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
 end
 ```
 
-## Functions for LinearAlgebra on the GPU
+## LinearAlgebra on the GPU
 
-We plan to use `KrylovKit` on the GPU. For this to work, we need to overload some functions for `CuArray.jl`. Note that this will be removed in the future when `CuArrays` improves.
+We plan to use `KrylovKit` on the GPU. For this to work, we need to overload some functions for `CuArray.jl`. 
+
+!!! note "Overloading specific functions for CuArrays.jl"
+    Note that the following code will not be needed in the future when `CuArrays` improves.
 
 ```julia
 using CuArrays
