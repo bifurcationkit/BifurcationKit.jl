@@ -4,6 +4,7 @@ makedocs(doctest = false,
 	sitename = "Pseudo Arc Length Continuation in Julia",
 	pages = Any[
 		"Home" => "index.md",
+		"Tutorials" => "tutorials.md",
 		"Advanced Usage" => [
 			"Linear Solvers" => "linearsolver.md",
 			"Bifurcations" => "detectionBifurcation.md",
