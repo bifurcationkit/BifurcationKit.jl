@@ -42,9 +42,9 @@ end
 	a::T                  = 0.5  # aggressiveness factor
 	tangentFactorExponent::T = 1.5
 
-	# predictor based on ... tangent or secant?
-	secant	= true
-	natural = false
+	# # predictor based on ... tangent or secant?
+	# secant	= true
+	# natural = false
 
 	# parameters bound
 	pMin::T	= -1.0
@@ -78,10 +78,10 @@ end
 
 # check the logic of the parameters
 function check!(contParams::ContinuationPar)
-	# if we chose a natural continuation, we disable to computation of the tangent by a Bordered system and turn to finite differences.
-	if contParams.natural
-		contParams.secant = true
-	end
+	# # if we chose a natural continuation, we disable to computation of the tangent by a Bordered system and turn to finite differences.
+	# if contParams.natural
+	# 	contParams.secant = true
+	# end
 
 	if contParams.detect_bifurcation
 		contParams.computeEigenValues = true

@@ -1,28 +1,44 @@
 include("BorderedArrays.jl")
-################################################################################################
-# equation of the arc length constraint
-@inline function arcLengthEq(u, p, du, dp, xi, ds)
-	return dottheta(u, du, p, dp, xi) - ds
-end
-################################################################################################
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}}
-	if contparams.natural
-		res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
-		return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
-	else
-		return newtonPseudoArcLength(Fhandle, Jhandle,
-							z_old, tau_old, z_pred,
-							contparams; linearalgo = linearalgo, normN = normC)
-	end
-end
-################################################################################################
-function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M <: BorderedArray{vectype, T}}
+
+abstract type AbstractTangentPredictor end
+abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
+
+"""
+	Natural predictor / corrector
+"""
+struct Natural <: AbstractSecantPredictor end
+
+"""
+	Secant tangent predictor
+"""
+struct Secant <: AbstractSecantPredictor end
+
+"""
+	Bordered Tangent predictor
+"""
+struct Bordered <: AbstractSecantPredictor end
+
+function getPredictor!(z_pred::M, z_old::M, tau::M, contparams, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + contparams.ds * tau
 	copyto!(z_pred, z_old)
 	axpy!(contparams.ds, tau, z_pred)
 end
-################################################################################################
-function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+	@show "Non-Natural" algo
+	return newtonPseudoArcLength(Fhandle, Jhandle,
+						z_old, tau_old, z_pred,
+						contparams; linearalgo = linearalgo, normN = normC)
+end
+
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo::Natural, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}}
+	@show "Natural" algo
+	res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
+	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
+end
+
+# tangent computation using Secant predictor
+function getTangent!(tau_new::M, z_new::M, z_old::M, F, J, contparams, algo, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = Secant")
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau_new, z_new)
@@ -30,8 +46,9 @@ function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity
 	α = sign(contparams.ds) / normtheta(tau_new, contparams.theta)
 	rmul!(tau_new, α)
 end
-################################################################################################
-function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+
+# tangent computation using Bordered system
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: Bordered}
 	(verbosity > 0) && println("--> predictor = Tangent")
 	# tangent predictor
 	epsi = contparams.finDiffEps
@@ -54,6 +71,62 @@ function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, c
 	copyto!(tau_new, tau)
 	rmul!(tau_new, α)
 end
+
+################################################################################################
+# equation of the arc length constraint
+@inline function arcLengthEq(u, p, du, dp, xi, ds)
+	return dottheta(u, du, p, dp, xi) - ds
+end
+################################################################################################
+# function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}}
+# 	if contparams.natural
+# 		res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
+# 		return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
+# 	else
+# 		return newtonPseudoArcLength(Fhandle, Jhandle,
+# 							z_old, tau_old, z_pred,
+# 							contparams; linearalgo = linearalgo, normN = normC)
+# 	end
+# end
+################################################################################################
+# function getPredictor!(z_pred::M, z_old::M, tau::M, contparams) where {T, vectype, M <: BorderedArray{vectype, T}}
+# 	# we perform z_pred = z_old + contparams.ds * tau
+# 	copyto!(z_pred, z_old)
+# 	axpy!(contparams.ds, tau, z_pred)
+# end
+################################################################################################
+# function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+# 	(verbosity > 0) && println("--> predictor = Secant")
+# 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
+# 	copyto!(tau_new, z_new)
+# 	minus!(tau_new, z_old)
+# 	α = sign(contparams.ds) / normtheta(tau_new, contparams.theta)
+# 	rmul!(tau_new, α)
+# end
+################################################################################################
+# function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+# 	(verbosity > 0) && println("--> predictor = Tangent")
+# 	# tangent predictor
+# 	epsi = contparams.finDiffEps
+# 	# dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
+# 	dFdl = similar(z_old.u)
+# 	copyto!(dFdl, F(z_old.u, z_old.p + epsi))
+# 	minus!(dFdl, F(z_old.u, z_old.p))
+# 	rmul!(dFdl, 1/epsi)
+#
+# 	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
+# 	new_tau = copy(tau_old)
+# 	rmul!(new_tau, contparams.theta / length(tau_old.u), 1 - contparams.theta)
+# 	tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
+# 			new_tau, zero(z_old.u), 1.0, contparams.theta,
+# 			contparams.newtonOptions.linsolve)
+# 	tau = BorderedArray(tauu, taup)
+# 	b = sign((tau.p) * convert(T, z_new.p - z_old.p))
+# 	α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
+# 	# tau_new = α * tau
+# 	copyto!(tau_new, tau)
+# 	rmul!(tau_new, α)
+# end
 ################################################################################################
 function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	g = abs(tau.p * contparams.theta)

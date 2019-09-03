@@ -14,6 +14,7 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/PeriodicOrbit.jl")
 
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray
+	export Secant, Bordeded, Natural
 	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
@@ -80,6 +81,7 @@ module PseudoArcLengthContinuation
 						u0,
 						p0::T,
 						contParams::ContinuationPar{T, S, E};
+						tangentalgo = Secant(),
 						linearalgo   = :bordering,
 						plot = false,
 						printsolution = norm,
@@ -153,26 +155,22 @@ module PseudoArcLengthContinuation
 		## Main continuation loop
 		while (step < maxSteps) & ~continuationFailed & (z_old.p < contParams.pMax) & (z_old.p > contParams.pMin)
 			# Predictor: z_pred
-			getPredictor!(z_pred, z_old, tau_old, contParams)
+			getPredictor!(z_pred, z_old, tau_old, contParams, tangentalgo)
 			(verbosity > 0) && println("########################################################################")
 			(verbosity > 0) && @printf("Start of Continuation Step %d: Parameter: p1 = %2.4e --> %2.4e\n", step, z_old.p, z_pred.p)
 			(length(contRes.branch[4, :])>1 && (verbosity > 0)) && @printf("Step size  = %2.4e --> %2.4e\n", contRes.branch[4, end-1], contParams.ds)
 
 			# Corrector, ie newton correction
 			z_new, fval, isconverged, it_number  = corrector(Fhandle, Jhandle,
-					z_old, tau_old, z_pred, contParams,
+					z_old, tau_old, z_pred, contParams, tangentalgo,
 					linearalgo, normC = normC)
 
 			# Successful step
 			if isconverged
 				(verbosity > 0) && printstyled("--> Step Converged in $it_number Nonlinear Solver Iterations!\n", color=:green)
-				# get predictor
 
-				if contParams.secant
-					getTangentSecant!(tau_new, z_new, z_old, contParams, verbosity)
-				else
-					getTangentBordered!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, verbosity)
-				end
+				# get predictor
+				getTangent!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, tangentalgo, verbosity)
 
 				# Output
 				push!(contRes.branch, vcat(z_new.p, printsolution(z_new.u), it_number, contParams.ds))
