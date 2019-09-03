@@ -321,7 +321,7 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 # floquetES(poTrap(l_hopf + 0.01), outpo_f, 10 )
 
 # continuation of periodic orbits
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, secant = true, theta = 0.1, plot_every_n_steps = 4, newtonOptions = NewtonPar(verbose = false))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, plot_every_n_steps = 4, newtonOptions = NewtonPar(verbose = false))
 	br_pok2, upo , _= @time Cont.continuation(
 			(x, p) ->  poTrap(p)(x),
 			(x, p) ->  poTrap(p)(x, :jacsparse),

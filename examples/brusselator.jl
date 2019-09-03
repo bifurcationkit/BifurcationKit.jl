@@ -208,7 +208,7 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
 	br_pok2, upo , _= @time Cont.continuation(
 			(x, p) ->  poTrap(p)(x),
 			(x, p) ->  poTrap(p)(x, :jacsparse),

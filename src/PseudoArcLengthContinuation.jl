@@ -14,14 +14,14 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/PeriodicOrbit.jl")
 
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray
-	export Secant, Bordeded, Natural
-	export 	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
-	export  DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
+	export	SecantPred, BorderedPred, NaturalPred
+	export	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
+	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
 			Default_eig, Default_eig_sp, eig_IterativeSolvers, eig_KrylovKit, eig_MF_KrylovKit, getEigenVector
 	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
-	export  ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
+	export	ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
 	export plotBranch, plotBranch!
 
 
@@ -38,6 +38,7 @@ module PseudoArcLengthContinuation
 	- `printsolution::Function = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
 	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plot of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting...
+	- `tangentalgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
 	- `linearalgo = :bordering`. Must belong to `[:bordering, :full]`. Used to control the way the extended linear system associated to the continuation problem is solved.
 	- `verbosity` controls the amount of information printed during the continuation process.
 	- `normC = norm` norm used in the different Newton solves
@@ -67,10 +68,10 @@ module PseudoArcLengthContinuation
 
 	## Natural continuation
 
-	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the field `natural` in the struct `ContinuationPar`
+	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentalgo = NaturalPred()` in `continuation`.
 
 	## Tangent computation (step 4)
-	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the field `secant` in the struct `ContinuationPar`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. If `secant` is set to `false`, another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information.
+	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the option `tangentalgo = SecantPred()` in `continuation`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information ; it is set by the option `tangentalgo = BorderedPred()`.
 
 	## Bordered linear solver
 
@@ -81,7 +82,7 @@ module PseudoArcLengthContinuation
 						u0,
 						p0::T,
 						contParams::ContinuationPar{T, S, E};
-						tangentalgo = Secant(),
+						tangentalgo = SecantPred(),
 						linearalgo   = :bordering,
 						plot = false,
 						printsolution = norm,
