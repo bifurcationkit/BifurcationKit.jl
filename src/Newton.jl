@@ -156,7 +156,7 @@ end
 
 This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
 """
-function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
 
@@ -172,7 +172,7 @@ function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, d
 end
 
 # simplified call when no Jacobian is given
-function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype};kwargs...) where {T, Tf, vectype}
 	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end

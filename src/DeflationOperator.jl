@@ -8,16 +8,16 @@ DeflationOperator with structure
 - roots
 The deflation operator is is ``M(u) = \\frac{1}{\\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^p)}``
 """
-struct DeflationOperator{T <: Real, vectype}
+struct DeflationOperator{T <: Real, Tf, vectype}
 	power::T
-	dot::Function
+	dot::Tf
 	shift::T
 	roots::Vector{vectype}
 end
 
-push!(df::DeflationOperator{T, vectype}, v::vectype) where {T, vectype} = push!(df.roots, v)
+push!(df::DeflationOperator{T, Tf, vectype}, v::vectype) where {T, Tf, vectype} = push!(df.roots, v)
 
-function (df::DeflationOperator{T, vectype})(u::vectype) where {T, vectype}
+function (df::DeflationOperator{T, Tf, vectype})(u::vectype) where {T, Tf, vectype}
 	nrm  = u -> df.dot(u, u)
 	@assert length(df.roots) > 0 "You need to specify some roots for deflation to work"
 	# compute u - df.roots[1]
@@ -30,13 +30,13 @@ function (df::DeflationOperator{T, vectype})(u::vectype) where {T, vectype}
 	return out
 end
 
-function scalardM(df::DeflationOperator{T, vectype}, u::vectype, du::vectype) where {T, vectype}
+function scalardM(df::DeflationOperator{T, Tf, vectype}, u::vectype, du::vectype) where {T, Tf, vectype}
 	# the deflation operator is Mu = 1/Π_i(shift + norm(u-ri)^p)
 	# its differntial is -alpha(u, du) / Mu^2
 	# the goal of this function is to compute alpha(u, du)
 	@assert 1==0 "Not implemented"
-	delta = T(1e-8)
-	return (df(u + delta * du) - df(u))/delta
+	# delta = T(1e-8)
+	# return (df(u + delta * du) - df(u))/delta
 
 	# exact differentiation, not used
 	# Mu = df(u)
@@ -51,16 +51,16 @@ function scalardM(df::DeflationOperator{T, vectype}, u::vectype, du::vectype) wh
 	# return out * Mu
 end
 
-struct DeflatedProblem{T, vectype, def <: DeflationOperator{T, vectype}}
-	F::Function
-	J::Function
+struct DeflatedProblem{T, Tf, vectype, TF, TJ, def <: DeflationOperator{T, Tf, vectype}}
+	F::TF
+	J::TJ
 	M::def
 end
 
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{T, vectype, def})(u::vectype) where {T, vectype, def <: DeflationOperator{T, vectype}}
+function (df::DeflatedProblem{T, Tf, vectype, TF, TJ, def})(u::vectype) where {T, Tf, vectype, TF, TJ, def <: DeflationOperator{T, Tf, vectype}}
 	out = df.F(u)
 	rmul!(out, df.M(u))
 	return out
