@@ -38,18 +38,16 @@ br5a, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, finalis
 @test length(br5a.branch) == 22
 
 # test for different predictors
-opts.secant = true
-br6, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0)
+br6, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, tangentalgo = Cont.SecantPred())
 
-optsnat = @set opts.natural = true
+optsnat = deepcopy(opts)
 optsnat.ds = 0.001
 optsnat.dsmax = 0.02
 optsnat.dsmin = 0.0001
-br7, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,optsnat,verbosity=0)
+br7, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,optsnat,verbosity=0, tangentalgo = Cont.NaturalPred())
 
 # tangent prediction with Bordered predictor
-opts.secant = false
-br8, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0)
+br8, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, tangentalgo = Cont.BorderedPred())
 
 
 # further testing with sparse Jacobian operator

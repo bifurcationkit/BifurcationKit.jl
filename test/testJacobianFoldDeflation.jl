@@ -55,28 +55,27 @@ n = 101
 							opt_newton, normN = x->norm(x,Inf64))
 
 # test with secant continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detect_fold = true, secant = true, plot_every_n_steps = 50)
-br, u1 = @time Cont.continuation(
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detect_fold = true, plot_every_n_steps = 50)
+	br, u1 = @time Cont.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
 				printsolution = x->norm(x,Inf64),
 				out, a, opts_br0, plot = false, verbosity = 0)
 
-# test with tangent continuation
-opts_br0.secant = false
+# test with Bordered tangent continuation
 br_tg, u1 = @time Cont.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
 				printsolution = x->norm(x,Inf64),
-				out,a,opts_br0,plot = false, verbosity = 0)
+				out,a,opts_br0,plot = false, verbosity = 0, tangentalgo = Cont.BorderedPred())
 
 # test with natural continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton, detect_fold = true, natural = true)
-br_nat, u1 = @time Cont.continuation(
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton, detect_fold = true)
+	br_nat, u1 = @time Cont.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
 				printsolution = x->norm(x,Inf64),
-				out,0.,opts_br0,plot = false, verbosity = 0)
+				out,0.,opts_br0,plot = false, verbosity = 0, tangentalgo = Cont.NaturalPred())
 
 ####################################################################################################
 # deflation newton solver, test of jacobian expression

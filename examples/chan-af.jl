@@ -63,7 +63,7 @@ opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 		sol, opt_new, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143
@@ -78,7 +78,7 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax
 		normC = x -> norm(x, Inf64))
 ####################################################################################################
 # tangent predictor with Bordered system
-opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.2, ds= 0.01, a = 1.5, pMax = 3.5, theta = 0.3, secant = false, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 4e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.2, ds= 0.01, a = 1.5, pMax = 3.5, theta = 0.3, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 4e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts.newtonOptions.linesearch  = false
 	opts.detect_fold = true
 	opts.maxSteps = 43
@@ -87,6 +87,7 @@ opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.2, ds= 0.01, a = 1.5, pMax = 3.
 		(x, p) -> F_chan(x, p),
 		(x, p) -> Jac_chan(x, p),
 		out, 0.5, opts,
+		tangentalgo = BorderedPred(),
 		plot = true,
 		finaliseSolution = finalise_solution,
 		plotsolution = (x;kwargs...)-> plot!(x, subplot=4, label = "l = $(length(x))"))

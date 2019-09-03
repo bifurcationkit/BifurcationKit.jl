@@ -42,10 +42,6 @@ end
 	a::T                  = 0.5  # aggressiveness factor
 	tangentFactorExponent::T = 1.5
 
-	# predictor based on ... tangent or secant?
-	secant	= true
-	natural = false
-
 	# parameters bound
 	pMin::T	= -1.0
 	pMax::T	=  1.0
@@ -78,11 +74,6 @@ end
 
 # check the logic of the parameters
 function check!(contParams::ContinuationPar)
-	# if we chose a natural continuation, we disable to computation of the tangent by a Bordered system and turn to finite differences.
-	if contParams.natural
-		contParams.secant = true
-	end
-
 	if contParams.detect_bifurcation
 		contParams.computeEigenValues = true
 	end
@@ -165,7 +156,7 @@ end
 
 This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
 """
-function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
 
@@ -181,7 +172,7 @@ function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, d
 end
 
 # simplified call when no Jacobian is given
-function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, vectype};kwargs...) where {T, vectype}
+function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype};kwargs...) where {T, Tf, vectype}
 	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end

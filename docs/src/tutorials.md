@@ -634,7 +634,7 @@ and
 Finally, we can perform continuation of this periodic orbit
 
 ```julia
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 4.5, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 4.5, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
 	br_pok1, _ , _= @time Cont.continuation(
 		(x, p) ->  poTrap(p)(x),
 		(x, p) ->  poTrap(p)(x, :jacsparse),
@@ -748,7 +748,7 @@ Newton Iterations
 We can now perform numerical continuation wrt the parameter `a`. Again, we need to provide some parameters for the continuation:
 
 ```julia
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143
