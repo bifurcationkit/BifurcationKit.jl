@@ -342,7 +342,7 @@ end</code></pre><p>We want to make two remarks. The first is that an initial gue
         3                4     6.4370e-06         1
         4                5     5.8870e-10         1
  25.460922 seconds (5.09 M allocations: 22.759 GiB, 31.76% gc time)
---&gt; T = 2.978950450406386, amplitude = 0.35069253154451707</code></pre><p>and</p><p><img src="../PO-newton.png" alt/></p><p>Finally, we can perform continuation of this periodic orbit</p><pre><code class="language-julia">opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 4.5, maxSteps = 400, secant = true, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
+--&gt; T = 2.978950450406386, amplitude = 0.35069253154451707</code></pre><p>and</p><p><img src="../PO-newton.png" alt/></p><p>Finally, we can perform continuation of this periodic orbit</p><pre><code class="language-julia">opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 4.5, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = NewtonPar(verbose = true))
 	br_pok1, _ , _= @time Cont.continuation(
 		(x, p) -&gt;  poTrap(p)(x),
 		(x, p) -&gt;  poTrap(p)(x, :jacsparse),
@@ -397,7 +397,7 @@ const Δ = Derivative(sol.space, 2)</code></pre><p>Finally, we need to provide s
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     4.6975e-13         1
-  0.079482 seconds (344.44 k allocations: 13.856 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to provide some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, secant = true, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
+  0.079482 seconds (344.44 k allocations: 13.856 MiB)</code></pre><p>We can now perform numerical continuation wrt the parameter <code>a</code>. Again, we need to provide some parameters for the continuation:</p><pre><code class="language-julia">opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch  = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 143</code></pre><p>We also provide a function to check how the <code>ApproxFun</code> solution vector grows:</p><pre><code class="language-julia">function finalise_solution(z, tau, step, contResult)
