@@ -7,16 +7,16 @@ function FoldPoint(br::ContResult, index::Int64)
 end
 
 ####################################################################################################Method using Minimally Augmented formulation
-struct FoldProblemMinimallyAugmented{vectype, S <: LinearSolver}
-	F 					# Function F(x, p) = 0
-	J 					# Jacobian of F wrt x
-	Jadjoint			# Adjoint of the Jacobian of F
+struct FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: LinearSolver}
+	F::TF				# Function F(x, p) = 0
+	J::TJ				# Jacobian of F wrt x
+	Jadjoint::TJa		# Adjoint of the Jacobian of F
 	a::vectype			# close to null vector of J^T
 	b::vectype			# close to null vector of J
 	linsolve::S			# linear solver
 end
 
-function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where {vectype, S <: LinearSolver, T}
+function (fp::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S })(x::vectype, p::T) where {TF, TJ, TJa, vectype, S  <: LinearSolver, T}
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter for which the jacobian is singular
@@ -36,7 +36,7 @@ function (fp::FoldProblemMinimallyAugmented{vectype, S})(x::vectype, p::T) where
 	return fp.F(x, p), σ1
 end
 
-function (foldpb::FoldProblemMinimallyAugmented{vectype, S})(x::BorderedArray{vectype, T}) where {vectype, S <: LinearSolver, T}
+function (foldpb::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S })(x::BorderedArray{vectype, T}) where {TF, TJ, TJa, vectype, S  <: LinearSolver, T}
 	res = foldpb(x.u, x.p)
 	return BorderedArray(res[1], res[2])
 end
@@ -237,7 +237,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 """
 function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,vectype}
 	#TODO Bad way it creates a struct for every p2
-	# Jacobian for the Fold problem	
+	# Jacobian for the Fold problem
 	Jac_fold_MA(u0, pb, hess) = (return (u0, pb, hess))
 
 	# options for the Newton Solver inheritated from the ones the user provided
