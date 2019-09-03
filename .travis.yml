@@ -2,15 +2,15 @@
 language: julia
 os:
   - linux
-  - osx
+  # - osx
 julia:
   - 1.1
 notifications:
   email: false
-# matrix:
-#   allow_failures:
-#     - os: osx
-#     - julia: nightly
+matrix:
+  allow_failures:
+    - os: osx
+    - julia: nightly
 after_success:
   # push coverage results to Codecov and Coveralls
   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder()); Coveralls.submit(Coveralls.process_folder())'
