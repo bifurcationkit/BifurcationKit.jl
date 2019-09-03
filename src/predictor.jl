@@ -24,15 +24,17 @@ end
 ################################################################################################
 function getTangentSecant!(tau_new::M, z_new::M, z_old::M, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Secant")
+	ds = contparams.ds
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau_new, z_new)
 	minus!(tau_new, z_old)
-	α = sign(contparams.ds) / normtheta(tau_new, contparams.theta)
+	α = sign(ds) / normtheta(tau_new, contparams.theta)
 	rmul!(tau_new, α)
 end
 ################################################################################################
 function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Tangent")
+	ds = contparams.ds
 	# tangent predictor
 	epsi = contparams.finDiffEps
 	# dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
@@ -45,11 +47,10 @@ function getTangentBordered!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, c
 	new_tau = copy(tau_old)
 	rmul!(new_tau, contparams.theta / length(tau_old.u), 1 - contparams.theta)
 	tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
-			new_tau, zero(z_old.u), 1.0, contparams.theta,
+			new_tau, zero(z_old.u), T(1), contparams.theta,
 			contparams.newtonOptions.linsolve)
 	tau = BorderedArray(tauu, taup)
-	b = sign((tau.p) * convert(T, z_new.p - z_old.p))
-	α = b * sign(contparams.ds) / normtheta(tau, contparams.theta)
+	α = T(1) / normtheta(tau, contparams.theta)
 	# tau_new = α * tau
 	copyto!(tau_new, tau)
 	rmul!(tau_new, α)
