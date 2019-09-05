@@ -26,7 +26,7 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, contparams, algo::Talgo) whe
 end
 
 # generic corrector based on Bordered formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = MatrixFreeLBS(); normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPseudoArcLength(Fhandle, Jhandle,
 			z_old, tau_old, z_pred,
 			contparams; linearalgo = linearalgo, normN = normC)
@@ -39,7 +39,7 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams
 end
 
 # tangent computation using Secant predictor
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::Talgo, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::Talgo, verbosity, linearalgo) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = Secant")
 	ds = contparams.ds
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
@@ -50,7 +50,7 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 end
 
 # tangent computation using Bordered system
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity, linearalgo) where {T, vectype, M<:BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	epsi = contparams.finDiffEps
@@ -62,10 +62,10 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 
 	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, contparams.theta, contparams.newtonOptions.linsolve)
 	new_tau = copy(tau_old)
+	@warn "This can be improved a lot"
 	rmul!(new_tau, contparams.theta / length(tau_old.u), 1 - contparams.theta)
-	tauu, taup, it = linearBorderedSolver( J(z_old.u, z_old.p), dFdl,
-			new_tau, zero(z_old.u), T(1), contparams.theta,
-			contparams.newtonOptions.linsolve)
+	tauu, taup, it = linearalgo( J(z_old.u, z_old.p), dFdl,
+			new_tau, zero(z_old.u), T(1), contparams.theta)
 	tau = BorderedArray(tauu, taup)
 	α = T(1) / normtheta(tau, contparams.theta)
 	# tau_new = α * tau

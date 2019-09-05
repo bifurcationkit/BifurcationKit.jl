@@ -102,7 +102,7 @@ res_fd =  J_def_fd \ rhs
 Jacdf = (u0, pb::DeflatedProblem,ls = opt_def.linsolve ) -> (return (u0, pb, ls))
 Jacdfsolver = DeflatedLinearSolver()
 
-res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolve),rhs)[1]
+res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolver),rhs)[1]
 
 println("--> Test jacobian expression for deflated problem")
 @test norm(res_fd - res_explicit,Inf64) < 1e-4
@@ -126,7 +126,7 @@ foldpb = FoldProblemMinimallyAugmented(
 		(x, α) -> transpose(Jac_mat(x, α, 0.01)),
 		br.bifpoint[indfold][6],
 		br.bifpoint[indfold][6],
-		opts_br0.newtonOptions.linsolve)
+		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt) |> norm
 
 outfold, _ = Cont.newtonFold(
@@ -187,7 +187,7 @@ res_exp = res_explicit[end] \ rhs
 @test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-8
 ####################################################################################################
 # Use of different eigensolvers
-opt_newton = Cont.NewtonPar(tol = 1e-8, verbose = false, eigsolve = eig_KrylovKit{Float64}())
+opt_newton = Cont.NewtonPar(tol = 1e-8, verbose = false, eigsolver = eig_KrylovKit{Float64}())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detect_fold = true, detect_bifurcation = true, nev = 15)
 
 br, u1 = @time Cont.continuation(

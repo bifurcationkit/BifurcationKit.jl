@@ -28,9 +28,9 @@ br4, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = 
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts.newtonOptions.linesearch = false
-br5, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = :bordering)
+br5, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = Cont.BorderingBLS())
 
-br5, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = :full)
+br5, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, normC = normInf, linearalgo = Cont.MatrixBLS())
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult) -> (step < 20)
@@ -54,7 +54,7 @@ br8, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0, tangenta
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
 brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0)
 brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0, printsolution = x -> norm(x,2))
-brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0,linearalgo = :bordering)
-brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0,linearalgo = :full)
+brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0,linearalgo = Cont.BorderingBLS())
+brsp, sol, _ = @time Cont.continuation(F,Jac_sp_simple,x0,-1.5,opts,verbosity=0,linearalgo = Cont.MatrixBLS())
 # plotBranch(br1,marker=:d);title!("")
 # plotBranch!(br3,marker=:d);title!("")

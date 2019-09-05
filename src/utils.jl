@@ -117,7 +117,7 @@ end
 ####################################################################################################
 function computeEigenvalues(contparams, contResult, J, step)
 	nev_ = max(sum( real.(contResult.eig[end][1]) .> 0) + 2, contparams.nev)
-	eig_elements = contparams.newtonOptions.eigsolve(J, contparams.nev)
+	eig_elements = contparams.newtonOptions.eigsolver(J, contparams.nev)
 	if mod(step, contparams.save_eig_every_n_steps) == 0
 		if contparams.save_eigenvectors
 			push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))

@@ -3,7 +3,7 @@
 
 ####################################################################################################
 # Periodic Orbits via implicit midpoint method, order 2 in time
-@with_kw struct ShootingProblemMid{vectype, S <: LinearSolver, N} <: PeriodicOrbit
+@with_kw struct ShootingProblemMid{vectype, S <: AbstractLinearSolver, N} <: PeriodicOrbit
 	# Function F(x, p) = 0
 	F::Function
 
@@ -17,7 +17,7 @@
 	# discretisation of the time interval
 	M::Int = 100
 
-	linsolve::S
+	linsolver::S
 	options_newton::NewtonPar{N}
 end
 
@@ -35,7 +35,7 @@ function (poPb::ShootingProblemMid{vectype, S, N})(u0::vectype) where {vectype, 
 	return vcat(xnew - u, dot(poPb.ϕ, u - poPb.xπ))
 end
 
-struct PeriodicOrbitLinearSolverMid <: LinearSolver end
+struct PeriodicOrbitLinearSolverMid <: AbstractLinearSolver end
 
 # function (ls::PeriodicOrbitLinearSolverMid)(Jper, rhs)
 # 	# @assert 1==0 "Very unstable Implementation"
@@ -125,7 +125,7 @@ struct PeriodicOrbitLinearSolverMid <: LinearSolver end
 ####################################################################################################
 # other functional for searching for Periodic Orbits with Trapezoidal rule, order 2 in time
 
-@with_kw struct ShootingProblemTrap{vectype, S <: LinearSolver, N} <: PeriodicOrbit
+@with_kw struct ShootingProblemTrap{vectype, S <: AbstractLinearSolver, N} <: PeriodicOrbit
 	# Function F(x, p) = 0
 	F::Function
 
@@ -161,7 +161,7 @@ end
 ####################################################################################################
 # other functional for searching for Periodic Orbits based on Backward Euler Scheme
 
-@with_kw struct ShootingProblemBE{vectype, S <: LinearSolver, N} <: PeriodicOrbit
+@with_kw struct ShootingProblemBE{vectype, S <: AbstractLinearSolver, N} <: PeriodicOrbit
 	# Function F(x, p) = 0
 	F::Function
 

@@ -12,16 +12,19 @@ function HopfPoint(br::ContResult, index::Int64)
 	return BorderedArray(bifpoint[5], [p, ω] )
 end
 
-struct HopfProblemMinimallyAugmented{vectype, S <: LinearSolver}
-	F 					# Function F(x, p) = 0
-	J 					# Jacobian of F wrt x
-	Jadjoint  			# Adjoint of the Jacobian of F
+struct HopfProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
+	F::TF 				# Function F(x, p) = 0
+	J::TJ 				# Jacobian of F wrt x
+	Jadjoint::TJa		# Adjoint of the Jacobian of F
 	a::vectype			# close to null vector of (J - iω I)^*
 	b::vectype			# close to null vector of J - iω I
-	linsolve::S
+	linsolver::S		# linear solver
+	linbdsolver::Sbd	# linear bordered solver
 end
 
-function (fp::HopfProblemMinimallyAugmented{vectype, S})(x, p::T, ω::T) where {vectype, S <: LinearSolver, T}
+HopfProblemMinimallyAugmented(F, J, Ja, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, a, b, linsolve, BorderingBLS(linsolve))
+
+function (fp::HopfProblemMinimallyAugmented{TF, TJ, TJa, vectype, S})(x, p::T, ω::T) where {TF, TJ, TJa, vectype, S, Sbd, T}
 	# These are minimally augmented turning point equations
 	# The jacobian will be inverted using a bordering method
 	a = fp.a
@@ -29,10 +32,13 @@ function (fp::HopfProblemMinimallyAugmented{vectype, S})(x, p::T, ω::T) where {
 
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, _ = linearBorderedSolver(fp.J(x, p),
-	 								a, b,
-									T(0), zero(x), n,
-									fp.linsolve; shift = Complex{T}(0, ω))
+	# v, σ1, _ = linearBorderedSolver(fp.J(x, p),
+	#  								a, b,
+	# 								T(0), zero(x), n,
+	# 								fp.linsolver; shift = Complex{T}(0, ω))
+	v, σ1, _ = fp.linbdsolver(fp.J(x, p),
+							a, b,
+							T(0), zero(x), n; shift = Complex{T}(0, ω))
 
 	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
 	# we find sigma2 = conj(sigma1)
@@ -45,13 +51,13 @@ function (fp::HopfProblemMinimallyAugmented{vectype, S})(x, p::T, ω::T) where {
 	return fp.F(x, p), real(σ1), imag(σ1)
 end
 
-function (hopfpb::HopfProblemMinimallyAugmented{vectypeC, S})(x::BorderedArray{vectypeR, T}) where {vectypeC, vectypeR, S <: LinearSolver, T}
+function (hopfpb::HopfProblemMinimallyAugmented{TF, TJ, TJa, vectypeC, S, Sbd})(x::BorderedArray{vectypeR, T}) where {TF, TJ, TJa, vectypeC, vectypeR, S, Sbd, T}
 	res = hopfpb(x.u, x.p[1], x.p[2])
 	return BorderedArray(res[1], [res[2], res[3]])
 end
 
 # Method to solve the associated linear system
-@with_kw struct HopfLinearSolveMinAug <: LinearSolver
+@with_kw struct HopfLinearSolveMinAug <: AbstractLinearSolver
 	# whether the Hessian is known analytically
 	d2F_is_known = false
 end
@@ -85,9 +91,11 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, _ = linearBorderedSolver(J(x, p), a, b, T(0), zero(x), n, pbMA.linsolve; shift = Complex{T}(0, ω))
+	# v, σ1, _ = linearBorderedSolver(J(x, p), a, b, T(0), zero(x), n, pbMA.linsolver; shift = Complex{T}(0, ω))
+	v, σ1, _ = pbMA.linbdsolver(J(x, p), a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
 
-	w, σ2, _ = linearBorderedSolver(Jadjoint(x, p), b, a, T(0), zero(x), n, pbMA.linsolve; shift = -Complex{T}(0, ω))
+	# w, σ2, _ = linearBorderedSolver(Jadjoint(x, p), b, a, T(0), zero(x), n, pbMA.linsolver; shift = -Complex{T}(0, ω))
+	w, σ2, _ = pbMA.linbdsolver(Jadjoint(x, p), b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
 
 	################### computation of σx σp ####################
 	dpF   = (Fhandle(x, p + ϵ1)	 - Fhandle(x, p - ϵ1)) / T(2ϵ1)
@@ -97,8 +105,8 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	# case of sigma_omega
 	σω = -dot(w, Complex{T}(0, 1) * v) / n
 
-	x1, _, it1 = pbMA.linsolve(J(x, p), duu)
-	x2, _, it2 = pbMA.linsolve(J(x, p), dpF)
+	x1, _, it1 = pbMA.linsolver(J(x, p), duu)
+	x2, _, it2 = pbMA.linsolver(J(x, p), dpF)
 
 	# the case of ∂_xσ is a bit more involved
 	# we first need to compute the value of ∂_xσ written σx
@@ -168,14 +176,14 @@ function newtonHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectypeR, T}, e
 		(x, p) -> Jt(x, p),
 		copy(eigenvec),
 		copy(eigenvec_ad),
-		options.linsolve)
+		options.linsolver)
 	hopfPb = u -> hopfvariable(u)
 
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb, d2F))
 
 	# options for the Newton Solver
-	opt_hopf = @set options.linsolve = HopfLinearSolveMinAug(d2F_is_known = d2F_is_known)
+	opt_hopf = @set options.linsolver = HopfLinearSolveMinAug(d2F_is_known = d2F_is_known)
 
 	# solve the hopf equations
 	return newton(x ->  hopfPb(x),
@@ -209,7 +217,7 @@ function newtonHopf(F, J, Jt, d2F, br::ContResult, ind_hopf::Int64, options::New
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt[2]][1][bifpt[end]])
-	eigenvec = getEigenVector(options.eigsolve ,br.eig[bifpt[2]][2] ,bifpt[end])
+	eigenvec = getEigenVector(options.eigsolver ,br.eig[bifpt[2]][2] ,bifpt[end])
 	eigenvec_ad = conj.(eigenvec)
 
 	# solve the hopf equations
@@ -247,12 +255,12 @@ function continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectype, 
 		(x, p1) -> Jt(x, p1, p2),
 		copy(eigenvec),
 		copy(eigenvec_ad),
-		options_newton.linsolve)
+		options_newton.linsolver)
 
 	hopfPb = (u, p2) -> hopfvariable(p2)(u)
-	println("--> Start Hopf continuation with Hessian known? = ", d2F_is_known)
+	println("--> Start Hopf continuation, is Hessian known? = ", d2F_is_known)
 
-	opt_hopf_cont = @set options_cont.newtonOptions.linsolve = HopfLinearSolveMinAug(d2F_is_known = d2F_is_known)
+	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolveMinAug(d2F_is_known = d2F_is_known)
 
 	# solve the hopf equations
 	return continuation((x, p2) -> hopfPb(x, p2),
@@ -279,7 +287,7 @@ Simplified calls are also provided but at the cost of using finite differences.
 function continuationHopf(F, J, Jt, d2F, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
-	eigenvec = getEigenVector(options_cont.newtonOptions.eigsolve ,br.eig[bifpt[2]][2] ,bifpt[end])
+	eigenvec = getEigenVector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt[2]][2] ,bifpt[end])
 	eigenvec_ad = conj.(eigenvec)
 	return continuationHopf(F, J, Jt, d2F, hopfpointguess, p2_0, eigenvec, eigenvec_ad, options_cont ; d2F_is_known = d2F_is_known, kwargs...)
 end

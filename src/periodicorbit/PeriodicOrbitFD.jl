@@ -12,7 +12,7 @@ This structure implements Finite Differences based on Trapezoidal rule to locate
 - ϕ used for the Poincare section
 - xπ used for the Poincare section
 - M::Int number of slices in [0,2π]
-- linsolve <: LinearSolver  linear solver
+- linsolve <: AbstractLinearSolver  linear solver
 
 You can then call pb(orbitguess) to apply the functional to a guess. Note that orbitguess must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
 
@@ -24,7 +24,7 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
  ``\\langle x[1] - x\\pi, \\phi\\rangle.``
 
 """
-@with_kw struct PeriodicOrbitTrap{vectype, S <: LinearSolver} <: PeriodicOrbit
+@with_kw struct PeriodicOrbitTrap{vectype, S <: AbstractLinearSolver} <: PeriodicOrbit
 	# Function F(x, p) = 0
 	F::Function
 
@@ -38,7 +38,7 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
 	# discretisation of the time interval
 	M::Int = 100
 
-	linsolve::S
+	linsolver::S
 end
 
 """

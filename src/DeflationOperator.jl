@@ -72,7 +72,7 @@ end
 #	 J = df.J(u)
 # end
 
-struct DeflatedLinearSolver <: LinearSolver end
+struct DeflatedLinearSolver <: AbstractLinearSolver end
 
 """
 Implement the linear solver for the deflated problem

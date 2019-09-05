@@ -7,16 +7,19 @@ function FoldPoint(br::ContResult, index::Int64)
 end
 
 ####################################################################################################Method using Minimally Augmented formulation
-struct FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: LinearSolver}
+@with_kw struct FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
 	F::TF				# Function F(x, p) = 0
 	J::TJ				# Jacobian of F wrt x
 	Jadjoint::TJa		# Adjoint of the Jacobian of F
 	a::vectype			# close to null vector of J^T
 	b::vectype			# close to null vector of J
-	linsolve::S			# linear solver
+	linsolver::S		# linear solver
+	linbdsolver::Sbd	# linear bordered solver
 end
 
-function (fp::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S })(x::vectype, p::T) where {TF, TJ, TJa, vectype, S  <: LinearSolver, T}
+FoldProblemMinimallyAugmented(F, J, Ja, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, a, b, linsolve, BorderingBLS(linsolve))
+
+function (fp::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S, Sbd})(x::vectype, p::T) where {TF, TJ, TJa, vectype, S, Sbd, T}
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter for which the jacobian is singular
@@ -28,21 +31,21 @@ function (fp::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S })(x::vectyp
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
-	v, _, _ = fp.linsolve(fp.J(x, p), a)
+	v, _, _ = fp.linsolver(fp.J(x, p), a)
 	bv = dot(b, v)
-	bv == T(0) && (@error "Error with Method using Minimally Augmented formulation for Fold")
+	bv == T(0) && @error "Error with Method using Minimally Augmented formulation for Fold"
 
 	σ1 = -n / bv
 	return fp.F(x, p), σ1
 end
 
-function (foldpb::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S })(x::BorderedArray{vectype, T}) where {TF, TJ, TJa, vectype, S  <: LinearSolver, T}
+function (foldpb::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S, Sbd })(x::BorderedArray{vectype, T}) where {TF, TJ, TJa, vectype, S  <: AbstractLinearSolver, Sbd, T}
 	res = foldpb(x.u, x.p)
 	return BorderedArray(res[1], res[2])
 end
 
 # Method to invert the jacobian of the fold problem. The only parameter which affects inverting the jacobian of the fold MA problem is whether the hessian is known analytically
-@with_kw struct FoldLinearSolveMinAug <: LinearSolver
+@with_kw struct FoldLinearSolveMinAug <: AbstractLinearSolver
 	# whether the Hessian is known analytically
 	d2F_is_known::Bool = false
  end
@@ -66,13 +69,13 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 	n = T(1)
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
-	v = pbMA.linsolve(J(x, p), a)[1]
+	v = pbMA.linsolver(J(x, p), a)[1]
 	σ1 = -n / dot(b, v)
 	rmul!(v, -σ1)
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J\b with σ2 = -n/<a, J^{-1}b>
-	w = pbMA.linsolve(Jadjoint(x, p), b)[1]
+	w = pbMA.linsolver(Jadjoint(x, p), b)[1]
 	σ2 = -n / dot(a, w)
 	rmul!(w, -σ2)
 
@@ -100,14 +103,14 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 		end
 
 		########## Resolution of the bordered linear system ########
-		dX, dsig, it = linearBorderedSolver(J(x, p), dpF, σx, σp, duu, dup, pbMA.linsolve)
+		dX, dsig, it = pbMA.linbdsolver(J(x, p), dpF, σx, σp, duu, dup)
 
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically. Much faster than the previous case
 
 		# we solve it ourself instead of calling linearBorderedSolver. This removes the need to pass the linear form associated to σx
-		x1, _, it1 = pbMA.linsolve(J(x, p), duu)
-		x2, _, it2 = pbMA.linsolve(J(x, p), dpF)
+		x1, _, it1 = pbMA.linsolver(J(x, p), duu)
+		x2, _, it2 = pbMA.linsolver(J(x, p), dpF)
 		it = (it1, it2)
 
 		d2Fv = d2F(x, p, x1, v)
@@ -164,14 +167,14 @@ function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, ei
 		(x, p) -> Jt(x, p),
 		copy(eigenvec),
 		copy(eigenvec),
-		options.linsolve)
+		options.linsolver)
 
 	foldPb = u -> foldvariable(u)
 
 	# Jacobian for the Fold problem
 	Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F))
 
-	opt_fold = @set options.linsolve = FoldLinearSolveMinAug(d2F_is_known = d2F_is_known)
+	opt_fold = @set options.linsolver = FoldLinearSolveMinAug(d2F_is_known = d2F_is_known)
 
 	# solve the Fold equations
 	return newton(x ->  foldPb(x),
@@ -208,13 +211,13 @@ function newtonFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, options::New
 	return outfold, hist, flag
 end
 
-function newtonFold(F, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar;kwargs...)
+function newtonFold(F, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt[end-1]
 
 	# solve the Fold equations
-	outfold, hist, flag =  newtonFold(F, J, Jt, foldpointguess, eigenvec, options ;kwargs...)
+	outfold, hist, flag =  newtonFold(F, J, Jt, foldpointguess, eigenvec, options; kwargs...)
 
 	return outfold, hist, flag
 end
@@ -249,11 +252,11 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, 
 		(x, p1) -> Jt(x, p1, p2),
 		copy(eigenvec),
 		copy(eigenvec),
-		options_newton.linsolve)
+		options_newton.linsolver)
 	foldPb = (u, p2) -> foldvariable(p2)(u)
 	println("--> Start Fold continuation with Hessian known? = ", d2F_is_known)
 
-	opt_fold_cont = @set options_cont.newtonOptions.linsolve = FoldLinearSolveMinAug(d2F_is_known = d2F_is_known)
+	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolveMinAug(d2F_is_known = d2F_is_known)
 
 	# solve the Fold equations
 	return continuation((x, p2) -> foldPb(x, p2),

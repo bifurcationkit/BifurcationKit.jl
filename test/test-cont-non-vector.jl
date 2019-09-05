@@ -34,7 +34,7 @@ outfold, hist, flag = @time Cont.newtonFold(
 	# (x, r, v1, v2) -> -6 .* x .* v1 .* v2,
 	br0, 2, #index of the fold point
 	opts_br0.newtonOptions)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.bifpoint[1][3],"\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.bifpoint[1][3], "\n")
 
 ####################################################################################################
 # Here is a more involved example
@@ -62,7 +62,7 @@ function (J::jacobian)(dx)
 	return out
 end
 
-struct linsolveBd <: Cont.LinearSolver end
+struct linsolveBd <: Cont.AbstractBorderedLinearSolver end
 
 function (l::linsolveBd)(J, dx)
 	x = J.x
@@ -75,8 +75,7 @@ end
 
 sol = BorderedArray([0.8], 0.0)
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true,
-		linsolve = linsolveBd())
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = linsolveBd())
 out, hist, flag = @time Cont.newton(
 		x -> Fb(x, 1., 1.),
 		x -> jacobian(x, 1., 1.),
@@ -111,8 +110,7 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 	(x, r, s) -> jacobian(x, r, s),
 	s -> ((x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.)),
 	br, 1,
-	1.0, plot = false,
-	opts_br)
+	1.0, plot = false, opts_br)
 
 # try with newtonDeflation
 printstyled(color=:green, "--> test with Newton deflation 1")

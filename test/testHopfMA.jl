@@ -75,7 +75,7 @@ opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
 		sol0 .* (1 .+ 0.01rand(2n)),
 		opt_newton)
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = false, linsolve = GMRES_IterativeSolvers(tol=1e-4, N = 2n))
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRES_IterativeSolvers(tol=1e-4, N = 2n))
 	out, hist, flag = @time Cont.newton(
 		x -> F_bru(x, a, b),
 		x -> Jac_sp(x, a, b),
@@ -106,7 +106,7 @@ hopfvariable = β -> HopfProblemMinimallyAugmented(
 					conj.(br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]]),
 					# av,
 					# bv,
-					opts_br0.newtonOptions.linsolve)
+					opts_br0.newtonOptions.linsolver)
 	hopfPb = (u, p) -> hopfvariable(p)(u)
 
 hopfvariable(b)(hopfpt) |> norm
@@ -226,12 +226,12 @@ outhopf, hist, flag = @time Cont.newtonHopf(
 		(x, p) ->  F_bru(x, a, b, l = p),
 		(x, p) -> Jac_sp(x, a, b, l = p),
 		br, 1,
-		NewtonPar(verbose = true, linsolve = GMRES_IterativeSolvers(tol=1e-4, N = 2n)))
+		NewtonPar(verbose = true, linsolver = GMRES_IterativeSolvers(tol=1e-4, N = 2n)))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 outhopf, _, flag, _ = @time Cont.newton(u -> hopfvariable(b)(u),
 							x -> Jac_hopf_MA(x, hopfvariable(b)),
-							hopfpt, NewtonPar(verbose = true, linsolve = HopfLinearSolveMinAug(), eigsolve = Default_eig()))
+							hopfpt, NewtonPar(verbose = true, linsolver = HopfLinearSolveMinAug(), eigsolver = Default_eig()))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], " from ", hopfpt.p, "\n")
 
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
@@ -261,7 +261,7 @@ br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) ->  Jac_sp(x, a, β, l = p),
 			br, ind_hopf,
 			b,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 1, plot = false)
 
 br_hopf, u1_hopf = @time Cont.continuationHopf(
 			(x, p, β) ->   F_bru(x, a, β, l = p),
@@ -296,8 +296,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			opt_newton.linsolve)
-
+			opt_newton.linsolver)
 
 jac_PO_fd = Cont.finiteDifferences(x -> poTrap(l_hopf + 0.01)(x), orbitguess_f)
 jac_PO_sp =  poTrap(l_hopf + 0.01)(orbitguess_f, :jacsparse)
