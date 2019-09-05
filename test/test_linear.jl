@@ -21,8 +21,12 @@ zero(z2);zero(z_pred)
 copyto!(z,z2)
 Cont.minus(z.u,z2.u);Cont.minus!(z.u,z2.u)
 Cont.minus(1.,2.);Cont.minus!(1.,2.)
+rmul!(z_pred, 1.0)
+rmul!(z_pred, true)
+
+mul!(z_pred, tau_pred, 1.0)
 ####################################################################################################
-# test the linear solver LinearBorderSolver
+# test the bordered linear solvers
 println("--> Test linear Bordered solver")
 J0 = rand(10,10) * 0.1 + I
 rhs = rand(10)
@@ -30,6 +34,13 @@ sol_explicit = J0 \ rhs
 
 linBdsolver = Cont.BorderingBLS(Default())
 sol_bd1, sol_bd2, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd1
+
+ls = GMRES_KrylovKit{Float64}(rtol = 1e-9, dim = 9, verbose = 2)
+linBdsolver = Cont.MatrixFreeBLS(ls)
+sol_bd_2, cv, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test cv
+@test sol_bd_2.u ≈ sol_explicit[1:end-1]
 
 @test norm(sol_explicit[1:end-1] - sol_bd1, Inf64) < 1e-12
 @test norm(sol_explicit[end] - sol_bd2, Inf64) < 1e-12

@@ -34,7 +34,7 @@ end
 	tol::T = T(1e-4)		# tolerance for solver
 	restart::Int64 = 200	# number of restarts
 	maxiter::Int64 = 100
-	N = 0				   # dimension of the problem
+	N = 0					# dimension of the problem
 	verbose = false
 	log = true
 end

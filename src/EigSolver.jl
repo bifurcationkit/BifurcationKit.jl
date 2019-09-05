@@ -48,9 +48,9 @@ end
 # Solvers for KrylovKit
 ####################################################################################################
 @with_kw struct eig_KrylovKit{T} <: EigenSolver
-	dim::Int64 = KrylovDefaults.krylovdim		# Krylov Dimension
-	tol::T = T(1e-4)		# tolerance for solver
-	restart::Int64 = 200	# number of restarts
+	dim::Int64 = KrylovDefaults.krylovdim	# Krylov Dimension
+	tol::T = T(1e-4)						# tolerance for solver
+	restart::Int64 = 200					# number of restarts
 	maxiter::Int64 = KrylovDefaults.maxiter
 	verbose::Int = 0
 	which = :LR
@@ -67,8 +67,8 @@ getEigenVector(eigsolve::eig_KrylovKit{T}, vecs, n::Int) where T = vecs[n]
 # Matrix-Free version, needs to specify an example of rhs x₀
 @with_kw struct eig_MF_KrylovKit{T, vectype} <: EigenSolver
 	dim::Int64 = KrylovDefaults.krylovdim		# Krylov Dimension
-	tol::T = T(1e-4)		# tolerance for solver
-	restart::Int64 = 200	# number of restarts
+	tol::T = T(1e-4)							# tolerance for solver
+	restart::Int64 = 200						# number of restarts
 	maxiter::Int64 = KrylovDefaults.maxiter
 	verbose::Int = 0
 	which = :LR

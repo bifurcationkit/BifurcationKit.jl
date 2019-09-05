@@ -1,6 +1,6 @@
 # structure for Bordered arrays
 import Base: copy, copyto!, eltype, zero
-import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!
+import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 
 mutable struct BorderedArray{vectype1, vectype2}
 	u::vectype1
@@ -24,20 +24,35 @@ norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p
 
 zero(b::BorderedArray{vectype, T}) where {vectype, T } = BorderedArray(zero(b.u), zero(b.p))
 ################################################################################
-function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <:Real, Tv}
+function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <: Number, Tv}
 	# Scale an array A by a scalar b overwriting A in-place
 	rmul!(A.u, a)
 	rmul!(A.p, b)
 	return A
 end
 
-function rmul!(A::BorderedArray{vectype, T}, a::T, b::T) where {vectype, T <:Real}
+function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, Tv <: Number, T <: Number }
 	# Scale an array A by a scalar b overwriting A in-place
 	rmul!(A.u, a)
 	A.p = A.p * b
 	return A
 end
-rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <:Real, Tv} = rmul!(A, a, a)
+
+rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <: Number, Tv} = rmul!(A, a, a)
+################################################################################
+function mul!(A::BorderedArray{vectype, Tv}, B::BorderedArray{vectype, Tv}, α::T) where {vectype, Tv, T <: Number}
+	mul!(A.u, B.u, α)
+	mul!(A.p, B.p, α)
+	return A
+end
+
+function mul!(A::BorderedArray{vectype, Tv}, B::BorderedArray{vectype, Tv}, α::T) where {vectype, Tv <: Number, T <: Number}
+	mul!(A.u, B.u, α)
+	A.p = B.p * α
+	return A
+end
+
+mul!(A::BorderedArray{vectype, Tv}, α::T, B::BorderedArray{vectype, Tv}) where {vectype, Tv, T} = mul!(A, B,  α)
 ################################################################################
 function axpy!(a::T, X::BorderedArray{vectype, Tv}, Y::BorderedArray{vectype, Tv}) where {vectype, T <:Real, Tv}
 	# Overwrite Y with a*X + b*Y, where a, b are scalar

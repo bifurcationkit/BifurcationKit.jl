@@ -65,18 +65,41 @@ end
 # [b'	c]
 # It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
 #
-# struct MatrixFreeBLS{Tj, Ta, Tb, Tc} <: AbstractBorderedLinearSolver
-# 	J::Tj
-# 	a::Ta
-# 	b::Tb
-# 	c::Tc
-# end
-#
-# function (Lb::MatrixFreeBLS{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number}
-# 	out = similar(x)
-# 	out.u .= apply(Lb.J, x.u) .+ Lb.a .* x.p
-# 	out.p = dot(Lb.b, x.u) + Lb.c * x.p
-# 	return out
-# end
-#
+struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc}
+	J::Tj
+	a::Ta
+	b::Tb
+	c::Tc
+end
+
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number}
+	out = similar(x)
+	copyto!(out.u, apply(lbmap.J, x.u) .+ lbmap.a .* x.p)
+	out.p  =   dot(lbmap.b, x.u)  + lbmap.c  * x.p
+	return out
+end
+
+struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
+	solver::S
+end
+
+MatrixFreeBLS() = MatrixFreeBLS(Default())
+
+# dummy constructor to simplify user passing options to continuation
+# we restrict to bordered systems where the added component is scalar
+# For now, we restrict to KrylovKit
+function (lbs::MatrixFreeBLS{S})(J, dR::vectype,
+					dzu::vectype, dzp::T,
+					R, n::T,
+					xiu::T = T(1), xip::T = T(1); shift::Ts = 0) where {T <: Number, vectype, S <: GMRES_KrylovKit, Ts <: Number}
+	linearmap = MatrixFreeBLSmap(J, dR, dzu * xiu, dzp * xip)
+	rhs = BorderedArray(R, n)
+	sol, cv, it = lbs.solver(linearmap, rhs)
+
+end
+
+# call for using with BorderedArray, specific to Arclength Continuation
+(lbs::MatrixFreeBLS{S})(J, dR::vectype, dz::BorderedArray{vectype, T}, R, n::T, theta::T; shift::Ts = 0) where {S, T <: Number, Ts, vectype} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
+####################################################################################################
+# Nested algorithm for solving the bordered linear system
 # NestedBLS

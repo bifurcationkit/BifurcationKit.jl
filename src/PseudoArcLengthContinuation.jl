@@ -40,7 +40,7 @@ module PseudoArcLengthContinuation
 	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plot of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting...
 	- `tangentalgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
-	- `linearalgo = BorderingBLS()`. Must belong to `[MatrixBLS(), BorderingBLS()]`. Used to control the way the extended linear system associated to the continuation problem is solved.
+	- `linearalgo = BorderingBLS()`. Must belong to `[MatrixBLS(), BorderingBLS(), MatrixFreeBLS()]`. Used to control the way the extended linear system associated to the continuation problem is solved.
 	- `verbosity` controls the amount of information printed during the continuation process.
 	- `normC = norm` norm used in the different Newton solves
 

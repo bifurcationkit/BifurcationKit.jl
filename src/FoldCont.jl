@@ -254,7 +254,7 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, 
 		copy(eigenvec),
 		options_newton.linsolver)
 	foldPb = (u, p2) -> foldvariable(p2)(u)
-	println("--> Start Fold continuation with Hessian known? = ", d2F_is_known)
+	println("--> Start Fold continuation, is Hessian known? = ", d2F_is_known)
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolveMinAug(d2F_is_known = d2F_is_known)
 
