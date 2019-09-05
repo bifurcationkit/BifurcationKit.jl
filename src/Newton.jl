@@ -1,30 +1,30 @@
-@with_kw mutable struct NewtonPar{T, S <: LinearSolver, E <: EigenSolver}
+@with_kw mutable struct NewtonPar{T, S <: AbstractLinearSolver, E <: EigenSolver}
 	tol::T			 = 1e-10
 	maxIter::Int  	 = 50
 	alpha::T         = 1.0        # damping
 	almin::T         = 0.001      # minimal damping
 	verbose          = false
 	linesearch       = false
-	linsolve::S 	 = Default()
-	eigsolve::E 	 = Default_eig()
+	linsolver::S 	 = Default()
+	eigsolver::E 	 = Default_eig()
 end
 
 # this function is used to simplify calls to NewtonPar
 function NewtonPar(; kwargs...)
-	if haskey(kwargs, :linsolve)
-		tls = typeof(kwargs[:linsolve])
+	if haskey(kwargs, :linsolver)
+		tls = typeof(kwargs[:linsolver])
 	else
 		tls = typeof(Default())
 	end
-	if haskey(kwargs, :eigsolve)
-		tes = typeof(kwargs[:eigsolve])
+	if haskey(kwargs, :eigsolver)
+		tes = typeof(kwargs[:eigsolver])
 	else
 		tes = typeof(Default_eig())
 	end
 	return NewtonPar{Float64, tls, tes}(;kwargs...)
 end
 
-@with_kw mutable struct ContinuationPar{T, S <: LinearSolver, E <: EigenSolver}
+@with_kw mutable struct ContinuationPar{T, S <: AbstractLinearSolver, E <: EigenSolver}
 	# parameters for arclength continuation
 	s0::T		= 0.01
 	dsmin::T	= 0.001
@@ -83,7 +83,7 @@ end
 function ContinuationPar(; kwargs...)
 	if haskey(kwargs, :newtonOptions)
 		on = kwargs[:newtonOptions]
-		ContinuationPar{Float64, typeof(on.linsolve), typeof(on.eigsolve)}(;kwargs...)
+		ContinuationPar{Float64, typeof(on.linsolver), typeof(on.eigsolver)}(;kwargs...)
 	else
 		ContinuationPar{Float64, typeof(Default()), typeof(Default_eig())}(;kwargs...)
 	end
@@ -127,7 +127,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 	# Main loop
 	while (res > tol) & (it < maxIter)
 		J = Jhandle(x)
-		d, flag, itlinear = options.linsolve(J, f)
+		d, flag, itlinear = options.linsolver(J, f)
 
 		# Update solution: x .= x .- d
 		minus!(x, d)
@@ -164,9 +164,9 @@ function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, d
 	Jacdf = (u0, pb::DeflatedProblem, ls) -> (return (u0, pb, ls))
 
 	# Rename parameters
-	opt_def = @set options.linsolve = DeflatedLinearSolver()
+	opt_def = @set options.linsolver = DeflatedLinearSolver()
 	return newton(u -> deflatedPb(u),
-				u-> Jacdf(u, deflatedPb, options.linsolve),
+				u-> Jacdf(u, deflatedPb, options.linsolver),
 				x0,
 				opt_def; kwargs...)
 end
@@ -186,7 +186,7 @@ function newtonPseudoArcLength(F, Jh,
 						tau0::BorderedArray{vectype, T},
 						z_pred::BorderedArray{vectype, T},
 						options::ContinuationPar{T};
-						linearalgo = :bordering,
+						linearalgo = MatrixFreeLBS(),
 						normN = norm) where {T, vectype}
 	# Extract parameters
 	newtonOpts = options.newtonOptions
@@ -194,6 +194,7 @@ function newtonPseudoArcLength(F, Jh,
 	@unpack theta, ds, finDiffEps = options
 
 	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
+	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
 	# Initialise iterations
 	x = copy(z_pred.u)
@@ -210,7 +211,7 @@ function newtonPseudoArcLength(F, Jh,
 	dFdl = copy(F(x, l + finDiffEps))
 	minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
 
-	res     = max(normN(res_f), abs(res_n))
+	res     = normAC(res_f, res_n)
 	resHist = [res]
 	it = 0
 
@@ -224,10 +225,12 @@ function newtonPseudoArcLength(F, Jh,
 		copyto!(dFdl, F(x, l + finDiffEps)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
 
 		J = Jh(x, l)
-		u, up, liniter = linearBorderedSolver(J, dFdl,
-						tau0, res_f, res_n, theta,
-						newtonOpts.linsolve,
-						algo = linearalgo)
+		u, up, liniter = linearalgo(J, dFdl,
+						tau0, res_f, res_n, theta)
+		# u, up, liniter = linearBorderedSolver(J, dFdl,
+		# 				tau0, res_f, res_n, theta,
+		# 				newtonOpts.linsolve,
+		# 				algo = linearalgo)
 
 		if linesearch
 			step_ok = false
@@ -240,7 +243,7 @@ function newtonPseudoArcLength(F, Jh,
 				copyto!(res_f, F(x_pred, l_pred))
 
 				res_n  = N(x_pred, l_pred)
-				res = max(normN(res_f), abs(res_n))
+				res = normAC(res_f, res_n)
 
 				if res < resHist[end]
 					if (res < resHist[end] / 2) & (alpha < 1)
@@ -260,7 +263,7 @@ function newtonPseudoArcLength(F, Jh,
 			copyto!(res_f, F(x, l))
 
 			res_n  = N(x, l)
-			res = max(normN(res_f), res_n)
+			res = normAC(res_f, res_n)
 		end
 		# Book-keeping
 		push!(resHist, res)

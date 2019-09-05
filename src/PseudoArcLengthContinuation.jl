@@ -15,6 +15,7 @@ module PseudoArcLengthContinuation
 
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray
 	export	SecantPred, BorderedPred, NaturalPred
+	export	MatrixBLS, BorderingBLS
 	export	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
@@ -27,7 +28,7 @@ module PseudoArcLengthContinuation
 
 	################################################################################################
 	"""
-		continuation(F, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x; kwargs...)->nothing, finaliseSolution::Function = (z, tau, step, contResult) -> true, linearalgo = :bordering, verbosity = 2)
+		continuation(F, J, u0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, printsolution = norm, plotsolution::Function = (x; kwargs...)->nothing, finaliseSolution::Function = (z, tau, step, contResult) -> true, linearalgo = BorderingBLS(), verbosity = 2)
 
 	Compute the continuation curve associated to the functional `F` and its jacobian `J`. The parameters are as follows
 	- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
@@ -39,7 +40,7 @@ module PseudoArcLengthContinuation
 	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plot of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting...
 	- `tangentalgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
-	- `linearalgo = :bordering`. Must belong to `[:bordering, :full]`. Used to control the way the extended linear system associated to the continuation problem is solved.
+	- `linearalgo = BorderingBLS()`. Must belong to `[MatrixBLS(), BorderingBLS()]`. Used to control the way the extended linear system associated to the continuation problem is solved.
 	- `verbosity` controls the amount of information printed during the continuation process.
 	- `normC = norm` norm used in the different Newton solves
 
@@ -71,7 +72,7 @@ module PseudoArcLengthContinuation
 	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentalgo = NaturalPred()` in `continuation`.
 
 	## Tangent computation (step 4)
-	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the option `tangentalgo = SecantPred()` in `continuation`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangentBordered` for more information ; it is set by the option `tangentalgo = BorderedPred()`.
+	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the option `tangentalgo = SecantPred()` in `continuation`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangent!` for more information ; it is set by the option `tangentalgo = BorderedPred()`.
 
 	## Bordered linear solver
 
@@ -83,19 +84,23 @@ module PseudoArcLengthContinuation
 						p0::T,
 						contParams::ContinuationPar{T, S, E};
 						tangentalgo = SecantPred(),
-						linearalgo   = :bordering,
+						linearalgo  = BorderingBLS(),
 						plot = false,
 						printsolution = norm,
 						normC = norm,
 						plotsolution = (x;kwargs...) -> nothing,
 						finaliseSolution = (z, tau, step, contResult) -> true,
-						verbosity = 2) where {T, S <: LinearSolver, E <: EigenSolver}
+						verbosity = 2) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
 		################################################################################################
-		## Get parameters
+		# Get parameters
 		@unpack pMin, pMax, maxSteps, newtonOptions = contParams
 		epsi = contParams.finDiffEps
 
+		# check the logic of the parameters
 		check!(contParams)
+
+		# create a bordered linear solver
+		linearalgo = @set linearalgo.solver = contParams.newtonOptions.linsolver
 
 		# Filename to save the computations
 		filename = "branch-" * string(Dates.now())
@@ -114,7 +119,7 @@ module PseudoArcLengthContinuation
 		# Save data and hold general information
 		if contParams.computeEigenValues
 			# Eigen elements computation
-			evsol =  newtonOptions.eigsolve(Jhandle(u0, p0), contParams.nev)
+			evsol =  newtonOptions.eigsolver(Jhandle(u0, p0), contParams.nev)
 			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, evsol, contParams)
 		else
 			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, 0, contParams)
@@ -171,7 +176,7 @@ module PseudoArcLengthContinuation
 				(verbosity > 0) && printstyled("--> Step Converged in $it_number Nonlinear Solver Iterations!\n", color=:green)
 
 				# get predictor
-				getTangent!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, tangentalgo, verbosity)
+				getTangent!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, tangentalgo, verbosity, linearalgo)
 
 				# Output
 				push!(contRes.branch, vcat(z_new.p, printsolution(z_new.u), it_number, contParams.ds))
@@ -218,5 +223,5 @@ module PseudoArcLengthContinuation
 		return contRes, z_old, tau_old
 	end
 
-	continuation(Fhandle::Function, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: LinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
+	continuation(Fhandle::Function, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: AbstractLinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
 end

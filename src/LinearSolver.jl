@@ -2,7 +2,7 @@ using IterativeSolvers, KrylovKit, Parameters
 
 # In this file, we regroud a way to provide linear solver for the Package
 
-abstract type LinearSolver end
+abstract type AbstractLinearSolver end
 
 # The function linsolve(y, J, x) must return whether the solve was successfull and how many steps were required for the solve
 
@@ -12,7 +12,7 @@ abstract type LinearSolver end
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-struct Default <: LinearSolver end
+struct Default <: AbstractLinearSolver end
 
 function (l::Default)(J, rhs)
 	return J \ rhs, true, 1
@@ -30,7 +30,7 @@ end
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
-@with_kw mutable struct GMRES_IterativeSolvers{T} <: LinearSolver
+@with_kw mutable struct GMRES_IterativeSolvers{T} <: AbstractLinearSolver
 	tol::T = T(1e-4)		# tolerance for solver
 	restart::Int64 = 200	# number of restarts
 	maxiter::Int64 = 100
@@ -53,7 +53,7 @@ end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
-@with_kw mutable struct GMRES_KrylovKit{T} <: LinearSolver
+@with_kw mutable struct GMRES_KrylovKit{T} <: AbstractLinearSolver
 	dim::Int64 = KrylovDefaults.krylovdim # Krylov Dimension
 	atol::T  = T(KrylovDefaults.tol)	  # absolute tolerance for solver
 	rtol::T  = T(KrylovDefaults.tol)	  # relative tolerance for solver
