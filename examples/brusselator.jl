@@ -193,7 +193,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			opt_newton.linsolve)
+			opt_newton.linsolver)
 
 poTrap(l_hopf + 0.01)(orbitguess_f) |> plot
 
@@ -219,7 +219,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3
 			printsolution = u -> u[end])
 ##########################################################################################
 # Matrix-Free computation, useless without a preconditionner
-opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolve = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
+opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolver = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
 	outpo_f, hist, flag = @time Cont.newton(
 			x ->  poTrap(l_hopf + 0.01)(x),
 			x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),

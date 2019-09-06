@@ -93,6 +93,7 @@ opts_br = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.
 		out, 1.,
 		opts_br, printsolution = x -> x.u[1])
 
+
 # plotBranch(br);title!("")
 
 outfold, hist, flag = @time Cont.newtonFold(

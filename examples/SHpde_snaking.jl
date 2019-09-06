@@ -69,4 +69,4 @@ opts = Cont.ContinuationPar(dsmin = 0.0001,
 					plotsolution = (x;kwargs...)->(plot!(X, x, subplot=4, ylabel="solution", label="")))
 #####################################################
 # case with computation of eigenvalues
-# opt_new = Cont.NewtonPar(linsolve = Default(),	eigsolve = eig_KrylovKit{Float64}())
+# opt_new = Cont.NewtonPar(linsolver = Default(),	eigsolver = eig_KrylovKit{Float64}())

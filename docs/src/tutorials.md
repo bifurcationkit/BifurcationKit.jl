@@ -169,7 +169,7 @@ end
 # we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 # and pass it to the newton parameters
-opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
 # we can then call the newton solver
 out_mf, hist, flag = @time Cont.newton(
 	x -> F_chan(x, a, 0.01),
@@ -467,7 +467,7 @@ b = 5.45
 
 sol0 = vcat(a * ones(n), b/a * ones(n))
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolve = eig_KrylovKit(tol=1e-6, dim = 60))
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolver = eig_KrylovKit(tol=1e-6, dim = 60))
 	out, hist, flag = @time Cont.newton(
 		x -> F_bru(x, a, b),
 		x -> Jac_sp(x, a, b),
@@ -557,7 +557,7 @@ M = 100
 
 orbitguess = zeros(2n, M)
 phase = []; scalphase = []
-vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
+vec_hopf = getEigenVector(opt_newton.eigsolver ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
 	orbitguess[:, ii] .= real.(hopfpt.u +
@@ -588,7 +588,7 @@ poTrap = l-> PeriodicOrbitTrap(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			opt_newton.linsolve)
+			opt_newton.linsolver)
 ```
 
 The functional is `x -> poTrap(l_hopf + 0.01)(x)` at parameter `l_hopf + 0.01`. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at `(x,p)` is computed like this
@@ -926,7 +926,7 @@ end
 We are now ready to perform Newton iterations:
 
 ```julia
-opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
+opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -> F_shfft(x, -.1, 1.3, shlop = L),
 				u -> (u, -0.1, 1.3),

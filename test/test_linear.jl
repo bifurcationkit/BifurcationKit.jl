@@ -42,8 +42,8 @@ sol_bd_2, cv, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end
 @test cv
 @test sol_bd_2.u ≈ sol_explicit[1:end-1]
 
-@test norm(sol_explicit[1:end-1] - sol_bd1, Inf64) < 1e-12
-@test norm(sol_explicit[end] - sol_bd2, Inf64) < 1e-12
+@test sol_explicit[1:end-1] ≈ sol_bd1
+@test sol_explicit[end] ≈ sol_bd2
 ####################################################################################################
 # test the linear solvers for matrix free formulations
 J0 = I + sprand(100,100,0.1)
@@ -54,16 +54,17 @@ out = ls(J0, x0)
 
 ls = GMRES_KrylovKit{Float64}(rtol = 1e-9, dim = 100)
 outkk = ls(J0, x0)
-@test norm(out[1] - outkk[1], Inf64) < 1e-7
+@test out[1] ≈ outkk[1]
 outkk = ls(Jmf, x0)
-@test norm(out[1] - outkk[1], Inf64) < 1e-7
+@test out[1] ≈ outkk[1]
 
 
 ls = GMRES_IterativeSolvers{Float64}(N = 100, tol = 1e-9)
 outit = ls(J0, x0)
-@test norm(out[1] - outit[1], Inf64) < 1e-7
+@test out[1] ≈ outit[1]
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
+eil = Cont.eig_IterativeSolvers(tol = 1e-9)
 out = Arpack.eigs(J0, nev = 20, which = :LR)
 
 eil = Cont.eig_KrylovKit(tol = 1e-9)
@@ -73,4 +74,4 @@ outkkmf = eil(Jmf, 20)
 
 eil = Cont.Default_eig_sp()
 outdefault = eil(J0, 20)
-@test norm(out[1] - outdefault[1], Inf64) < 1e-7
+@test out[1] ≈ outdefault[1]
