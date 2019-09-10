@@ -92,20 +92,20 @@ module PseudoArcLengthContinuation
 						finaliseSolution = (z, tau, step, contResult) -> true,
 						verbosity = 2) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
 		################################################################################################
+		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
+		
 		# Get parameters
 		@unpack pMin, pMax, maxSteps, newtonOptions = contParams
 		epsi = contParams.finDiffEps
 
-		# check the logic of the parameters
+		# Check the logic of the parameters
 		check!(contParams)
 
-		# create a bordered linear solver
+		# Create a bordered linear solver
 		linearalgo = @set linearalgo.solver = contParams.newtonOptions.linsolver
 
 		# Filename to save the computations
 		filename = "branch-" * string(Dates.now())
-
-		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
 
 		# Converge initial guess
 		(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
@@ -142,7 +142,7 @@ module PseudoArcLengthContinuation
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
 		rmul!(duds, T(1) / α); dpds = dpds / α
 
-		## Initialise continuation
+		# Initialise continuation
 		step = 0
 		continuationFailed = false
 		# number of iterations for newton correction
@@ -158,7 +158,7 @@ module PseudoArcLengthContinuation
 
 		(verbosity > 0) && println("--> Start continuation from p = ", z_old.p)
 
-		## Main continuation loop
+		# Main continuation loop
 		while (step < maxSteps) & ~continuationFailed & (z_old.p < contParams.pMax) & (z_old.p > contParams.pMin)
 			# Predictor: z_pred
 			getPredictor!(z_pred, z_old, tau_old, contParams, tangentalgo)
@@ -175,7 +175,7 @@ module PseudoArcLengthContinuation
 			if isconverged
 				(verbosity > 0) && printstyled("--> Step Converged in $it_number Nonlinear Solver Iterations!\n", color=:green)
 
-				# get predictor
+				# Get predictor
 				getTangent!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, tangentalgo, verbosity, linearalgo)
 
 				# Output
@@ -191,7 +191,7 @@ module PseudoArcLengthContinuation
 				copyto!(tau_old, tau_new)
 
 				if contParams.computeEigenValues
-					# number of eigenvalues to be computed
+					# Number of eigenvalues to be computed
 					res = computeEigenvalues(contParams, contRes, Jhandle(z_old.u, z_old.p),  step)
 					push!(contRes.stability, mapreduce(x->real(x)<0, *, contRes.eig[end][1]))
 					(verbosity > 0) && printstyled(color=:green,"--> Computed ",contParams.nev," eigenvalues in ",res[end]," iterations\n")
@@ -215,10 +215,10 @@ module PseudoArcLengthContinuation
 
 			step += 1
 			continuationFailed = stepSizeControl(contParams, isconverged, it_number, tau_old, contRes.branch, verbosity)
-		end # while
+		end # End while
 		plot && plotBranchCont(contRes, z_old, contParams, plotsolution)
 
-		# we remove the initial guesses that are meaningless
+		# We remove the initial guesses which are meaningless
 		popfirst!(contRes.bifpoint)
 		return contRes, z_old, tau_old
 	end

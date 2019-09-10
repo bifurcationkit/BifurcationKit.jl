@@ -33,13 +33,13 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams
 end
 
 # corrector based on natural formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo::NaturalPred, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}}
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo::NaturalPred, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 
 # tangent computation using Secant predictor
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::Talgo, verbosity, linearalgo) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::Talgo, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = Secant")
 	ds = contparams.ds
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
@@ -50,7 +50,7 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 end
 
 # tangent computation using Bordered system
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity, linearalgo) where {T, vectype, M<:BorderedArray{vectype, T}}
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	epsi = contparams.finDiffEps

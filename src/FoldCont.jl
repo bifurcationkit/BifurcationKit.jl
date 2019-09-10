@@ -1,12 +1,13 @@
 using Parameters, Setfield
 
 function FoldPoint(br::ContResult, index::Int64)
-	@assert br.bifpoint[index][1] == :fold "The index provided does not refer to a Fold point"
+	@assert br.bifpoint[index][1] == :fold "The provided index does not refer to a Fold point"
 	bifpoint = br.bifpoint[index]
 	return BorderedArray(copy(bifpoint[5]), bifpoint[3])
 end
 
-####################################################################################################Method using Minimally Augmented formulation
+####################################################################################################
+# Method using Minimally Augmented formulation
 @with_kw struct FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
 	F::TF				# Function F(x, p) = 0
 	J::TJ				# Jacobian of F wrt x
@@ -14,7 +15,7 @@ end
 	a::vectype			# close to null vector of J^T
 	b::vectype			# close to null vector of J
 	linsolver::S		# linear solver
-	linbdsolver::Sbd	# linear bordered solver
+	linbdsolver::Sbd	# bordered linear solver
 end
 
 FoldProblemMinimallyAugmented(F, J, Ja, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, a, b, linsolve, BorderingBLS(linsolve))
@@ -44,7 +45,7 @@ function (foldpb::FoldProblemMinimallyAugmented{TF, TJ, TJa, vectype, S, Sbd })(
 	return BorderedArray(res[1], res[2])
 end
 
-# Method to invert the jacobian of the fold problem. The only parameter which affects inverting the jacobian of the fold MA problem is whether the hessian is known analytically
+# Struct to invert the jacobian of the fold problem. The only parameter which affects the inversion of the jacobian of the fold MA problem is whether the hessian is known analytically
 @with_kw struct FoldLinearSolveMinAug <: AbstractLinearSolver
 	# whether the Hessian is known analytically
 	d2F_is_known::Bool = false
@@ -57,7 +58,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 	# We solve Jfold⋅res = du := [duu, dup]
 	# the Jacobian J is expressed at (x, p)
 	# the Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
-	# we recall the expression of σx = -< w ,d2F(x,p)[v, x2]>
+	# we recall the expression of σx = -< w, d2F(x,p)[v, x2]>
 	############### Extraction of function names #################
 
 	F = pbMA.F

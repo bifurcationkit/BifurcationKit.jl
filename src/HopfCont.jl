@@ -4,7 +4,7 @@ using Parameters, Setfield
 For an initial guess from the index of a bifurcation point located in ContResult.bifpoint
 """
 function HopfPoint(br::ContResult, index::Int64)
-	@assert br.bifpoint[index][1] == :hopf "The index provided does not refer to a Hopf point"
+	@assert br.bifpoint[index][1] == :hopf "The provided index does not refer to a Hopf point"
 	bifpoint = br.bifpoint[index]
 	eigRes   = br.eig
 	p = bifpoint[3]

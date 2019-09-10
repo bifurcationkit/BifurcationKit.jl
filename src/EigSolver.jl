@@ -17,7 +17,8 @@ function (l::Default_eig)(J, nev::Int64)
 	# I put Array so we can call it on small sparse matrices
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = x-> real(x), rev = true)
-	return F.values[I[1:nev]], F.vectors[:, I[1:nev]], 1
+	nev2 = min(nev, length(I))
+	return F.values[I[1:nev2]], F.vectors[:, I[1:nev2]], 1
 end
 
 # case of sparse matrices

@@ -72,6 +72,7 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax
 		(x, p) -> F_chan(x, p, 0.01),
 		(x, p) -> Jac_chan(x, p, 0.01),
 		out, 3.0, opts_br0,
+		# linearalgo = MatrixBLS(),
 		plot = true,
 		finaliseSolution = finalise_solution,
 		plotsolution = (x; kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"),

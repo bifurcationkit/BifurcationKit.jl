@@ -53,12 +53,13 @@ opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1,
 		(x, p) -> F_chan(x, p, 0.01),
 		(x, p) -> (Jac_mat(x, p, 0.01)),
 		out, a, opts_br0,
+		# linearalgo = MatrixBLS(),
 		printsolution = x -> norm(x, Inf64),
 		plot = false,
 		plotsolution = (x;kwargs...) -> (plot!(x, subplot = 4, ylabel = "solution", label = "")))
 ###################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [out])
+deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
 
 opt_def = opt_newton
 opt_def.tol = 1e-10
@@ -126,7 +127,6 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 					optcontfold)
 ###################################################################################################
 # GMRES example
-
 function dF_chan(x, dx, α, β = 0.)
 	out = similar(x)
 	n = length(x)
@@ -139,7 +139,7 @@ function dF_chan(x, dx, α, β = 0.)
 end
 
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
+	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
 	out_mf, hist, flag = @time Cont.newton(
 		x -> F_chan(x, a, 0.01),
 		x -> (dx -> dF_chan(x, dx, a, 0.01)),

@@ -55,7 +55,7 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 	else
 		l =  Plots.@layout [a{0.5w} b{0.5w}; c d;e]
 	end
-	Plots.plot(layout=l)
+	Plots.plot(layout = l)
 
 	# plot the branch of solutions
 	plotBranch!(contres, xlabel="p", ylabel="|x|", label="", subplot=1)
@@ -82,7 +82,7 @@ Plot the branch of solutions from a `ContResult`. You can also pass parameters l
 For the continuation diagram, the legend is as follows `(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)`
 """
 function plotBranch(contres::ContResult; kwargs...)
-	plot([],[],label="")
+	plot()
 	plotBranch!(contres; kwargs...)
 end
 
