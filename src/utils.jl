@@ -103,7 +103,7 @@ function plotBranch!(contres::ContResult; kwargs...)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)
 	branch = contres.branch
 	if length(contres.stability) > 2
-		plot!(branch[1, :], branch[2, :], linewidth = 1 .+ 3contres.stability ; kwargs...)
+		plot!(branch[1, :], branch[2, :], linestyle = map(x->isodd(x) ? :solid : :dot, contres.stability) ; kwargs...)
 	else
 		plot!(branch[1, :], branch[2, :]; kwargs...)
 	end
