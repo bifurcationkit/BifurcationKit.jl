@@ -127,13 +127,13 @@ function blockToSparse(J::AbstractBlockArray)
 	# form the first line of blocks
 	res = J[Block(1,1)]
 	for j=2:nc
-		res = hcat(res,J[Block(1,j)])
+		res = hcat(res, J[Block(1,j)])
 	end
 	# continue with the other lines
 	for i=2:nl
 		line = J[Block(i,1)]
 		for j=2:nc
-			line = hcat(line,J[Block(i,j)])
+			line = hcat(line, J[Block(i,j)])
 		end
 		res = vcat(res,line)
 	end
@@ -153,9 +153,9 @@ function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacspa
 	dTFper = (poPb(vcat(u0[1:end-1], T + δ)) - poPb(u0)) / δ
 
 	# this bad for performance. Get converted to SparseMatrix at the next line
-	J = blockToSparse(J_block)
+	J = blockToSparse(J_block) # most of the compute time is here!!
 	J = hcat(J, dTFper[1:end-1])
-	J = vcat(J, spzeros(1, N*M+1)) # this line is 5% of compute time
+	J = vcat(J, spzeros(1, N*M + 1))
 
 	J[N*M+1, 1:N] .=  poPb.ϕ
 	J[N*M+1, N*M+1] = dTFper[end]

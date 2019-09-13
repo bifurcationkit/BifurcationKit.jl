@@ -77,6 +77,10 @@ function check!(contParams::ContinuationPar)
 	if contParams.detect_bifurcation
 		contParams.computeEigenValues = true
 	end
+
+	if contParams.computeEigenValues
+		contParams.detect_bifurcation = true
+	end
 end
 
 # this function is to simplify calls to ContinuationPar
@@ -92,9 +96,9 @@ end
 """
 		newton(F, J, x0, options, normN = norm)
 
-This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolve` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolve = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. Iterative solver (GMRES) are also provided. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable which need to be passed are as follows:
+This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. Iterative solver (GMRES) are also provided. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable which need to be passed are as follows:
 - `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
-- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolve`. The Jacobian can be a matrix or an out of place function.
+- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian can be a matrix or an out of place function.
 
 Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
 
@@ -229,7 +233,7 @@ function newtonPseudoArcLength(F, Jh,
 						tau0, res_f, res_n, theta)
 		# u, up, liniter = linearBorderedSolver(J, dFdl,
 		# 				tau0, res_f, res_n, theta,
-		# 				newtonOpts.linsolve,
+		# 				newtonOpts.linsolver,
 		# 				algo = linearalgo)
 
 		if linesearch

@@ -1,4 +1,5 @@
 import Base: push!
+import Base: show
 
 """
 DeflationOperator with structure
@@ -16,6 +17,10 @@ struct DeflationOperator{T <: Real, Tf, vectype}
 end
 
 push!(df::DeflationOperator{T, Tf, vectype}, v::vectype) where {T, Tf, vectype} = push!(df.roots, v)
+
+function show(io::IO, df::DeflationOperator)
+	println(io, "Deflation operator with ", length(df.roots)," roots")
+end
 
 function (df::DeflationOperator{T, Tf, vectype})(u::vectype) where {T, Tf, vectype}
 	nrm  = u -> df.dot(u, u)
@@ -60,17 +65,14 @@ end
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{T, Tf, vectype, TF, TJ, def})(u::vectype) where {T, Tf, vectype, TF, TJ, def <: DeflationOperator{T, Tf, vectype}}
+function (df::DeflatedProblem{T, Tf, vectype, TF, TJ, def})(u::vectype) where {T, Tf, vectype, TF, TJ, def}
 	out = df.F(u)
 	rmul!(out, df.M(u))
 	return out
 end
 
 ###################################################################################################
-# Linear operator
-# function jac(df::DeflatedProblem, u)
-#	 J = df.J(u)
-# end
+# Implement the Jacobian operator of the Deflated problem
 
 struct DeflatedLinearSolver <: AbstractLinearSolver end
 

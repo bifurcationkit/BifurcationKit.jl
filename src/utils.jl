@@ -2,7 +2,7 @@ using RecursiveArrayTools # for bifurcation point handling
 import Base: show
 ####################################################################################################
 # Structure to hold result
-@with_kw struct ContResult{T, vectype, eigenvectype}
+@with_kw struct ContResult{T, vectype, eigenvectype, biftype}
 	# this vector is used to hold (param, printsolution(u), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}} = VectorOfArray([zeros(T, 4)])
 
@@ -11,7 +11,7 @@ import Base: show
 
 	# the following holds information about the detected bifurcation points like
 	# [(:none, step, printsolution(u), u, tau, eigenvalue_index)] where tau is the tangent along the curve and eigenvalue_index is the index of the eigenvalue in eig (see above) which change stability
-	bifpoint::Vector{Tuple{Symbol, Int64, T, T, vectype, vectype, Int64}}
+	bifpoint::Vector{biftype}
 
 	# whether the associated point is linearly stable
 	stability::Vector{Bool} = [false]
@@ -23,13 +23,13 @@ import Base: show
 	n_unstable::Vector{Int64}
 end
 
-function show(io::IO, br::PseudoArcLengthContinuation.ContResult)
+function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
 	if length(br.bifpoint) >0
 		println(io, "Bifurcation points:")
 		for ii in eachindex(br.bifpoint)
 			bp  = br.bifpoint[ii]
-			println(io, "- $ii, ", bp[1], " point, at p = ", bp[3])
+			println(io, "- $ii, ", bp.type, " point, at p = ", bp.param, ", index = ", bp.idx)
 		end
 	end
 end
@@ -134,10 +134,10 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detect_fold && size(branch)[2] > 2 && (branch[1, end] - branch[1, end-1]) * (branch[1, end-1] - branch[1, end-2]) < 0
 		(verbosity > 1) && printstyled(color=:red, "Fold bifurcation point!! between $(branch[1, end-1]) and  $(branch[1, end]) \n")
-		push!(contResult.bifpoint, (:fold,
-							length(branch)-1,
-							branch[1, end-1],
-							printsolution(z.u), copy(z.u), normalize(tau.u), 0))
+		push!(contResult.bifpoint, (type = :fold,
+							idx = length(branch)-1,
+							param = branch[1, end-1],
+							norm = printsolution(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
 	end
 	if contparams.detect_bifurcation == false
 		return
@@ -160,44 +160,48 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 	# Hopf / BP bifurcation point detection based on eigenvalue distribution
 	if size(branch)[2] > 1
 		if abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 1
-			push!(contResult.bifpoint, (:bp,
-								length(branch)-1,
-								branch[1, end-1],
-								printsolution(z.u),
-								copy(z.u),
-								normalize(tau.u), ind_bif))
+			push!(contResult.bifpoint, (type = :bp,
+					idx = length(branch)-1,
+					param = branch[1, end-1],
+					norm = printsolution(z.u),
+					u = copy(z.u),
+					tau = normalize(tau.u), ind_bif = ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
 			if abs(contResult.n_imag[end] - contResult.n_imag[end-1]) == 2
-				push!(contResult.bifpoint, (:hopf,
-									length(branch)-1,
-									branch[1, end-1],
-									printsolution(z.u),
-									copy(z.u), zero(tau.u), ind_bif))
+				push!(contResult.bifpoint, (type = :hopf,
+					idx = length(branch)-1,
+					param = branch[1, end-1],
+					norm = printsolution(z.u),
+					u = copy(z.u), tau = zero(tau.u), ind_bif = ind_bif))
 			else
-				push!(contResult.bifpoint, (:bp,
-									length(branch)-1,
-									branch[1, end-1],
-									printsolution(z.u),
-									copy(z.u),
-									normalize(tau.u), n_unstable))
+				push!(contResult.bifpoint, (type = :bp,
+					idx = length(branch)-1,
+					param = branch[1, end-1],
+					norm = printsolution(z.u),
+					u = copy(z.u),
+					tau = normalize(tau.u), ind_bif = n_unstable))
 			end
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) >2
-			push!(contResult.bifpoint, (:nd,
-							length(branch)-1,
-							branch[1, end-1],
-							printsolution(z.u),
-							copy(z.u),
-							normalize(tau.u), ind_bif))
+			push!(contResult.bifpoint, (type = :nd,
+					idx = length(branch)-1,
+					param = branch[1, end-1],
+					norm = printsolution(z.u),
+					u = copy(z.u),
+					tau = normalize(tau.u), ind_bif = ind_bif))
 		end
 	end
 end
 
-function initContRes(br, u0, evsol, contParams)
+"""
+This function is used to initialize the struct `br` according to the options passed by `contParams`
+"""
+function initContRes(br, u0, evsol, contParams::ContinuationPar)
 	T = eltype(br)
+	bif0 = (type = :none, idx = 0, param = T(0.), norm  = T(0.), u = u0, tau = u0, ind_bif = 0)
 	if contParams.computeEigenValues
-		contRes = ContResult{T, typeof(u0), typeof(evsol[2])}(
+		contRes = ContResult{T, typeof(u0), typeof(evsol[2]), typeof(bif0)}(
 			branch = br,
-			bifpoint = [(:none, 0, T(0.), T(0.), u0, u0, 0)],
+			bifpoint = [bif0],
 			n_imag = [0],
 			n_unstable = [0],
 			eig = [(evsol[1], evsol[2], 0)] )
@@ -214,9 +218,9 @@ function initContRes(br, u0, evsol, contParams)
 		end
 		return contRes
 	else
-		return ContResult{T, typeof(u0), Array{Complex{T}, 2}}(
+		return ContResult{T, typeof(u0), Array{Complex{T}}, typeof(bif0)}(
 				branch = br,
-				bifpoint = [(:none, 0, T(0.), T(0.), u0, u0, 0)],
+				bifpoint = [bif0],
 				n_imag = [0],
 				n_unstable = [0],
 				eig = [([Complex{T}(1)], zeros(Complex{T}, 2, 2), 0)])
@@ -247,7 +251,7 @@ Save solution / data in JLD2 file
 - `p` is the parameter
 - `i` is the index of the solution to be saved
 """
-function saveSolution(filename, sol, p, i::Int64, br::ContResult, contParam)
+function saveSolution(filename, sol, p, i::Int64, br::ContResult, contParam::ContinuationPar)
 	# create a group in the JLD format
 	jldopen(filename*".jld2", "a+") do file
 		mygroup = JLD2.Group(file, "sol-$i")

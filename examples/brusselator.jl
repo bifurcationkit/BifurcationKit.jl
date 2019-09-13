@@ -106,7 +106,7 @@ b = 5.45
 
 sol0 = vcat(a * ones(n), b/a * ones(n))
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolve = eig_KrylovKit(tol=1e-6, dim = 60))
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolver = eig_KrylovKit(tol=1e-6, dim = 60))
 	# ca fait dans les 60.2k Allocations
 	out, hist, flag = @time Cont.newton(
 		x -> F_bru(x, a, b),
@@ -171,7 +171,7 @@ M = 100
 orbitguess = zeros(2n, M)
 plot([0, 1], [0, 0])
 	phase = []; scalphase = []
-	vec_hopf = getEigenVector(opt_newton.eigsolve, br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
+	vec_hopf = getEigenVector(opt_newton.eigsolver, br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 
 	# br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
 	for ii=1:M
@@ -187,9 +187,9 @@ end
 
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 
-poTrap = l-> PeriodicOrbitTrap(
-			x-> F_bru(x, a, b, l = l),
-			x-> Jac_sp(x, a, b, l = l),
+poTrap = l -> PeriodicOrbitTrap(
+			x -> F_bru(x, a, b, l = l),
+			x -> Jac_sp(x, a, b, l = l),
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
@@ -219,7 +219,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3
 			printsolution = u -> u[end])
 ##########################################################################################
 # Matrix-Free computation, useless without a preconditionner
-opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolver = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
+opt_po  = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolver = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
 	outpo_f, hist, flag = @time Cont.newton(
 			x ->  poTrap(l_hopf + 0.01)(x),
 			x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),
