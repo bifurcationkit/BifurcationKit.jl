@@ -12,9 +12,14 @@ PeriodicOrbitTrap
 newton
 ```
 
+## Newton with deflation
+```@docs
+DeflationOperator
+```
+
 
 ```@docs
-newtonDeflated
+newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 ```
 
 ## Newton for Fold / Hopf

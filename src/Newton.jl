@@ -156,9 +156,17 @@ function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
 end
 
 """
-	newtonDeflated(Fhandle::Function, Jhandle, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype})
+	newtonDeflated(F, J, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs)
 
-This is the deflated version of the Newton Solver. It penalises the roots saved in `defOp.roots`
+This is the deflated version of the Newton Solver for `F(x) = 0` with Jacobian `J`. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`.
+
+Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
+
+# Output:
+- solution:
+- history of residuals
+- flag of convergence
+- number of iterations
 """
 function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 	# we create the new functional
@@ -199,7 +207,7 @@ function newtonPseudoArcLength(F, Jh,
 
 	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
-
+	@show 1
 	# Initialise iterations
 	x = copy(z_pred.u)
 	l = z_pred.p
@@ -208,9 +216,9 @@ function newtonPseudoArcLength(F, Jh,
 	# Initialise residuals
 	res_f = F(x, l);  res_n = N(x, l)
 
-	dX   = similar(res_f)
+	dX   = copy(res_f)
 	dl   = T(0)
-
+	@show 2
 	# dFdl = (F(x, l + finDiffEps) - res_f) / finDiffEps
 	dFdl = copy(F(x, l + finDiffEps))
 	minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
@@ -222,6 +230,8 @@ function newtonPseudoArcLength(F, Jh,
 	# Displaying results
 	verbose && displayIteration(it, 1, res)
 	step_ok = true
+
+	@show 3
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok

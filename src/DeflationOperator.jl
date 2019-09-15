@@ -1,13 +1,15 @@
-import Base: push!
-import Base: show
+import Base: push!, pop!, length
+import Base: show, getindex
 
 """
-DeflationOperator with structure
+DeflationOperator. It is used to describe the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
+``F(u) / Π_i(dot(u - roots_i, u - roots_i)^{p} + shift) := F(u) / M(u)``. The fields of the struct `DeflationOperator` are as follows:
 - power `p`
-- dot function, this function has to be bilinear and symmetric for the linear solver
+- `dot` function, this function has to be bilinear and symmetric for the linear solver
 - shift
 - roots
 The deflation operator is is ``M(u) = \\frac{1}{\\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^p)}``
+where ``nrm(u) = dot(u,u)``.
 """
 struct DeflationOperator{T <: Real, Tf, vectype}
 	power::T
@@ -17,6 +19,9 @@ struct DeflationOperator{T <: Real, Tf, vectype}
 end
 
 push!(df::DeflationOperator{T, Tf, vectype}, v::vectype) where {T, Tf, vectype} = push!(df.roots, v)
+pop!(df::DeflationOperator) = pop!(df.roots)
+getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
+length(df::DeflationOperator) = length(df.roots)
 
 function show(io::IO, df::DeflationOperator)
 	println(io, "Deflation operator with ", length(df.roots)," roots")
