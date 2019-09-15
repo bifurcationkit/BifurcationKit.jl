@@ -80,7 +80,7 @@ end
 # we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 # and pass it to the newton parameters
-opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolve = ls, eigsolve = Default_eig())
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
 # we can then call the newton solver
 out_mf, hist, flag = @time Cont.newton(
 	x -&gt; F_chan(x, a, 0.01),
@@ -260,7 +260,7 @@ b = 5.45
 
 sol0 = vcat(a * ones(n), b/a * ones(n))
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolve = eig_KrylovKit(tol=1e-6, dim = 60))
+opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolver = eig_KrylovKit(tol=1e-6, dim = 60))
 	out, hist, flag = @time Cont.newton(
 		x -&gt; F_bru(x, a, b),
 		x -&gt; Jac_sp(x, a, b),
@@ -314,7 +314,7 @@ M = 100
 
 orbitguess = zeros(2n, M)
 phase = []; scalphase = []
-vec_hopf = getEigenVector(opt_newton.eigsolve ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
+vec_hopf = getEigenVector(opt_newton.eigsolver ,br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
 	orbitguess[:, ii] .= real.(hopfpt.u +
@@ -326,7 +326,7 @@ end</code></pre><p>We want to make two remarks. The first is that an initial gue
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			opt_newton.linsolve)</code></pre><p>The functional is <code>x -&gt; poTrap(l_hopf + 0.01)(x)</code> at parameter <code>l_hopf + 0.01</code>. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at <code>(x,p)</code> is computed like this</p><p><code>poTrap(p)(x, :jacsparse)</code></p><p>while the Matrix Free version is</p><p><code>dx -&gt; poTrap(p)(x, dx)</code></p><p>We use Newton solve:</p><pre><code class="language-julia">opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
+			opt_newton.linsolver)</code></pre><p>The functional is <code>x -&gt; poTrap(l_hopf + 0.01)(x)</code> at parameter <code>l_hopf + 0.01</code>. For this problem, it is more efficient to use a Sparse Matrix representation of the jacobian rather than a Matrix Free one (with GMRES). The matrix at <code>(x,p)</code> is computed like this</p><p><code>poTrap(p)(x, :jacsparse)</code></p><p>while the Matrix Free version is</p><p><code>dx -&gt; poTrap(p)(x, dx)</code></p><p>We use Newton solve:</p><pre><code class="language-julia">opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
 			x -&gt;  poTrap(l_hopf + 0.01)(x),
 			x -&gt;  poTrap(l_hopf + 0.01)(x, :jacsparse),
@@ -486,7 +486,7 @@ L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	</code></pre><p>Before applying a Newton
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 	res, info = res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6) 
 	return res, true, info.numops
-end</code></pre><h3><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h3><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
+end</code></pre><h3><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h3><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -&gt; F_shfft(x, -.1, 1.3, shlop = L),
 				u -&gt; (u, -0.1, 1.3),
