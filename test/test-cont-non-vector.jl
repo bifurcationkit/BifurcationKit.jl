@@ -15,7 +15,7 @@ opt_newton0 = Cont.NewtonPar(tol = 1e-11, verbose = true)
 		[0.8],
 		opt_newton0)
 
-opts_br0 = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= -0.01, pMax = 4.1, pMin = -1, newtonOptions = opt_newton0, detect_fold = true, detect_bifurcation = false)
+opts_br0 = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.021, ds= -0.01, pMax = 4.1, pMin = -1, newtonOptions = opt_newton0, detect_fold = true, detect_bifurcation = false)
 	opts_br0.newtonOptions.maxIter = 70
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 150
@@ -132,3 +132,12 @@ soldef2, _, _ = @time Cont.newtonDeflated(
 	x -> jacobian(x, 0., 1.),
 	rmul!(soldef0,rand()),
 	opt_newton, deflationOp)
+
+# test indexing
+deflationOp[1]
+
+# test length
+length(deflationOp)
+
+# test pop!
+pop!(deflationOp)

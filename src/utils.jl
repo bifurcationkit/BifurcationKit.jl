@@ -81,7 +81,8 @@ end
 Plot the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch(br, marker = :dot)`.
 For the continuation diagram, the legend is as follows `(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)`
 """
-function plotBranch(contres::ContResult; kwargs...)
+function plotBranch(contres; kwargs...)
+	# we do not specify the type of contres, not convenient when using JLD2
 	plot()
 	plotBranch!(contres; kwargs...)
 end
@@ -90,6 +91,7 @@ end
 Plot all the branches contained in `brs` in a single figure. Convenient when many bifurcation diagram have been computed.
 """
 function plotBranch(brs::Vector; kwargs...)
+	# we do not specify the type of contres, not convenient when using JLD2
 	plotBranch(brs[1]; kwargs...)
 	for ii=2:length(brs)
 		plotBranch!(brs[ii]; kwargs...) |> display
@@ -99,7 +101,8 @@ end
 """
 Append to the current plot the plot of the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch!(br, marker = :dot)`
 """
-function plotBranch!(contres::ContResult; kwargs...)
+function plotBranch!(contres; kwargs...)
+	# we do not specify the type of contres, not convenient when using JLD2
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)
 	branch = contres.branch
 	if length(contres.stability) > 2
@@ -126,6 +129,13 @@ function computeEigenvalues(contparams, contResult, J, step)
 		end
 	end
 	eig_elements
+end
+
+################################################################################################
+function normalize(x)
+	out = copy(x)
+	rmul!(out, norm(x))
+	return out
 end
 
 function detectBifucation(contparams, contResult, z, tau, printsolution, verbosity)
@@ -191,7 +201,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 		end
 	end
 end
-
+####################################################################################################
 """
 This function is used to initialize the struct `br` according to the options passed by `contParams`
 """

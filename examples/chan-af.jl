@@ -13,14 +13,14 @@ eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
 
 norm(x::ApproxFun.Fun, p::Real) = (@show p;norm(x.coefficients, p))
-norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
-norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
+# norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
+# norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
 
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
-axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y)
-axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a .* x .+ b.* y)
+axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y; return y)
+axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a .* x .+ b .* y)
 rmul!(y::ApproxFun.Fun, b::Float64) = (y .= b .* y)
 
 copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = copy(y.coefficients))
@@ -30,21 +30,21 @@ source_term(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dsource_term(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 
 function F_chan(u, alpha, beta = 0.01)
-	return [Fun(u(0.), domain(sol)) - beta,
-			Fun(u(1.), domain(sol)) - beta,
+	return [Fun(u(0.), domain(u)) - beta,
+			Fun(u(1.), domain(u)) - beta,
 			Δ * u + alpha * source_term(u, b = beta)]
 end
 
 function dF_chan(u, v, alpha, beta = 0.01)
-	return [Fun(v(0.), domain(sol)),
-			Fun(v(1.), domain(sol)),
-			Δ * v + alpha * dsource_term(u, b = beta) * v]#Multiplication(dsource_term(u), u.space)]
+	return [Fun(v(0.), domain(u)),
+			Fun(v(1.), domain(u)),
+			Δ * v + alpha * dsource_term(u, b = beta) * v]
 end
 
 function Jac_chan(u, alpha, beta = 0.01)
 	return [Evaluation(u.space, 0.),
 			Evaluation(u.space, 1.),
-			Δ + alpha * dsource_term(u, b = beta)]#Multiplication(dsource_term(u), u.space)]
+			Δ + alpha * dsource_term(u, b = beta)]
 end
 
 function finalise_solution(z, tau, step, contResult)
@@ -54,7 +54,7 @@ function finalise_solution(z, tau, step, contResult)
 end
 
 sol = Fun( x -> x * (1-x), Interval(0.0, 1.0))
-const Δ = Derivative(sol.space, 2)
+const Δ = Derivative(sol.space, 2);
 
 opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 	out, hist, flag = @time Cont.newton(
@@ -66,7 +66,7 @@ opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch = false
 	opts_br0.detect_fold = true
-	opts_br0.maxSteps = 143
+	opts_br0.maxSteps = 200
 
 	br, u1 = @time Cont.continuation(
 		(x, p) -> F_chan(x, p, 0.01),

@@ -93,7 +93,7 @@ module PseudoArcLengthContinuation
 						verbosity = 2) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
 		################################################################################################
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
-		
+
 		# Get parameters
 		@unpack pMin, pMax, maxSteps, newtonOptions = contParams
 		epsi = contParams.finDiffEps
@@ -132,7 +132,6 @@ module PseudoArcLengthContinuation
 		@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
-
 		duds = copy(u_pred)
 		axpby!(-T(1)/ (contParams.ds / T(50)), u0, T(1)/ (contParams.ds / T(50)), duds)
 		# duds = (u_pred - u0) / (contParams.ds / T(50));
@@ -141,7 +140,6 @@ module PseudoArcLengthContinuation
 		@assert typeof(α) == T
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
 		rmul!(duds, T(1) / α); dpds = dpds / α
-
 		# Initialise continuation
 		step = 0
 		continuationFailed = false

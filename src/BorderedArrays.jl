@@ -15,7 +15,6 @@ copy(b::BorderedArray{vectype, T}) where {vectype, T} =  BorderedArray(copy(b.u)
 copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p);dest)
 copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
 
-
 length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
 
 dot(a::BorderedArray{vectype, T}, b::BorderedArray{vectype, T}) where {vectype, T} = dot(a.u, b.u) + dot(a.p, b.p)
@@ -55,28 +54,28 @@ end
 mul!(A::BorderedArray{vectype, Tv}, α::T, B::BorderedArray{vectype, Tv}) where {vectype, Tv, T} = mul!(A, B,  α)
 ################################################################################
 function axpy!(a::T, X::BorderedArray{vectype, Tv}, Y::BorderedArray{vectype, Tv}) where {vectype, T <:Real, Tv}
-	# Overwrite Y with a*X + b*Y, where a, b are scalar
+	# Overwrite Y with a*X + Y, where a is scalar
 	axpy!(a, X.u, Y.u)
 	axpy!(a, X.p, Y.p)
 	return Y
 end
 
 function axpy!(a::T, X::BorderedArray{vectype, T}, Y::BorderedArray{vectype, T}) where {vectype, T <:Real}
-	# Overwrite Y with a*X + b*Y, where a, b are scalar
+	# Overwrite Y with a*X + Y, where a is scalar
 	axpy!(a, X.u, Y.u)
 	Y.p = a * X.p + Y.p
 	return Y
 end
 ################################################################################
 function axpby!(a::T, X::BorderedArray{vectype, Tv}, b::T, Y::BorderedArray{vectype, Tv}) where {vectype, T <: Real, Tv}
-	# Overwrite Y with a*X + b*Y, where a, b are scalar
+	# Overwrite Y with a * X + b * Y, where a, b are scalar
 	axpby!(a, X.u, b, Y.u)
 	axpby!(a, X.p, b, Y.p)
 	return Y
 end
 
 function axpby!(a::T, X::BorderedArray{vectype, T}, b::T, Y::BorderedArray{vectype, T}) where {vectype, T <:Real}
-	# Overwrite Y with a*X + b*Y, where a is a scalar
+	# Overwrite Y with a * X + b * Y, where a is a scalar
 	axpby!(a, X.u, b, Y.u)
 	Y.p = a * X.p + b * Y.p
 	return Y
@@ -84,13 +83,14 @@ end
 ################################################################################
 # this function is actually axpy!(-1, y, x)
 """
-	minus!(x,y)
-computes x-y into x and return x
+	`minus!(x, y)`
+
+computes x-y into x and returns x
 """
-@inline minus!(x, y) = (x .= x .- y) # necessary to put a dot .= for ApproxFun to work
-@inline minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
-@inline minus!(x::T, y::T) where {T <:Real} = (x = x - y)
-minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u);minus!(x.p, y.p))
+minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
+minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
+minus!(x::T, y::T) where {T <:Real} = (x = x - y)
+minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))	
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real}
 	minus!(x.u, y.u)
 	# Carefull here. If I use the line below, then x.p will be left unaffected
@@ -99,30 +99,17 @@ function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) wher
 	return x
 end
 ################################################################################
-# this function is actually axpy!(-1, y, x)
 """
-	minus(x,y)
-returns x-y
+	`minus(x,y)`
+
+returns x - y
 """
-@inline minus(x, y) = (return x .- y) # necessary to put a dot .= for ApproxFun to work
-@inline minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
-@inline minus(x::T, y::T) where {T <:Real} = (return x - y)
-@inline minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
-@inline minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
-################################################################################
-function normalize(x)
-	out = copy(x)
-	rmul!(out, norm(x))
-	return out
-end
-################################################################################
-function dottheta(u1, u2, p1::T, p2::T, theta::T) where T
-	return dot(u1, u2) * theta / length(u1) + p1 * p2 * (one(T) - theta)
-end
-################################################################################
-function normtheta(u, p::T, theta::T) where T
-	return sqrt(dottheta(u, u, p, p, theta))
-end
+minus(x, y) = (x1 = copy(x);minus!(x1, y); return x1)
+# minus(x, y) = (x - y)
+minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
+minus(x::T, y::T) where {T <:Real} = (return x - y)
+minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
+minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
 ################################################################################
 function dottheta(a::BorderedArray{vectype, T}, b::BorderedArray{vectype, T}, theta::T) where {vectype, T}
 	return dottheta(a.u, b.u, a.p, b.p, theta)

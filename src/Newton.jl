@@ -92,7 +92,7 @@ function ContinuationPar(; kwargs...)
 		ContinuationPar{Float64, typeof(Default()), typeof(Default_eig())}(;kwargs...)
 	end
 end
-
+####################################################################################################
 """
 		newton(F, J, x0, options, normN = norm)
 
@@ -136,6 +136,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 		# Update solution: x .= x .- d
 		minus!(x, d)
 
+
 		copyto!(f, Fhandle(x))
 		res = normN(f)
 
@@ -154,7 +155,7 @@ function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
 	Jhandle = u -> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
 end
-
+####################################################################################################
 """
 	newtonDeflated(F, J, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs)
 
@@ -188,7 +189,7 @@ function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::Defl
 	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
 	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
 end
-
+####################################################################################################
 """
 This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` together
 with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
@@ -207,7 +208,7 @@ function newtonPseudoArcLength(F, Jh,
 
 	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
-	@show 1
+
 	# Initialise iterations
 	x = copy(z_pred.u)
 	l = z_pred.p
@@ -218,10 +219,10 @@ function newtonPseudoArcLength(F, Jh,
 
 	dX   = copy(res_f)
 	dl   = T(0)
-	@show 2
 	# dFdl = (F(x, l + finDiffEps) - res_f) / finDiffEps
 	dFdl = copy(F(x, l + finDiffEps))
-	minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
+	minus!(dFdl, res_f)	# dFdl = dFdl - res_f
+	rmul!(dFdl, T(1) / finDiffEps)
 
 	res     = normAC(res_f, res_n)
 	resHist = [res]
@@ -230,8 +231,6 @@ function newtonPseudoArcLength(F, Jh,
 	# Displaying results
 	verbose && displayIteration(it, 1, res)
 	step_ok = true
-
-	@show 3
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok

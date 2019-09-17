@@ -697,8 +697,8 @@ source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 
 function F_chan(u, alpha::Float64, beta = 0.01)
-	return [Fun(u(0.), domain(sol)) - beta,
-		Fun(u(1.), domain(sol)) - beta,
+	return [Fun(u(0.), domain(u)) - beta,
+		Fun(u(1.), domain(u)) - beta,
 		Δ * u + alpha * source_term(u, b = beta)]
 end
 

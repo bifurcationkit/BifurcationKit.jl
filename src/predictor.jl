@@ -73,11 +73,6 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 	rmul!(tau_new, α)
 end
 ################################################################################################
-# equation of the arc length constraint
-@inline function arcLengthEq(u, p, du, dp, xi, ds)
-	return dottheta(u, du, p, dp, xi) - ds
-end
-################################################################################################
 function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	g = abs(tau.p * contparams.theta)
 	(verbosity > 0) && print("Theta changes from $(contparams.theta) to ")
@@ -119,5 +114,18 @@ function stepSizeControl(contparams, converged::Bool, it_number::Int64, tau::M, 
 	contparams.doArcLengthScaling && arcLengthScaling(contparams, tau, verbosity)
 	@assert abs(contparams.ds) >= contparams.dsmin
 	return false
+end
+################################################################################################
+# equation of the arc length constraint
+function arcLengthEq(u, p, du, dp, xi, ds)
+	return dottheta(u, du, p, dp, xi) - ds
+end
+################################################################################################
+function dottheta(u1, u2, p1::T, p2::T, theta::T) where T
+	return dot(u1, u2) * theta / length(u1) + p1 * p2 * (one(T) - theta)
+end
+################################################################################################
+function normtheta(u, p::T, theta::T) where T
+	return sqrt(dottheta(u, u, p, p, theta))
 end
 ################################################################################################
