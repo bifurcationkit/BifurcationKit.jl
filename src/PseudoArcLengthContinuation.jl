@@ -205,7 +205,7 @@ module PseudoArcLengthContinuation
 				end
 
 				# Call user saved finaliseSolution function. If returns false, stop continuation
-				finaliseSolution(z_old, tau_old, step, contRes) && (step = maxSteps)
+				!finaliseSolution(z_old, tau_old, step, contRes) && (step = maxSteps)
 			else
 				(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 				(verbosity > 0) && println("--> Newton Residuals history = ", fval)
