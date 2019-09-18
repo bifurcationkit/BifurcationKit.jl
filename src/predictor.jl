@@ -55,8 +55,7 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 	# tangent predictor
 	epsi = contparams.finDiffEps
 	# dFdl = (F(z_old.u, z_old.p + epsi) - F(z_old.u, z_old.p)) / epsi
-	dFdl = similar(z_old.u)
-	copyto!(dFdl, F(z_old.u, z_old.p + epsi))
+	dFdl = F(z_old.u, z_old.p + epsi)
 	minus!(dFdl, F(z_old.u, z_old.p))
 	rmul!(dFdl, 1/epsi)
 

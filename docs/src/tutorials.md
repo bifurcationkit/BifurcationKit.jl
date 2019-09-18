@@ -676,18 +676,15 @@ import LinearAlgebra: norm, dot, axpy!, rmul!, axpby!
 eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
 
-norm(x::ApproxFun.Fun, p::Real) = (@show p;norm(x.coefficients, p))
-norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
-norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
-
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
-axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y)
-axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a .* x .+ b.* y)
+axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a .* x .+ y; return y)
+axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a .* x .+ b .* y)
 rmul!(y::ApproxFun.Fun, b::Float64) = (y .= b .* y)
 
 copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = (x.coefficients = copy(y.coefficients))
+
 ```
 
 We can easily write our functional with boundary conditions in a convenient manner using `ApproxFun`:
@@ -734,7 +731,7 @@ opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 and you should see
 
 ```
-Newton Iterations 
+ Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     1.5707e+00         0
@@ -742,7 +739,7 @@ Newton Iterations
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     4.6975e-13         1
-  0.079482 seconds (344.44 k allocations: 13.856 MiB)
+  0.079128 seconds (332.65 k allocations: 13.183 MiB)
 ```
 
 We can now perform numerical continuation wrt the parameter `a`. Again, we need to provide some parameters for the continuation:

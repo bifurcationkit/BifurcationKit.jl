@@ -12,10 +12,6 @@ import LinearAlgebra: norm, dot, axpy!, rmul!, axpby!
 eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
 
-norm(x::ApproxFun.Fun, p::Real) = (@show p;norm(x.coefficients, p))
-# norm(x::Array{Fun, 1}, p::Real)  = (@show p;norm(x[3].coefficients, p))
-# norm(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, p::Real) = (@show p;norm(x[3].coefficients, p))
-
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 dot(x::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}, y::Array{Fun{Chebyshev{Segment{Float64}, Float64}, Float64, Array{Float64, 1}}, 1}) = sum(x[3] * y[3])
 
@@ -79,15 +75,10 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax
 		normC = x -> norm(x, Inf64))
 ####################################################################################################
 # tangent predictor with Bordered system
-opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.2, ds= 0.01, a = 1.5, pMax = 3.5, theta = 0.3, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 4e-9, maxIter = 50, verbose = true), doArcLengthScaling = false)
-	opts.newtonOptions.linesearch  = false
-	opts.detect_fold = true
-	opts.maxSteps = 43
-
-	br, u1 = @time Cont.continuation(
+br, u1 = @time Cont.continuation(
 		(x, p) -> F_chan(x, p),
 		(x, p) -> Jac_chan(x, p),
-		out, 0.5, opts,
+		out, 3.0, opts_br0,
 		tangentalgo = BorderedPred(),
 		plot = true,
 		finaliseSolution = finalise_solution,
