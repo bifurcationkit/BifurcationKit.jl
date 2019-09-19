@@ -90,7 +90,7 @@ computes x-y into x and returns x
 minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <:Real} = (x = x - y)
-minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))	
+minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real}
 	minus!(x.u, y.u)
 	# Carefull here. If I use the line below, then x.p will be left unaffected

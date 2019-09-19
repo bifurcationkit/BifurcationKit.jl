@@ -30,7 +30,7 @@ function (lbs::BorderingBLS{S})(J, dR, dzu, dzp::T, R, n::T, xiu::T = T(1), xip:
 	# dX = x1 .- dl .* x2
 	dX = copy(x1); axpy!(-dl, x2, dX)
 
-	return dX, dl, (it1, it2)
+	return dX, dl, true, (it1, it2)
 end
 
 # call for using BorderedArray input, specific to Arclength Continuation
@@ -96,7 +96,7 @@ function (lbs::MatrixFreeBLS{S})(J, dR::vectype,
 	linearmap = MatrixFreeBLSmap(J, dR, dzu * xiu, dzp * xip)
 	rhs = BorderedArray(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
-
+	return sol.u, sol.p, cv, it
 end
 
 # call for using BorderedArray input, specific to Arclength Continuation

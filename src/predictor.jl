@@ -29,7 +29,7 @@ end
 function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = MatrixFreeLBS(); normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPseudoArcLength(Fhandle, Jhandle,
 			z_old, tau_old, z_pred,
-			contparams; linearalgo = linearalgo, normN = normC)
+			contparams; linearbdalgo = linearalgo, normN = normC)
 end
 
 # corrector based on natural formulation
@@ -50,7 +50,7 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 end
 
 # tangent computation using Bordered system
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparams, algo::BorderedPred, verbosity, linearbdalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	epsi = contparams.finDiffEps
@@ -63,7 +63,7 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J, contparam
 	new_tau = copy(tau_old)
 	@warn "This can be improved a lot"
 	rmul!(new_tau, contparams.theta / length(tau_old.u), 1 - contparams.theta)
-	tauu, taup, it = linearalgo( J(z_old.u, z_old.p), dFdl,
+	tauu, taup, flag, it = linearbdalgo( J(z_old.u, z_old.p), dFdl,
 			new_tau, zero(z_old.u), T(1), contparams.theta)
 	tau = BorderedArray(tauu, taup)
 	α = T(1) / normtheta(tau, contparams.theta)
@@ -81,8 +81,7 @@ function arcLengthScaling(contparams, tau::M, verbosity) where {T, vectype, M<:B
 		  contparams.theta = contparams.thetaMin;
 	  end
 	end
-	print("$(contparams.theta)\n")
-	@show g
+	(verbosity > 0) && print("$(contparams.theta)\n")
 end
 ################################################################################################
 function stepSizeControl(contparams, converged::Bool, it_number::Int64, tau::M, branch, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}

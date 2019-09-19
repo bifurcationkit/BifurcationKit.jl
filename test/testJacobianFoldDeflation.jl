@@ -77,6 +77,56 @@ opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, new
 				printsolution = x->norm(x,Inf64),
 				out,0.,opts_br0,plot = false, verbosity = 0, tangentalgo = Cont.NaturalPred())
 
+# idem with Matrix-Free solver
+function dF_chan(x, dx, α, β = 0.)
+	out = similar(x)
+	n = length(x)
+	out[1] = dx[1]
+	out[n] = dx[n]
+	for i=2:n-1
+		out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dsource_term(x[i], b = β) * dx[i]
+	end
+	return out
+end
+
+ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
+	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
+	out_mf, hist, flag = @time Cont.newton(
+		x -> F_chan(x, a, 0.01),
+		x -> (dx -> dF_chan(x, dx, a, 0.01)),
+		sol,
+		opt_newton_mf)
+
+opts_cont_mf  = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40, newtonOptions = opt_newton_mf)
+	opts_cont_mf.newtonOptions.maxIter = 70
+	opts_cont_mf.newtonOptions.verbose = false
+	opts_cont_mf.newtonOptions.tol = 1e-8
+	opts_cont_mf.maxSteps = 150
+
+brmf, u1 = @time Cont.continuation(
+		(x, p) -> F_chan(x, p, 0.01),
+		(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+		out, a, opts_cont_mf, verbosity = 0)
+
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = BorderedPred(), verbosity = 0)
+
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = SecantPred(),
+	linearalgo = Cont.MatrixFreeBLS())
+
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = BorderedPred(),
+	linearalgo = Cont.MatrixFreeBLS())
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])

@@ -15,7 +15,7 @@ module PseudoArcLengthContinuation
 
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray
 	export	SecantPred, BorderedPred, NaturalPred
-	export	MatrixBLS, BorderingBLS
+	export	MatrixBLS, BorderingBLS, MatrixFreeBLS
 	export	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,

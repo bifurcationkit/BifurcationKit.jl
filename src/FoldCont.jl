@@ -104,7 +104,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 		end
 
 		########## Resolution of the bordered linear system ########
-		dX, dsig, it = pbMA.linbdsolver(J(x, p), dpF, σx, σp, duu, dup)
+		dX, dsig, flag, it = pbMA.linbdsolver(J(x, p), dpF, σx, σp, duu, dup)
 
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically. Much faster than the previous case

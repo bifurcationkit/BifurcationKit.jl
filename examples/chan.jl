@@ -44,7 +44,7 @@ n = 101
 		opt_newton)
 
 
-opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40)
+opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, plot_every_n_steps = 40)
 	opts_br0.newtonOptions.maxIter = 70
 	opts_br0.newtonOptions.tol = 1e-8
 	opts_br0.maxSteps = 150
@@ -53,10 +53,17 @@ opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1,
 		(x, p) -> F_chan(x, p, 0.01),
 		(x, p) -> (Jac_mat(x, p, 0.01)),
 		out, a, opts_br0,
-		# linearalgo = MatrixBLS(),
-		printsolution = x -> norm(x, Inf64),
-		plot = false,
-		plotsolution = (x;kwargs...) -> (plot!(x, subplot = 4, ylabel = "solution", label = "")))
+		linearalgo = MatrixBLS(),
+		)
+
+# br, u1 = @time Cont.continuation(
+# 	(x, p) -> F_chan(x, p, 0.01),
+# 	(x, p) -> (Jac_mat(x, p, 0.01)),
+# 	out, a, opts_br0,
+# 	tangentalgo = BorderedPred(),
+# 	printsolution = x -> norm(x, Inf64),
+# 	plot = false,
+# 	plotsolution = (x;kwargs...) -> (plot!(x, subplot = 4, ylabel = "solution", label = "")))
 ###################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
@@ -126,7 +133,7 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 					0.01, plot = true,
 					optcontfold)
 ###################################################################################################
-# GMRES example
+# Matrix Free example
 function dF_chan(x, dx, α, β = 0.)
 	out = similar(x)
 	n = length(x)
@@ -145,3 +152,47 @@ ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 		x -> (dx -> dF_chan(x, dx, a, 0.01)),
 		sol,
 		opt_newton_mf)
+
+opts_cont_mf  = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40, newtonOptions = opt_newton_mf)
+	opts_cont_mf.newtonOptions.maxIter = 70
+	opts_cont_mf.newtonOptions.tol = 1e-8
+	opts_cont_mf.maxSteps = 150
+
+	brmf, u1 = @time Cont.continuation(
+		(x, p) -> F_chan(x, p, 0.01),
+		(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+		out, a, opts_cont_mf,
+		# linearalgo = Cont.MatrixFreeBLS(),
+		)
+
+plotBranch(brmf,color=:red)
+
+# matrix free with different tangent predictor
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = BorderedPred(),
+	# linearalgo = Cont.MatrixFreeBLS(),
+	)
+
+plotBranch(brmf,color=:blue)
+
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = SecantPred(),
+	linearalgo = Cont.MatrixFreeBLS()
+	)
+
+plotBranch(brmf,color=:green)
+
+brmf, u1 = @time Cont.continuation(
+	(x, p) -> F_chan(x, p, 0.01),
+	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+	out, a, opts_cont_mf,
+	tangentalgo = BorderedPred(),
+	linearalgo = Cont.MatrixFreeBLS())
+
+plotBranch(brmf,color=:orange)

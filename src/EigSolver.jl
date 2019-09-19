@@ -40,11 +40,11 @@ end
 	log = true
 end
 
-function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
-	# for now, we don't have an eigensolver for non hermitian matrices
-	@assert 1==0 "Not implemented: IterativeSolvers does not have an eigensolver yet!"
-	return res[1], length(res)>1, res[2].iters
-end
+# function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
+# 	# for now, we don't have an eigensolver for non hermitian matrices
+# 	@assert 1==0 "Not implemented: IterativeSolvers does not have an eigensolver yet!"
+# 	return res[1], length(res)>1, res[2].iters
+# end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################

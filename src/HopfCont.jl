@@ -36,7 +36,7 @@ function (fp::HopfProblemMinimallyAugmented{TF, TJ, TJa, vectype, S})(x, p::T, �
 	#  								a, b,
 	# 								T(0), zero(x), n,
 	# 								fp.linsolver; shift = Complex{T}(0, ω))
-	v, σ1, _ = fp.linbdsolver(fp.J(x, p),
+	v, σ1, flag, it = fp.linbdsolver(fp.J(x, p),
 							a, b,
 							T(0), zero(x), n; shift = Complex{T}(0, ω))
 
@@ -92,10 +92,10 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	n = T(1)
 	# v, σ1, _ = linearBorderedSolver(J(x, p), a, b, T(0), zero(x), n, pbMA.linsolver; shift = Complex{T}(0, ω))
-	v, σ1, _ = pbMA.linbdsolver(J(x, p), a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
+	v, σ1, _, _ = pbMA.linbdsolver(J(x, p), a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
 
 	# w, σ2, _ = linearBorderedSolver(Jadjoint(x, p), b, a, T(0), zero(x), n, pbMA.linsolver; shift = -Complex{T}(0, ω))
-	w, σ2, _ = pbMA.linbdsolver(Jadjoint(x, p), b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
+	w, σ2, _, _ = pbMA.linbdsolver(Jadjoint(x, p), b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
 
 	################### computation of σx σp ####################
 	dpF   = (Fhandle(x, p + ϵ1)	 - Fhandle(x, p - ϵ1)) / T(2ϵ1)

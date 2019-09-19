@@ -14,6 +14,10 @@ x0 = 0.01 * ones(N)
 opts.newtonOptions.tol     = 1e-8
 opts.newtonOptions.verbose = false
 
+opts.doArcLengthScaling = true
+br0, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0) #(18.19 k allocations:
+
+opts.doArcLengthScaling = false
 br1, sol, _ = @time Cont.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0) #(18.19 k allocations: 1.222 MiB)
 show(br1)
 

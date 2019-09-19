@@ -136,7 +136,6 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 		# Update solution: x .= x .- d
 		minus!(x, d)
 
-
 		copyto!(f, Fhandle(x))
 		res = normN(f)
 
@@ -199,7 +198,7 @@ function newtonPseudoArcLength(F, Jh,
 						tau0::BorderedArray{vectype, T},
 						z_pred::BorderedArray{vectype, T},
 						options::ContinuationPar{T};
-						linearalgo = MatrixFreeLBS(),
+						linearbdalgo = BorderingBLS(),
 						normN = norm) where {T, vectype}
 	# Extract parameters
 	newtonOpts = options.newtonOptions
@@ -238,12 +237,7 @@ function newtonPseudoArcLength(F, Jh,
 		copyto!(dFdl, F(x, l + finDiffEps)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
 
 		J = Jh(x, l)
-		u, up, liniter = linearalgo(J, dFdl,
-						tau0, res_f, res_n, theta)
-		# u, up, liniter = linearBorderedSolver(J, dFdl,
-		# 				tau0, res_f, res_n, theta,
-		# 				newtonOpts.linsolver,
-		# 				algo = linearalgo)
+		u, up, flag, liniter = linearbdalgo(J, dFdl, tau0, res_f, res_n, theta)
 
 		if linesearch
 			step_ok = false
