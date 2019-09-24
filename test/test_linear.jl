@@ -31,22 +31,45 @@ mul!(z3, z3, 1.0)
 ####################################################################################################
 # test the bordered linear solvers
 println("--> Test linear Bordered solver")
-J0 = rand(10,10) * 0.1 + I
-rhs = rand(10)
+J0 = rand(100,100) * 0.9 - I
+rhs = rand(100)
 sol_explicit = J0 \ rhs
 
 linBdsolver = Cont.BorderingBLS(Default())
-sol_bd1, sol_bd2, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
-@test sol_explicit[1:end-1] ≈ sol_bd1
+sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd1u
+@test sol_explicit[end] ≈ sol_bd1p
 
-ls = GMRES_KrylovKit{Float64}(rtol = 1e-9, dim = 9, verbose = 2)
+ls = GMRES_IterativeSolvers{Float64}(tol = 1e-9, N = length(rhs)-1)
+linBdsolver = Cont.BorderingBLS(ls)
+sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd2u
+@test sol_explicit[end] ≈ sol_bd2p
+
+ls = GMRES_KrylovKit{Float64}(dim = length(rhs)-1)
+linBdsolver = Cont.BorderingBLS(ls)
+sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd2u
+@test sol_explicit[end] ≈ sol_bd2p
+
+
 linBdsolver = Cont.MatrixFreeBLS(ls)
-sol_bd_2, _, cv, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
-@test cv
-@test sol_bd_2 ≈ sol_explicit[1:end-1]
+sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd3u
+@test sol_explicit[end] ≈ sol_bd3p
 
-@test sol_explicit[1:end-1] ≈ sol_bd1
-@test sol_explicit[end] ≈ sol_bd2
+# test the bordered linear solvers as used in newtonPseudoArcLength
+xiu = rand()
+xip = rand()
+
+linBdsolver = Cont.BorderingBLS(Default())
+sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], xiu, xip)
+
+linBdsolver = Cont.MatrixFreeBLS(ls)
+sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], xiu, xip)
+
+@test sol_bd1u ≈ sol_bd2u
+@test sol_bd1p ≈ sol_bd2p
 ####################################################################################################
 # test the linear solvers for matrix free formulations
 J0 = I + sprand(100,100,0.1)

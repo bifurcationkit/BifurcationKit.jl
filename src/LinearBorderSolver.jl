@@ -94,7 +94,7 @@ function (lbs::MatrixFreeBLS{S})(J, dR::vectype,
 					R, n::T,
 					xiu::T = T(1), xip::T = T(1); shift::Ts = 0) where {T <: Number, vectype, S <: GMRES_KrylovKit, Ts <: Number}
 	linearmap = MatrixFreeBLSmap(J, dR, dzu * xiu, dzp * xip)
-	rhs = BorderedArray(R, n)
+	rhs = BorderedArray(copy(R), n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return sol.u, sol.p, cv, it
 end
