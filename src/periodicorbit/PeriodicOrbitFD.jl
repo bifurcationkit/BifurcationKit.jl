@@ -24,12 +24,12 @@ where `h = T/M`. Finally, the phase of the periodic orbit is constraint by
  ``\\langle x[1] - x\\pi, \\phi\\rangle.``
 
 """
-@with_kw struct PeriodicOrbitTrap{vectype, S <: AbstractLinearSolver} <: PeriodicOrbit
+@with_kw struct PeriodicOrbitTrap{TF, TJ, vectype, S <: AbstractLinearSolver} <: PeriodicOrbit
 	# Function F(x, p) = 0
-	F::Function
+	F::TF
 
 	# Jacobian of F wrt x
-	J::Function
+	J::TJ
 
 	# variables to define a Poincare Section
 	ϕ::vectype
@@ -44,7 +44,7 @@ end
 """
 This encodes the previous functional for finding periodic orbits based on finite differences using the Trapezoidal rule
 """
-function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype) where {vectype <: AbstractVector, S}
+function (poPb::PeriodicOrbitTrap{TF, TJ, vectype, S})(u0::vectype) where {TF, TJ, vectype <: AbstractVector, S}
 	M = poPb.M
 	N = div(length(u0) - 1, M)
 	T = u0[end]
@@ -66,7 +66,7 @@ end
 """
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
-function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, du) where {vectype, S}
+function (poPb::PeriodicOrbitTrap{TF, TJ, vectype, S})(u0::vectype, du) where {TF, TJ, vectype, S}
 	M = poPb.M
 	N = div(length(u0) - 1, M)
 	T = u0[end]
@@ -92,7 +92,7 @@ end
 """
 Sparse Matrix expression expression of the Jacobian for the periodic problem computed at the space-time guess: `u0`
 """
-function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{vectype, S}, u0::vectype, γ = 1.0) where {vectype, S}
+function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{TF, TJ, vectype, S}, u0::vectype, γ = 1.0) where {TF, TJ, vectype, S}
 	# extraction of various constants
 	M = poPb.M
 	N = div(length(u0) - 1, M)
@@ -140,7 +140,7 @@ function blockToSparse(J::AbstractBlockArray)
 	return res
 end
 
-function (poPb::PeriodicOrbitTrap{vectype, S})(u0::vectype, tp::Symbol = :jacsparse) where {vectype, S}
+function (poPb::PeriodicOrbitTrap{TF, TJ, vectype, S})(u0::vectype, tp::Symbol = :jacsparse) where {TF, TJ, vectype, S}
 	# extraction of various constants
 	M = poPb.M
 	N = div(length(u0) - 1, M)
