@@ -240,16 +240,16 @@ end
 """
 Compute Jacobian by Finite Differences
 """
-function finiteDifferences(F, x::AbstractVector)
+function finiteDifferences(F, x::AbstractVector; δ = 1e-9)
 	f = F(x)
-	epsi = 1e-9
 	N = length(x)
 	J = zeros(eltype(f), N, N)
-	x1 = copy(x)
+
+	Δx = zeros(N)
 	for i=1:N
-		x1[i] += epsi
-		J[:, i] .= (F(x1) .- F(x)) / epsi
-		x1[i] -= epsi
+		Δx[i] += δ
+		J[:, i] .= (F(x.+Δx) .- F(x)) / δ
+		Δx[i] -= δ
 	end
 	return J
 end
