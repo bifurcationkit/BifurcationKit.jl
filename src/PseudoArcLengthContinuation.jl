@@ -1,14 +1,14 @@
 module PseudoArcLengthContinuation
 	using Parameters, Plots, JLD2, Printf, Dates, LinearMaps, Setfield, BlockArrays
 
-	include("predictor.jl")
+	include("Predictor.jl")
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
 	include("BorderedArrays.jl")
 	include("LinearBorderSolver.jl")
 	include("DeflationOperator.jl")
 	include("Newton.jl")
-	include("utils.jl")
+	include("Utils.jl")
 	include("FoldCont.jl")
 	include("HopfCont.jl")
 	include("periodicorbit/PeriodicOrbit.jl")

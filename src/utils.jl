@@ -244,7 +244,7 @@ function finiteDifferences(F, x::AbstractVector)
 	f = F(x)
 	epsi = 1e-9
 	N = length(x)
-	J = zeros(N, N)
+	J = zeros(eltype(f), N, N)
 	x1 = copy(x)
 	for i=1:N
 		x1[i] += epsi
