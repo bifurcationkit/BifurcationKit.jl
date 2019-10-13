@@ -12,15 +12,15 @@ abstract type AbstractLinearSolver end
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-struct Default <: AbstractLinearSolver end
+struct DefaultLS <: AbstractLinearSolver end
 
-function (l::Default)(J, rhs)
+function (l::DefaultLS)(J, rhs)
 	return J \ rhs, true, 1
 end
 
 # this function is used to solve (J + shift I) * x = rhs
 # this is only used for the Hopf Newton / Continuation
-function (l::Default)(J, rhs, shift::R) where {R <: Number}
+function (l::DefaultLS)(J, rhs, shift::R) where {R <: Number}
 	if shift == R(0)
 		return J \ rhs, true, 1
 	else

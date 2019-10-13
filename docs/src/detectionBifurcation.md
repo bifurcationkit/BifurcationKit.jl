@@ -6,7 +6,7 @@ Depending on the bifurcation type, detection is ensured during a call to `br, _ 
 
 The user must provide an eigensolver by setting `NewtonOptions.eigsolve` where `NewtonOptions` is located in the parameter `::ContinuationPar` passed to continuation. See `src/Newton.jl` for more information on the structure of the options passed to `newton` and `continuation`.
 
-The eigensolver is highly problem dependent and this is why the user should implement / parametrize its own eigensolver through the abstract type `EigenSolver` or select one among the provided like `Default_eig(), eig_IterativeSolvers(), eig_KrylovKit`. See `src/EigSolver.jl`.
+The eigensolver is highly problem dependent and this is why the user should implement / parametrize its own eigensolver through the abstract type `AbstractEigenSolver` or select one among the provided like `DefaultEig(), eig_IterativeSolvers(), eig_KrylovKit`. See `src/EigSolver.jl`.
 
 ## Fold bifurcation
 The detection of **Fold** point is done by monitoring  the monotonicity of the parameter.

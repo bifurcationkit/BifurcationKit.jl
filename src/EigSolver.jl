@@ -1,19 +1,19 @@
 using IterativeSolvers, KrylovKit, Parameters, Arpack, LinearAlgebra
 # In this file, we regroud a way to provide eigen solvers
 
-abstract type EigenSolver end
+abstract type AbstractEigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
-getEigenVector(eigsolve::ES, vecs, n::Int) where {ES <: EigenSolver} = vecs[:, n]
+getEigenVector(eigsolve::ES, vecs, n::Int) where {ES <: AbstractEigenSolver} = vecs[:, n]
 ####################################################################################################
 # Solvers for default \ operator (backslash)
 ####################################################################################################
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-struct Default_eig <: EigenSolver end
+struct DefaultEig <: AbstractEigenSolver end
 
-function (l::Default_eig)(J, nev::Int64)
+function (l::DefaultEig)(J, nev::Int64)
 	# I put Array so we can call it on small sparse matrices
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = x-> real(x), rev = true)
@@ -22,16 +22,16 @@ function (l::Default_eig)(J, nev::Int64)
 end
 
 # case of sparse matrices
-struct Default_eig_sp <: EigenSolver end
+struct DefaultEigSparse <: AbstractEigenSolver end
 
-function (l::Default_eig_sp)(J, nev::Int64)
+function (l::DefaultEigSparse)(J, nev::Int64)
 	λ, ϕ = Arpack.eigs(J, nev = nev, which = :LR)
 	return λ, ϕ, 1
 end
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
-@with_kw struct eig_IterativeSolvers{T} <: EigenSolver
+@with_kw struct eig_IterativeSolvers{T} <: AbstractEigenSolver
 	tol::T = T(1e-4)		# tolerance for solver
 	restart::Int64 = 200	# number of restarts
 	maxiter::Int64 = 100
@@ -48,7 +48,7 @@ end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
-@with_kw struct eig_KrylovKit{T} <: EigenSolver
+@with_kw struct eig_KrylovKit{T} <: AbstractEigenSolver
 	dim::Int64 = KrylovDefaults.krylovdim	# Krylov Dimension
 	tol::T = T(1e-4)						# tolerance for solver
 	restart::Int64 = 200					# number of restarts
@@ -66,7 +66,7 @@ end
 getEigenVector(eigsolve::eig_KrylovKit{T}, vecs, n::Int) where T = vecs[n]
 
 # Matrix-Free version, needs to specify an example of rhs x₀
-@with_kw struct eig_MF_KrylovKit{T, vectype} <: EigenSolver
+@with_kw struct eig_MF_KrylovKit{T, vectype} <: AbstractEigenSolver
 	dim::Int64 = KrylovDefaults.krylovdim		# Krylov Dimension
 	tol::T = T(1e-4)							# tolerance for solver
 	restart::Int64 = 200						# number of restarts

@@ -169,7 +169,7 @@ end
 # we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 # and pass it to the newton parameters
-opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
 # we can then call the newton solver
 out_mf, hist, flag = @time Cont.newton(
 	x -> F_chan(x, a, 0.01),

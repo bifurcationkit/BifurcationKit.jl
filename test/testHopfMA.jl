@@ -231,7 +231,7 @@ outhopf, hist, flag = @time Cont.newtonHopf(
 
 outhopf, _, flag, _ = @time Cont.newton(u -> hopfvariable(b)(u),
 							x -> Jac_hopf_MA(x, hopfvariable(b)),
-							hopfpt, NewtonPar(verbose = true, linsolver = HopfLinearSolveMinAug(), eigsolver = Default_eig()))
+							hopfpt, NewtonPar(verbose = true, linsolver = HopfLinearSolveMinAug(), eigsolver = DefaultEig()))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], " from ", hopfpt.p, "\n")
 
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
@@ -335,7 +335,7 @@ poShoot = l-> ShootingProblemTrap(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			Default(),
+			DefaultLS(),
 			NewtonPar())
 orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
 poShoot(l_hopf + 0.01)(orbitguess_f)
@@ -348,7 +348,7 @@ poShoot = l-> ShootingProblemBE(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			Default(),
+			DefaultLS(),
 			NewtonPar())
 orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
 poShoot(l_hopf + 0.01)(orbitguess_f)
@@ -361,7 +361,7 @@ poShoot = l-> ShootingProblemMid(
 			real.(vec_hopf),
 			hopfpt.u,
 			M,
-			Default(),
+			DefaultLS(),
 			NewtonPar())
 orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
 poShoot(l_hopf + 0.01)(orbitguess_f)

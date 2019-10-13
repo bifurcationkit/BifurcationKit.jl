@@ -176,7 +176,7 @@ plot([0, 1], [0, 0])
 	# br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
 	for ii=1:M
 	t = (ii-1)/(M-1)
-	# use phase 0.279 for default_eig()
+	# use phase 0.279 for DefaultEig()
 	orbitguess[:, ii] .= real.(hopfpt.u +
 						26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - .235))) #k=1
 	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))

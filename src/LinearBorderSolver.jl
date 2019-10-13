@@ -7,7 +7,7 @@ struct BorderingBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
 end
 
 # dummy constructor to simplify user passing options to continuation
-BorderingBLS() = BorderingBLS(Default())
+BorderingBLS() = BorderingBLS(DefaultLS())
 
 # solve in dX, dl
 #          J  * dX +       dR   * dl = R
@@ -42,7 +42,7 @@ struct MatrixBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixBLS() = MatrixBLS(Default())
+MatrixBLS() = MatrixBLS(DefaultLS())
 
 function (lbs::MatrixBLS)(J, dR, dzu, dzp::T, R::vectype, n::T, xiu::T = T(1), xip::T = T(1); shift::Ts = 0)  where {T, vectype <: AbstractVector, S, Ts <: Number}
 	N = length(dzu)
@@ -84,7 +84,7 @@ struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
 	solver::S
 end
 
-MatrixFreeBLS() = MatrixFreeBLS(Default())
+MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
 
 # dummy constructor to simplify user passing options to continuation
 # We restrict to bordered systems where the added component is scalar
