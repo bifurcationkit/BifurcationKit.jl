@@ -146,7 +146,7 @@ function dF_chan(x, dx, α, β = 0.)
 end
 
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
+	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
 	out_mf, hist, flag = @time Cont.newton(
 		x -> F_chan(x, a, 0.01),
 		x -> (dx -> dF_chan(x, dx, a, 0.01)),

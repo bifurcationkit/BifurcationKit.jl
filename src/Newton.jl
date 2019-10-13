@@ -1,12 +1,12 @@
-@with_kw mutable struct NewtonPar{T, S <: AbstractLinearSolver, E <: EigenSolver}
+@with_kw mutable struct NewtonPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	tol::T			 = 1e-10
 	maxIter::Int  	 = 50
 	alpha::T         = 1.0        # damping
 	almin::T         = 0.001      # minimal damping
 	verbose          = false
 	linesearch       = false
-	linsolver::S 	 = Default()
-	eigsolver::E 	 = Default_eig()
+	linsolver::S 	 = DefaultLS()
+	eigsolver::E 	 = DefaultEig()
 end
 
 # this function is used to simplify calls to NewtonPar
@@ -14,17 +14,17 @@ function NewtonPar(; kwargs...)
 	if haskey(kwargs, :linsolver)
 		tls = typeof(kwargs[:linsolver])
 	else
-		tls = typeof(Default())
+		tls = typeof(DefaultLS())
 	end
 	if haskey(kwargs, :eigsolver)
 		tes = typeof(kwargs[:eigsolver])
 	else
-		tes = typeof(Default_eig())
+		tes = typeof(DefaultEig())
 	end
 	return NewtonPar{Float64, tls, tes}(;kwargs...)
 end
 
-@with_kw mutable struct ContinuationPar{T, S <: AbstractLinearSolver, E <: EigenSolver}
+@with_kw mutable struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	# parameters for arclength continuation
 	s0::T		= 0.01
 	dsmin::T	= 0.001
@@ -89,7 +89,7 @@ function ContinuationPar(; kwargs...)
 		on = kwargs[:newtonOptions]
 		ContinuationPar{Float64, typeof(on.linsolver), typeof(on.eigsolver)}(;kwargs...)
 	else
-		ContinuationPar{Float64, typeof(Default()), typeof(Default_eig())}(;kwargs...)
+		ContinuationPar{Float64, typeof(DefaultLS()), typeof(DefaultEig())}(;kwargs...)
 	end
 end
 ####################################################################################################

@@ -1,14 +1,14 @@
 module PseudoArcLengthContinuation
 	using Parameters, Plots, JLD2, Printf, Dates, LinearMaps, Setfield, BlockArrays
 
-	include("predictor.jl")
+	include("Predictor.jl")
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
 	include("BorderedArrays.jl")
 	include("LinearBorderSolver.jl")
 	include("DeflationOperator.jl")
 	include("Newton.jl")
-	include("utils.jl")
+	include("Utils.jl")
 	include("FoldCont.jl")
 	include("HopfCont.jl")
 	include("periodicorbit/PeriodicOrbit.jl")
@@ -18,12 +18,12 @@ module PseudoArcLengthContinuation
 	export	MatrixBLS, BorderingBLS, MatrixFreeBLS
 	export	NewtonPar, newton, newtonDeflated, newtonPArcLength, newtonFold, newtonHopf
 	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
-	export	Default, GMRES_IterativeSolvers, GMRES_KrylovKit,
-			Default_eig, Default_eig_sp, eig_IterativeSolvers, eig_KrylovKit, eig_MF_KrylovKit, getEigenVector
+	export	DefaultLS, GMRES_IterativeSolvers, GMRES_KrylovKit,
+			DefaultEig, DefaultEigSparse, eig_IterativeSolvers, eig_KrylovKit, eig_MF_KrylovKit, getEigenVector
 	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 	export	ShootingProblemTrap, ShootingProblemBE, ShootingProblemMid, PeriodicOrbitLinearSolverMid, PeriodicOrbitTrap
-	export plotBranch, plotBranch!
+	export	plotBranch, plotBranch!
 
 
 	################################################################################################
@@ -36,7 +36,7 @@ module PseudoArcLengthContinuation
 	- `u0` initial guess
 	- `contParams` parameters for continuation, with struct `ContinuationPar`
 	- `plot = false` whether to plot the solution while computing
-	- `printsolution::Function = norm` function used to plot in the continuation curve, e.g. `norm` or `x -> x[1]`
+	- `printsolution::Function = norm` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons for example (on GPU...).
 	- `plotsolution::Function = (x; kwargs...) -> nothing` function implementing the plot of the solution.
 	- `finaliseSolution::Function = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting...
 	- `tangentalgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
@@ -90,7 +90,7 @@ module PseudoArcLengthContinuation
 						normC = norm,
 						plotsolution = (x;kwargs...) -> nothing,
 						finaliseSolution = (z, tau, step, contResult) -> true,
-						verbosity = 0) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
+						verbosity = 0) where {T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 		################################################################################################
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
 
@@ -181,7 +181,7 @@ module PseudoArcLengthContinuation
 				# Detection of codim 1 bifurcation points
 				# This should be there before the old z is re-written
 				if contParams.detect_fold || contParams.detect_bifurcation
-					detectBifucation(contParams, contRes, z_old, tau_old, printsolution, verbosity)
+					detectBifucation(contParams, contRes, z_old, tau_old, normC, verbosity)
 				end
 
 				copyto!(z_old, z_new)
@@ -220,5 +220,5 @@ module PseudoArcLengthContinuation
 		return contRes, z_old, tau_old
 	end
 
-	continuation(Fhandle::Function, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: AbstractLinearSolver, E <: EigenSolver} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
+	continuation(Fhandle::Function, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S <: AbstractLinearSolver, E <: AbstractEigenSolver} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
 end

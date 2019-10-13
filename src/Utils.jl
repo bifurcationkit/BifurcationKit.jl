@@ -3,14 +3,14 @@ import Base: show
 ####################################################################################################
 # Structure to hold result
 @with_kw struct ContResult{T, vectype, eigenvectype, biftype}
-	# this vector is used to hold (param, printsolution(u), Newton iterations, ds)
+	# this vector is used to hold (param, normC(u), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}} = VectorOfArray([zeros(T, 4)])
 
 	# the following holds the eigen elements at the index of the point along the curve. This index is the last element of eig[1] (for example). Recording this index is useful for storing only some eigenelements and not all of them along the curve
 	eig::Vector{Tuple{Array{Complex{T}, 1}, eigenvectype, Int64}}
 
 	# the following holds information about the detected bifurcation points like
-	# [(:none, step, printsolution(u), u, tau, eigenvalue_index)] where tau is the tangent along the curve and eigenvalue_index is the index of the eigenvalue in eig (see above) which change stability
+	# [(:none, step, normC(u), u, tau, eigenvalue_index)] where tau is the tangent along the curve and eigenvalue_index is the index of the eigenvalue in eig (see above) which change stability
 	bifpoint::Vector{biftype}
 
 	# whether the associated point is linearly stable
@@ -138,7 +138,7 @@ function normalize(x)
 	return out
 end
 
-function detectBifucation(contparams, contResult, z, tau, printsolution, verbosity)
+function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
 	branch = contResult.branch
 
 	# Fold point detection based on continuation parameter monotony
@@ -147,7 +147,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 		push!(contResult.bifpoint, (type = :fold,
 							idx = length(branch)-1,
 							param = branch[1, end-1],
-							norm = norm(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
+							norm = normC(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
 	end
 	if contparams.detect_bifurcation == false
 		return
@@ -173,7 +173,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 			push!(contResult.bifpoint, (type = :bp,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = norm(z.u),
+					norm = normC(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
@@ -181,13 +181,13 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 				push!(contResult.bifpoint, (type = :hopf,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = norm(z.u),
+					norm = normC(z.u),
 					u = copy(z.u), tau = zero(tau.u), ind_bif = ind_bif))
 			else
 				push!(contResult.bifpoint, (type = :bp,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = norm(z.u),
+					norm = normC(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = n_unstable))
 			end
@@ -195,7 +195,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 			push!(contResult.bifpoint, (type = :nd,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = norm(z.u),
+					norm = normC(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		end

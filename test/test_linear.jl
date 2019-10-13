@@ -35,7 +35,7 @@ J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
 sol_explicit = J0 \ rhs
 
-linBdsolver = Cont.BorderingBLS(Default())
+linBdsolver = Cont.BorderingBLS(DefaultLS())
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
@@ -62,7 +62,7 @@ sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 xiu = rand()
 xip = rand()
 
-linBdsolver = Cont.BorderingBLS(Default())
+linBdsolver = Cont.BorderingBLS(DefaultLS())
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], xiu, xip)
 
 linBdsolver = Cont.MatrixFreeBLS(ls)
@@ -75,7 +75,7 @@ sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 J0 = I + sprand(100,100,0.1)
 Jmf = x -> J0*x
 x0 = rand(100)
-ls = Default()
+ls = DefaultLS()
 out = ls(J0, x0)
 
 ls = GMRES_KrylovKit{Float64}(rtol = 1e-9, dim = 100)
@@ -100,6 +100,6 @@ eil = Cont.eig_MF_KrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
 getEigenVector(eil, outkkmf[2], 2)
 
-eil = Cont.Default_eig_sp()
+eil = Cont.DefaultEigSparse()
 outdefault = eil(J0, 20)
 @test out[1] ≈ outdefault[1]
