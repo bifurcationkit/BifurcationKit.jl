@@ -86,11 +86,11 @@ module PseudoArcLengthContinuation
 						tangentalgo = SecantPred(),
 						linearalgo  = BorderingBLS(),
 						plot = false,
-						printsolution = norm,
+						printsolution = u -> u,
 						normC = norm,
 						plotsolution = (x;kwargs...) -> nothing,
 						finaliseSolution = (z, tau, step, contResult) -> true,
-						verbosity = 2) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
+						verbosity = 0) where {T, S <: AbstractLinearSolver, E <: EigenSolver}
 		################################################################################################
 		(verbosity > 0) && printstyled("#"^50*"\n*********** ArcLengthContinuationNewton *************\n\n", bold = true, color = :red)
 
