@@ -147,7 +147,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 		push!(contResult.bifpoint, (type = :fold,
 							idx = length(branch)-1,
 							param = branch[1, end-1],
-							norm = printsolution(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
+							norm = norm(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
 	end
 	if contparams.detect_bifurcation == false
 		return
@@ -173,7 +173,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 			push!(contResult.bifpoint, (type = :bp,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = printsolution(z.u),
+					norm = norm(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
@@ -181,13 +181,13 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 				push!(contResult.bifpoint, (type = :hopf,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = printsolution(z.u),
+					norm = norm(z.u),
 					u = copy(z.u), tau = zero(tau.u), ind_bif = ind_bif))
 			else
 				push!(contResult.bifpoint, (type = :bp,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = printsolution(z.u),
+					norm = norm(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = n_unstable))
 			end
@@ -195,7 +195,7 @@ function detectBifucation(contparams, contResult, z, tau, printsolution, verbosi
 			push!(contResult.bifpoint, (type = :nd,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
-					norm = printsolution(z.u),
+					norm = norm(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		end
