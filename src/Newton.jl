@@ -113,9 +113,7 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialise iterations
-	x = zeros(T,length(x0))
-	x .= copy(x0)
-
+	x = copy(x0)
 	f = Fhandle(x)
 	d = copy(f)
 
