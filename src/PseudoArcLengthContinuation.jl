@@ -137,6 +137,7 @@ module PseudoArcLengthContinuation
 		# duds = (u_pred - u0) / (contParams.ds / T(50));
 		dpds = T(1)
 		α = normtheta(duds, dpds, contParams.theta)
+		@assert typeof(α) == T
 		@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
 		rmul!(duds, T(1) / α); dpds = dpds / α
 		# Initialise continuation

@@ -244,12 +244,11 @@ function finiteDifferences(F, x::AbstractVector; δ = 1e-9)
 	f = F(x)
 	N = length(x)
 	J = zeros(eltype(f), N, N)
-
-	Δx = zeros(N)
+	x1 = copy(x)
 	for i=1:N
-		Δx[i] += δ
-		J[:, i] .= (F(x.+Δx) .- F(x)) / δ
-		Δx[i] -= δ
+		x1[i] += δ
+		J[:, i] .= (F(x1) .- F(x)) / δ
+		x1[i] -= δ
 	end
 	return J
 end
