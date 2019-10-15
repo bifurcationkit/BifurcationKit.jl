@@ -81,7 +81,7 @@ module PseudoArcLengthContinuation
 	function continuation(Fhandle,
 						Jhandle,
 						u0,
-						p0,
+						p0::T,
 						contParams::ContinuationPar{T, S, E};
 						tangentalgo = SecantPred(),
 						linearalgo  = BorderingBLS(),
