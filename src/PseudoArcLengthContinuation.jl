@@ -182,7 +182,7 @@ module PseudoArcLengthContinuation
 				# Detection of codim 1 bifurcation points
 				# This should be there before the old z is re-written
 				if contParams.detect_fold || contParams.detect_bifurcation
-					detectBifucation(contParams, contRes, z_old, tau_old, normC, verbosity)
+					detectBifucation(contParams, contRes, z_old, tau_old, normC, printsolution, verbosity)
 				end
 
 				copyto!(z_old, z_new)

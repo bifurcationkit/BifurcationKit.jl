@@ -2,16 +2,16 @@ using RecursiveArrayTools # for bifurcation point handling
 import Base: show
 ####################################################################################################
 # Structure to hold result
-@with_kw struct ContResult{T, vectype, eigenvectype, biftype}
+@with_kw struct ContResult{T, Vectype, Eigenvectype, Biftype}
 	# this vector is used to hold (param, normC(u), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}} = VectorOfArray([zeros(T, 4)])
 
 	# the following holds the eigen elements at the index of the point along the curve. This index is the last element of eig[1] (for example). Recording this index is useful for storing only some eigenelements and not all of them along the curve
-	eig::Vector{Tuple{Array{Complex{T}, 1}, eigenvectype, Int64}}
+	eig::Vector{Tuple{Array{Complex{T}, 1}, Eigenvectype, Int64}}
 
 	# the following holds information about the detected bifurcation points like
 	# [(:none, step, normC(u), u, tau, eigenvalue_index)] where tau is the tangent along the curve and eigenvalue_index is the index of the eigenvalue in eig (see above) which change stability
-	bifpoint::Vector{biftype}
+	bifpoint::Vector{Biftype}
 
 	# whether the associated point is linearly stable
 	stability::Vector{Bool} = [false]
@@ -64,7 +64,9 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>1
-		scatter!(map(x->x[2],contres.bifpoint[2:end]), map(x->x[4],contres.bifpoint[2:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3) |> display
+		scatter!(map(x -> x.idx, contres.bifpoint[2:end]),
+				 map(x -> x.printsol ,contres.bifpoint[2:end]),
+				label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3) |> display
 	end
 
 	if contparms.computeEigenValues
@@ -111,10 +113,10 @@ function plotBranch!(contres; kwargs...)
 		plot!(branch[1, :], branch[2, :]; kwargs...)
 	end
 	# add the bifurcation points along the branch
-	if length(contres.bifpoint)>=1
+	if length(contres.bifpoint) >= 1
 		id = 1
-		contres.bifpoint[1][1] == :none ? id = 2 : id = 1
-		scatter!(map(x->x[3],contres.bifpoint[id:end]), map(x->x[4],contres.bifpoint[id:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
+		contres.bifpoint[1].type == :none ? id = 2 : id = 1
+		scatter!(map(x -> x.param, contres.bifpoint[id:end]), map(x -> x.printsol, contres.bifpoint[id:end]), label="", color = map(x->colorbif[x.type], contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
 	end
 end
 ####################################################################################################
@@ -138,7 +140,7 @@ function normalize(x)
 	return out
 end
 
-function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
+function detectBifucation(contparams, contResult, z, tau, normC, printsolution, verbosity)
 	branch = contResult.branch
 
 	# Fold point detection based on continuation parameter monotony
@@ -147,7 +149,9 @@ function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
 		push!(contResult.bifpoint, (type = :fold,
 							idx = length(branch)-1,
 							param = branch[1, end-1],
-							norm = normC(z.u), u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
+							norm = normC(z.u),
+							printsol = printsolution(z.u),
+							u = copy(z.u), tau = normalize(tau.u), ind_bif = 0))
 	end
 	if contparams.detect_bifurcation == false
 		return
@@ -174,6 +178,7 @@ function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
+					printsol = printsolution(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
@@ -182,12 +187,15 @@ function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
-					u = copy(z.u), tau = zero(tau.u), ind_bif = ind_bif))
+					printsol = printsolution(z.u),
+					u = copy(z.u),
+					tau = zero(tau.u), ind_bif = ind_bif))
 			else
 				push!(contResult.bifpoint, (type = :bp,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
+					printsol = printsolution(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = n_unstable))
 			end
@@ -196,6 +204,7 @@ function detectBifucation(contparams, contResult, z, tau, normC, verbosity)
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
+					printsol = printsolution(z.u),
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
 		end
@@ -207,7 +216,7 @@ This function is used to initialize the struct `br` according to the options pas
 """
 function initContRes(br, u0, evsol, contParams::ContinuationPar)
 	T = eltype(br)
-	bif0 = (type = :none, idx = 0, param = T(0.), norm  = T(0.), u = u0, tau = u0, ind_bif = 0)
+	bif0 = (type = :none, idx = 0, param = T(0.), norm  = T(0.), printsol = T(0.), u = u0, tau = u0, ind_bif = 0)
 	if contParams.computeEigenValues
 		contRes = ContResult{T, typeof(u0), typeof(evsol[2]), typeof(bif0)}(
 			branch = br,

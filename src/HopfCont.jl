@@ -7,9 +7,9 @@ function HopfPoint(br::ContResult, index::Int64)
 	@assert br.bifpoint[index][1] == :hopf "The provided index does not refer to a Hopf point"
 	bifpoint = br.bifpoint[index]
 	eigRes   = br.eig
-	p = bifpoint[3]
+	p = bifpoint.param
 	ω = abs(imag(eigRes[bifpoint[2]][1][bifpoint[end]]))
-	return BorderedArray(bifpoint[5], [p, ω] )
+	return BorderedArray(bifpoint.u, [p, ω] )
 end
 
 struct HopfProblemMinimallyAugmented{TF, TJ, TJa, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
