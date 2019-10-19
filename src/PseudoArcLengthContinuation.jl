@@ -86,7 +86,7 @@ module PseudoArcLengthContinuation
 						tangentalgo = SecantPred(),
 						linearalgo  = BorderingBLS(),
 						plot = false,
-						printsolution = u -> u,
+						printsolution = norm,
 						normC = norm,
 						plotsolution = (x;kwargs...) -> nothing,
 						finaliseSolution = (z, tau, step, contResult) -> true,
@@ -120,9 +120,9 @@ module PseudoArcLengthContinuation
 		if contParams.computeEigenValues
 			# Eigen elements computation
 			evsol =  newtonOptions.eigsolver(Jhandle(u0, p0), contParams.nev)
-			contRes = initContRes(VectorOfArray([[p0,printsolution(u0)..., it_number, contParams.ds]]), u0, evsol, contParams)
+			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, evsol, contParams)
 		else
-			contRes = initContRes(VectorOfArray([[p0,printsolution(u0)..., it_number, contParams.ds]]), u0, 0, contParams)
+			contRes = initContRes(VectorOfArray([vcat(p0, printsolution(u0), it_number, contParams.ds)]), u0, 0, contParams)
 		end
 
 		(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
@@ -177,7 +177,7 @@ module PseudoArcLengthContinuation
 				getTangent!(tau_new, z_new, z_old, tau_old, Fhandle, Jhandle, contParams, tangentalgo, verbosity, linearalgo)
 
 				# Output
-				push!(contRes.branch, [z_new.p,printsolution(z_new.u)..., it_number, contParams.ds])
+				push!(contRes.branch, vcat(z_new.p, printsolution(z_new.u), it_number, contParams.ds))
 
 				# Detection of codim 1 bifurcation points
 				# This should be there before the old z is re-written

@@ -32,7 +32,7 @@ function (poPb::ShootingProblemMid{vectype, S, N})(u0::vectype) where {vectype, 
 
 	x0 = copy(u)
 	xnew  = Flow(Fper, dFper, x0, poPb.M, poPb.options_newton)
-	return [ (xnew .- u)..., dot(poPb.ϕ, u - poPb.xπ)]
+	return vcat(xnew - u, dot(poPb.ϕ, u - poPb.xπ))
 end
 
 struct PeriodicOrbitLinearSolverMid <: AbstractLinearSolver end
@@ -154,7 +154,7 @@ function (poPb::ShootingProblemTrap{vectype, S, N})(u0::vectype) where {vectype,
 
 	x0 = copy(u)
 	xnew  = Flow(Fper, dFper, x0, poPb.M, poPb.options_newton)
-	return [ (x0 .- u)..., dot(x0 - poPb.xπ, poPb.ϕ)]
+	return vcat(x0 - u, dot(x0 - poPb.xπ, poPb.ϕ))
 end
 
 ####################################################################################################
@@ -190,5 +190,5 @@ function (poPb::ShootingProblemBE{vectype, S, N})(u0::vectype) where {vectype, S
 
 	x0 = copy(u)
 	xnew  = Flow(Fper, dFper, x0, poPb.M, poPb.options_newton)
-	return [ (x0 .- u)..., dot(x0 - poPb.xπ, poPb.ϕ)]
+	return vcat(x0 - u, dot(x0 - poPb.xπ, poPb.ϕ))
 end
