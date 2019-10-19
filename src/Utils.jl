@@ -64,7 +64,7 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>1
-		scatter!(map(x->x[2],contres.bifpoint[2:end]), map(x->x[4],contres.bifpoint[2:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3) |> display
+		scatter!(map(x->x[2],contres.bifpoint[2:end]), map(x->x[4],contres.bifpoint[2:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3)
 	end
 
 	if contparms.computeEigenValues
@@ -94,7 +94,7 @@ function plotBranch(brs::Vector; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
 	plotBranch(brs[1]; kwargs...)
 	for ii=2:length(brs)
-		plotBranch!(brs[ii]; kwargs...) |> display
+		plotBranch!(brs[ii]; kwargs...)
 	end
 end
 
@@ -114,7 +114,7 @@ function plotBranch!(contres; kwargs...)
 	if length(contres.bifpoint)>=1
 		id = 1
 		contres.bifpoint[1][1] == :none ? id = 2 : id = 1
-		scatter!(map(x->x[3],contres.bifpoint[id:end]), map(x->x[4],contres.bifpoint[id:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
+		scatter!(map(x->x[3],contres.bifpoint[id:end]), map(x->x[4],contres.bifpoint[id:end]), label="", color = map(x->colorbif[x[1]],contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...)
 	end
 end
 ####################################################################################################
