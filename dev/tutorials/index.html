@@ -80,7 +80,7 @@ end
 # we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 # and pass it to the newton parameters
-opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
 # we can then call the newton solver
 out_mf, hist, flag = @time Cont.newton(
 	x -&gt; F_chan(x, a, 0.01),
@@ -409,10 +409,12 @@ end</code></pre><p>Then, we can call the continuation routine</p><pre><code clas
 		finaliseSolution = finalise_solution,
 		plotsolution = (x; kwargs...) -&gt; plot!(x, subplot = 4, label = &quot;l = $(length(x))&quot;),
 		normC = x -&gt; norm(x, Inf64))</code></pre><p>and you should see </p><p><img src="../chan-af-bif-diag.png" alt/></p><h2><a class="nav-anchor" id="Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1" href="#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1">Example 5: the Swift-Hohenberg equation on the GPU</a></h2><p>Here we give an example where the continuation can be done <strong>entirely</strong> on the GPU, <em>e.g.</em> on a single Tesla K80.</p><p>We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See <strong>Example 2</strong> above for more details. Solving the sparse linear problem in <span>$v$</span></p><div>\[-(I+\Delta)^2 v+(l +2\nu u-3u^2)v = rhs\]</div><p>with a <strong>direct</strong> solver becomes prohibitive. Looking for an iterative method, the conditioning of the jacobian is not good enough to have fast convergence, mainly because of the Laplacian operator. However, the above problem is equivalent to:</p><div>\[-v + L \cdot (d \cdot v) = L\cdot rhs\]</div><p>where </p><div>\[L = ((I+\Delta)^2 + I)^{-1}\]</div><p>is very well conditioned and </p><div>\[d := l+1+2\nu v-3v^2.\]</div><p>Hence, to solve the previous equation, only a <strong>few</strong> GMRES iterations are required. </p><h3><a class="nav-anchor" id="Computing-the-inverse-of-the-differential-operator-1" href="#Computing-the-inverse-of-the-differential-operator-1">Computing the inverse of the differential operator</a></h3><p>The issue now is to compute <code>L</code> but this is easy using Fourier transforms.</p><p>Hence, that&#39;s why we slightly modify the above Example 2. by considering <strong>periodic</strong> boundary conditions. Let us now show how to compute <code>L</code>. Although the code looks quite technical, it is based on two facts. First, the Fourier transform symbol associated to <code>L</code> is</p><div>\[l_1 = 1+(1-k_x^2-k_y^2)^2\]</div><p>which is pre-computed in the structure <code>SHLinearOp</code>. Then the effect of <code>L</code> on <code>u</code> is as simple as <code>real.(ifft( l1 .* fft(u) ))</code> and the inverse <code>L\u</code> is <code>real.(ifft( fft(u) ./ l1 ))</code>. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.</p><pre><code class="language-julia">using AbstractFFTs, FFTW, KrylovKit
+using PseudoArcLengthContinuation, LinearAlgebra, Plots
+const Cont = PseudoArcLengthContinuation
 
-# Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it 
+# Making the linear operator a subtype of Cont.AbstractLinearSolver is handy as we will use it 
 # in the Newton iterations.
-struct SHLinearOp &lt;: Cont.LinearSolver
+struct SHLinearOp &lt;: Cont.AbstractLinearSolver
 	tmp_real         # temporary
 	tmp_complex      # temporary
 	l1
@@ -453,12 +455,11 @@ end</code></pre><h3><a class="nav-anchor" id="LinearAlgebra-on-the-GPU-1" href="
 CuArrays.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
-mul!(x::CuArray, y::T, α::CuArray) where {T &lt;: Number} = (x .= α .* y)
+mul!(x::CuArray, α::T, y::CuArray) where {T &lt;: Number} = (x .= α .* y)
 axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)
 
 TY = Float64
-AF = CuArray{TY}</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots
-const Cont = PseudoArcLengthContinuation
+AF = CuArray{TY}</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using LinearAlgebra, Plots
 
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)&#39;, color=:viridis)
@@ -481,7 +482,7 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	</code></pre><p>Before applying a Newton solver, we need to show how to solve the linear equation arising in the Newton Algorithm.</p><pre><code class="language-julia">function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6) 
+	res, info = res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
 	return res, true, info.numops
 end</code></pre><h3><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h3><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 	sol_hexa, hist, flag = @time Cont.newton(
@@ -515,10 +516,10 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 				opt_new, deflationOp, normN = x-&gt;maximum(abs.(x)))
 		println(&quot;--&gt; norm(sol) = &quot;, norm(outdef))
 		heatmapsol(outdef) |&gt; display
-		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h3><a class="nav-anchor" id="Computation-of-the-branches-1" href="#Computation-of-the-branches-1">Computation of the branches</a></h3><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h3><a class="nav-anchor" id="Computation-of-the-branches-1" href="#Computation-of-the-branches-1">Computation of the branches</a></h3><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 15, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
 	opts_cont.newtonOptions.tol = 1e-6
 	opts_cont.newtonOptions.maxIter = 50
-	opts_cont.maxSteps = 80
+	opts_cont.maxSteps = 100
 
 	br, u1 = @time Cont.continuation(
 		(u, p) -&gt; F_shfft(u, p, 1.3, shlop = L),
@@ -527,4 +528,4 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 		-0.1,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)-&gt;heatmap!(reshape(Array(x), Nx, Ny)&#39;, color=:viridis, subplot=4),
-		printsolution = x-&gt;maximum(abs.(x)), normC = x-&gt;maximum(abs.(x)))</code></pre><p><img src="../GPUbranch.png" alt/></p><footer><hr/><a class="previous" href="../"><span class="direction">Previous</span><span class="title">Home</span></a><a class="next" href="../linearsolver/"><span class="direction">Next</span><span class="title">Linear Solvers</span></a></footer></article></body></html>
+		printsolution = x-&gt;norm(x), normC = x-&gt;maximum(abs.(x)))</code></pre><p><img src="../GPUbranch.png" alt/></p><footer><hr/><a class="previous" href="../"><span class="direction">Previous</span><span class="title">Home</span></a><a class="next" href="../linearsolver/"><span class="direction">Next</span><span class="title">Linear Solvers</span></a></footer></article></body></html>
