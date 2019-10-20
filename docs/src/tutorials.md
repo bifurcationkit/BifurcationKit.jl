@@ -169,7 +169,7 @@ end
 # we create a new linear solver
 ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
 # and pass it to the newton parameters
-opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = Default_eig())
 # we can then call the newton solver
 out_mf, hist, flag = @time Cont.newton(
 	x -> F_chan(x, a, 0.01),
@@ -813,10 +813,12 @@ which is pre-computed in the structure `SHLinearOp `. Then the effect of `L` on 
 
 ```julia
 using AbstractFFTs, FFTW, KrylovKit
+using PseudoArcLengthContinuation, LinearAlgebra, Plots
+const Cont = PseudoArcLengthContinuation
 
-# Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it 
+# Making the linear operator a subtype of Cont.AbstractLinearSolver is handy as we will use it 
 # in the Newton iterations.
-struct SHLinearOp <: Cont.LinearSolver
+struct SHLinearOp <: Cont.AbstractLinearSolver
 	tmp_real         # temporary
 	tmp_complex      # temporary
 	l1
@@ -874,7 +876,7 @@ using CuArrays
 CuArrays.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
-mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
+mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)
 axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
 TY = Float64
@@ -884,8 +886,7 @@ AF = CuArray{TY}
 We can now define our operator `L` and an initial guess `sol0`.
 
 ```julia
-using PseudoArcLengthContinuation, LinearAlgebra, Plots
-const Cont = PseudoArcLengthContinuation
+using LinearAlgebra, Plots
 
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
@@ -914,7 +915,7 @@ Before applying a Newton solver, we need to show how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6) 
+	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
 	return res, true, info.numops
 end
 ```
@@ -986,10 +987,10 @@ and get:
 Finally, we can perform continuation of the branches on the GPU:
 
 ```julia
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 15, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
 	opts_cont.newtonOptions.tol = 1e-6
 	opts_cont.newtonOptions.maxIter = 50
-	opts_cont.maxSteps = 80
+	opts_cont.maxSteps = 100
 
 	br, u1 = @time Cont.continuation(
 		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
@@ -998,7 +999,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0
 		-0.1,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)', color=:viridis, subplot=4),
-		printsolution = x->maximum(abs.(x)), normC = x->maximum(abs.(x)))
+		printsolution = x->norm(x), normC = x->maximum(abs.(x)))
 ```
 
 ![](GPUbranch.png)

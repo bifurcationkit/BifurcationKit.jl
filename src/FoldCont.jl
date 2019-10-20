@@ -3,7 +3,7 @@ using Parameters, Setfield
 function FoldPoint(br::ContResult, index::Int64)
 	@assert br.bifpoint[index][1] == :fold "The provided index does not refer to a Fold point"
 	bifpoint = br.bifpoint[index]
-	return BorderedArray(copy(bifpoint[5]), bifpoint[3])
+	return BorderedArray(copy(bifpoint.u), bifpoint.param)
 end
 
 ####################################################################################################
@@ -300,7 +300,7 @@ Simplified call for continuation of Fold point. More precisely, the call is as f
 Simplified calls are also provided but at the cost of using finite differences.
 """
 function continuationFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
-	foldpointguess = BorderedArray(br.bifpoint[ind_fold][5], br.bifpoint[ind_fold][3])
+	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt[end-1]
 	return continuationFold(F, J, Jt, d2F, foldpointguess, p2_0, eigenvec, options_cont ;d2F_is_known = true, kwargs...)
