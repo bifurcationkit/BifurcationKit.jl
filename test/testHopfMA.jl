@@ -339,7 +339,7 @@ poShoot = l-> ShootingProblemTrap(
 			NewtonPar())
 orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
 poShoot(l_hopf + 0.01)(orbitguess_f)
-poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true))
+poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true, tol = 1e-9))
 println("--> T = ", poshoot[end])
 
 poShoot = l-> ShootingProblemBE(
@@ -352,7 +352,7 @@ poShoot = l-> ShootingProblemBE(
 			NewtonPar())
 orbitguess_f = vcat(orbitguess[:,1], 2pi/ωH)
 poShoot(l_hopf + 0.01)(orbitguess_f)
-poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true))
+poshoot, _ = newton(u -> poShoot(l_hopf + 0.01)(u), orbitguess_f, NewtonPar(verbose = true, tol = 1e-9))
 println("--> T = ", poshoot[end])
 
 poShoot = l-> ShootingProblemMid(
@@ -369,5 +369,5 @@ poshoot, _ = newton(
 			u -> poShoot(l_hopf + 0.01)(u),
 			# u -> (u, poShoot(l_hopf + 0.01)),
 			orbitguess_f,
-			NewtonPar(verbose = true, maxIter = 1))
+			NewtonPar(verbose = true, maxIter = 1, tol = 1e-9))
 println("--> T = ", poshoot[end])

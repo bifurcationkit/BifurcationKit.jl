@@ -1,5 +1,8 @@
+using Revise
 using PseudoArcLengthContinuation, LinearAlgebra, Plots
 const Cont = PseudoArcLengthContinuation
+TY = Float64
+AF = Array{TY}
 #################################################################
 using CuArrays
 CuArrays.allowscalar(false)
@@ -14,13 +17,13 @@ AF = CuArray{TY}
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 
-Nx = 2^10
-Ny = 2^10
-lx = 8pi * 2
+Nx = 2^8
+Ny = 2^8
+lx = 4pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
-X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
-Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
+X = -lx .+ 2lx/Nx * collect(0:Nx-1)
+Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
 
 sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		sol0 .= sol0 .- minimum(vec(sol0))
@@ -30,15 +33,20 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		heatmap(sol0, color=:viridis)
 
 using AbstractFFTs, FFTW, KrylovKit
+import Base: *, \
 
 # Making the linear operator a subtype of Cont.LinearSolver is handy as we will use it
 # in the Newton iterations.
-struct SHLinearOp <: Cont.LinearSolver
+struct SHLinearOp <: Cont.AbstractLinearSolver
 	tmp_real         # temporary
 	tmp_complex      # temporary
 	l1
 	fftplan
 	ifftplan
+end
+
+struct SHEigOp <: Cont.AbstractEigenSolver
+	sh::SHLinearOp
 end
 
 function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
@@ -49,15 +57,6 @@ function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
 	tmpc = Complex.(AF(zeros(Nx, Ny)))
 	return SHLinearOp(AF(zeros(Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
-
-function (sh::SHLinearOp)(J, rhs)
-	u, l, ν = J
-	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
-	return res, true, info.numops
-end
-
-import Base: *, \
 
 function *(c::SHLinearOp, u)
 	c.tmp_complex .= Complex.(u)
@@ -77,19 +76,36 @@ function \(c::SHLinearOp, u)
 	return copy(c.tmp_real)
 end
 
+function (sh::SHLinearOp)(J, rhs)
+	u, l, ν = J
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
+	return res, true, info.numops
+end
+
+# function (sheig::SHEigOp)(J, nev::Int)
+# 	u, l, ν = J
+# 	sh = sheig.sh
+# 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+# 	N = size(u)
+# 	vals, vec, info = KrylovKit.eigsolve( u -> -(sh * u) .+ (udiag .* u), AF(rand(eltype(u), N)), nev, :LR, tol = 1e-9, maxiter = 6, verbosity = 2)
+# 	@show vals
+# 	return vals, vec, true, info.numops
+# end
+
 function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
 	return -(shlop * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
 end
 
-
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
+# Leig = SHEigOp(L) # for eigenvalues computation
 
-opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolve = L)
+opt_new = Cont.NewtonPar(verbose = true, tol = 1e-8, linsolver = L)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -> F_shfft(x, -.1, 1.3, shlop = L),
 				u -> (u, -0.1, 1.3),
 				AF(sol0),
-				opt_new, normN = x->maximum(abs.(x)))
+				opt_new, normN = x -> maximum(abs.(x)))
 	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
 
 #################################################################
@@ -100,7 +116,7 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 				x -> F_shfft(x, -.1, 1.3, shlop = L),
 				u -> (u, -0.1, 1.3),
 				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
-				opt_new, deflationOp, normN = x->maximum(abs.(x)))
+				opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 		println("--> norm(sol) = ", norm(outdef))
 		heatmapsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
@@ -109,13 +125,16 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
 	opts_cont.newtonOptions.tol = 1e-6
 	opts_cont.newtonOptions.maxIter = 50
-	opts_cont.maxSteps = 80
+	opts_cont.maxSteps = 100
+
+	opts_cont.computeEigenValues = false
+	opts_cont.nev = 20
 
 	br, u1 = @time Cont.continuation(
 		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
 		(u, p) -> (u, p, 1.3),
-		deflationOp.roots[1],
+		deflationOp.roots[2],
 		-0.1,
-		opts_cont, plot = true,
+		opts_cont, plot = true, verbosity = 2,
 		plotsolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)', color=:viridis, subplot=4),
-		printsolution = x->maximum(abs.(x)), normC = x->maximum(abs.(x)))
+		printsolution = x-> norm(x,2), normC = x-> maximum(abs.(x)))
