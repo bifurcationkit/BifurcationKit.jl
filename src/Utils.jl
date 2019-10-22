@@ -66,7 +66,7 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 	if length(contres.bifpoint)>1
 		scatter!(map(x -> x.idx, contres.bifpoint[2:end]),
 				 map(x -> x.printsol ,contres.bifpoint[2:end]),
-				label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3) |> display
+				label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3)
 	end
 
 	if contparms.computeEigenValues

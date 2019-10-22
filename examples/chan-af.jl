@@ -59,7 +59,7 @@ opt_new = Cont.NewtonPar(tol = 1e-12, verbose = true)
 		sol, opt_new, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 3, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax = 4.1, theta = 0.91, plot_every_n_steps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 50, verbose = true), doArcLengthScaling = false)
 	opts_br0.newtonOptions.linesearch = false
 	opts_br0.detect_fold = true
 	opts_br0.maxSteps = 200
@@ -72,6 +72,8 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.005, a = 0.1, pMax
 		plot = true,
 		finaliseSolution = finalise_solution,
 		plotsolution = (x; kwargs...) -> plot!(x, subplot = 4, label = "l = $(length(x))"),
+		verbosity = 2,
+		# printsolution = x -> norm(x, Inf64),
 		normC = x -> norm(x, Inf64))
 ####################################################################################################
 # tangent predictor with Bordered system
@@ -93,3 +95,16 @@ outfold, hist, flag = @time Cont.newtonFold(
 			br, indfold, #index of the fold point
 			opts_br0.newtonOptions)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+#################################################################################################### Continuation of the Fold Point using minimally augmented
+opts_br0.newtonOptions.verbose = true
+opts_br0.newtonOptions.tol = 1e-10
+indfold = 2
+
+outfold, hist, flag = @time Cont.newtonFold(
+			(x, p) -> F_chan(x, p, 0.01),
+			(x, p) -> Jac_chan(x, p, 0.01),
+			(x, p) -> Jac_chan(x, p, 0.01),
+			br, indfold, #index of the fold point
+			opts_br0.newtonOptions)
+
+br.bifpoint[2].

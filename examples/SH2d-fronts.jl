@@ -1,26 +1,36 @@
 using Revise
-using DiffEqOperators
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
-const Cont = PseudoArcLengthContinuation
+	using DiffEqOperators
+	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
+	const Cont = PseudoArcLengthContinuation
 
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 
 Nx = 151
-Ny = 100
-lx = 8pi
-ly = 2*2pi/sqrt(3)
+	Ny = 100
+	lx = 8pi
+	ly = 2*2pi/sqrt(3)
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann0)
-    hx = 2lx/Nx
+function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
+	hx = 2lx/Nx
 	hy = 2ly/Ny
-    D2x = sparse(DerivativeOperator{Float64}(2, 2, hx, Nx, bc, bc))
-	D2y = sparse(DerivativeOperator{Float64}(2, 2, hy, Ny, bc, bc))
+	D2x = CenteredDifference(2, 2, hx, Nx)
+	D2y = CenteredDifference(2, 2, hy, Ny)
+	if bc == :Dirichlet
+		Qx = Dirichlet0BC(typeof(hx))
+		Qy = Dirichlet0BC(typeof(hy))
+	elseif bc == :Neumann
+		Qx = Neumann0BC(hx)
+		Qy = Neumann0BC(hy)
+	elseif bc == :Periodic
+		Qx = PeriodicBC(hx)
+		Qy = PeriodicBC(hy)
+	end
 	# @show norm(D2x - Circulant(D2x[1,:]))
-	A = kron(sparse(I, Ny, Ny), D2x) + kron(D2y, sparse(I, Nx, Nx))
-    return A, D2x
+	A = kron(sparse(I, Ny, Ny), sparse(D2x * Qx)[1]) + kron(sparse(D2y * Qy)[1], sparse(I, Nx, Nx))
+	return A, D2x
 end
 
-Δ, D2x = Laplacian2D(Nx, Ny, lx, ly, :periodic)
+Δ, D2x = Laplacian2D(Nx, Ny, lx, ly, :Neumann)
 const L1 = (I + Δ)^2
 
 function F_sh(u, l=-0.15, ν=1.3)
@@ -93,11 +103,13 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.0015, pMax = -0
 	opts_cont.newtonOptions.tol = 1e-9
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 450
+	opts_cont.computeEigenValues = true
 
 	br, u1 = @time Cont.continuation(
-		(x, p) -> F_sh(x, p, 1.3), (x, p) -> dF_sh(x, p, 1.3),
+		(x, p) -> F_sh(x, p, 1.3),
+		(x, p) -> dF_sh(x, p, 1.3),
 		deflationOp.roots[1],
-		-0.1,
+		-0.1, verbosity = 2,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)->(heatmap!(X, Y, reshape(x, Nx, Ny)', color=:viridis, subplot=4, label="")),
 		printsolution = x->norm(x))#norm(x)/N^2*lx*ly)

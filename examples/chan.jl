@@ -1,10 +1,10 @@
 using Revise
-using PseudoArcLengthContinuation, LinearAlgebra, Plots
-const Cont = PseudoArcLengthContinuation
+	using PseudoArcLengthContinuation, LinearAlgebra, Plots
+	const Cont = PseudoArcLengthContinuation
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
-dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
-d2source_term(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
+	dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+	d2source_term(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
 function F_chan(x, α, β = 0.)
 	f = similar(x)
@@ -54,6 +54,7 @@ opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1,
 		(x, p) -> (Jac_mat(x, p, 0.01)),
 		out, a, opts_br0,
 		linearalgo = MatrixBLS(),
+		plot = true,
 		)
 
 # br, u1 = @time Cont.continuation(
