@@ -11,6 +11,7 @@ module PseudoArcLengthContinuation
 	include("Utils.jl")
 	include("FoldCont.jl")
 	include("HopfCont.jl")
+	include("Diffeqwrap.jl")
 	include("periodicorbit/PeriodicOrbit.jl")
 
 	export	ContinuationPar, ContResult, continuation, continuationFold, continuationHopf, BorderedArray

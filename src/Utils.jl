@@ -85,8 +85,7 @@ For the continuation diagram, the legend is as follows `(:fold => :black, :hopf 
 """
 function plotBranch(contres; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
-	plot()
-	plotBranch!(contres; kwargs...)
+	plot();	plotBranch!(contres; kwargs...)
 end
 
 """
@@ -110,13 +109,13 @@ function plotBranch!(contres; kwargs...)
 	if length(contres.stability) > 2
 		plot!(branch[1, :], branch[2, :], linestyle = map(x->isodd(x) ? :solid : :dot, contres.stability) ; kwargs...)
 	else
-		plot!(branch[1, :], branch[2, :]; kwargs...)
+		plot!(branch[1, :], branch[2, :]; kwargs...) |> display
 	end
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint) >= 1
 		id = 1
 		contres.bifpoint[1].type == :none ? id = 2 : id = 1
-		scatter!(map(x -> x.param, contres.bifpoint[id:end]), map(x -> x.printsol, contres.bifpoint[id:end]), label="", color = map(x->colorbif[x.type], contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
+		scatter!(map(x -> x.param, contres.bifpoint[id:end]), map(x -> x.printsol, contres.bifpoint[id:end]), label="", color = map(x->colorbif[x.type], contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...)
 	end
 end
 ####################################################################################################
