@@ -95,7 +95,7 @@ function plotBranch(brs::Vector; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
 	plotBranch(brs[1]; kwargs...)
 	for ii=2:length(brs)
-		plotBranch!(brs[ii]; kwargs...) |> display
+		plotBranch!(brs[ii]; kwargs...)
 	end
 end
 
@@ -109,7 +109,7 @@ function plotBranch!(contres; kwargs...)
 	if length(contres.stability) > 2
 		plot!(branch[1, :], branch[2, :], linestyle = map(x->isodd(x) ? :solid : :dot, contres.stability) ; kwargs...)
 	else
-		plot!(branch[1, :], branch[2, :]; kwargs...) |> display
+		plot!(branch[1, :], branch[2, :]; kwargs...)
 	end
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint) >= 1

@@ -1,4 +1,4 @@
-using Revise
+using Revise, LinearAlgebra
 	using PseudoArcLengthContinuation
 	const Cont = PseudoArcLengthContinuation
 
@@ -54,15 +54,14 @@ function dF_chan!(out, dx, x, p, t)
 end
 
 x0 = rand(100);x0[1] = x0[end] = 0.
-p = (α = 3.4, β = 0.0)
+p = (α = 3., β = 0.01)
 
 ff = ODEFunction(F_chan!, jac_prototype = JacVecOperator{Float64}(F_chan!, x0, p))
-
-@which ff(Val{:jac}, x0, x0, p, 0)
-
 prob = ODEProblem(ff, x0, (0., 2.), p)
+sol  = @time solve(prob, ImplicitEuler(), dt = 0.1)
+
 sol  = @time solve(prob, KenCarp4(linsolve=LinSolveGMRES()))
-# sol  = @time solve(prob, KenCarp4())
+sol  = @time solve(prob, KenCarp4())
 
 using Plots
 # plot(sol)
@@ -73,37 +72,16 @@ heatmap(sol[:,:])
 ff2 = ODEFunction(F_chan!, jac_prototype = AnalyticalJacVecOperator{Float64}(dF_chan!, x0, p))
 prob2 = ODEProblem(ff, x0, (0., 2.), p)
 sol2  = @time solve(prob2, KenCarp4(linsolve=LinSolveGMRES()))
-# sol2[10][[1,end]] |> norm
 
 
-# function f1(x,p)
-# 	@unpack x1, x2 = p
-# 	return x1 * x+x2
-# end
-#
-# prms = (x1=1., x2=2.)
-#
-# f1(1.,prms)
-# l = @lens _.x1
-# Setfield.set(prms,l, 2.)
-#
-# prms = 1.0
-# l = @lens _
-# Setfield.set(prms,l, 2.)
-#
-#
-# methods(prob.f)
-#
-# prob.f.jac_prototype
-#
-# using LinearAlgebra
-# f = (du,u,p,t) -> du .= t .* u
-# jac = (J,u,p,t) -> (J[1,1] = t; J[2,2] = t; J)
-# jp = Diagonal(zeros(2))
-# fun1 = ODEFunction(f; jac=jac, jac_prototype=jp)
-# fun2 = ODEFunction(f, jac=nothing)
+opts = NewtonPar(tol = 1e-9)
+	optscont = ContinuationPar(pMax = 5., pMin = -5., ds = 0.01, dsmax = 0.1, dsmin = 0.01, maxSteps = 200, newtonOptions = opts)
+	sol0, _ = Cont.newton(prob, opts, normN = norm)
 
+plot(sol0)
 
-fun1.jac |> methods
-ff.jac * rand(100)
-ff.jac_prototype * rand(100)
+l = @lens _.α
+	Setfield.get(prob.p, l)
+	# prob.u0 .= sol0
+	br, u = Cont.continuation(prob, l, optscont, verbosity = 2)
+	plotBranch(br) |> display

@@ -13,17 +13,22 @@ struct DiffEqWrapper{P, L}
 end
 
 function ContinuationProblem(
-		de_prob::DEP{iip}, param_axis::Lens;
+		deprob::DEP{iip}, param_axis::Lens;
 		kwargs0...) where iip
-	@assert de_prob isa DEP{false} "We don't consider inplace problem (for now)"
-	de_prob = deepcopy(de_prob)
+	de_prob = deepcopy(deprob)
 	x0 = de_prob.u0
 	@assert !(typeof(x0) <: Number) "We need array like structures for the state space, consider using [u0]"
 	pbwrap = DiffEqWrapper(de_prob, param_axis)
 
 	# we extract the vector field
-	fnewton = x -> de_prob.f(x, de_prob.p, de_prob.tspan[1])
-	f = (x, p) -> de_prob.f(x, set(de_prob.p, param_axis, p), de_prob.tspan[1])
+	if de_prob isa DEP{false}
+		fnewton = x -> de_prob.f(x, de_prob.p, de_prob.tspan[1])
+		f = (x, p) -> de_prob.f(x, set(de_prob.p, param_axis, p), de_prob.tspan[1])
+	else
+		@warn "We don't consider inplace problem very efficiently (for now)"
+		fnewton = x -> (out = similar(x);de_prob.f(out, x, de_prob.p, de_prob.tspan[1]);out)
+		f = (x, p) -> (out = similar(x);de_prob.f(out, x, set(de_prob.p, param_axis, p), de_prob.tspan[1]);out)
+	end
 
 	# we extract the jacobian (operator)
 	if de_prob.f.jac === nothing
@@ -31,9 +36,10 @@ function ContinuationProblem(
 		dfnewton = nothing
 		df = nothing
 	else
-		@assert 1==0 "WIP"
+		@warn "No jacobian is provided by ODEProblem"
+		dfnewton = nothing
+		df = nothing
 	end
-
 	return (fnewton = fnewton, dfnewton = dfnewton, f = f, df = df, x0 = x0)
 end
 
