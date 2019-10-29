@@ -10,11 +10,12 @@ using Setfield, Parameters
 
 f = (u, parm, t) -> (@unpack p, q = parm; p .* u .- u.^3 .+ q)
 
-u0 = [-1.0]
+u0 = -ones(100) .+ rand(100) .* 0.01
 	tspan = (0.0, 1.0)
 	parms = (p = 1.0, q = 0.01)
 	prob = ODEProblem(f, u0, tspan, parms)
-	sol = solve(prob, Tsit5())
+	sol = @time solve(prob, ImplicitEuler(), dt = 0.01)
+	sol = @time solve(prob, Tsit5())
 
 opts = NewtonPar()
 	optscont = ContinuationPar(pMax = 2., pMin = -2., ds = -0.01)
@@ -23,8 +24,8 @@ opts = NewtonPar()
 l = @lens _.p
 	Setfield.get(prob.p, l)
 	# prob.u0 .= sol0
-	br, u = Cont.continuation(prob, l, optscont)
-	plotBranch(br)
+	br, u = Cont.continuation(prob, l, optscont, verbosity = 0)
+	plotBranch(br, label = "br") |> display
 ####################################################################################################
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -57,15 +58,16 @@ x0 = rand(100);x0[1] = x0[end] = 0.
 p = (α = 3., β = 0.01)
 
 ff = ODEFunction(F_chan!, jac_prototype = JacVecOperator{Float64}(F_chan!, x0, p))
-prob = ODEProblem(ff, x0, (0., 2.), p)
+prob = ODEProblem(ff, x0, (0., 5.), p)
 sol  = @time solve(prob, ImplicitEuler(), dt = 0.1)
+sol  = @time solve(prob, ImplicitEuler(linsolve=LinSolveGMRES()), dt = 0.1)
 
 sol  = @time solve(prob, KenCarp4(linsolve=LinSolveGMRES()))
 sol  = @time solve(prob, KenCarp4())
 
 using Plots
 # plot(sol)
-heatmap(sol[:,:])
+contour(sol[:,:], fill=true)
 
 
 # version with analytical jacobian
@@ -74,9 +76,9 @@ prob2 = ODEProblem(ff, x0, (0., 2.), p)
 sol2  = @time solve(prob2, KenCarp4(linsolve=LinSolveGMRES()))
 
 
-opts = NewtonPar(tol = 1e-9)
+opts = NewtonPar(tol = 1e-9, verbose = true,maxIter = 10)
 	optscont = ContinuationPar(pMax = 5., pMin = -5., ds = 0.01, dsmax = 0.1, dsmin = 0.01, maxSteps = 200, newtonOptions = opts)
-	sol0, _ = Cont.newton(prob, opts, normN = norm)
+	sol0, _ = Cont.newton(prob, opts, normN = norm)#, linsolver = LinSolveGMRES())
 
 plot(sol0)
 

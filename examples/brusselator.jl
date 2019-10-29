@@ -125,7 +125,7 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8
 		out,
 		0.3,
 		opts_br0,
-		plot = true,
+		plot = true, verbosity = 2,
 		plotsolution = (x;kwargs...)->(N = div(length(x), 2);plot!(x[1:N], subplot=4, label="");plot!(x[N+1:2N], subplot=4, label="")),
 		finaliseSolution = finalise_solution,
 		printsolution = x -> norm(x, Inf64))
@@ -208,14 +208,15 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.07, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
 	br_pok2, upo , _= @time Cont.continuation(
 			(x, p) ->  poTrap(p)(x),
 			(x, p) ->  poTrap(p)(x, :jacsparse),
 			outpo_f, l_hopf + 0.01,
 			opts_po_cont,
-			plot = true,
+			plot = true, verbosity = 2,
 			plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
+			# tangentalgo = NaturalPred(),
 			printsolution = u -> u[end])
 ##########################################################################################
 # Matrix-Free computation, useless without a preconditionner
