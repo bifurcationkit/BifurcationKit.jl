@@ -36,8 +36,6 @@ end
 	restart::Int64 = 200	# number of restarts
 	maxiter::Int64 = 100
 	N = 0				   # dimension of the problem
-	verbose = true
-	log = true
 end
 
 # function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
@@ -55,11 +53,13 @@ end
 	maxiter::Int64 = KrylovDefaults.maxiter
 	verbose::Int = 0
 	which = :LR
+	issymmetric = false						# if the linear map is symmetric, only meaningful if T<:Real
+	ishermitian = false 					# if the linear map is hermitian
 end
 
 function (l::eig_KrylovKit{T})(J, nev::Int64) where T
 	@assert typeof(J) <:  AbstractMatrix
-	vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol)
+	vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
 	return vals, vec, true, info.numops
 end
 
@@ -74,10 +74,12 @@ getEigenVector(eigsolve::eig_KrylovKit{T}, vecs, n::Int) where T = vecs[n]
 	verbose::Int = 0
 	which = :LR
 	x₀::vectype
+	issymmetric = false						# if the linear map is symmetric, only meaningful if T<:Real
+	ishermitian = false 					# if the linear map is hermitian
 end
 
 function (l::eig_MF_KrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
-	vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol)
+	vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
 	return vals, vec, true, info.numops
 end
 

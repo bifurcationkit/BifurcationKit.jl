@@ -23,6 +23,10 @@ ls(rand(2,2), rand(2))
 
 You can instead define `struct myLinearSolver <: AbstractLinearSolver end` and write `(l::myLinearSolver)(J, x)` where this function would implement GMRES or whatever you prefer.
 
+## List of implemented solvers
+- GMRES from `IterativeSolvers.jl`. You can call it via `linsolver = GMRES_IterativeSolvers()` and pass appropriate options.
+- GMRES from `KrylovKit.jl`. You can call it via `linsolver = GMRES_KrylovKit{Float64}()` and pass appropriate options.
+
 # Eigen solvers
 
 The eigen solvers are subtypes of `AbstractEigenSolver`. Basically, one must provide a way of computing the eigen elements of the Jacobian `J`.
@@ -46,3 +50,8 @@ end
 	
 !!! note "Eigenvectors"
     The eigenvectors must be a 2d array for the simplified calls `newtonHopf` and `newtonFold` to work properly.
+
+## List of implemented solvers
+- GMRES from `IterativeSolvers.jl`. **Not implemented yet.**
+- Solver from `KrylovKit.jl`. You can call it via `eigsolver = eig_KrylovKit{Float64}()` and pass appropriate options.
+- Matrix-Free Solver from `KrylovKit.jl`. You can call it via `eigsolver = eig_MF_KrylovKit{Float64, typeof(u0)}(x₀ = u0)` and pass appropriate options.

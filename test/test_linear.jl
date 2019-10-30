@@ -40,7 +40,7 @@ sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
 
-ls = GMRES_IterativeSolvers{Float64}(tol = 1e-9, N = length(rhs)-1)
+ls = GMRES_IterativeSolvers(tol = 1e-9, N = length(rhs)-1)
 linBdsolver = Cont.BorderingBLS(ls)
 sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd2u
@@ -84,7 +84,7 @@ outkk = ls(J0, x0)
 outkk = ls(Jmf, x0)
 @test out[1] ≈ outkk[1]
 
-ls = GMRES_IterativeSolvers{Float64}(N = 100, tol = 1e-9)
+ls = GMRES_IterativeSolvers(N = 100, tol = 1e-9)
 outit = ls(J0, x0)
 @test out[1] ≈ outit[1]
 ####################################################################################################
