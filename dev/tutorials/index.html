@@ -105,14 +105,19 @@ Ny = 100
 lx = 4*2pi
 ly = 2*2pi/sqrt(3)
 
-function Laplacian2D(Nx,Ny,lx,ly,bc = :Neumann0)
-    hx = 2lx/Nx
-    hy = 2ly/Ny
-    D2x = sparse(DerivativeOperator{Float64}(2,2,hx,Nx,bc,bc))
-    D2y = sparse(DerivativeOperator{Float64}(2,2,hy,Ny,bc,bc))
-    A = kron(sparse(I,Ny,Ny),D2x) + kron(D2y,sparse(I,Nx,Nx))
-    return A
+function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
+	hx = 2lx/Nx
+	hy = 2ly/Ny
+	D2x = CenteredDifference(2, 2, hx, Nx)
+	D2y = CenteredDifference(2, 2, hy, Ny)
+	if bc == :Neumann
+		Qx = Neumann0BC(hx)
+		Qy = Neumann0BC(hy)
+	end
+	A = kron(sparse(I, Ny, Ny), sparse(D2x * Qx)[1]) + kron(sparse(D2y * Qy)[1], sparse(I, Nx, Nx))
+	return A, D2x
 end
+
 
 Δ = Laplacian2D(Nx,Ny,lx,ly)
 const L1 = (I + Δ)^2</code></pre><p>We also write the functional and its differential which is a Sparse Matrix</p><pre><code class="language-julia">function F_sh(u, l=-0.15, ν=1.3)
