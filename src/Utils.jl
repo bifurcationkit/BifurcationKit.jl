@@ -29,7 +29,8 @@ function show(io::IO, br::ContResult)
 		println(io, "Bifurcation points:")
 		for ii in eachindex(br.bifpoint)
 			bp  = br.bifpoint[ii]
-			println(io, "- $ii, ", bp.type, " point, at p = ", bp.param, ", index = ", bp.idx)
+			# println(io, "- $ii, ", bp.type, " point, at p = ", bp.param, ", index = ", bp.idx)
+			@printf(io, "- %3i, %7s point at p = %4.8f, index = %3i\n", ii, bp.type, bp.param, bp.idx)
 		end
 	end
 end
@@ -83,27 +84,27 @@ end
 Plot the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch(br, marker = :dot)`.
 For the continuation diagram, the legend is as follows `(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)`
 """
-function plotBranch(contres; kwargs...)
+function plotBranch(contres, plot_fold = true; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
 	plot()
-	plotBranch!(contres; kwargs...)
+	plotBranch!(contres, plot_fold; kwargs...)
 end
 
 """
 Plot all the branches contained in `brs` in a single figure. Convenient when many bifurcation diagram have been computed.
 """
-function plotBranch(brs::Vector; kwargs...)
+function plotBranch(brs::Vector, plot_fold = true; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
-	plotBranch(brs[1]; kwargs...)
+	plotBranch(brs[1], plot_fold; kwargs...)
 	for ii=2:length(brs)
-		plotBranch!(brs[ii]; kwargs...) |> display
+		plotBranch!(brs[ii], plot_fold; kwargs...) |> display
 	end
 end
 
 """
 Append to the current plot the plot of the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch!(br, marker = :dot)`
 """
-function plotBranch!(contres; kwargs...)
+function plotBranch!(contres, plot_fold = true; kwargs...)
 	# we do not specify the type of contres, not convenient when using JLD2
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)
 	branch = contres.branch
@@ -116,7 +117,12 @@ function plotBranch!(contres; kwargs...)
 	if length(contres.bifpoint) >= 1
 		id = 1
 		contres.bifpoint[1].type == :none ? id = 2 : id = 1
-		scatter!(map(x -> x.param, contres.bifpoint[id:end]), map(x -> x.printsol, contres.bifpoint[id:end]), label="", color = map(x->colorbif[x.type], contres.bifpoint[id:end]), markersize=3, markerstrokewidth=0 ; kwargs...) |> display
+		if plot_fold
+			bifpt = contres.bifpoint[id:end]
+		else
+			bifpt = [pt for pt in contres.bifpoint[id:end] if pt.type != :fold]
+		end
+		scatter!(map(x -> x.param, bifpt), map(x -> x.printsol, bifpt), label="", color = map(x->colorbif[x.type], bifpt), markersize=3, markerstrokewidth=0 ; kwargs...)
 	end
 end
 ####################################################################################################
@@ -158,11 +164,11 @@ function detectBifucation(contparams, contResult, z, tau, normC, printsolution, 
 	end
 
 	# update number of unstable eigenvalues
-	n_unstable = mapreduce(x -> round(real(x), digits=6) > 0, +, contResult.eig[end][1])
+	n_unstable = mapreduce(x -> round(real(x), digits = 9) > 0, +, contResult.eig[end][1])
 	push!(contResult.n_unstable, n_unstable)
 
 	# update number of unstable eigenvalues with nonzero imaginary part
-	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 6)) > 0) * (round(real(x), digits = 6) > 0), +, contResult.eig[end][1])
+	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 9)) > 0) * (round(real(x), digits = 9) > 0), +, contResult.eig[end][1])
 	push!(contResult.n_imag, n_imag)
 
 	# computation of the index of the bifurcating eigenvalue
