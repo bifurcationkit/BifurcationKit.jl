@@ -1,4 +1,4 @@
-using Revise, LinearAlgebra
+using Revise, LinearAlgebra, SparseArrays
 	using PseudoArcLengthContinuation
 	const Cont = PseudoArcLengthContinuation
 
@@ -17,7 +17,7 @@ u0 = -ones(100) .+ rand(100) .* 0.01
 	sol = @time solve(prob, ImplicitEuler(), dt = 0.01)
 	# sol = @time solve(prob, Tsit5())
 
-opts = NewtonPar()
+opts = NewtonPar(verbose = true)
 	optscont = ContinuationPar(pMax = 2., pMin = -2., ds = -0.01)
 	sol0, _ = Cont.newton(prob, opts)
 
@@ -66,13 +66,17 @@ function dF_chan(dx, x, p, t)
 	out
 end
 
-x0 = rand(100);x0[1] = x0[end] = 0.
+N = 100; x0 = rand(N);x0[1] = x0[end] = 0.
 p = (α = 3., β = 0.01)
+
+# this is the preconditionner
+P = spdiagm(0 => -2 * (N-1)^2 * ones(N), -1 => (N-1)^2 * ones(N-1), 1 => (N-1)^2 * ones(N-1))
+P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 
 # problem definition with finite differences
 ff_fd = ODEFunction(F_chan!)
 	prob_fd = ODEProblem(ff_fd, x0, (0., 5.), p)
-	sol  = @time solve(prob, ImplicitEuler(), dt = 0.1)
+	sol  = @time solve(prob_fd, ImplicitEuler(), dt = 0.1)
 
 # problem definition with autodiff and Matrix Free
 ff = ODEFunction(F_chan!, jac_prototype = JacVecOperator{Float64}(F_chan!, x0, p))
@@ -87,14 +91,14 @@ ff2 = ODEFunction(F_chan!, jac_prototype = AnalyticalJacVecOperator{Float64}(dF_
 	sol2  = @time solve(prob2, ImplicitEuler(linsolve=LinSolveGMRES()))
 
 # newton solve based on IterativeSolvers and Cont interface
-opts = NewtonPar(tol = 1e-9, verbose = true, maxIter = 10, linsolver = GMRES_IterativeSolvers(tol = 1e-4, N = length(x0), restart = 100, maxiter=100))
+opts = NewtonPar(tol = 1e-9, verbose = true, maxIter = 10, linsolver = GMRES_IterativeSolvers(tol = 1e-4, N = length(x0), restart = 10, maxiter=10, verbose = true, Pl = lu(P)))
 	optscont = ContinuationPar(pMax = 5., pMin = -5., ds = 0.01, dsmax = 0.1, dsmin = 0.01, maxSteps = 200, newtonOptions = opts)
-	solCont, _ = Cont.newton(x -> F_chan(x, p, 0.), x -> (dx -> dF_chan(dx, x, p, 0.)), x0, opts)
+	solCont, _ = @time Cont.newton(x -> F_chan(x, p, 0.), x -> (dx -> dF_chan(dx, x, p, 0.)), x0, opts)
 
 # newton solve based on IterativeSolvers and Cont interface
 opts = NewtonPar(tol = 1e-9, verbose = true, maxIter = 10)
 	optscont = ContinuationPar(pMax = 5., pMin = -5., ds = 0.01, dsmax = 0.1, dsmin = 0.01, maxSteps = 200, newtonOptions = opts)
-	sol0, _ = Cont.newton(prob, opts, linsolver = LinSolveGMRES(;restart=100, maxiter=100, tol = 1e-4))
+	sol0, _ = Cont.newton(prob2, opts, linsolver = LinSolveGMRES(;restart=10, maxiter=10, tol = 1e-4, Pl = lu(P)))
 
 plot(sol0)
 

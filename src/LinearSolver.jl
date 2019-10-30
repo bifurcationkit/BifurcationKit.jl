@@ -30,22 +30,25 @@ end
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
-@with_kw mutable struct GMRES_IterativeSolvers{T} <: AbstractLinearSolver
+@with_kw mutable struct GMRES_IterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
 	tol::T = T(1e-4)		# tolerance for solver
 	restart::Int64 = 200	# number of restarts
 	maxiter::Int64 = 100
 	N = 0					# dimension of the problem
 	verbose = false
 	log = true
+	initially_zero = true
+	Pl::Tl = Identity()
+	Pr::Tr = Identity()
 end
 
 # this function is used to solve (J + shift I) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRES_IterativeSolvers{T})(J, rhs, shift::Ts = T(0)) where {T, Ts}
+function (l::GMRES_IterativeSolvers{T, Tl, Tr})(J, rhs, shift::Ts = T(0)) where {T, Ts, Tl, Tr}
 	# no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
 	J_map = v -> apply(J, v) .+ shift .* v
 	Jmap = LinearMap{Ts}(J_map, l.N, l.N ; ismutating = false)
-	res = IterativeSolvers.gmres(Jmap, rhs, tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter)
+	res = IterativeSolvers.gmres(Jmap, rhs, tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr)
 	(res[2].iters >= l.maxiter) && (@warn "IterativeSolvers.gmres iterated maxIter =$(res[2].iters) times without achieving the desired tolerance.\n")
 	return res[1], length(res) > 1, res[2].iters
 end

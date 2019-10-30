@@ -44,7 +44,7 @@ end
 
 function (l::DiffEqWrapLS)(J, rhs)
 	out = similar(rhs)
-	l.linsolve(out, J, rhs; tol = 1e-4, verbose = true)
+	l.linsolve(out, J, rhs)
 
 	res = similar(rhs)
 	mul!(res, J, out)
@@ -79,7 +79,7 @@ function ContinuationProblem(
 		df = nothing
 	else
 		@warn "jacobian is provided by ODEProblem"
-		J, W = OrdinaryDiffEq.build_J_W(ImplicitEuler(), x0, x0, p0, 1., 1., de_prob.f, eltype(x0), Val{}(iip))
+		J, W = OrdinaryDiffEq.build_J_W(ImplicitEuler(), x0, x0, p0, 1., 0., de_prob.f, eltype(x0), Val{}(iip))
 		@show typeof(J), typeof(W)
 		dfnewton = J
 		df = nothing
@@ -97,7 +97,6 @@ function newton(de_prob::DEP, options:: NewtonPar{T}; normN = norm, linsolver = 
 		@warn "newton with Jacobian"
 		options = @set options.linsolver = DiffEqWrapLS(linsolver)
 		J = JacWrap(dfnewton, de_prob.p, copy(x0))
-		@show methods(J.J)
 		return newton(fnewton, J, x0, options)
 	end
 end
