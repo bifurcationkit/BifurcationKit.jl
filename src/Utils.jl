@@ -71,13 +71,13 @@ function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunct
 	end
 
 	if contparms.computeEigenValues
-		for ii=1:length(contres.eig)
-			scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=5, label="", markersize = 1, color=:black)
-		end
+		ii = length(contres.eig)
+		scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=5, label="", markersize = 1, color=:black)
+
 	end
 	plotuserfunction(sol.u, subplot = 4)
 
-display(title!(""))
+	display(title!(""))
 end
 
 """
@@ -164,11 +164,11 @@ function detectBifucation(contparams, contResult, z, tau, normC, printsolution, 
 	end
 
 	# update number of unstable eigenvalues
-	n_unstable = mapreduce(x -> round(real(x), digits = 9) > 0, +, contResult.eig[end][1])
+	n_unstable = mapreduce(x -> round(real(x), digits = 15) > 0, +, contResult.eig[end][1])
 	push!(contResult.n_unstable, n_unstable)
 
 	# update number of unstable eigenvalues with nonzero imaginary part
-	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 9)) > 0) * (round(real(x), digits = 9) > 0), +, contResult.eig[end][1])
+	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 15)) > 0) * (round(real(x), digits = 15) > 0), +, contResult.eig[end][1])
 	push!(contResult.n_imag, n_imag)
 
 	# computation of the index of the bifurcating eigenvalue
@@ -234,10 +234,10 @@ function initContRes(br, u0, evsol, contParams::ContinuationPar)
 			empty!(contRes.eig[1][2])
 		end
 		# whether the current solution is stable
-		contRes.stability[1] = mapreduce(x->real(x)<0, *, evsol[1])
-		contRes.n_unstable[1] = mapreduce(x->round(real(x), digits=6) > 0, +, evsol[1])
+		contRes.stability[1]  = mapreduce(x -> real(x) < 0, *, evsol[1])
+		contRes.n_unstable[1] = mapreduce(x -> round(real(x), digits=14) > 0, +, evsol[1])
 		if length(evsol[1][1:contRes.n_unstable[1]])>0
-			contRes.n_imag[1] = mapreduce(x->round(imag(x), digits=6) > 0, +, evsol[1][1:contRes.n_unstable[1]])
+			contRes.n_imag[1] = mapreduce(x -> round(imag(x), digits=14) > 0, +, evsol[1][1:contRes.n_unstable[1]])
 		else
 			contRes.n_imag[1] = 0
 		end

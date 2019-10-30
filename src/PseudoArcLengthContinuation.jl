@@ -72,7 +72,7 @@ module PseudoArcLengthContinuation
 	We speak of *natural* continuation when we do not consider the constraint ``N(x,p)=0``. Knowing ``(x_0,p_0)``, we use ``x_0`` as a guess for solving ``F(x,p_1)=0`` with ``p_1`` close to ``p_0``. Again, this will fail at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentalgo = NaturalPred()` in `continuation`.
 
 	## Tangent computation (step 4)
-	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the option `tangentalgo = SecantPred()` in `continuation`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|u,p\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangent!` for more information ; it is set by the option `tangentalgo = BorderedPred()`.
+	There are various ways to compute ``(\\tau_1,p_1)``. The first one is called secant and is parametrised by the option `tangentalgo = SecantPred()` in `continuation`. It is computed by ``(\\tau_1,p_1) = (z_1,p_1) - (z_0,p_0)`` and normalised by the norm ``\\|(u,p)\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is use computing ``(\\tau_1,p_1)`` by solving a bordered linear system, see the function `getTangent!` for more information ; it is set by the option `tangentalgo = BorderedPred()`.
 
 	## Bordered linear solver
 

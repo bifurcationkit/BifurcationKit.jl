@@ -51,7 +51,7 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		sol0 .*= 1.7
 		heatmap(sol0', color=:viridis)
 
-opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 20)
+opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 20, eigsolver = eig_KrylovKit(tol = 1e-9, issymmetric = true))
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -> F_sh(x, -.1, 1.3),
 				u -> dF_sh(u, -.1, 1.3),
@@ -64,24 +64,9 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 20)
 
 heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
-
-# using Arpack
-# J0 = dF_sh(sol_hexa, -.1, 1.3)
-# Arpack.eigs(J0, nev = 10, which = :LR, sigma = 0.)
-#
-# using KrylovKit
-# @time KrylovKit.eigsolve(J0,10, :LR)
-#
 # using ArnoldiMethod
 # decomp,_ = @time ArnoldiMethod.partialschur(x -> J0\x, nev = 10, which = LR(), tol=1e-6)
 # partialeigen(decomp)
-#
-# using IterativeSolvers
-# IterativeSolvers.ei
-
-
-# 0.7*vec(sol1 .* exp.(vec(exp.(-0*X.^2 .- X'.^2/50.))))
-# 0.3*sol_hexa .* vec(1 .-exp.(-0X.^2 .- (X.-lx)'.^2/(2*8^2))) p = -.175
 ###################################################################################################
 # recherche de solutions
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
@@ -90,7 +75,7 @@ opt_new.maxIter = 250
 outdef, _, flag, _ = @time Cont.newtonDeflated(
 				x -> F_sh(x, -.1, 1.3),
 				u -> dF_sh(u, -.1, 1.3),
-				0.4vec(sol_hexa) .* vec([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
+				0.4vec(sol_hexa) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y]),
 
 				opt_new, deflationOp, normN = x->norm(x, Inf64))
 		println("--> norm(sol) = ", norm(outdef))
@@ -99,29 +84,51 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 
 heatmapsol(deflationOp.roots[2])
 ###################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 3, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, newtonOptions = opt_new, theta = 0.6)
 	opts_cont.newtonOptions.tol = 1e-9
-	opts_cont.newtonOptions.maxIter = 50
-	opts_cont.maxSteps = 450
+	opts_cont.newtonOptions.maxIter = 20
+
+	opts_cont.maxSteps = 130
 	opts_cont.computeEigenValues = true
+	opts_cont.nev = 30
 
 	br, u1 = @time Cont.continuation(
 		(x, p) -> F_sh(x, p, 1.3),
 		(x, p) -> dF_sh(x, p, 1.3),
-		deflationOp.roots[1],
+		deflationOp.roots[6],
 		-0.1, verbosity = 2,
 		opts_cont, plot = true,
-		plotsolution = (x;kwargs...)->(heatmap!(X, Y, reshape(x, Nx, Ny)', color=:viridis, subplot=4, label="")),
-		printsolution = x->norm(x))#norm(x)/N^2*lx*ly)
+		# tangentalgo = BorderedPred(),
+		plotsolution = (x;kwargs...)->(heatmap!(X, Y, reshape(x, Nx, Ny)', color=:viridis, subplot=4, label="");ylims!(-1,1,subplot=5);xlims!(-.5,.3,subplot=5)),
+		printsolution = x -> norm(x),
+		normC = x-> norm(x, Inf))
+
+# 1 ds- 100
+# 2 ds+ 110
+# 3 ds- 130
+# 4 ds- 90
 
 # heatmap!(X, Y, reshape(sol_hexa, Nx, Ny)', color=:viridis, subplot=4, xlabel="Solution at blue point")
-branches = []
+# branches = []
 push!(branches, br)
 
 # Cont.plotBranch(branches[1])
 # Cont.plotBranch!(branches[7], ylabel="max U")
 
-Cont.plotBranch(branches,xlabel="p", ylabel="||u||",label="")
+Cont.plotBranch(branches, false;xlabel="p", ylabel="||u||",label="")
 
 # ls = vcat(fill(:dash,5),fill(:solid,5))
 # plot(rand(10),linestyle = ls)
+
+
+branches[2]
+
+plotBranch!(br, label="", xlabel="l",marker=:d)
+br
+
+
+cstab = [st ? :green : :red for st in br.stability]
+scatter!(br.branch[1,:],br.branch[2,:], color=cstab)
+
+
+plot(br.branch[1,:],br.branch[2,:], color=cstab)

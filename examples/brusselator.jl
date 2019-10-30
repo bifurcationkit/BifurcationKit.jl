@@ -1,5 +1,5 @@
 using Revise
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
+using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield
 const Cont = PseudoArcLengthContinuation
 
 f1(u, v) = u^2*v
@@ -199,7 +199,7 @@ poTrap(l_hopf + 0.01)(orbitguess_f) |> plot
 
 plot(heatmap(orbitguess[1:n,:], ylabel="Time"),heatmap(orbitguess[n+2:end,:]))
 
-opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
+opt_po = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 50)
 	outpo_f, hist, flag = @time Cont.newton(
 			x ->  poTrap(l_hopf + 0.01)(x),
 			x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
@@ -208,12 +208,12 @@ opt_po = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50)
 	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
 	plotPeriodic(outpo_f,n,M)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = opt_po)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = @set opt_po.tol = 1e-8)
 	br_pok2, upo , _= @time Cont.continuation(
 			(x, p) ->  poTrap(p)(x),
 			(x, p) ->  poTrap(p)(x, :jacsparse),
 			outpo_f, l_hopf + 0.01,
-			opts_po_cont,
+			opts_po_cont, verbosity = 2,
 			plot = true,
 			plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
 			printsolution = u -> u[end])
