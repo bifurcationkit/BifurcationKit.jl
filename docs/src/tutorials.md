@@ -364,9 +364,11 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005,ds= -0.0015, pMax = -0.
 		printsolution = x->norm(x))
 ```
 
-and get using `Cont.plotBranch(br)`
+and get using `Cont.plotBranch(br)`, we obtain:
 
 ![](sh2dbranches.png)
+
+Note that the plot provides the stability of solutions and bifurcation points. We did not presented how to do this by simplicity. Interested readers should consult the associated file `example/SH2d-fronts.jl` in the `example` folder. 
 
 ## Example 3: Brusselator in 1d
 
