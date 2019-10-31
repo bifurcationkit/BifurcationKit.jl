@@ -52,6 +52,5 @@ end
     The eigenvectors must be a 2d array for the simplified calls `newtonHopf` and `newtonFold` to work properly.
 
 ## List of implemented solvers
-- GMRES from `IterativeSolvers.jl`. **Not implemented yet.**
 - Solver from `KrylovKit.jl`. You can call it via `eigsolver = eig_KrylovKit{Float64}()` and pass appropriate options.
 - Matrix-Free Solver from `KrylovKit.jl`. You can call it via `eigsolver = eig_MF_KrylovKit{Float64, typeof(u0)}(x₀ = u0)` and pass appropriate options.

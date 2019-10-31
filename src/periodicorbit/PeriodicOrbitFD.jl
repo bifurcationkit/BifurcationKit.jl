@@ -92,7 +92,7 @@ end
 """
 Sparse Matrix expression expression of the Jacobian for the periodic problem computed at the space-time guess: `u0`
 """
-function JacobianPeriodicFD(poPb::PeriodicOrbitTrap{TF, TJ, vectype, S}, u0::vectype, γ = 1.0) where {TF, TJ, vectype, S}
+function JacobianPOTrap(poPb::PeriodicOrbitTrap{TF, TJ, vectype, S}, u0::vectype, γ = 1.0) where {TF, TJ, vectype, S}
 	# extraction of various constants
 	M = poPb.M
 	N = div(length(u0) - 1, M)
@@ -146,7 +146,7 @@ function (poPb::PeriodicOrbitTrap{TF, TJ, vectype, S})(u0::vectype, tp::Symbol =
 	N = div(length(u0) - 1, M)
 	T = u0[end]
 	h = T / M
-	J_block = JacobianPeriodicFD(poPb, u0)
+	J_block = JacobianPOTrap(poPb, u0)
 
 	# we now set up the last line / column
 	δ = 1e-9
@@ -187,7 +187,7 @@ Matrix-Free expression expression of the Monodromy matrix for the periodic probl
 # 	return out
 # end
 #
-# struct FloquetFD <: EigenSolver
+# struct FloquetFD <: AbstractEigenSolver
 # 	poPb
 # end
 #

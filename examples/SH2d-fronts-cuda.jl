@@ -79,7 +79,7 @@ end
 function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
+	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
 	return res, true, info.numops
 end
 
@@ -108,6 +108,15 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-8, linsolver = L)
 				opt_new, normN = x -> maximum(abs.(x)))
 	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
 
+#################################################################
+# trial using IterativeSolvers
+
+function (sh::SHLinearOp)(J, rhs)
+	u, l, ν = J
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
+	return res, true, info.numops
+end
 #################################################################
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 

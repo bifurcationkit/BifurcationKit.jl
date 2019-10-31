@@ -133,7 +133,7 @@ which gives
 We can also continue this fold point in the plane $(a,b)$ performing a Fold Point Continuation. In the present case, we find a Cusp point.
 
 ```julia
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0.)
 	optcontfold.newtonOptions.tol = 1e-8
 	outfoldco, hist, flag = @time Cont.continuationFold(
 		(x, α, β) ->  F_chan(x, α, β),
@@ -190,6 +190,35 @@ Newton Iterations
         3                4     2.4336e-06        73
         4                5     6.2617e-12        73
   0.336398 seconds (1.15 M allocations: 54.539 MiB, 7.93% gc time)
+```
+
+We can speed-up this computation, *i.e.* reduce the number of `Linear-Iterations`, by using a preconditioner
+
+```julia
+P = spdiagm(0 => -2 * (n-1)^2 * ones(n), -1 => (n-1)^2 * ones(n-1), 1 => (n-1)^2 * ones(n-1))
+P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]	
+
+ls = GMRES_IterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter=10, Pl = lu(P))	
+	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	out_mf, hist, flag = @time Cont.newton(
+		x -> F_chan(x, a, 0.01),
+		x -> (dx -> dF_chan(x, dx, a, 0.01)),
+		sol,
+		opt_newton_mf)
+```
+
+which gives
+
+```julia
+ Newton Iterations 
+   Iterations      Func-count      f(x)      Linear-Iterations
+
+        0                1     2.3440e+01         0
+        1                2     1.3777e+00         3
+        2                3     1.6266e-02         3
+        3                4     2.3699e-05         2
+        4                5     4.8930e-09         3
+        5                6     6.3288e-12         4
 ```
 
 ## Example 2: Snaking with 2d Swift-Hohenberg equation
@@ -922,7 +951,7 @@ Before applying a Newton solver, we need to show how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
+	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
 	return res, true, info.numops
 end
 ```
