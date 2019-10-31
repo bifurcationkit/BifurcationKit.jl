@@ -1,4 +1,4 @@
-using Revise, LinearAlgebra, SparseArrays
+using Revise, LinearAlgebra, SparseArrays, IterativeSolvers
 	using PseudoArcLengthContinuation
 	const Cont = PseudoArcLengthContinuation
 
@@ -98,7 +98,7 @@ opts = NewtonPar(tol = 1e-9, verbose = true, maxIter = 10, linsolver = GMRES_Ite
 # newton solve based on IterativeSolvers and Cont interface
 opts = NewtonPar(tol = 1e-9, verbose = true, maxIter = 10)
 	optscont = ContinuationPar(pMax = 5., pMin = -5., ds = 0.01, dsmax = 0.1, dsmin = 0.01, maxSteps = 200, newtonOptions = opts)
-	sol0, _ = Cont.newton(prob2, opts, linsolver = LinSolveGMRES(;restart=10, maxiter=10, tol = 1e-4, Pl = lu(P)))
+	sol0, _ = Cont.newton(prob, opts, linsolver = LinSolveGMRES(;restart=10, maxiter=10, tol = 1e-4, Pl = lu(P)))
 
 plot(sol0)
 

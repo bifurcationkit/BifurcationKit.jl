@@ -23,10 +23,16 @@ end
 # callable function to compute the Jacobian J(x) = dF(x)
 function (Jac::JacWrap)(x)
 	if Jac.J isa DiffEqBase.AbstractDiffEqLinearOperator
-		@warn "We update J!"
 		Jac.x .= x
 		update_coefficients(Jac.J, x, Jac.p, zero(eltype(x)))
+		# this is a Hack because update_coefficients does not do it
+		Jac.J.u .= x
+		norm(Jac.J.u - x) ≈ 0 ? printstyled(color=:green,"--> Jac Updated\n") : printstyled(color=:red,"--> Jac Not updated!!, $(norm(Jac.J.u - x))\n")
+	else
+		@error "Not a Matrix Free Operator!"
 	end
+	# needs to return the jacobian so we can call linsolve on it
+	Jac.J
 end
 
 # callable function to compute the Jacobian J(x, p)
@@ -44,11 +50,10 @@ end
 
 function (l::DiffEqWrapLS)(J, rhs)
 	out = similar(rhs)
-	l.linsolve(out, J, rhs)
 
-	res = similar(rhs)
-	mul!(res, J, out)
-	println("--> CV? ", norm(rhs - res, Inf))
+	# tol is required for DefaultLinSolve() to work
+	l.linsolve(out, J, rhs; tol = 1e-4, verbose = true)
+
 	return out, true, 1
 end
 ####################################################################################################
