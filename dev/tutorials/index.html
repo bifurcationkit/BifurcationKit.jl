@@ -56,7 +56,7 @@ outfold, hist, flag = @time Cont.newtonFold((x,α) -&gt; F_chan(x, α, 0.01),
 				br, indfold, #index of the fold point
 				opts_br0.newtonOptions)
 		flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p, &quot;, β = 0.01, from &quot;, br.bifpoint[indfold][3],&quot;\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia">  0.085458 seconds (98.05 k allocations: 40.414 MiB, 21.55% gc time)
---&gt; We found a Fold Point at α = 3.1556507316107947, β = 0.01, from 3.155651011218501</code></pre><p>We can also continue this fold point in the plane <span>$(a,b)$</span> performing a Fold Point Continuation. In the present case, we find a Cusp point.</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3)
+--&gt; We found a Fold Point at α = 3.1556507316107947, β = 0.01, from 3.155651011218501</code></pre><p>We can also continue this fold point in the plane <span>$(a,b)$</span> performing a Fold Point Continuation. In the present case, we find a Cusp point.</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0.)
 	optcontfold.newtonOptions.tol = 1e-8
 	outfoldco, hist, flag = @time Cont.continuationFold(
 		(x, α, β) -&gt;  F_chan(x, α, β),
@@ -94,7 +94,24 @@ out_mf, hist, flag = @time Cont.newton(
         2                3     1.6267e-02        98
         3                4     2.4336e-06        73
         4                5     6.2617e-12        73
-  0.336398 seconds (1.15 M allocations: 54.539 MiB, 7.93% gc time)</code></pre><h2><a class="nav-anchor" id="Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></h2><p>We study the following PDE </p><div>\[0=-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3\]</div><p>with periodic boundary conditions. This example is in the file <code>example/SH2d-fronts.jl</code>. It is extracted from <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. We use a Sparse Matrix to express the operator <span>$L_1=(I+\Delta)^2$</span></p><pre><code class="language-julia">using DiffEqOperators
+  0.336398 seconds (1.15 M allocations: 54.539 MiB, 7.93% gc time)</code></pre><p>We can speed-up this computation, <em>i.e.</em> reduce the number of <code>Linear-Iterations</code>, by using a preconditioner</p><pre><code class="language-julia">P = spdiagm(0 =&gt; -2 * (n-1)^2 * ones(n), -1 =&gt; (n-1)^2 * ones(n-1), 1 =&gt; (n-1)^2 * ones(n-1))
+P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]	
+
+ls = GMRES_IterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter=10, Pl = lu(P))	
+	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	out_mf, hist, flag = @time Cont.newton(
+		x -&gt; F_chan(x, a, 0.01),
+		x -&gt; (dx -&gt; dF_chan(x, dx, a, 0.01)),
+		sol,
+		opt_newton_mf)</code></pre><p>which gives</p><pre><code class="language-julia"> Newton Iterations 
+   Iterations      Func-count      f(x)      Linear-Iterations
+
+        0                1     2.3440e+01         0
+        1                2     1.3777e+00         3
+        2                3     1.6266e-02         3
+        3                4     2.3699e-05         2
+        4                5     4.8930e-09         3
+        5                6     6.3288e-12         4</code></pre><h2><a class="nav-anchor" id="Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1" href="#Example-2:-Snaking-with-2d-Swift-Hohenberg-equation-1">Example 2: Snaking with 2d Swift-Hohenberg equation</a></h2><p>We study the following PDE </p><div>\[0=-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3\]</div><p>with periodic boundary conditions. This example is in the file <code>example/SH2d-fronts.jl</code>. It is extracted from <a href="http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/">pde2path</a>. We use a Sparse Matrix to express the operator <span>$L_1=(I+\Delta)^2$</span></p><pre><code class="language-julia">using DiffEqOperators
 using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
 const Cont = PseudoArcLengthContinuation
 
@@ -194,7 +211,7 @@ outdef, _,flag,_ = @time Cont.newtonDeflated(
 		-0.1,
 		opts_cont,plot = true,
 		plotsolution = (x;kwargs...)-&gt;(heatmap!(X,Y,reshape(x,Nx,Ny)&#39;,color=:viridis,subplot=4,label=&quot;&quot;)),
-		printsolution = x-&gt;norm(x))</code></pre><p>and get using <code>Cont.plotBranch(br)</code></p><p><img src="../sh2dbranches.png" alt/></p><h2><a class="nav-anchor" id="Example-3:-Brusselator-in-1d-1" href="#Example-3:-Brusselator-in-1d-1">Example 3: Brusselator in 1d</a></h2><p>We look at the Brusselator in 1d. The equations are as follows</p><div>\[\begin{aligned} \frac { \partial X } { \partial t } &amp; = \frac { D _ { 1 } } { l ^ { 2 } } \frac { \partial ^ { 2 } X } { \partial z ^ { 2 } } + X ^ { 2 } Y - ( β + 1 ) X + α \\ \frac { \partial Y } { \partial t } &amp; = \frac { D _ { 2 } } { l ^ { 2 } } \frac { \partial ^ { 2 } Y } { \partial z ^ { 2 } } + β X - X ^ { 2 } Y \end{aligned}\]</div><p>with Dirichlet boundary conditions</p><div>\[\begin{array} { l } { X ( t , z = 0 ) = X ( t , z = 1 ) = α } \\ { Y ( t , z = 0 ) = Y ( t , z = 1 ) = β / α } \end{array}\]</div><p>These equations have been derived to reproduce an oscillating chemical reaction. There is an obvious equilibrium <span>$(α, β / α)$</span>. Here, we consider bifurcation with respect to the parameter <span>$l$</span>.</p><p>We start by writing the functional</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
+		printsolution = x-&gt;norm(x))</code></pre><p>and get using <code>Cont.plotBranch(br)</code>, we obtain:</p><p><img src="../sh2dbranches.png" alt/></p><p>Note that the plot provides the stability of solutions and bifurcation points. We did not presented how to do this by simplicity. Interested readers should consult the associated file <code>example/SH2d-fronts.jl</code> in the <code>example</code> folder. </p><h2><a class="nav-anchor" id="Example-3:-Brusselator-in-1d-1" href="#Example-3:-Brusselator-in-1d-1">Example 3: Brusselator in 1d</a></h2><p>We look at the Brusselator in 1d. The equations are as follows</p><div>\[\begin{aligned} \frac { \partial X } { \partial t } &amp; = \frac { D _ { 1 } } { l ^ { 2 } } \frac { \partial ^ { 2 } X } { \partial z ^ { 2 } } + X ^ { 2 } Y - ( β + 1 ) X + α \\ \frac { \partial Y } { \partial t } &amp; = \frac { D _ { 2 } } { l ^ { 2 } } \frac { \partial ^ { 2 } Y } { \partial z ^ { 2 } } + β X - X ^ { 2 } Y \end{aligned}\]</div><p>with Dirichlet boundary conditions</p><div>\[\begin{array} { l } { X ( t , z = 0 ) = X ( t , z = 1 ) = α } \\ { Y ( t , z = 0 ) = Y ( t , z = 1 ) = β / α } \end{array}\]</div><p>These equations have been derived to reproduce an oscillating chemical reaction. There is an obvious equilibrium <span>$(α, β / α)$</span>. Here, we consider bifurcation with respect to the parameter <span>$l$</span>.</p><p>We start by writing the functional</p><pre><code class="language-julia">using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
 const Cont = PseudoArcLengthContinuation
 
 f1(u, v) = u^2*v
@@ -487,7 +504,7 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)	</code></pre><p>Before applying a Newton solver, we need to show how to solve the linear equation arising in the Newton Algorithm.</p><pre><code class="language-julia">function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
+	res, info = KrylovKit.linsolve( u -&gt; -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
 	return res, true, info.numops
 end</code></pre><h3><a class="nav-anchor" id="Newton-iterations-and-deflation-1" href="#Newton-iterations-and-deflation-1">Newton iterations and deflation</a></h3><p>We are now ready to perform Newton iterations:</p><pre><code class="language-julia">opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 	sol_hexa, hist, flag = @time Cont.newton(
