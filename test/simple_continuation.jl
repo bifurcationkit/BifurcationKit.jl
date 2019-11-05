@@ -7,7 +7,7 @@ N = 10
 F = (x, p) -> p .* x .+ x.^(k+1)/(k+1) .+ 1.0e-2
 Jac_m = (x, p) -> diagm(0 => p  .+ x.^k)
 
-normInf = x -> norm(x,Inf64)
+normInf = x -> norm(x, Inf)
 
 opts = Cont.ContinuationPar(dsmax = 0.02, dsmin=1e-2, ds=0.0001, maxSteps = 140, pMin = -3)
 x0 = 0.01 * ones(N)

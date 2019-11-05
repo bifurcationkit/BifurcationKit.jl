@@ -26,15 +26,15 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, contparams, algo::Talgo) whe
 end
 
 # generic corrector based on Bordered formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = MatrixFreeLBS(); normC::Function = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo, linearalgo = MatrixFreeLBS(); normN = norm) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPseudoArcLength(Fhandle, Jhandle,
 			z_old, tau_old, z_pred,
-			contparams; linearbdalgo = linearalgo, normN = normC)
+			contparams; linearbdalgo = linearalgo, normN = normN)
 end
 
 # corrector based on natural formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo::NaturalPred, linearalgo = :bordered; normC::Function = norm) where {T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normC)
+function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M, contparams, algo::NaturalPred, linearalgo = :bordered; normN = norm) where {T, vectype, M <: BorderedArray{vectype, T}}
+	res = newton(u -> Fhandle(u, z_pred.p), u -> Jhandle(u, z_pred.p), z_pred.u, contparams.newtonOptions, normN = normN)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 

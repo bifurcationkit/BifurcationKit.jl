@@ -60,13 +60,8 @@ opt_new = Cont.NewtonPar(verbose = true, tol = 1e-9, maxIter = 20, eigsolver = e
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
-
-
 heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
-# using ArnoldiMethod
-# decomp,_ = @time ArnoldiMethod.partialschur(x -> J0\x, nev = 10, which = LR(), tol=1e-6)
-# partialeigen(decomp)
 ###################################################################################################
 # recherche de solutions
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
@@ -75,9 +70,9 @@ opt_new.maxIter = 250
 outdef, _, flag, _ = @time Cont.newtonDeflated(
 				x -> F_sh(x, -.1, 1.3),
 				u -> dF_sh(u, -.1, 1.3),
-				0.4vec(sol_hexa) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y]),
+				0.4vec(sol_hexa) .* vec([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
 
-				opt_new, deflationOp, normN = x->norm(x, Inf64))
+				opt_new, deflationOp, normN = x -> norm(x, Inf))
 		println("--> norm(sol) = ", norm(outdef))
 		heatmapsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
@@ -88,20 +83,20 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0
 	opts_cont.newtonOptions.tol = 1e-9
 	opts_cont.newtonOptions.maxIter = 20
 
-	opts_cont.maxSteps = 130
+	opts_cont.maxSteps = 141
 	opts_cont.computeEigenValues = true
 	opts_cont.nev = 30
 
 	br, u1 = @time Cont.continuation(
-		(x, p) -> F_sh(x, p, 1.3),
+		(x, p) ->  F_sh(x, p, 1.3),
 		(x, p) -> dF_sh(x, p, 1.3),
-		deflationOp.roots[6],
+		deflationOp.roots[3],
 		-0.1, verbosity = 2,
 		opts_cont, plot = true,
 		# tangentalgo = BorderedPred(),
 		plotsolution = (x;kwargs...)->(heatmap!(X, Y, reshape(x, Nx, Ny)', color=:viridis, subplot=4, label="");ylims!(-1,1,subplot=5);xlims!(-.5,.3,subplot=5)),
 		printsolution = x -> norm(x),
-		normC = x-> norm(x, Inf))
+		normC = x -> norm(x, Inf))
 
 # 1 ds- 100
 # 2 ds+ 110

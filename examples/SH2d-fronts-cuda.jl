@@ -16,9 +16,10 @@ AF = CuArray{TY}
 #################################################################
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+norminf(x) = maximum(abs.(x))
 
-Nx = 2^8
-Ny = 2^8
+Nx = 2^10
+Ny = 2^10
 lx = 4pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
@@ -30,7 +31,7 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		sol0 ./= maximum(vec(sol0))
 		sol0 = sol0 .- 0.25
 		sol0 .*= 1.7
-		heatmap(sol0, color=:viridis)
+		# heatmap(sol0, color=:viridis)
 
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \
@@ -76,47 +77,40 @@ function \(c::SHLinearOp, u)
 	return copy(c.tmp_real)
 end
 
-function (sh::SHLinearOp)(J, rhs)
+function (sh::SHLinearOp)(J, rhs; shift = 0.)
 	u, l, ν = J
-	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, tol = 1e-9, maxiter = 6)
 	return res, true, info.numops
 end
 
-# function (sheig::SHEigOp)(J, nev::Int)
-# 	u, l, ν = J
-# 	sh = sheig.sh
-# 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-# 	N = size(u)
-# 	vals, vec, info = KrylovKit.eigsolve( u -> -(sh * u) .+ (udiag .* u), AF(rand(eltype(u), N)), nev, :LR, tol = 1e-9, maxiter = 6, verbosity = 2)
-# 	@show vals
-# 	return vals, vec, true, info.numops
-# end
+function (sheig::SHEigOp)(J, nev::Int; σ = 0.1)
+	u, l, ν = J
+	sh = sheig.sh
+	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
+	N = size(u)
+
+	A = du -> sh(J, du; shift = σ)[1]
+	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), N)), nev, :LM, tol = 1e-10, maxiter = 40, verbosity = 2, issymmetric = true, krylovdim = 40)
+	@show 1 ./vals .+ σ
+	return 1 ./vals .+ σ, vec, true, info.numops
+end
 
 function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
 	return -(shlop * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
 end
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
-# Leig = SHEigOp(L) # for eigenvalues computation
+Leig = SHEigOp(L) # for eigenvalues computation
+# Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
 
-opt_new = Cont.NewtonPar(verbose = true, tol = 1e-8, linsolver = L)
+opt_new = Cont.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 	sol_hexa, hist, flag = @time Cont.newton(
 				x -> F_shfft(x, -.1, 1.3, shlop = L),
 				u -> (u, -0.1, 1.3),
 				AF(sol0),
-				opt_new, normN = x -> maximum(abs.(x)))
-	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
-
-#################################################################
-# trial using IterativeSolvers
-
-function (sh::SHLinearOp)(J, rhs)
-	u, l, ν = J
-	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
-	return res, true, info.numops
-end
+				opt_new, normN = norminf)
+	println("--> norm(sol) = ", norminf(sol_hexa))
 #################################################################
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
@@ -131,19 +125,26 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 		flag && push!(deflationOp, outdef)
 
 #################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 5, newtonOptions = opt_new)
 	opts_cont.newtonOptions.tol = 1e-6
-	opts_cont.newtonOptions.maxIter = 50
+	opts_cont.newtonOptions.maxIter = 18
 	opts_cont.maxSteps = 100
 
-	opts_cont.computeEigenValues = false
+	opts_cont.computeEigenValues = true
 	opts_cont.nev = 20
 
 	br, u1 = @time Cont.continuation(
 		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
 		(u, p) -> (u, p, 1.3),
-		deflationOp.roots[2],
+		deflationOp.roots[1],
 		-0.1,
 		opts_cont, plot = true, verbosity = 2,
 		plotsolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)', color=:viridis, subplot=4),
-		printsolution = x-> norm(x,2), normC = x-> maximum(abs.(x)))
+		printsolution = norminf, normC = norminf)
+
+
+# branches = [br]
+push!(branches, br)
+plotBranch(branches) |> display
+
+plotBranch(br)

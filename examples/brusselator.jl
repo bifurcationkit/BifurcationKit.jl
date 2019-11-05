@@ -16,17 +16,13 @@ function F_bru(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
 
 	f[1] = u[1] - α
 	f[n] = u[n] - α
-	for i=2:n-1
-		f[i] = D1/l^2 * (u[i-1] - 2u[i] + u[i+1]) / h2 - (β + 1) * u[i] + α + f1(u[i], v[i])
-	end
-
-
 	f[n+1] = v[1] - β / α
 	f[end] = v[n] - β / α;
-	for i=2:n-1
-		f[n+i] = D2/l^2 * (v[i-1] - 2v[i] + v[i+1]) / h2 + β * u[i] - f1(u[i], v[i])
-	end
 
+	for i=2:n-1
+		  f[i] = D1/l^2 * (u[i-1] - 2u[i] + u[i+1]) / h2 - (β + 1) * u[i] + α + f1(u[i], v[i])
+		f[n+i] = D2/l^2 * (v[i-1] - 2v[i] + v[i+1]) / h2       + β * u[i]     - f1(u[i], v[i])
+	end
 	return f
 end
 
@@ -88,8 +84,6 @@ function Jac_sp(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
 	end
 	return spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
 end
-
-
 
 function finalise_solution(z, tau, step, contResult)
 	n = div(length(z.u), 2)

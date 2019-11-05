@@ -431,17 +431,13 @@ function F_bru(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
 
 	f[1] = u[1] - α
 	f[n] = u[n] - α
-	for i=2:n-1
-		f[i] = D1/l^2 * (u[i-1] - 2u[i] + u[i+1]) / h2 - (β + 1) * u[i] + α + f1(u[i], v[i])
-	end
-
-
 	f[n+1] = v[1] - β / α
 	f[end] = v[n] - β / α;
-	for i=2:n-1
-		f[n+i] = D2/l^2 * (v[i-1] - 2v[i] + v[i+1]) / h2 + β * u[i] - f1(u[i], v[i])
-	end
 
+	for i=2:n-1
+		  f[i] = D1/l^2 * (u[i-1] - 2u[i] + u[i+1]) / h2 - (β + 1) * u[i] + α + f1(u[i], v[i])
+		f[n+i] = D2/l^2 * (v[i-1] - 2v[i] + v[i+1]) / h2       + β * u[i]     - f1(u[i], v[i])
+	end
 	return f
 end
 ```
@@ -951,7 +947,7 @@ Before applying a Newton solver, we need to show how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, rtol = 1e-5, krylovdim = 15, maxiter = 15) 
 	return res, true, info.numops
 end
 ```

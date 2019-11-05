@@ -1,5 +1,5 @@
 using RecursiveArrayTools # for bifurcation point handling
-import Base: show
+import Base: show, length
 ####################################################################################################
 # Structure to hold result
 @with_kw struct ContResult{T, Vectype, Eigenvectype, Biftype}
@@ -22,6 +22,8 @@ import Base: show
 	# number of eigenvalues with positive real part
 	n_unstable::Vector{Int64}
 end
+
+length(br::ContResult) = length(br.branch[4, :])
 
 function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
@@ -47,7 +49,7 @@ end
 """
 Plot the continued branch of solutions
 """
-function plotBranchCont(contres::ContResult{T}, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedArray{vectype, T}}
+function plotBranchCont(contres::ContResult, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedArray{vectype, T}}
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
 	branch = contres.branch
 
@@ -126,14 +128,15 @@ function plotBranch!(contres, plot_fold = true; kwargs...)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(contparams, contResult, J, step)
-	nev_ = max(sum( real.(contResult.eig[end][1]) .> 0) + 2, contparams.nev)
-	eig_elements = contparams.newtonOptions.eigsolver(J, contparams.nev)
+function computeEigenvalues(contparams, contres, J, step)
+	# this line is to ensure we compute enough eigenvalues to probe stability
+	nev_ = max(sum( real.(contres.eig[end][1]) .> 0) + 2, contparams.nev)
+	eig_elements = contparams.newtonOptions.eigsolver(J, nev_)
 	if mod(step, contparams.save_eig_every_n_steps) == 0
 		if contparams.save_eigenvectors
-			push!(contResult.eig, (eig_elements[1], eig_elements[2], step + 1))
+			push!(contres.eig, (eig_elements[1], eig_elements[2], step + 1))
 		else
-			push!(contResult.eig, (eig_elements[1], empty(eig_elements[2]), step + 1))
+			push!(contres.eig, (eig_elements[1], empty(eig_elements[2]), step + 1))
 		end
 	end
 	eig_elements
@@ -146,13 +149,13 @@ function normalize(x)
 	return out
 end
 
-function detectBifucation(contparams, contResult, z, tau, normC, printsolution, verbosity)
-	branch = contResult.branch
+function detectBifucation(contparams, contres, z, tau, normC, printsolution, verbosity)
+	branch = contres.branch
 
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detect_fold && size(branch)[2] > 2 && (branch[1, end] - branch[1, end-1]) * (branch[1, end-1] - branch[1, end-2]) < 0
 		(verbosity > 1) && printstyled(color=:red, "Fold bifurcation point!! between $(branch[1, end-1]) and  $(branch[1, end]) \n")
-		push!(contResult.bifpoint, (type = :fold,
+		push!(contres.bifpoint, (type = :fold,
 							idx = length(branch)-1,
 							param = branch[1, end-1],
 							norm = normC(z.u),
@@ -164,32 +167,35 @@ function detectBifucation(contparams, contResult, z, tau, normC, printsolution, 
 	end
 
 	# update number of unstable eigenvalues
-	n_unstable = mapreduce(x -> round(real(x), digits = 15) > 0, +, contResult.eig[end][1])
-	push!(contResult.n_unstable, n_unstable)
+	n_unstable = mapreduce(x -> round(real(x), digits = 15) > 0, +, contres.eig[end][1])
+	push!(contres.n_unstable, n_unstable)
 
 	# update number of unstable eigenvalues with nonzero imaginary part
-	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 15)) > 0) * (round(real(x), digits = 15) > 0), +, contResult.eig[end][1])
-	push!(contResult.n_imag, n_imag)
+	n_imag = mapreduce(x -> (abs(round(imag(x), digits = 15)) > 0) * (round(real(x), digits = 15) > 0), +, contres.eig[end][1])
+	push!(contres.n_imag, n_imag)
 
 	# computation of the index of the bifurcating eigenvalue
 	ind_bif = n_unstable
-	if n_unstable < contResult.n_unstable[end-1]
+	if n_unstable < contres.n_unstable[end-1]
 		ind_bif += 1
 	end
 
+	idxmoststable = contres.n_unstable[end] < contres.n_unstable[end-1] ? length(contres) : length(contres) - 1
+
 	# Hopf / BP bifurcation point detection based on eigenvalue distribution
 	if size(branch)[2] > 1
-		if abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 1
-			push!(contResult.bifpoint, (type = :bp,
-					idx = length(branch)-1,
-					param = branch[1, end-1],
+		if abs(contres.n_unstable[end] - contres.n_unstable[end-1]) == 1
+			# in order to match the Fold biurcation, we chose the most stable point
+			push!(contres.bifpoint, (type = :bp,
+					idx = idxmoststable,
+					param = branch[1, idxmoststable],
 					norm = normC(z.u),
-					printsol = printsolution(z.u),
+					printsol = branch[2, idxmoststable],
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = ind_bif))
-		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) == 2
-			if abs(contResult.n_imag[end] - contResult.n_imag[end-1]) == 2
-				push!(contResult.bifpoint, (type = :hopf,
+		elseif abs(contres.n_unstable[end] - contres.n_unstable[end-1]) == 2
+			if abs(contres.n_imag[end] - contres.n_imag[end-1]) == 2
+				push!(contres.bifpoint, (type = :hopf,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
@@ -197,16 +203,16 @@ function detectBifucation(contparams, contResult, z, tau, normC, printsolution, 
 					u = copy(z.u),
 					tau = zero(tau.u), ind_bif = ind_bif))
 			else
-				push!(contResult.bifpoint, (type = :bp,
-					idx = length(branch)-1,
-					param = branch[1, end-1],
+				push!(contres.bifpoint, (type = :bp,
+					idx = idxmoststable,
+					param = branch[1, idxmoststable],
 					norm = normC(z.u),
-					printsol = printsolution(z.u),
+					printsol = branch[2, idxmoststable],
 					u = copy(z.u),
 					tau = normalize(tau.u), ind_bif = n_unstable))
 			end
-		elseif abs(contResult.n_unstable[end] - contResult.n_unstable[end-1]) >2
-			push!(contResult.bifpoint, (type = :nd,
+		elseif abs(contres.n_unstable[end] - contres.n_unstable[end-1]) >2
+			push!(contres.bifpoint, (type = :nd,
 					idx = length(branch)-1,
 					param = branch[1, end-1],
 					norm = normC(z.u),
