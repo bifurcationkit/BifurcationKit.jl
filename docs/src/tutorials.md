@@ -386,7 +386,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005,ds= -0.0015, pMax = -0.
 
 	br, u1 = @time Cont.continuation(
 		(x,p) -> F_sh(x,p,1.3), (x,p) -> dF_sh(x,p,1.3),
-		deflationOp.roots[5],
+		deflationOp[5],
 		-0.1,
 		opts_cont,plot = true,
 		plotsolution = (x;kwargs...)->(heatmap!(X,Y,reshape(x,Nx,Ny)',color=:viridis,subplot=4,label="")),
@@ -896,7 +896,7 @@ function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
 end
 ```
 
-### LinearAlgebra on the GPU
+### Linear Algebra on the GPU
 
 We plan to use `KrylovKit` on the GPU. For this to work, we need to overload some functions for `CuArray.jl`. 
 
@@ -1019,7 +1019,7 @@ and get:
 Finally, we can perform continuation of the branches on the GPU:
 
 ```julia
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 15, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, plot_every_n_steps = 15, newtonOptions = opt_new)
 	opts_cont.newtonOptions.tol = 1e-6
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 100
@@ -1027,7 +1027,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0
 	br, u1 = @time Cont.continuation(
 		(u, p) -> F_shfft(u, p, 1.3, shlop = L),
 		(u, p) -> (u, p, 1.3),
-		deflationOp.roots[1],
+		deflationOp[1],
 		-0.1,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)', color=:viridis, subplot=4),

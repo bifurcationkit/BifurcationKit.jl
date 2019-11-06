@@ -47,37 +47,36 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 end
 ####################################################################################################
 """
-Plot the continued branch of solutions
+Plot the branch of solutions during the continuation
 """
 function plotBranchCont(contres::ContResult, sol::M, contparms, plotuserfunction) where {T, vectype, M<:BorderedArray{vectype, T}}
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta)
 	branch = contres.branch
 
 	if contparms.computeEigenValues == false
-		l =  Plots.@layout [a{0.5w} b{0.5w}; c d]
+		l =  Plots.@layout [a{0.5w} [b; c]]
 	else
-		l =  Plots.@layout [a{0.5w} b{0.5w}; c d;e]
+		l =  Plots.@layout [a{0.5w} [b; c]; e{0.2h}]
 	end
 	Plots.plot(layout = l)
 
 	# plot the branch of solutions
-	plotBranch!(contres, xlabel="p", ylabel="|x|", label="", subplot=1)
-	plot!(branch[1, :],	 xlabel="s", ylabel="p",   label="", subplot=2)
-	plot!(branch[2, :], xlabel="it", ylabel="|x|", label="", subplot=3)
+	plotBranch!(contres, xlabel="p",  ylabel="||x||", label="", subplot=1)
+	plot!(branch[1, :],	 xlabel="it", ylabel="p",     label="", subplot=2)
 
 	# add the bifurcation points along the branch
 	if length(contres.bifpoint)>1
 		scatter!(map(x -> x.idx, contres.bifpoint[2:end]),
-				 map(x -> x.printsol ,contres.bifpoint[2:end]),
-				label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=3)
+				 map(x -> x.param, contres.bifpoint[2:end]),
+				label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=2)
 	end
 
 	if contparms.computeEigenValues
 		ii = length(contres.eig)
-		scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=5, label="", markersize = 1, color=:black)
+		scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=4, label="", markersize = 1, color=:black)
 
 	end
-	plotuserfunction(sol.u, subplot = 4)
+	plotuserfunction(sol.u, subplot = 3)
 
 	display(title!(""))
 end
@@ -111,7 +110,7 @@ function plotBranch!(contres, plot_fold = true; kwargs...)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)
 	branch = contres.branch
 	if length(contres.stability) > 2
-		plot!(branch[1, :], branch[2, :], linestyle = map(x->isodd(x) ? :solid : :dot, contres.stability) ; kwargs...)
+		plot!(branch[1, :], branch[2, :], linestyle = map(x -> isodd(x) ? :solid : :dot, contres.stability); kwargs...)
 	else
 		plot!(branch[1, :], branch[2, :]; kwargs...)
 	end
@@ -128,9 +127,9 @@ function plotBranch!(contres, plot_fold = true; kwargs...)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(contparams, contres, J, step)
+function computeEigenvalues(contparams::ContinuationPar, contres::ContResult, J, step)
 	# this line is to ensure we compute enough eigenvalues to probe stability
-	nev_ = max(sum( real.(contres.eig[end][1]) .> 0) + 2, contparams.nev)
+	nev_ = max(sum( real.(contres.eig[end][1]) .> 0) + 4, contparams.nev)
 	eig_elements = contparams.newtonOptions.eigsolver(J, nev_)
 	if mod(step, contparams.save_eig_every_n_steps) == 0
 		if contparams.save_eigenvectors
@@ -141,7 +140,6 @@ function computeEigenvalues(contparams, contres, J, step)
 	end
 	eig_elements
 end
-
 ################################################################################################
 function normalize(x)
 	out = copy(x)
@@ -149,7 +147,7 @@ function normalize(x)
 	return out
 end
 
-function detectBifucation(contparams, contres, z, tau, normC, printsolution, verbosity)
+function detectBifucation(contparams::ContinuationPar, contres::ContResult, z, tau, normC, printsolution, verbosity)
 	branch = contres.branch
 
 	# Fold point detection based on continuation parameter monotony

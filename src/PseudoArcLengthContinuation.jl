@@ -132,9 +132,11 @@ module PseudoArcLengthContinuation
 		@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 		(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 		(verbosity > 0) && println("--> p = $(p0 + contParams.ds/50), initial step (bis)")
-		duds = copy(u_pred)
-		axpby!(-T(1)/ (contParams.ds / T(50)), u0, T(1)/ (contParams.ds / T(50)), duds)
+
+		# compute guess for initial tangent
 		# duds = (u_pred - u0) / (contParams.ds / T(50));
+		duds = copy(u_pred)
+		axpby!(-T(50) / contParams.ds, u0, T(50) / contParams.ds, duds)
 		dpds = T(1)
 		α = normtheta(duds, dpds, contParams.theta)
 		@assert typeof(α) == T
@@ -185,7 +187,7 @@ module PseudoArcLengthContinuation
 					res = computeEigenvalues(contParams, contRes, Jhandle(z_new.u, z_new.p),  step)
 					# assess stability of the point
 					push!(contRes.stability, mapreduce(x->real(x)<0, *, contRes.eig[end][1]))
-					(verbosity > 0) && printstyled(color=:green,"--> Computed ", contParams.nev, " eigenvalues in ", res[end], " iterations, #unstable = ", sum(real.(res[1]) .> 0),"\n")
+					(verbosity > 0) && printstyled(color=:green,"--> Computed ", length(contRes.eig[end][1]), " eigenvalues in ", res[end], " iterations, #unstable = ", sum(real.(res[1]) .> 0),"\n")
 				end
 
 				# # Detection of codim 1 bifurcation points
