@@ -207,7 +207,7 @@ outdef, _,flag,_ = @time Cont.newtonDeflated(
 
 	br, u1 = @time Cont.continuation(
 		(x,p) -&gt; F_sh(x,p,1.3), (x,p) -&gt; dF_sh(x,p,1.3),
-		deflationOp.roots[5],
+		deflationOp[5],
 		-0.1,
 		opts_cont,plot = true,
 		plotsolution = (x;kwargs...)-&gt;(heatmap!(X,Y,reshape(x,Nx,Ny)&#39;,color=:viridis,subplot=4,label=&quot;&quot;)),
@@ -469,7 +469,7 @@ function \(c::SHLinearOp, u)
 	return copy(c.tmp_real)
 end</code></pre><p>Now that we have our operator <code>L</code>, we can give our functional:</p><pre><code class="language-julia">function F_shfft(u, l = -0.15, ν = 1.3; shlop::SHLinearOp)
 	return -(shlop * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
-end</code></pre><h3><a class="nav-anchor" id="LinearAlgebra-on-the-GPU-1" href="#LinearAlgebra-on-the-GPU-1">LinearAlgebra on the GPU</a></h3><p>We plan to use <code>KrylovKit</code> on the GPU. For this to work, we need to overload some functions for <code>CuArray.jl</code>. </p><div class="admonition note"><div class="admonition-title">Overloading specific functions for CuArrays.jl</div><div class="admonition-text"><p>Note that the following code will not be needed in the future when <code>CuArrays</code> improves.</p></div></div><pre><code class="language-julia">using CuArrays
+end</code></pre><h3><a class="nav-anchor" id="Linear-Algebra-on-the-GPU-1" href="#Linear-Algebra-on-the-GPU-1">Linear Algebra on the GPU</a></h3><p>We plan to use <code>KrylovKit</code> on the GPU. For this to work, we need to overload some functions for <code>CuArray.jl</code>. </p><div class="admonition note"><div class="admonition-title">Overloading specific functions for CuArrays.jl</div><div class="admonition-text"><p>Note that the following code will not be needed in the future when <code>CuArrays</code> improves.</p></div></div><pre><code class="language-julia">using CuArrays
 CuArrays.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
@@ -534,7 +534,7 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 				opt_new, deflationOp, normN = x-&gt;maximum(abs.(x)))
 		println(&quot;--&gt; norm(sol) = &quot;, norm(outdef))
 		heatmapsol(outdef) |&gt; display
-		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h3><a class="nav-anchor" id="Computation-of-the-branches-1" href="#Computation-of-the-branches-1">Computation of the branches</a></h3><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, theta = 0.5, plot_every_n_steps = 15, newtonOptions = opt_new, a = 0.5, detect_fold = true, detect_bifurcation = false)
+		flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h3><a class="nav-anchor" id="Computation-of-the-branches-1" href="#Computation-of-the-branches-1">Computation of the branches</a></h3><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds= -0.0015, pMax = -0.0, pMin = -1.0, plot_every_n_steps = 15, newtonOptions = opt_new)
 	opts_cont.newtonOptions.tol = 1e-6
 	opts_cont.newtonOptions.maxIter = 50
 	opts_cont.maxSteps = 100
@@ -542,7 +542,7 @@ outdef, _, flag, _ = @time Cont.newtonDeflated(
 	br, u1 = @time Cont.continuation(
 		(u, p) -&gt; F_shfft(u, p, 1.3, shlop = L),
 		(u, p) -&gt; (u, p, 1.3),
-		deflationOp.roots[1],
+		deflationOp[1],
 		-0.1,
 		opts_cont, plot = true,
 		plotsolution = (x;kwargs...)-&gt;heatmap!(reshape(Array(x), Nx, Ny)&#39;, color=:viridis, subplot=4),
