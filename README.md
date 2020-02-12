@@ -70,10 +70,9 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 Without a priority order:
 
 - [ ] improve plotting by using recipies
-- [ ] improve location of bifurcation points
 - [ ] improve compatibility with `DifferentialEquations.jl`
 - [ ] Add interface to other iterative linear solvers (cg, minres,...) from IterativeSolvers.jl
 - [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
-- [ ] Compute Hopf Normal Form and do branching from Hopf point using this
+- [ ] Compute Hopf Normal Form and allow branching from Hopf point using this
 - [ ] Inplace implementation
 - [ ] Write continuation loop as an iterator
