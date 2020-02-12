@@ -1,23 +1,23 @@
 using Revise
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots
-	const Cont = PseudoArcLengthContinuation
+	using PseudoArcLengthContinuation, LinearAlgebra, Plots, Setfield
+	const PALC = PseudoArcLengthContinuation
 
-source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
-	dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
-	d2source_term(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
+N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
+dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+d2N(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
-function F_chan(x, α, β = 0.)
+function F_chan(x, α, β = 0.01)
 	f = similar(x)
 	n = length(x)
 	f[1] = x[1] - β
 	f[n] = x[n] - β
 	for i=2:n-1
-		f[i] = (x[i-1] - 2 * x[i] + x[i+1]) * (n-1)^2 + α * source_term(x[i], b = β)
+		f[i] = (x[i-1] - 2 * x[i] + x[i+1]) * (n-1)^2 + α * N(x[i], b = β)
 	end
 	return f
 end
 
-function Jac_mat(u, α, β = 0.)
+function Jac_mat(u, α, β = 0.01)
 	n = length(u)
 	J = zeros(n, n)
 	J[1, 1] = 1.0
@@ -25,107 +25,91 @@ function Jac_mat(u, α, β = 0.)
 	for i = 2:n-1
 		J[i, i-1] = (n-1)^2
 		J[i, i+1] = (n-1)^2
-    	J[i, i] = -2 * (n-1)^2 + α * dsource_term(u[i], b = β)
+		J[i, i] = -2 * (n-1)^2 + α * dN(u[i], b = β)
 	end
 	return J
 end
 
-Jac_fd(u0, α, β = 0.) = Cont.finiteDifferences(u->F_chan(u, α, β = β), u0)
+Jac_fd(u0, α, β = 0.) = finiteDifferences(u -> F_chan(u, α, β = β), u0)
 
 n = 101
 	a = 3.3
 	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-	opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true)
+	optnewton = NewtonPar(tol = 1e-11, verbose = true)
 	# ca fait dans les 63.59k Allocations
-	out, hist, flag = @time Cont.newton(
-		x -> F_chan(x, a, 0.01),
-		x -> Jac_mat(x, a, 0.01),
+	out, hist, flag = @time newton(
+		x ->  F_chan(x, a),
+		x -> Jac_mat(x, a),
 		sol,
-		opt_newton)
+		optnewton)
 
 
-opts_br0 = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, plot_every_n_steps = 40)
-	opts_br0.newtonOptions.maxIter = 70
-	opts_br0.newtonOptions.tol = 1e-8
-	opts_br0.maxSteps = 150
-
-	br, u1 = @time Cont.continuation(
-		(x, p) -> F_chan(x, p, 0.01),
-		(x, p) -> (Jac_mat(x, p, 0.01)),
-		out, a, opts_br0,
-		linearalgo = MatrixBLS(),
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detectFold = true, plotEveryNsteps = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
+	br, _ = @time continuation(
+		(x, p) ->   F_chan(x, p),
+		(x, p) -> (Jac_mat(x, p)),
+		out, a, optscont,
 		plot = true,
+		plotSolution = (x;kwargs...) -> (plot!(x;ylabel="solution",label="",kwargs...))
 		)
-
-# br, u1 = @time Cont.continuation(
-# 	(x, p) -> F_chan(x, p, 0.01),
-# 	(x, p) -> (Jac_mat(x, p, 0.01)),
-# 	out, a, opts_br0,
-# 	tangentalgo = BorderedPred(),
-# 	printsolution = x -> norm(x, Inf64),
-# 	plot = false,
-# 	plotsolution = (x;kwargs...) -> (plot!(x, subplot = 4, ylabel = "solution", label = "")))
 ###################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
 
-opt_def = opt_newton
-opt_def.tol = 1e-10
-opt_def.maxIter = 1000
+optdef = setproperties(optnewton; tol = 1e-10, maxIter = 1000)
 
-outdef1, _, _ = @time Cont.newtonDeflated(
-						x -> F_chan(x, a, 0.01),
-						x -> Jac_mat(x, a, 0.01),
+outdef1, _, _ = @time newton(
+						x ->  F_chan(x, a),
+						x -> Jac_mat(x, a),
 						out.*(1 .+ 0.01*rand(n)),
-						opt_def, deflationOp)
+						optdef, deflationOp)
 plot(out, label="newton")
 	plot!(sol, label="init guess")
 	plot!(outdef1, label="deflation-1")
 
 #save newly found point to look for new ones
 push!(deflationOp, outdef1)
-outdef2, _, _ = @time Cont.newtonDeflated(
-						x -> F_chan(x, a, 0.01),
-						x -> Jac_mat(x, a, 0.01),
+outdef2, _, _ = @time newton(
+						x ->  F_chan(x, a),
+						x -> Jac_mat(x, a),
 						outdef1.*(1 .+ 0.01*rand(n)),
-						opt_def, deflationOp)
+						optdef, deflationOp)
 plot!(outdef2, label="deflation-2")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
-opts_br0.newtonOptions.verbose = true
-opts_br0.newtonOptions.tol = 1e-10
+optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; verbose = true, tol = 1e-10))
+
 indfold = 2
 
-outfold, hist, flag = @time Cont.newtonFold(
-			(x, α) -> F_chan(x, α, 0.01),
-			(x, α) -> Jac_mat(x, α, 0.01),
+outfold, _, flag = @time newtonFold(
+			(x, α) ->  F_chan(x, α),
+			(x, α) -> Jac_mat(x, α),
 			br, indfold, #index of the fold point
-			opts_br0.newtonOptions)
-flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+			optscont.newtonOptions)
+flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
-	optcontfold.newtonOptions.tol = 1e-8
-	outfoldco, hist, flag = @time Cont.continuationFold(
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 1300)
+	outfoldco, _, _ = @time continuationFold(
 			(x, α, β) ->  F_chan(x, α, β),
 			(x, α, β) -> Jac_mat(x, α, β),
 			br, indfold,
 			0.01, plot = true, verbosity = 2,
 			optcontfold)
-Cont.plotBranch(outfoldco, xlabel="beta", ylabel = "alpha", label = "");title!("")
+PALC.plotBranch(outfoldco, xlabel="beta", ylabel = "alpha", label = "");title!("")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
-d2F(x,p,u,v; b = 0.01) = p * d2source_term.(x; b = b) .* u .* v
+d2F(x, p, u, v; b = 0.01) = p * d2N.(x; b = b) .* u .* v
 
-outfold, hist, flag = @time Cont.newtonFold(
-			(x, α) -> F_chan(x, α, 0.01),
-			(x, α) -> Jac_mat(x, α, 0.01),
-			(x, α) -> transpose(Jac_mat(x, α, 0.01)),
+outfold, _, flag = @time newtonFold(
+			(x, α) -> F_chan(x, α),
+			(x, α) -> Jac_mat(x, α),
+			(x, α) -> transpose(Jac_mat(x, α)),
 			d2F,
 			br, indfold, #index of the fold point
-			opts_br0.newtonOptions)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+			optscont.newtonOptions)
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 
-outfoldco, hist, flag = @time Cont.continuationFold(
+outfoldco, _, _ = @time continuationFold(
 					(x, α, β) ->  F_chan(x, α, β),
 					(x, α, β) -> Jac_mat(x, α, β),
 					(x, α, β) -> transpose(Jac_mat(x, α, β)),
@@ -135,77 +119,74 @@ outfoldco, hist, flag = @time Cont.continuationFold(
 					optcontfold)
 ###################################################################################################
 # Matrix Free example
-function dF_chan(x, dx, α, β = 0.)
+function dF_chan(x, dx, α, β = 0.01)
 	out = similar(x)
 	n = length(x)
 	out[1] = dx[1]
 	out[n] = dx[n]
 	for i=2:n-1
-		out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dsource_term(x[i], b = β) * dx[i]
+		out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dN(x[i], b = β) * dx[i]
 	end
 	return out
 end
 
-ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
-	out_mf, hist, flag = @time Cont.newton(
-		x -> F_chan(x, a, 0.01),
-		x -> (dx -> dF_chan(x, dx, a, 0.01)),
+ls = GMRESKrylovKit(dim = 100)
+	optnewton_mf = NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	out_mf, _, flag = @time newton(
+		x -> F_chan(x, a),
+		x -> (dx -> dF_chan(x, dx, a)),
 		sol,
-		opt_newton_mf)
+		optnewton_mf)
 
-opts_cont_mf  = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40, newtonOptions = opt_newton_mf)
-	opts_cont_mf.newtonOptions.maxIter = 70
-	opts_cont_mf.newtonOptions.tol = 1e-8
-	opts_cont_mf.maxSteps = 150
-
-	brmf, u1 = @time Cont.continuation(
-		(x, p) -> F_chan(x, p, 0.01),
-		(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, plotEveryNsteps = 40, newtonOptions = setproperties(optnewton_mf; maxIter = 70, tol = 1e-8), maxSteps = 150)
+	brmf, _ = @time continuation(
+		(x, p) -> F_chan(x, p),
+		(x, p) -> (dx -> dF_chan(x, dx, p)),
 		out, a, opts_cont_mf,
-		# linearalgo = Cont.MatrixFreeBLS(),
+		# linearalgo = MatrixFreeBLS(),
 		)
 
+using SparseArrays
 P = spdiagm(0 => -2 * (n-1)^2 * ones(n), -1 => (n-1)^2 * ones(n-1), 1 => (n-1)^2 * ones(n-1))
 P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 
-ls = GMRES_IterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter=10, Pl = lu(P))
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
-	out_mf, hist, flag = @time Cont.newton(
-		x -> F_chan(x, a, 0.01),
-		x -> (dx -> dF_chan(x, dx, a, 0.01)),
+ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter=10, Pl = lu(P))
+	optnewton_mf = NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	out_mf, _, flag = @time newton(
+		x -> F_chan(x, a),
+		x -> (dx -> dF_chan(x, dx, a)),
 		sol,
-		opt_newton_mf)
+		optnewton_mf)
 
 
-plotBranch(brmf,color=:red)
+plotBranch(brmf,color=:red);title!("")
 
 # matrix free with different tangent predictor
-brmf, u1 = @time Cont.continuation(
-	(x, p) -> F_chan(x, p, 0.01),
-	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+brmf, _ = @time continuation(
+	(x, p) -> F_chan(x, p),
+	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, a, opts_cont_mf,
-	tangentalgo = BorderedPred(),
-	# linearalgo = Cont.MatrixFreeBLS(),
+	tangentAlgo = BorderedPred(),
+	# linearAlgo = PALC.MatrixFreeBLS(),
 	)
 
 plotBranch(brmf,color=:blue)
 
-brmf, u1 = @time Cont.continuation(
-	(x, p) -> F_chan(x, p, 0.01),
-	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+brmf, _ = @time continuation(
+	(x, p) -> F_chan(x, p),
+	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, a, opts_cont_mf,
-	tangentalgo = SecantPred(),
-	linearalgo = Cont.MatrixFreeBLS()
+	tangentAlgo = SecantPred(),
+	linearAlgo = MatrixFreeBLS()
 	)
 
 plotBranch(brmf,color=:green)
 
-brmf, u1 = @time Cont.continuation(
-	(x, p) -> F_chan(x, p, 0.01),
-	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
+brmf, _ = @time continuation(
+	(x, p) -> F_chan(x, p),
+	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, a, opts_cont_mf,
-	tangentalgo = BorderedPred(),
-	linearalgo = Cont.MatrixFreeBLS())
+	tangentAlgo = BorderedPred(),
+	linearAlgo = MatrixFreeBLS())
 
 plotBranch(brmf,color=:orange)

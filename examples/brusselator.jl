@@ -1,88 +1,78 @@
 using Revise
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield
-const Cont = PseudoArcLengthContinuation
+	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+	const PALC = PseudoArcLengthContinuation
 
-f1(u, v) = u^2*v
+f1(u, v) = u * u * v
+norminf = x -> norm(x, Inf)
 
-function F_bru(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
+function plotsol(x; kwargs...)
+	N = div(length(x), 2)
+	plot!(x[1:N], label="u"; kwargs...)
+	plot!(x[N+1:2N], label="v"; kwargs...)
+end
+
+function Fbru!(f, x, p)
+	@unpack α, β, D1, D2, l = p
 	n = div(length(x), 2)
-	h = 1.0 / (n+1); h2 = h*h
+	h = 1.0 / n; h2 = h*h
+	c1 = D1 / l^2 / h2
+	c2 = D2 / l^2 / h2
 
 	u = @view x[1:n]
 	v = @view x[n+1:2n]
 
-	# output
-	f = similar(x)
+	# Dirichlet boundary conditions
+	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
+	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
 
-	f[1] = u[1] - α
-	f[n] = u[n] - α
-	f[n+1] = v[1] - β / α
-	f[end] = v[n] - β / α;
+	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
+	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
 
 	for i=2:n-1
-		  f[i] = D1/l^2 * (u[i-1] - 2u[i] + u[i+1]) / h2 - (β + 1) * u[i] + α + f1(u[i], v[i])
-		f[n+i] = D2/l^2 * (v[i-1] - 2v[i] + v[i+1]) / h2       + β * u[i]     - f1(u[i], v[i])
+		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
+		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
 	end
 	return f
 end
 
-function Jac_mat(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
-	n = div(length(x), 2)
-	h = 1.0 / (n+1); hh = h*h
-
-	J = zeros(2n, 2n)
-
-	J[1, 1] = 1.0
-	for i=2:n-1
-		J[i, i-1] = D1 / hh/l^2
-		J[i, i]   = -2D1 / hh/l^2 - (β + 1) + 2x[i] * x[i+n]
-		J[i, i+1] = D1 / hh/l^2
-		J[i, i+n] = x[i]^2
-	end
-	J[n, n] = 1.0
-
-	J[n+1, n+1] = 1.0
-	for i=n+2:2n-1
-		J[i, i-n] = β - 2x[i-n] * x[i]
-		J[i, i-1] = D2 / hh/l^2
-		J[i, i]   = -2D2 / hh/l^2 - x[i-n]^2
-		J[i, i+1] = D2 / hh/l^2
-	end
-	J[2n, 2n] = 1.0
-	return J
+function Fbru(x, p)
+	f = similar(x)
+	Fbru!(f, x, p)
+	f
 end
 
-function Jac_sp(x, α, β; D1 = 0.008, D2 = 0.004, l = 1.0)
+function Jbru_sp(x, p)
+	@unpack α, β, D1, D2, l = p
 	# compute the Jacobian using a sparse representation
 	n = div(length(x), 2)
-	h = 1.0 / (n+1); hh = h*h
+	h = 1.0 / n; h2 = h*h
 
-	diag  = zeros(2n)
-	diagp1 = zeros(2n-1)
-	diagm1 = zeros(2n-1)
+	c1 = D1 / p.l^2 / h2
+	c2 = D2 / p.l^2 / h2
 
-	diagpn = zeros(n)
-	diagmn = zeros(n)
+	u = @view x[1:n]
+	v = @view x[n+1:2n]
 
-	diag[1] = 1.0
-	diag[n] = 1.0
-	diag[n + 1] = 1.0
-	diag[end] = 1.0
+	diag   = zeros(eltype(x), 2n)
+	diagp1 = zeros(eltype(x), 2n-1)
+	diagm1 = zeros(eltype(x), 2n-1)
 
-	for i=2:n-1
-		diagm1[i-1] = D1 / hh/l^2
-		diag[i]   = -2D1 / hh/l^2 - (β + 1) + 2x[i] * x[i+n]
-		diagp1[i] = D1 / hh/l^2
-		diagpn[i] = x[i]^2
-	end
+	diagpn = zeros(eltype(x), n)
+	diagmn = zeros(eltype(x), n)
 
-	for i=n+2:2n-1
-		diagmn[i-n] = β - 2x[i-n] * x[i]
-		diagm1[i-1] = D2 / hh/l^2
-		diag[i]   = -2D2 / hh/l^2 - x[i-n]^2
-		diagp1[i] = D2 / hh/l^2
-	end
-	return spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
+	@. diagmn = β - 2 * u * v
+	@. diagm1[1:n-1] = c1
+	@. diagm1[n+1:end] = c2
+
+	@. diag[1:n]    = -2c1 - (β + 1) + 2 * u * v
+	@. diag[n+1:2n] = -2c2 - u * u
+
+	@. diagp1[1:n-1]   = c1
+	@. diagp1[n+1:end] = c2
+
+	@. diagpn = u * u
+	J = spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
+	return J
 end
 
 function finalise_solution(z, tau, step, contResult)
@@ -91,133 +81,167 @@ function finalise_solution(z, tau, step, contResult)
 	return true
 end
 
-n = 101
-# const Δ = spdiagm(0 => 2ones(N), -1 => 0ones(N-1), 1 => -ones(N-1))
-Jac_fd(u0, α, β, l = l) = Cont.finiteDifferences(u->F_bru(u, α, β, l=l), u0)
+n = 500
+####################################################################################################
+# test for the Jacobian expression
+# using ForwardDiff
+# sol0 = rand(2n)
+# J0 = ForwardDiff.jacobian(x-> Fbru(x, par_bru), sol0) |> sparse
+# J1 = Jbru_sp(sol0, par_bru)
+# J0 - J1
+####################################################################################################
+# different parameters to define the Brusselator model and guess for the stationary solution
+par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
+	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
-a = 2.
-b = 5.45
+# # parameters for an isola of stationary solutions
+# par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
+# 	xspace = LinRange(0, par_bru.l, n)
+# 	sol0 = vcat(		par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
+# 			par_bru.β/par_bru.α .- 0.5 .* sin.(pi*xspace/par_bru.l))
 
-sol0 = vcat(a * ones(n), b/a * ones(n))
+# eigls = EigArpack(1.1, :LM)
+# 	opt_newton = PALC.NewtonPar(eigsolver = eigls)
+# 	out, hist, flag = @time PALC.newton(
+# 		x ->    Fbru(x, par_bru),
+# 		x -> Jbru_sp(x, par_bru),
+# 		sol0, opt_newton, normN = norminf)
+#
+# 	plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
+####################################################################################################
+eigls = EigArpack(1.1, :LM)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
-opt_newton = Cont.NewtonPar(tol = 1e-11, verbose = true, eigsolver = eig_KrylovKit(tol=1e-6, dim = 60))
-	# ca fait dans les 60.2k Allocations
-	out, hist, flag = @time Cont.newton(
-		x -> F_bru(x, a, b),
-		x -> Jac_sp(x, a, b),
-		sol0,
-		opt_newton)
-
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.0061, ds= 0.0051, pMax = 1.8, save = false, theta = 0.01, detect_fold = true, detect_bifurcation = true, nev = 41, plot_every_n_steps = 50, newtonOptions = opt_newton)
-	opts_br0.newtonOptions.maxIter = 20
-	opts_br0.newtonOptions.tol = 1e-8
-	opts_br0.maxSteps = 280
-
-	br, u1 = @time Cont.continuation(
-		(x, p) ->   F_bru(x, a, b, l = p),
-		(x, p) -> Jac_sp(x, a, b, l = p),
-		out,
-		0.3,
-		opts_br0,
+	br, _ = @time continuation(
+		(x, p) ->    Fbru(x, @set par_bru.l = p),
+		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
+		sol0, par_bru.l,
+		opts_br_eq, verbosity = 0,
 		plot = true,
-		plotsolution = (x;kwargs...)->(N = div(length(x), 2);plot!(x[1:N], subplot=4, label="");plot!(x[N+1:2N], subplot=4, label="")),
-		finaliseSolution = finalise_solution,
-		printsolution = x -> norm(x, Inf64))
-
-# J0 = Jac_sp(sol0, a, 16) |> sparse
-# using Arpack, ArnoldiMethod, KrylovKit
-# @time Arpack.eigs(J0, nev = 10, which = :LR)
-# @time sort(eigen(Array(J0)).values, by = x -> abs(x), rev = false)[1:15]
-# @time KrylovKit.eigsolve(J0, 10, :LR, tol = 1e-6)
-# @time opt_newton.eigsolve(J0,10)
+		plotSolution = (x; kwargs...) -> (plotsol(x; label="", kwargs... )),
+		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
-ind_hopf = 1
-	hopfpt = Cont.HopfPoint(br, ind_hopf)
-
-	outhopf, hist, flag = @time Cont.newtonHopf((x, p) ->  F_bru(x, a, b, l = p),
-			(x, p) -> Jac_sp(x, a, b, l = p),
-			br, ind_hopf,
-			opt_newton)
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], ", from l = ",hopfpt.p[1],"\n")
-
-br_hopf, u1_hopf = @time Cont.continuationHopf(
-			(x, p, β) ->  F_bru(x, a, β, l = p),
-			(x, p, β) -> Jac_sp(x, a, β, l = p),
-			br, ind_hopf,
-			b,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, newtonOptions = opt_newton), verbosity = 2)
-Cont.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
-#################################################################################################### Continuation of Periodic Orbit
-function plotPeriodic(outpof,n,M)
-	outpo = reshape(outpof[1:end-1], 2n, M)
-	plot(heatmap(outpo[1:n,:]', ylabel="Time"),
-			heatmap(outpo[n+2:end,:]'))
-end
-
 ind_hopf = 2
-hopfpt = Cont.HopfPoint(br, ind_hopf)
+	# hopfpt = PALC.HopfPoint(br, ind_hopf)
+	optnew = opts_br_eq.newtonOptions
+	hopfpoint, _, flag = @time newtonHopf(
+		(x, p) ->    Fbru(x, @set par_bru.l = p),
+		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
+		br, ind_hopf,
+		(@set optnew.verbose=true), normN = norminf)
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
-l_hopf = hopfpt.p[1]
-ωH     = hopfpt.p[end] |> abs
-M = 100
+# br_hopf, u1_hopf = @time PALC.continuationHopf(
+# 	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
+# 	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
+# 	br, ind_hopf, par_bru.β,
+# 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
+# PALC.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
+#
+# # test with analytical Hessian but with dummy expression ;)
+# d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
+#
+# hopfpoint, hist, flag = @time PALC.newtonHopf(
+# 	(x, p) ->  Fbru(x, @set par_bru.l = p),
+# 	(x, p) -> Jbru_sp(x, @set par_bru.l = p),
+# 	(x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
+# 	d2Fbru,
+# 	br, ind_hopf,
+# 	(@set opt_newton.verbose = true), normN = norminf)
+#
+# br_hopf, u1_hopf = @time PALC.continuationHopf(
+# 	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
+# 	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
+# 	(x, p, β) -> transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
+# 	β -> d2Fbru,
+# 	br, ind_hopf, par_bru.β,
+# 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 
+####################################################################################################Continuation of Periodic Orbit
+# number of time slices
+M = 51
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2.7; phase = 0.25)
+#
+# orbitguess_f2 = orbitguess2[1]; for ii=2:M; global orbitguess_f2 = hcat(orbitguess_f2, orbitguess2[ii]);end
+orbitguess_f2 = reduce(vcat, orbitguess2)
+orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-orbitguess = zeros(2n, M)
-plot([0, 1], [0, 0])
-	phase = []; scalphase = []
-	vec_hopf = getEigenVector(opt_newton.eigsolver, br.eig[br.bifpoint[ind_hopf][2]][2] ,br.bifpoint[ind_hopf][end]-1)
-
-	# br.eig[br.bifpoint[ind_hopf][2]][2][:, br.bifpoint[ind_hopf][end]-1]
-	for ii=1:M
-	t = (ii-1)/(M-1)
-	# use phase 0.279 for DefaultEig()
-	orbitguess[:, ii] .= real.(hopfpt.u +
-						26*0.1 * vec_hopf * exp(2pi * complex(0, 1) * (t - .235))) #k=1
-	push!(phase, t);push!(scalphase, dot(orbitguess[:, ii]- hopfpt.u, real.(vec_hopf)))
-end
-	phmin = findmin(abs.(scalphase))
-	println("--> min phase for ", phase[phmin[2]])
-	plot!(phase, scalphase)
-
-orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
-
-poTrap = l -> PeriodicOrbitTrap(
-			x -> F_bru(x, a, b, l = l),
-			x -> Jac_sp(x, a, b, l = l),
+poTrap = p -> PeriodicOrbitTrapProblem(
+			x ->	Fbru(x, @set par_bru.l = p),
+			x -> Jbru_sp(x, @set par_bru.l = p),
 			real.(vec_hopf),
 			hopfpt.u,
-			M,
-			opt_newton.linsolver)
+			M)
 
 poTrap(l_hopf + 0.01)(orbitguess_f) |> plot
+PALC.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
 
-plot(heatmap(orbitguess[1:n,:], ylabel="Time"),heatmap(orbitguess[n+2:end,:]))
+using ForwardDiff
+d1Fbru(x, p, dx) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
 
-opt_po = Cont.NewtonPar(tol = 1e-10, verbose = true, maxIter = 50)
-	outpo_f, hist, flag = @time Cont.newton(
-			x ->  poTrap(l_hopf + 0.01)(x),
-			x ->  poTrap(l_hopf + 0.01)(x, :jacsparse),
+ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+poTrapMF = p -> PeriodicOrbitTrapProblem(
+			x ->	Fbru(x, @set par_bru.l = p),
+			x -> (dx -> d1Fbru(x, (@set par_bru.l = p), dx)),
+			real.(vec_hopf),
+			hopfpt.u,
+			M, ls0)
+
+deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+# deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
+####################################################################################################
+opt_po = PALC.NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
+	outpo_f, _, flag = @time PALC.newton(poTrap(l_hopf + 0.01),
 			orbitguess_f,
-			opt_po)
-	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
-	plotPeriodic(outpo_f,n,M)
+			# ig,
+			# (br_po.sol[11].u),
+			(@set opt_po.maxIter = 250),
+			# opt_po,
+			# deflationOp,
+			# :FullLU;
+			normN = norminf,
+			callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
+			)
+	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
+	PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 3.3, maxSteps = 400, theta=0.1, plot_every_n_steps = 3, newtonOptions = @set opt_po.tol = 1e-8)
-	br_pok2, upo , _= @time Cont.continuation(
-			(x, p) ->  poTrap(p)(x),
-			(x, p) ->  poTrap(p)(x, :jacsparse),
+PALC.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
+opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2)
+opt_po = @set opt_po.eigsolver = DefaultEig()
+# opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 100, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 1)
+	br_po, _ , _= @time PALC.continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
-			opts_po_cont, verbosity = 2,
-			plot = true,
-			plotsolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)', subplot=4, ylabel="time"),
-			printsolution = u -> u[end])
-##########################################################################################
-# Matrix-Free computation, useless without a preconditionner
-opt_po  = Cont.NewtonPar(tol = 1e-8, verbose = true, maxIter = 50, linsolver = GMRES_KrylovKit{Float64}(dim=30, verbose = 2))
-	outpo_f, hist, flag = @time Cont.newton(
-			x ->  poTrap(l_hopf + 0.01)(x),
-			x -> (dx -> poTrap(l_hopf + 0.01)(x, dx)),
+			opts_po_cont;
+			verbosity = 2,	plot = true,
+			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
+			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
+			normC = norminf)
+
+####################################################################################################
+using IncompleteLU
+Jpo = poTrap(l_hopf + 0.01)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(l_hopf + 0.01)(Val(:JacCyclicSparse), orbitguess_f)
+
+Precilu = @time ilu(Jpo, τ = 0.005)
+ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu)
+	@time ls(Jpo, rand(ls.N))
+
+opt_po = PALC.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
+	outpo_f, _, flag = @time PALC.newton(poTrap(l_hopf + 0.01),
 			orbitguess_f,
-			opt_po)
-	println("--> T = ", outpo_f[end], ", amplitude = ", maximum(outpo_f[1:n,:])-minimum(outpo_f[1:n,:]))
-	plotPeriodic(outpo_f,n,M)
+			(@set opt_po.linsolver = ls), :BorderedMatrixFree;
+			normN = norminf,
+			# callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x), " T = ", x[end], ", T0 = ",orbitguess_f[end]);true)
+			)
+	printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
+	PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
+
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
+	br_pok, _ , _= @time PALC.continuationPOTrap(poTrap,
+			outpo_f, l_hopf + 0.01,
+			opts_po_cont , :FullMatrixFree;
+			verbosity = 2,
+			plot = true,
+			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
+			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)

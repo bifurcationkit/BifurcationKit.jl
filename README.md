@@ -6,7 +6,7 @@
 
 This Julia package aims at solving equations F(u,λ)=0 where λ∈ℝ starting from an initial guess (u0,λ0). It relies on the pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from (u0,λ0). A Newton method is then used to correct this predictor.
 
-The current package focuses on large scale problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials/#Example-5:-the-Swift-Hohenberg-equation-on-the-GPU-1)) or on a **cluster** to solve non linear PDE (for example).
+The current package focuses on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2/index.html#The-Swift-Hohenberg-equation-on-the-GPU-1) and [Periodic orbit example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2/index.html#The-Swift-Hohenberg-equation-on-the-GPU-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
 
 **If you use this package for your work, please cite it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:**
 
@@ -26,6 +26,8 @@ The current package focuses on large scale problems and multiple hardwares. Henc
 
 ## Installation 
 
+This package requires Julia > v1.3.0
+
 To install it, please run
 
 `] add https://github.com/rveltz/PseudoArcLengthContinuation.jl`
@@ -36,37 +38,42 @@ The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuat
 
 ## Main features
 
-- Matrix Free Newton solver with generic linear / eigen solver. Idem for the arc-length continuation.
-- Matrix Free Newton solver with deflation. It can be used for branch switching for example.
-- Fold / Hopf bifurcation detection.
-- Fold / Hopf with Matrix Free / Sparse Jacobian continuation with Minimally Augmented formulation.
-- Periodic orbit computation and continuation using Simple Shooting (not very stable yet) or Finite Differences.
+- Matrix Free Newton solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
+- Matrix Free Newton solver with deflation and preconditioner. It can be used for branch switching for example.
+- Bifurcation points are located using a bisection algorithm
+- Branch, Fold, Hopf bifurcation point detection of stationary solutions.
+- Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
+- Periodic orbit computation and continuation using Shooting or Finite Differences.
+- Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
+- Computation and Continuation of Fold of periodic orbits
 
-Custom state means, we can use something else than `AbstractVector`:
+Custom state means, we can use something else than `AbstractArray`, for example your own `struct`. 
 
+**Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
-|Feature|Matrix Free|Custom state| Example |
+|Features|Matrix Free|Custom state| Tutorial |
 |---|---|---|---|
-| Newton | Y | Y |1 - 5 |
-| Newton + Deflation| Y | Y | 1, 2, 5|
-| Continuation (Natural, Secant, Tangent) | Y | Y | 1 - 5 |
-| Branching point detection | Y | Y |  |
-| Fold detection | Y | Y | 1 - 5 |
-| Hopf detection | Y | Y | 3 |
-| Fold continuation | Y | Y | 1 |
-| Hopf continuation | Y | `AbstractArray` | 3 |
-| Periodic Orbit Newton | N | `AbstractVector` | 3 |
-| Periodic Orbit continuation | N | `AbstractVector` | 3 |
-| Fold of Periodic Orbit continuation | N | `AbstractVector` |  |
+| Newton | Y | Y | All |
+| Newton + Deflation| Y | Y | 3, 4|
+| Continuation (Natural, Secant, Tangent) | Y | Y | All |
+| Branching point detection | Y | Y | All |
+| Fold point detection | Y | Y | All |
+| Hopf detection | Y | Y | 5 - 8 |
+| Fold Point continuation | Y | Y | 1, 7 |
+| Hopf continuation | Y | `AbstractArray` | 5 |
+| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 5, 7 |
+| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  5, 6, 8 |
+| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 5 - 8  |
+| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 7 |
 
 ## To do or grab
 Without a priority order:
 
-- [x] Improve Sparse Matrix creation of the Jacobian for the Periodic Orbit problem with Finite Differences
-- [ ] Provide a way to add constraints and combine functionals
+- [ ] improve plotting by using recipies
+- [ ] improve location of bifurcation points
+- [ ] improve compatibility with `DifferentialEquations.jl`
+- [ ] Add interface to other iterative linear solvers (cg, minres,...) from IterativeSolvers.jl
 - [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
-- [ ] Improve data structure for `newtonFold, newtonHopf`. Also, the implementation allocates a new `struct` for each parameter.
-- [ ] Compute Hopf Normal Form
-- [ ] Implement Preconditioner for the Matrix Free computation of Periodic Orbits based on Finite Differences
+- [ ] Compute Hopf Normal Form and do branching from Hopf point using this
 - [ ] Inplace implementation
 - [ ] Write continuation loop as an iterator

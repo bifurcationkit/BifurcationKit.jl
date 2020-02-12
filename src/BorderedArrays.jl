@@ -1,17 +1,26 @@
-# structure for Bordered arrays
+# composite type for Bordered arrays
 import Base: copy, copyto!, eltype, zero
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 
+"""
+	x = BorderedArray(vec1, vec2)
+
+This defines an array (although not `<: AbstractArray`) to hold two arrays or an array and a scalar. This is useful when one wants to add constraints (phase, ...) to a functional for example. It is used throughout the package for the Pseudo Arc Length Continuation, for the continuation of Fold / Hopf points, for periodic orbits... It is also used to define periodic orbits as (orbit, period). As such, it is a convenient alternative to `cat`, `vcat` and friends. We chose not make it a subtype of AbstractArray as we wish to apply the current package to general "arrays", see [Requested methods for Custom State](@ref). Finally, it proves useful for the GPU where the operation `x[end]` can be slow.
+"""
 mutable struct BorderedArray{vectype1, vectype2}
 	u::vectype1
 	p::vectype2
 end
 
-eltype(b::BorderedArray{vectype, T}) where {T, vectype} = T
-similar(b::BorderedArray{vectype, T}, ::Type{S} = T) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
-similar(b::BorderedArray{vectype, T}, ::Type{S} = T) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
+eltype(b::BorderedArray{vectype, T}) where {T, vectype} = eltype(b.p)
+similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
+similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
 
-copy(b::BorderedArray{vectype, T}) where {vectype, T} =  BorderedArray(copy(b.u), copy(b.p))
+# a version of copy which cope with our requirements concerning the methods
+# availabble for
+_copy(b) = copyto!(similar(b), b)
+copy(b::BorderedArray) = copyto!(similar(b), b)# BorderedArray(copy(b.u), copy(b.p))
+
 copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p);dest)
 copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
 
@@ -51,7 +60,7 @@ function mul!(A::BorderedArray{vectype, Tv}, B::BorderedArray{vectype, Tv}, α::
 	return A
 end
 
-mul!(A::BorderedArray{vectype, Tv}, α::T, B::BorderedArray{vectype, Tv}) where {vectype, Tv, T} = mul!(A, B,  α)
+mul!(A::BorderedArray{vectype, Tv}, α::T, B::BorderedArray{vectype, Tv}) where {vectype, Tv, T} = mul!(A, B, α)
 ################################################################################
 function axpy!(a::T, X::BorderedArray{vectype, Tv}, Y::BorderedArray{vectype, Tv}) where {vectype, T <:Real, Tv}
 	# Overwrite Y with a*X + Y, where a is scalar
@@ -82,11 +91,10 @@ function axpby!(a::T, X::BorderedArray{vectype, T}, b::T, Y::BorderedArray{vecty
 end
 ################################################################################
 # this function is actually axpy!(-1, y, x)
-"""
-	`minus!(x, y)`
-
-computes x-y into x and returns x
-"""
+#
+# 	`minus!(x, y)`
+#
+# computes x-y into x and returns x
 minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <:Real} = (x = x - y)
@@ -99,22 +107,13 @@ function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) wher
 	return x
 end
 ################################################################################
-"""
-	`minus(x,y)`
-
-returns x - y
-"""
-minus(x, y) = (x1 = copy(x);minus!(x1, y); return x1)
+#
+#	`minus(x,y)`
+#
+# returns x - y
+minus(x, y) = (x1 = copyto!(similar(x), x); minus!(x1, y); return x1)
 # minus(x, y) = (x - y)
 minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 minus(x::T, y::T) where {T <:Real} = (return x - y)
 minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
 minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
-################################################################################
-function dottheta(a::BorderedArray{vectype, T}, b::BorderedArray{vectype, T}, theta::T) where {vectype, T}
-	return dottheta(a.u, b.u, a.p, b.p, theta)
-end
-################################################################################
-function normtheta(a::BorderedArray{vectype, T}, theta::T) where {vectype, T}
-	return normtheta(a.u, a.p, theta)
-end

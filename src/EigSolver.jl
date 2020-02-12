@@ -1,86 +1,78 @@
-using IterativeSolvers, KrylovKit, Parameters, Arpack, LinearAlgebra
+using IterativeSolvers, KrylovKit, Arpack
 # In this file, we regroud a way to provide eigen solvers
 
 abstract type AbstractEigenSolver end
+abstract type AbstractMFEigenSolver <: AbstractEigenSolver end
+abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
-getEigenVector(eigsolve::ES, vecs, n::Int) where {ES <: AbstractEigenSolver} = vecs[:, n]
+geteigenvector(eigsolve::ES, vecs, n::Int) where {ES <: AbstractEigenSolver} = vecs[:, n]
+geteigenvector(eigsolve::ES, vecs, I::Array{Int64,1}) where {ES <: AbstractEigenSolver} = vecs[:, I]
 ####################################################################################################
 # Solvers for default \ operator (backslash)
 ####################################################################################################
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-struct DefaultEig <: AbstractEigenSolver end
+@with_kw struct DefaultEig{Tby} <: AbstractEigenSolver
+	which::Tby = real		# how do we sort the computed eigenvalues
+end
 
 function (l::DefaultEig)(J, nev::Int64)
 	# I put Array so we can call it on small sparse matrices
 	F = eigen(Array(J))
-	I = sortperm(F.values, by = x-> real(x), rev = true)
+	I = sortperm(F.values, by = l.which, rev = true)
 	nev2 = min(nev, length(I))
-	return F.values[I[1:nev2]], F.vectors[:, I[1:nev2]], 1
+	return Complex.(F.values[I[1:nev2]]), F.vectors[:, I[1:nev2]], true, 1
 end
 
-# case of sparse matrices
-struct DefaultEigSparse <: AbstractEigenSolver end
-
-function (l::DefaultEigSparse)(J, nev::Int64)
-	λ, ϕ = Arpack.eigs(J, nev = nev, which = :LR)
-	return λ, ϕ, 1
-end
-####################################################################################################
-# Solvers for IterativeSolvers
-####################################################################################################
-@with_kw struct eig_IterativeSolvers{T} <: AbstractEigenSolver
-	tol::T = T(1e-4)		# tolerance for solver
-	restart::Int64 = 200	# number of restarts
-	maxiter::Int64 = 100
-	N = 0				   # dimension of the problem
+# case of sparse matrices or matrix free method
+@with_kw struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
+	sigma::T = nothing
+	which::Symbol = :LR
+	by::Tby = real			# how do we sort the computed eigenvalues.
+	kwargs::Tw = nothing
 end
 
-# function (l::eig_IterativeSolvers{T})(J, nev::Int64) where T
-# 	# for now, we don't have an eigensolver for non hermitian matrices
-# 	@assert 1==0 "Not implemented: IterativeSolvers does not have an eigensolver yet!"
-# 	return res[1], length(res)>1, res[2].iters
-# end
+EigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, real, kwargs)
+
+function (l::EigArpack)(J, nev::Int64)
+	if J isa AbstractMatrix
+		λ, ϕ, ncv = Arpack.eigs(J; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
+	else
+		N = length(l.kwargs[:v0])
+		T = eltype(l.kwargs[:v0])
+		Jmap = LinearMap{T}(J, N, N; ismutating = false)
+		λ, ϕ, ncv, = Arpack.eigs(Jmap; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
+	end
+	I = sortperm(λ, by = l.by, rev = true)
+	ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
+	return λ[I], ϕ[:, I], true, 1
+end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
-@with_kw struct eig_KrylovKit{T} <: AbstractEigenSolver
+@with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
 	dim::Int64 = KrylovDefaults.krylovdim	# Krylov Dimension
-	tol::T = T(1e-4)						# tolerance for solver
+	tol::T = 1e-4							# tolerance for solver
 	restart::Int64 = 200					# number of restarts
 	maxiter::Int64 = KrylovDefaults.maxiter
 	verbose::Int = 0
-	which = :LR
-	issymmetric = false						# if the linear map is symmetric, only meaningful if T<:Real
-	ishermitian = false 					# if the linear map is hermitian
+	which::Symbol = :LR
+	issymmetric::Bool = false				# if the linear map is symmetric, only meaningful if T<:Real
+	ishermitian::Bool = false 				# if the linear map is hermitian
+	x₀::vectype = nothing					# example of vector in case of a matrix-free operator
 end
 
-function (l::eig_KrylovKit{T})(J, nev::Int64) where T
-	@assert typeof(J) <:  AbstractMatrix
-	vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
+function (l::EigKrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
+	if J isa AbstractMatrix && isnothing(l.x₀)
+		vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
+	else
+		vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
+	end
+	info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
 	return vals, vec, true, info.numops
 end
 
-getEigenVector(eigsolve::eig_KrylovKit{T}, vecs, n::Int) where T = vecs[n]
-
-# Matrix-Free version, needs to specify an example of rhs x₀
-@with_kw struct eig_MF_KrylovKit{T, vectype} <: AbstractEigenSolver
-	dim::Int64 = KrylovDefaults.krylovdim		# Krylov Dimension
-	tol::T = T(1e-4)							# tolerance for solver
-	restart::Int64 = 200						# number of restarts
-	maxiter::Int64 = KrylovDefaults.maxiter
-	verbose::Int = 0
-	which = :LR
-	x₀::vectype
-	issymmetric = false						# if the linear map is symmetric, only meaningful if T<:Real
-	ishermitian = false 					# if the linear map is hermitian
-end
-
-function (l::eig_MF_KrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
-	vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
-	return vals, vec, true, info.numops
-end
-
-getEigenVector(eigsolve::eig_MF_KrylovKit{T, vectype}, vecs, n::Int) where {T, vectype} = vecs[n]
+geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Int) where {T, vectype} = vecs[n]
+geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, I::Array{Int64,1}) where {T, vectype} = vecs[I]

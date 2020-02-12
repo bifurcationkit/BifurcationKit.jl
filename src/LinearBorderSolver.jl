@@ -1,40 +1,57 @@
 include("LinearSolver.jl")
 
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
+
+# call for using BorderedArray input, specific to Arclength Continuation
+(lbs::AbstractBorderedLinearSolver)(J, dR::vec1, dz::vec2, R, n::T, theta::T; shift::Ts = nothing) where {vec1, vec2, T, Ts} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
+
 ####################################################################################################
-struct BorderingBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
+@with_kw struct BorderingBLS{S <: AbstractLinearSolver, Ttol} <: AbstractBorderedLinearSolver
 	solver::S
+	tol::Ttol = 1e-12
+	checkPrecision::Bool = false
 end
 
 # dummy constructor to simplify user passing options to continuation
-BorderingBLS() = BorderingBLS(DefaultLS())
+BorderingBLS() = BorderingBLS(solver = DefaultLS())
+BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
 #          J  * dX +       dR   * dl = R
 # xiu * dz.u' * dX + xip * dz.p * dl = n
-function (lbs::BorderingBLS{S})(J, dR, dzu, dzp::T, R, n::T, xiu::T = T(1), xip::T = T(1); shift::Ts = 0)  where {T, S, Ts <: Number}
+function (lbs::BorderingBLS{S, Ttol})(  J, dR,
+								dzu, dzp::T, R, n::T,
+								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, S, Ts, Ttol}
 	# the following parameters are used for the pseudo arc length continuation
 	# xiu = theta / length(dz.u)
 	# xip = one(T) - theta
 
 	# we make this branching to avoid applying a zero shift
-	if shift == 0
-		x1, _, it1 = lbs.solver(J,  R)
-		x2, _, it2 = lbs.solver(J, dR)
+	if isnothing(shift)
+		x1, x2, _, (it1, it2) = lbs.solver(J, R, dR)
 	else
-		x1, _, it1 = lbs.solver(J,  R, shift)
-		x2, _, it2 = lbs.solver(J, dR, shift)
+		x1, x2, _, (it1, it2) = lbs.solver(J, R, dR; a₀ = shift)
 	end
 
 	dl = (n - dot(dzu, x1) * xiu) / (dzp * xip - dot(dzu, x2) * xiu)
+
 	# dX = x1 .- dl .* x2
-	dX = copy(x1); axpy!(-dl, x2, dX)
+	axpy!(-dl, x2, x1)
 
-	return dX, dl, true, (it1, it2)
+	# we check the precision of the solution by the bordering algorithm
+	# mainly for debugging purposes
+	if lbs.checkPrecision
+		# at this point, x2 is not used anymore, we can use it for computing the residual
+		# hence x2 = J*x1 + dl*dR - R
+		x2 = apply(J, x1)
+		axpy!(dl, dR, x2)
+		axpy!(-1, R, x2)
+
+		printstyled(color=:red,"--> res = ", ( norm(x2), abs(n - xip*dzp*dl -xiu* dot(dzu, x1))), "\n")
+	end
+
+	return x1, dl, true, (it1, it2)
 end
-
-# call for using BorderedArray input, specific to Arclength Continuation
-(lbs::BorderingBLS{S})(J, dR::vec1, dz::BorderedArray{vec2, T}, R, n::T, theta::T; shift::Ts = 0) where {S, T, Ts, vec1, vec2} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
 ####################################################################################################
 # this interface should work for Sparse Matrices as well as for Matrices
 struct MatrixBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
@@ -44,24 +61,65 @@ end
 # dummy constructor to simplify user passing options to continuation
 MatrixBLS() = MatrixBLS(DefaultLS())
 
-function (lbs::MatrixBLS)(J, dR, dzu, dzp::T, R::vectype, n::T, xiu::T = T(1), xip::T = T(1); shift::Ts = 0)  where {T, vectype <: AbstractVector, S, Ts <: Number}
+# case of a scalar additional linear equation
+function (lbs::MatrixBLS)(J, dR,
+						dzu, dzp::T, R::vectype, n::T,
+						xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T <: Number, vectype <: AbstractVector, S, Ts}
 	N = length(dzu)
 
 	rhs = vcat(R, n)
-	A = similar(J, N+1, N+1)
+	# A = similar(J, N + 1, N + 1)
+	# if shift == nothing
+	# 	A[1:N, 1:N] .= J
+	# else
+	# 	A[1:N, 1:N] .= J + shift * I
+	# end
+	#
+	# A[1:N, end] .= dR
+	# A[end, 1:N] .= vec(dzu) .* xiu
+	# A[end, end]  = dzp * xip
 
-	A[1:N, 1:N] .= J + shift * I
-	A[1:N, end] .= dR
-	A[end, 1:N] .= dzu .* xiu
-	A[end, end]  = dzp * xip
+	# A[1:N, end] .= dR
+	# A[end, 1:N] .= vec(dzu) .* xiu
+	# A[end, end]  = dzp * xip
+
+	if isnothing(shift)
+		A = J
+	else
+		A = J + shift * I
+	end
+	A = hcat(A, dR)
+	A = vcat(A, vcat(vec(dzu) .* xiu, dzp * xip)')
+
 	res = A \ rhs
 	return res[1:end-1], res[end], true, 1
 end
 
-# call for using BorderedArray input, specific to Arclength Continuation
-(lbs::MatrixBLS{S})(J, dR::vec1, dz::BorderedArray{vec2, T}, R, n::T, theta::T; shift::Ts = 0) where {S, T, Ts, vec1, vec2} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
+# case of a scalar additional linear equation
+function (lbs::MatrixBLS)(J, dR,
+						dzu, dzp, R::vectype, n::Tv,
+						xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {Tv, T <: Number, vectype <: AbstractVector, S, Ts}
+	@warn "Experimental!! Solving bordered linear system with non scalar bordered equation"
+	N = size(J, 1)
+	n1, n2 = size(dzp)
+
+	rhs = vcat(R, n)
+	A = similar(J, N + n1, N + n2)
+
+	if shift == nothing
+		A[1:N, 1:N] .= J
+	else
+		A[1:N, 1:N] .= J + shift * I
+	end
+
+	A[1:N, end-n1+1:end] .= dR
+	A[end-n1+1:end, 1:N] .= (dzu) .* xiu
+	A[end-n1+1:end, end-n1+1:end]  .= dzp .* xip
+	res = A \ rhs
+	return res[1:end-n1], res[end-n1+1:end], true, 1
+end
 ####################################################################################################
-# structure to save the bordered linear system with expression
+# composite type to save the bordered linear system with expression
 # [ J	a]
 # [b'	c]
 # It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
@@ -88,19 +146,14 @@ MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
 
 # dummy constructor to simplify user passing options to continuation
 # We restrict to bordered systems where the added component is scalar
-# For now, we restrict to KrylovKit iterative solver
-function (lbs::MatrixFreeBLS{S})(J, dR::vectype,
-					dzu::vectype, dzp::T,
-					R, n::T,
-					xiu::T = T(1), xip::T = T(1); shift::Ts = 0) where {T <: Number, vectype, S <: GMRES_KrylovKit, Ts <: Number}
+# For now, we restrict to KrylovKit iterative solver because we did not make BorderedArray a subtype of AbstractVector
+function (lbs::MatrixFreeBLS{S})(J, 		dR,
+								dzu, 	dzp::T, R, n::T,
+								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
 	linearmap = MatrixFreeBLSmap(J, dR, dzu * xiu, dzp * xip)
 	rhs = BorderedArray(copy(R), n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return sol.u, sol.p, cv, it
 end
-
-# call for using BorderedArray input, specific to Arclength Continuation
-(lbs::MatrixFreeBLS{S})(J, dR::vec1, dz::BorderedArray{vec2, T}, R, n::T, theta::T; shift::Ts = 0) where {S, T <: Number, Ts, vec1, vec2} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
 ####################################################################################################
 # Nested algorithm for solving the bordered linear system
-# NestedBLS

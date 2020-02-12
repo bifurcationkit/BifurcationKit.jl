@@ -1,106 +1,49 @@
-@with_kw mutable struct NewtonPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+"""
+	options = NewtonPar(tol = 1e-4,...)
+
+Returns a variable containing parameters to affect the `newton` algorithm when solving `F(x) = 0`.
+
+# Arguments (with default values):
+- `tol = 1e-10`: absolute tolerance for `F(x)`
+- `maxIter = 50`: number of Newton iterations
+- `verbose = false`: display Newton iterations?
+- `linsolver = DefaultLS()`: linear solver, must be `<: AbstractLinearSolver`
+- `eigsolver = DefaultEig()`: eigen solver, must be `<: AbstractEigenSolver`
+
+# Arguments only used in `newtonPALC`
+- `linesearch = false`: use line search algorithm
+- `alpha = 1.0`: alpha (damping) parameter for line search algorithm
+- `almin  = 0.001 `: minimal vslue of the damping `alpha`
+
+!!! tip "Mutating"
+    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
+"""
+@with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	tol::T			 = 1e-10
-	maxIter::Int  	 = 50
+	maxIter::Int64 	 = 50
 	alpha::T         = 1.0        # damping
 	almin::T         = 0.001      # minimal damping
-	verbose          = false
-	linesearch       = false
-	linsolver::S 	 = DefaultLS()
+	verbose::Bool    = false
+	linesearch::Bool = false
+	linsolver::L 	 = DefaultLS()
 	eigsolver::E 	 = DefaultEig()
 end
 
-# this function is used to simplify calls to NewtonPar
-function NewtonPar(; kwargs...)
-	if haskey(kwargs, :linsolver)
-		tls = typeof(kwargs[:linsolver])
-	else
-		tls = typeof(DefaultLS())
-	end
-	if haskey(kwargs, :eigsolver)
-		tes = typeof(kwargs[:eigsolver])
-	else
-		tes = typeof(DefaultEig())
-	end
-	return NewtonPar{Float64, tls, tes}(;kwargs...)
-end
-
-@with_kw mutable struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
-	# parameters for arclength continuation
-	s0::T		= 0.01
-	dsmin::T	= 0.001
-	dsmax::T	= 0.02
-	ds::T		= 0.001
-	dsgrow::T	= 1.1
-
-	# parameters for scaling arclength step size
-	theta::T              = 0.5 # parameter in the dot product used for the extended system
-	doArcLengthScaling    = false
-	gGoal::T              = 0.5
-	gMax::T               = 0.8
-	thetaMin::T           = 1.0e-3
-	isFirstRescale        = true
-	a::T                  = 0.5  # aggressiveness factor
-	tangentFactorExponent::T = 1.5
-
-	# parameters bound
-	pMin::T	= -1.0
-	pMax::T	=  1.0
-
-	# maximum number of continuation steps
-	maxSteps       = 100
-
-	# Newton solver parameters
-	finDiffEps::T  = 1e-9 		#constant for finite differences
-	newtonOptions::NewtonPar{T, S, E} = NewtonPar{T, S, E}()
-	optNonlinIter  = 5
-
-	save = false 				# save to file?
-
-	# parameters for eigenvalues
- 	computeEigenValues = false
-	shift = 0.1					# shift used for eigenvalues computation
-	nev = 3 					# number of eigenvalues
-	save_eig_every_n_steps = 1	# what steps do we keep the eigenvectors
-	save_eigenvectors	= true	# useful options because if puts a high memory pressure
-
-	plot_every_n_steps = 3
-	@assert dsmin>0
-	@assert dsmax>0
-
-	# handling bifucation points
-	detect_fold = true
-	detect_bifurcation = false
-end
-
-# check the logic of the parameters
-function check!(contParams::ContinuationPar)
-	if contParams.detect_bifurcation
-		contParams.computeEigenValues = true
-	end
-
-	if contParams.computeEigenValues
-		contParams.detect_bifurcation = true
-	end
-end
-
-# this function is to simplify calls to ContinuationPar
-function ContinuationPar(; kwargs...)
-	if haskey(kwargs, :newtonOptions)
-		on = kwargs[:newtonOptions]
-		ContinuationPar{Float64, typeof(on.linsolver), typeof(on.eigsolver)}(;kwargs...)
-	else
-		ContinuationPar{Float64, typeof(DefaultLS()), typeof(DefaultEig())}(;kwargs...)
-	end
-end
 ####################################################################################################
 """
-		newton(F, J, x0, options, normN = norm)
+		newton(F, J, x0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, optionsN; kwargs...) -> true, kwargs...)
 
-This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. Iterative solver (GMRES) are also provided. You should implement your own solver for maximal efficiency. This is quite easy to do, have a look at `src/LinearSolver.jl`. The functions or callable which need to be passed are as follows:
+This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
+
+# Arguments:
 - `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
-- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian can be a matrix or an out of place function.
+- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian `J(x)` can be a matrix or an out-of-place function.
+- `x0` initial guess
+- `options` variable holding the internal parameters used by the `newton` method
+- `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The `optionsN` will be `options` passed in order to change the linear / eigen solvers
+- `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
-Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
+Simplified calls are provided, for example when `J` is not passed. It is then computed with finite differences.
 
 # Output:
 - solution:
@@ -108,14 +51,14 @@ Simplified calls are provided, for example when `J` is not passed. It then compu
 - flag of convergence
 - number of iterations
 """
-function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) where T
+function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, optionsN; kwargs...) -> true, kwargs...) where T
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialise iterations
-	x = copy(x0)
+	x = similar(x0); copyto!(x, x0) # x = copy(x0)
 	f = Fhandle(x)
-	d = copy(f)
+	d = similar(f); copyto!(d, f)	# d = copy(f)
 
 	neval = 1
 	res = normN(f)
@@ -125,13 +68,10 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 	# Displaying results
 	verbose && displayIteration(it, neval, res)
 
-	# parameter for linesearch
-	step_ok = true
-
 	# Main loop
 	while (res > tol) & (it < maxIter)
 		J = Jhandle(x)
-		d, flag, itlinear = options.linsolver(J, f)
+		d, _, itlinear = options.linsolver(J, f)
 
 		# Update solution: x .= x .- d
 		minus!(x, d)
@@ -143,9 +83,10 @@ function newton(Fhandle, Jhandle, x0, options:: NewtonPar{T}; normN = norm) wher
 		push!(resHist, res)
 		it += 1
 
+		callback(x, f, J, res, it, options; kwargs...) == false && (it = maxIter)
 		verbose && displayIteration(it, neval, res, itlinear)
 	end
-	(resHist[end] > tol) && printstyled("\n--> Newton algorithm failed to converge, residual = ", res[end], color=:red)
+	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	return x, resHist, resHist[end] < tol, it
 end
 
@@ -153,130 +94,4 @@ end
 function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
 	Jhandle = u -> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
-end
-####################################################################################################
-"""
-	newtonDeflated(F, J, x0, options:: NewtonPar{T}, defOp::DeflationOperator{T, vectype}; kwargs)
-
-This is the deflated version of the Newton Solver for `F(x) = 0` with Jacobian `J`. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`.
-
-Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
-
-# Output:
-- solution:
-- history of residuals
-- flag of convergence
-- number of iterations
-"""
-function newtonDeflated(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
-	# we create the new functional
-	deflatedPb = DeflatedProblem(Fhandle, Jhandle, defOp)
-
-	# and its jacobian
-	Jacdf = (u0, pb::DeflatedProblem, ls) -> (return (u0, pb, ls))
-
-	# Rename parameters
-	opt_def = @set options.linsolver = DeflatedLinearSolver()
-	return newton(u -> deflatedPb(u),
-				u-> Jacdf(u, deflatedPb, options.linsolver),
-				x0,
-				opt_def; kwargs...)
-end
-
-# simplified call when no Jacobian is given
-function newtonDeflated(Fhandle, x0::vectype, options::NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype};kwargs...) where {T, Tf, vectype}
-	Jhandle = u -> PseudoArcLengthContinuation.finiteDifferences(Fhandle, u)
-	return newtonDeflated(Fhandle,  Jhandle,  x0, options,  defOp;kwargs...)
-end
-####################################################################################################
-"""
-This is the classical matrix-free Newton Solver used to solve `F(x, l) = 0` together
-with the scalar condition `n(x, l) = (x - x0) * xp + (l - l0) * lp - n0`
-"""
-function newtonPseudoArcLength(F, Jh,
-						z0::BorderedArray{vectype, T},
-						tau0::BorderedArray{vectype, T},
-						z_pred::BorderedArray{vectype, T},
-						options::ContinuationPar{T};
-						linearbdalgo = BorderingBLS(),
-						normN = norm) where {T, vectype}
-	# Extract parameters
-	newtonOpts = options.newtonOptions
-	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
-	@unpack theta, ds, finDiffEps = options
-
-	N = (x, p) -> arcLengthEq(minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
-	normAC = (resf, resn) -> max(normN(resf), abs(resn))
-
-	# Initialise iterations
-	x = copy(z_pred.u)
-	l = z_pred.p
-	x_pred = copy(x)
-
-	# Initialise residuals
-	res_f = F(x, l);  res_n = N(x, l)
-
-	dX   = copy(res_f)
-	dl   = T(0)
-	# dFdl = (F(x, l + finDiffEps) - res_f) / finDiffEps
-	dFdl = copy(F(x, l + finDiffEps))
-	minus!(dFdl, res_f)	# dFdl = dFdl - res_f
-	rmul!(dFdl, T(1) / finDiffEps)
-
-	res     = normAC(res_f, res_n)
-	resHist = [res]
-	it = 0
-
-	# Displaying results
-	verbose && displayIteration(it, 1, res)
-	step_ok = true
-
-	# Main loop
-	while (res > tol) & (it < maxIter) & step_ok
-		# copyto!(dFdl, (F(x, l + epsi) - F(x, l)) / epsi)
-		copyto!(dFdl, F(x, l + finDiffEps)); minus!(dFdl, res_f); rmul!(dFdl, T(1) / finDiffEps)
-
-		J = Jh(x, l)
-		u, up, flag, liniter = linearbdalgo(J, dFdl, tau0, res_f, res_n, theta)
-
-		if linesearch
-			step_ok = false
-			while !step_ok & (alpha > almin)
-				# x_pred = x - alpha * u
-				copyto!(x_pred, x)
-				axpy!(-alpha, u, x_pred)
-
-				l_pred = l - alpha * up
-				copyto!(res_f, F(x_pred, l_pred))
-
-				res_n  = N(x_pred, l_pred)
-				res = normAC(res_f, res_n)
-
-				if res < resHist[end]
-					if (res < resHist[end] / 2) & (alpha < 1)
-						alpha *=2
-					end
-					step_ok = true
-					copyto!(x, x_pred)
-					l  = l_pred
-				else
-					alpha /= 2
-				end
-			end
-		else
-			minus!(x, u) 	# x .= x .- u
-			l = l - up
-
-			copyto!(res_f, F(x, l))
-
-			res_n  = N(x, l)
-			res = normAC(res_f, res_n)
-		end
-		# Book-keeping
-		push!(resHist, res)
-		it += 1
-		verbose && displayIteration(it, 1, res, liniter)
-
-	end
-	return BorderedArray(x, l), resHist, resHist[end] < tol, it
 end

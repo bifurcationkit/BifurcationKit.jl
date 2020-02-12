@@ -7,6 +7,8 @@ version = "0.1.0"
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
@@ -19,6 +21,9 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[compat]
+Documenter = "0.24.3"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

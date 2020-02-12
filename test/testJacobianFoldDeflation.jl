@@ -1,5 +1,5 @@
-using Test, PseudoArcLengthContinuation, LinearAlgebra
-const Cont = PseudoArcLengthContinuation
+using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield
+const PALC = PseudoArcLengthContinuation
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
@@ -31,9 +31,9 @@ function Jac_mat(u, α, β = 0.)
 	return J
 end
 
-Jac_fd(u0, α, β) = Cont.finiteDifferences(u->F_chan(u,α, β),u0)
+Jac_fd(u0, α, β) = PALC.finiteDifferences(u->F_chan(u,α, β),u0)
 
-# not really precise Finite Differences, I don't really undertand why
+# not really precise Finite Differences
 n = 101
 sol = rand(n)
 sol[end] = sol[1]
@@ -46,36 +46,36 @@ J_fold_exp = Jac_mat(sol,3,0.01)
 n = 101
 	a = 3.3
 	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-	opt_newton = Cont.NewtonPar(tol = 1e-8, verbose = false)
+	opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = false)
 	# ca fait dans les 69.95k Allocations
-	out, hist, flag = @time Cont.newton(
-							x -> F_chan(x,a, 0.01),
-							x -> Jac_mat(x,a, 0.01),
+	out, hist, flag = @time PALC.newton(
+							x -> F_chan(x, a, 0.01),
+							x -> Jac_mat(x, a, 0.01),
 							sol,
 							opt_newton, normN = x->norm(x,Inf64))
 
 # test with secant continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detect_fold = true, plot_every_n_steps = 50)
-	br, u1 = @time Cont.continuation(
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton)
+	br, u1 = @time PALC.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
-				printsolution = x->norm(x,Inf64),
+				printSolution = (x,p)->norm(x,Inf64),
 				out, a, opts_br0, plot = false, verbosity = 0)
 
 # test with Bordered tangent continuation
-br_tg, u1 = @time Cont.continuation(
+br_tg, u1 = @time PALC.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
-				printsolution = x->norm(x,Inf64),
-				out,a,opts_br0,plot = false, verbosity = 0, tangentalgo = Cont.BorderedPred())
+				printSolution = (x,p)->norm(x,Inf64),
+				out,a,opts_br0,plot = false, verbosity = 0, tangentAlgo = PALC.BorderedPred())
 
 # test with natural continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton, detect_fold = true)
-	br_nat, u1 = @time Cont.continuation(
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton)
+	br_nat, u1 = @time PALC.continuation(
 				(x,p) -> F_chan(x,p, 0.01),
 				(x,p) -> (Jac_mat(x,p, 0.01)),
-				printsolution = x->norm(x,Inf64),
-				out,0.,opts_br0,plot = false, verbosity = 0, tangentalgo = Cont.NaturalPred())
+				printSolution = (x,p)->norm(x,Inf64),
+				out,0.,opts_br0,plot = false, verbosity = 0, tangentAlgo = PALC.NaturalPred())
 
 # idem with Matrix-Free solver
 function dF_chan(x, dx, α, β = 0.)
@@ -89,64 +89,58 @@ function dF_chan(x, dx, α, β = 0.)
 	return out
 end
 
-ls = Cont.GMRES_KrylovKit{Float64}(dim = 100)
-	opt_newton_mf = Cont.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
-	out_mf, hist, flag = @time Cont.newton(
+ls = PALC.GMRESKrylovKit(dim = 100)
+	opt_newton_mf = PALC.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	out_mf, hist, flag = @time PALC.newton(
 		x -> F_chan(x, a, 0.01),
 		x -> (dx -> dF_chan(x, dx, a, 0.01)),
 		sol,
 		opt_newton_mf)
 
-opts_cont_mf  = Cont.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detect_fold = true, detect_bifurcation = false, plot_every_n_steps = 40, newtonOptions = opt_newton_mf)
-	opts_cont_mf.newtonOptions.maxIter = 70
-	opts_cont_mf.newtonOptions.verbose = false
-	opts_cont_mf.newtonOptions.tol = 1e-8
-	opts_cont_mf.maxSteps = 150
+opts_cont_mf  = PALC.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, newtonOptions = setproperties(opt_newton_mf;maxIter = 70, verbose = false, tol = 1e-8), maxSteps = 150)
 
-brmf, u1 = @time Cont.continuation(
+brmf, u1 = @time PALC.continuation(
 		(x, p) -> F_chan(x, p, 0.01),
 		(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
 		out, a, opts_cont_mf, verbosity = 0)
 
-brmf, u1 = @time Cont.continuation(
+brmf, u1 = @time PALC.continuation(
 	(x, p) -> F_chan(x, p, 0.01),
 	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
 	out, a, opts_cont_mf,
-	tangentalgo = BorderedPred(), verbosity = 0)
+	tangentAlgo = BorderedPred(), verbosity = 0)
 
-brmf, u1 = @time Cont.continuation(
+brmf, u1 = @time PALC.continuation(
 	(x, p) -> F_chan(x, p, 0.01),
 	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
 	out, a, opts_cont_mf,
-	tangentalgo = SecantPred(),
-	linearalgo = Cont.MatrixFreeBLS())
+	tangentAlgo = SecantPred(),
+	linearAlgo = PALC.MatrixFreeBLS())
 
-brmf, u1 = @time Cont.continuation(
+brmf, u1 = @time PALC.continuation(
 	(x, p) -> F_chan(x, p, 0.01),
 	(x, p) -> (dx -> dF_chan(x, dx, p, 0.01)),
 	out, a, opts_cont_mf,
-	tangentalgo = BorderedPred(),
-	linearalgo = Cont.MatrixFreeBLS())
+	tangentAlgo = BorderedPred(),
+	linearAlgo = PALC.MatrixFreeBLS())
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
-deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[out])
+deflationOp = DeflationOperator(2.0, (x,y) -> dot(x,y), 1.0, [out])
 
 # quick test of scalardM deflation
-# Cont.scalardM(deflationOp, sol, 5sol)
+# PALC.scalardM(deflationOp, sol, 5sol)
 
 chanDefPb   = DeflatedProblem(x -> F_chan(x,a, 0.01),x -> Jac_mat(x,a, 0.01),deflationOp)
 
-opt_def = opt_newton
-opt_def.tol = 1e-10
-opt_def.maxIter = 1000
-outdef1, _,_ = @time Cont.newton(
-						u->chanDefPb(u),
-						out.*(1 .+0.01*rand(n)),
+opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
+outdef1, _,_ = @time PALC.newton(
+						u -> chanDefPb(u),
+						out .* (1 .+0.01*rand(n)),
 						opt_def)
 
 # we now compare the jacobians for the deflated problem either using finite differences or the explicit jacobian
 rhs = rand(n)
-J_def_fd = Cont.finiteDifferences(u->chanDefPb(u),1.5*out)
+J_def_fd = PALC.finiteDifferences(u->chanDefPb(u),1.5*out)
 res_fd =  J_def_fd \ rhs
 
 Jacdf = (u0, pb::DeflatedProblem,ls = opt_def.linsolve ) -> (return (u0, pb, ls))
@@ -157,11 +151,8 @@ res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolver),rhs)[1]
 println("--> Test jacobian expression for deflated problem")
 @test norm(res_fd - res_explicit,Inf64) < 1e-4
 
-opt_def = opt_newton
-opt_def.tol = 1e-10
-opt_def.maxIter = 1000
-
-outdef1, _, _ = @time Cont.newtonDeflated(
+opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
+outdef1, _, _ = @time PALC.newton(
 		x -> F_chan(x, a, 0.01),
 		x -> Jac_mat(x, a, 0.01),
 		out.*(1 .+ 0.01*rand(n)),
@@ -174,23 +165,33 @@ foldpb = FoldProblemMinimallyAugmented(
 		(x, α) ->   F_chan(x, α, 0.01),
 		(x, α) -> (Jac_mat(x, α, 0.01)),
 		(x, α) -> transpose(Jac_mat(x, α, 0.01)),
-		br.bifpoint[indfold][6],
-		br.bifpoint[indfold][6],
+		br.foldpoint[indfold][6],
+		br.foldpoint[indfold][6],
 		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt) |> norm
 
-outfold, _ = Cont.newtonFold(
+outfold, _ = PALC.newtonFold(
 		(x, p) -> F_chan(x, p, 0.01),
 		(x, p) -> Jac_mat(x, p, 0.01),
 		foldpt,
-		br.bifpoint[indfold][6],
+		br.foldpoint[indfold][6],
 		NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold][3])
+	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold][3])
+
+# example with KrylovKit
+P = Jac_mat(sol.*0,0,0)
+optils = NewtonPar(verbose=true, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
+outfold, _ = PALC.newtonFold(
+		(x, p) -> F_chan(x, p, 0.01),
+		(x, p) -> Jac_mat(x, p, 0.01),
+		foldpt,
+		br.foldpoint[indfold][6],
+		optils )
+	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold][3])
 
 # continuation of the fold point
-optcontfold = Cont.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true), maxSteps = 5)
-	optcontfold.newtonOptions.tol = 1e-8
-	outfoldco, hist, flag = @time Cont.continuationFold(
+optcontfold = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 5)
+	outfoldco, hist, flag = @time PALC.continuationFold(
 						(x, α, β) ->  F_chan(x, α, β),
 						(x, α, β) -> Jac_mat(x, α, β),
 						br, indfold,
@@ -205,14 +206,14 @@ Bd2Vec(x) = vcat(x.u, x.p)
 Vec2Bd(x) = BorderedArray(x[1:end-1], x[end])
 foldpbVec(x) = Bd2Vec(foldpb(Vec2Bd(x)))
 
-outfold, _ = Cont.newton(x -> foldpbVec(x),
+outfold, _ = PALC.newton(x -> foldpbVec(x),
 			# (x, α) -> Jac_mat(x, α, 0.01),
 			Bd2Vec(foldpt),
 			NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold][3])
+	println("--> Fold found at α = ", outfold[end], " from ", br.foldpoint[indfold][3])
 
 rhs = rand(n+1)
-Jac_fold_fdMA(u0) = Cont.finiteDifferences( u-> foldpbVec(u), u0)
+Jac_fold_fdMA(u0) = PALC.finiteDifferences( u-> foldpbVec(u), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
@@ -237,19 +238,19 @@ res_exp = res_explicit[end] \ rhs
 @test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-8
 ####################################################################################################
 # Use of different eigensolvers
-opt_newton = Cont.NewtonPar(tol = 1e-8, verbose = false, eigsolver = eig_KrylovKit{Float64}())
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detect_fold = true, detect_bifurcation = true, nev = 15)
+opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, u1 = @time Cont.continuation(
+br, u1 = @time PALC.continuation(
 			(x,p) -> F_chan(x,p, 0.01),
 			(x,p) -> (Jac_mat(x,p, 0.01)),
-			printsolution = x->norm(x,Inf64),
+			printSolution = (x,p)->norm(x,Inf64),
 			out,a,opts_br0,plot = false, verbosity = 0)
 
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detect_fold = true, detect_bifurcation = true, nev = 15)
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, u1 = @time Cont.continuation(
+br, u1 = @time PALC.continuation(
 			(x,p) -> F_chan(x,p, 0.01),
 			(x,p) -> (Jac_mat(x,p, 0.01)),
-			printsolution = x->norm(x,Inf64),
+			printSolution = (x,p)->norm(x,Inf64),
 			out,a,opts_br0,plot = false, verbosity = 0)
