@@ -130,7 +130,7 @@ ind_hopf = 1
 ####################################################################################################Continuation of Periodic Orbit
 M = 10
 
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.05)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
 #
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
@@ -151,14 +151,14 @@ jac_prototype = Jbru_sp(ones(sol0 |> length), @set par_bru.β = 0)
 ff = ODEFunction(FOde, jac_prototype = JacVecOperator{Float64}(FOde, u0, par_hopf))
 probsundials = ODEProblem(FOde, u0, (0., 5200.), par_hopf)
 
-vf = ODEFunction((u,p,t)->Fbru(u,p); jac = (u,p,t) -> Jbru_sp(u,p))
-	prob = ODEProblem(vf,  u0, (0.0, .1), par_hopf)
+# vf = ODEFunction((u,p,t)->Fbru(u,p); jac = (u,p,t) -> Jbru_sp(u,p))
+	# prob = ODEProblem(vf,  u0, (0.0, .1), par_hopf)
 
 
 # heatmap(sol[:,:], color = :viridis)
 ####################################################################################################
 # M = 10
-dM = 3
+dM = 5
 orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.0)
@@ -167,7 +167,7 @@ PALC.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 # PALC.sectionShooting(initpo, Array(orbitguess_f2[:,1:dM:M]), par_hopf)
 
-probSh = p -> PALC.ShootingProblem(u -> Fbru(u, p), p, prob, Rodas4P(),
+probSh = p -> PALC.ShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(),
 		length(1:dM:M), x -> PALC.sectionShooting(x, Array(orbitguess_f2[:,1:dM:M]), p, Fbru); atol = 1e-10, rtol = 1e-8)
 
 res = @time probSh(par_hopf)(initpo)
@@ -186,143 +186,48 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbos
 	plot(initpo[1:end-1], label = "Init guess")
 	plot!(outpo[1:end-1], label = "sol")
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
-	br_po, _, _= @time PALC.continuationPOShooting(
-		p -> probSh(@set par_hopf.l = p),
-		outpo, par_hopf.l,
-		opts_po_cont; verbosity = 2,
-		plot = true,
-		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
-		printSolution = (u, p) -> u[end], normC = norminf)
+# opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
+# 	br_po, _, _= @time PALC.continuationPOShooting(
+# 		p -> probSh(@set par_hopf.l = p),
+# 		outpo, par_hopf.l,
+# 		opts_po_cont; verbosity = 2,
+# 		plot = true,
+# 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+# 		printSolution = (u, p) -> u[end], normC = norminf)
 
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # eig = DefaultEig()
 opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true)
-opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 3, precisionStability = 1e-2, detectBifurcation = 2, maxSteps = 5000)
+opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 1e-2, detectBifurcation = 2, maxSteps = 5000, ds = 0.03, dsmax = 0.03, pMax = 2.5)
 
 br_po, _ , _ = @time PALC.continuationPOShooting(
 		p -> probSh(@set par_hopf.l = p),
 		outpo, par_hopf.l,
-		opts_po_cont_floquet; verbosity = 2,
+		opts_po_cont_floquet; verbosity = 3,
 		plot = true,
 		# callbackN = cb_ss,
+		finaliseSolution = (z, tau, step, contResult) ->
+			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 		printSolution = (u, p) -> u[end], normC = norminf)
 ####################################################################################################
-# Simple Poincare Shooting
-function sectionP(x, po::AbstractMatrix, p)
-	res = 1.0
-	N, M = size(po)
-	# @show size(x,2)
-	for ii = 1:size(x, 2)
-		res *= dot(x .- po[:, ii], Fbru(po[:, ii], p))
-	end
-	# @show p res
-	res
-end
-
-M = 1
-orbitsection = Array(sol[:,1:M])
-
-initpo = vec(orbitsection)
-
-sectionP(initpo[1:2n], Array(sol[:,1:M]), par_hopf)
-
-probPSh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(), M, x -> sectionP(x, Array(sol[:,1:M]), p), atol = 1e-9)
-
-probPSh(par_hopf)
-
-res = @time probPSh(par_hopf)(initpo)
-norminf(res)
-res = probPSh(par_hopf)(initpo, initpo)
-norminf(res)
-
-ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
-	ls = GMRESIterativeSolvers(tol = 1e-4, N = length(initpo), maxiter=50, verbose = false)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 65, linsolver = ls)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-	outpo, _ = @time PALC.newton(x -> probPSh(par_hopf)(x),
-			x -> (dx -> probPSh(par_hopf)(x, dx)),
-			initpo,
-			optn;
-			# callback = cb_ss,
-			normN = norminf)
-	plot(initpo[1:end-1], label = "Init guess")
-	plot!(outpo[1:end-1], label = "sol")
-
-getPeriod(probPSh(par_hopf), outpo)
-
-
-opts_poP_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.02, pMax = 4.0, maxSteps = 3, newtonOptions = @set optn.tol = 1e-8)
-	eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 2, dim = 40)
-	# eig = DefaultEig()
-	opts_poP_cont_floquet = setproperties(opts_poP_cont.newtonOptions; eigsolver = eig,maxIter = 25)
-	opts_poP_cont_floquet = setproperties(opts_poP_cont; computeEigenValues = true, nev = 10, precisionStability = 5e-3, detectBifurcation = 1, maxSteps = 100)
-
-br_pok2, upo , _= @time PALC.continuationPOShooting(
-		p -> probPSh(@set par_hopf.l = p),
-		outpo, par_hopf.l,
-		opts_poP_cont_floquet;
-		verbosity = 2, plot = true,
-		# callbackN = cb_ss,
-		plotSolution = (x;kwargs...) -> plot!(x; label = "", kwargs...),
-		# printSolution = (x,p)->norm(x),
-		normC = norminf)
-####################################################################################################
-# Multiple Poincare Shooting
-function sectionP!(out, x, po::AbstractMatrix, p)
-	res = 1.0
-	N, M = size(po)
-	# @show N M
-	for ii = 1:M
-		out[ii] = dot(x .- po[:, ii], Fbru(po[:, ii], p))
-	end
-	out
-end
-
-M = 1
-orbitsection = Array(sol[:,1:M])
-
-initpo = vec(orbitsection)
-
-sectionP(initpo[1:2n], Array(sol[:,1:M]), par_hopf)
-
-probPSh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(), M, x -> sectionP!(x, Array(sol[:,1:M]), p), atol = 1e-9)
-
-probPSh(par_hopf)
-
-res = @time probPSh(par_hopf)(initpo)
-norminf(res)
-res = probPSh(par_hopf)(initpo, initpo)
-norminf(res)
-
-ls = GMRESIterativeSolvers(tol = 1e-4, N = length(initpo), maxiter=50, verbose = false)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 65, linsolver = ls)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-	outpo, _ = @time PALC.newton(x -> probPSh(par_hopf)(x),
-			x -> (dx -> probPSh(par_hopf)(x, dx)),
-			initpo,
-			optn;
-			callback = cb_ss,
-			normN = norminf)
-	plot(initpo[1:end-1], label = "Init guess")
-	plot!(outpo[1:end-1], label = "sol")
-
-getPeriod(probPSh(par_hopf), outpo)
-####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
-M = size(sol, 2)
-dM = 15
-normals = [Fbru(sol[:,ii], par_hopf)/(norm(Fbru(sol[:,ii], par_hopf)))^2 for ii = 1:dM:M]
-	centers = [sol[:,ii] for ii = 1:dM:M]
 
-probHPsh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probmatrixfree, ImplicitEuler(), normals, centers; atol = 1e-10, rtol = 1e-9, dt = 0.1)
+using ForwardDiff
 
-# probHPsh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probsundials, ImplicitEuler(), normals, centers; atol = 1e-10, rtol = 1e-9, dt = 0.1)
+function dprobHPsh(pb,x,dx)
+	ForwardDiff.derivative(t -> pb(x .+ t .* dx), 0.)
+end
+
+dM = 10
+normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
+	centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
+
+probHPsh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(), normals, centers; atol = 1e-10, rtol = 1e-8)
 
 hyper = probHPsh(par_hopf).psh.section
-initpo_bar = zeros(size(sol,1)-1, length(normals))
+initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 	for ii=1:length(normals)
 		initpo_bar[:, ii] .= PALC.R(hyper, centers[ii], ii)
 	end
@@ -330,41 +235,39 @@ initpo_bar = zeros(size(sol,1)-1, length(normals))
 probHPsh(par_hopf)(vec(initpo_bar))
 probHPsh(par_hopf)(vec(initpo_bar)) |> norminf
 
-probHPsh(par_hopf)(vec(initpo_bar), vec(initpo_bar) )
+# TODO JE PENSE QU IL Y A UN SOUCIS AVEC JACOBIAN ET DERIVEE SUR SURFACE
+_r1 = probHPsh(par_hopf)(vec(initpo_bar), vec(initpo_bar); δ = 1e-8 )
+	_r2 = dprobHPsh(probHPsh(par_hopf),vec(initpo_bar), vec(initpo_bar) )
+	_r1 - _r2
 
-ls = GMRESIterativeSolvers(tol = 1e-5, N = length(vec(initpo_bar)), maxiter = 500, verbose = true)
-	# ls = GMRESKrylovKit(rtol = 1e-5, verbose = 2)
-	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x,y), 1.0, [sol0])
-	optn = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 140, linsolver = ls)
+ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
+	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x,y), 1.0, [sol0])
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
 	outpo_psh, _ = @time PALC.newton(x -> probHPsh(par_hopf)(x; verbose = false),
-			x -> (dx -> probHPsh(par_hopf)(x, dx; δ = 1e-7)),
+			x -> (dx -> probHPsh(par_hopf)(x, dx; δ = 1e-8)),
+			# x -> (dx -> dprobHPsh(probHPsh(par_hopf), x, dx)),
 			vec(initpo_bar), optn,
 			# deflationOp,
 			; normN = norminf)
 
-plot(outpo_psh)
+plot(outpo_psh, label = "Solution")
+	plot!(initpo_bar |> vec, label = "Init Cont")
+
+PALC.getPeriod(probHPsh(par_hopf), outpo_psh)
 
 
-####################################################################################################
-using DiffEqBase
+# simplified call
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
+opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
+opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 1e-3, detectBifurcation = 2, maxSteps = 5000, ds = 0.001, pMax = 2.5, plotEveryNsteps = 3)
 
-function sectionHyper(out, x, normals = normals, centers = centers)
-	for ii = 1:length(normals)
-		out[ii] = dot(normals[ii], x .- centers[ii])
-	end
-	out
-endw
-
-orbitsection = vec(sol[:,1:1])
-
-
-pSection(out, u, t, integrator) = sectionHyper(out, u) * (integrator.iter > 1)
-affect!(integrator, idx) = terminate!(integrator)
-cb = VectorContinuousCallback(pSection, affect!, length(normals); interp_points = 150, affect_neg! = nothing)
-# _probsundials = DiffEqBase.remake(probsundials; u0 = vec(sol[:,1:1]), tspan = (0, Inf64), p = par_hopf)
-
-
-PALC.flow(vec(sol[:,1:1]), Inf64, probsundials; alg = Rodas4(), callback = cb)
-
-
-PALC.dflow_fd(vec(sol[:,1:1]), vec(sol[:,1:1]), Inf64, probsundials; alg = Rodas4(), callback = cb)
+br_po, _ , _ = @time PALC.continuationPOShooting(
+	p -> probHPsh(@set par_hopf.l = p),
+	outpo_psh, par_hopf.l,
+	opts_po_cont_floquet; verbosity = 3,
+	plot = true,
+	plotSolution = (x; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	# printSolution = (x, p) -> norminf(x),
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	normC = norminf)

@@ -1,6 +1,6 @@
 # Complex Ginzburg-Landau 2d
 
-> This example is treated from the MATLAB library [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/).
+> This example is also treated in the MATLAB library [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/).
 
 We look at the Ginzburg-Landau equations in 2d. The code is very similar to the Brusselator example except that some special care has to be taken in order to cope with the "high" dimensionality of the problem.
 
@@ -379,10 +379,10 @@ It gives
         5                6     3.9205e-08        12
         6                7     1.0685e-10        13
         7                8     1.0592e-13        14
-  1.401160 seconds (23.44 k allocations: 154.468 MiB, 3.39% gc time)
+  1.157987 seconds (23.44 k allocations: 154.468 MiB, 3.39% gc time)
 ```
 
-Notice the speed boost and the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
+Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
 
 
 ### Other linear formulation

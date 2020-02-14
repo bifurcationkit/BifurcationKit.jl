@@ -173,7 +173,7 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 or
 
 	pb = ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; kwargs...)
-where `F` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
+where `F` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 - The other way is an elaboration of the previous one
 	pb = ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; kwargs...)
 or
@@ -368,7 +368,7 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 ## Simplified constructors
 A simpler way is to create a functional is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)` for simple shooting or `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...)` for multiple shooting . Here `F` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information.
 
-Another convenient call is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; kwargs...)` where `normals` (resp. `centers`) is a list of normals (resp. centers) which define a list of hyperplanes `\\Sigma_i`. These hyperplanes are used to define partial Poincaré return maps. See docs for more information.
+Another convenient call is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; kwargs...)` where `normals` (resp. `centers`) is a list of normals (resp. centers) which define a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps. See docs for more information.
 
 ## Computing the functionals
 You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
@@ -388,7 +388,7 @@ end
 
 # simple Poincaré shooting
 function PoincareShootingProblem(F, prob::ODEProblem, alg, section; interp_points = 50, kwargs...)
-	pSection(u, t, integrator) = section(u) .* (integrator.iter > 1)
+	pSection(u, t, integrator) = section(u) * (integrator.iter > 1)
 	# we put the nothing option to have an upcrossing
 	cb = ContinuousCallback(pSection, terminate!, nothing, interp_points = interp_points)
 	return PoincareShootingProblem(Flow(F, prob, alg, callback=cb; kwargs...), 1, section)
@@ -406,12 +406,17 @@ end
 # this function takes into account a parameter passed to the vector field
 # multiple shooting
 function PoincareShootingProblem(F, p, prob::ODEProblem, alg, M, section; interp_points = 50, kwargs...)
-	if M==1
+	if M == 1
 		return PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)
 	end
 
-	pSection(out, u, t, integrator) = section(out, u) .* (integrator.iter > 1)
+	pSection(out, u, t, integrator) = (section(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
+	# function affect!(integrator, idx)
+	# 	if integrator.iter > 1
+	# 		terminate!(integrator)
+	# 	end
+	# end
 	# we put the nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, M;interp_points = interp_points, affect_neg! = nothing)
 	return PoincareShootingProblem(Flow(F, p, prob, alg; callback = cb, kwargs...), M, section)
@@ -519,11 +524,36 @@ struct HyperplanePoincareShootingProblem <: AbstractShootingProblem
 	psh::PoincareShootingProblem
 end
 
-getPeriod(hpsh::HyperplanePoincareShootingProblem, x) = getPeriod(hpsh.psh)
+function getPeriod(hpsh::HyperplanePoincareShootingProblem, x_bar)
+	sh = hpsh.psh
+	M = sh.M
+	Nm1 = div(length(x_bar), M)
+
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+
+	# variable to hold the computed result
+	xc = similar(x_bar, Nm1 + 1, M)
+	outc = similar(xc)
+
+	Th = eltype(x_barc)
+	period = Th(0)
+
+	# we extend the state space to be able to call the flow, so we fill xc
+	#TODO create the projections on the fly
+	for ii=1:M
+		E!(sh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+	end
+
+	for ii in 1:M-1
+		period += @views sh.flow.flowFull(xc[:, ii+1], Inf64).t[end]
+	end
+	period += @views sh.flow.flowFull(xc[:, M], Inf64).t[end]
+end
 
 function PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; interp_points = 50, kwargs...)
 	hyp = HyperplaneSections(normals, centers)
-	pSection(out, u, t, integrator) = hyp(out, u) * (integrator.iter > 1)
+	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
@@ -568,7 +598,7 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector; verbos
 end
 
 # jacobian of the shooting functional
-function (sh::HyperplanePoincareShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-8)
+function (sh::HyperplanePoincareShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
 	return (sh(x .+ δ .* dx) .- sh(x)) ./ δ
 end
 
@@ -580,6 +610,7 @@ struct ShootingJacobian{Tpb <: AbstractShootingProblem, Torbitguess}
 	x::Torbitguess
 end
 
+# evaluation of the jacobian
 (shjac::ShootingJacobian)(dx) = shjac.pb(shjac.x, dx)
 
 ####################################################################################################
@@ -629,11 +660,16 @@ function continuationPOShooting(prob, orbitguess, p0::Real, _contParams::Continu
 
 	options = contParams.newtonOptions
 
+	pb0 = prob(p0)
+
 	if contParams.computeEigenValues
+		if pb0 isa HyperplanePoincareShootingProblem && pb0.psh.M > 1
+			@warn "Floquet multipliers wrongly computed"
+		end
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDShooting(contParams.newtonOptions.eigsolver)
 	end
 
-	if (prob(p0) isa PoincareShootingProblem) || (prob(p0) isa HyperplanePoincareShootingProblem)
+	if (pb0 isa PoincareShootingProblem) || (pb0 isa HyperplanePoincareShootingProblem)
 		if printPeriod
 			printSolutionPS = (x, p) -> getPeriod(prob(p), x)
 			return continuation(

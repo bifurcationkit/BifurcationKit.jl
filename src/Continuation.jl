@@ -549,7 +549,6 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 
 			# Saving Solution to File
 			if contParams.saveToFile
-				(verbosity > 0) && printstyled("--> Solving solution in file\n", color=:green)
 				saveToFile(it.filename, getu(state), getp(state), state.step, contRes, contParams)
 			end
 

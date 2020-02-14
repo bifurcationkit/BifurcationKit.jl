@@ -15,7 +15,7 @@ end
 ####################################################################################################
 function computeEigenvalues(contparams::ContinuationPar, n_unstable::Int64, J)
 	# the next line is to ensure we compute enough eigenvalues to probe stability
-	nev_ = max(n_unstable + 5, contparams.nev)
+	nev_ = max(n_unstable + 6, contparams.nev)
 	eiginfo = contparams.newtonOptions.eigsolver(J, nev_)
 	isstable, n_unstable, n_imag = is_stable(contparams, eiginfo[1])
 	return eiginfo, isstable, n_unstable, n_imag
