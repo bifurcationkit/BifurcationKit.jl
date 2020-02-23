@@ -26,7 +26,7 @@ The current package focuses on large scale nonlinear problems and multiple hardw
 
 ## Installation 
 
-This package requires Julia > v1.3.0
+This package requires Julia >= v1.3.0
 
 To install it, please run
 
