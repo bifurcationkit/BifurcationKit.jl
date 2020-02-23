@@ -207,46 +207,6 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Poicaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N.
 """
-function MonodromyQaDShooting(sh::PoincareShootingProblem, x, du::AbstractVector)
-	# extract parameters
-	M = sh.M
-	N = div(length(x), M)
-
-	# extract the time slices
-	xc = reshape(x, N, M)
-
-	out = copy(du)
-
-	for ii = 1:M
-		# call jacobian of the flow
-		@views out .= sh.flow(xc[:, ii], out, Inf64)[2]
-	end
-
-	return out
-end
-
-
-# Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
-function MonodromyQaDShooting(sh::PoincareShootingProblem, x)
-	# extract parameters
-	M = sh.M
-	@assert M == 1 "This is not yet a practical approach for multiple shooting"
-
-	N = div(length(x) , M)
-
-	Mono = zeros(N, N)
-
-	# extract the time slices
-	xc = reshape(x, N, M)
-
-	du = zeros(N)
-
-	for ii = 1:N
-		du[ii] = 1.0
-		# call jacobian of the flow
-		@views Mono[:, ii] .= sh.flow(xc[:, 1], du, Inf64)[2]
-		du[ii] = 0.0
-	end
-
-	return Mono
+function MonodromyQaDShooting(sh::HyperplanePoincareShootingProblem, x, du::AbstractVector)
+	return du .- sh(x, du)
 end

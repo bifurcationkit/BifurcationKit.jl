@@ -17,16 +17,9 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	plotBranch!(contres; filterbifpoints = true, putbifptlegend = false, xlabel="p",  ylabel="||x||", label="", subplot=1)
 	plot!(branch[1, :],	 xlabel="it", ylabel="p", label="", subplot=2)
 
-	# add the bifurcation points along the branch
-	# if length(contres.bifpoint)>1
-	# 	scatter!(map(x -> x.idx, contres.bifpoint[2:end]),
-	# 			 map(x -> x.param, contres.bifpoint[2:end]),
-	# 			label="", color = map(x -> colorbif[x.type], contres.bifpoint[2:end]), markersize=3, markerstrokewidth=0, subplot=2)
-	# end
-
 	if contparms.computeEigenValues
-		ii = length(contres.eig)
-		scatter!(real.(contres.eig[ii][1]), imag.(contres.eig[ii][1]), subplot=4, label="", markersize = 1, color=:black)
+		eigvals = contres.eig[end].eigenvals
+		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label="", markerstrokewidth=0, markersize = 3, color=:black)
 	end
 
 	plotuserfunction(sol.u, subplot = 3)
@@ -65,7 +58,7 @@ function plotBranch(brs::Vector, plot_fold = true; putbifptlegend = true, filter
 	# add legend for bifurcation points
 	if putbifptlegend && length(bp) > 0
 		for pt in bp
-			scatter!([], [], color = colorbif[pt], label = "$pt")
+			scatter!([], [], color = colorbif[pt], label = "$pt", markerstrokewidth = 0)
 		end
 	end
 end
@@ -127,14 +120,14 @@ function plotBranch!(contres, plot_fold = true; putbifptlegend = true, filterbif
 		if filterbifpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
-		scatter!(map(x -> x.param, bifpt), map(x -> x.printsol, bifpt), label="", color = map(x->colorbif[x.type], bifpt), markersize=2, markerstrokewidth=1 ; kwargs...)
+		scatter!(map(x -> x.param, bifpt), map(x -> x.printsol, bifpt), label="", color = map(x->colorbif[x.type], bifpt), markersize=3, markerstrokewidth=0 ; kwargs...)
 	end
 	# add legend for bifurcation points
 	if putbifptlegend && length(bifpoints) >= 1
 		bp = unique([pt.type for pt in bifpt if pt.type != :none])
 		(length(bp) == 0) && return
 		for pt in bp
-			scatter!([], [], color=colorbif[pt], label="$pt")
+			scatter!([], [], color=colorbif[pt], label="$pt", markerstrokewidth = 0)
 		end
 	end
 end

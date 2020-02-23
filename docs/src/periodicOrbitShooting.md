@@ -54,6 +54,10 @@ and $M_i=\partial_x\phi^{\delta s_i T}(x_i)$.
 The functional is encoded in the composite type [`ShootingProblem`](@ref). In particular, the user can pass its own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a solver tailored for the a specific problem. See the link [`ShootingProblem`](@ref) for more information, in particular on how to access the underlying functional, its jacobian...
 
 ## Poincaré shooting
+
+> The algorithm is based on the one described in **Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.**, Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó (2004) and **Matrix-Free Continuation of Limit Cycles for Bifurcation Analysis of Large Thermoacoustic Systems.** Waugh, Iain, Simon Illingworth, and Matthew Juniper (2013). 
+
+
 The idea is to look for periodic orbits solutions of (1) using hyperplanes $\Sigma_i$ for $i=1,\cdots,M$ which intersect transversally an initial periodic orbit guess. We write $\Pi_i$, the Poincaré return map on $\Sigma_i$ and look for solutions of the following problem:
 
 $$\begin{aligned} 
@@ -62,7 +66,7 @@ $$\begin{aligned}
 \Pi_m(x_{m})-x_{1} &=0. 
 \end{aligned}$$
 
-> The algorithm is based on the one described in **Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.**, Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó (2004) and **Matrix-Free Continuation of Limit Cycles for Bifurcation Analysis of Large Thermoacoustic Systems.** Waugh, Iain, Simon Illingworth, and Matthew Juniper (2013). The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$.
+The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$. Hence, one has to constrained the unknowns to these hyperplanes otherwise the Newton algorithm does not converge well.
 
 
 ### Encoding of the functional

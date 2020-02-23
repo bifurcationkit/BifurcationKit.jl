@@ -117,7 +117,7 @@ probSh = p -> ShootingProblem(
 We use the solution from the ODE solver as a starting guess for the shooting method.
 
 ```julia
-# initial guess with period 6.9
+# initial guess with period 6.9 using solution at time t = 116
 initpo = vcat(sol(116.), 6.9) |> vec
 
 # linear solver for shooting functional

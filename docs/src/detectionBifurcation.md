@@ -4,13 +4,14 @@ The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p
 
 - `contParams.detectBifurcation = 1` which also turns on `contParams.computeEigenValues = true`
 
-The located bifurcation points are then returned in `br.bifpoint`. 
+The bifurcation points are first located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalues $\lambda$ are declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
 
 !!! danger 
     Note that these points are only approximate **bifurcation** points when `detectBifurcation = 1`. If `detectBifurcation = 2`, a bisection algorithm is used to locate them more precisely. They can also be refined using the methods described here after.
 
-!!! warning "Large scale computations"
-    The user must specify the number of eigenvalues to be computed (like `nev = 10`) in the parameters `::ContinuationPar` passed to `continuation`. Note that `nev` is automatically incremented whenever a bifurcation point is detected [^1]. Also, there is an option in `::ContinuationPar` to save (or not) the eigenvectors. This can be useful in memory limited environments (like on GPUs).
+## Large scale computations
+
+The user must specify the number of eigenvalues to be computed (like `nev = 10`) in the parameters `::ContinuationPar` passed to `continuation`. Note that `nev` is automatically incremented whenever a bifurcation point is detected [^1]. Also, there is an option in `::ContinuationPar` to save (or not) the eigenvectors. This can be useful in memory limited environments (like on GPUs).
     
 [^1] In this case, the Krylov dimension is not increased because the eigensolver could be a direct solver. You might want to increase this dimension using the callbacks in [`continuation`](@ref). 
 

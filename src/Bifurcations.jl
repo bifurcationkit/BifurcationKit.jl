@@ -42,7 +42,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 				ind_bif = 0,
 				step = length(branch)-1,
 				status = :guess,
-				δ = (-1, -1)))
+				δ = (0, 0)))
 		detected = true
 	end
 end
@@ -74,6 +74,10 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 
 	δn_unstable = abs(n_unstable - n_unstable_prev)
 	δn_imag		= abs(n_imag - n_imag_prev)
+
+	if δn_unstable < δn_imag
+		@error "Error in eigenvalues computation. It seems an eigenvalue is missing, probably `conj(λ)` for some already computed eigenvalue λ. This makes the identification of bifurcation points erroneous. You should increase the number of requested eigenvalues."
+	end
 
 	# codim 1 bifurcation point detection based on eigenvalue distribution
 
@@ -114,7 +118,7 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 			ind_bif = ind_bif,
 			step = state.step,
 			status = status,
-			δ = (δn_unstable, δn_imag))
+			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev))
 		(verbosity>0) && printstyled(color=:red, "!! $(tp) Bifurcation point around p ≈ $(getp(state)), δn_unstable = $δn_unstable, δn_imag = $δn_imag \n")
 	end
 

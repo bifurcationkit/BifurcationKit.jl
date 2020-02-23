@@ -205,7 +205,7 @@ poTrap = p -> PeriodicOrbitTrapProblem(
 To evaluate the functional at `x`, you call it like a function: `poTrap(l_hopf + 0.01)(x)` for the parameter `l_hopf + 0.01`. 
 
 !!! note "Using the functional for deflation, Fold of limit cycles..."
-    The functional `poTrap` gives you access to the underlying methods to call a regular `newton`. For example the functional is `x -> poTrap(l_hopf + 0.01)(x)` at parameter `l_hopf + 0.01`. The (sparse) Jacobian at `(x,p)` is computed like this `poTrap(p)(Val(:JacFullSparse), x)` while the Matrix Free version is `dx -> poTrap(p)(x, dx)`. This also allows you to call the newton deflated method (see [Newton with deflation](@ref)) or [Newton for Fold / Hopf](@ref) to locate Fold point of limit cycles see [`PeriodicOrbitTrapProblem`](@ref). You can also use preconditioners. In the case of more computationally intense problems (like the 2d Brusselator), this might be mandatory as using LU decomposition for the linear solve will use too much memory. See [Newton for Periodic Orbits](@ref) for more information and the example `cGL2.jl`
+    The functional `poTrap` gives you access to the underlying methods to call a regular `newton`. For example the functional is `x -> poTrap(l_hopf + 0.01)(x)` at parameter `l_hopf + 0.01`. The (sparse) Jacobian at `(x,p)` is computed like this `poTrap(p)(Val(:JacFullSparse), x)` while the Matrix Free version is `dx -> poTrap(p)(x, dx)`. This also allows you to call the newton deflated method (see [Newton with deflation](@ref)) or [Newton for Fold / Hopf](@ref) to locate Fold point of limit cycles see [`PeriodicOrbitTrapProblem`](@ref). You can also use preconditioners. In the case of more computationally intense problems (like the 2d Brusselator), this might be mandatory as using LU decomposition for the linear solve will use too much memory. See [Newton for Periodic Orbits](@ref) for more information and the example [Complex Ginzburg-Landau 2d](@ref)
  
 
 For convenience, we provide a simplified newton / continuation methods for periodic orbits. One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
@@ -269,7 +269,7 @@ Looking for periodic orbits branching of bifurcation points, it is very useful t
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 ```
 
-which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product remove the last component, *i.e.* the period of the cycle is not be considered during this particular deflation. We can now use 
+which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use 
 
 ```Julia
 outpo_f, hist, flag = @time newton(poTrap(l_hopf + 0.01),
@@ -483,7 +483,7 @@ Newton Iterations
 ```
 
 !!! info "Convergence and speedup"
-    The convergence is much worse for the multiple shooting than for the simple one. This is reflected above in the number of linear iterations made during the newton solves. The reason for this is because of the cyclic structure of the jacobian which impedes GMRES from converging fast. This can only be resolved with an improved GMRES which we'll provide in the future.
+    The convergence is much worse for the multiple shooting than for the simple one. This is reflected above in the number of linear iterations made during the newton solve. The reason for this is because of the cyclic structure of the jacobian which impedes GMRES from converging fast. This can only be resolved with an improved GMRES which we'll provide in the future.
 
 
 Finally, we can perform continuation of this periodic orbit using a specialized version of `continuation`:
@@ -504,14 +504,14 @@ br_po, _, _= @time continuationPOShooting(
 	printSolution = (u, p) -> u[end], normC = norminf)
 ```
 
-> We can observe that simple shooting is faster but the Floquet multipliers are less accurate than for multiple shooting. Also, when the solution is very unstable, simple shooting can have spurious branch switching.
+We can observe that simple shooting is faster but the Floquet multipliers are less accurate than for multiple shooting. Also, when the solution is very unstable, simple shooting can have spurious branch switching. Finally, note the $0=\log 1$ eigenvalue of the monodromy matrix in the graph below.
 
 ![](brus-sh-cont.png)
 
 ## Continuation of periodic orbits (Poincaré Shooting)
 
-!!! compat "Using DifferentialEquations.jl (Experimental)"
-    This feature currently errors due to multiple events (via callbacks) being registered at the same time. This is being resolved.
+!!! compat "Experimental"
+    This computation of periodic orbits via Poincaré shooting is still experimenntal and not tested as much as the Standard shooting.
 
 We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of `DifferentialEquations.jl`. More information is provided at [`PoincareShootingProblem`](@ref) and [Periodic orbits based on the shooting method](@ref) but basically, it is a shooting method between Poincaré sections $\Sigma_i$ (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is $M_{sh}(N-1)$ where $N$ is the dimension of the phase space. Indeed, each time slice lives in an hyperplane $\Sigma_i$. Additionally, the period $T$ is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane $\Sigma_i$, something called **event detection**.
 
@@ -519,12 +519,11 @@ We now turn to another Shooting method, namely the Poincaré one. We can provide
 We show how to use this method, the code is very similar to the case of the Standard Shooting. We first define the functional for Poincaré Shooting Problem
 
 ```julia
-M = size(sol, 2)
-dM = 15
+dM = 10
 
 # vectors to define the hyperplanes Sigma_i
-normals = [Fbru(sol[:,ii], par_hopf) for ii = 1:dM:M]
-centers = [sol[:,ii] for ii = 1:dM:M]
+normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
+centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
 # functional to hold the Poincare Shooting Problem
 probHPsh = p -> PoincareShootingProblem(
@@ -538,28 +537,33 @@ probHPsh = p -> PoincareShootingProblem(
 	normals, centers; 
 	
 	# Parameters passed to the ODE solver
-	atol = 1e-10, rtol = 1e-9)
+	atol = 1e-10, rtol = 1e-8)
 ```
 
 Let us now compute an initial guess for the periodic orbit which must live in the hyperplanes $\Sigma_i$. Fortunately, we provide projections on these hyperplanes.
 
 ```julia
 # variable to hold the initial guess
-initpo_bar = zeros(size(sol,1)-1, length(normals))
+initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 
 # projection of the initial guess on the hyperplanes. We assume that the centers[ii]
 # form the periodic orbit initial guess.
 for ii=1:length(normals)
-	initpo_bar[:,ii] .= PALC.R(hyper, centers[ii], ii)
+	initpo_bar[:, ii] .= PALC.R(hyper, centers[ii], ii)
 end
 ```
 
 We can now call `newton` to refine the initial guess
 
 ```julia
-ls = GMRES_IterativeSolvers(tol = 1e-5, N = length(vec(initpo_bar)), verbose = false)
-optn = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 140, linsolver = ls)
-outpo_psh, _ = @time newton(x -> probHPsh(par_hopf)(x),
-	x -> (dx -> probHPsh(par_hopf)(x, dx)),
-	vec(initpo_bar), optn; normN = norminf)
+ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
+	outpo_psh, _ = @time PALC.newton(x -> probHPsh(par_hopf)(x; verbose = false),
+		# Finite differences for the Matrix-Free Jacobian:
+		x -> (dx -> probHPsh(par_hopf)(x, dx; δ = 1e-8)),
+		vec(initpo_bar), optn,
+		; normN = norminf)
 ```
+
+![](brus-psh-cont.png)
+
