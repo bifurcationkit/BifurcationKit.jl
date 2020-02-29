@@ -83,14 +83,14 @@ eigls = EigArpack(0.5, :LM)
 		plot();plot!(X,out[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 
-optcont = ContinuationPar(dsmax = 0.01, ds = -0.001, pMin = -1.8, detectBifurcation = 1, nev = 21, plotEveryNsteps = 50, newtonOptions = optnewton, maxSteps = 400)
+optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = optnewton, maxSteps = 370)
 
 	br, _ = @time continuation(
 		(x, p) -> Fbr(x, @set par_br.C = p),
 		(x, p) -> Jbr(x, @set par_br.C = p),
 		solc0, -0.2,
 		optcont;
-		plot = true, verbosity = 2,
+		plot = true, verbosity = 3,
 		printSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
@@ -146,10 +146,10 @@ outpo_f, _, flag = @time PALC.newton(
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 0)
+optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
 	br_po, _ , _ = @time continuationPOTrap(poTrap,
 		outpo_f, -0.87,
-		optcontpo; verbosity = 2,
+		optcontpo; verbosity = 3,
 		plot = true,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
 		plotSolution = (x;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
@@ -159,6 +159,8 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8,
 # branches = [br_po]
 push!(branches, br_po)
 plotBranch(vcat(branches, br), label = "");title!("")
+
+plotBranch(vcat(br_po, br), label = "");title!("")
 ####################################################################################################
 # Period doubling
 ind_pd = 1
@@ -177,6 +179,11 @@ vec_pd = geteigenvector(eig,
 # 	PALC.plotPeriodicPOTrap(outpo_pd, N, M)
 ####################################################################################################
 # shooting
+f1 = DiffEqArrayOperator(par_br.Δ)
+f2 = NL!
+prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), @set par_br.C = -0.86)
+
+sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
 orbitsection = Array(sol[:,[end]])
 # orbitsection = orbitguess[:, 1]
 
@@ -186,10 +193,11 @@ PALC.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 
 probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true),
-		1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr); atol = 1e-14, rtol = 1e-14, dt = 0.1)
+		1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr);
+		atol = 1e-14, rtol = 1e-14, dt = 0.05)
 
-probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob, Rodas4P(),
-		1, x -> sectionArray(x, Array(sol[:,[end]]), p))#; atol = 1e-12, rtol = 1e-10)
+# probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob, Rodas4(),
+		# 1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr); atol = 1e-12, rtol = 1e-10)
 
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
@@ -202,17 +210,19 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outposh[end], ", amplitude = ", PALC.getAmplitude(probSh(@set par_br.C = -0.86), outposh; ratio = 2),"\n")
 
-	plot(initpo[1:end-1], label = "Init guess")
-	plot!(outpo[1:end-1], label = "sol")
+plot(initpo[1:end-1], label = "Init guess")
+	plot!(outposh[1:end-1], label = "sol")
 
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.005, pMin = -1.8, maxSteps = 70, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 1)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
 	br_po_sh, _ , _ = @time continuationPOShooting(
 		p -> probSh(@set par_br.C = p),
 		outposh, -0.86,
-		optcontpo; verbosity = 2,
+		optcontpo; verbosity = 3,
 		plot = true,
+		finaliseSolution = (z, tau, step, contResult) ->
+			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
@@ -220,11 +230,14 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.005, pMin = -1.8
 # push!(branches, br_po_sh)
 # plotBranch(branches);title!("")
 
-plotBranch(vcat(br_po_sh, br_po, br), label = "");title!("")
+plotBranch(vcat(br_po_sh, br), label = "");title!("")
 
 ####################################################################################################
 # shooting PD
+f1 = DiffEqArrayOperator(par_br.Δ)
+f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), @set par_br.C = -1.32)
+# solution close to the PD point.
 
 solpd = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
 	# heatmap(sol.t, X, sol[N,:], color=:viridis, xlim=(20,280.0))
@@ -233,11 +246,12 @@ plot(solpd.t, solpd[N÷2, :], xlim=(290,296.2))
 
 solpd.t[end-100]
 
+
 orbitsectionpd = Array(solpd[:,end-100])
 initpo_pd = vcat(vec(orbitsectionpd), 6.2)
 PALC.plotPeriodicShooting(initpo_pd[1:end-1], 1);title!("")
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
@@ -251,14 +265,17 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose
 	plot(initpo[1:end-1], label = "Init guess")
 	plot!(outposh_pd[1:end-1], label = "sol")
 
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = -1.8, maxSteps = 100, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 1)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1.8, maxSteps = 500, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 0)
 	br_po_sh_pd, _ , _ = @time continuationPOShooting(
 		p -> probSh(@set par_br.C = p),
 		outposh_pd, -1.32,
-		optcontpo; verbosity = 2,
+		optcontpo; verbosity = 3,
 		plot = true,
-		# callbackN = cb_ss,
+		finaliseSolution = (z, tau, step, contResult) ->
+			(Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
-plotBranch(vcat(br_po_sh, br, br_po_sh_pd), label = "");title!("")
+plotBranch(vcat(br_po_sh, br,), label = "");title!("")
+
+br_pd3

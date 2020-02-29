@@ -146,11 +146,12 @@ We can now continue this periodic orbit:
 
 ```julia
 eig = DefaultEig()
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.005, pMin = -1.8, maxSteps = 70, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig),
+	nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
 	br_po_sh, _ , _ = @time continuationPOShooting(
 		p -> probSh(@set par_br.C = p),
-		out_po_sh, -0.86,
-		opts_po_cont; verbosity = 2,
+		opts_po_cont, -0.86,
+		opts_po_cont; verbosity = 3,
 		plot = true,
 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
@@ -160,6 +161,8 @@ We plot the result using `plotBranch(vcat(br_po_sh, br), label = "")`:
 
 ![](br_pd2.png)
 
+!!! tip "Numerical precision for stability"
+    The Floquet multipliers are not very precisely computed here using the Shooting method. We know that `1=exp(0)` should be a Floquet multiplier but this is only true here at precision ~1e-3. In order to prevent spurious bifurcation detection, there is a threshold `precisionStability` in `ContinuationPar` for declaring an unstable eigenvalue. Another way would be to use Poincaré Shooting so that this issue does not show up.
 
 # Periodic orbits from the PD point (Shooting)
 
