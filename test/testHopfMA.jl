@@ -173,7 +173,7 @@ Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb, x -> x))
 
 outhopf, _, flag, _ = @time PALC.newton(u -> hopfpbVec(u, par_bru.β),
 							# u -> Jac_hopf_fdMA(u, par_bru.β),
-							Bd2Vec(hopfpt), NewtonPar(verbose = true))
+							Bd2Vec(hopfpt), NewtonPar(verbose = true, tol = 1e-8, maxIter = 10))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], " from ", hopfpt.p, "\n")
 
 rhs = rand(length(hopfpt))
