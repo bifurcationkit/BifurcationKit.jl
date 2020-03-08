@@ -140,22 +140,22 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00
 		normC = x -> norm(x, Inf))
 ```
 
-Note that we can get some information about the branch:
+Note that we can get some information about the branch as follows. The `[converged]` indicates if the bisection routine was successful, otherwise it shows `[guess]`. Finally `δ = ( 2,  0)` says that the bifurcation point has been detected by 2 new eigenvalues with zero real part among which zero have non zero imaginary part. A Hopf bifurcation point would thus have `δ = ( 2,  2)` or `δ = ( -2,  2)`.
 
 ```julia
 julia> br
-Branch number of points: 91
+Branch number of points: 43
 Bifurcation points:
--   1,      bp point around p ≈ -0.21554703, step =  27, idx =  28, ind_bif =   1 [converged]
--   2,      bp point around p ≈ -0.21551270, step =  28, idx =  29, ind_bif =   2 [converged]
--   3,      bp point around p ≈ -0.21502386, step =  29, idx =  30, ind_bif =   3 [converged]
--   4,      bp point around p ≈ -0.21290012, step =  31, idx =  32, ind_bif =   4 [converged]
--   5,      bp point around p ≈ -0.21092914, step =  32, idx =  33, ind_bif =   5 [converged]
--   6,      bp point around p ≈ -0.21008215, step =  33, idx =  34, ind_bif =   6 [converged]
--   7,      bp point around p ≈ -0.20682609, step =  35, idx =  36, ind_bif =   8 [converged]
--   8,      bp point around p ≈ -0.19985956, step =  37, idx =  38, ind_bif =   9 [converged]
--   9,      bp point around p ≈ -0.18887677, step =  40, idx =  41, ind_bif =  10 [converged]
--  10,      bp point around p ≈ -0.18104915, step =  42, idx =  43, ind_bif =  11 [converged]
+-   1,      bp point around p ≈ -0.21554685, step =  21, idx =  22, ind_bif =   1 [converged], δ = ( 1,  0)
+-   2,      bp point around p ≈ -0.21504230, step =  22, idx =  23, ind_bif =   3 [converged], δ = ( 2,  0)
+-   3,      bp point around p ≈ -0.21095557, step =  24, idx =  25, ind_bif =   5 [converged], δ = ( 2,  0)
+-   4,      bp point around p ≈ -0.21001596, step =  25, idx =  26, ind_bif =   6 [converged], δ = ( 1,  0)
+-   5,      bp point around p ≈ -0.20684791, step =  26, idx =  27, ind_bif =   8 [converged], δ = ( 2,  0)
+-   6,      bp point around p ≈ -0.19986385, step =  28, idx =  29, ind_bif =   9 [converged], δ = ( 1,  0)
+-   7,      bp point around p ≈ -0.18895070, step =  30, idx =  31, ind_bif =  10 [converged], δ = ( 1,  0)
+-   8,      bp point around p ≈ -0.18103775, step =  32, idx =  33, ind_bif =  11 [converged], δ = ( 1,  0)
+-   9,      bp point around p ≈ -0.13841646, step =  37, idx =  38, ind_bif =  10 [converged], δ = (-2,  0)
+-  10,      bp point around p ≈ -0.11180884, step =  40, idx =  41, ind_bif =   9 [converged], δ = (-1,  0)
 ```
 
 We get the following plot during computation:

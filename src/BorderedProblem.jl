@@ -28,21 +28,21 @@ end
 
 BorderedProblem(F, g, npar = 1) = BorderedProblem(F = F, g = g, npar = npar)
 
-getParSize(pb::BorderedProblem) = pb.npar
+getParameterDim(pb::BorderedProblem) = pb.npar
 
 function extractParameter(pb::BorderedProblem, x::AbstractVector)
-	if getParSize(pb) == 1
+	if getParameterDim(pb) == 1
 		return x[end]
 	else
 		return @view x[end-pb.npar+1:end]
 	end
 end
 
-extractVector(pb::BorderedProblem, x::AbstractVector) = @view x[1:end-getParSize(pb)]
-setVector!(pb::BorderedProblem, out::AbstractVector, x::AbstractVector) = out[1:end-getParSize(pb)] .= x
+extractVector(pb::BorderedProblem, x::AbstractVector) = @view x[1:end-getParameterDim(pb)]
+setVector!(pb::BorderedProblem, out::AbstractVector, x::AbstractVector) = out[1:end-getParameterDim(pb)] .= x
 
 etParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out[end] = p
-setParameter!(pb::BorderedProblem, out::AbstractVector, p) = out[end-getParSize(pb)+1:end] .= p
+setParameter!(pb::BorderedProblem, out::AbstractVector, p) = out[end-getParameterDim(pb)+1:end] .= p
 
 extractParameter(pb::BorderedProblem, x::BorderedArray) = x.p
 extractVector(pb::BorderedProblem, x::BorderedArray) = x.u
@@ -94,7 +94,7 @@ function (Jpb::JacobianBorderedProblem)(x, p)
 	copyto!(Jpb.J, 	 pb.dxF(x, p))
 	copyto!(Jpb.dpF, pb.dpF(x, p))
 	copyto!(Jpb.∇g,  pb.∇g(x, p))
-	if getParSize(pb) == 1
+	if getParameterDim(pb) == 1
 		Jpb.dpg = pb.dpg(x, p)
 	else
 		copyto!(Jpb.dpg, pb.dpg(x, p))

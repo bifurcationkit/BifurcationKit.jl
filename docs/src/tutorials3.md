@@ -553,17 +553,45 @@ for ii=1:length(normals)
 end
 ```
 
-We can now call `newton` to refine the initial guess
+We can now call `continuation` to get the first branch.
 
 ```julia
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
-	outpo_psh, _ = @time PALC.newton(x -> probHPsh(par_hopf)(x; verbose = false),
-		# Finite differences for the Matrix-Free Jacobian:
-		x -> (dx -> probHPsh(par_hopf)(x, dx; δ = 1e-8)),
-		vec(initpo_bar), optn,
-		; normN = norminf)
+# eigen / linear solver
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
+ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
+
+# newton options	
+optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
+
+# continuation options
+opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, 
+	pMax = 2.5, maxSteps = 500, nev = 10, 
+	precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 3)
+opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = 
+	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
+
+# continuation run
+br_po, _ , _ = @time PALC.continuationPOShooting(
+	p -> probHPsh(@set par_hopf.l = p),
+	outpo_psh, 0.6,
+	opts_po_cont_floquet; verbosity = 3,
+	plot = true,
+	plotSolution = (x; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	normC = norminf)		
 ```
 
 ![](brus-psh-cont.png)
+
+We also obtain the following information:
+
+```julia
+julia> br_po
+Branch number of points: 41
+Bifurcation points:
+-   1,      bp point around p ≈ 1.22791659, step =  18, idx =  19, ind_bif =   1 [converged], δ = ( 1,  0)
+-   2,      ns point around p ≈ 1.76774516, step =  27, idx =  28, ind_bif =   3 [converged], δ = ( 2,  2)
+-   3,      ns point around p ≈ 1.85809384, step =  29, idx =  30, ind_bif =   5 [converged], δ = ( 2,  2)
+-   4,      bp point around p ≈ 1.87009173, step =  30, idx =  31, ind_bif =   5 [converged], δ = (-1,  0)
+-   5,      bp point around p ≈ 2.47577299, step =  39, idx =  40, ind_bif =   5 [converged], δ = ( 1,  0)
+```
 

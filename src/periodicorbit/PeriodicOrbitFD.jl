@@ -94,19 +94,13 @@ function applyJ(pb::PeriodicOrbitTrapProblem, dest, x, dx)
 end
 
 function PeriodicOrbitTrapProblem(F::TF, J::TJ, ϕ::vectype, xπ::vectype, M, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false) where {TF, TJ, vectype}
-	if ϕ isa AbstractVector
-		return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Nothing, vectype, typeof(ls)}(F = F, J = J, ϕ = ϕ, xπ = xπ, M = M, N = length(ϕ), linsolver = ls, isinplace = isinplace, ongpu = ongpu)
-	else
-		return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Nothing, vectype, typeof(ls)}(F = F, J = J, ϕ = ϕ, xπ = xπ, M = M, 0, linsolver = ls, isinplace = isinplace, ongpu = ongpu)
-	end
+	_length = ϕ isa AbstractVector ? length(ϕ) : 0
+	return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Nothing, vectype, typeof(ls)}(F = F, J = J, ϕ = ϕ, xπ = xπ, M = M, N = _length, linsolver = ls, isinplace = isinplace, ongpu = ongpu)
 end
 
 function PeriodicOrbitTrapProblem(F::TF, J::TJ, d2F::Td2f, ϕ::vectype, xπ::vectype, M, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false) where {TF, TJ, Td2f, vectype}
-	if ϕ isa AbstractVector
-		return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Td2f, vectype, typeof(ls)}(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, length(ϕ), linsolver = ls, isinplace = isinplace, ongpu = ongpu)
-	else
-		return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Td2f, vectype, typeof(ls)}(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, 0, linsolver = ls, isinplace = isinplace, ongpu = ongpu)
-	end
+	_length = ϕ isa AbstractVector ? length(ϕ) : 0
+	return PeriodicOrbitTrapProblem{TF, TJ, Nothing, Td2f, vectype, typeof(ls)}(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, N = _length, linsolver = ls, isinplace = isinplace, ongpu = ongpu)
 end
 
 # these functions extract the last component of the periodic orbit guess

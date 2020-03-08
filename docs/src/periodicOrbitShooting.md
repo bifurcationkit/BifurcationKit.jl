@@ -19,7 +19,7 @@ and we write $\phi^t(x_0)$ the associated flow (or semigroup of solutions).
 A periodic orbit is found when we have a couple $(x, T)$ such that $\phi^T(x) = x$ and the trajectory is non constant. Therefore, we want to solve the equations $G(x,T)=0$ given by
 
 $$\tag{SS}
-\begin{array}{l}{\phi^T(x, T)-x=0} \\ {s(x,T)=0}\end{array}.$$
+\begin{array}{l}{\phi^T(x)-x=0} \\ {s(x,T)=0}\end{array}.$$
 
 The section $s(x,T)=0$ is a phase condition to remove the indeterminacy of the point on the limit cycle.
 
@@ -66,7 +66,7 @@ $$\begin{aligned}
 \Pi_m(x_{m})-x_{1} &=0. 
 \end{aligned}$$
 
-The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$. Hence, one has to constrained the unknowns to these hyperplanes otherwise the Newton algorithm does not converge well.
+The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$. Hence, one has to constrained the unknowns to these hyperplanes otherwise the Newton algorithm does not converge (well).
 
 
 ### Encoding of the functional

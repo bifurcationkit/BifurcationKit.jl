@@ -5,21 +5,17 @@ using KrylovKit, DiffEqBase
 abstract type AbstractShootingProblem end
 
 ####################################################################################################
-function flow(x, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
-	_prob = DiffEqBase.remake(pb; u0 = x, tspan = tspan)
-	# the use of concrete_solve makes it compatible with Zygote
-	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)[end]
-	return sol
-end
-
 # this function takes into accound a parameter passed to the vector field
 # Putting the options `save_start=false` seems to bug with Sundials
-function flow(x, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
+function flowTimeSol(x, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
 	_prob = DiffEqBase.remake(pb; u0 = x, tspan = tspan, p = p)
 	# the use of concrete_solve makes it compatible with Zygote
-	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)[end]
-	return sol
+	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)
+	return sol.t[end], sol[end]
 end
+
+flow(x, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...) = flowTimeSol(x, p, tspan, pb; alg = alg, kwargs...)[2]
+flow(x, tspan, pb::ODEProblem; alg = Euler(), kwargs...) =  flow(x, nothing, tspan, pb; alg = alg, kwargs...)
 ################
 # this flow is used for computing the derivative of the flow, so pb encode the variational equation
 function dflow(dx, x::AbstractVector, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
@@ -37,32 +33,23 @@ function dflow(dx, x::AbstractVector, p, tspan, pb::ODEProblem; alg = Euler(), k
 	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)[end]
 	return sol[1:n], sol[n+1:end]
 end
+dflow(dx, x::AbstractVector, tspan, pb::ODEProblem; alg = Euler(), kwargs...) = dflow(dx, x, nothing, tspan, pb; alg = alg, kwargs...)
 ################
-function dflow_fd(x, dx, tspan, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...)
-	sol1 = flow(x .+ δ .* dx, tspan, pb; alg = alg, kwargs...)
-	sol2 = flow(x 			, tspan, pb; alg = alg, kwargs...)
-	return sol2, (sol1 .- sol2) ./ δ
-end
-
 # this function takes into accound a parameter passed to the vector field
 function dflow_fd(x, dx, p, tspan, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...)
 	sol1 = flow(x .+ δ .* dx, p, tspan, pb; alg = alg, kwargs...)
 	sol2 = flow(x 			, p, tspan, pb; alg = alg, kwargs...)
 	return sol2, (sol1 .- sol2) ./ δ
 end
+dflow_fd(x, dx, tspan, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...) = dflow_fd(x, dx, nothing, tspan, pb; alg = alg, δ = δ, kwargs...)
 ################
 # this gives access to the full solution, convenient for Poincaré shooting
-function flowFull(x, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
-	_prob = DiffEqBase.remake(pb; u0 = x, tspan = tspan)
-	sol = DiffEqBase.solve(_prob, alg; kwargs...)
-end
-
 # this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function flowFull(x, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
 	_prob = DiffEqBase.remake(pb; u0 = x, tspan = tspan, p = p)
 	sol = DiffEqBase.solve(_prob, alg; kwargs...)
 end
-
+flowFull(x, tspan, pb::ODEProblem; alg = Euler(), kwargs...) = flowFull(x, nothing, tspan, pb; alg = alg, kwargs...)
 ####################################################################################################
 # Structures related to computing ODE/PDE Flows
 """
@@ -86,69 +73,46 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	fl = Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-struct Flow{TF, Tf, Tff, Td}
+struct Flow{TF, Tf, Tts, Tff, Td}
 	F::TF				# vector field F(x)
 	flow::Tf			# flow(x,t)
+	flowTimeSol::Tts	# flow(x,t)
 	flowFull::Tff		# flow(x,t) returns full solution
 	dflow::Td			# dflow(x,dx,t) returns (flow(x,t), dflow(x,t)⋅dx)
 
-	function Flow(F::TF, fl::Tf, flf::Tff, df::Td) where {TF, Tf, Tff, Td}
-		new{TF, Tf, Tff, Td}(F, fl, flf, df)
+	function Flow(F::TF, fl::Tf, fts::Tts, flf::Tff, df::Td) where {TF, Tf, Tts, Tff, Td}
+		new{TF, Tf, Tts, Tff, Td}(F, fl, fts, flf, df)
 	end
 
 	function Flow(F::TF, fl::Tf, df::Td) where {TF, Tf, Td}
-		new{TF, Tf, Nothing, Td}(F, fl, nothing, df)
+		new{TF, Tf, Nothing, Nothing, Td}(F, fl, nothing, nothing, df)
 	end
 end
 
 (fl::Flow)(x, tspan)     = fl.flow(x, tspan)
 (fl::Flow)(x, dx, tspan) = fl.dflow(x, dx, tspan)
+(fl::Flow)(::Val{:Full}, x, tspan) = fl.flowFull(x, tspan)
+(fl::Flow)(::Val{:TimeSol}, x, tspan) = fl.flowTimeSol(x, tspan)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
 """
-function Flow(F, prob::ODEProblem, alg; kwargs...)
-	return Flow(F,
-		(x, t) -> 				flow(x, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, t) ->			flowFull(x, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, dx, t) -> dflow_fd((x, dx), (zero(t), t), prob; alg = alg, kwargs...)
-		)
-end
-
 # this constructor takes into accound a parameter passed to the vector field
 function Flow(F, p, prob::ODEProblem, alg; kwargs...)
 	return Flow(F,
 		(x, t) ->			 	flow(x, p, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, t) -> 		 	flowFull(x, p, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, dx, t) -> dflow_fd((x, dx), p, (zero(t), t), prob; alg = alg, kwargs...)
+		(x, t) ->		 flowTimeSol(x, p, (zero(t), t), prob; alg = alg, kwargs...),
+		(x, t) -> 		 	flowFull(x, p, (zero(t), t), prob; alg = alg, Base.structdiff(kwargs, (callback=0,))...),
+		(x, dx, t) -> dflow_fd(x, dx, p, (zero(t), t), prob; alg = alg, kwargs...)
 		)
 end
 
 function Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 	return Flow(F,
 		(x, t) -> 			flow(x, p, (zero(t), t), prob1, alg = alg1; kwargs...),
+		(x, t) ->	  flowTimeSol(x, p, (zero(t), t), prob; alg = alg1, kwargs...),
 		(x, t) -> 		flowFull(x, p, (zero(t), t), prob1, alg = alg1; kwargs...),
 		(x, dx, t) ->  dflow(dx, x, p, (zero(t), t), prob2, alg = alg2; kwargs...)
-		)
-end
-
-"""
-Creates a Flow variable based on a `prob1::ODEProblem` and ODE solver `alg`. The derivative of the flow is imlemented in using `prob2::ODEProblem`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`.
-"""
-function Flow(F, prob::ODEProblem, alg; kwargs...)
-	return Flow(F,
-		(x, t) ->			  flow(x, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, t) ->		  flowFull(x, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, dx, t) -> dflow_fd(x, dx, (zero(t), t), prob; alg = alg, kwargs...)
-		)
-end
-
-# this constructor takes into accound a parameter passed to the vector field
-function Flow(F, p, prob::ODEProblem, alg; kwargs...)
-	return Flow(F,
-		(x, t) ->			  flow(x, p, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, t) -> 		  flowFull(x, p, (zero(t), t), prob; alg = alg, kwargs...),
-		(x, dx, t) -> dflow_fd(x, dx, p, (zero(t), t), prob; alg = alg, kwargs...)
 		)
 end
 ####################################################################################################
@@ -186,10 +150,6 @@ where we supply now two `ODEProblem`. The first one `prob1`, is used to define t
 	ds::Ts = diff(LinRange(0, 1, 5))	# number of Poincaré sections
 	section::Tsection					# sections for phase condition
 end
-
-ShootingProblem(F, prob::ODEProblem, alg, ds, section; kwargs...) =  ShootingProblem(Flow(F, prob, alg; kwargs...), ds, section)
-
-ShootingProblem(F, prob::ODEProblem, alg, M::Int, section; kwargs...) = ShootingProblem(Flow(F, prob, alg; kwargs...), diff(LinRange(0, 1, M + 1)), section)
 
 # this constructor takes into accound a parameter passed to the vector field
 ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; kwargs...) = ShootingProblem(Flow(F, p, prob, alg; kwargs...), ds, section)
@@ -330,7 +290,7 @@ function _getMax(prob::ShootingProblem, x::AbstractVector; ratio = 1)
 	xc = reshape(xv, N, M)
 
 	# we could use @views but then Sundials might complain
-	sol = prob.flow.flowFull((xc[:, 1]), T)
+	sol = prob.flow(Val(:Full), xc[:, 1], T)
 	mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
 end
 
@@ -355,7 +315,6 @@ function sectionShooting(x::AbstractVector, po::AbstractMatrix, p, F)
 	end
 	res
 end
-
 ####################################################################################################
 """
 pb = PoincareShootingProblem(flow::Flow, M, section)
@@ -385,81 +344,10 @@ A functional, hereby called `G` encodes this shooting problem. For example, the 
 	M::Int64 = 1				# number of Poincaré sections
 	section::Tsection			# Poincaré sections
 end
-
-# simple Poincaré shooting
-function PoincareShootingProblem(F, prob::ODEProblem, alg, section; interp_points = 50, kwargs...)
-	pSection(u, t, integrator) = section(u) * (integrator.iter > 1)
-	# we put the nothing option to have an upcrossing
-	cb = ContinuousCallback(pSection, terminate!, nothing, interp_points = interp_points)
-	return PoincareShootingProblem(Flow(F, prob, alg, callback=cb; kwargs...), 1, section)
-end
-
-# this function takes into account a parameter passed to the vector field
-# simple shooting
-function PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; interp_points = 50, kwargs...)
-	pSection(u, t, integrator) = section(u) * (integrator.iter > 1)
-	# we put nothing option to have an upcrossing
-	cb = ContinuousCallback(pSection, terminate!, nothing, interp_points = interp_points)
-	return PoincareShootingProblem(Flow(F, p, prob, alg; callback = cb, kwargs...), 1, section)
-end
-
-# this function takes into account a parameter passed to the vector field
-# multiple shooting
-function PoincareShootingProblem(F, p, prob::ODEProblem, alg, M, section; interp_points = 50, kwargs...)
-	if M == 1
-		return PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)
-	end
-
-	pSection(out, u, t, integrator) = (section(out, u); out .= out .* (integrator.iter > 1))
-	affect!(integrator, idx) = terminate!(integrator)
-	# function affect!(integrator, idx)
-	# 	if integrator.iter > 1
-	# 		terminate!(integrator)
-	# 	end
-	# end
-	# we put the nothing option to have an upcrossing
-	cb = VectorContinuousCallback(pSection, affect!, M;interp_points = interp_points, affect_neg! = nothing)
-	return PoincareShootingProblem(Flow(F, p, prob, alg; callback = cb, kwargs...), M, section)
-end
-
-function getPeriod(prob::PoincareShootingProblem, x)
-	# this function extracts the period of the cycle
-	@warn "Only done for M=1"
-	prob.flow.flowFull(x, Inf64).t[end]
-end
-
-# Poincaré shooting functional
-function (sh::PoincareShootingProblem)(x::AbstractVector)
-	# period of the cycle
-	M = sh.M
-	N = div(length(x), M)
-
-	# reshape the period orbit guess
-	xc = reshape(x, N, M)
-
-	# variable to hold the computed result
-	out = similar(x)
-	outc = reshape(out, N, M)
-
-	for ii in 1:M-1
-		# yi = Flow(xi) - x[i+1]
-		# here we compute the flow up to an infinite time hoping we intersect a Poincare section before :D
-		@views outc[:, ii] .= sh.flow(xc[:, ii], Inf64) .- xc[:, ii+1]
-	end
-	# ym = Flow(xm) - x1
-	@views outc[:, M] .= sh.flow(xc[:, M], Inf64) .- xc[:, 1]
-
-	return out
-end
-
-# jacobian of the shooting functional
-function (sh::PoincareShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-8)
-	return (sh(x .+ δ .* dx) .- sh(x)) ./ δ
-end
 ####################################################################################################
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
-function sectionHyp(out, x, normals, centers)
+function sectionHyp!(out, x, normals, centers)
 	for ii = 1:length(normals)
 		out[ii] = dot(normals[ii], x .- centers[ii])
 	end
@@ -467,11 +355,11 @@ function sectionHyp(out, x, normals, centers)
 end
 
 # this composite type encodes a set of hyperplanes which are used as Poincaré sections
-struct HyperplaneSections
-	M				# number of hyperplanes
-	normals 		# normals to define hyperplanes
-	centers 		# representative point on each hyperplane
-	indices 		# indices to be removed in the operator Ek
+struct HyperplaneSections{Tn, Tc, Ti}
+	M::Int			# number of hyperplanes
+	normals::Tn 	# normals to define hyperplanes
+	centers::Tc 	# representative point on each hyperplane
+	indices::Ti 	# indices to be removed in the operator Ek
 
 	function HyperplaneSections(normals, centers)
 		M = length(normals)
@@ -479,13 +367,11 @@ struct HyperplaneSections
 		for ii=1:M
 			indices[ii] = argmax(abs.(normals[ii]))
 		end
-		return new(M, normals, centers, indices)
+		return new{typeof(normals), typeof(centers), typeof(indices)}(M, normals, centers, indices)
 	end
 end
 
-function (hyp::HyperplaneSections)(out, u)
-	sectionHyp(out, u, hyp.normals, hyp.centers)
-end
+(hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 
 # Operateur Rk from the paper above
 function R!(hyp::HyperplaneSections, out, x::AbstractVector, ii::Int)
@@ -500,6 +386,9 @@ function R(hyp::HyperplaneSections, x::AbstractVector, ii::Int)
 	R!(hyp, out, x, ii)
 end
 
+# differential of R
+dR!(hyp::HyperplaneSections, out, dx::AbstractVector, ii::Int) = R!(hyp, out, dx, ii)
+
 # Operateur Ek from the paper above
 function E!(hyp::HyperplaneSections, out, xbar::AbstractVector, ii::Int)
 	@assert length(xbar) == length(hyp.normals[1]) - 1 "Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))"
@@ -511,7 +400,6 @@ function E!(hyp::HyperplaneSections, out, xbar::AbstractVector, ii::Int)
 	@views out[1:k-1] .= xbar[1:k-1]
 	@views out[k+1:end] .= xbar[k:end]
 	out[k] = coord_k
-
 	return out
 end
 
@@ -520,8 +408,26 @@ function E(hyp::HyperplaneSections, xbar::AbstractVector, ii::Int)
 	E!(hyp, out, xbar, ii)
 end
 
-struct HyperplanePoincareShootingProblem <: AbstractShootingProblem
-	psh::PoincareShootingProblem
+# differential of E!
+function dE!(hyp::HyperplaneSections, out, dxbar::AbstractVector, ii::Int)
+	k = hyp.indices[ii]
+	nbar = R(hyp, hyp.normals[ii], ii)
+	xcbar = R(hyp, hyp.centers[ii], ii)
+	coord_k = - dot(nbar, dxbar) / hyp.normals[ii][k]
+
+	@views out[1:k-1] .= dxbar[1:k-1]
+	@views out[k+1:end] .= dxbar[k:end]
+	out[k] = coord_k
+	return out
+end
+
+function dE(hyp::HyperplaneSections, dxbar::AbstractVector, ii::Int)
+	out = similar(dxbar, length(dxbar) + 1)
+	dE!(hyp, out, dxbar, ii)
+end
+
+struct HyperplanePoincareShootingProblem{Tpsh <: PoincareShootingProblem} <: AbstractShootingProblem
+	psh::Tpsh
 end
 
 function getPeriod(hpsh::HyperplanePoincareShootingProblem, x_bar)
@@ -546,9 +452,9 @@ function getPeriod(hpsh::HyperplanePoincareShootingProblem, x_bar)
 	end
 
 	for ii in 1:M-1
-		period += @views sh.flow.flowFull(xc[:, ii+1], Inf64).t[end]
+		period += @views sh.flow(Val(:TimeSol), xc[:, ii+1], Inf64)[1]
 	end
-	period += @views sh.flow.flowFull(xc[:, M], Inf64).t[end]
+	period += @views sh.flow(Val(:TimeSol), xc[:, M], Inf64)[1]
 end
 
 function PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; interp_points = 50, kwargs...)
@@ -557,7 +463,8 @@ function PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractV
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
-	return HyperplanePoincareShootingProblem(PoincareShootingProblem(Flow(F, p, prob, alg; callback = cb, kwargs...), hyp.M, hyp))
+	return HyperplanePoincareShootingProblem(
+			PoincareShootingProblem(Flow(F, p, prob, alg; callback = cb, kwargs...), hyp.M, hyp))
 end
 
 # Poincaré (multiple) shooting with hyperplanes parametrization
@@ -581,7 +488,7 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector; verbos
 
 	for ii in 1:M-1
 		# yi = Flow(xi) - x[i+1]
-		@views outc[:, ii] .= xc[:, ii+1].- sh.flow(xc[:, ii], Inf64)
+		@views outc[:, ii] .= xc[:, ii+1] .- sh.flow(xc[:, ii], Inf64)
 	end
 	# ym = Flow(xm) - x1
 	@views outc[:, M] .= xc[:, 1] .- sh.flow(xc[:, M], Inf64)
@@ -590,16 +497,69 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector; verbos
 	out_bar = similar(x_bar)
 	out_barc = reshape(out_bar, Nm1, M)
 	for ii=1:M-1
-		R!(hpsh.psh.section, view(out_barc, :, ii), view(outc, :, ii), ii+1)
+		R!(sh.section, view(out_barc, :, ii), view(outc, :, ii), ii+1)
 	end
-	R!(hpsh.psh.section, view(out_barc, :, M), view(outc, :, M), 1)
+	R!(sh.section, view(out_barc, :, M), view(outc, :, M), 1)
 
 	return out_bar
 end
 
+function diffPoincareMap(hpsh, x, dx, ii::Int)
+	sh = hpsh.psh
+	normal = sh.section.normals[ii]
+	abs(dot(normal, dx)) > 1e-12 * dot(dx, dx) && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx)))"
+	# compute the Poincare map from x
+	tΣ, solΣ = sh.flow(Val(:TimeSol), x, Inf64)
+	z = sh.flow.F(solΣ)
+	# @error "I dont want to have dflow avec le callback"
+	y = sh.flow(x, dx, tΣ)[2]
+	# @show size(normal) size(x) size(dx) size(y) size(z)
+	out = y .- (dot(normal, y) / dot(normal, z)) .* z
+end
+
 # jacobian of the shooting functional
-function (sh::HyperplanePoincareShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
-	return (sh(x .+ δ .* dx) .- sh(x)) ./ δ
+function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractVector; δ = 1e-8)
+	if δ > 0
+		# mostly for debugging purposes
+		return (hpsh(x_bar .+ δ .* dx_bar) .- hpsh(x_bar)) ./ δ
+	end
+
+	# otherwise analytical Jacobian
+	sh = hpsh.psh
+	M = sh.M
+	Nm1 = div(length(x_bar), M)
+
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+	dx_barc = reshape(dx_bar, Nm1, M)
+
+	# variable to hold the computed result
+	xc  = similar( x_bar, Nm1 + 1, M)
+	dxc = similar(dx_bar, Nm1 + 1, M)
+	outc = similar(xc)
+
+	# we extend the state space to be able to call the flow, so we fill xc
+	for ii=1:M
+		 E!(sh.section,  view(xc, :, ii),  view(x_barc, :, ii), ii)
+		dE!(sh.section, view(dxc, :, ii), view(dx_barc, :, ii), ii)
+	end
+
+	for ii in 1:M-1
+		# yi = Flow(xi) - x[i+1]
+		@views outc[:, ii] .= xc[:, ii+1] .- diffPoincareMap(hpsh, xc[:, ii], dxc[:, ii], ii)#sh.flow(xc[:, ii], Inf64)
+	end
+	# ym = Flow(xm) - x1
+	@views outc[:, M] .= xc[:, 1] .- diffPoincareMap(hpsh, xc[:, M], dxc[:, M], M)#sh.flow(xc[:, M], Inf64)
+
+	# build the array to be returned
+	out_bar = similar(x_bar)
+	out_barc = reshape(out_bar, Nm1, M)
+	for ii=1:M-1
+		dR!(sh.section, view(out_barc, :, ii), view(outc, :, ii), ii+1)
+	end
+	dR!(sh.section, view(out_barc, :, M), view(outc, :, M), 1)
+
+	return out_bar
 end
 
 ####################################################################################################

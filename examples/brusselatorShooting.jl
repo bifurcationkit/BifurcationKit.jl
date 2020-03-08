@@ -108,7 +108,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 		plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200, dsminBisection = 1e-7)
 
 	br, _ = @time PALC.continuation(
 		(x, p) ->    Fbru(x, @set par_bru.l = p),
@@ -136,7 +136,7 @@ orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ####################################################################################################
 # essai Shooting
-using DifferentialEquations, DiffEqOperators, ForwardDiff
+using DifferentialEquations, DiffEqOperators, ForwardDiff, Sundials
 
 FOde(f, x, p, t) = Fbru!(f, x, p)
 Jbru(x, dx, p) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
@@ -157,8 +157,8 @@ probsundials = ODEProblem(FOde, u0, (0., 5200.), par_hopf)
 
 # heatmap(sol[:,:], color = :viridis)
 ####################################################################################################
-# M = 10
-dM = 5
+M = 10
+dM = 10
 orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.0)
@@ -213,7 +213,6 @@ br_po, _ , _ = @time PALC.continuationPOShooting(
 		printSolution = (u, p) -> u[end], normC = norminf)
 ####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
-
 using ForwardDiff
 
 function dprobHPsh(pb,x,dx)
@@ -235,19 +234,11 @@ initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 probHPsh(par_hopf)(vec(initpo_bar))
 probHPsh(par_hopf)(vec(initpo_bar)) |> norminf
 
-# TODO JE PENSE QU IL Y A UN SOUCIS AVEC JACOBIAN ET DERIVEE SUR SURFACE
-_r1 = probHPsh(par_hopf)(vec(initpo_bar), vec(initpo_bar); δ = 1e-8 )
-	_r2 = dprobHPsh(probHPsh(par_hopf),vec(initpo_bar), vec(initpo_bar) )
-	_r1 - _r2
 
-ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x,y), 1.0, [sol0])
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
+ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = true)
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 	outpo_psh, _ = @time PALC.newton(x -> probHPsh(par_hopf)(x; verbose = false),
-			x -> (dx -> probHPsh(par_hopf)(x, dx; δ = 1e-8)),
-			# x -> (dx -> dprobHPsh(probHPsh(par_hopf), x, dx)),
 			vec(initpo_bar), optn,
-			# deflationOp,
 			; normN = norminf)
 
 plot(outpo_psh, label = "Solution")
@@ -255,15 +246,16 @@ plot(outpo_psh, label = "Solution")
 
 PALC.getPeriod(probHPsh(par_hopf), outpo_psh)
 
-
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
-opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
-opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 1e-3, detectBifurcation = 2, maxSteps = 5000, ds = 0.001, pMax = 2.5, plotEveryNsteps = 3)
+	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 1)
+
+	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
+
 
 br_po, _ , _ = @time PALC.continuationPOShooting(
 	p -> probHPsh(@set par_hopf.l = p),
-	outpo_psh, par_hopf.l,
+	outpo_psh, 0.6,
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
 	plotSolution = (x; kwargs...) -> PALC.plot!(x; label="", kwargs...),

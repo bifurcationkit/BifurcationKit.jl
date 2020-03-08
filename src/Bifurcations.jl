@@ -107,6 +107,13 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 		detected = true
 	end
 
+	# rule out initial condition where we populate n_unstable = (-1,-1) and n_imag = (-1,-1)
+	if prod(state.n_unstable) < 0 || prod(state.n_imag) < 0
+		tp = :nd
+		detected = true
+	end
+
+
 	if detected
 		# record information about the bifurcation point
 		param_bif = (
