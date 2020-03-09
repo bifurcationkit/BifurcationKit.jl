@@ -136,7 +136,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, 
 		vec(sol0), par_cgl.r,
 		opts_br, verbosity = 0)
 ####################################################################################################
-ind_hopf = 2
+ind_hopf = 1
 # number of time slices
 M = 30
 r_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 22*sqrt(0.1); phase = 0.25)
@@ -217,7 +217,7 @@ plot();PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);title!("")
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 # opt_po = @set opt_po.eigsolver = DefaultEig()
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 2, dsminBisection =1e-7)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 2 , dsminBisection =1e-7)
 	br_po, _ , _= @time PALC.continuationPOTrap(
 			p -> poTrapMF(@set par_cgl.r = p),
 			outpo_f, r_hopf - 0.01,
@@ -448,18 +448,16 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-5, N = size(Jpo, 1), restar
 outfold, hist, flag = @time PALC.newtonFold(
 		(x, p) -> poTrap(@set par_cgl.r = p)(x),
 		(x, p) -> poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
-		(x, p) -> transpose(poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x)),
-		(x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),
-		br_pok2, indfold, #index of the fold point
-		@set opt_po.linsolver = ls)
-		# opt_po)
+		br_pok2 , indfold, #index of the fold point
+		@set opt_po.linsolver = ls;
+		d2F = (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_pok2.bifpoint[indfold][3],"\n")
 
 outfold, hist, flag = @time PALC.newtonFold(
 		(x, p) -> poTrapMF(@set par_cgl.r = p)(x),
 		(x, p) -> (dx -> poTrapMF(@set par_cgl.r = p)(x, dx)),
-		(x, p) -> (dx -> JacT(x -> poTrapMF(@set par_cgl.r = p)(x), x, dx)),
-		(x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),
+		# (x, p) -> (dx -> JacT(x -> poTrapMF(@set par_cgl.r = p)(x), x, dx)),
+		# (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),
 		br_pok2, indfold, #index of the fold point
 		@set opt_po.linsolver = ls)
 		# opt_po)
@@ -479,11 +477,9 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1
 outfoldco, hist, flag = @time PALC.continuationFold(
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
-	(x, r, p) -> transpose(poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x)),
-	p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
-	br_pok2, indfold,
-	par_cgl.c5, plot = true, verbosity = 2,
-	optcontfold)
+	br_pok2, indfold, par_cgl.c5, optcontfold;
+	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	plot = true, verbosity = 2)
 
 plotBranch(outfoldco, label="", xlabel="c5", ylabel="r");title!("")
 

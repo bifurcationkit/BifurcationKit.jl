@@ -11,6 +11,14 @@ ContinuationPar
 ```
 
 ```@docs
+PrecPartialSchurKrylovKit
+```
+
+```@docs
+PrecPartialSchurArnoldiMethod
+```
+
+```@docs
 ContResult
 ```
 
@@ -61,11 +69,19 @@ newton(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOp
 ## Newton for Fold / Hopf
 
 ```@docs
-newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm, d2F_is_known = true ) where {T,vectype}
+newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {T, vectype}
 ```
 
 ```@docs
-newtonFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, options::NewtonPar;kwargs...)
+newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar;Jt = nothing, d2F = nothing, kwargs...)
+```
+
+```@docs
+newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
+```
+
+```@docs
+newtonHopf(F, J, br::ContResult, ind_hopf::Int64, options::NewtonPar ; Jt = nothing, d2F = nothing, normN = norm)
 ```
 
 ## Newton for Periodic Orbits
@@ -87,19 +103,19 @@ continuation
 ## Continuation for Fold / Hopf
 
 ```@docs
-continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; d2F_is_known = true, kwargs...) where {T,vectype}
+continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,vectype}
 ```
 
 ```@docs
-continuationFold(F, J, Jt, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ;kwargs...) where {T,vectype}
+continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...)
 ```
 
 ```@docs
-continuationFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
+continuationHopf(F, J, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ;  Jt = nothing, d2F = p2 -> nothing, kwargs...)
 ```
 
 ```@docs
-continuationHopf(F, J, Jt, d2F, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; kwargs...) where {T,Tb,vectype}
+continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
 ```
 
 ## Continuation for periodic orbits

@@ -500,13 +500,12 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restar
 We can then use our functional to call `newtonFold` like for a regular function (see Tutorial 1)
 
 ```julia
-outfold, hist, flag = @time newtonFold(
+outfold, hist, flag = @time PALC.newtonFold(
 	(x, p) -> poTrap(@set par_cgl.r = p)(x),
 	(x, p) -> poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
-	(x, p) -> transpose(poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x)),
-	(x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),
-	br_po, indfold, #index of the fold point
-	@set opt_po.linsolver = ls)
+	br_pok2 , indfold, #index of the fold point
+	@set opt_po.linsolver = ls;
+	d2F = (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
 ```
 
@@ -532,14 +531,12 @@ Finally, one can perform continuation of the Fold bifurcation point as follows
 ```julia
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
-outfoldco, hist, flag = @time continuationFold(
-	(x, r, c5) -> poTrap(setproperties(par_cgl, (r=r, c5=c5)))(x),
-	(x, r, c5) -> poTrap(setproperties(par_cgl, (r=r, c5=c5)))(Val(:JacFullSparse), x),
-	(x, r, c5) -> transpose(poTrap(setproperties(par_cgl, (r=r, c5=c5)))(Val(:JacFullSparse), x)),
-	c5 -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=c5))), x, dx1, dx2)),
-	br_po, indfold,
-	par_cgl.c5, plot = true, verbosity = 2,
-	optcontfold)
+outfoldco, hist, flag = @time PALC.continuationFold(
+	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
+	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
+	br_pok2, indfold, par_cgl.c5, optcontfold;
+	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	plot = true, verbosity = 2)
 ```
 
 which yields:

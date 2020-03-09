@@ -90,16 +90,36 @@ resfd = (probSh(pov .+ δ .* dpov) .- resv) ./ δ
 ####################################################################################################
 # test the hyperplane projections for Poincare Shooting
 M = 3
-normals = [rand(10) for ii=1:M]
-centers = [rand(10) for ii=1:M]
+normals = [rand(50) for ii=1:M]
+for ii=1:M
+	normals[ii] /= norm(normals[ii])
+end
+centers = [rand(50) for ii=1:M]
 
 hyper = PALC.HyperplaneSections(normals, centers)
 
-x = 1:10 |>collect .|> Float64 |> vec
+x = 1:50 |>collect .|> Float64 |> vec
+x = rand(50)
 xb = PALC.R(hyper, x, 1)
 # test
-x2 = PALC.E(hyper, xb, 1)
-# test that x2 in Sigma2
-@test dot(x2 - centers[1], normals[1]) < 1e-14
-# that we have Rk∘Ek = Id and Ek∘Rk = IdΣ
-@test PALC.R(hyper, x2, 1) ≈ xb
+for ii=1:M
+	x2 = PALC.E(hyper, xb, ii)
+	# test that x2 in Sigma2
+	@test dot(x2 - centers[ii], normals[ii]) < 1e-14
+	# that we have Rk∘Ek = Id and Ek∘Rk = IdΣ
+	@test PALC.R(hyper, x2, ii) ≈ xb
+end
+
+# test of the derivatives
+dx = rand(50)
+δ = 1e-9
+_out1 = (PALC.R(hyper, x .+ δ .* dx, 1) - PALC.R(hyper, x, 1)) ./ δ
+_out2 = zero(_out1)
+_out2 = PALC.dR!(hyper, _out2, dx, 1)
+
+@test norm(_out2 - _out1, Inf) < 1e-6
+
+dx = rand(49)
+_out1 = (PALC.E(hyper, xb .+ δ .* dx, 1) - PALC.E(hyper, xb, 1)) ./ δ
+_out2 = PALC.dE(hyper, dx, 1)
+@test norm(_out2 - _out1, Inf) < 1e-6

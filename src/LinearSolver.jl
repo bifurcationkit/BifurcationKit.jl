@@ -57,7 +57,7 @@ end
 # Solvers for default \ operator (backslash)
 ####################################################################################################
 """
-The struct `Default` is used to  provide the backslash operator to our Package
+The struct `DefaultLS` is used to  provide the backslash operator
 """
 struct DefaultLS <: AbstractLinearSolver end
 

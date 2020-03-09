@@ -7,6 +7,7 @@ module PseudoArcLengthContinuation
 	include("LinearSolver.jl")
 	include("EigSolver.jl")
 	include("LinearBorderSolver.jl")
+	include("Preconditioner.jl")
 	include("Newton.jl")
 	include("Continuation.jl")
 	include("Bifurcations.jl")
@@ -26,6 +27,7 @@ module PseudoArcLengthContinuation
 	export	DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
 			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, geteigenvector, AbstractEigenSolver
 	export	BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
+	export	PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 	export	MatrixBLS, BorderingBLS, MatrixFreeBLS, BorderedArray
 	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 	export	SecantPred, BorderedPred, NaturalPred

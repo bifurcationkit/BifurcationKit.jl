@@ -38,6 +38,7 @@ ls(rand(2,2), rand(2))
 - [IncompleteLU.jl](https://github.com/haampie/IncompleteLU.jl) an ILU like preconditioner
 - [AlgebraicMultigrid.jl](https://github.com/JuliaLinearAlgebra/AlgebraicMultigrid.jl) Algebraic Multigrid (AMG) preconditioners. This works especially well for symmetric positive definite matrices.
 - [Preconditioners.jl](https://github.com/mohamed82008/Preconditioners.jl) A convenient interface to conveniently called most of the above preconditioners using a single syntax.
+- We provide a preconditioner based on deflation of eigenvalues using a partial Schur decomposition. There are two ways to define one *i.e.* [`PrecPartialSchurKrylovKit`](@ref) and [`PrecPartialSchurArnoldiMethod`](@ref). 
 
 !!! tip "Using Preconditioners"
     Apart from setting a preconditioner for a linear solver, it can be advantageous to change the preconditioner during computations, *e.g.* during a call to `continuation` or `newton`. This can be achieved by taking advantage of the callbacks to these methods. See the example [Complex Ginzburg-Landau 2d](@ref).

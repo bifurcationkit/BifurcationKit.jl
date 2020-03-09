@@ -27,11 +27,11 @@ function (l::DefaultEig)(J, nev::Int64)
 end
 
 # case of sparse matrices or matrix free method
-@with_kw struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
-	sigma::T = nothing
-	which::Symbol = :LR
-	by::Tby = real			# how do we sort the computed eigenvalues.
-	kwargs::Tw = nothing
+struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
+	sigma::T
+	which::Symbol
+	by::Tby			# how do we sort the computed eigenvalues.
+	kwargs::Tw
 end
 
 EigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, real, kwargs)

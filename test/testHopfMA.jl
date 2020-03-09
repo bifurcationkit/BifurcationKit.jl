@@ -1,3 +1,4 @@
+# using Revise
 using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Setfield, Parameters
 const PALC = PseudoArcLengthContinuation
 
@@ -219,9 +220,8 @@ println("--> test jacobian expression for Hopf Minimally Augmented")
 outhopf, hist, flag = @time PALC.newtonHopf(
 		(x, p) ->  Fbru(x, @set par_bru.l = p),
 		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		(x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
 		br, 1,
-		NewtonPar(verbose = true))
+		NewtonPar(verbose = true); Jt = (x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 outhopf, _, flag, _ = @time PALC.newton(u -> hopfvariable(par_bru.β)(u),
@@ -245,10 +245,10 @@ end
 outhopf, hist, flag = @time PALC.newtonHopf(
 		(x, p) ->  Fbru(x, @set par_bru.l = p),
 		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		(x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
-		(x, p1, v1, v2) -> d2F(x, 0., 0., v1, v2),
 		br, 1,
-		NewtonPar(verbose = true))
+		NewtonPar(verbose = true),
+		Jt = (x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
+		d2F = (x, p1, v1, v2) -> d2F(x, 0., 0., v1, v2))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 br_hopf, u1_hopf = @time PALC.continuationHopf(
@@ -261,11 +261,10 @@ br_hopf, u1_hopf = @time PALC.continuationHopf(
 br_hopf, u1_hopf = @time PALC.continuationHopf(
 			(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
 			(x, p, β) ->  Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
-			(x, p, β) ->  transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
-			p2 -> (x, p1, v1, v2) -> d2F(x, 0., 0., v1, v2),
 			br, ind_hopf,
 			par_bru.β,
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jt = (x, p, β) ->  transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
+			d2F = p2 -> (x, p1, v1, v2) -> d2F(x, 0., 0., v1, v2), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = PALC.HopfPoint(br, ind_hopf)

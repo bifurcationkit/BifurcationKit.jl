@@ -1,3 +1,4 @@
+# using Revise
 using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield
 const PALC = PseudoArcLengthContinuation
 

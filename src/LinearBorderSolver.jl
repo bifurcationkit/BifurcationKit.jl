@@ -65,32 +65,18 @@ MatrixBLS() = MatrixBLS(DefaultLS())
 function (lbs::MatrixBLS)(J, dR,
 						dzu, dzp::T, R::vectype, n::T,
 						xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T <: Number, vectype <: AbstractVector, S, Ts}
-	N = length(dzu)
-
-	rhs = vcat(R, n)
-	# A = similar(J, N + 1, N + 1)
-	# if shift == nothing
-	# 	A[1:N, 1:N] .= J
-	# else
-	# 	A[1:N, 1:N] .= J + shift * I
-	# end
-	#
-	# A[1:N, end] .= dR
-	# A[end, 1:N] .= vec(dzu) .* xiu
-	# A[end, end]  = dzp * xip
-
-	# A[1:N, end] .= dR
-	# A[end, 1:N] .= vec(dzu) .* xiu
-	# A[end, end]  = dzp * xip
 
 	if isnothing(shift)
 		A = J
 	else
 		A = J + shift * I
 	end
+
 	A = hcat(A, dR)
 	A = vcat(A, vcat(vec(dzu) .* xiu, dzp * xip)')
 
+	# solve the equations and return the result
+	rhs = vcat(R, n)
 	res = A \ rhs
 	return res[1:end-1], res[end], true, 1
 end
@@ -133,8 +119,9 @@ end
 
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number}
 	out = similar(x)
-	copyto!(out.u, apply(lbmap.J, x.u) .+ lbmap.a .* x.p)
-	out.p  =   dot(lbmap.b, x.u)  + lbmap.c  * x.p
+	copyto!(out.u, apply(lbmap.J, x.u))
+	axpy!(x.p, lbmap.a, out.u)
+	out.p = dot(lbmap.b, x.u)  + lbmap.c  * x.p
 	return out
 end
 

@@ -23,6 +23,8 @@ end
 
 hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, vectype, S, Sa, Sbd} = Td2f != Nothing
 
+hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, vectype, S, Sa, Sbd} = TJa != Nothing
+
 FoldProblemMinimallyAugmented(F, J, Ja, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, a, b, linsolve, linsolve, BorderingBLS(linsolve))
 
 FoldProblemMinimallyAugmented(F, J, Ja, d2F, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, a, b, linsolve, linsolve, BorderingBLS(linsolve))
@@ -41,7 +43,7 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T) where {vectype, T
 	n = T(1)
 	v, _, _ = fp.linsolver(fp.J(x, p), a)
 	bv = dot(b, v)
-	bv == T(0) && @error "Error with Method using Minimally Augmented formulation for Fold bifurcation"
+	bv == T(0) && @error "Error when using Minimally Augmented formulation for Fold bifurcation. The dot product should non-zero."
 
 	σ1 = -n / bv
 	return fp.F(x, p), σ1
@@ -68,13 +70,20 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 
 	F = pbMA.F
 	J = pbMA.J
-	Jadjoint = pbMA.Jadjoint
+
 	d2F = pbMA.d2F
 	a = pbMA.a
 	b = pbMA.b
 
 	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
 	J_at_xp = J(x, p)
+
+	# we do the following to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
+	if hasAdjoint(pbMA)
+		JAd_at_xp = pbMA.Jadjoint(x, p)
+	else
+		JAd_at_xp = transpose(J_at_xp)
+	end
 
 	n = T(1)
 	# we solve Jv + a σ1 = 0 with <b, v> = n
@@ -85,7 +94,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented,
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-	w = pbMA.linsolverAdjoint(Jadjoint(x, p), b)[1]
+	w = pbMA.linsolverAdjoint(JAd_at_xp, b)[1]
 	σ2 = -n / dot(a, w)
 	rmul!(w, -σ2)
 
@@ -156,20 +165,31 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
+	`newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm)`
+
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is the parameter associated to the Fold point
 - `dF  = (x, p) -> d_xF(x, p)` associated jacobian
-- `dFt = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method.
-- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as given by the function FoldPoint
 - `eigenvec` guess for the 0 eigenvector
 - `options::NewtonPar`
+
+Optional arguments:
+- `Jt = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method.
+- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
+- `normN = norm`
+
+!!! tip "Jacobian tranpose"
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
+
+!!! warning "Hessian"
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T, vectype}
+function newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {T, vectype}
 	foldvariable = FoldProblemMinimallyAugmented(
-		(x, p) ->  F(x, p),
-		(x, p) ->  J(x, p),
-		(x, p) -> Jt(x, p),
+		F,
+		J,
+		Jt,
 		d2F,
 		_copy(eigenvec), #copy(eigenvec),
 		_copy(eigenvec), #copy(eigenvec),
@@ -189,62 +209,50 @@ function newtonFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, ei
 				opt_fold, normN = normN)
 end
 
-
-# calls when hessian is unknown, finite differences are then used
-newtonFold(F, J, Jt, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype} = newtonFold(F, J, Jt, nothing, foldpointguess, eigenvec, options; normN = normN)
-
-newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; normN = norm) where {T,vectype} = newtonFold(F, J, (x, p) -> transpose(J(x, p)), foldpointguess, eigenvec, options; normN = normN)
-
 """
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	`newtonFold(F, J, Jt, br::ContResult, index::Int64, options::NewtonPar)`
+	`newtonFold(F, J, br::ContResult, index::Int64, options::NewtonPar; Jt = nothing, d2F = nothing)`
 
-or
+where the optional argument `Jt` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
 
-	`newtonFold(F, J, Jt, d2F, br::ContResult, index::Int64, options::NewtonPar)`
+!!! tip "Jacobian tranpose"
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
-whether the Hessian d2F is known analytically or not. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+!!! warning "Hessian"
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, options::NewtonPar;kwargs...)
+function newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar;Jt = nothing, d2F = nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau
 
 	# solve the Fold equations
-	outfold, hist, flag =  newtonFold(F, J, Jt, d2F, foldpointguess, eigenvec, options; kwargs...)
-
-	return outfold, hist, flag
+	return newtonFold(F, J, foldpointguess, eigenvec, options; Jt = Jt, d2F = d2F, kwargs...)
 end
-
-function newtonFold(F, J, Jt, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...)
-	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.foldpoint[ind_fold]
-	eigenvec = bifpt.tau
-
-	# solve the Fold equations
-	outfold, hist, flag =  newtonFold(F, J, Jt, foldpointguess, eigenvec, options; kwargs...)
-
-	return outfold, hist, flag
-end
-
-newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...) = newtonFold(F, J, (x, p) -> transpose(J(x, p)), br, ind_fold, options; kwargs...)
-
-newtonFold(F, br::ContResult, ind_fold::Int64, options::NewtonPar; kwargs...) = newtonFold(F, (x0, p) -> finiteDifferences(x -> F(x, p), x0), br, ind_fold, options; kwargs...)
 
 
 """
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `F = (x, p1, p2) ->	F(x, p1, p2)` where `p` is the parameter associated to the Fold point
 - `J = (x, p1, p2) -> d_xF(x, p1, p2)` associated jacobian
-- `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` associated jacobian transpose
-- `d2F = p2 -> ((x, p1, v1, v2) -> d2F(x, p1, p2, v1, v2))` this is the hessian of `F` computed at `(x, p1, p2)` and evaluated at `(v1, v2)`.
 - `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as given by the function FoldPoint
 - `p2` parameter p2 for which `foldpointguess` is a good guess
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `options::NewtonPar`
+
+Optional arguments:
+
+- `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` associated jacobian transpose
+- `d2F = p2 -> ((x, p1, v1, v2) -> d2F(x, p1, p2, v1, v2))` this is the hessian of `F` computed at `(x, p1, p2)` and evaluated at `(v1, v2)`.
+
+!!! tip "Jacobian tranpose"
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` otherwise the jacobian will be computed twice!
+
+!!! warning "Hessian"
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; kwargs...) where {T,vectype}
+function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,vectype}
 	# Bad way it creates a struct for every p2?
 	# Jacobian for the Fold problem
 	Jac_fold_MA(u0, pb) = (return (u0, pb))
@@ -252,15 +260,27 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
 
-	foldvariable = p2 -> FoldProblemMinimallyAugmented(
-		(x, p1) ->  F(x, p1, p2),
-		(x, p1) ->  J(x, p1, p2),
-		(x, p1) -> Jt(x, p1, p2),
-		d2F(p2),
-		_copy(eigenvec), #copy(eigenvec),
-		_copy(eigenvec), #copy(eigenvec),
-		options_newton.linsolver)
-	foldPb = (u, p2) -> foldvariable(p2)(u)
+	if isnothing(Jt)
+		foldvariable = p2 -> FoldProblemMinimallyAugmented(
+			(x, p1) ->  F(x, p1, p2),
+			(x, p1) ->  J(x, p1, p2),
+			nothing,
+			d2F(p2),
+			_copy(eigenvec), #copy(eigenvec),
+			_copy(eigenvec), #copy(eigenvec),
+			options_newton.linsolver)
+		foldPb = (u, p2) -> foldvariable(p2)(u)
+	else
+		foldvariable = p2 -> FoldProblemMinimallyAugmented(
+			(x, p1) ->  F(x, p1, p2),
+			(x, p1) ->  J(x, p1, p2),
+			(x, p1) -> Jt(x, p1, p2),
+			d2F(p2),
+			_copy(eigenvec), #copy(eigenvec),
+			_copy(eigenvec), #copy(eigenvec),
+			options_newton.linsolver)
+		foldPb = (u, p2) -> foldvariable(p2)(u)
+	end
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolveMinAug()
 
@@ -275,49 +295,17 @@ function continuationFold(F, J, Jt, d2F, foldpointguess::BorderedArray{vectype, 
 end
 
 """
-codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
-- `F = (x, p1, p2) -> F(x, p1, p2)` where `p` is the parameter associated to the Fold point
-- `J = (x, p1, p2) -> d_xF(x, p1, p2)` associated jacobian
-- `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as given by the function FoldPoint
-- `p2` parameter p2 for which foldpointguess is a good guess
-- `eigenvec` guess for the 0 eigenvector at p1_0
-- `options::NewtonPar`
+Simplified call for continuation of Fold point. More precisely, the call is as follows `continuationFold(F, J, br::ContResult, index::Int64, options; Jt = nothing, d2F = p2 -> nothing)` where the parameters are as for `continuationFold` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
+
+!!! tip "Jacobian tranpose"
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` otherwise the jacobian will be computed twice!
 
 !!! warning "Hessian"
-    The hessian of `F` in this case is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-continuationFold(F, J, Jt, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ;kwargs...) where {T,vectype} = continuationFold(F, J, Jt, p2 -> nothing, foldpointguess, p2_0, eigenvec, options_cont ; kwargs...)
-
-
-continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::Real, eigenvec, options_cont::ContinuationPar ; kwargs...)  where {T,vectype} = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), foldpointguess, p2_0, eigenvec, options_cont ; kwargs...)
-
-function continuationFold(F, foldpointguess::BorderedArray{vectype, T}, p2_0::Real, eigenvec, options::ContinuationPar ; kwargs...)  where {T,vectype}
-	return continuationFold(F,
-		(x0, p) -> finiteDifferences(x -> F(x, p), x0),
-		foldpointguess, p2_0,
-		eigenvec,
-		options ; kwargs...)
-end
-
-"""
-Simplified call for continuation of Fold point. More precisely, the call is as follows `continuationFold(F, J, Jt, d2F, br::ContResult, index::Int64, options)` where the parameters are as for `continuationFold` except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine.
-
-Simplified calls are also provided but at the cost of using finite differences.
-"""
-function continuationFold(F, J, Jt, d2F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
+function continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau
-	return continuationFold(F, J, Jt, d2F, foldpointguess, p2_0, eigenvec, options_cont ;kwargs...)
+	return continuationFold(F, J, foldpointguess, p2_0, eigenvec, options_cont ;Jt = Jt, d2F = d2F, kwargs...)
 end
-
-function continuationFold(F, J, Jt, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...)
-	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.foldpoint[ind_fold]
-	eigenvec = bifpt.tau
-	return continuationFold(F, J, Jt, foldpointguess, p2_0, eigenvec, options_cont; kwargs...)
-end
-
-continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, J, (x, p1, p2) -> transpose(J(x, p1, p2)), br, ind_fold, p2_0, options_cont::ContinuationPar; kwargs...)
-
-continuationFold(F, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; kwargs...) = continuationFold(F, (x0, p1, p2) -> finiteDifferences(x -> F(x, p1, p2), x0), br, ind_fold, p2_0, options_cont::ContinuationPar; kwargs...)
