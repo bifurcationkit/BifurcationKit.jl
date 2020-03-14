@@ -301,13 +301,12 @@ foldpt = FoldPoint(br_po, indfold)
 
 Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)
 Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)</code></pre><p>We can then use our functional to call <code>newtonFold</code> like for a regular function (see Tutorial 1)</p><pre><code class="language-julia">outfold, hist, flag = @time newtonFold(
+ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)</code></pre><p>We can then use our functional to call <code>newtonFold</code> like for a regular function (see Tutorial 1)</p><pre><code class="language-julia">outfold, hist, flag = @time PALC.newtonFold(
 	(x, p) -&gt; poTrap(@set par_cgl.r = p)(x),
 	(x, p) -&gt; poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
-	(x, p) -&gt; transpose(poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x)),
-	(x, p, dx1, dx2) -&gt; d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),
-	br_po, indfold, #index of the fold point
-	@set opt_po.linsolver = ls)
+	br_pok2 , indfold, #index of the fold point
+	@set opt_po.linsolver = ls;
+	d2F = (x, p, dx1, dx2) -&gt; d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
 flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p,&quot; from &quot;, br_po.foldpoint[indfold][3],&quot;\n&quot;)</code></pre><p>and this gives</p><pre><code class="language-julia"> Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
@@ -321,14 +320,12 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α
  27.289005 seconds (1.07 M allocations: 24.444 GiB, 10.12% gc time)
 --&gt; We found a Fold Point at α = 0.9470569704262517 from 0.9481896723164748</code></pre><p>Finally, one can perform continuation of the Fold bifurcation point as follows</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
-outfoldco, hist, flag = @time continuationFold(
-	(x, r, c5) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=c5)))(x),
-	(x, r, c5) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=c5)))(Val(:JacFullSparse), x),
-	(x, r, c5) -&gt; transpose(poTrap(setproperties(par_cgl, (r=r, c5=c5)))(Val(:JacFullSparse), x)),
-	c5 -&gt; ((x, r, dx1, dx2) -&gt; d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=c5))), x, dx1, dx2)),
-	br_po, indfold,
-	par_cgl.c5, plot = true, verbosity = 2,
-	optcontfold)</code></pre><p>which yields:</p><p><img src="../cgl2d-po-foldcont.png" alt/></p><p>There is still room for a lot of improvements here. Basically, the idea would be to use full Matrix-Free the jacobian functional and its transpose.</p><h2 id="Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1">Continuation of periodic orbits on the GPU (Advanced)</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1" title="Permalink"></a></h2><div class="admonition is-success"><header class="admonition-header"></header><div class="admonition-body"><p>This is a very neat example <strong>all done</strong> on the GPU using the following ingredients: Matrix-Free computation of periodic orbits using preconditioners.</p></div></div><p>We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the <strong>big</strong> preconditioner. </p><blockquote><p>Note that we use the parameters <code>Nx = 82; Ny = 42; M=30</code>.</p></blockquote><pre><code class="language-julia"># computation of the first derivative
+outfoldco, hist, flag = @time PALC.continuationFold(
+	(x, r, p) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
+	(x, r, p) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
+	br_pok2, indfold, par_cgl.c5, optcontfold;
+	d2F = p -&gt; ((x, r, dx1, dx2) -&gt; d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	plot = true, verbosity = 2)</code></pre><p>which yields:</p><p><img src="../cgl2d-po-foldcont.png" alt/></p><p>There is still room for a lot of improvements here. Basically, the idea would be to use full Matrix-Free the jacobian functional and its transpose.</p><h2 id="Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1">Continuation of periodic orbits on the GPU (Advanced)</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1" title="Permalink"></a></h2><div class="admonition is-success"><header class="admonition-header"></header><div class="admonition-body"><p>This is a very neat example <strong>all done</strong> on the GPU using the following ingredients: Matrix-Free computation of periodic orbits using preconditioners.</p></div></div><p>We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the <strong>big</strong> preconditioner. </p><blockquote><p>Note that we use the parameters <code>Nx = 82; Ny = 42; M=30</code>.</p></blockquote><pre><code class="language-julia"># computation of the first derivative
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -&gt; Fcgl(x .+ t .* dx, p), 0.)
 
 d1NL(x, p, dx) = ForwardDiff.derivative(t -&gt; NL(x .+ t .* dx, p), 0.)
@@ -384,4 +381,4 @@ br_po, upo , _= @time continuationPOTrap(
    orbitguess_cu, r_hopf - 0.01,
    opts_po_cont, :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; amplitude(u, Nx*Ny, M), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorialsPD/">« 6/ Period Doubling in BVAM model</a><a class="docs-footer-nextpage" href="../tutorialsCGLShoot/">8/ Ginzburg-Landau 2d (Shooting) »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 8 March 2020 10:21">Sunday 8 March 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; amplitude(u, Nx*Ny, M), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorialsPD/">« 6/ Period Doubling in BVAM model</a><a class="docs-footer-nextpage" href="../tutorialsCGLShoot/">8/ Ginzburg-Landau 2d (Shooting) »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 14 March 2020 10:51">Saturday 14 March 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
