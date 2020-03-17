@@ -1,4 +1,4 @@
-using IterativeSolvers, KrylovKit, Arpack
+using IterativeSolvers, KrylovKit, Arpack, LinearAlgebra
 # In this file, we regroud a way to provide eigen solvers
 
 abstract type AbstractEigenSolver end
@@ -45,9 +45,9 @@ function (l::EigArpack)(J, nev::Int64)
 		Jmap = LinearMap{T}(J, N, N; ismutating = false)
 		λ, ϕ, ncv, = Arpack.eigs(Jmap; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
 	end
-	I = sortperm(λ, by = l.by, rev = true)
+	Ind = sortperm(λ, by = l.by, rev = true)
 	ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
-	return λ[I], ϕ[:, I], true, 1
+	return λ[Ind], ϕ[:, Ind], true, 1
 end
 ####################################################################################################
 # Solvers for KrylovKit
@@ -76,3 +76,42 @@ end
 
 geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Int) where {T, vectype} = vecs[n]
 geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, I::Array{Int64,1}) where {T, vectype} = vecs[I]
+####################################################################################################
+# Solvers for ArnoldiMethod
+####################################################################################################
+# case of sparse matrices or matrix free method
+struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractEigenSolver
+	sigma::T
+	which::Tw
+	by::Tby			# how do we sort the computed eigenvalues.
+	kwargs::Tkw
+	x₀::vectype
+end
+
+EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...) = EigArnoldiMethod(sigma, which, real, kwargs, x₀)
+
+function (l::EigArnoldiMethod)(J, nev::Int64)
+	if J isa AbstractMatrix
+		if isnothing(l.sigma)
+			decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which, l.kwargs...)
+		else
+			F = factorize(l.sigma .* LinearAlgebra.I - J)
+    		Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J,1), ismutating=true)
+			decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
+		end
+	else
+		N = length(l.x₀)
+		T = eltype(l.x₀)
+		isnothing(l.sigma) == false && @warn "Shift-Invert strategy not implemented for maps"
+		Jmap = LinearMap{T}(J, N, N; ismutating = false)
+		decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
+	end
+	λ, ϕ = partialeigen(decomp)
+	# shift and invert
+	if isnothing(l.sigma) == false
+		λ .= l.sigma .- 1 ./ λ
+	end
+	Ind = sortperm(λ, by = l.by, rev = true)
+	length(λ) < nev && @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
+	return λ[Ind], ϕ[:, Ind], true, 1
+end

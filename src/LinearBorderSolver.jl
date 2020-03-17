@@ -118,6 +118,8 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc}
 end
 
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number}
+	# This implements the case where Tc is a number, ie there is one scalar constraint in the
+	# bordered linear system
 	out = similar(x)
 	copyto!(out.u, apply(lbmap.J, x.u))
 	axpy!(x.p, lbmap.a, out.u)
@@ -137,7 +139,7 @@ MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
 function (lbs::MatrixFreeBLS{S})(J, 		dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
-	linearmap = MatrixFreeBLSmap(J, dR, dzu * xiu, dzp * xip)
+	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)
 	rhs = BorderedArray(copy(R), n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return sol.u, sol.p, cv, it

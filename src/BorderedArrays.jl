@@ -21,16 +21,16 @@ similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real
 _copy(b) = copyto!(similar(b), b)
 copy(b::BorderedArray) = copyto!(similar(b), b)# BorderedArray(copy(b.u), copy(b.p))
 
-copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p);dest)
-copyto!(dest::BorderedArray{vectype, T}, src::BorderedArray{vectype, T}) where {vectype, T <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
+copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1, T2 } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p); dest)
+copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
 
 length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
 
-dot(a::BorderedArray{vectype, T}, b::BorderedArray{vectype, T}) where {vectype, T} = dot(a.u, b.u) + dot(a.p, b.p)
+dot(a::BorderedArray{Tv1, Tp1}, b::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2} = dot(a.u, b.u) + dot(a.p, b.p)
 
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
 
-zero(b::BorderedArray{vectype, T}) where {vectype, T } = BorderedArray(zero(b.u), zero(b.p))
+zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
 ################################################################################
 function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <: Number, Tv}
 	# Scale an array A by a scalar b overwriting A in-place
@@ -48,42 +48,42 @@ end
 
 rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <: Number, Tv} = rmul!(A, a, a)
 ################################################################################
-function mul!(A::BorderedArray{vectype, Tv}, B::BorderedArray{vectype, Tv}, α::T) where {vectype, Tv, T <: Number}
+function mul!(A::BorderedArray{Tv1, Tp1}, B::BorderedArray{Tv2, Tp2}, α::T) where {Tv1, Tv2, Tp1, Tp2, T <: Number}
 	mul!(A.u, B.u, α)
 	mul!(A.p, B.p, α)
 	return A
 end
 
-function mul!(A::BorderedArray{vectype, Tv}, B::BorderedArray{vectype, Tv}, α::T) where {vectype, Tv <: Number, T <: Number}
+function mul!(A::BorderedArray{Tv1, Tp1}, B::BorderedArray{Tv2, Tp2}, α::T) where {Tv1, Tv2, Tp1 <: Number, Tp2 <: Number, T <: Number}
 	mul!(A.u, B.u, α)
 	A.p = B.p * α
 	return A
 end
 
-mul!(A::BorderedArray{vectype, Tv}, α::T, B::BorderedArray{vectype, Tv}) where {vectype, Tv, T} = mul!(A, B, α)
+mul!(A::BorderedArray{Tv1, Tp1}, α::T, B::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2, T} = mul!(A, B, α)
 ################################################################################
-function axpy!(a::T, X::BorderedArray{vectype, Tv}, Y::BorderedArray{vectype, Tv}) where {vectype, T <:Real, Tv}
+function axpy!(a::T, X::BorderedArray{Tv1, Tp1}, Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1, Tp2}
 	# Overwrite Y with a*X + Y, where a is scalar
 	axpy!(a, X.u, Y.u)
 	axpy!(a, X.p, Y.p)
 	return Y
 end
 
-function axpy!(a::T, X::BorderedArray{vectype, T}, Y::BorderedArray{vectype, T}) where {vectype, T <:Real}
+function axpy!(a::T, X::BorderedArray{Tv1, Tp1}, Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1 <: Number, Tp2 <: Number}
 	# Overwrite Y with a*X + Y, where a is scalar
 	axpy!(a, X.u, Y.u)
 	Y.p = a * X.p + Y.p
 	return Y
 end
 ################################################################################
-function axpby!(a::T, X::BorderedArray{vectype, Tv}, b::T, Y::BorderedArray{vectype, Tv}) where {vectype, T <: Real, Tv}
+function axpby!(a::T, X::BorderedArray{vectype, Tv1}, b::T, Y::BorderedArray{vectype, Tv2}) where {vectype, T <: Number, Tv1, Tv2}
 	# Overwrite Y with a * X + b * Y, where a, b are scalar
 	axpby!(a, X.u, b, Y.u)
 	axpby!(a, X.p, b, Y.p)
 	return Y
 end
 
-function axpby!(a::T, X::BorderedArray{vectype, T}, b::T, Y::BorderedArray{vectype, T}) where {vectype, T <:Real}
+function axpby!(a::T, X::BorderedArray{vectype, Tv1}, b::T, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1 <: Number, Tv2 <: Number, T <: Number}
 	# Overwrite Y with a * X + b * Y, where a is a scalar
 	axpby!(a, X.u, b, Y.u)
 	Y.p = a * X.p + b * Y.p
@@ -97,9 +97,9 @@ end
 # computes x-y into x and returns x
 minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
-minus!(x::T, y::T) where {T <:Real} = (x = x - y)
+minus!(x::T, y::T) where {T <: Number} = (x = x - y)
 minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))
-function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real}
+function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Number}
 	minus!(x.u, y.u)
 	# Carefull here. If I use the line below, then x.p will be left unaffected
 	# minus_!(x.p, y.p)
@@ -116,4 +116,4 @@ minus(x, y) = (x1 = copyto!(similar(x), x); minus!(x1, y); return x1)
 minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 minus(x::T, y::T) where {T <:Real} = (return x - y)
 minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
-minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Real} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
+minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Number} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))

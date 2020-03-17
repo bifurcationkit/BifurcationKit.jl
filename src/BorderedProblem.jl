@@ -75,25 +75,40 @@ function (pb::BorderedProblem)(xe, dxe)
 end
 
 # Structure to hold the jacobian of the bordered problem
-mutable struct JacobianBorderedProblem
-	pb
-	J
-	dpF
-	∇g
-	dpg
+mutable struct JacobianBorderedProblem{Tpb, Tj, Tdpf, Tdg, Tdpg}
+	pb::Tpb
+	J::Tj
+	dpF::Tdpf
+	∇g::Tdg
+	dpg::Tdpg
 end
 
 # simplified constructor
 JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, pb.dxF(x, p), pb.dpF(x, p), pb.∇g(x, p), pb.dpg(x, p))
+
 JacobianBorderedProblem(pb, x) = JacobianBorderedProblem(pb, extractVector(pb, x), extractParameter(pb, x))
 
 
 function (Jpb::JacobianBorderedProblem)(x, p)
 	# computation of the jacobian of the Bordered problem
 	pb = Jpb.pb
-	copyto!(Jpb.J, 	 pb.dxF(x, p))
-	copyto!(Jpb.dpF, pb.dpF(x, p))
-	copyto!(Jpb.∇g,  pb.∇g(x, p))
+	if Jpb.J isa AbstractArray
+		copyto!(Jpb.J, 	 pb.dxF(x, p))
+	else
+		Jpb.J = pb.dxF(x, p)
+	end
+
+	if Jpb.dpF isa AbstractArray
+		copyto!(Jpb.dpF, pb.dpF(x, p))
+	else
+		Jpb.dpF = pb.dpF(x, p)
+	end
+
+	if Jpb.∇g isa AbstractArray
+		copyto!(Jpb.∇g,  pb.∇g(x, p))
+	else
+		Jpb.∇g = pb.∇g(x, p)
+	end
 	if getParameterDim(pb) == 1
 		Jpb.dpg = pb.dpg(x, p)
 	else

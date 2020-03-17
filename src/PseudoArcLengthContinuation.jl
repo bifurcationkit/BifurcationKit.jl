@@ -25,7 +25,7 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/FloquetQaD.jl")
 
 	export	DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
-			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, geteigenvector, AbstractEigenSolver
+			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 	export	BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
 	export	PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 	export	MatrixBLS, BorderingBLS, MatrixFreeBLS, BorderedArray

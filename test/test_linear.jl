@@ -1,3 +1,4 @@
+# using Revise
 using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
 const PALC = PseudoArcLengthContinuation
 ####################################################################################################
@@ -167,3 +168,13 @@ geteigenvector(eil, outkkmf[2], 2)
 eil = PALC.EigArpack()
 outdefault = eil(J0, 20)
 @test out[1] ≈ outdefault[1]
+
+eil = PALC.EigArnoldiMethod(;x₀ = x0)
+outam = eil(J0, 20)
+outam = eil(Jmf, 20)
+geteigenvector(eil, outam[2], 2)
+
+eil = PALC.EigArnoldiMethod(;x₀ = x0, sigma = 1.)
+outam = eil(J0, 20)
+outam = eil(Jmf, 20)
+geteigenvector(eil, outam[2], 2)
