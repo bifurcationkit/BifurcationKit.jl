@@ -21,8 +21,6 @@ function computeEigenvalues(contparams::ContinuationPar, n_unstable::Int64, J)
 	return eiginfo, isstable, n_unstable, n_imag
 end
 
-computeEigenvalues(iter::PALCIterable, state::PALCStateVariables) = computeEigenvalues(iter.contParams, state.n_unstable[2], iter.J(getu(state), getp(state)))
-
 function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
 	n_unstable = state.n_unstable[2]
 	nev_ = max(n_unstable + 5, iter.contParams.nev)

@@ -1,4 +1,4 @@
-using RecursiveArrayTools # for bifurcation point handling in ContRes
+using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
 import Base: show		# simplified display method for ContRes
 
 """
@@ -116,7 +116,7 @@ Structure which holds the results after a call to [`continuation`](@ref).
 - `foldpoint::Vector{Biftype}` a vector holding the set of fold points detected during the computation of the branch.
 - `eig::Vector` contains for each continuation step the eigen elements.
 """
-@with_kw struct ContResult{T, Teigvals, Teigvec, Biftype, Ts}
+@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts}
 	# this vector is used to hold (param, printSolution(u, param), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 

@@ -1,6 +1,6 @@
 using IterativeSolvers, KrylovKit, LinearAlgebra
 
-# In this file, we regroud a way to provide linear solver for the Package
+# In this file, we provide linear solvers for the Package
 
 abstract type AbstractLinearSolver end
 

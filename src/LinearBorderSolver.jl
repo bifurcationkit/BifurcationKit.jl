@@ -1,5 +1,3 @@
-include("LinearSolver.jl")
-
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
 # call for using BorderedArray input, specific to Arclength Continuation
@@ -7,13 +5,12 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
 ####################################################################################################
 @with_kw struct BorderingBLS{S <: AbstractLinearSolver, Ttol} <: AbstractBorderedLinearSolver
-	solver::S
+	solver::S = DefaultLS()
 	tol::Ttol = 1e-12
 	checkPrecision::Bool = false
 end
 
 # dummy constructor to simplify user passing options to continuation
-BorderingBLS() = BorderingBLS(solver = DefaultLS())
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl

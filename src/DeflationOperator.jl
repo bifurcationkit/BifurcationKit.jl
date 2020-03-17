@@ -1,4 +1,3 @@
-include("Newton.jl")
 import Base: push!, pop!, length
 import Base: show, getindex
 

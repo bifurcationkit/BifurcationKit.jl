@@ -14,8 +14,8 @@ geteigenvector(eigsolve::ES, vecs, I::Array{Int64,1}) where {ES <: AbstractEigen
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-@with_kw struct DefaultEig{Tby} <: AbstractEigenSolver
-	which::Tby = real		# how do we sort the computed eigenvalues
+@with_kw struct DefaultEig{Twh} <: AbstractEigenSolver
+	which::Twh = real		# how do we sort the computed eigenvalues
 end
 
 function (l::DefaultEig)(J, nev::Int64)
@@ -96,7 +96,7 @@ function (l::EigArnoldiMethod)(J, nev::Int64)
 			decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which, l.kwargs...)
 		else
 			F = factorize(l.sigma .* LinearAlgebra.I - J)
-    		Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J,1), ismutating=true)
+			Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J,1), ismutating=true)
 			decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
 		end
 	else

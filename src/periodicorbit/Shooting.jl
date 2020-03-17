@@ -18,14 +18,6 @@ flow(x, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...) = flowTimeSol(x, p, 
 flow(x, tspan, pb::ODEProblem; alg = Euler(), kwargs...) =  flow(x, nothing, tspan, pb; alg = alg, kwargs...)
 ################
 # this flow is used for computing the derivative of the flow, so pb encode the variational equation
-function dflow(dx, x::AbstractVector, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
-	n = length(x)
-	_prob = DiffEqBase.remake(pb; u0 = vcat(x, dx), tspan = tspan)
-	# the use of concrete_solve makes it compatible with Zygote
-	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)[end]
-	return sol[1:n], sol[n+1:end]
-end
-
 function dflow(dx, x::AbstractVector, p, tspan, pb::ODEProblem; alg = Euler(), kwargs...)
 	n = length(x)
 	_prob = DiffEqBase.remake(pb; u0 = vcat(x, dx), tspan = tspan, p = p)
@@ -33,6 +25,7 @@ function dflow(dx, x::AbstractVector, p, tspan, pb::ODEProblem; alg = Euler(), k
 	sol = DiffEqBase.concrete_solve(_prob, alg, save_everystep = false; kwargs...)[end]
 	return sol[1:n], sol[n+1:end]
 end
+
 dflow(dx, x::AbstractVector, tspan, pb::ODEProblem; alg = Euler(), kwargs...) = dflow(dx, x, nothing, tspan, pb; alg = alg, kwargs...)
 ################
 # this function takes into accound a parameter passed to the vector field
