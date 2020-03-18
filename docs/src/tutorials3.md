@@ -510,9 +510,6 @@ We can observe that simple shooting is faster but the Floquet multipliers are le
 
 ## Continuation of periodic orbits (Poincaré Shooting)
 
-!!! compat "Experimental"
-    This computation of periodic orbits via Poincaré shooting is still experimenntal and not tested as much as the Standard shooting.
-
 We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of `DifferentialEquations.jl`. More information is provided at [`PoincareShootingProblem`](@ref) and [Periodic orbits based on the shooting method](@ref) but basically, it is a shooting method between Poincaré sections $\Sigma_i$ (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is $M_{sh}(N-1)$ where $N$ is the dimension of the phase space. Indeed, each time slice lives in an hyperplane $\Sigma_i$. Additionally, the period $T$ is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane $\Sigma_i$, something called **event detection**.
 
 

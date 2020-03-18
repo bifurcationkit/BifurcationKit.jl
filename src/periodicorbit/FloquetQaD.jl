@@ -168,7 +168,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
 	out = copy(du)
 
 	for ii = 1:M
-		# call jacobian of the flow
+		# call the jacobian of the flow
 		@views out .= sh.flow(xc[:, ii], out, sh.ds[ii] * T)[2]
 	end
 
@@ -191,7 +191,6 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 	# extract the time slices
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
-
 	du = zeros(N)
 
 	for ii = 1:N
@@ -205,8 +204,33 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 end
 
 """
-Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Poicaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N.
+Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N.
 """
-function MonodromyQaDShooting(sh::HyperplanePoincareShootingProblem, x, du::AbstractVector)
-	return du .- sh(x, du)
+function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
+	# this is still work in progress
+	sh = hpsh.psh
+	M = getM(hpsh)
+
+	Nm1 = div(length(x_bar), M)
+
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+	@assert length(dx_bar) == Nm1 "Please provide the right dimension to your matrix-free eigensolver, it must be $Nm1."
+
+	xc = similar(x_bar, Nm1 + 1)
+	outbar = copy(dx_bar)
+	outc = similar(dx_bar, Nm1 + 1)
+
+	for ii = 1:M
+		E!(sh.section,  xc,  view(x_barc, :, ii), ii)
+		dE!(sh.section, outc, outbar, ii)
+		outc .= diffPoincareMap(hpsh, xc, outc, ii)
+		dR!(sh.section, outbar, outc, ii)
+	end
+	return outbar
+
+end
+
+function MonodromyQaDShooting(sh::HyperplanePoincareShootingProblem, x)
+	@assert 1==0 "WIP no done yet!"
 end

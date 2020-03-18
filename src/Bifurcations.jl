@@ -102,7 +102,7 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 	end
 
 	if δn_unstable < δn_imag
-		@error "Error in eigenvalues computation. It seems an eigenvalue is missing, probably `conj(λ)` for some already computed eigenvalue λ. This makes the identification of bifurcation points erroneous. You should increase the number of requested eigenvalues."
+		@error "Error in eigenvalues computation. It seems an eigenvalue is missing, probably conj(λ) for some already computed eigenvalue λ. This makes the identification (but not the detection) of bifurcation points erroneous. You should increase the number of requested eigenvalues."
 		tp = :nd
 		detected = true
 	end

@@ -4,6 +4,16 @@ using KrylovKit, DiffEqBase
 
 abstract type AbstractShootingProblem end
 
+function getAmplitude(prob::AbstractShootingProblem, x::AbstractVector; ratio = 1)
+	mx = _getMax(prob, x; ratio = ratio)
+	return maximum(mx) - minimum(mx)
+end
+
+function getMaximum(prob::AbstractShootingProblem, x::AbstractVector; ratio = 1)
+	mx = _getMax(prob, x; ratio = ratio)
+	return maximum(mx)
+end
+
 ####################################################################################################
 # this function takes into accound a parameter passed to the vector field
 # Putting the options `save_start=false` seems to bug with Sundials
@@ -83,7 +93,7 @@ struct Flow{TF, Tf, Tts, Tff, Td}
 end
 
 (fl::Flow)(x, tspan)     = fl.flow(x, tspan)
-(fl::Flow)(x, dx, tspan) = fl.dflow(x, dx, tspan)
+(fl::Flow)(x, dx, tspan; kw2...) = fl.dflow(x, dx, tspan; kw2...)
 (fl::Flow)(::Val{:Full}, x, tspan) = fl.flowFull(x, tspan)
 (fl::Flow)(::Val{:TimeSol}, x, tspan) = fl.flowTimeSol(x, tspan)
 
@@ -95,9 +105,9 @@ function Flow(F, p, prob::ODEProblem, alg; kwargs...)
 	return Flow(F,
 		(x, t) ->			 	flow(x, p, (zero(t), t), prob; alg = alg, kwargs...),
 		(x, t) ->		 flowTimeSol(x, p, (zero(t), t), prob; alg = alg, kwargs...),
+		(x, t) -> 		 	flowFull(x, p, (zero(t), t), prob; alg = alg, kwargs...),
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
-		(x, t) -> 		 	flowFull(x, p, (zero(t), t), prob; alg = alg, kwargs..., callback = nothing),
-		(x, dx, t) -> dflow_fd(x, dx, p, (zero(t), t), prob; alg = alg, kwargs...)
+		(x, dx, t; kw2...) -> dflow_fd(x, dx, p, (zero(t), t), prob; alg = alg, kwargs..., kw2...)
 		)
 end
 
@@ -105,9 +115,8 @@ function Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 	return Flow(F,
 		(x, t) -> 			flow(x, p, (zero(t), t), prob1, alg = alg1; kwargs...),
 		(x, t) ->	  flowTimeSol(x, p, (zero(t), t), prob; alg = alg1, kwargs...),
-		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
-		(x, t) -> 		flowFull(x, p, (zero(t), t), prob1, alg = alg1; kwargs..., callback = nothing),
-		(x, dx, t) ->  dflow(dx, x, p, (zero(t), t), prob2, alg = alg2; kwargs...)
+		(x, t) -> 		flowFull(x, p, (zero(t), t), prob1, alg = alg1; kwargs...),
+		(x, dx, t; kw2...) ->  dflow(dx, x, p, (zero(t), t), prob2, alg = alg2; kwargs..., kw2...)
 		)
 end
 ####################################################################################################
@@ -156,21 +165,31 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, sect
 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; kwargs...) = ShootingProblem(Flow(F, p, prob1, alg1, prob2, alg2; kwargs...), diff(LinRange(0, 1, M + 1)), section)
 
+getM(sh::ShootingProblem) = length(sh.ds)
+
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]
 extractPeriodShooting(x::BorderedArray)  = x.p
 
-# Standard shooting functional
+function extractTimeSlices(x::AbstractVector, M::Int)
+	N = div(length(x) - 1, M)
+	return @views reshape(x[1:end-1], N, M)
+end
+extractTimeSlices(x::BorderedArray, M::Int) = x.u
+
+# extractTimeSlice(x::AbstractMatrix, ii::Int) = @view xc[:, i]
+# extractTimeSlice(x::AbstractVector, ii::Int) = xc[i]
+
+# Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector)
 	# period of the cycle
 	# Sundials does not like @views :(
 	T = extractPeriodShooting(x)
-	M = length(sh.ds)
+	M = getM(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xv = @view x[1:end-1]
-	xc = reshape(xv, N, M)
+	xc = extractTimeSlices(x, M)
 
 	# variable to hold the computed result
 	out = similar(x)
@@ -178,7 +197,7 @@ function (sh::ShootingProblem)(x::AbstractVector)
 	outc = reshape(outv, N, M)
 
 	for ii in 1:M-1
-		# yi = Flow(xi, dsi⋅T) - x[i+1]
+		# we can use views but Sundials will complain
 		outc[:, ii] .= sh.flow(xc[:, ii], sh.ds[ii] * T) .- xc[:, ii+1]
 	end
 	# ym = Flow(xm, dsm⋅T) - x1
@@ -186,6 +205,31 @@ function (sh::ShootingProblem)(x::AbstractVector)
 
 	# add constraint
 	out[end] = sh.section(x)
+
+	return out
+end
+
+# shooting functional, this allows for Array state space
+function (sh::ShootingProblem)(x::BorderedArray)
+	# period of the cycle
+	T = extractPeriodShooting(x)
+	M = getM(sh)
+
+	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
+	xc = extractTimeSlices(x, M)
+
+	# variable to hold the computed result
+	out = similar(x)
+
+	for ii in 1:M-1
+		# we can use views but Sundials will complain
+		out.u[ii] .= sh.flow(xc[ii], sh.ds[ii] * T) .- xc[ii+1]
+	end
+	# ym = Flow(xm, sm T) - x1
+	out.u[M] .= sh.flow(xc[M], sh.ds[M] * T) .- xc[1]
+
+	# add constraint
+	out.p = sh.section(x)
 
 	return out
 end
@@ -213,37 +257,15 @@ function (sh::ShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-8)
 	for ii = 1:M-1
 		# call jacobian of the flow
 		tmp = sh.flow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
-		outc[:, ii] .= tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[ii] * dT .- dxc[:, ii+1]
+		outc[:, ii] .= @views tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[ii] * dT .- dxc[:, ii+1]
 	end
 
 	# ym = Flow(xm, dsm⋅T) - x1
 	tmp = sh.flow(xc[:, M], dxc[:, M], sh.ds[M] * T)
-	outc[:, M] .= tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[M] * dT .- dxc[:, 1]
+	outc[:, M] .= @views tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[M] * dT .- dxc[:, 1]
 
 	# add constraint
 	out[end] = (sh.section(x .+ δ .* dx) - sh.section(x)) / δ
-
-	return out
-end
-
-# shooting functional, this allows for Array state space
-function (sh::ShootingProblem)(x::BorderedArray)
-	# period of the cycle
-	T = extractPeriodShooting(x)
-	M = length(x.u)
-
-	# variable to hold the computed result
-	out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
-
-	for ii in 1:M-1
-		# yi = Flow(xi, dsi⋅T) - x[i+1]
-		out.u[ii] .= sh.flow(x.u[ii], sh.ds[ii] * T) .- x.u[ii+1]
-	end
-	# ym = Flow(xm, sm T) - x1
-	out.u[M] .= sh.flow(x.u[M], sh.ds[M] * T) .- x.u[1]
-
-	# add constraint
-	out.p = sh.section(x)
 
 	return out
 end
@@ -289,16 +311,6 @@ function _getMax(prob::ShootingProblem, x::AbstractVector; ratio = 1)
 	mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
 end
 
-function getAmplitude(prob::ShootingProblem, x::AbstractVector; ratio = 1)
-	mx = _getMax(prob, x; ratio = ratio)
-	return maximum(mx) - minimum(mx)
-end
-
-function getMaximum(prob::ShootingProblem, x::AbstractVector; ratio = 1)
-	mx = _getMax(prob, x; ratio = ratio)
-	return maximum(mx)
-end
-
 function sectionShooting(x::AbstractVector, po::AbstractMatrix, p, F)
 	res = 1.0
 	N, M = size(po)
@@ -322,7 +334,7 @@ This composite type implements	 the Poincaré Shooting method to locate periodic
 ## Simplified constructors
 A simpler way is to create a functional is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)` for simple shooting or `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...)` for multiple shooting . Here `F` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information.
 
-Another convenient call is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)` where `normals` (resp. `centers`) is a list of normals (resp. centers) which define a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps. δ is a numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used. See docs for more information.
+Another convenient call is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)` where `normals` (resp. `centers`) is a list of normals (resp. centers) which define a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps. δ is a numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used.
 
 ## Computing the functionals
 You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
@@ -375,6 +387,22 @@ end
 
 (hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 
+struct HyperplanePoincareShootingProblem{Tpsh <: PoincareShootingProblem} <: AbstractShootingProblem
+	psh::Tpsh
+end
+
+getM(hyp::HyperplanePoincareShootingProblem) = hyp.psh.M
+
+function PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, interp_points = 50, kwargs...)
+	hyp = HyperplaneSections(normals, centers)
+	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
+	affect!(integrator, idx) = terminate!(integrator)
+	# we put nothing option to have an upcrossing
+	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
+	return HyperplanePoincareShootingProblem(
+			PoincareShootingProblem(flow = Flow(F, p, prob, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ))
+end
+
 # Operateur Rk from the paper above
 function R!(out, x::AbstractVector, k::Int)
 	@views out[1:k-1] .= x[1:k-1]
@@ -393,7 +421,6 @@ function R(x::AbstractVector, k::Int)
 	out = similar(x, length(x) - 1)
 	R!(out, x, k)
 end
-
 
 # differential of R
 dR!(hyp::HyperplaneSections, out, dx::AbstractVector, ii::Int) = R!(hyp, out, dx, ii)
@@ -424,7 +451,7 @@ function dE!(hyp::HyperplaneSections, out, dxbar::AbstractVector, ii::Int)
 	xcbar = hyp.centers_bar[ii]
 	coord_k = - dot(nbar, dxbar) / hyp.normals[ii][k]
 
-	@views out[1:k-1] .= dxbar[1:k-1]
+	@views out[1:k-1]   .= dxbar[1:k-1]
 	@views out[k+1:end] .= dxbar[k:end]
 	out[k] = coord_k
 	return out
@@ -435,13 +462,9 @@ function dE(hyp::HyperplaneSections, dxbar::AbstractVector, ii::Int)
 	dE!(hyp, out, dxbar, ii)
 end
 
-struct HyperplanePoincareShootingProblem{Tpsh <: PoincareShootingProblem} <: AbstractShootingProblem
-	psh::Tpsh
-end
-
 function getPeriod(hpsh::HyperplanePoincareShootingProblem, x_bar)
 	sh = hpsh.psh
-	M = sh.M
+	M = getM(hpsh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
@@ -455,31 +478,41 @@ function getPeriod(hpsh::HyperplanePoincareShootingProblem, x_bar)
 	period = Th(0)
 
 	# we extend the state space to be able to call the flow, so we fill xc
-	#TODO create the projections on the fly
 	for ii=1:M
 		E!(sh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+		# We need the callback to be active here!!!
+		period += @views sh.flow(Val(:TimeSol), xc[:, ii], Inf64)[1]
 	end
-
-	for ii in 1:M-1
-		period += @views sh.flow(Val(:TimeSol), xc[:, ii+1], Inf64)[1]
-	end
-	period += @views sh.flow(Val(:TimeSol), xc[:, M], Inf64)[1]
+	return period
 end
 
-function PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 0e-8, interp_points = 50, kwargs...)
-	hyp = HyperplaneSections(normals, centers)
-	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
-	affect!(integrator, idx) = terminate!(integrator)
-	# we put nothing option to have an upcrossing
-	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
-	return HyperplanePoincareShootingProblem(
-			PoincareShootingProblem(flow = Flow(F, p, prob, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ))
+function _getMax(hpsh::HyperplanePoincareShootingProblem, x_bar::AbstractVector; ratio = 1)
+	# this function extracts the amplitude of the cycle
+	sh = hpsh.psh
+	M = getM(hpsh)
+	Nm1 = div(length(x_bar), M)
+
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+	xc = similar(x_bar, Nm1 + 1, M)
+
+	Th = eltype(x_bar)
+	mx = Th(0)
+
+	for ii=1:M
+		E!(sh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+		# We need the callback to be active here!!!
+		sol = @views sh.flow(Val(:Full), xc[:, ii], Inf64)
+		mx = max(mx, maximum(sol[1:div(Nm1, ratio), :]))
+	end
+
+	return mx
 end
 
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
+	M = getM(hpsh)
 	sh = hpsh.psh
-	M = sh.M
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
@@ -495,18 +528,17 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector; verbos
 		E!(sh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 	end
 
-	for ii in 1:M-1
-		# yi = x[i+1] - Flow(xi)
-		@views outc[:, ii] .= xc[:, ii+1] .- sh.flow(xc[:, ii], Inf64)
+	for ii=1:M
+		im1 = (ii == 1 ? M : ii - 1)
+		# We need the callback to be active here!!!
+		@views outc[:, ii] .= xc[:, ii] .- sh.flow(xc[:, im1], Inf64)
 	end
-	# ym = x1 - Flow(xm)
-	@views outc[:, M] .= xc[:, 1] .- sh.flow(xc[:, M], Inf64)
 
 	# build the array to be returned
 	out_bar = similar(x_bar)
 	out_barc = reshape(out_bar, Nm1, M)
-	for ii=1:M
-		R!(sh.section, view(out_barc, :, ii), view(outc, :, ii), ii)
+	for i=1:M
+		R!(sh.section, view(out_barc, :, i), view(outc, :, i), i)
 	end
 	return out_bar
 end
@@ -514,13 +546,12 @@ end
 function diffPoincareMap(hpsh, x, dx, ii::Int)
 	sh = hpsh.psh
 	normal = sh.section.normals[ii]
-	abs(dot(normal, dx)) > 1e-12 * dot(dx, dx) && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx)))"
+	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
 	# compute the Poincare map from x
 	tΣ, solΣ = sh.flow(Val(:TimeSol), x, Inf64)
 	z = sh.flow.F(solΣ)
-	# @error "I dont want to have dflow avec le callback"
-	y = sh.flow(x, dx, tΣ)[2]
-	# @show size(normal) size(x) size(dx) size(y) size(z)
+	# We need the callback to be INACTIVE here!!!
+	y = sh.flow(x, dx, tΣ; callback = nothing)[2]
 	out = y .- (dot(normal, y) / dot(normal, z)) .* z
 end
 
@@ -534,11 +565,11 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector, dx_bar
 
 	# otherwise analytical Jacobian
 	sh = hpsh.psh
-	M = sh.M
+	M = getM(hpsh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
-	x_barc = reshape(x_bar, Nm1, M)
+	x_barc  = reshape( x_bar, Nm1, M)
 	dx_barc = reshape(dx_bar, Nm1, M)
 
 	# variable to hold the computed result
@@ -552,10 +583,10 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector, dx_bar
 		dE!(sh.section, view(dxc, :, ii), view(dx_barc, :, ii), ii)
 	end
 
-	for ii in 1:M-1
-		@views outc[:, ii] .= dxc[:, ii+1] .- diffPoincareMap(hpsh, xc[:, ii], dxc[:, ii], ii)
+	for ii=1:M
+		im1 = (ii == 1 ? M : ii - 1)
+		@views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(hpsh, xc[:, im1], dxc[:, im1], im1)
 	end
-	@views outc[:, M] .= dxc[:, 1] .- diffPoincareMap(hpsh, xc[:, M], dxc[:, M], M)
 
 	# build the array to be returned
 	out_bar = similar(x_bar)
@@ -563,7 +594,6 @@ function (hpsh::HyperplanePoincareShootingProblem)(x_bar::AbstractVector, dx_bar
 	for ii=1:M
 		dR!(sh.section, view(out_barc, :, ii), view(outc, :, ii), ii)
 	end
-
 	return out_bar
 end
 

@@ -39,7 +39,7 @@ end
 """
 	PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0)
 
-Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is build (Matrix-Free) from which a projection is built. The package KrylovKit.jl is used to compute the partial Schur decomposition. The options are similar to the ones of `EigKrylovKit()`.
+Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is computed (Matrix-Free), using the package `KrylovKit.jl`, from which a projection is built. The options are similar to the ones of `EigKrylovKit()`.
 """
 function PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0)
 	H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, Arnoldi(krylovdim = krylovdim, verbosity = verbosity))
@@ -51,7 +51,7 @@ end
 """
 	PrecPartialSchurArnoldiMethod(J, N, nev, which = LM(); tol = 1e-9, kwargs...)
 
-Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is build (Matrix-Free) from which a projection is built. The package `ArnoldiMethod.jl` is used to compute the partial Schur decomposition. See the package `ArnoldiMethod.jl` for how to pass the proper options.
+Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is computed (Matrix-Free), using the package `ArnoldiMethod.jl`, from which a projection is built. See the package `ArnoldiMethod.jl` for how to pass the proper options.
 """
 function PrecPartialSchurArnoldiMethod(J, N, nev, which = LM(); tol = 1e-9, kwargs...)
 	if J isa AbstractMatrix

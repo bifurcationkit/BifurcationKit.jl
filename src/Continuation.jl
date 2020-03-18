@@ -90,6 +90,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15		# maximum number of bisection steps
 	@assert iseven(nInversion) "This number must be even"
+	@assert detectBifurcation < 3 "This option must belong to {0,1,2}"
 end
 
 # check the logic of the parameters

@@ -1,6 +1,6 @@
 # Periodic orbits based on the shooting method
 
-A shooting algorithm is provided which is called either *Simple Shooting (SS)* if a single section is used and *Multiple Shooting (MS)* otherwise. 
+A set of shooting algorithms is provided which is called either *Simple Shooting (SS)* if a single shooting is used and *Multiple Shooting (MS)* otherwise. 
 
 !!! unknown "References"
     For the exposition, we follow the PhD thesis **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations**, *Lust, Kurt*, 1997. 
@@ -12,7 +12,7 @@ $$\tag{1} \frac{d x}{d t}=f(x)$$
 and we write $\phi^t(x_0)$ the associated flow (or semigroup of solutions).
 
 !!! tip "Tip about convenience functions"
-    For convenience, we provide some functions `plotPeriodicShooting` for plotting, `getAmplitude` (resp. `getMaximum`) for getting the amplitude (resp. maximum) of the solution encoded by a shooting problem. See tutorials for example of use.
+    For convenience, we provide some functions `plotPeriodicShooting` for plotting, `getAmplitude` (resp. `getMaximum`) for getting the amplitude (resp. maximum) of the solution encoded by a shooting problem. See the tutorials for example of use.
 
 ## Standard Shooting
 ### Simple shooting
@@ -51,22 +51,29 @@ and $M_i=\partial_x\phi^{\delta s_i T}(x_i)$.
 
 ### Encoding of the functional
 
-The functional is encoded in the composite type [`ShootingProblem`](@ref). In particular, the user can pass its own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a solver tailored for the a specific problem. See the link [`ShootingProblem`](@ref) for more information, in particular on how to access the underlying functional, its jacobian...
+The functional is encoded in the composite type [`ShootingProblem`](@ref). In particular, the user can pass its own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a solver tailored for the a specific problem. See the link [`ShootingProblem`](@ref) for more information, for example on how to access the underlying functional, its jacobian...
 
 ## Poincaré shooting
 
 > The algorithm is based on the one described in **Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.**, Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó (2004) and **Matrix-Free Continuation of Limit Cycles for Bifurcation Analysis of Large Thermoacoustic Systems.** Waugh, Iain, Simon Illingworth, and Matthew Juniper (2013). 
 
 
-The idea is to look for periodic orbits solutions of (1) using hyperplanes $\Sigma_i$ for $i=1,\cdots,M$ which intersect transversally an initial periodic orbit guess. We write $\Pi_i$, the Poincaré return map on $\Sigma_i$ and look for solutions of the following problem:
+We look for periodic orbits solutions of (1) using hyperplanes $\Sigma_i=\{x\ / \ n_i\cdot(x-x^c_{i})=0\}$ for $i=1,\cdots,M$, centered on $x^c_i$, which intersect transversally an initial periodic orbit guess. We write $\Pi_i:\Sigma_i\to\Sigma_{mod(i+1,M)}$, the Poincaré return map to $\Sigma_{mod(i+1,M)}$. The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ constrained to live in $\Sigma_i$. Hence, one has to constrain the unknowns to these hyperplanes otherwise the Newton algorithm does not converge well.
+
+To this end, we introduce the projection operator $R_i:\mathbb R^N\to \mathbb R^{N-1}$ such that $R_{i}\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k}, x_{k+1}, \ldots, x_{N}\right)=\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k+1}, \ldots, x_{N}\right)$ where $k=argmax |n_{i,p}|$ (which depends on $i$). The inverse operator is defined as (where $\bar x:=R_i(x)$)
+
+$$E_{i}(\bar x) := E_{i}\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k+1}, \ldots, x_{N}\right)=
+\left(x_{1}, x_{2}, \ldots, x_{k-1}, x^c_{i,k}-\frac{\bar{n}_i \cdot\left(\overline{x}-\overline{x}^c_{i}\right)}{n_{i,k}}, x_{k+1}, \ldots, x_{N}\right).$$ 
+
+We note that $R_i\circ E_i = I_{\mathbb R^{N-1}}$ and $E_i\circ R_i = I_{\mathbb R^{N}}$.
+
+We then look for solutions of the following problem:
 
 $$\begin{aligned} 
-\Pi_1(x_{1})-x_{2} &=0 \\ 
-\Pi_{2}(x_{2})-x_{3} &=0 \\ & \vdots \\ 
-\Pi_m(x_{m})-x_{1} &=0. 
+\bar x_1 - R_M\Pi_M(E_M(\bar x_M))&=0 \\ 
+\bar x_2 - R_1\Pi_1(E_i(\bar x_1))&=0 \\ & \vdots \\ 
+\bar x_M - R_{M-1}\Pi_{M-1}(E_{M-1}(\bar x_{M-1}))&=0. 
 \end{aligned}$$
-
-The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$. Hence, one has to constrained the unknowns to these hyperplanes otherwise the Newton algorithm does not converge (well).
 
 
 ### Encoding of the functional
