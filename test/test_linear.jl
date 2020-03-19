@@ -67,6 +67,11 @@ sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
+linBdsolver = PALC.MatrixFreeBLS(GMRESIterativeSolvers(tol = 1e-9, N = size(J0, 1)))
+sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+@test sol_explicit[1:end-1] ≈ sol_bd4u
+@test sol_explicit[end] ≈ sol_bd4p
+
 # test the bordered linear solvers as used in newtonPseudoArcLength
 xiu = rand()
 xip = rand()

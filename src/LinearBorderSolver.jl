@@ -124,11 +124,28 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) whe
 	return out
 end
 
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::AbstractArray) where {Tj, Ta <: AbstractArray, Tb, Tc <: Number}
+	# This implements the case where Tc is a number, ie there is one scalar constraint in the
+	# bordered linear system
+	out = similar(x)
+	xu = @view x[1:end-1]
+	xp = x[end]
+	# copyto!(out.u, apply(lbmap.J, x.u))
+	out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a
+	out[end] = @views dot(lbmap.b, xu)  + lbmap.c  * xp
+	return out
+end
+
 struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
 	solver::S
 end
 
 MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
+extractVector(x::AbstractVector) = @view x[1:end-1]
+extractVector(x::BorderedArray) = x.u
+
+extractParameter(x::AbstractVector) = x[end]
+extractParameter(x::BorderedArray) = x.p
 
 # dummy constructor to simplify user passing options to continuation
 # We restrict to bordered systems where the added component is scalar
@@ -137,9 +154,13 @@ function (lbs::MatrixFreeBLS{S})(J, 		dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)
-	rhs = BorderedArray(copy(R), n)
+	if S <: GMRESIterativeSolvers
+		rhs = vcat(R, n)
+	else
+		rhs = BorderedArray(copy(R), n)
+	end
 	sol, cv, it = lbs.solver(linearmap, rhs)
-	return sol.u, sol.p, cv, it
+	return extractVector(sol), extractParameter(sol), cv, it
 end
 ####################################################################################################
 # Nested algorithm for solving the bordered linear system
