@@ -323,7 +323,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2
 	br_pok2, upo , _= @time PALC.continuationPOTrap(
 		p ->  poTrap(p),
 		outpo_f, l_hopf + 0.01,
-		opts_po_cont, :BorderedLU;
+		opts_po_cont; linearPO = :BorderedLU,
 		plot = false,
 		verbosity = 0)
 
@@ -339,6 +339,6 @@ for linalgo in [:FullLU, :BorderedLU]
 			orbitguess_f, opt_po, linalgo; normN = norminf)
 	br_pok2, upo , _= @time PALC.continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
-			opts_po_cont; verbosity = 0,
+			opts_po_cont; linearPO = linalgo, verbosity = 0,
 			plot = false, normC = norminf)
 end

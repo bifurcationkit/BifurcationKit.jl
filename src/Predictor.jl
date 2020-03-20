@@ -73,7 +73,7 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M,
 			ds, theta, contparams, dottheta::DotTheta,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
 			normC = norm,
-			callback = (x, f, J, res, iteration; kwargs...) -> true, kwargs...) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPALC(Fhandle, Jhandle,
 			z_old, tau_old, z_pred,
 			ds, theta,
@@ -85,7 +85,7 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M,
 			ds, theta, contparams, dottheta::DotTheta,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm,
-			callback = (x, f, J, res, iteration; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
+			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(u -> Fhandle(u, z_pred.p),
 				 u -> Jhandle(u, z_pred.p),
 				 z_pred.u, contparams.newtonOptions;
@@ -141,7 +141,6 @@ end
 ################################################################################################
 function arcLengthScaling(theta, contparams, tau::M, verbosity) where {M <: BorderedArray}
 	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee, Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,” March 1, 2002. https://doi.org/10.2172/800778.
-
 	thetanew = theta
 	g = abs(tau.p * theta)
 	(verbosity > 0) && print("Theta changes from $(theta) to ")
@@ -203,7 +202,7 @@ function newtonPALC(F, Jh,
 						dottheta::DotTheta;
 						linearbdalgo = BorderingBLS(),
 						normN = norm,
-						callback = (x, f, J, res, iteration, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
+						callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
@@ -280,8 +279,8 @@ function newtonPALC(F, Jh,
 		push!(resHist, res)
 		it += 1
 
-		callback(x, res_f, J, res, it, contparams; kwargs...) == false && (it = maxIter)
 		verbose && displayIteration(it, 1, res, liniter)
+		callback(x, res_f, J, res, it, liniter, contparams; kwargs...) == false && (it = maxIter)
 
 	end
 	return BorderedArray(x, p), resHist, resHist[end] < tol, it

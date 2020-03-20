@@ -238,7 +238,7 @@ function PALCIterable(Fhandle, Jhandle,
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, optionsN; kwargs...) -> true,
+					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
 					verbosity = 0
 					) where {T <: Real, S, E}
 
@@ -606,7 +606,7 @@ function continuation(Fhandle, Jhandle,
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, optionsN; kwargs...) -> true,
+					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
 					filename = "branch-" * string(Dates.now()),
 					verbosity = 0) where {T <: Real, S, E}
 
@@ -618,7 +618,7 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
@@ -697,7 +697,7 @@ function continuation(Fhandle, Jhandle,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					plotSolution = (x; kwargs...) -> nothing,
 					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, optionsN; kwargs...) -> true,
+					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
 					filename = "branch-" * string(Dates.now()),
 					verbosity = 0) where {T <: Real, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 

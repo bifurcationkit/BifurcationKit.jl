@@ -51,7 +51,7 @@ Simplified calls are provided, for example when `J` is not passed. It is then co
 - flag of convergence
 - number of iterations
 """
-function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, optionsN; kwargs...) -> true, kwargs...) where T
+function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...) where T
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
@@ -83,8 +83,9 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 		push!(resHist, res)
 		it += 1
 
-		callback(x, f, J, res, it, options; kwargs...) == false && (it = maxIter)
 		verbose && displayIteration(it, neval, res, itlinear)
+
+		callback(x, f, J, res, it, itlinear, options; kwargs...) == false && (it = maxIter)
 	end
 	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	return x, resHist, resHist[end] < tol, it

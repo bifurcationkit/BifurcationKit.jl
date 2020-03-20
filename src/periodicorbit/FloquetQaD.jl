@@ -207,13 +207,11 @@ end
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N.
 """
 function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
-	# this is still work in progress
 	sh = hpsh.psh
 	M = getM(hpsh)
-
 	Nm1 = div(length(x_bar), M)
 
-	# reshape the period orbit guess
+	# reshape the period orbit guess into a Matrix
 	x_barc = reshape(x_bar, Nm1, M)
 	@assert length(dx_bar) == Nm1 "Please provide the right dimension to your matrix-free eigensolver, it must be $Nm1."
 

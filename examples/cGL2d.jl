@@ -189,14 +189,14 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 	br_pok2, upo , _= @time PALC.continuationPOTrap(
 			p -> poTrap(@set par_cgl.r = p),
 			orbitguess_f, r_hopf - 0.01,
-			opts_po_cont, :FullLU;
+			opts_po_cont; linearPO = :FullLU
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			printSolution = (u,p) -> PALC.amplitude(u, Nx*Ny, M), normC = norminf)
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f)
-Precilu = @time ilu(Jpo, τ = 0.003)
+Precilu = @time ilu(Jpo, τ = 0.005)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
@@ -217,16 +217,16 @@ plot();PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);title!("")
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 # opt_po = @set opt_po.eigsolver = DefaultEig()
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 2 , dsminBisection =1e-7)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = -0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
 	br_po, _ , _= @time PALC.continuationPOTrap(
 			p -> poTrapMF(@set par_cgl.r = p),
 			outpo_f, r_hopf - 0.01,
-			opts_po_cont, :FullMatrixFree;
+			opts_po_cont; linearPO = :FullMatrixFree,
 			verbosity = 3,	plot = true,
 			plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 			printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
-# branches = Any[br_po]
+branches = Any[br_po]
 # push!(branches, br_po)
 plotBranch([branches[1], br_po]; putbifptlegend = false, label="", xlabel="r",ylabel="Amplitude", legend = :bottomright);title!("")
 
@@ -273,10 +273,10 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 	br_pok2, upo , _= @time PALC.continuationPOTrap(
 			p -> poTrap(@set par_cgl.r = p),
 			outpo_f, r_hopf - 0.01,
-			opts_po_cont, :BorderedMatrixFree;
+			opts_po_cont;# linearPO = :BorderedMatrixFree,
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
-			callbackN = callbackPO,
+			# callbackN = callbackPO,
 			printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M), normC = norminf)
 
 

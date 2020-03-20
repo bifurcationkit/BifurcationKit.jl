@@ -434,7 +434,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 
 br_po, _ , _= @time continuationPOTrap(
 	p -> poTrapMF(@set par_cgl.r = p),
 	outpo_f, r_hopf - 0.01,
-	opts_po_cont, :FullMatrixFree;
+	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
@@ -466,7 +466,7 @@ end
 br_po, _ , _= @time continuationPOTrap(
 	p -> poTrapMF(@set par_cgl.r = p),
 	outpo_f, r_hopf - 0.01,
-	opts_po_cont, :FullMatrixFree;
+	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
 	plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -664,7 +664,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.001, pMax = 2
 br_po, upo , _= @time continuationPOTrap(
    p -> poTrapMFGPU(@set par_cgl_gpu.r = p),
    orbitguess_cu, r_hopf - 0.01,
-   opts_po_cont, :FullMatrixFree;
+   opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
    printSolution = (u,p) -> amplitude(u, Nx*Ny, M), normC = x->maximum(abs.(x)))
 ```

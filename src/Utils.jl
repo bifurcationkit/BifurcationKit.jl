@@ -80,16 +80,20 @@ Save solution / data in JLD2 file
 - `i` is the index of the solution to be saved
 """
 function saveToFile(filename, sol, p, i::Int64, br::ContResult, contParam::ContinuationPar)
-	# create a group in the JLD format
-	jldopen(filename*".jld2", "a+") do file
-		mygroup = JLD2.Group(file, "sol-$i")
-		mygroup["sol"] = sol
-		mygroup["param"] = p
-	end
+	try
+		# create a group in the JLD format
+		jldopen(filename*".jld2", "a+") do file
+			mygroup = JLD2.Group(file, "sol-$i")
+			mygroup["sol"] = sol
+			mygroup["param"] = p
+		end
 
-	jldopen(filename*"-branch.jld2", "w") do file
-		file["branch"] = br
-		file["contParam"] = contParam
+		jldopen(filename*"-branch.jld2", "w") do file
+			file["branch"] = br
+			file["contParam"] = contParam
+		end
+	catch
+		@warn "Could not write in jld2 file"
 	end
 end
 ####################################################################################################

@@ -196,9 +196,9 @@ opt_po = PALC.NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
 			(@set opt_po.maxIter = 250),
 			# opt_po,
 			# deflationOp,
-			# :FullLU;
+			:FullLU;
 			normN = norminf,
-			callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
+			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
 			)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
 	PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
@@ -211,8 +211,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0
 	br_po, _ , _= @time PALC.continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
 			opts_po_cont;
-			verbosity = 2,	plot = true,
-			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
+			# linearPO = :FullLU,
+			verbosity = 3,	plot = true,
+			# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
 			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 			normC = norminf)
 
@@ -238,7 +239,7 @@ opt_po = PALC.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
 	br_pok, _ , _= @time PALC.continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
-			opts_po_cont , :FullMatrixFree;
+			opts_po_cont; linearPO = :FullMatrixFree,
 			verbosity = 2,
 			plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),

@@ -121,7 +121,7 @@ continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eige
 ## Continuation for periodic orbits
 
 ```@docs
-continuationPOTrap(probPO, orbitguess, p0::Real, contParams::ContinuationPar, linearalgo = :BorderedLU; printSolution = (u,p) -> u[end], kwargs...)
+continuationPOTrap(probPO, orbitguess, p0::Real, contParams::ContinuationPar; linearalgo = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
 ```
 
 ```@docs
