@@ -51,7 +51,7 @@ and $M_i=\partial_x\phi^{\delta s_i T}(x_i)$.
 
 ### Encoding of the functional
 
-The functional is encoded in the composite type [`ShootingProblem`](@ref). In particular, the user can pass its own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a solver tailored for the a specific problem. See the link [`ShootingProblem`](@ref) for more information, for example on how to access the underlying functional, its jacobian...
+The functional is encoded in the composite type [`ShootingProblem`](@ref). In particular, the user can pass its own time stepper or one can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a solver tailored for the a specific problem. See the link [`ShootingProblem`](@ref) for more information ;  for example on how to access the underlying functional, its jacobian...
 
 ## Poincaré shooting
 
@@ -78,7 +78,7 @@ $$\begin{aligned}
 
 ### Encoding of the functional
 
-The functional is encoded in the composite type [`PoincareShootingProblem`](@ref). In particular, the user can pass its own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a tailored solver: the partial Poincaré return maps are implemented using **callbacks**. See the link [`PoincareShootingProblem`](@ref) for more information, in particular on how to access the underlying functional, its jacobian...
+The functional is encoded in the composite type [`PoincareShootingProblem`](@ref). In particular, the user can pass their own time stepper or he can use the different ODE solvers in  [DifferentialEquations.jl](https://github.com/JuliaDiffEq/DifferentialEquations.jl) which makes it very easy to choose a tailored solver: the partial Poincaré return maps are implemented using **callbacks**. See the link [`PoincareShootingProblem`](@ref) for more information, in particular on how to access the underlying functional, its jacobian...
 
 ## Floquet multipliers computation
 

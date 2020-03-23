@@ -1,6 +1,6 @@
 # Periodic orbits based on finite differences
 
-We have implemented a method where we compute `M` slices of a periodic orbit. This is implemented by `PeriodicOrbitTrapProblem` for which the problem of finding periodic orbits is discretized using Finite Differences based on a trapezoidal rule. 
+We have implemented a method where we compute `M` slices of a periodic orbit. This is done by the structure `PeriodicOrbitTrapProblem` for which the problem of finding periodic orbits is discretized using Finite Differences based on a trapezoidal rule. 
 
 !!! unknown "References"
     The general method is very well exposed in **Hopf Bifurcation and Time Periodic Orbits with Pde2path – Algorithms and Applications.**, Uecker, Hannes, Communications in Computational Physics 25, no. 3 (2019) and in the PhD thesis **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations**, *Lust, Kurt*, 1997. We adopt the notations of the first reference.
@@ -35,7 +35,7 @@ $$A_{\gamma}:=\left(\begin{array}{ccccccc}
 
 with $M_i := I-	\frac h2\partial_uF(x_i)$ and $H_i := I+\frac h2\partial_uF(x_{i-1})$.
 
-We solve the linear equation $\mathcal J\cdot sol = rhs$ with a bordering strategy (a linear solver `<: AbstractBorderedLinearSolver`) which in turn requires to solve $A_\gamma z=b$ where $z=(x,x_m)$. We also solve this equation with a bordering strategy but this time, it can be simplified as follows. If we write $b=(f,g)$, one gets $J_c x=f$ and $x_m=g+\gamma x_1$ where $x_1$ is the first time slice of $x$. Note that we call $J_c$ the following **cyclic matrix**:
+We solve the linear equation $\mathcal J\cdot sol = rhs$ with a bordering strategy (*i.e.* the linear solver is a subtype of `<: AbstractBorderedLinearSolver`) which in turn requires to solve $A_\gamma z=b$ where $z=(x,x_m)$. We also solve this equation with a bordering strategy but this time, it can be simplified as follows. If we write $b=(f,g)$, one gets $J_c x=f$ and $x_m=g+\gamma x_1$ where $x_1$ is the first time slice of $x$ and $J_c$ is the following **cyclic matrix**:
 
 $$J_c:=\left(\begin{array}{ccccccc}
 {M_{1}} & {0} & {0} & {0} & {\cdots} & {-H_{1}} \\ 

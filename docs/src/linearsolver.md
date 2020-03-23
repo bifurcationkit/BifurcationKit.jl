@@ -1,6 +1,7 @@
 # Linear solvers
 
-> The linear solvers must be subtypes of `AbstractLinearSolver`. 
+> If you provide your own linear solver, it must be a subtype of `AbstractLinearSolver` otherwise `PseudoArcLengthContinuation.jl
+` will not recognise it. See example just below. 
 
 The linear solvers provide a way of inverting the Jacobian `J` or computing `J \ x`.
 

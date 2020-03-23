@@ -1,7 +1,7 @@
 # Constrained problems
 
 !!! compat "Experimental"
-    This feature is still experimental. It has not been tested thoroughly especially in the case of multiple constraints and matrix-free functionals.
+    This feature is still experimental. It has not been tested thoroughly, especially the case of multiple constraints and matrix-free functionals.
 
 This section is dedicated to the study of an equation (in `x`) `F(x,p)=0` where one wishes to add a constraint `g(x,p)=0`. Hence, one is interested in solving in the couple $(x,p)$:
 
