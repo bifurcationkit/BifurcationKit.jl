@@ -129,7 +129,7 @@ This composite type implements the Standard Simple / Multiple Standard Shooting 
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver.
 
-You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 - `pb(orbitguess)` evaluates the functional G on `orbitguess`
@@ -329,7 +329,7 @@ pb = PoincareShootingProblem(flow::Flow, M, section)
 This composite type implements	 the Poincaré Shooting method to locate periodic orbits, basically using Poincaré return maps. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure `Flow`.
 - `M`: the number of return maps. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `section`: implements a Poincaré section condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit when `M=1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` hyperplanes.
+- `section`: implements a Poincaré section condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit when `M=1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections.
 
 ## Simplified constructors
 A simpler way is to create a functional is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)` for simple shooting or `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...)` for multiple shooting . Here `F` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information.
@@ -337,7 +337,7 @@ A simpler way is to create a functional is `pb = PoincareShootingProblem(F, p, p
 Another convenient call is `pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)` where `normals` (resp. `centers`) is a list of normals (resp. centers) which define a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps. δ is a numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used.
 
 ## Computing the functionals
-You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
 A functional, hereby called `G` encodes this shooting problem. For example, the following methods are available:
 - `pb(orbitguess)` evaluates the functional G on `orbitguess`
@@ -693,7 +693,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 # Arguments
 - `p -> prob(p)` is a function or family such that `prob(p)::AbstractShootingProblem` encodes the functional G
-- `orbitguess` a guess for the periodic orbit. For the type of `orbitguess`, please see the information concerning `ShootingProblem` and `PoincareShootingProblem`.
+- `orbitguess` a guess for the periodic orbit. For the type of `orbitguess`, please see the information concerning [`ShootingProblem`](@ref) and [`PoincareShootingProblem`](@ref).
 - `p0` initial parameter, must be a real number
 - `contParams` same as for the regular `continuation` method
 - `printPeriod` in the case of Poincaré Shooting, plot the period of the cycle.

@@ -195,8 +195,11 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			printSolution = (u,p) -> PALC.amplitude(u, Nx*Ny, M), normC = norminf)
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f)
-Precilu = @time ilu(Jpo, τ = 0.005)
+Jpo = @time poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f) # 0.5sec
+Precilu = @time ilu(Jpo, τ = 0.005) # 2 sec
+# P = @time lu(Jpo) # 97 sec
+# @time Jpo \ rand(ls.N) # 97 sec
+
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 

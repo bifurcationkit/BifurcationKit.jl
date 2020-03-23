@@ -85,14 +85,15 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 
 		verbose && displayIteration(it, neval, res, itlinear)
 
-		callback(x, f, J, res, it, itlinear, options; kwargs...) == false && (it = maxIter)
+		callback(x, f, J, res, it, itlinear, options; x0 = x0, kwargs...) == false && (it = maxIter)
 	end
 	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
-	return x, resHist, resHist[end] < tol, it
+	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)
+	return x, resHist, flag, it
 end
 
 # simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
-function newton(Fhandle, x0, options:: NewtonPar{T};kwargs...) where T
+function newton(Fhandle, x0, options::NewtonPar; kwargs...)
 	Jhandle = u -> finiteDifferences(Fhandle, u)
 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
 end

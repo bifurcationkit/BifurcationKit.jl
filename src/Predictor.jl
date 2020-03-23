@@ -280,9 +280,10 @@ function newtonPALC(F, Jh,
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		callback(x, res_f, J, res, it, liniter, contparams; kwargs...) == false && (it = maxIter)
+		callback(x, res_f, J, res, it, liniter, contparams; z0 = z0, kwargs...) == false && (it = maxIter)
 
 	end
-	return BorderedArray(x, p), resHist, resHist[end] < tol, it
+	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z0, kwargs...)
+	return BorderedArray(x, p), resHist, flag, it
 end
 ####################################################################################################

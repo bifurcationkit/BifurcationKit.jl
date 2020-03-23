@@ -390,6 +390,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	p0 = it.p0
 	ds = it.contParams.ds
 	T = eltype(p0)
+	η = T(150)
 
 	(verbosity > 0) && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
@@ -409,9 +410,9 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 
 	(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
 	u_pred, fval, isconverged, it_number = newton(
-			x -> it.F(x, p0 + ds / T(50)),
-			x -> it.J(x, p0 + ds / T(50)),
-			u0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / T(50))
+			x -> it.F(x, p0 + ds / η),
+			x -> it.J(x, p0 + ds / η),
+			u0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/50), initial step (bis)")
@@ -419,7 +420,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	# compute guess for initial tangent
 	# duds = (u_pred - u0) / (contParams.ds / T(50));
 	duds = copyto!(similar(u_pred), u_pred) #copy(u_pred)
-	axpby!(-T(50) / ds, u0, T(50) / ds, duds)
+	axpby!(-η / ds, u0, η / ds, duds)
 	dpds = T(1)
 	# compute the normtheta value
 	α = it.dottheta(duds, dpds, it.contParams.theta)
@@ -433,7 +434,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	z_pred   = BorderedArray(copyto!(similar(u0), u0), p0)		# current solution
 	tau_new  = BorderedArray(copyto!(similar(u0), u0), p0)		# tangent predictor
 
-	z_old	 = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / T(50))	# variable for previous solution
+	z_old	 = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)	# variable for previous solution
 	tau_old  = BorderedArray(copyto!(similar(duds), duds), dpds)
 
 	# compute eigenvalues to get the type
@@ -536,7 +537,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 				if contParams.detectBifurcation > 1
 					(verbosity > 0) && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 
-					# locate bifurcations, mutates state so that it rests very close to the bifurcation point. It also update the eigenelements at the current state
+					# locate bifurcations, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state
 					status = locateBifurcation!(it, state, verbosity > 2)
 				end
 				if contParams.detectBifurcation>0 && detectBifucation(state)

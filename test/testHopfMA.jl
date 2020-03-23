@@ -98,16 +98,16 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.0051, pMax = 1.8, 
 		printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
 #################################################################################################### Continuation of the Hopf Point using Dense method
 ind_hopf = 1
-av = randn(Complex{Float64},2n); av = av./norm(av)
-bv = randn(Complex{Float64},2n); bv = bv./norm(bv)
+# av = randn(Complex{Float64},2n); av = av./norm(av)
+# bv = randn(Complex{Float64},2n); bv = bv./norm(bv)
 hopfpt = PALC.HopfPoint(br, ind_hopf)
-# hopfpt[1:2n] .= rand(2n)
+bifpt = br.bifpoint[ind_hopf]
 hopfvariable = β -> HopfProblemMinimallyAugmented(
 					(x, p) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
 					(x, p) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
 					(x, p) -> transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
-					br.eig[br.bifpoint[ind_hopf].idx].eigenvec[:, br.bifpoint[ind_hopf].ind_bif],
-					conj.(br.eig[br.bifpoint[ind_hopf].idx].eigenvec[:, br.bifpoint[ind_hopf].ind_bif]),
+					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_bif]),
+					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_bif]),
 					# av,
 					# bv,
 					opts_br0.newtonOptions.linsolver)
@@ -331,7 +331,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
-for linalgo in [:FullLU, :BorderedLU]
+for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	outpo_f, hist, flag = @time PALC.newton(poTrap(l_hopf + 0.01),
 			orbitguess_f, opt_po, deflationOp, linalgo; normN = norminf)
