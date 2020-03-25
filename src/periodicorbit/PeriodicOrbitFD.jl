@@ -297,7 +297,7 @@ end
 """
 Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
 """
-function jacobianPOFD_block(pb::PeriodicOrbitTrapProblem, u0::vectype, γ = 1.0) where {vectype <: AbstractVector}
+function jacobianPOFD_block(pb::PeriodicOrbitTrapProblem, u0::vectype; γ = 1.0) where {vectype <: AbstractVector}
 	# extraction of various constants
 	M = pb.M
 	N = pb.N
@@ -362,13 +362,13 @@ cylicPOFD_sparse(pb::PeriodicOrbitTrapProblem, orbitguess0) = blockToSparse(cyli
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using a Sparse representation.
 """
-function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacFullSparse}, u0::vectype, γ = 1.0; δ = 1e-9) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
+function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacFullSparse}, u0::vectype; γ = 1.0, δ = 1e-9) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
 	# extraction of various constants
 	M = pb.M
 	N = pb.N
 	T = extractPeriodFDTrap(u0)
 	h = T / M
-	Aγ_block = jacobianPOFD_block(pb, u0, γ)
+	Aγ_block = jacobianPOFD_block(pb, u0; γ = γ)
 
 	# we now set up the last line / column
 	@views ∂TGpo = (pb(vcat(u0[1:end-1], T + δ)) .- pb(u0)) ./ δ
@@ -386,7 +386,7 @@ end
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using a Sparse representation and inplace update.
 """
-function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacFullSparseInplace}, J0, u0::vectype, γ = 1.0; δ = 1e-9) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
+@views function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacFullSparseInplace}, J0, u0::vectype; γ = 1.0, δ = 1e-9) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
 		# update J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same
 		M = pb.M
 		N = pb.N
@@ -400,34 +400,36 @@ function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:
 
 		tmpJ = @views pb.J(u0c[:, 1])
 
-		@views Jn = In - h/2 .* tmpJ
+		Jn = In - h/2 * tmpJ
 		# setblock!(Jc, Jn, 1, 1)
 		J0[1:N, 1:N] .= Jn
 
-		@views Jn = -In - h/2 .* pb.J(u0c[:, M-1])
+		Jn = -In - h/2 * pb.J(u0c[:, M-1])
 		# setblock!(Jc, Jn, 1, M-1)
 		J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
 		for ii=2:M-1
-			@views Jn = -In - h/2 .* tmpJ
+			Jn = -In - h/2 * tmpJ
 			# the next lines cost the most
 			# setblock!(Jc, Jn, ii, ii-1)
 			J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
 
-			tmpJ .= @views pb.J(u0c[:, ii])
+			tmpJ = pb.J(u0c[:, ii])
 
-			@views Jn = In - h/2 .* tmpJ
+			Jn = In - h/2 * tmpJ
 			# setblock!(Jc, Jn, ii, ii)
 			J0[(ii-1)*N+1:(ii)*N, (ii-1)*N+1:(ii)*N] .= Jn
 		end
 
 		# setblock!(Aγ, -γ * In, M, 1)
-		J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -In
+		# useless to update:
+			# J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -In
 		# setblock!(Aγ,  In,     M, M)
-		J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
+		# useless to update:
+			# J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
 
 		# we now set up the last line / column
-		@views ∂TGpo = (pb(vcat(u0[1:end-1], T + δ)) .- pb(u0)) ./ δ
+		∂TGpo = (pb(vcat(u0[1:end-1], T + δ)) .- pb(u0)) ./ δ
 		J0[:, end] .=  ∂TGpo
 
 		# this following does not depend on u0, so it does not change
@@ -436,13 +438,65 @@ function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:
 		return J0
 end
 
+
+@views function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacFullSparseInplace}, J0, u0::vectype, indx; γ = 1.0, δ = 1e-9) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
+	M = pb.M
+	N = pb.N
+	T = extractPeriodFDTrap(u0)
+	h = T / M
+	In = spdiagm( 0 => ones(N))
+	On = spzeros(N, N)
+
+	u0c = extractTimeSlice(u0, N, M)
+	outc = similar(u0c)
+
+	tmpJ = pb.J(u0c[:, 1])
+
+	Jn = In - tmpJ * (h/2)
+	# setblock!(Jc, Jn, 1, 1)
+	J0.nzval[indx[1,1]] .= Jn.nzval
+
+	Jn = -In - pb.J(u0c[:, M-1]) * (h/2)
+	# setblock!(Jc, Jn, 1, M-1)
+	J0.nzval[indx[1,M-1]] .= Jn.nzval
+
+	for ii=2:M-1
+		Jn = -In - tmpJ * (h/2)
+		# the next lines cost the most
+		# setblock!(Jc, Jn, ii, ii-1)
+		J0.nzval[indx[ii,ii-1]] .= Jn.nzval
+
+		tmpJ = pb.J(u0c[:, ii])# * (h/2)
+
+		Jn = In -  tmpJ * (h/2)
+		# setblock!(Jc, Jn, ii, ii)
+		J0.nzval[indx[ii,ii]] .= Jn.nzval
+	end
+
+	# setblock!(Aγ, -γ * In, M, 1)
+	# useless to update:
+		# J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -In
+	# setblock!(Aγ,  In,     M, M)
+	# useless to update:
+		# J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
+
+	# we now set up the last line / column
+	∂TGpo = (pb(vcat(u0[1:end-1], T + δ)) .- pb(u0)) ./ δ
+	J0[:, end] .=  ∂TGpo
+
+	# this following does not depend on u0, so it does not change
+	# J0[N*M+1, 1:N] .=  pb.ϕ
+
+	return J0
+end
+
 function (pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls})(::Val{:JacCyclicSparse}, u0::vectype, γ = 1.0) where {TF, TJ, TJt, Td2F, vectype <: AbstractVector, Tls}
 	# extraction of various constants
 	M = pb.M
 	N = pb.N
 	T = extractPeriodFDTrap(u0)
 	h = T / M
-	Aγ_block = jacobianPOFD_block(pb, u0, γ)
+	Aγ_block = jacobianPOFD_block(pb, u0; γ = γ)
 
 	# this is bad for performance. Get converted to SparseMatrix at the next line
 	Aγ = blockToSparse(Aγ_block) # most of the computing time is here!!
@@ -609,6 +663,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPa
 		elseif linearPO == :FullSparseInplace
 			# sparse matrix to hold the jacobian
 			_J =  probPO(Val(:JacFullSparse), orbitguess)
+			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
 			jac = x -> probPO(Val(:JacFullSparseInplace), _J, x)
 		else
@@ -722,8 +777,9 @@ function continuationPOTrap(probPO, orbitguess, p0::Real, _contParams::Continuat
 		elseif linearPO == :FullSparseInplace
 			# sparse matrix to hold the jacobian
 			_J =  _pb(Val(:JacFullSparse), orbitguess)
+			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
-			jac = (x, p) -> probPO(p)(Val(:JacFullSparseInplace), _J, x)
+			jac = (x, p) -> probPO(p)(Val(:JacFullSparseInplace), _J, x, _indx)
 		else
 		 	jac = (x, p) ->  ( dx -> probPO(p)(x, dx))
 		end

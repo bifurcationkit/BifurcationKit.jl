@@ -1,5 +1,5 @@
 # using Revise
-using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield
+using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays
 const PALC = PseudoArcLengthContinuation
 
 n = 250*150
@@ -149,3 +149,20 @@ _du = rand(length(orbitguess_f))
 res = @time pb(orbitguess_f, _du)
 _res = _dfunctional(pb, orbitguess_f, _du)
 @test res ≈ _res
+
+####################################################################################################
+# test whether the inplace version of computation of the Jacobian is right
+n = 1000
+pbsp = PeriodicOrbitTrapProblem(
+			x -> x.^2,
+			x -> spdiagm(0 => 2 .* x),
+			rand(2n),
+			rand(2n),
+			M)
+
+sol0 = rand(2n)				# 585.977 KiB
+orbitguess_f = rand(2n*M+1)	# 17.166MiB
+Jpo = pbsp(Val(:JacFullSparse), orbitguess_f)
+Jpo2 = copy(Jpo)
+pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f)
+@test nnz(Jpo2 - Jpo) == 0

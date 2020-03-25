@@ -196,7 +196,7 @@ opt_po = PALC.NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
 			(@set opt_po.maxIter = 250),
 			# opt_po,
 			# deflationOp,
-			:FullLU;
+			# :FullLU;
 			normN = norminf,
 			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
 			)
@@ -219,8 +219,10 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0
 
 ####################################################################################################
 using IncompleteLU
-Jpo = poTrap(l_hopf + 0.01)(Val(:JacFullSparse), orbitguess_f)
-Jpo = poTrap(l_hopf + 0.01)(Val(:JacCyclicSparse), orbitguess_f)
+Jpo = @time poTrap(l_hopf + 0.01)(Val(:JacFullSparse), orbitguess_f)
+@time lu(Jpo)
+Jpo = @time poTrap(l_hopf + 0.01)(Val(:JacCyclicSparse), orbitguess_f)
+@time lu(Jpo)
 
 Precilu = @time ilu(Jpo, τ = 0.005)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu)

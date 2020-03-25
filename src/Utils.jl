@@ -119,6 +119,18 @@ function blockToSparse(J::AbstractBlockArray)
 	return res
 end
 ####################################################################################################
+# this function extarct the indexes of the blocks composing the matrix A. We assume that the blocks have the same sparsity
+function getBlocks(A::SparseMatrixCSC, N, M)
+	I,J,K = findnz(A)
+	out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
+	for k in eachindex(I)
+		m, l = div(I[k]-1, N), div(J[k]-1, N)
+		push!(out[1+m,1+l], k)
+	end
+	res = [length(m) for m in out]
+	out
+end
+####################################################################################################
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
