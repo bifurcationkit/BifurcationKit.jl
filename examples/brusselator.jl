@@ -118,7 +118,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9
 		sol0, par_bru.l,
 		opts_br_eq, verbosity = 0,
 		plot = true,
-		plotSolution = (x; kwargs...) -> (plotsol(x; label="", kwargs... )),
+		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
 		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 2
@@ -207,14 +207,14 @@ PALC.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 100, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 100, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 0)
 	br_po, _ , _= @time PALC.continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
 			opts_po_cont;
 			# linearPO = :FullLU,
 			verbosity = 3,	plot = true,
 			# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
-			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
+			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 			normC = norminf)
 
 ####################################################################################################
@@ -245,4 +245,4 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 			verbosity = 2,
 			plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
-			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)

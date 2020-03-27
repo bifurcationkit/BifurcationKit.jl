@@ -291,7 +291,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0:
 		foldpointguess, p2_0,
 		opt_fold_cont,
 		printSolution = (u, p) -> u.p,
-		plotSolution = (x; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ); kwargs...)
+		plotSolution = (x, p; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ); kwargs...)
 end
 
 """

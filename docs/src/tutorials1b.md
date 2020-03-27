@@ -115,7 +115,7 @@ br, _ = @time continuation(
 		(x, p) -> Jac_chan(x, p),
 		out, 3.0, optcont,
 		plot = true,
-		plotSolution = (x; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
+		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
 		normC = x -> norm(x, Inf64))
 ```

@@ -85,7 +85,9 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 
 		verbose && displayIteration(it, neval, res, itlinear)
 
-		callback(x, f, J, res, it, itlinear, options; x0 = x0, kwargs...) == false && (it = maxIter)
+		if callback(x, f, J, res, it, itlinear, options; x0 = x0, kwargs...) == false
+			it = maxIter
+		end
 	end
 	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)

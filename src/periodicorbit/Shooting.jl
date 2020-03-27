@@ -151,7 +151,7 @@ where we supply now two `ODEProblem`. The first one `prob1`, is used to define t
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
 	flow::Tf							# should be a Flow{TF, Tf, Td}
-	ds::Ts = diff(LinRange(0, 1, 5))	# number of Poincaré sections
+	ds::Ts = diff(LinRange(0, 1, 5))	# number of sections
 	section::Tsection					# sections for phase condition
 end
 
@@ -165,7 +165,7 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, sect
 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; kwargs...) = ShootingProblem(Flow(F, p, prob1, alg1, prob2, alg2; kwargs...), diff(LinRange(0, 1, M + 1)), section)
 
-getM(sh::ShootingProblem) = length(sh.ds)
+@inline getM(sh::ShootingProblem) = length(sh.ds)
 
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]

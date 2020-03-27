@@ -186,7 +186,7 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbos
 	plot(initpo[1:end-1], label = "Init guess")
 	plot!(outpo[1:end-1], label = "sol")
 
-# opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
 # 	br_po, _, _= @time PALC.continuationPOShooting(
 # 		p -> probSh(@set par_hopf.l = p),
 # 		outpo, par_hopf.l,
@@ -209,7 +209,7 @@ br_po, _ , _ = @time PALC.continuationPOShooting(
 		# callbackN = cb_ss,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
-		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 		printSolution = (u, p) -> u[end], normC = norminf)
 ####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
@@ -235,9 +235,9 @@ probHPsh(par_hopf)(vec(initpo_bar))
 probHPsh(par_hopf)(vec(initpo_bar)) |> norminf
 
 
-ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = true)
+ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
-	outpo_psh, _ = @time PALC.newton(x -> probHPsh(par_hopf)(x; verbose = false),
+	outpo_psh, _ = @time PALC.newton(probHPsh(par_hopf),
 			vec(initpo_bar), optn,
 			; normN = norminf)
 
@@ -258,7 +258,7 @@ br_po, _ , _ = @time PALC.continuationPOShooting(
 	outpo_psh, 0.6,
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
-	plotSolution = (x; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plot!(x; label="", kwargs...),
 	# printSolution = (x, p) -> norminf(x),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),

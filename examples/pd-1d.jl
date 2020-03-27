@@ -92,7 +92,7 @@ optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurc
 		optcont;
 		plot = true, verbosity = 3,
 		printSolution = (x, p) -> norm(x, Inf),
-		plotSolution = (x; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
 ind_hopf = 1
 	hopfpt = HopfPoint(br, ind_hopf)
@@ -152,7 +152,7 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8
 		optcontpo; verbosity = 3,
 		plot = true,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
-		plotSolution = (x;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
+		plotSolution = (x, p;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
 		printSolution = (u, p) -> PALC.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
@@ -194,7 +194,7 @@ PALC.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true),
 		1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr);
-		atol = 1e-14, rtol = 1e-14, dt = 0.05)
+		atol = 1e-14, rtol = 1e-14, dt = 0.1)
 
 # probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob, Rodas4(),
 		# 1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr); atol = 1e-12, rtol = 1e-10)
@@ -223,7 +223,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8
 		plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
-		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
@@ -273,7 +273,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
-		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
 plotBranch(vcat(br_po_sh, br,), label = "");title!("")

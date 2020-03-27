@@ -56,7 +56,7 @@ and you should see
         2                3     1.6267e-02         1
         3                4     2.4521e-06         1
         4                5     5.9356e-11         1
-  0.098594 seconds (105.74 k allocations: 6.938 MiB)
+  0.125980 seconds (117.21 k allocations: 7.438 MiB)
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -75,7 +75,7 @@ Next, we call the continuation routine
 ```julia
 br, _ = continuation((x, p) -> F_chan(x, p),
 	out, 3.3, optcont, plot = true,
-	plotSolution = (x;kwargs...) -> (plot!(x; ylabel="solution",label="",kwargs...)))
+	plotSolution = (x, p;kwargs...) -> (plot!(x; ylabel="solution",label="",kwargs...)))
 ```
 
 !!! tip "Tip"
@@ -206,7 +206,7 @@ which gives:
         2                3     1.6267e-02        98
         3                4     2.4336e-06        73
         4                5     6.2617e-12        73
-  0.248527 seconds (963.53 k allocations: 46.840 MiB)
+	0.323253 seconds (1.07 M allocations: 50.779 MiB)
 ```
 
 We can improve this computation, *i.e.* reduce the number of `Linear-Iterations`, by using a preconditioner

@@ -59,7 +59,11 @@ end
 """
 The struct `DefaultLS` is used to  provide the backslash operator
 """
-struct DefaultLS <: AbstractLinearSolver end
+@with_kw struct DefaultLS <: AbstractLinearSolver
+	# some operators may not support LU (like ApproxFun.jl), QR factorization so it is best to let the user decides
+	useFactorization::Bool = true
+end
+
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
@@ -71,8 +75,12 @@ end
 # with multiple RHS. We can cache the factorization in this case
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
 function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
-	Jfact = lu(_axpy(J, a₀, a₁))
-	return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
+	if l.useFactorization
+		Jfact = factorize(_axpy(J, a₀, a₁))
+		return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
+	else
+		return J \ rhs1, J \ rhs2, true, (1, 1)
+	end
 end
 ####################################################################################################
 # Solvers for IterativeSolvers

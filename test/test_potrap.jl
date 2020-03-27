@@ -26,8 +26,7 @@ pbi = PeriodicOrbitTrapProblem(
 			pb.ϕ,
 			pb.xπ,
 			M ; isinplace = true)
-@test PALC.isinplace(pb) == false
-
+@test PALC.isInplace(pb) == false
 # @time PALC.POTrapFunctional(pb, res, orbitguess_f)
 # @time PALC.POTrapFunctional(pbi, res, orbitguess_f)
 res = @time pb(orbitguess_f)
@@ -151,7 +150,22 @@ _res = _dfunctional(pb, orbitguess_f, _du)
 @test res ≈ _res
 
 ####################################################################################################
+# test whether the analytical version of the Jacobian is right
+n = 50
+pbsp = PeriodicOrbitTrapProblem(
+			x -> cos.(x),
+			x -> spdiagm(0 => -sin.(x)),
+			rand(2n),
+			rand(2n),
+			10)
+orbitguess_f = rand(2n*10+1)
+dorbit = rand(2n*10+1)
+Jfd = sparse( PALC.finiteDifferences(x->pbsp(x), orbitguess_f; δ = 1e-8) )
+Jan = pbsp(Val(:JacFullSparse), orbitguess_f)
+@test norm(Jfd - Jan, Inf) < 1e-6
+####################################################################################################
 # test whether the inplace version of computation of the Jacobian is right
+
 n = 1000
 pbsp = PeriodicOrbitTrapProblem(
 			x -> x.^2,
@@ -160,8 +174,8 @@ pbsp = PeriodicOrbitTrapProblem(
 			rand(2n),
 			M)
 
-sol0 = rand(2n)				# 585.977 KiB
-orbitguess_f = rand(2n*M+1)	# 17.166MiB
+sol0 = rand(2n)
+orbitguess_f = rand(2n*M+1)
 Jpo = pbsp(Val(:JacFullSparse), orbitguess_f)
 Jpo2 = copy(Jpo)
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f)

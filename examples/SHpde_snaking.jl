@@ -43,7 +43,7 @@ opts = PALC.ContinuationPar(dsmin = 0.0005, dsmax = 0.0055, ds = -0.001,
 					plot = true,
 					# tangentAlgo = BorderedPred(),
 					linearAlgo  = MatrixBLS(),
-					plotSolution = (x;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)), normC = norminf)
+					plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)), normC = norminf)
 	brs = [br]
 #####################################################
 # case with computation of eigenvalues
@@ -74,6 +74,6 @@ opts = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001,
 					plot = true,
 					# tangentAlgo = BorderedPred(),
 					# linearAlgo  = MatrixBLS(),
-					plotSolution = (x;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
+					plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
 
 push!(brs, br)

@@ -60,7 +60,7 @@ sol0 = [(cos(x) + cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 	heatmap(sol0',color=:viridis)
 
 # define parameters for the PDE
-Δ, D2x = Laplacian2D(Nx, Ny, lx, ly, :Neumann)
+Δ, _ = Laplacian2D(Nx, Ny, lx, ly)
 L1 = (I + Δ)^2
 par = (l = -0.1, ν = 1.3, L1 = L1)
 
@@ -115,7 +115,7 @@ eig(J0, 10)
 The reason is that the jacobian operator is not very well conditioned unlike its inverse. We thus opt for the *shift-invert* method (see [Eigen solvers](@ref) for more information) with shift `0.1`:
 
 ```julia
-EigArpack(0.1, :LM)
+eig = EigArpack(0.1, :LM)
 ```
 
 If we want to compute the bifurcation points along the branches, we have to tell the solver by setting `detectBifurcation = 1`. However, this won't be very precise and each bifurcation point will be located at best at the step size precision. We can use bisection to locate this points more precisely using the option `detectBifurcation = 2` (see [Detection of bifurcation points](@ref) for more information).
@@ -124,7 +124,7 @@ We are now ready to compute the branches:
 
 ```julia
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00, pMin = -1.0,
-	newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 125,
+	newtonOptions = setproperties(optnewton; tol = 1e-9, maxIter = 15), maxSteps = 125,
 	detectBifurcation = 2, nev = 40, detectFold = false, 
 	dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
@@ -135,7 +135,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00
 		sol_hexa, -0.1, optcont;
 		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
-		plotSolution = (x; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
+		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
 		printSolution = (x, p) -> norm(x),
 		normC = x -> norm(x, Inf))
 ```
@@ -212,10 +212,10 @@ We can now continue the solutions located in `deflationOp.roots`
 ```julia
 br, _ = @time continuation(
 	(x, p) ->  F_sh(x, @set par.l = p),
-	(x, p) -> dF_sh(x, @set par.l = p),,
+	(x, p) -> dF_sh(x, @set par.l = p),
 	deflationOp[2], -0.1, optcont;
 	plot = true, 
-	plotSolution = (x; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))
+	plotSolution = (x, p; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))
 ```
 
 and using `plotBranch(br)`, we obtain:

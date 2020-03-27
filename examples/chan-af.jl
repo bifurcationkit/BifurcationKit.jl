@@ -66,7 +66,6 @@ optnew = NewtonPar(tol = 1e-12, verbose = true)
 		sol, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
 
 	br, _ = @time continuation(
@@ -74,7 +73,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 		(x, p) -> Jac_chan(x, p),
 		out, 3.0, optcont,
 		plot = true,
-		plotSolution = (x; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
+		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
 		# printsolution = x -> norm(x, Inf64),
 		normC = x -> norm(x, Inf64))
@@ -91,7 +90,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 		dotPALC = (x, y) -> dot(x, y),
 		plot = true,
 		# finaliseSolution = finalise_solution,
-		plotSolution = (x; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
+		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
 		# printsolution = x -> norm(x, Inf64),
 		normC = x -> norm(x, Inf64))
@@ -104,7 +103,7 @@ br, _ = @time continuation(
 	tangentAlgo = BorderedPred(),
 	plot = true,
 	finaliseSolution = finalise_solution,
-	plotSolution = (x;kwargs...)-> plot!(x; label = "l = $(length(x))", kwargs...))
+	plotSolution = (x, p;kwargs...)-> plot!(x; label = "l = $(length(x))", kwargs...))
 ####################################################################################################
 # tangent predictor with Bordered system
 # optcont = @set optcont.newtonOptions.verbose = true
@@ -124,5 +123,3 @@ outfold, _, flag = @time newtonFold(
 	(x, p) -> Jac_chan(x, p),
 	br, indfold, #index of the fold point
 	optcont.newtonOptions)
-
-br.bifpoint[2].

@@ -233,7 +233,7 @@ function PALCIterable(Fhandle, Jhandle,
 					filename = "branch-" * string(Dates.now()),
 					tangentAlgo = SecantPred(),
 					plot = false,
-					plotSolution = (x; kwargs...) -> nothing,
+					plotSolution = (x, p; kwargs...) -> nothing,
 					printSolution = (x, p) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
@@ -465,8 +465,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	# Predictor: z_pred, following method only mutates z_pred
 	getPredictor!(state.z_pred, state.z_old, state.tau_old, ds, it.tangentAlgo)
 	(verbosity > 0) && println("#"^35)
-	(verbosity > 0) && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e\n", step, state.z_old.p, state.z_pred.p)
-
+	(verbosity > 0) && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
 	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
@@ -602,7 +601,7 @@ function continuation(Fhandle, Jhandle,
 					linearAlgo::AbstractBorderedLinearSolver;
 					tangentAlgo = SecantPred(),
 					plot = false,
-					plotSolution = (x; kwargs...) -> nothing,
+					plotSolution = (x, p; kwargs...) -> nothing,
 					printSolution = (x, p) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
@@ -619,7 +618,7 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
@@ -631,7 +630,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `contParams` parameters for continuatio. See [`ContinuationPar`](@ref) for more information about the options
 - `plot = false` whether to plot the solution while computing
 - `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
-- `plotSolution = (x; kwargs...) -> nothing` function implementing the plot of the solution.
+- `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
 - `finaliseSolution = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting... The notations are ``z=(x,p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners
 - `tangentAlgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
@@ -696,7 +695,7 @@ function continuation(Fhandle, Jhandle,
 					printSolution = (x, p) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
-					plotSolution = (x; kwargs...) -> nothing,
+					plotSolution = (x, p; kwargs...) -> nothing,
 					finaliseSolution = (z, tau, step, contResult) -> true,
 					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
 					filename = "branch-" * string(Dates.now()),

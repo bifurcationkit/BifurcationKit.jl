@@ -308,7 +308,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0
 		opt_hopf_cont,
 		plot = true,
 		printSolution = (u, p) -> u.p[1],
-		plotSolution = (x;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ) ; kwargs...)
+		plotSolution = (x, p;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ) ; kwargs...)
 end
 
 """

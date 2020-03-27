@@ -50,6 +50,8 @@ end
 
 ####################################################################################################
 """
+	finiteDifferences(F, x::AbstractVector; δ = 1e-9)
+
 Compute a Jacobian by Finite Differences
 """
 function finiteDifferences(F, x::AbstractVector; δ = 1e-9)
@@ -60,6 +62,11 @@ function finiteDifferences(F, x::AbstractVector; δ = 1e-9)
 	return J
 end
 
+"""
+	finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
+
+Compute a Jacobian by Finite Differences, update J
+"""
 function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 	f = F(x)
 	x1 = copy(x)

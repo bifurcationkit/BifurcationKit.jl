@@ -221,6 +221,7 @@ function newtonPALC(F, Jh,
 
 	dX   = copyto!(similar(res_f), res_f) # copy(res_f)
 	dp   = T(0)
+	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
 	dFdp = copyto!(similar(res_f), F(x, p + finDiffEps)) # copy(F(x, p + finDiffEps))
 	minus!(dFdp, res_f)	# dFdp = dFdp - res_f
@@ -280,10 +281,10 @@ function newtonPALC(F, Jh,
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		callback(x, res_f, J, res, it, liniter, contparams; z0 = z0, kwargs...) == false && (it = maxIter)
+		callback((x, p), res_f, J, res, it, liniter, contparams; z0 = z_pred, kwargs...) == false && (it = maxIter)
 
 	end
-	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z0, kwargs...)
+	flag = (resHist[end] < tol) & callback((x, p), res_f, nothing, res, it, nothing, contparams; z0 = z_pred, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it
 end
 ####################################################################################################

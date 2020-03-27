@@ -82,12 +82,12 @@ outdef, _, flag, _ = @time PALC.newton(
 	heatmapsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
 
-heatmapsol(deflationOp[4])
+heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
 normC = x -> norm(x, Inf)
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 2, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 0, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
 	br, u1 = @time PALC.continuation(
@@ -97,9 +97,9 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
-		plotSolution = (x; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
-		printSolution = (x,p) -> norm(x),
-		finaliseSolution = (z, tau, step, contResult) -> (Base.display(contResult.eig[end].eigenvals) ;true) ,
+		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
+		printSolution = (x, p) -> norm(x),
+		finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		normC = x -> norm(x, Inf))
 ###################################################################################################
 using IncompleteLU
@@ -107,9 +107,14 @@ prec = ilu(L1 + I,τ=0.05)
 prec = lu(L1 + I)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = Nx*Ny, Pl = prec)
 
+function dF_sh2(du, u, p)
+	@unpack l, ν, L1 = p
+	return -L1 * du .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
+end
+
 sol_hexa, _, flag = @time PALC.newton(
 			x ->  F_sh(x, par),
-			u -> dF_sh(u, par),
+			u -> (du -> dF_sh2(du, u, par)),
 			vec(sol0),
 			@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))

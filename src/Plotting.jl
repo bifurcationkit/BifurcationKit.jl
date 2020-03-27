@@ -22,7 +22,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label="", markerstrokewidth=0, markersize = 3, color=:black)
 	end
 
-	plotuserfunction(sol.u, subplot = 3)
+	plotuserfunction(sol.u, sol.p; subplot = 3)
 
 	display(title!(""))
 end
