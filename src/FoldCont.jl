@@ -4,7 +4,7 @@ For an initial guess from the index of a Fold bifurcation point located in ContR
 function FoldPoint(br::ContResult, index::Int64)
 	@assert br.foldpoint[index].type == :fold "The provided index does not refer to a Fold point"
 	bifpoint = br.foldpoint[index]
-	return BorderedArray(_copy(bifpoint.u), bifpoint.param)
+	return BorderedArray(_copy(bifpoint.x), bifpoint.param)
 end
 
 ####################################################################################################

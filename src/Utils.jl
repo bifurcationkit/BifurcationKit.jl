@@ -24,7 +24,7 @@ end
 function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
 	n_unstable = state.n_unstable[2]
 	nev_ = max(n_unstable + 5, iter.contParams.nev)
-	J = iter.J(getu(state), getp(state))
+	J = iter.J(getx(state), getp(state))
 	eiginfo = iter.contParams.newtonOptions.eigsolver(J, nev_)
 	isstable, n_unstable, n_imag = is_stable(iter.contParams, eiginfo[1])
 	return eiginfo, isstable, n_unstable, n_imag
@@ -34,7 +34,7 @@ function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
 	# we compute the eigenelements
 	n_unstable = state.n_unstable[2]
 	nev_ = max(n_unstable + 5, iter.contParams.nev)
-	J = iter.J(getu(state), getp(state))
+	J = iter.J(getx(state), getp(state))
 	eigvals, eigvecs, flag, it_number = iter.contParams.newtonOptions.eigsolver(J, nev_)
 	# we update the state
 	isstable, n_unstable, n_imag = is_stable(iter.contParams, eigvals)

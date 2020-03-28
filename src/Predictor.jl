@@ -194,15 +194,15 @@ This is the classical matrix-free Newton Solver used to solve `F(x, p) = 0` toge
 with the scalar condition `n(x, p) = (x - x0) * xp + (p - p0) * lp - n0`
 """
 function newtonPALC(F, Jh,
-						z0::BorderedArray{vectype, T},
-						tau0::BorderedArray{vectype, T},
-						z_pred::BorderedArray{vectype, T},
-						ds::T, theta::T,
-						contparams::ContinuationPar{T},
-						dottheta::DotTheta;
-						linearbdalgo = BorderingBLS(),
-						normN = norm,
-						callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
+					z0::BorderedArray{vectype, T},
+					tau0::BorderedArray{vectype, T},
+					z_pred::BorderedArray{vectype, T},
+					ds::T, theta::T,
+					contparams::ContinuationPar{T},
+					dottheta::DotTheta;
+					linearbdalgo = BorderingBLS(),
+					normN = norm,
+					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
@@ -219,8 +219,8 @@ function newtonPALC(F, Jh,
 	# Initialise residuals
 	res_f = F(x, p);  res_n = N(x, p)
 
-	dX   = copyto!(similar(res_f), res_f) # copy(res_f)
-	dp   = T(0)
+	dX = copyto!(similar(res_f), res_f) # copy(res_f)
+	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
 	dFdp = copyto!(similar(res_f), F(x, p + finDiffEps)) # copy(F(x, p + finDiffEps))

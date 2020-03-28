@@ -1,5 +1,5 @@
 using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
-import Base: show		# simplified display method for ContRes
+import Base: show, length		# simplified display method for ContRes
 
 """
 	options = ContinuationPar(dsmin = 1e-4,...)
@@ -167,9 +167,9 @@ end
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
-function initContRes(br, u0, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), u = u0, tau = u0, ind_bif = 0, step = 0, status = :guess, δ = (0,0))
-	contParams.saveSolEveryNsteps > 0 ? sol = [(u = u0, p = br[1,1], step = 1)] : sol = nothing
+function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = x0, ind_bif = 0, step = 0, status = :guess, δ = (0,0))
+	contParams.saveSolEveryNsteps > 0 ? sol = [(x = x0, p = br[1,1], step = 1)] : sol = nothing
 	n_unstable = 0
 	n_imag = 0
 	stability = true
@@ -256,7 +256,7 @@ Returns a variable containing the state of the continuation procedure.
 - `z_old` previous solution
 - `tau_old` previous tangent
 - `isconverged` Boolean for newton correction
-- `it_number` Number of newton iteration (in corrector)
+- `itnewton` Number of newton iteration (in corrector)
 - `step` current continuation step
 - `ds` step size
 - `theta` theta parameter for constraint equation in PALC
@@ -264,8 +264,8 @@ Returns a variable containing the state of the continuation procedure.
 
 # Useful functions
 - `copy(state)` returns a copy of `state`
-- `solution(state)` returns the current solution (u,p)
-- `getu(state)` returns the u component of the current solution
+- `solution(state)` returns the current solution (x, p)
+- `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
 - `isstable(state)` whether the current solution is linearly stable
 """
@@ -277,7 +277,7 @@ Returns a variable containing the state of the continuation procedure.
 	tau_old::Tv								# previous tangent
 
 	isconverged::Bool						# Boolean for newton correction
-	it_number::Int64						# Number of newton iteration (in corrector)
+	itnewton::Int64						# Number of newton iteration (in corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
@@ -302,7 +302,7 @@ function copy(state::PALCStateVariables)
 		z_old 	= _copy(state.z_old),
 		tau_old = _copy(state.tau_old),
 		isconverged = state.isconverged,
-		it_number 	= state.it_number,
+		itnewton 	= state.itnewton,
 		step 		= state.step,
 		ds 			= state.ds,
 		theta 		= state.theta,
@@ -314,8 +314,8 @@ function copy(state::PALCStateVariables)
 end
 
 solution(state::PALCStateVariables) = state.z_old
-getu(state::PALCStateVariables) = state.z_old.u
-getp(state::PALCStateVariables) = state.z_old.p
+getx(state::PALCStateVariables) = state.z_old.u
+@inline getp(state::PALCStateVariables) = state.z_old.p
 isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
 
 # condition for halting the continuation procedure
@@ -338,7 +338,7 @@ function detectBifucation(state::PALCStateVariables)
 end
 
 function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
-	push!(contres.branch, getStateSummary(it, state, it.contParams))
+	push!(contres.branch, getStateSummary(it, state))
 
 	if state.n_unstable[1] >= 0 # if to deal with n_unstable = -1
 		push!(contres.n_unstable, state.n_unstable[1])
@@ -351,7 +351,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	# save solution
 	if it.contParams.saveSolEveryNsteps > 0 &&
 		mod(state.step, it.contParams.saveSolEveryNsteps) == 0
-		push!(contres.sol, (u = getu(state), p = getp(state), step = state.step))
+		push!(contres.sol, (x = getx(state), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if it.contParams.computeEigenValues
@@ -366,19 +366,19 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 end
 
 function initContRes(it::PALCIterable, state::PALCStateVariables)
-	u0 = getu(state)
+	x0 = getx(state)
 	p0 = getp(state)
 	contParams = it.contParams
 
 	if contParams.computeEigenValues
-		eiginfo = contParams.newtonOptions.eigsolver(it.J(u0, p0), contParams.nev)
+		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, p0), contParams.nev)
 		_, n_unstable, n_imag = is_stable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return initContRes(VectorOfArray([getStateSummary(it, state, contParams)]), u0, eiginfo, contParams)
+		return initContRes(VectorOfArray([getStateSummary(it, state, contParams)]), x0, eiginfo, contParams)
 	else
 		T = eltype(it)
 		eiginfo = (Complex{T}(1), nothing, false, 0)
-		return initContRes(VectorOfArray([getStateSummary(it, state, contParams)]), u0, nothing, contParams)
+		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, nothing, contParams)
 	end
 end
 
@@ -390,7 +390,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	p0 = it.p0
 	ds = it.contParams.ds
 	T = eltype(p0)
-	η = T(150)
+	η = T(50)
 
 	(verbosity > 0) && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
@@ -400,7 +400,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 
 	# Converge initial guess
 	(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
-	u0, fval, isconverged, it_number = newton(
+	u0, fval, isconverged, itnewton = newton(
 			x -> it.F(x, p0),
 			x -> it.J(x, p0),
 			it.x0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
@@ -409,16 +409,16 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	(verbosity > 0) && println("--> parameter = $(p0), initial step")
 
 	(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
-	u_pred, fval, isconverged, it_number = newton(
+	u_pred, fval, isconverged, itnewton = newton(
 			x -> it.F(x, p0 + ds / η),
 			x -> it.J(x, p0 + ds / η),
 			u0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	(verbosity > 0) && println("--> parameter = $(p0 + ds/50), initial step (bis)")
+	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
 
 	# compute guess for initial tangent
-	# duds = (u_pred - u0) / (contParams.ds / T(50));
+	# duds = (u_pred - u0) / (contParams.ds / η);
 	duds = copyto!(similar(u_pred), u_pred) #copy(u_pred)
 	axpby!(-η / ds, u0, η / ds, duds)
 	dpds = T(1)
@@ -449,7 +449,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	end
 
 	# return the state
-	state = PALCStateVariables(z_pred = z_pred, tau_new  = tau_new, z_old = z_old, tau_old = tau_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, it_number = 0, eigvals = eigvals, eigvecs = eigvecs)	# previous tangent
+	state = PALCStateVariables(z_pred = z_pred, tau_new  = tau_new, z_old = z_old, tau_old = tau_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs)	# previous tangent
 	return state, state
 end
 
@@ -458,9 +458,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	# this is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity)
 
-	step = state.step
-	ds = state.ds
-	theta = state.theta
+	@unpack step, ds, theta = state
 
 	# Predictor: z_pred, following method only mutates z_pred
 	getPredictor!(state.z_pred, state.z_old, state.tau_old, ds, it.tangentAlgo)
@@ -469,7 +467,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
-	z_new, fval, state.isconverged, state.it_number  = corrector(it.F, it.J,
+	z_new, fval, state.isconverged, state.itnewton  = corrector(it.F, it.J,
 			state.z_old, state.tau_old, state.z_pred,
 			ds, theta,
 			it.contParams, it.dottheta,
@@ -477,7 +475,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 
 	# Successful step
 	if state.isconverged
-		(verbosity > 0) && printstyled("--> Step Converged in $(state.it_number) Nonlinear Iterations\n", color=:green)
+		(verbosity > 0) && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
 		# Get predictor, it only mutates tau_old
 		getTangent!(state.tau_old, z_new, state.z_old, state.tau_old, it.F, it.J,
@@ -493,17 +491,17 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 
 	if state.stopcontinuation == false && state.stepsizecontrol == true
 		# we update the PALC paramters ds and theta, they are in the state variable
-		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.it_number, state.tau_old, verbosity)
+		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau_old, verbosity)
 	end
 
 	state.step += 1
 	return state, state
 end
 
-function getStateSummary(it, state, contParams)
-	u0 = getu(state)
-	p0 = getp(state)
-	vcat(p0, it.printSolution(u0, p0), state.it_number, contParams.ds, contParams.theta, state.step)
+function getStateSummary(it, state)
+	x = getx(state)
+	p = getp(state)
+	vcat(p, it.printSolution(x, p), state.itnewton, state.ds, state.theta, state.step)
 end
 
 function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)
@@ -523,9 +521,9 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 
 			# Eigenvalues computation
 			if contParams.computeEigenValues
-				it_number = computeEigenvalues!(it, state)
+				itnewton = computeEigenvalues!(it, state)
 
-				(verbosity > 0) && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", it_number, " iterations, #unstable = ", state.n_unstable[1],"\n")
+				(verbosity > 0) && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
 			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
@@ -550,7 +548,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 
 			# Saving Solution to File
 			if contParams.saveToFile
-				saveToFile(it.filename, getu(state), getp(state), state.step, contRes, contParams)
+				saveToFile(it.filename, getx(state), getp(state), state.step, contRes, contParams)
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
@@ -625,7 +623,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 # Arguments:
 - `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
 - `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
-- `u0` initial guess
+- `x0` initial guess
 - `p0` initial parameter, must be a real number
 - `contParams` parameters for continuatio. See [`ContinuationPar`](@ref) for more information about the options
 - `plot = false` whether to plot the solution while computing
@@ -637,7 +635,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `linearAlgo = BorderingBLS()`. Must belong to `[MatrixBLS(), BorderingBLS(), MatrixFreeBLS()]`. Used to control the way the extended linear system associated to the continuation problem is solved.
 - `verbosity ∈ {0,1,2,3}` controls the amount of information printed during the continuation process.
 - `normC = norm` norm used in the different Newton solves
-- `dotPALC = (x,y) -> dot(x,y) / length(x)`, dot product used in the definition of the dot product (norm) ``\\|(u, p)\\|^2_\\theta`` in the constraint ``N(x,p)`` (see below). This option can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
+- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used in the definition of the dot product (norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This option can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
 
 # Outputs:
@@ -651,28 +649,28 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 ## Bordered system of equations
 
-The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, \\tau_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0``. In practice, the curve ``\\gamma`` is parametrised by ``s`` so that ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``(\\tau_0, dp_0)`` is the tangent to the curve at ``s_0``. Hence, to compute the curve of solutions, we need solve an equation of dimension N+1 which is called a Bordered system.
+The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]``. In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
 
 !!! warning "Parameter `theta`"
-    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, \\tau_0\\rangle`` component in the constraint might be favoured too much.
+    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, dx_0\\rangle`` component in the constraint might be favoured too much. Also, large `theta`s favour `p` as the corresponding term in ``N``
 
-The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`.
+The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`. For example, if you a small `theta`
 
 ## Algorithm
 
 The algorithm works as follows:
-0. Start from a known solution ``(x_0, p_0,\\tau_0 ,dp_0)``
-1. **Predictor** set ``(x_1, p_1) = (x_0, p_0) + ds\\cdot (\\tau_0, dp_0)``
-2. **Corrector** solve ``F(x, p)=0,\\ N(x, p)=0`` with a (Bordered) Newton Solver with guess ``(x_1, p_1)``.
-    - if Newton in 3. did not converge, put ds/2 ⟶ ds and go to 1.
-3. **New tangent** Compute ``(\\tau_1, dp_1)``, set ``(x_0, p_0, \\tau_0, dp_0) = (x_1, p_1, \\tau_1, dp_1)`` and return to step 2
+0. Start from a known solution ``(x_0, p_0)`` with tangent to the curve of solutions: ``(dx_0 ,dp_0)``
+1. **Predictor:** set ``(x_1, p_1) = (x_0, p_0) + ds\\cdot (dx_0, dp_0)``
+2. **Corrector:** solve ``F(x, p)=0,\\ N(x, p)=0`` with a (Bordered) Newton Solver with initial guess ``(x_1, p_1)``.
+    - if Newton in 3. did not converge, update ds/2 ⟶ ds in ``N`` and go to 1.
+3. **New tangent:** Compute a new tangent (see below) ``(dx_1, dp_1)`` and update ``N`` with it. Set ``(x_0, p_0, dx_0, dp_0) = (x_1, p_1, dx_1, dp_1)`` and return to step 2
 
 ## Natural continuation
 
 We speak of *natural* continuation when we do not consider the constraint ``N(x, p)=0``. Knowing ``(x_0, p_0)``, we use ``x_0`` as a guess for solving ``F(x, p_1)=0`` with ``p_1`` close to ``p_0``. Again, this fails at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentAlgo = NaturalPred()` in `continuation`.
 
 ## Tangent computation (step 4)
-There are various ways to compute ``(\\tau_1, p_1)``. The first one is called secant and is parametrised by the option `tangentAlgo = SecantPred()`. It is computed by ``(\\tau_1, p_1) = (z_1, p_1) - (z_0, p_0)`` and normalised by the norm ``\\|(u, p)\\|^2_\\theta = \\frac{\\theta}{length(u)} \\langle u,u\\rangle + (1 - \\theta)\\cdot p^2``. Another method is to compute ``(\\tau_1, p_1)`` by solving solving the bordered linear system ``\\begin{bmatrix} F_x & F_p	; \\ \\frac{\\theta}{length(x)}\\tau_0 & (1-\\theta)p_0\\end{bmatrix}\\begin{bmatrix}\\tau_1 ;  p_1\\end{bmatrix} =\\begin{bmatrix}0 ; 1\\end{bmatrix}`` ; it is set by the option `tangentAlgo = BorderedPred()`.
+There are various ways to compute ``(dx_1, p_1)``. The first one is called secant and is parametrised by the option `tangentAlgo = SecantPred()`. It is computed by ``(dx_1, p_1) = (z_1, p_1) - (z_0, p_0)`` and normalised by the norm ``\\|(x, p)\\|^2_\\theta = \\frac{\\theta}{length(x)} \\langle x,x\\rangle + (1 - \\theta)\\cdot p^2``. Another method is to compute ``(dx_1, p_1)`` by solving solving the bordered linear system ``\\begin{bmatrix} F_x & F_p	; \\ \\frac{\\theta}{length(x)}dx_0 & (1-\\theta)dp_0\\end{bmatrix}\\begin{bmatrix}dx_1 ;  p_1\\end{bmatrix} =\\begin{bmatrix}0 ; 1\\end{bmatrix}`` ; it is set by the option `tangentAlgo = BorderedPred()`.
 
 ## Bordered linear solver
 
@@ -694,7 +692,7 @@ function continuation(Fhandle, Jhandle,
 					plot = false,
 					printSolution = (x, p) -> norm(x),
 					normC = norm,
-					dotPALC = (x,y) -> dot(x,y) / length(x),
+					dotPALC = (x,y) -> dot(x, y) / length(x),
 					plotSolution = (x, p; kwargs...) -> nothing,
 					finaliseSolution = (z, tau, step, contResult) -> true,
 					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
@@ -708,4 +706,4 @@ function continuation(Fhandle, Jhandle,
 
 end
 
-continuation(Fhandle, u0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S, E} = continuation(Fhandle, (u0, p) -> finiteDifferences(u -> Fhandle(u, p), u0), u0, p0, contParams; kwargs...)
+continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S, E} = continuation(Fhandle, (x0, p) -> finiteDifferences(u -> Fhandle(u, p), x0), x0, p0, contParams; kwargs...)

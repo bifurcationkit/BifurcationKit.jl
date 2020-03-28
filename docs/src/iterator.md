@@ -62,17 +62,17 @@ opts = PALC.ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 1
 iter = PALC.PALCIterable(F, Jac_m, [0.8], 1., opts; verbosity = 2)
 
 resp = Float64[]
-resu = Float64[]
+resx = Float64[]
 
 # this is the PALC algorithm
 for state in iter
 	# we save the current solution on the branch
-	push!(resu, getu(state)[1])
+	push!(resx, getx(state)[1])
 	push!(resp, getp(state))
 end
 
 # plot the result
-plot(resp, resu; label = "", xlabel = "p")
+plot(resp, resx; label = "", xlabel = "p")
 ```
 
 and you should see:

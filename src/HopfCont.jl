@@ -7,7 +7,7 @@ function HopfPoint(br::ContResult, index::Int64)
 	eigRes   = br.eig										# eigenvector at the Hopf point
 	p = bifpoint.param										# parameter value at the Hopf point
 	ω = abs(imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_bif]))	# frequency at the Hopf point
-	return BorderedArray(bifpoint.u, [p, ω] )
+	return BorderedArray(bifpoint.x, [p, ω] )
 end
 
 @with_kw struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}

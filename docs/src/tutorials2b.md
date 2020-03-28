@@ -232,7 +232,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2
 		deflationOp[1],
 		-0.1,
 		opts_cont, plot = true,
-		plotSolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
+		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
 ```
 
 We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at `examples/SH2d-fronts-cuda.jl`.

@@ -44,13 +44,13 @@ n = 101
 		optnewton)
 
 
-optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, detectFold = true, plotEveryNsteps = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.01, pMax = 4.1, nev = 5, detectFold = true, plotEveryNsteps = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
 	br, _ = @time continuation(
 		(x, p) ->   F_chan(x, p),
 		(x, p) -> (Jac_mat(x, p)),
 		out, a, optscont,
 		plot = true,
-		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="",kwargs...))
+		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...))
 		)
 ###################################################################################################
 # Example with deflation technique
