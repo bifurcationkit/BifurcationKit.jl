@@ -214,7 +214,7 @@ For convenience, we provide a simplified newton / continuation methods for perio
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 	outpo_f, _, flag = @time newton(poTrap(l_hopf + 0.01),
 			orbitguess_f, opt_po, normN = norminf,
-			callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true))
+			callback = (x, f, J, res, itlin, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true))
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
 # plot of the periodic orbit
 PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
@@ -226,19 +226,21 @@ and obtain
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     1.5492e-03         0
---> amplitude = 0.48837364060021904
-        1                2     1.4482e-02         2
---> amplitude = 0.5444815902638647
-        2                3     1.6588e-03         2
---> amplitude = 0.5114497102285744
-        3                4     3.6207e-05         2
---> amplitude = 0.5153024440971214
-        4                5     5.8333e-07         2
---> amplitude = 0.5152672386060477
-        5                6     4.8436e-11         2
-  6.710838 seconds (742.76 k allocations: 7.356 GiB, 20.12% gc time)
---> T = 3.0206156984967505, amplitude = 0.5152672386060477
+        0                1     1.5181e-03         0
+        1                2     2.9908e-03         2
+--> amplitude = 0.4918117686141368
+        2                3     3.9882e-04         2
+--> amplitude = 0.4052630504137267
+        3                4     7.1846e-05         2
+--> amplitude = 0.3632419222621528
+        4                5     3.5603e-06         2
+--> amplitude = 0.3535493640310805
+        5                6     8.8021e-09         2
+--> amplitude = 0.35306096384003083
+        6                7     1.1831e-13         2
+--> amplitude = 0.35305974130245743
+  8.377266 seconds (904.76 k allocations: 8.824 GiB, 19.55% gc time)
+--> T = 3.0094049008917816, amplitude = 0.35305974130245743
 ```
 
 and
@@ -254,7 +256,7 @@ br_po, _ , _= @time continuationPOTrap(poTrap,
 			outpo_f, l_hopf + 0.01,
 			opts_po_cont;
 			verbosity = 2,	plot = true,
-			plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
 to obtain the period of the orbit as function of `l`
@@ -287,7 +289,7 @@ br_po, _ , _= @time continuationPOTrap(poTrap,
 	outpo_f, l_hopf + 0.01,
 	opts_po_cont;
 	verbosity = 2,	plot = true,
-	plotSolution = (x;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
 A more complete diagram can be obtained combining the methods (essentially deflation and Floquet) described above. It shows the period of the periodic orbits as function of `l`. See `example/brusselator.jl` for more information.
@@ -500,7 +502,7 @@ br_po, _, _= @time continuationPOShooting(
 	outpo, par_hopf.l,
 	opts_po_cont; verbosity = 2,
 	plot = true,
-	plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 	printSolution = (u, p) -> u[end], normC = norminf)
 ```
 
@@ -540,6 +542,7 @@ probHPsh = p -> PoincareShootingProblem(
 Let us now compute an initial guess for the periodic orbit which must live in the hyperplanes $\Sigma_i$. Fortunately, we provide projections on these hyperplanes.
 
 ```julia
+hyper = probHPsh(par_hopf).psh.section
 # variable to hold the initial guess
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 
@@ -570,10 +573,10 @@ opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions =
 # continuation run
 br_po, _ , _ = @time PALC.continuationPOShooting(
 	p -> probHPsh(@set par_hopf.l = p),
-	outpo_psh, 0.6,
+	vec(initpo_bar), 0.6,
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
-	plotSolution = (x; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plot!(x; label="", kwargs...),
 	normC = norminf)		
 ```
 

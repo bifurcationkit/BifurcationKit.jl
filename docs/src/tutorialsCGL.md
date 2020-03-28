@@ -436,7 +436,7 @@ br_po, _ , _= @time continuationPOTrap(
 	outpo_f, r_hopf - 0.01,
 	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
-	plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 ```
 
@@ -452,7 +452,7 @@ We did not change the preconditioner in the previous example as it does not seem
 ```julia
 # callback which will be sent to newton. 
 # `iteration` in the arguments refers to newton iterations
-function callbackPO(x, f, J, res, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
+function callbackPO(x, f, J, res, itlinear, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
 	# we update the preconditioner every 10 continuation steps
 	if mod(kwargs[:iterationC], 10) == 9 && iteration == 1
 		@info "update Preconditioner"
@@ -469,7 +469,7 @@ br_po, _ , _= @time continuationPOTrap(
 	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
-	plotSolution = (x ;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 ```
 
@@ -503,7 +503,7 @@ We can then use our functional to call `newtonFold` like for a regular function 
 outfold, hist, flag = @time PALC.newtonFold(
 	(x, p) -> poTrap(@set par_cgl.r = p)(x),
 	(x, p) -> poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
-	br_pok2 , indfold, #index of the fold point
+	br_po , indfold, #index of the fold point
 	@set opt_po.linsolver = ls;
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
@@ -534,7 +534,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1
 outfoldco, hist, flag = @time PALC.continuationFold(
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
-	br_pok2, indfold, par_cgl.c5, optcontfold;
+	br_po, indfold, par_cgl.c5, optcontfold;
 	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
 	plot = true, verbosity = 2)
 ```

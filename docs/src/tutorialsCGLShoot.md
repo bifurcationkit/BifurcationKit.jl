@@ -133,7 +133,7 @@ br_po, _ , _= @time continuationPOShooting(
 	initpo, 1.2, opts_po_cont;
 	verbosity = 3,
 	plot = true,
-	plotSolution = (x; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
+	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
 	printSolution = (u, p) -> PALC.getAmplitude(probSh(@set par_cgl.r = p), u; ratio = 2), normC = norminf)
 ```
 

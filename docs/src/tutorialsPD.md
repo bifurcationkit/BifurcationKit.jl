@@ -94,7 +94,7 @@ br, _ = @time continuation(
 	opts_br;
 	plot = true, verbosity = 2,
 	printSolution = (x, p) -> norm(x, Inf),
-	plotSolution = (x; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+	plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ```
 
 which yields
@@ -150,10 +150,10 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -
 	nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
 	br_po_sh, _ , _ = @time continuationPOShooting(
 		p -> probSh(@set par_br.C = p),
-		opts_po_cont, -0.86,
+		out_po_sh, -0.86,
 		opts_po_cont; verbosity = 3,
 		plot = true,
-		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 ```
 
@@ -215,7 +215,7 @@ br_po_sh_pd, _ , _ = @time continuationPOShooting(
 	out_po_sh_pd, -1.32,
 	opts_po_cont; verbosity = 2,
 	plot = true,
-	plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 	printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 ```
 
