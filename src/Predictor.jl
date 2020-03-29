@@ -69,19 +69,19 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, v
 end
 
 # generic corrector based on Bordered formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M,
+function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
 			ds, theta, contparams, dottheta::DotTheta,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
 			normC = norm,
 			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPALC(Fhandle, Jhandle,
-			z_old, tau_old, z_pred,
+			z_old, tau, z_pred,
 			ds, theta,
 			contparams, dottheta; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 
 # corrector based on natural formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M,
+function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
 			ds, theta, contparams, dottheta::DotTheta,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm,
@@ -94,25 +94,25 @@ function corrector(Fhandle, Jhandle, z_old::M, tau_old::M, z_pred::M,
 end
 
 # tangent computation using Natural / Secant predictor
-# tau_new is the tangent prediction
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J,
+# tau is the tangent prediction
+function getTangent!(tau::M, z_new::M, z_old::M, F, J,
 	ds, theta, contparams, normtheta::DotTheta,
 	algo::Talgo, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
-	copyto!(tau_new, z_new)
-	minus!(tau_new, z_old)
+	copyto!(tau, z_new)
+	minus!(tau, z_old)
 	if algo isa SecantPred
-		α = sign(ds) / normtheta(tau_new, theta)
+		α = sign(ds) / normtheta(tau, theta)
 	else
-		α = sign(ds) / abs(tau_new.p)
+		α = sign(ds) / abs(tau.p)
 	end
-	rmul!(tau_new, α)
+	rmul!(tau, α)
 end
 
 # tangent computation using Bordered system
-# tau_new is the tangent prediction
-function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J,
+# tau is the tangent prediction
+function getTangent!(tau::M, z_new::M, z_old::M, F, J,
 	ds, theta, contparams, dottheta::DotTheta,
 	algo::BorderedPred, verbosity, linearbdalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
@@ -124,19 +124,19 @@ function getTangent!(tau_new::M, z_new::M, z_old::M, tau_old::M, F, J,
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	tau_normed = copyto!(similar(tau_old), tau_old) #copy(tau_old)
-	rmul!(tau_normed, theta / length(tau_old.u), 1 - theta)
+	tau_normed = copyto!(similar(tau), tau) #copy(tau_old)
+	rmul!(tau_normed, theta / length(tau.u), 1 - theta)
 	# extract tangent as solution of bordered linear system, using zero(z_old.u)
 	tauu, taup, flag, it = linearbdalgo( J(z_old.u, z_old.p), dFdl,
 			tau_normed, rmul!(similar(z_old.u), false), T(1), theta)
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / dottheta(tauu, tau_old.u, taup, tau_old.p, theta)
+	α = T(1) / dottheta(tauu, tau.u, taup, tau.p, theta)
 
 	# tau_new = α * tau
-	copyto!(tau_new.u, tauu)
-	tau_new.p = taup
-	rmul!(tau_new, α)
+	copyto!(tau.u, tauu)
+	tau.p = taup
+	rmul!(tau, α)
 end
 ################################################################################################
 function arcLengthScaling(theta, contparams, tau::M, verbosity) where {M <: BorderedArray}

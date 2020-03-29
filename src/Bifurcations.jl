@@ -47,7 +47,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	end
 end
 
-locateFold!(contres::ContResult, iter::PALCIterable, state::PALCStateVariables) = locateFold!(iter.contParams, contres, solution(state), state.tau_old, iter.normC, iter.printSolution, iter.verbosity)
+locateFold!(contres::ContResult, iter::PALCIterable, state::PALCStateVariables) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.printSolution, iter.verbosity)
 
 ####################################################################################################
 """
@@ -123,7 +123,7 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 			norm = normC(getx(state)),
 			printsol = printsolution(getx(state), getp(state)),
 			x = _copy(getx(state)),
-			tau = normalize(state.tau_old.u),
+			tau = normalize(state.tau.u),
 			ind_bif = ind_bif,
 			step = state.step,
 			status = status,
@@ -223,8 +223,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		status = :converged
 		copyto!(_state.z_pred, state.z_pred)
 		copyto!(_state.z_old,  state.z_old)
-		copyto!(_state.tau_new, state.tau_new)
-		copyto!(_state.tau_old, state.tau_old)
+		copyto!(_state.tau, state.tau)
 
 		_state.eigvals = eiginfo[1]
 		if iter.contParams.saveEigenvectors

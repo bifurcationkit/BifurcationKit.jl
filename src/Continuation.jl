@@ -252,9 +252,8 @@ Returns a variable containing the state of the continuation procedure.
 
 # Arguments
 - `z_pred` current solution on the branch
-- `tau_new` tangent predictor
+- `tau` tangent predictor
 - `z_old` previous solution
-- `tau_old` previous tangent
 - `isconverged` Boolean for newton correction
 - `itnewton` Number of newton iteration (in corrector)
 - `step` current continuation step
@@ -271,13 +270,12 @@ Returns a variable containing the state of the continuation procedure.
 """
 @with_kw mutable struct PALCStateVariables{Tv, T, Teigvals, Teigvec}
 	z_pred::Tv								# current solution
-	tau_new::Tv								# tangent predictor
+	tau::Tv									# tangent predictor
 
 	z_old::Tv								# previous solution
-	tau_old::Tv								# previous tangent
 
 	isconverged::Bool						# Boolean for newton correction
-	itnewton::Int64						# Number of newton iteration (in corrector)
+	itnewton::Int64							# Number of newton iteration (in corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
@@ -298,9 +296,8 @@ import Base: copy
 function copy(state::PALCStateVariables)
 	return PALCStateVariables(
 		z_pred 	= _copy(state.z_pred),
-		tau_new = _copy(state.tau_new),
+		tau = _copy(state.tau),
 		z_old 	= _copy(state.z_old),
-		tau_old = _copy(state.tau_old),
 		isconverged = state.isconverged,
 		itnewton 	= state.itnewton,
 		step 		= state.step,
@@ -374,7 +371,7 @@ function initContRes(it::PALCIterable, state::PALCStateVariables)
 		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, p0), contParams.nev)
 		_, n_unstable, n_imag = is_stable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return initContRes(VectorOfArray([getStateSummary(it, state, contParams)]), x0, eiginfo, contParams)
+		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, eiginfo, contParams)
 	else
 		T = eltype(it)
 		eiginfo = (Complex{T}(1), nothing, false, 0)
@@ -432,10 +429,9 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	# number of iterations for newton correction
 	# Variables to hold the predictor
 	z_pred   = BorderedArray(copyto!(similar(u0), u0), p0)		# current solution
-	tau_new  = BorderedArray(copyto!(similar(u0), u0), p0)		# tangent predictor
 
 	z_old	 = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)	# variable for previous solution
-	tau_old  = BorderedArray(copyto!(similar(duds), duds), dpds)
+	tau  = BorderedArray(copyto!(similar(duds), duds), dpds)
 
 	# compute eigenvalues to get the type
 	if it.contParams.computeEigenValues
@@ -449,7 +445,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	end
 
 	# return the state
-	state = PALCStateVariables(z_pred = z_pred, tau_new  = tau_new, z_old = z_old, tau_old = tau_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs)	# previous tangent
+	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs)	# previous tangent
 	return state, state
 end
 
@@ -461,14 +457,14 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	@unpack step, ds, theta = state
 
 	# Predictor: z_pred, following method only mutates z_pred
-	getPredictor!(state.z_pred, state.z_old, state.tau_old, ds, it.tangentAlgo)
+	getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
 	(verbosity > 0) && println("#"^35)
 	(verbosity > 0) && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
 	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
 	z_new, fval, state.isconverged, state.itnewton  = corrector(it.F, it.J,
-			state.z_old, state.tau_old, state.z_pred,
+			state.z_old, state.tau, state.z_pred,
 			ds, theta,
 			it.contParams, it.dottheta,
 			it.tangentAlgo, it.linearAlgo, normC = it.normC, callback = it.callbackN, iterationC = step, p = state.z_old.p)
@@ -477,8 +473,8 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	if state.isconverged
 		(verbosity > 0) && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
-		# Get predictor, it only mutates tau_old
-		getTangent!(state.tau_old, z_new, state.z_old, state.tau_old, it.F, it.J,
+		# Get predictor, it only mutates tau
+		getTangent!(state.tau, z_new, state.z_old, it.F, it.J,
 					ds, theta, it.contParams, it.dottheta,
 					it.tangentAlgo, verbosity, it.linearAlgo)
 
@@ -491,7 +487,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 
 	if state.stopcontinuation == false && state.stepsizecontrol == true
 		# we update the PALC paramters ds and theta, they are in the state variable
-		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau_old, verbosity)
+		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, verbosity)
 	end
 
 	state.step += 1
@@ -552,7 +548,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-			if it.finaliseSolution(state.z_old, state.tau_new, state.step, contRes) == false
+			if it.finaliseSolution(state.z_old, state.tau, state.step, contRes) == false
 				state.stopcontinuation = true
 			end
 
@@ -574,7 +570,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 	it.plot && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
 
 	# return current solution in case the corrector did not converge
-	return contRes, state.z_old, state.tau_old
+	return contRes, state.z_old, state.tau
 end
 
 function continuation(it::PALCIterable)
