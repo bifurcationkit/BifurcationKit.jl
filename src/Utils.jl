@@ -126,7 +126,7 @@ function blockToSparse(J::AbstractBlockArray)
 	return res
 end
 ####################################################################################################
-# this function extarct the indexes of the blocks composing the matrix A. We assume that the blocks have the same sparsity
+# this function extracts the indices of the blocks composing the matrix A. We assume that the blocks have the same sparsity
 function getBlocks(A::SparseMatrixCSC, N, M)
 	I,J,K = findnz(A)
 	out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];

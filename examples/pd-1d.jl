@@ -193,12 +193,9 @@ PALC.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 
 probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true),
-		1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr);
-		atol = 1e-14, rtol = 1e-14, dt = 0.1)
+		[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
 
-# probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob, Rodas4(),
-		# 1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr); atol = 1e-12, rtol = 1e-10)
-
+probSh(@set par_br.C = -0.86)(initpo)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)

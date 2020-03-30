@@ -8,7 +8,7 @@ This Julia package aims at solving equations F(u,λ)=0 where λ∈ℝ starting f
 
 The package actually does a little more. By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems by casting them into an equation F(u,λ)=0 of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences to compute periodic orbits.**
 
-The current package focuses on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2/index.html#The-Swift-Hohenberg-equation-on-the-GPU-1) and [Periodic orbit example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
+The current package focuses on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2b/index.html#The-Swift-Hohenberg-equation-on-the-GPU-1) and [Periodic orbit example](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
 
 **If you use this package for your work, please cite it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:**
 
@@ -53,20 +53,21 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 
 **Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
-|Features|Matrix Free|Custom state| Tutorial |
-|---|---|---|---|
-| Newton | Y | Y | All |
-| Newton + Deflation| Y | Y | 3, 4|
-| Continuation (Natural, Secant, Tangent) | Y | Y | All |
-| Branching point detection | Y | Y | All |
-| Fold point detection | Y | Y | All |
-| Hopf detection | Y | Y | 5 - 8 |
-| Fold Point continuation | Y | Y | 1, 7 |
-| Hopf continuation | Y | `AbstractArray` | 5 |
-| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 5, 7 |
-| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  5, 6, 8 |
-| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 5 - 8  |
-| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 7 |
+
+|Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/) | GPU |
+|---|---|---|---|---|
+| Newton | Y | Y | All | :heavy_check_mark:  |
+| Newton + Deflation| Y | Y | 3, 4| :heavy_check_mark:|
+| Continuation (Natural, Secant, Tangent) | Y | Y | All |:heavy_check_mark:  |
+| Branching point detection | Y | Y | All | :heavy_check_mark: |
+| Fold point detection | Y | Y | All | :heavy_check_mark: |
+| Hopf detection | Y | Y | 5 - 8 | :heavy_check_mark: |
+| Fold Point continuation | Y | Y | 1, 7 | |
+| Hopf continuation | Y | `AbstractArray` | 5 | |
+| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 5, 7 | :heavy_check_mark:|
+| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  5, 6, 8 | :heavy_check_mark: | 
+| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 5 - 8  | |
+| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 7 | |
 
 ## To do or grab
 Without a priority order:
@@ -77,4 +78,4 @@ Without a priority order:
 - [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
 - [ ] Compute Hopf Normal Form and allow branching from Hopf point using this
 - [ ] Inplace implementation
-- [ ] Write continuation loop as an iterator
+- [x] Write continuation loop as an iterator

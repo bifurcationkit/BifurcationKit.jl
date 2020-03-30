@@ -147,11 +147,7 @@ probSh = p -> PALC.ShootingProblem(
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
 
-	# we pass M_{sh}
-	1,
-
-	# this is the phase condition
-	x -> PALC.sectionShooting(x, Array(sol[:, end:end]), p, Fcgl);
+	[sol[:, end]];
 
 	# these are options passed to the ODE time stepper
 	atol = 1e-14, rtol = 1e-14, dt = 0.1)

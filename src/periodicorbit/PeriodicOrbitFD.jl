@@ -547,6 +547,20 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::vectype) wh
 	A_diag_sp = blockToSparse(A_diagBlock) # most of the computing time is here!!
 	return A_diag_sp
 end
+
+
+function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
+	M = pb.M
+	N = pb.N
+	T = extractPeriodFDTrap(u0)
+	u0c = reshape(u0[1:end-1], N, M)
+
+	res = Float64[]
+	for ii=1:M-1
+		push!(res, norm(u0c[:,ii+1].-u0c[:,ii]) * T/M)
+	end
+	return res
+end
 ####################################################################################################
 # The following struct encodes a jacobian of PeriodicOrbitTrapProblem which is a convenient composite type for the computation of Floquet multipliers. Therefore, it is only used in the method continuationPOTrap
 mutable struct PeriodicOrbitTrapJacobianFull{Tpb, Tj, vectype}

@@ -165,10 +165,8 @@ initpo = vcat(vec(orbitsection), 3.0)
 
 PALC.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
-# PALC.sectionShooting(initpo, Array(orbitguess_f2[:,1:dM:M]), par_hopf)
-
 probSh = p -> PALC.ShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(),
-		length(1:dM:M), x -> PALC.sectionShooting(x, Array(orbitguess_f2[:,1:dM:M]), p, Fbru); atol = 1e-10, rtol = 1e-8)
+		[orbitguess_f2[:,ii] for ii=1:dM:M]; atol = 1e-10, rtol = 1e-8)
 
 res = @time probSh(par_hopf)(initpo)
 norminf(res)

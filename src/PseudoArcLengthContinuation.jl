@@ -20,7 +20,9 @@ module PseudoArcLengthContinuation
 	include("HopfCont.jl")
 
 	include("periodicorbit/PeriodicOrbitUtils.jl")
-	include("periodicorbit/Shooting.jl")
+	include("periodicorbit/Flow.jl")
+	include("periodicorbit/StandardShooting.jl")
+	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/PeriodicOrbitFD.jl")
 	include("periodicorbit/FloquetQaD.jl")
 

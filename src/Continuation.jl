@@ -1,4 +1,4 @@
-using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
+ using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
 import Base: show, length		# simplified display method for ContRes
 
 """
@@ -386,8 +386,8 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	verbosity = min(it.verbosity, _verbosity)
 	p0 = it.p0
 	ds = it.contParams.ds
+	theta = it.contParams.theta
 	T = eltype(p0)
-	η = T(50)
 
 	(verbosity > 0) && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
@@ -397,15 +397,13 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 
 	# Converge initial guess
 	(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
-	u0, fval, isconverged, itnewton = newton(
-			x -> it.F(x, p0),
-			x -> it.J(x, p0),
+	u0, fval, isconverged, itnewton = newton(x -> it.F(x, p0), x -> it.J(x, p0),
 			it.x0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess"
-	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n", color=:green))
+	(verbosity > 0) && println("\n--> convergence of initial guess = OK")
 	(verbosity > 0) && println("--> parameter = $(p0), initial step")
-
 	(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
+	η = T(150)
 	u_pred, fval, isconverged, itnewton = newton(
 			x -> it.F(x, p0 + ds / η),
 			x -> it.J(x, p0 + ds / η),
@@ -413,25 +411,11 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
-
-	# compute guess for initial tangent
-	# duds = (u_pred - u0) / (contParams.ds / η);
-	duds = copyto!(similar(u_pred), u_pred) #copy(u_pred)
-	axpby!(-η / ds, u0, η / ds, duds)
-	dpds = T(1)
-	# compute the normtheta value
-	α = it.dottheta(duds, dpds, it.contParams.theta)
-
-	@assert typeof(α) == T "Error the type of α = $α, $(typeof(α)), does not match $T"
-	@assert α > 0 "Error, α = 0, cannot scale first tangent vector"
-	rmul!(duds, T(1) / α); dpds = dpds / α
-
-	# number of iterations for newton correction
-	# Variables to hold the predictor
-	z_pred   = BorderedArray(copyto!(similar(u0), u0), p0)		# current solution
-
-	z_old	 = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)	# variable for previous solution
-	tau  = BorderedArray(copyto!(similar(duds), duds), dpds)
+	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
+	z_pred	= BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
+	tau  = copy(z_pred)
+	# compute the tangents
+	getTangent!(tau, z_pred, z_old, it.F, it.J, ds, theta, it.contParams, it.dottheta, SecantPred(), _verbosity, it.linearAlgo)
 
 	# compute eigenvalues to get the type
 	if it.contParams.computeEigenValues
@@ -449,6 +433,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	return state, state
 end
 
+
 function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
 	# this is to overwrite verbosity behaviour, like when locating bifurcations
@@ -463,23 +448,24 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
-	z_new, fval, state.isconverged, state.itnewton  = corrector(it.F, it.J,
+	z_newton, fval, state.isconverged, state.itnewton  = corrector(it.F, it.J,
 			state.z_old, state.tau, state.z_pred,
 			ds, theta,
 			it.contParams, it.dottheta,
-			it.tangentAlgo, it.linearAlgo, normC = it.normC, callback = it.callbackN, iterationC = step, p = state.z_old.p)
+			it.tangentAlgo, it.linearAlgo,
+			normC = it.normC, callback = it.callbackN, iterationC = step, p = state.z_old.p)
 
 	# Successful step
 	if state.isconverged
 		(verbosity > 0) && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
 		# Get predictor, it only mutates tau
-		getTangent!(state.tau, z_new, state.z_old, it.F, it.J,
+		getTangent!(state.tau, z_newton, state.z_old, it.F, it.J,
 					ds, theta, it.contParams, it.dottheta,
 					it.tangentAlgo, verbosity, it.linearAlgo)
 
 		# update current solution
-		copyto!(state.z_old, z_new)
+		copyto!(state.z_old, z_newton)
 	else
 		(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 		(verbosity > 0) && println("--> Newton Residuals history = ", fval)
@@ -650,7 +636,7 @@ The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of
 !!! warning "Parameter `theta`"
     The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, dx_0\\rangle`` component in the constraint might be favoured too much. Also, large `theta`s favour `p` as the corresponding term in ``N``
 
-The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`. For example, if you a small `theta`
+The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`.
 
 ## Algorithm
 
@@ -666,7 +652,7 @@ The algorithm works as follows:
 We speak of *natural* continuation when we do not consider the constraint ``N(x, p)=0``. Knowing ``(x_0, p_0)``, we use ``x_0`` as a guess for solving ``F(x, p_1)=0`` with ``p_1`` close to ``p_0``. Again, this fails at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentAlgo = NaturalPred()` in `continuation`.
 
 ## Tangent computation (step 4)
-There are various ways to compute ``(dx_1, p_1)``. The first one is called secant and is parametrised by the option `tangentAlgo = SecantPred()`. It is computed by ``(dx_1, p_1) = (z_1, p_1) - (z_0, p_0)`` and normalised by the norm ``\\|(x, p)\\|^2_\\theta = \\frac{\\theta}{length(x)} \\langle x,x\\rangle + (1 - \\theta)\\cdot p^2``. Another method is to compute ``(dx_1, p_1)`` by solving solving the bordered linear system ``\\begin{bmatrix} F_x & F_p	; \\ \\frac{\\theta}{length(x)}dx_0 & (1-\\theta)dp_0\\end{bmatrix}\\begin{bmatrix}dx_1 ;  p_1\\end{bmatrix} =\\begin{bmatrix}0 ; 1\\end{bmatrix}`` ; it is set by the option `tangentAlgo = BorderedPred()`.
+There are various ways to compute ``(dx_1, dp_1)``. The first one is called secant and is parametrised by the option `tangentAlgo = SecantPred()`. It is computed by ``(dx_1, dp_1) = (z_1, p_1) - (z_0, p_0)`` and normalised by the norm ``\\|(x, p)\\|^2_\\theta = \\frac{\\theta}{length(x)} \\langle x,x\\rangle + (1 - \\theta)\\cdot p^2``. Another method is to compute ``(dx_1, dp_1)`` by solving solving the bordered linear system ``\\begin{bmatrix} F_x & F_p	; \\ \\frac{\\theta}{length(x)}dx_0 & (1-\\theta)dp_0\\end{bmatrix}\\begin{bmatrix}dx_1 ;  dp_1\\end{bmatrix} =\\begin{bmatrix}0 ; 1\\end{bmatrix}`` ; it is set by the option `tangentAlgo = BorderedPred()`.
 
 ## Bordered linear solver
 

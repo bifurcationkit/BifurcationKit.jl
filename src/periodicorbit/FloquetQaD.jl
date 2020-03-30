@@ -210,7 +210,9 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 end
 
 """
-Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N.
+	MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
+
+Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """
 function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
 	sh = hpsh.psh
@@ -229,12 +231,15 @@ function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx
 		E!(sh.section,  xc,  view(x_barc, :, ii), ii)
 		dE!(sh.section, outc, outbar, ii)
 		outc .= diffPoincareMap(hpsh, xc, outc, ii)
+		# check to <outc, normals[ii]> = 0
+		# println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
 		dR!(sh.section, outbar, outc, ii)
 	end
+	# @assert 1==0
 	return outbar
 
 end
 
 function MonodromyQaDShooting(sh::HyperplanePoincareShootingProblem, x)
-	@assert 1==0 "WIP no done yet!"
+	@assert 1==0 "WIP, no done yet!"
 end
