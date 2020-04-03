@@ -77,4 +77,4 @@ Without a priority order:
 - [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
 - [ ] Compute Hopf Normal Form and allow branching from Hopf point using this
 - [ ] Inplace implementation
-- [ ] Write continuation loop as an iterator
+- :heavy_check_mark: Write continuation loop as an iterator
