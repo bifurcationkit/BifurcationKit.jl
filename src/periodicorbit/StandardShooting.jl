@@ -36,7 +36,7 @@ end
 ####################################################################################################
 # Standard Shooting functional
 """
-	pb = ShootingProblem(flow::Flow, ds, section)
+	pb = ShootingProblem(flow::Flow, ds, section; isparallel = false)
 
 This composite type implements the Standard Simple / Multiple Standard Shooting  method to locate periodic orbits. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure `Flow`.
@@ -52,18 +52,18 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 ## Simplified constructors
 - A simpler way to build a functional is to use
 	pb = ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; kwargs...)
-where `F` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
+where `F` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `isparallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 
 - Another way with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase
-	pb = ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...)
+	pb = ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; kwargs...)
+	pb = ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; isparallel = false, kwargs...)
 - The next way is an elaboration of the previous one
-	pb = ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; kwargs...)
+	pb = ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; kwargs...)
+	pb = ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y) = (F(x),dF(x)\\cdot y)``.
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
@@ -71,31 +71,45 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	flow::Tf							# should be a Flow{TF, Tf, Td}
 	ds::Ts = diff(LinRange(0, 1, 5))	# difference of times for multiple shooting
 	section::Tsection					# sections for phase condition
-	# isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
+	isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
 end
 
 # this constructor takes into accound a parameter passed to the vector field
-ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; kwargs...) = ShootingProblem(M = length(ds), flow = Flow(F, p, prob, alg; kwargs...), ds = ds, section = section)
+# if M = 1, we disable parallel processing
+function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; isparallel = false, kwargs...)
+	_M = length(ds)
+	isparallel = _M==1 ? false : isparallel
+	_pb = isparallel ? EnsembleProblem(prob) : prob
+	return ShootingProblem(M = _M, flow = Flow(F, p, _pb, alg; kwargs...),
+			ds = ds, section = section, isparallel = isparallel)
+end
 
-ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section)
+ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section, isparallel = isparallel)
 
-ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); isparallel = isparallel, kwargs...)
 
 # idem but with an ODEproblem to define the derivative of the flow
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; kwargs...) = ShootingProblem(M = length(ds), flow = Flow(F, p, prob1, alg1, prob2, alg2; kwargs...), ds = ds, section = section)
+function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
+	_M = length(ds)
+	isparallel = _M==1 ? false : isparallel
+	_pb1 = isparallel ? EnsembleProblem(prob1) : prob1
+	_pb2 = isparallel ? EnsembleProblem(prob2) : prob2
+	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, isparallel = isparallel)
+end
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; kwargs...)
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); kwargs...)
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); isparallel = isparallel,
+kwargs...)
 
 @inline getM(sh::ShootingProblem) = sh.M
 isSimple(sh::ShootingProblem) = sh.M == 1
+@inline isParallel(sh::ShootingProblem) = sh.isparallel
 
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]
 extractPeriodShooting(x::BorderedArray)  = x.p
 @inline getPeriod(sh::ShootingProblem, x) = extractPeriodShooting(x)
-# @inline isParallel(sh::ShootingProblem) = sh.isparallel
 
 function extractTimeSlices(x::AbstractVector, M::Int)
 	N = div(length(x) - 1, M)
@@ -124,10 +138,19 @@ function (sh::ShootingProblem)(x::AbstractVector)
 	out = similar(x)
 	outc = extractTimeSlices(out, M)
 
-	for ii in 1:M
-		ip1 = (ii == M) ? 1 : ii+1
-		# we can use views but Sundials will complain
-		outc[:, ii] .= sh.flow(xc[:, ii], sh.ds[ii] * T) .- xc[:, ip1]
+	if ~isParallel(sh)
+		for ii in 1:M
+			ip1 = (ii == M) ? 1 : ii+1
+			# we can use views but Sundials will complain
+			outc[:, ii] .= sh.flow(xc[:, ii], sh.ds[ii] * T) .- xc[:, ip1]
+		end
+	else
+		solOde = sh.flow(xc, sh.ds .* T)
+		for ii in 1:M
+			ip1 = (ii == M) ? 1 : ii+1
+			# we can use views but Sundials will complain
+			outc[:, ii] .= solOde[ii][2] .- xc[:, ip1]
+		end
 	end
 
 	# add constraint
@@ -148,42 +171,16 @@ function (sh::ShootingProblem)(x::BorderedArray)
 	# variable to hold the computed result
 	out = similar(x)
 
-	for ii in 1:M
-		# we can use views but Sundials will complain
-		ip1 = (ii == M) ? 1 : ii+1
-		out.u[ii] .= sh.flow(xc[ii], sh.ds[ii] * T) .- xc[ip1]
+	if ~isParallel(sh)
+		for ii in 1:M
+			# we can use views but Sundials will complain
+			ip1 = (ii == M) ? 1 : ii+1
+			out.u[ii] .= sh.flow(xc[ii], sh.ds[ii] * T) .- xc[ip1]
+		end
 	end
 
 	# add constraint
 	out.p = sh.section(x)
-
-	return out
-end
-
-# Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
-function (sh::ShootingProblem)(::Val{:Parallel}, x::AbstractVector)
-	@assert 1==0 "WIP"
-	# period of the cycle
-	# Sundials does not like @views :(
-	T = extractPeriodShooting(x)
-	M = getM(sh)
-	N = div(length(x) - 1, M)
-
-	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(x, M)
-
-	# variable to hold the computed result
-	out = similar(x)
-	outc = extractTimeSlices(out, M)
-
-	for ii in 1:M
-		ip1 = (ii == M) ? 1 : ii+1
-		# we can use views but Sundials will complain
-		outc[:, ii] .= sh.flow(xc[:, ii], sh.ds[ii] * T) .- xc[:, ip1]
-	end
-
-	# add constraint
-	out[end] = sh.section(x)
 
 	return out
 end
@@ -195,7 +192,7 @@ function (sh::ShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
 	# Sundials does not like @views :(
 	dT = extractPeriodShooting(dx)
 	T  = extractPeriodShooting(x)
-	M = length(sh.ds)
+	M = getM(sh)
 	N = div(length(x) - 1, M)
 
 	xv = @view x[1:end-1]
@@ -209,11 +206,20 @@ function (sh::ShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
 	outv = @view out[1:end-1]
 	outc = reshape(outv, N, M)
 
-	for ii = 1:M
-		ip1 = (ii == M) ? 1 : ii+1
+	if ~isParallel(sh)
+		for ii = 1:M
+			ip1 = (ii == M) ? 1 : ii+1
+			# call jacobian of the flow
+			tmp = sh.flow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
+			outc[:, ii] .= @views tmp.du .+ sh.flow.F(tmp.u) .* sh.ds[ii] * dT .- dxc[:, ip1]
+		end
+	else
 		# call jacobian of the flow
-		tmp = sh.flow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
-		outc[:, ii] .= @views tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[ii] * dT .- dxc[:, ip1]
+		solOde = sh.flow(xc, dxc, sh.ds .* T)
+		for ii = 1:M
+			ip1 = (ii == M) ? 1 : ii+1
+			outc[:, ii] .= solOde[ii].du .+ sh.flow.F(solOde[ii].u) .* sh.ds[ii] * dT .- dxc[:, ip1]
+		end
 	end
 
 	# add constraint
@@ -227,16 +233,18 @@ function (sh::ShootingProblem)(x::BorderedArray, dx::BorderedArray; δ = 1e-9)
 	# period of the cycle
 	dT = extractPeriodShooting(dx)
 	T  = extractPeriodShooting(x)
-	M = length(x.u)
+	M = getM(sh)
 
 	# variable to hold the computed result
 	out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
 
-	for ii = 1:M
-		ip1 = (ii == M) ? 1 : ii+1
-		# call jacobian of the flow
-		tmp = sh.flow(x.u[ii], dx.u[ii], sh.ds[ii] * T)
-		out.u[ii] .= tmp[2] .+ sh.flow.F(tmp[1]) .* sh.ds[ii] * dT .- dx.u[ip1]
+	if ~isParallel(sh)
+		for ii = 1:M
+			ip1 = (ii == M) ? 1 : ii+1
+			# call jacobian of the flow
+			tmp = sh.flow(x.u[ii], dx.u[ii], sh.ds[ii] * T)
+			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u) .* sh.ds[ii] * dT .- dx.u[ip1]
+		end
 	end
 
 	# add constraint
@@ -254,10 +262,20 @@ function _getMax(prob::ShootingProblem, x::AbstractVector; ratio = 1)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
+	Th = eltype(x)
+	mx = Th(0)
 
 	# !!!! we could use @views but then Sundials will complain !!!
-	sol = prob.flow(Val(:Full), xc[:, 1], T)
-	mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
+	if ~isParallel(prob)
+		sol = prob.flow(Val(:Full), xc[:, 1], T)
+		mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
+	else
+		sol = prob.flow(Val(:Full), xc, prob.ds .* T)
+		for ii = 1:M
+			mx = max(mx, maximum(sol[ii].u[1:div(N, ratio), :]))
+		end
+	end
+	return mx
 end
 ####################################################################################################
 # if we use the same code as for newton (see below) in continuation, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix. So we have to use a dedicated composite type for the jacobian to handle this case.
@@ -323,7 +341,7 @@ function continuationPOShooting(prob, orbitguess, p0::Real, _contParams::Continu
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDShooting(contParams.newtonOptions.eigsolver)
 	end
 
-	if (pb0 isa PoincareShootingProblem) || (pb0 isa HyperplanePoincareShootingProblem)
+	if (pb0 isa PoincareShootingProblem)
 		if printPeriod
 			printSolutionPS = (x, p) -> getPeriod(prob(p), x)
 			return continuation(

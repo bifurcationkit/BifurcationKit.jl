@@ -126,8 +126,7 @@ initpo = vcat(vec(orbitsection), 3.)
 
 # define the functional for the standard simple shooting based on the 
 # ODE solver ETDRK2. SectionShooting implements an appropriate phase condition
-probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true),
-1, x -> PALC.sectionShooting(x, Array(sol[:,[end]]), p, Fbr); atol = 1e-14, rtol = 1e-14, dt = 0.1)
+probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true), [sol(280.)]; atol = 1e-14, rtol = 1e-14, dt = 0.1)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)

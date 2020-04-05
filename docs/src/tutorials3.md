@@ -417,11 +417,8 @@ probSh = p -> ShootingProblem(
 	# we pass the ODEProblem encoding the flow and the time stepper
 	probsundials, Rodas4P(),
 	
-	# we pass M_{sh}
-	length(1:dM:M),
-	
-	# this is the phase condition, you can pass your own function
-	x -> PALC.sectionShooting(x, Array(orbitguess_f2[:,1:dM:M]), p, Fbru); 
+	# this is for the phase condition, you can pass your own section as well
+	[orbitguess_f2[:,ii] for ii=1:dM:M]; 
 	
 	# these are options passed to the ODE time stepper
 	atol = 1e-10, rtol = 1e-8)

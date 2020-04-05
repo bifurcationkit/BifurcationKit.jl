@@ -79,12 +79,12 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 normals = [[-1., 0.]]
 centers = [zeros(2)]
 
-probHPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p), p,
+probPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p), p,
 		prob, Rodas4P(),
 		probMono, Rodas4P(autodiff=false),
 		normals, centers; rtol = 1e-8)
 
-hyper = probHPsh(par_hopf).psh.section
+hyper = probPsh(par_hopf).section
 
 initpo_bar = PALC.R(hyper, [0,0.4], 1)
 
@@ -92,23 +92,23 @@ PALC.E(hyper, [1.0], 1)
 
 initpo_bar = [0.4]
 
-probHPsh(par_hopf)(initpo_bar)
+probPsh(par_hopf)(initpo_bar)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = DefaultEig()
-	optn = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
+	optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
 	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
-	outpo, _ = @time PALC.newton(probHPsh(par_hopf),
-			# x -> (dx -> probHPsh(par_hopf)(x, dx)),
+	outpo, _ = @time PALC.newton(probPsh(par_hopf),
+			# x -> (dx -> probPsh(par_hopf)(x, dx)),
 			initpo_bar,
 			optn; normN = norminf)
 	println("--> Point on the orbit = ", PALC.E(hyper, outpo, 1))
 
-getPeriod(probHPsh(par_hopf), outpo)
+getPeriod(probPsh(par_hopf), outpo)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 0)
 	br_pok2, upo , _= @time PALC.continuationPOShooting(
-		p -> probHPsh(@set par_hopf.r = p),
+		p -> probPsh(@set par_hopf.r = p),
 		outpo, par_hopf.r,
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
@@ -124,25 +124,25 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probHPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p, 0.), p, prob, Tsit5(), normals, centers; rtol = 1e-6)
+probPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p, 0.), p, prob, Tsit5(), normals, centers; rtol = 1e-6)
 
-hyper = probHPsh(par_hopf).psh.section
+hyper = probPsh(par_hopf).section
 
-probHPsh(par_hopf)(initpo_bar, verbose = true)
+probPsh(par_hopf)(initpo_bar, verbose = true)
 
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigArpack(v0 = rand(ls.N))
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls)
 	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
-	outpo, _ = @time PALC.newton(probHPsh(par_hopf),
+	outpo, _ = @time PALC.newton(probPsh(par_hopf),
 			initpo_bar, optn; normN = norminf)
 	println("--> Point on the orbit = ", PALC.E(hyper, [outpo[1]], 1), PALC.E(hyper, [outpo[2]], 2))
 
-getPeriod(probHPsh(par_hopf), outpo)
+getPeriod(probPsh(par_hopf), outpo)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 0)
 	br_pok2, upo , _= @time PALC.continuationPOShooting(
-		p -> probHPsh(@set par_hopf.r = p),
+		p -> probPsh(@set par_hopf.r = p),
 		outpo, par_hopf.r,
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
@@ -155,27 +155,27 @@ normals = [[-1., 0.], [1, 0], [0, 1]]
 centers = [zeros(2), zeros(2), zeros(2)]
 initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
 
-probHPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p, 0.), p, prob, Tsit5(), normals, centers; rtol = 1e-6)
+probPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p, 0.), p, prob, Tsit5(), normals, centers; rtol = 1e-6)
 
-hyper = probHPsh(par_hopf).psh.section
+hyper = probPsh(par_hopf).section
 initpo_bar = reduce(vcat, [PALC.R(hyper, initpo[ii], ii) for ii in eachindex(centers)])
 
-probHPsh(par_hopf)(initpo_bar, verbose = true)
+probPsh(par_hopf)(initpo_bar, verbose = true)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 10, verbose = false)
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 50, linsolver = ls)
-	outpo, _ = @time PALC.newton(probHPsh(par_hopf),
+	outpo, _ = @time PALC.newton(probPsh(par_hopf),
 		initpo_bar, optn; normN = norminf)
 
 for ii=1:length(normals)
 	@show PALC.E(hyper, [outpo[ii]], ii)
 end
 
-getPeriod(probHPsh(par_hopf), outpo)
+getPeriod(probPsh(par_hopf), outpo)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn; tol = 1e-9), detectBifurcation = 0)
 	br_hpsh, upo , _= @time PALC.continuationPOShooting(
-		p -> probHPsh(@set par_hopf.r = p),
+		p -> probPsh(@set par_hopf.r = p),
 		outpo, par_hopf.r,
 		opts_po_cont;
 		verbosity = 0, plot = false,

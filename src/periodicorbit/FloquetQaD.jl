@@ -175,7 +175,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
 
 	for ii = 1:M
 		# call the jacobian of the flow
-		@views out .= sh.flow(xc[:, ii], out, sh.ds[ii] * T)[2]
+		@views out .= sh.flow(Val(:Serial), xc[:, ii], out, sh.ds[ii] * T)[2]
 	end
 
 	return out
@@ -214,9 +214,8 @@ end
 
 Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """
-function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
-	sh = hpsh.psh
-	M = getM(hpsh)
+function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, dx_bar::AbstractVector)
+	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess into a Matrix
@@ -228,18 +227,18 @@ function MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx
 	outc = similar(dx_bar, Nm1 + 1)
 
 	for ii = 1:M
-		E!(sh.section,  xc,  view(x_barc, :, ii), ii)
-		dE!(sh.section, outc, outbar, ii)
-		outc .= diffPoincareMap(hpsh, xc, outc, ii)
+		E!(psh.section,  xc,  view(x_barc, :, ii), ii)
+		dE!(psh.section, outc, outbar, ii)
+		outc .= diffPoincareMap(psh, xc, outc, ii)
 		# check to <outc, normals[ii]> = 0
 		# println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
-		dR!(sh.section, outbar, outc, ii)
+		dR!(psh.section, outbar, outc, ii)
 	end
 	# @assert 1==0
 	return outbar
 
 end
 
-function MonodromyQaDShooting(sh::HyperplanePoincareShootingProblem, x)
+function MonodromyQaDShooting(psh::PoincareShootingProblem, x)
 	@assert 1==0 "WIP, no done yet!"
 end

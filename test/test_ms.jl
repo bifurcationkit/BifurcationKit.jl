@@ -8,7 +8,7 @@ M = 5
 # TODO do example with A matrix and exp(At)
 vf(x) = x
 flow(x, t) = exp(t) .* x
-dflow(x, dx, t) = (flow(x, t), exp(t) .* dx)
+dflow(x, dx, t) = (t = t, u = flow(x, t), du = exp(t) .* dx)
 section(x) = dot(x[1:N], ones(N))
 section(x::BorderedArray) = section(vec(x.u[:,:]))
 
@@ -16,7 +16,7 @@ fl = PALC.Flow(vf, flow, dflow)
 
 probSh = PALC.ShootingProblem(M, fl,
 	LinRange(0, 1, M+1) |> diff,
-	section)
+	section, false)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
 	po = BorderedArray(poguess, 1.)
@@ -45,13 +45,13 @@ dres = probSh(po, dpo; δ = δ)
 # test the jacobian of the multiple shooting functional using nonLinear flow
 vf(x) = x.^2
 flow(x, t) = x ./ (1 .- t .* x)
-dflow(x, dx, t) = (flow(x, t), dx ./ (1 .- t .* x).^2)
+dflow(x, dx, t) = (t = t, u = flow(x, t), du = dx ./ (1 .- t .* x).^2)
 
 fl = PALC.Flow(vf, flow, dflow)
 
 probSh = PALC.ShootingProblem(M, fl,
 	LinRange(0,1,M+1) |> diff ,
-	section)
+	section, false)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
 	po = BorderedArray(poguess, 1.)

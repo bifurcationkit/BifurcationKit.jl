@@ -1,5 +1,5 @@
 # using Revise
-using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays
+using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
 const PALC = PseudoArcLengthContinuation
 
 n = 250*150
@@ -160,7 +160,7 @@ pbsp = PeriodicOrbitTrapProblem(
 			10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
-Jfd = sparse( PALC.finiteDifferences(x->pbsp(x), orbitguess_f; δ = 1e-8) )
+Jfd = sparse( ForwardDiff.jacobian(x->pbsp(x), orbitguess_f) )
 Jan = pbsp(Val(:JacFullSparse), orbitguess_f)
 @test norm(Jfd - Jan, Inf) < 1e-6
 ####################################################################################################
@@ -180,3 +180,14 @@ Jpo = pbsp(Val(:JacFullSparse), orbitguess_f)
 Jpo2 = copy(Jpo)
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f)
 @test nnz(Jpo2 - Jpo) == 0
+####################################################################################################
+# test of the version with inhomogenous time discretisation
+pbsp = PeriodicOrbitTrapProblem(
+			x -> cos.(x),
+			x -> spdiagm(0 => -sin.(x)),
+			rand(2n),
+			rand(2n),
+			LinRange(0,1,10) |> diff)
+
+orbitguess_f = rand(2n*10+1)
+pbsp(orbitguess_f)
