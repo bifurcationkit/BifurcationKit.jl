@@ -175,7 +175,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
 
 	for ii = 1:M
 		# call the jacobian of the flow
-		@views out .= sh.flow(Val(:Serial), xc[:, ii], out, sh.ds[ii] * T)[2]
+		@views out .= sh.flow(Val(:Serial), xc[:, ii], out, sh.ds[ii] * T).du
 	end
 
 	return out
@@ -202,7 +202,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 	for ii = 1:N
 		du[ii] = 1.0
 		# call jacobian of the flow
-		@views Mono[:, ii] .= sh.flow(xc[:, 1], du, T)[2]
+		@views Mono[:, ii] .= sh.flow(xc[:, 1], du, T).du
 		du[ii] = 0.0
 	end
 

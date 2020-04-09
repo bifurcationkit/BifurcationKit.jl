@@ -173,6 +173,6 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2
 
 # branches = [br]
 # push!(branches, br)
-# plotBranch(branches) |> display
+# plot(branches)
 #
-# plotBranch(br)
+# plot(br)

@@ -179,19 +179,29 @@ end
 function PoincareShootingProblem(F, p,
 				prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
-				normals::AbstractVector, centers::AbstractVector;
+				hyp::HyperplaneSections;
 				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
-	hyp = HyperplaneSections(normals, centers)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
 	# change the ODEProblem -> EnsembleProblem for the parallel case
-	_M = length(normals)
+	_M = hyp.M
 	isparallel = _M==1 ? false : isparallel
 	_pb1 = isparallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = isparallel ? EnsembleProblem(prob2) : prob2
 	return PoincareShootingProblem(flow = Flow(F, p, _pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, isparallel = isparallel)
+end
+
+function PoincareShootingProblem(F, p,
+				prob1::ODEProblem, alg1,
+				prob2::ODEProblem, alg2,
+				normals::AbstractVector, centers::AbstractVector;
+				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
+	return PoincareShootingProblem(F, p,
+					prob1, alg2, prob2, alg2,
+					HyperplaneSections(normals, centers);
+					δ = δ, interp_points = interp_points, isparallel = isparallel, kwargs...)
 end
 
 function getPeriod(psh::PoincareShootingProblem, x_bar)

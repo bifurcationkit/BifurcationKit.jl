@@ -93,6 +93,8 @@ optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurc
 		plot = true, verbosity = 3,
 		printSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+
+plot(br)
 ####################################################################################################
 ind_hopf = 1
 	hopfpt = HopfPoint(br, ind_hopf)
@@ -146,7 +148,7 @@ outpo_f, _, flag = @time PALC.newton(
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
+optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
 	br_po, _ , _ = @time continuationPOTrap(poTrap,
 		outpo_f, -0.87,
 		optcontpo; verbosity = 3,
@@ -158,9 +160,9 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8
 
 # branches = [br_po]
 push!(branches, br_po)
-plotBranch(vcat(branches, br), label = "");title!("")
+plot(vcat(branches, br), label = "")
 
-plotBranch(vcat(br_po, br), label = "");title!("")
+plot(vcat(br_po, br), label = "")
 ####################################################################################################
 # Period doubling
 ind_pd = 1
@@ -212,7 +214,7 @@ plot(initpo[1:end-1], label = "Init guess")
 
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
 	br_po_sh, _ , _ = @time continuationPOShooting(
 		p -> probSh(@set par_br.C = p),
 		outposh, -0.86,
@@ -225,9 +227,9 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
-# plotBranch(branches);title!("")
+# plot(branches)
 
-plotBranch(vcat(br_po_sh, br), label = "");title!("")
+plot(vcat(br_po_sh, br), label = "")
 
 ####################################################################################################
 # shooting PD
@@ -273,6 +275,4 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
-plotBranch(vcat(br_po_sh, br,), label = "");title!("")
-
-br_pd3
+plot(vcat(br_po_sh, br,), label = "");title!("")

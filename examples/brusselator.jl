@@ -136,7 +136,8 @@ br_hopf, u1_hopf = @time PALC.continuationHopf(
 	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
 	br, ind_hopf, par_bru.β,
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew), verbosity = 2, normC = norminf)
-PALC.plotBranch(br_hopf, xlabel="beta", ylabel = "l", label="")
+
+plot(br_hopf, xlabel="beta", ylabel = "l", label="")
 
 # test with analytical Hessian but with dummy expression ;)
 d2Fbru(x, p, dx1, dx2) = dx1 .* dx2

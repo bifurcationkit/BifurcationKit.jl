@@ -89,7 +89,7 @@ where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constra
 	# whether the computation takes place on the gpu
 	ongpu::Bool = false
 
-	# whether the time discretisation is automatically adaptive
+	# whether the time discretisation is adaptive
 	adaptmesh::Bool = false
 end
 

@@ -48,7 +48,7 @@ opts = PALC.ContinuationPar(dsmin = 0.0005, dsmax = 0.0055, ds = -0.001,
 #####################################################
 # case with computation of eigenvalues
 # optnew = PALC.NewtonPar(linsolver = Default(),	eigsolver = eig_KrylovKit{Float64}())
-plotBranch(brs, label = "");title!("")
+plot(brs, label = "")
 
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))

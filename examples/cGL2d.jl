@@ -229,9 +229,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 
 			plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 			printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
-branches = Any[br_po]
+branches = Any[br_pok2]
 # push!(branches, br_po)
-plotBranch([branches[1], br_po]; putbifptlegend = false, label="", xlabel="r",ylabel="Amplitude", legend = :bottomright);title!("")
+plot([branches[1]]; putbifptlegend = false, label="", xlabel="r",ylabel="Amplitude", legend = :bottomright)
 
 ###################################################################################################
 # preconditioner taking into account the constraint
@@ -464,7 +464,7 @@ outfoldco, hist, flag = @time PALC.continuationFold(
 	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
 	plot = true, verbosity = 2)
 
-plotBranch(outfoldco, label="", xlabel="c5", ylabel="r");title!("")
+plot(outfoldco, label="", xlabel="c5", ylabel="r")
 
 
 ####################################################################################################

@@ -187,7 +187,14 @@ pbsp = PeriodicOrbitTrapProblem(
 			x -> spdiagm(0 => -sin.(x)),
 			rand(2n),
 			rand(2n),
+			10)
+
+pbspti = PeriodicOrbitTrapProblem(
+			x -> cos.(x),
+			x -> spdiagm(0 => -sin.(x)),
+			rand(2n),
+			rand(2n),
 			LinRange(0,1,10) |> diff)
 
 orbitguess_f = rand(2n*10+1)
-pbsp(orbitguess_f)
+pbsp(orbitguess_f) - pbspti(orbitguess_f)

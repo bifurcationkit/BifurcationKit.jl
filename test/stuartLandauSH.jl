@@ -1,5 +1,5 @@
 # using Revise, Plots
-using OrdinaryDiffEq, ForwardDiff
+using OrdinaryDiffEq, ForwardDiff, Test
 	using PseudoArcLengthContinuation, LinearAlgebra, Parameters, Setfield
 	const PALC = PseudoArcLengthContinuation
 
@@ -48,14 +48,28 @@ section(x) = x[1]
 # standard simple shooting
 M = 1
 dM = 1
-probSh = p -> PALC.ShootingProblem(u -> Fsl(u, p), p, prob, Tsit5(),
-		1, section; rtol = 1e-6)
+probSh = p -> PALC.ShootingProblem(u -> Fsl(u, p), p, prob, Rodas4(),
+		1, section; rtol = 1e-9)
 
 initpo = [0.3, 0., 6.]
 res = @time probSh(par_hopf)(initpo)
 
+# test of the differential of thew shooting method
+_pb = probSh(par_hopf)
+
+_dx = rand(3)
+resAD = ForwardDiff.derivative(z -> _pb(initpo .+ z .* _dx), 0.)
+resFD = (_pb(initpo .+ 1e-8 .* _dx) - _pb(initpo)) * 1e8
+resAN = _pb(initpo, _dx; δ = 1e-8)
+@test norm(resAN - resFD, Inf) < 1e-1
+@test norm(resAN - resAD, Inf) < 1e-1
+
+
+####################################################################################################
+# we test this using Newton - Continuation
+
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo))
-optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
+optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20, linsolver = ls)
 deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zeros(3)])
 outpo, _ = @time PALC.newton(probSh(par_hopf),
 	initpo,
@@ -80,8 +94,8 @@ normals = [[-1., 0.]]
 centers = [zeros(2)]
 
 probPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p), p,
-		prob, Rodas4P(),
-		probMono, Rodas4P(autodiff=false),
+		prob, Rodas4(),
+		probMono, Rodas4(),
 		normals, centers; rtol = 1e-8)
 
 hyper = probPsh(par_hopf).section
@@ -136,7 +150,7 @@ ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, ve
 	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
 	outpo, _ = @time PALC.newton(probPsh(par_hopf),
 			initpo_bar, optn; normN = norminf)
-	println("--> Point on the orbit = ", PALC.E(hyper, [outpo[1]], 1), PALC.E(hyper, [outpo[2]], 2))
+println("--> Point on the orbit = ", PALC.E(hyper, [outpo[1]], 1), PALC.E(hyper, [outpo[2]], 2))
 
 getPeriod(probPsh(par_hopf), outpo)
 

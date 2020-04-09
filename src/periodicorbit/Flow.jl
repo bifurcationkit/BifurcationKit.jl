@@ -18,7 +18,6 @@ function flowTimeSol(x::AbstractMatrix, p, tm, epb::EnsembleProblem; alg = Euler
 	_epb = setproperties(epb, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
 	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
 	# sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
-	# @show sol.u[1]
 	return sol.u
 end
 
@@ -79,8 +78,8 @@ flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...
 This composite type encapsulates:
 - the vector field `x -> F(x)` associated to a Cauchy problem,
 - the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. Only the last time point must be returned.
-- the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. This is not strictly necessary to provide this.
-- the differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple vectors: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant is the value of the derivative of the flow.
+- the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this.
+- the differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant being the value of the derivative of the flow.
 
 There are some simple constructors for which you only have to pass a `prob::ODEProblem` from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 

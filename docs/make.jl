@@ -17,7 +17,8 @@ makedocs(doctest = false,
 			"7/ Ginzburg-Landau 2d (GPU)" => "tutorialsCGL.md",
 			"8/ Ginzburg-Landau 2d (Shooting)" => "tutorialsCGLShoot.md",
 		],
-		"Advanced Usage" => [
+		"Functionalities" => [
+			"Plotting" => "plotting.md",
 			"Linear / Eigen Solvers" => "linearsolver.md",
 			"Bordered linear solvers" => "borderedlinearsolver.md",
 			"Bifurcations" => "detectionBifurcation.md",

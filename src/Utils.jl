@@ -31,7 +31,7 @@ function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
 end
 
 function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
-	# we compute the eigenelements
+	# we compute the eigen-elements
 	n_unstable = state.n_unstable[2]
 	nev_ = max(n_unstable + 5, iter.contParams.nev)
 	J = iter.J(getx(state), getp(state))

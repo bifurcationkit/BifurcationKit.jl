@@ -613,19 +613,19 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
 - `finaliseSolution = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting... The notations are ``z=(x,p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners
-- `tangentAlgo = SecantPred()` controls the algorithm use to predict the tangent along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
-- `linearAlgo = BorderingBLS()`. Must belong to `[MatrixBLS(), BorderingBLS(), MatrixFreeBLS()]`. Used to control the way the extended linear system associated to the continuation problem is solved.
-- `verbosity ∈ {0,1,2,3}` controls the amount of information printed during the continuation process.
+- `tangentAlgo = SecantPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`. See below for more information.
+- `linearAlgo = BorderingBLS()`. Used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS` or `MatrixFreeBLS`.
+- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`
 - `normC = norm` norm used in the different Newton solves
-- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used in the definition of the dot product (norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This option can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
+- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
 
 # Outputs:
 - `contres::ContResult` composite type which contains the computed branch. See [`ContResult`](@ref) for more information.
 - `u::BorderedArray` the last solution computed on the branch
 
-!!! tip "Controlling the parameter `linearAlgo`"
-    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, p0, contParams, linearAlgo; kwrags...)`.
+!!! tip "Controlling the argument `linearAlgo`"
+    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, p0, contParams, linearAlgo; kwargs...)`.
 
 # Method
 

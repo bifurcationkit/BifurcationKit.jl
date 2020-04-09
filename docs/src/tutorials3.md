@@ -509,12 +509,13 @@ We can observe that simple shooting is faster but the Floquet multipliers are le
 
 ## Continuation of periodic orbits (Poincaré Shooting)
 
-We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of `DifferentialEquations.jl`. More information is provided at [`PoincareShootingProblem`](@ref) and [Periodic orbits based on the shooting method](@ref) but basically, it is a shooting method between Poincaré sections $\Sigma_i$ (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is $M_{sh}(N-1)$ where $N$ is the dimension of the phase space. Indeed, each time slice lives in an hyperplane $\Sigma_i$. Additionally, the period $T$ is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane $\Sigma_i$, something called **event detection**.
+We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of `DifferentialEquations.jl`. More information is provided at [`PoincareShootingProblem`](@ref) and [Periodic orbits based on the shooting method](@ref) but basically, it is a shooting method between Poincaré sections $\Sigma_i$ (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is $M_{sh}\cdot(N-1)$ where $N$ is the dimension of the phase space. Indeed, each time slice lives in an hyperplane $\Sigma_i$. Additionally, the period $T$ is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane $\Sigma_i$, something called **event detection**.
 
 
 We show how to use this method, the code is very similar to the case of the Standard Shooting. We first define the functional for Poincaré Shooting Problem
 
 ```julia
+# sub-sampling factor of a initial guess for the periodic orbit
 dM = 10
 
 # vectors to define the hyperplanes Sigma_i
@@ -536,10 +537,11 @@ probHPsh = p -> PoincareShootingProblem(
 	atol = 1e-10, rtol = 1e-8)
 ```
 
-Let us now compute an initial guess for the periodic orbit which must live in the hyperplanes $\Sigma_i$. Fortunately, we provide projections on these hyperplanes.
+Let us now compute an initial guess for the periodic orbit, it must live in the hyperplanes $\Sigma_i$. Fortunately, we provide projections on these hyperplanes.
 
 ```julia
-hyper = probHPsh(par_hopf).psh.section
+hyper = probHPsh(par_hopf).section
+
 # variable to hold the initial guess
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 

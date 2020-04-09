@@ -27,12 +27,20 @@ end
 	res
 end
 
-struct Section{Tn, Tc}
+# section for Standard Shooting
+struct SectionSS{Tn, Tc}
 	normals::Tn 	# normals to define hyperplanes
 	centers::Tc 	# representative point on each hyperplane
 end
 
-(sect::Section)(u) = sectionShooting(u, sect.normals, sect.centers)
+(sect::SectionSS)(u) = sectionShooting(u, sect.normals, sect.centers)
+
+# we update the field of Section, useful during continuation procedure for updating the section
+function update!(sect::SectionSS, normals, centers)
+	copyto!(sect.normals, normals)
+	copyto!(sect.centers, centers)
+	sect
+end
 ####################################################################################################
 # Standard Shooting functional
 """
@@ -86,7 +94,7 @@ end
 
 ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section, isparallel = isparallel)
 
-ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c) for c in centers], centers); isparallel = isparallel, kwargs...)
 
 # idem but with an ODEproblem to define the derivative of the flow
 function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
@@ -99,7 +107,7 @@ end
 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), Section([F(c) for c in centers], centers); isparallel = isparallel,
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c) for c in centers], centers); isparallel = isparallel,
 kwargs...)
 
 @inline getM(sh::ShootingProblem) = sh.M
@@ -177,6 +185,8 @@ function (sh::ShootingProblem)(x::BorderedArray)
 			ip1 = (ii == M) ? 1 : ii+1
 			out.u[ii] .= sh.flow(xc[ii], sh.ds[ii] * T) .- xc[ip1]
 		end
+	else
+		@assert 1==0 "Not implemented yet. Try to use AbstractVectors instead"
 	end
 
 	# add constraint
@@ -245,6 +255,8 @@ function (sh::ShootingProblem)(x::BorderedArray, dx::BorderedArray; δ = 1e-9)
 			tmp = sh.flow(x.u[ii], dx.u[ii], sh.ds[ii] * T)
 			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u) .* sh.ds[ii] * dT .- dx.u[ip1]
 		end
+	else
+		@assert 1==0 "Not implemented yet. Try to use AbstractVectors instead"
 	end
 
 	# add constraint

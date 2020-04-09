@@ -1,10 +1,112 @@
+using RecipesBase
+
+@recipe function f(contres::ContResult ;plot_fold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing )
+	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+	axisDict = Dict(:p => 1, :sol => 1, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
+	# seriestype --> :path
+	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
+	if typeof(vars) <: Tuple && (typeof(vars[1]) == Symbol && typeof(vars[2]) == Symbol)
+		ind1 = axisDict[vars[1]]
+		ind2 = axisDict[vars[2]]
+	elseif typeof(vars) <: Tuple && (typeof(vars[1]) <: Int && typeof(vars[2]) <: Int)
+		ind1 = vars[1]
+		ind2 = vars[2]
+	else
+		ind1 = 1
+		ind2 = 2
+	end
+	@series begin
+		if length(contres.stability) > 2
+			linewidth --> map(x -> isodd(x) ? 3.0 : 1.0, contres.stability)
+		end
+		contres.branch[ind1, :], contres.branch[ind2, :]
+	end
+	# display last point on the branch
+	@series begin
+		seriestype := :scatter
+		markershape --> :cross
+		color --> :red
+		label --> ""
+		[contres.branch[ind1, end]], [contres.branch[ind2, end]]
+	end
+
+	# display bifurcation points
+	bifpoints = vcat(contres.bifpoint, filter(x->x.type != :none, contres.foldpoint))
+	if length(bifpoints) >= 1 && ind2 == 2
+		id = 1
+		bifpoints[1].type == :none ? id = 2 : id = 1
+		if plot_fold
+			bifpt = bifpoints[id:end]
+		else
+			bifpt = filter(x->x.type != :fold, bifpoints[id:end])
+		end
+		if filterbifpoints == true
+			bifpt = filterBifurcations(bifpt)
+		end
+		@series begin
+			seriestype := :scatter
+			color --> map(x->colorbif[x.type], bifpt)
+			markersize --> 4
+			markerstrokewidth --> 0
+			label --> ""
+			map(x -> x.param, bifpt), map(x -> x.printsol, bifpt)
+		end
+
+		# add legend for bifurcation points
+		if putbifptlegend && length(bifpoints) >= 1
+			bp = unique([pt.type for pt in bifpt if pt.type != :none])
+			(length(bp) == 0) && return
+			for pt in bp
+				@series begin
+					seriestype := :scatter
+					color --> colorbif[pt]
+					label --> "$pt"
+					markerstrokewidth --> 0
+					[], []
+				end
+			end
+		end
+
+	end
+end
+
+
+@recipe function Plots(brs::AbstractVector{<:ContResult} ;plot_fold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing )
+	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
+	for res in brs
+		@series begin
+			putbifptlegend --> false
+			label --> false
+
+			for pt in res.bifpoint
+				push!(bp, pt.type)
+			end
+			res
+		end
+	end
+	# add legend for bifurcation points
+	if putbifptlegend && length(bp) > 0
+		for pt in bp
+			@series begin
+				seriestype := :scatter
+				color --> colorbif[pt]
+				label --> "$pt"
+				markerstrokewidth --> 0
+			# scatter!([], [], color = colorbif[pt], label = "$pt", markerstrokewidth = 0)
+				[], []
+			end
+		end
+	end
+end
+
+
 ####################################################################################################
 """
 Plot the branch of solutions during the continuation
 """
 function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-	branch = contres.branch
 
 	if contparms.computeEigenValues == false
 		l =  Plots.@layout [a{0.5w} [b; c]]
@@ -13,9 +115,8 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 	Plots.plot(layout = l)
 
-	# plot the branch of solutions
-	plotBranch!(contres; filterbifpoints = true, putbifptlegend = false, xlabel="p",  ylabel="||x||", label="", subplot=1)
-	plot!(branch[1, :],	 xlabel="it", ylabel="p", label="", subplot=2)
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel="p",  ylabel="||x||", label="", subplot=1)
+	plot!(contres;	vars = (:step,:p), putbifptlegend = false, xlabel="it", ylabel="p", label = "", subplot=2)
 
 	if contparms.computeEigenValues
 		eigvals = contres.eig[end].eigenvals
@@ -25,42 +126,6 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	plotuserfunction(sol.u, sol.p; subplot = 3)
 
 	display(title!(""))
-end
-
-"""
-	plotBranch(contres::ContResult, plot_fold = true; kwargs...)
-
-Plot the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch(br, marker = :dot)`.
-For the continuation diagram, the legend is as follows `(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow)`
-"""
-function plotBranch(contres, plot_fold = true; kwargs...)
-	# we do not specify the type of contres, not convenient when using JLD2
-	plot()
-	plotBranch!(contres, plot_fold; kwargs...)
-end
-
-"""
-	plotBranch(brs::Vector, plot_fold = true; putbifptlegend = true, filterbifpoints = false, kwargs...)
-
-Plot all the branches contained in `brs` in a single figure. Convenient when many bifurcation diagram have been computed.
-"""
-function plotBranch(brs::Vector, plot_fold = true; putbifptlegend = true, filterbifpoints = false, kwargs...)
-	# we do not specify the type of contres, not convenient when using JLD2
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-	plotBranch(brs[1], plot_fold; putbifptlegend = false, filterbifpoints = filterbifpoints, kwargs...)
-	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
-	for ii=2:length(brs)
-		plotBranch!(brs[ii], plot_fold; putbifptlegend = false, filterbifpoints = filterbifpoints, kwargs...) |> display
-		for pt in brs[ii].bifpoint
-			push!(bp, pt.type)
-		end
-	end
-	# add legend for bifurcation points
-	if putbifptlegend && length(bp) > 0
-		for pt in bp
-			scatter!([], [], color = colorbif[pt], label = "$pt", markerstrokewidth = 0)
-		end
-	end
 end
 
 function filterBifurcations(bifpt)
@@ -88,46 +153,4 @@ function filterBifurcations(bifpt)
 	# 	println(p)
 	# end
 	res[2:end]
-end
-
-"""
-	plotBranch!(contres, plot_fold = true; putbifptlegend = true, filterbifpoints::Bool = false, kwargs...)
-
-Append to the current plot, the plot of the branch of solutions from a `ContResult`. You can also pass parameters like `plotBranch!(br, marker = :dot)`. Options to filter the bifurcation points (which are mostly guesses) are provided. For example, `filterbifpoints = true` merges the nearby Fold and Branch points.
-"""
-function plotBranch!(contres, plot_fold = true; putbifptlegend = true, filterbifpoints::Bool = false, kwargs...)
-	# we do not specify the type of contres, not convenient when using JLD2
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-	branch = contres.branch
-	if length(contres.stability) > 2
-		# plot!(branch[1, :], branch[2, :], linestyle = map(x -> isodd(x) ? :solid : :dash, contres.stability); kwargs...)
-		# plot!(branch[1, :], branch[2, :], color = map(x -> isodd(x) ? :green : :red, contres.stability); kwargs...)
-		plot!(branch[1, :], branch[2, :], linewidth = map(x -> isodd(x) ? 3.0 : 1.0, contres.stability); kwargs...)
-	else
-		plot!(branch[1, :], branch[2, :]; kwargs...)
-	end
-	scatter!([branch[1, end]], [branch[2, end]], marker=:cross, subplot=1, label = "")
-	# add the bifurcation points along the branch
-	bifpoints = vcat(contres.bifpoint, filter(x->x.type != :none, contres.foldpoint))
-	if length(bifpoints) >= 1
-		id = 1
-		bifpoints[1].type == :none ? id = 2 : id = 1
-		if plot_fold
-			bifpt = bifpoints[id:end]
-		else
-			bifpt = filter(x->x.type != :fold, bifpoints[id:end])
-		end
-		if filterbifpoints == true
-			bifpt = filterBifurcations(bifpt)
-		end
-		scatter!(map(x -> x.param, bifpt), map(x -> x.printsol, bifpt), label="", color = map(x->colorbif[x.type], bifpt), markersize=3, markerstrokewidth=0 ; kwargs...)
-	end
-	# add legend for bifurcation points
-	if putbifptlegend && length(bifpoints) >= 1
-		bp = unique([pt.type for pt in bifpt if pt.type != :none])
-		(length(bp) == 0) && return
-		for pt in bp
-			scatter!([], [], color=colorbif[pt], label="$pt", markerstrokewidth = 0)
-		end
-	end
 end

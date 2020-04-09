@@ -46,8 +46,8 @@ n = 101
 
 optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.01, pMax = 4.1, nev = 5, detectFold = true, plotEveryNsteps = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
 	br, _ = @time continuation(
-		(x, p) ->   F_chan(x, p),
-		(x, p) -> (Jac_mat(x, p)),
+		(x, p) ->  F_chan(x, p),
+		(x, p) -> Jac_mat(x, p),
 		out, a, optscont,
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...))
@@ -94,7 +94,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1,
 			br, indfold,
 			0.01, plot = true, verbosity = 2,
 			optcontfold)
-PALC.plotBranch(outfoldco, xlabel="beta", ylabel = "alpha", label = "");title!("")
+plot(outfoldco, xlabel="beta", ylabel = "alpha", label = "");title!("")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p * d2N.(x; b = b) .* u .* v
 
@@ -156,7 +156,7 @@ ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter=10
 		optnewton_mf)
 
 
-plotBranch(brmf,color=:red);title!("")
+plot(brmf,color=:red)
 
 # matrix free with different tangent predictor
 brmf, _ = @time continuation(
@@ -167,7 +167,7 @@ brmf, _ = @time continuation(
 	# linearAlgo = PALC.MatrixFreeBLS(),
 	)
 
-plotBranch(brmf,color=:blue)
+plot(brmf,color=:blue)
 
 brmf, _ = @time continuation(
 	(x, p) -> F_chan(x, p),
@@ -177,7 +177,7 @@ brmf, _ = @time continuation(
 	linearAlgo = MatrixFreeBLS()
 	)
 
-plotBranch(brmf,color=:green)
+plot(brmf,color=:green)
 
 brmf, _ = @time continuation(
 	(x, p) -> F_chan(x, p),
@@ -186,4 +186,4 @@ brmf, _ = @time continuation(
 	tangentAlgo = BorderedPred(),
 	linearAlgo = MatrixFreeBLS())
 
-plotBranch(brmf,color=:orange)
+plot(brmf,color=:orange)

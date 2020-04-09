@@ -86,7 +86,6 @@ heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-normC = x -> norm(x, Inf)
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 0, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
