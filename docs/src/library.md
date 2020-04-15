@@ -127,18 +127,3 @@ continuationPOTrap(probPO, orbitguess, p0::Real, contParams::ContinuationPar; li
 ```@docs
 continuationPOShooting(prob, orbitguess, p0::Real, contParams::ContinuationPar; printPeriod = true, kwargs...)
 ```
-
-## Plotting
-
-```@docs
-plotBranch(contres::ContResult; kwargs...)
-```
-
-```@docs
-plotBranch!(contres::ContResult; kwargs...)
-```
-
-```@docs
-plotBranch(brs::Vector; kwargs...)
-```
-

@@ -27,10 +27,18 @@ function (l::DefaultEig)(J, nev::Int64)
 end
 
 # case of sparse matrices or matrix free method
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
+	"Shift for Shift-Invert method"
 	sigma::T
+	"Which eigenelement to extract :LR, :LM, ..."
 	which::Symbol
-	by::Tby			# how do we sort the computed eigenvalues.
+	"Sorting function, default to real"
+	by::Tby
+	"Key words arguments passed to EigArpack"
 	kwargs::Tw
 end
 
@@ -52,6 +60,10 @@ end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 @with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
 	dim::Int64 = KrylovDefaults.krylovdim	# Krylov Dimension
 	tol::T = 1e-4							# tolerance for solver
@@ -61,6 +73,7 @@ end
 	which::Symbol = :LR
 	issymmetric::Bool = false				# if the linear map is symmetric, only meaningful if T<:Real
 	ishermitian::Bool = false 				# if the linear map is hermitian
+	"Example of vector to usen for Krylov iterations"
 	x₀::vectype = nothing					# example of vector in case of a matrix-free operator
 end
 
@@ -80,11 +93,20 @@ geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, I::Array{Int64,1}) wher
 # Solvers for ArnoldiMethod
 ####################################################################################################
 # case of sparse matrices or matrix free method
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractEigenSolver
+	"Shift for Shift-Invert method"
 	sigma::T
+	"Which eigenelement to extract LR(), LM(), ..."
 	which::Tw
-	by::Tby			# how do we sort the computed eigenvalues.
+	"how do we sort the computed eigenvalues, defaults to real"
+	by::Tby
+	"Key words arguments passed to EigArpack"
 	kwargs::Tkw
+	"Example of vector to usen for Krylov iterations"
 	x₀::vectype
 end
 

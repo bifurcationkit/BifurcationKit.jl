@@ -16,7 +16,7 @@ Returns a variable containing parameters to affect the `newton` algorithm when s
 - `almin  = 0.001 `: minimal vslue of the damping `alpha`
 
 !!! tip "Mutating"
-    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
+    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	tol::T			 = 1e-10
@@ -67,6 +67,11 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 
 	# Displaying results
 	verbose && displayIteration(it, neval, res)
+
+	# invoke callback before algo really starts
+	if callback(x, f, nothing, res, it, 0, options; x0 = x0, kwargs...) == false
+		it = maxIter
+	end
 
 	# Main loop
 	while (res > tol) & (it < maxIter)

@@ -113,9 +113,10 @@ Structure which holds the results after a call to [`continuation`](@ref).
 - `n_unstable::Vector{Int64}` a vector holding the number of eigenvalues with positive real part for each continuation step	(to detect stationary bifurcation)
 - `n_imag::Vector{Int64}` a vector holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)
 - `stability::Vector{Bool}` a vector holding the stability of the computed solution for each continuation step
-- `bifpoint::Vector{Biftype}` a vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple `(type, idx, param = T(0.), norm, printsol, u, tau, ind_bif, step, status)` where `step` is the continuation step at which the bifurcation occurs, `ind_bif` is the eigenvalue index responsible for the bifurcation (if applicable) and `idx` is the index in `eig` (see above) for which the bifurcation occurs.
+- `bifpoint::Vector{Biftype}` a vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple `(type, idx, param, norm, printsol, u, tau, ind_bif, step, status)` where `step` is the continuation step at which the bifurcation occurs, `ind_bif` is the eigenvalue index responsible for the bifurcation (if applicable) and `idx` is the index in `eig` (see above) for which the bifurcation occurs.
 - `foldpoint::Vector{Biftype}` a vector holding the set of fold points detected during the computation of the branch.
 - `eig::Vector` contains for each continuation step the eigen elements.
+- `sol`: vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [ContinuationPar](@ref)
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts}
 	# this vector is used to hold (param, printSolution(u, param), Newton iterations, ds)

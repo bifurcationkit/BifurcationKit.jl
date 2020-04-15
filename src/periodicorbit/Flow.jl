@@ -2,7 +2,7 @@ using DiffEqBase
 
 ####################################################################################################
 # this function takes into accound a parameter passed to the vector field
-# Putting the options `save_start=false` seems to bug with Sundials
+# Putting the options `save_start=false` seems to give bugs with Sundials
 function flowTimeSol(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 	_prob = DiffEqBase.remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
@@ -34,6 +34,7 @@ function dflow(x::AbstractVector, dx, p, tm, pb::ODEProblem; alg = Euler(), kwar
 	return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
+# same for Parallel computing
 function dflow(x::AbstractMatrix, dx, p, tm, epb::EnsembleProblem; alg = Euler(), kwargs...)
 	N = size(x,1)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = p)
@@ -74,13 +75,10 @@ flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...
 ####################################################################################################
 # Structures related to computing ODE/PDE Flows
 """
-	fl = Flow(F, flow, dflow)
-This composite type encapsulates:
-- the vector field `x -> F(x)` associated to a Cauchy problem,
-- the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. Only the last time point must be returned.
-- the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this.
-- the differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant being the value of the derivative of the flow.
+$(TYPEDEF)
+$(TYPEDFIELDS)
 
+## Simplified constructors
 There are some simple constructors for which you only have to pass a `prob::ODEProblem` from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 
 	fl = Flow(F, prob, Tsit5(); kwargs...)
@@ -95,12 +93,18 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 
 """
 struct Flow{TF, Tf, Tts, Tff, Td, Tse}
-	F::TF				# vector field F(x)
-	flow::Tf			# flow(x,t)
-	flowTimeSol::Tts	# flow(x,t)
-	flowFull::Tff		# flow(x,t) returns full solution
-	dflow::Td			# dflow(x,dx,t) returns (flow(x,t), dflow(x,t)⋅dx)
-	dfserial::Tse		# serial version of flow
+	"the vector field `x -> F(x)` associated to a Cauchy problem,"
+	F::TF
+	"the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. Only the last time point must be returned."
+	flow::Tf
+	"flow which returns ??"
+	flowTimeSol::Tts
+	"the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this."
+	flowFull::Tff
+	"the differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant being the value of the derivative of the flow."
+	dflow::Td
+	"serial version of flow"
+	dfserial::Tse
 
 	function Flow(F::TF, fl::Tf, fts::Tts, flf::Tff, df::Td, fse::Tse) where {TF, Tf, Tts, Tff, Td, Tse}
 		new{TF, Tf, Tts, Tff, Td, Tse}(F, fl, fts, flf, df, fse)

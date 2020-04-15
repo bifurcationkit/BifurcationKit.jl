@@ -153,7 +153,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, 
 		0.01,
 		optcontfold)
 
-plotBranch(outfoldco; xlabel="beta", ylabel="alpha")
+plot(outfoldco; xlabel="beta", ylabel="alpha")
 ```
 
 This produces:

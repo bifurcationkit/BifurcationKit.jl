@@ -223,7 +223,7 @@ normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], p
 
 probHPsh = p -> PALC.PoincareShootingProblem(u -> Fbru(u, p), p, probsundials, Rodas4P(), normals, centers; atol = 1e-10, rtol = 1e-8)
 
-hyper = probHPsh(par_hopf).psh.section
+hyper = probHPsh(par_hopf).section
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 	for ii=1:length(normals)
 		initpo_bar[:, ii] .= PALC.R(hyper, centers[ii], ii)
@@ -232,9 +232,12 @@ initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 probHPsh(par_hopf)(vec(initpo_bar))
 probHPsh(par_hopf)(vec(initpo_bar)) |> norminf
 
+P = @time PALC.PrecPartialSchurKrylovKit(dx -> probHPsh(par_hopf)(vec(outpo_psh), dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
+	scatter(real.(P.eigenvalues), imag.(P.eigenvalues))
+		plot!(1 .+ cos.(LinRange(0,2pi,100)), sin.(LinRange(0,2pi,100)))
 
-ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
+ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
 	outpo_psh, _ = @time PALC.newton(probHPsh(par_hopf),
 			vec(initpo_bar), optn,
 			; normN = norminf)
@@ -246,14 +249,12 @@ PALC.getPeriod(probHPsh(par_hopf), outpo_psh)
 
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
-	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 1)
-
-	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
-
+	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.00051, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 1)
+	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true, maxIter = 15)
 
 br_po, _ , _ = @time PALC.continuationPOShooting(
 	p -> probHPsh(@set par_hopf.l = p),
-	outpo_psh, 0.6,
+	outpo_psh, par_hopf.l,
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> PALC.plot!(x; label="", kwargs...),

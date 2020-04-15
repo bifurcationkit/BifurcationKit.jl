@@ -232,14 +232,14 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.
 plot(vcat(br_po_sh, br), label = "")
 
 ####################################################################################################
-# shooting PD
+# shooting Period Doubling
 f1 = DiffEqArrayOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), @set par_br.C = -1.32)
 # solution close to the PD point.
 
 solpd = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
-	# heatmap(sol.t, X, sol[N,:], color=:viridis, xlim=(20,280.0))
+	# heatmap(sol.t, X, sol[1:N,:], color=:viridis, xlim=(20,280.0))
 
 plot(solpd.t, solpd[N÷2, :], xlim=(290,296.2))
 
@@ -275,4 +275,4 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 
-plot(vcat(br_po_sh, br,), label = "");title!("")
+plot(vcat(br_po_sh_pd, br,), label = "");title!("")

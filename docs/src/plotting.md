@@ -1,6 +1,6 @@
 # Plotting 
 
-Plotting is provided by calling `Plots.jl` using recipes. It means, you just need to call 
+Plotting is provided by calling `Plots.jl`. It means that to plot a branch `br`, you just need to call 
 
 ```
 plot(br)
@@ -19,7 +19,7 @@ The available arguments specific out plotting methods are
 - `putbifptlegend = true`: display the legend corresponding to the bifurcation points
 - `vars = nothing`: see below
 
-If you have severals branches `br1, br2`, you can plot them together doing 
+If you have severals branches `br1, br2`, you can plot them in the same figure by doing 
 
 ```
 plot([br1, br2])
@@ -43,7 +43,7 @@ The available symbols are `:p, :sol, :itnewton, :ds, :theta, :step`.
 
 ## Plotting directly using the field names
 
-You can define your own plotting functions using the internal fields of `br` which is of type [ContRes](@ref). For example, the previous plot can be done as follows:
+You can define your own plotting functions using the internal fields of `br` which is of type [`ContResult`](@ref). For example, the previous plot can be done as follows:
 
 ```
 plot(br.branch[1, :], br.branch[2, :])

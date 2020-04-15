@@ -85,16 +85,28 @@ end
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
-	tol::T = 1e-4							# tolerance for solver
-	restart::Int64 = 200					# number of restarts
+	"tolerance for solver"
+	tol::T = 1e-4
+	" number of restarts"
+	restart::Int64 = 200
 	maxiter::Int64 = 100
-	N::Int64 = 0							# dimension of the problem
-	verbose::Bool = false					# display information during iterations
-	log::Bool = true						# record information
-	initially_zero::Bool = true				# start with zero guess
-	Pl::Tl = IterativeSolvers.Identity()	# left preconditioner
-	Pr::Tr = IterativeSolvers.Identity()	# right preconditioner
+	"dimension of the problem"
+	N::Int64 = 0
+	"display information during iterations"
+	verbose::Bool = false
+	"record information"
+	log::Bool = true
+	"start with zero guess"
+	initially_zero::Bool = true
+	"left preconditioner"
+	Pl::Tl = IterativeSolvers.Identity()
+	"right preconditioner"
+	Pr::Tr = IterativeSolvers.Identity()
 end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
@@ -130,17 +142,31 @@ end
 ####################################################################################################
 # Solvers for KrylovKit
 ####################################################################################################
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
-	dim::Int64 = KrylovDefaults.krylovdim # Krylov Dimension
-	atol::T  = KrylovDefaults.tol		  # absolute tolerance for solver
-	rtol::T  = KrylovDefaults.tol		  # relative tolerance for solver
-	restart::Int64 = 200				  # number of restarts
+	"Krylov Dimension"
+	dim::Int64 = KrylovDefaults.krylovdim
+	"absolute tolerance for solver"
+	atol::T  = KrylovDefaults.tol
+	"relative tolerance for solver"
+	rtol::T  = KrylovDefaults.tol
+	"number of restarts"
+	restart::Int64 = 200
+	"maximum number of iterations"
 	maxiter::Int64 = KrylovDefaults.maxiter
+	"verbosity ∈ {0,1,2}"
 	verbose::Int64 = 0
-	issymmetric::Bool = false				# if the linear map is symmetric, only meaningful if T<:Real
-	ishermitian::Bool = false 				# if the linear map is hermitian
-	isposdef::Bool    = false 				# if the linear map is positive definite
-	Pl::Tl			  = nothing				# left preconditioner
+	"if the linear map is symmetric, only meaningful if T<:Real"
+	issymmetric::Bool = false
+	"if the linear map is hermitian"
+	ishermitian::Bool = false
+	"if the linear map is positive definite"
+	isposdef::Bool    = false
+	"left preconditioner"
+	Pl::Tl			  = nothing
 end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs

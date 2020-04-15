@@ -235,6 +235,9 @@ function newtonPALC(F, Jh,
 	verbose && displayIteration(it, 1, res)
 	step_ok = true
 
+	# invoke callback before algo really starts
+	callback((x, p), res_f, nothing, res, 0, 0, contparams; kwargs...) == false && (it = maxIter)
+
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok
 		# copyto!(dFdp, (F(x, p + epsi) - F(x, p)) / epsi)

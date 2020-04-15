@@ -156,7 +156,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -
 		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 ```
 
-We plot the result using `plotBranch(vcat(br_po_sh, br), label = "")`:
+We plot the result using `plot(vcat(br_po_sh, br), label = "")`:
 
 ![](br_pd2.png)
 
@@ -218,6 +218,6 @@ br_po_sh_pd, _ , _ = @time continuationPOShooting(
 	printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
 ```
 
-and plot it using `plotBranch(vcat(br_po_sh, br, br_po_sh_pd), label = "")`:
+and plot it using `plot(vcat(br_po_sh, br, br_po_sh_pd), label = "")`:
 
 ![](br_pd3.png)

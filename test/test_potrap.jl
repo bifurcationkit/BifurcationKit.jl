@@ -165,7 +165,6 @@ Jan = pbsp(Val(:JacFullSparse), orbitguess_f)
 @test norm(Jfd - Jan, Inf) < 1e-6
 ####################################################################################################
 # test whether the inplace version of computation of the Jacobian is right
-
 n = 1000
 pbsp = PeriodicOrbitTrapProblem(
 			x -> x.^2,
@@ -192,9 +191,12 @@ pbsp = PeriodicOrbitTrapProblem(
 pbspti = PeriodicOrbitTrapProblem(
 			x -> cos.(x),
 			x -> spdiagm(0 => -sin.(x)),
-			rand(2n),
-			rand(2n),
-			LinRange(0,1,10) |> diff)
-
+			pbsp.ϕ,
+			pbsp.xπ,
+			ones(9) ./ 10)
+PALC.getM(pbspti)
 orbitguess_f = rand(2n*10+1)
-pbsp(orbitguess_f) - pbspti(orbitguess_f)
+@test pbspti.xπ ≈ pbsp.xπ
+@test pbspti.ϕ ≈ pbsp.ϕ
+pbspti(orbitguess_f)
+@test pbsp(orbitguess_f) ≈ pbspti(orbitguess_f)

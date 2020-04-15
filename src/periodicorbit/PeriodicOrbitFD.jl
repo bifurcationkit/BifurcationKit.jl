@@ -30,13 +30,12 @@ This composite type implements Finite Differences based on a Trapezoidal rule to
 - `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only used for the computation of the Floquet multipliers.
 - `isinplace::Bool` whether `F` and `J` are inplace functions (Experimental). In this case, the functions `F` and `J` must have the following definitions `(o, x) ->  F(o, x)` and `(o, x, dx) -> J(o, x, dx)`.
 - `ongpu::Bool` whether the computation takes place on the gpu (Experimental)
-- `adaptmesh::Bool` whether the time mesh is automatically adapted to the solution
 
 You can then call `pb(orbitguess)` to compute the functional on a `orbitguess`. Note that `orbitguess` must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
 
 The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one look for `T = x[end]` such that
 
- ``\\left(x_{i} - x_{i-1}\\right) - T\\frac{h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
+ ``\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
 
 with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
 
@@ -97,6 +96,7 @@ isInplace(pb::PeriodicOrbitTrapProblem) = pb.isinplace
 onGpu(pb::PeriodicOrbitTrapProblem) = pb.ongpu
 hasHessian(pb::PeriodicOrbitTrapProblem) = pb.d2F == nothing
 @inline getTimeStep(pb::PeriodicOrbitTrapProblem, i::Int) = getTimeStep(pb.mesh, i)
+@inline getM(pb::PeriodicOrbitTrapProblem) = pb.M
 
 function applyF(pb::PeriodicOrbitTrapProblem, dest, x)
 	if isInplace(pb)

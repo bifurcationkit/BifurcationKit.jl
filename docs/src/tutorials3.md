@@ -158,7 +158,7 @@ br_hopf, _ = @time continuationHopf(
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
 
-which gives using `plotBranch(br_hopf, xlabel="beta", ylabel = "l")`
+which gives using `plot(br_hopf, xlabel="beta", ylabel = "l")`
 
 ![](bru-hopf-cont.png)
 

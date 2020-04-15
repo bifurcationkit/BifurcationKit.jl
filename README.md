@@ -38,6 +38,16 @@ To install it, please run
 
 The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuation.jl).
 
+## Examples of bifurcation diagrams
+
+
+| ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/bru-po-cont-3br.png) | 
+|:-------------:|:-------------:|
+| [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://gridap.github.io/Tutorials/dev/pages/t003_elasticity/) |  
+| ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/br_pd3.png) |![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/cgl-sh-br.png) | 
+| [Period doubling BVAM Model](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsCGL/)  |  
+
+
 ## Main features
 
 - Matrix Free Newton solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.

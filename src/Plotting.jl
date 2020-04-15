@@ -17,15 +17,16 @@ using RecipesBase
 	end
 	@series begin
 		if length(contres.stability) > 2
-			linewidth --> map(x -> isodd(x) ? 3.0 : 1.0, contres.stability)
+			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
 		end
+		label --> ""
 		contres.branch[ind1, :], contres.branch[ind2, :]
 	end
 	# display last point on the branch
 	@series begin
 		seriestype := :scatter
 		markershape --> :cross
-		color --> :red
+		seriescolor --> :red
 		label --> ""
 		[contres.branch[ind1, end]], [contres.branch[ind2, end]]
 	end
@@ -45,7 +46,7 @@ using RecipesBase
 		end
 		@series begin
 			seriestype := :scatter
-			color --> map(x->colorbif[x.type], bifpt)
+			seriescolor --> map(x->colorbif[x.type], bifpt)
 			markersize --> 4
 			markerstrokewidth --> 0
 			label --> ""
@@ -59,7 +60,7 @@ using RecipesBase
 			for pt in bp
 				@series begin
 					seriestype := :scatter
-					color --> colorbif[pt]
+					seriescolor --> colorbif[pt]
 					label --> "$pt"
 					markerstrokewidth --> 0
 					[], []
@@ -90,7 +91,7 @@ end
 		for pt in bp
 			@series begin
 				seriestype := :scatter
-				color --> colorbif[pt]
+				seriescolor --> colorbif[pt]
 				label --> "$pt"
 				markerstrokewidth --> 0
 			# scatter!([], [], color = colorbif[pt], label = "$pt", markerstrokewidth = 0)

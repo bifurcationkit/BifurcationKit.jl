@@ -218,7 +218,7 @@ br, _ = @time continuation(
 	plotSolution = (x, p; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))
 ```
 
-and using `plotBranch(br)`, we obtain:
+and using `plot(br)`, we obtain:
 
 ![](sh2dbranches.png)
 
