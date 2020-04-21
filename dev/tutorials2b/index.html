@@ -54,15 +54,14 @@ function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 end</code></pre><p>Now that we have our operator <code>L</code>, we can encode our functional:</p><pre><code class="language-julia">function F_shfft(u, p)
 	@unpack l, ν, L = p
 	return -(L * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
-end</code></pre><h2 id="Linear-Algebra-on-the-GPU-1"><a class="docs-heading-anchor" href="#Linear-Algebra-on-the-GPU-1">Linear Algebra on the GPU</a><a class="docs-heading-anchor-permalink" href="#Linear-Algebra-on-the-GPU-1" title="Permalink"></a></h2><p>We plan to use <code>KrylovKit</code> on the GPU. For this to work, we need to redefine some functions for <code>CuArrays.jl</code>.</p><div class="admonition is-info"><header class="admonition-header">Overloading specific functions for CuArrays.jl</header><div class="admonition-body"><p>Note that the following code will not be needed in the future when <code>CuArrays</code> improves.</p></div></div><pre><code class="language-julia">using CuArrays
+end</code></pre><h2 id="Linear-Algebra-on-the-GPU-1"><a class="docs-heading-anchor" href="#Linear-Algebra-on-the-GPU-1">Linear Algebra on the GPU</a><a class="docs-heading-anchor-permalink" href="#Linear-Algebra-on-the-GPU-1" title="Permalink"></a></h2><p>We plan to use <code>KrylovKit</code> on the GPU. We define the following types so it is easier to switch to <code>Float32</code> for example:</p><pre><code class="language-julia">using CuArrays
+
+# this disable slow operations but errors if you use one of them
 CuArrays.allowscalar(false)
-import LinearAlgebra: mul!, axpby!
-mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
-mul!(x::CuArray, α::T, y::CuArray) where {T &lt;: Number} = (x .= α .* y)
-axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)
 
 # type used for the arrays, can be Float32 is GPU requires it
 TY = Float64
+
 # put the AF = Array{TY} instead to make the code on the CPU
 AF = CuArray{TY}</code></pre><p>We can now define our operator <code>L</code> and an initial guess <code>sol0</code>.</p><pre><code class="language-julia">using LinearAlgebra, Plots
 
@@ -130,4 +129,4 @@ outdef, _, flag, _ = @time newton(
 		deflationOp[1],
 		-0.1,
 		opts_cont, plot = true,
-		plotSolution = (x, p;kwargs...)-&gt;heatmap!(reshape(Array(x), Nx, Ny)&#39;; color=:viridis, kwargs...), normC = x-&gt;maximum(abs.(x)))</code></pre><p>We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at <code>examples/SH2d-fronts-cuda.jl</code>.</p><p><img src="../GPU-branch.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorials2/">« 3/ Swift-Hohenberg</a><a class="docs-footer-nextpage" href="../tutorials3/">5/ Brusselator 1d »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 15 April 2020 16:07">Wednesday 15 April 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+		plotSolution = (x, p;kwargs...)-&gt;heatmap!(reshape(Array(x), Nx, Ny)&#39;; color=:viridis, kwargs...), normC = x-&gt;maximum(abs.(x)))</code></pre><p>We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at <code>examples/SH2d-fronts-cuda.jl</code>.</p><p><img src="../GPU-branch.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorials2/">« 3/ Swift-Hohenberg</a><a class="docs-footer-nextpage" href="../tutorials3/">5/ Brusselator 1d »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 21 April 2020 07:38">Tuesday 21 April 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
