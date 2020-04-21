@@ -36,7 +36,7 @@ module PseudoArcLengthContinuation
 	export	SecantPred, BorderedPred, NaturalPred
 	export	NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
 	export	ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered
-	export	PALCIterable, iterate, PALCStateVariables, solution, getu, getp
+	export	PALCIterable, iterate, PALCStateVariables, solution, getx, getp
 	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 	export	PeriodicOrbitTrapProblem, continuationPOTrap

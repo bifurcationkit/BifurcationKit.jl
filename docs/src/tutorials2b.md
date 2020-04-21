@@ -105,21 +105,17 @@ end
 
 ## Linear Algebra on the GPU
 
-We plan to use `KrylovKit` on the GPU. For this to work, we need to redefine some functions for `CuArrays.jl`.
-
-!!! note "Overloading specific functions for CuArrays.jl"
-    Note that the following code will not be needed in the future when `CuArrays` improves.
+We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
 
 ```julia
 using CuArrays
+
+# this disable slow operations but errors if you use one of them
 CuArrays.allowscalar(false)
-import LinearAlgebra: mul!, axpby!
-mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
-mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)
-axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
 # type used for the arrays, can be Float32 is GPU requires it
 TY = Float64
+
 # put the AF = Array{TY} instead to make the code on the CPU
 AF = CuArray{TY}
 ```

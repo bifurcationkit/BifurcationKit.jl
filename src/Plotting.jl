@@ -1,6 +1,6 @@
 using RecipesBase
 
-@recipe function f(contres::ContResult ;plot_fold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing )
+@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing )
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	axisDict = Dict(:p => 1, :sol => 1, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# seriestype --> :path
@@ -36,7 +36,7 @@ using RecipesBase
 	if length(bifpoints) >= 1 && ind2 == 2
 		id = 1
 		bifpoints[1].type == :none ? id = 2 : id = 1
-		if plot_fold
+		if plotfold
 			bifpt = bifpoints[id:end]
 		else
 			bifpt = filter(x->x.type != :fold, bifpoints[id:end])
@@ -72,7 +72,7 @@ using RecipesBase
 end
 
 
-@recipe function Plots(brs::AbstractVector{<:ContResult} ;plot_fold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing )
+@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing )
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
 	for res in brs

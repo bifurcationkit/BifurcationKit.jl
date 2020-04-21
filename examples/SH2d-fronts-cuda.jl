@@ -18,10 +18,10 @@ end
 
 using CuArrays
 CuArrays.allowscalar(false)
-import LinearAlgebra: mul!, axpby!
-mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
-mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
-axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
+# import LinearAlgebra: mul!, axpby!
+# mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
+# mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
+# axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
 const TY = Float64
 const AF = CuArray{TY}
@@ -156,7 +156,7 @@ outdef, _, flag, _ = @time PALC.newton(
 ####################################################################################################
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryNsteps = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
 	computeEigenValues = true,
-	detectBifurcation = 0,
+	detectBifurcation = 1,
 	precisionStability = 1e-5,
 	saveEigenvectors = false,
 	nev = 11 )
@@ -167,7 +167,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2
 		deflationOp.roots[2],
 		-0.1,
 		opts_cont, plot = true, verbosity = 2,
-		plotSolution = (x;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...),
+		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...),
 		printSolution = (x, p) -> norm(x), normC = norminf
 		)
 

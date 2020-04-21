@@ -13,9 +13,9 @@ scatter(br)
 plot!(br, label = "continuous line")
 ```
 
-The available arguments specific out plotting methods are 
+The available arguments specific to our plotting methods are 
 
-- `plot_fold = true`: plot the fold points with black dots
+- `plotfold = true`: plot the fold points with black dots
 - `putbifptlegend = true`: display the legend corresponding to the bifurcation points
 - `vars = nothing`: see below
 
@@ -49,12 +49,12 @@ You can define your own plotting functions using the internal fields of `br` whi
 plot(br.branch[1, :], br.branch[2, :])
 ```
 
-For example, you can also plot the spectrum at a specific continuation `step::Int` by calling 
+You can also plot the spectrum at a specific continuation `step::Int` by calling 
 
 ```
 # get the eigenvalues
 eigvals = br.eig[step].eigenvals
 
 # plot them in the complex plane
-scatter!(real.(eigvals), imag.(eigvals))
+scatter(real.(eigvals), imag.(eigvals))
 ```

@@ -8,7 +8,7 @@ where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the same b
 
 ```julia
 using Revise
-	using DiffEqOperators, ForwardDiff, DifferentialEquations
+	using DiffEqOperators, DifferentialEquations
 	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const PALC = PseudoArcLengthContinuation
 
@@ -119,8 +119,10 @@ initpo = vcat(sol(116.), 6.9) |> vec
 
 # linear solver for shooting functional
 ls = GMRESIterativeSolvers(tol = 1e-4, N = 2Nx * Ny + 1, maxiter=50, verbose = false)
+
 # newton parameters
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
+
 # continuation parameters
 eig = EigKrylovKit(tol=1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 1.5, maxSteps = 60, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)

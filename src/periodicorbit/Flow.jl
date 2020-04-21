@@ -93,17 +93,22 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 
 """
 struct Flow{TF, Tf, Tts, Tff, Td, Tse}
-	"the vector field `x -> F(x)` associated to a Cauchy problem,"
+	"The vector field `x -> F(x)` associated to a Cauchy problem,"
 	F::TF
-	"the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. Only the last time point must be returned."
+
+	"The flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. Only the last time point must be returned."
 	flow::Tf
-	"flow which returns ??"
+
+	"Flow which returns the tuple (t, u(t))"
 	flowTimeSol::Tts
-	"the flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this."
+
+	"The flow (or semigroup) associated to the Cauchy problem `(x, t) -> flow(x, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this."
 	flowFull::Tff
-	"the differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant being the value of the derivative of the flow."
+
+	"The differential `dflow` of the flow w.r.t. `x`, `(x, dx, t) -> dflow(x, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, t), du = dflow(x, dx, t))`, the last composant being the value of the derivative of the flow."
 	dflow::Td
-	"serial version of flow"
+
+	"Serial version of flow"
 	dfserial::Tse
 
 	function Flow(F::TF, fl::Tf, fts::Tts, flf::Tff, df::Td, fse::Tse) where {TF, Tf, Tts, Tff, Td, Tse}
@@ -119,7 +124,7 @@ end
 (fl::Flow)(x, dx, t; kw2...) 	  = fl.dflow(x, dx, t; kw2...)
 (fl::Flow)(::Val{:Full}, x, t) 	  = fl.flowFull(x, t)
 (fl::Flow)(::Val{:TimeSol}, x, t) = fl.flowTimeSol(x, t)
-(fl::Flow)(::Val{:Serial}, x, dx, t)  = fl.dfserial(x, dx, t)
+(fl::Flow)(::Val{:Serial}, x, dx, t) = fl.dfserial(x, dx, t)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.

@@ -34,10 +34,13 @@ $(TYPEDFIELDS)
 struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
 	"Shift for Shift-Invert method"
 	sigma::T
-	"Which eigenelement to extract :LR, :LM, ..."
+
+	"Which eigen-element to extract :LR, :LM, ..."
 	which::Symbol
+
 	"Sorting function, default to real"
 	by::Tby
+
 	"Key words arguments passed to EigArpack"
 	kwargs::Tw
 end
@@ -100,13 +103,17 @@ $(TYPEDFIELDS)
 struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractEigenSolver
 	"Shift for Shift-Invert method"
 	sigma::T
-	"Which eigenelement to extract LR(), LM(), ..."
+
+	"Which eigen-element to extract LR(), LM(), ..."
 	which::Tw
+
 	"how do we sort the computed eigenvalues, defaults to real"
 	by::Tby
+
 	"Key words arguments passed to EigArpack"
 	kwargs::Tkw
-	"Example of vector to usen for Krylov iterations"
+
+	"Example of vector used for Krylov iterations"
 	x₀::vectype
 end
 
@@ -117,8 +124,8 @@ function (l::EigArnoldiMethod)(J, nev::Int64)
 		if isnothing(l.sigma)
 			decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which, l.kwargs...)
 		else
-			F = factorize(l.sigma .* LinearAlgebra.I - J)
-			Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J,1), ismutating=true)
+			F = factorize(l.sigma * LinearAlgebra.I - J)
+			Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1), ismutating=true)
 			decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
 		end
 	else

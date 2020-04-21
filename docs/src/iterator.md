@@ -35,7 +35,7 @@ PALCStateVariables
 !!! tip "continuation"
     You can also call `continuation(iter)` to have access to the regular continuation method used throughout the tutorials.
 
-## Example
+## Basic example
 
 We show a quick and simple example of use. Note that it is not very optimized because of the use of global variables.
 
@@ -78,3 +78,7 @@ plot(resp, resx; label = "", xlabel = "p")
 and you should see:
 
 ![](iterator.png)
+
+## Additional information
+
+If you want to customize the iterator to your needs, perhaps the best source of inspiration is the code of the function `continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)` where the iterator at its fullest. You will see how the eigen-elements and the stability are computed, how bifurcations are detected and how results are saved.

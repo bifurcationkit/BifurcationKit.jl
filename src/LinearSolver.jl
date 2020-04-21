@@ -90,22 +90,30 @@ $(TYPEDEF)
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
-	"tolerance for solver"
+	"Tolerance for solver"
 	tol::T = 1e-4
-	" number of restarts"
+
+	"Number of restarts"
 	restart::Int64 = 200
+
 	maxiter::Int64 = 100
-	"dimension of the problem"
+
+	"Dimension of the problem"
 	N::Int64 = 0
-	"display information during iterations"
+
+	"Display information during iterations"
 	verbose::Bool = false
-	"record information"
+
+	"Record information"
 	log::Bool = true
-	"start with zero guess"
+
+	"Start with zero guess"
 	initially_zero::Bool = true
-	"left preconditioner"
+
+	"Left preconditioner"
 	Pl::Tl = IterativeSolvers.Identity()
-	"right preconditioner"
+
+	"Right preconditioner"
 	Pr::Tr = IterativeSolvers.Identity()
 end
 
@@ -149,24 +157,33 @@ $(TYPEDFIELDS)
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
 	"Krylov Dimension"
 	dim::Int64 = KrylovDefaults.krylovdim
-	"absolute tolerance for solver"
+
+	"Absolute tolerance for solver"
 	atol::T  = KrylovDefaults.tol
-	"relative tolerance for solver"
+
+	"Relative tolerance for solver"
 	rtol::T  = KrylovDefaults.tol
-	"number of restarts"
+
+	"Number of restarts"
 	restart::Int64 = 200
-	"maximum number of iterations"
+
+	"Maximum number of iterations"
 	maxiter::Int64 = KrylovDefaults.maxiter
-	"verbosity ∈ {0,1,2}"
+
+	"Verbosity ∈ {0,1,2}"
 	verbose::Int64 = 0
-	"if the linear map is symmetric, only meaningful if T<:Real"
+
+	"If the linear map is symmetric, only meaningful if T<:Real"
 	issymmetric::Bool = false
-	"if the linear map is hermitian"
+
+	"If the linear map is hermitian"
 	ishermitian::Bool = false
-	"if the linear map is positive definite"
-	isposdef::Bool    = false
-	"left preconditioner"
-	Pl::Tl			  = nothing
+
+	"If the linear map is positive definite"
+	isposdef::Bool = false
+
+	"Left preconditioner"
+	Pl::Tl = nothing
 end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
