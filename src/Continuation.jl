@@ -267,7 +267,6 @@ Returns a variable containing the state of the continuation procedure.
 - `solution(state)` returns the current solution (x, p)
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
-- `isstable(state)` whether the current solution is linearly stable
 """
 @with_kw mutable struct PALCStateVariables{Tv, T, Teigvals, Teigvec}
 	z_pred::Tv								# current solution

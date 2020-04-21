@@ -23,7 +23,8 @@ function (l::DefaultEig)(J, nev::Int64)
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = l.which, rev = true)
 	nev2 = min(nev, length(I))
-	return Complex.(F.values[I[1:nev2]]), F.vectors[:, I[1:nev2]], true, 1
+	# we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
+	return Complex.(F.values[I[1:nev2]]), Complex.(F.vectors[:, I[1:nev2]]), true, 1
 end
 
 # case of sparse matrices or matrix free method
