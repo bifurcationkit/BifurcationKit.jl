@@ -348,7 +348,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	# save solution
 	if it.contParams.saveSolEveryNsteps > 0 &&
 		mod(state.step, it.contParams.saveSolEveryNsteps) == 0
-		push!(contres.sol, (x = getx(state), p = getp(state), step = state.step))
+		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if it.contParams.computeEigenValues
@@ -626,6 +626,11 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 !!! tip "Controlling the argument `linearAlgo`"
     In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, p0, contParams, linearAlgo; kwargs...)`.
+
+# Simplified call:
+You can also use the following call for which the jacobian is computed internally using Finite Differences
+
+	continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...)
 
 # Method
 

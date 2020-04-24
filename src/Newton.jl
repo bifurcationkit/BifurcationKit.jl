@@ -43,13 +43,16 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 - `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The `optionsN` will be `options` passed in order to change the linear / eigen solvers
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
-Simplified calls are provided, for example when `J` is not passed. It is then computed with finite differences.
-
 # Output:
 - solution:
 - history of residuals
 - flag of convergence
 - number of iterations
+
+# Simplified call
+When `J` is not passed. It is then computed with finite differences. The call is as follows:
+
+	newton(Fhandle, x0, options::NewtonPar; kwargs...)
 """
 function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...) where T
 	# Extract parameters

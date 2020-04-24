@@ -115,13 +115,16 @@ end
 
 This is the deflated version of the Newton Solver for `F(x) = 0` with Jacobian `J`. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more informations.
 
-Simplified calls are provided, for example when `J` is not passed. It then computed with finite differences.
-
 # Output:
 - solution:
 - history of residuals
 - flag of convergence
 - number of iterations
+
+# Simplified call
+When `J` is not passed. It then computed with finite differences. The call is as follows:
+
+	newton(Fhandle, Jhandle, x0, options, defOp; kwargs...)
 """
 function newton(Fhandle, Jhandle, x0::vectype, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype, S, E}
 	# we create the new functional
