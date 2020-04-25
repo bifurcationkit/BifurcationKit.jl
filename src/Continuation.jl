@@ -170,7 +170,7 @@ This function is used to initialize the composite type `ContResult` according to
 """
 function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
 	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = x0, ind_bif = 0, step = 0, status = :guess, δ = (0,0))
-	contParams.saveSolEveryNsteps > 0 ? sol = [(x = x0, p = br[1,1], step = 1)] : sol = nothing
+	sol = contParams.saveSolEveryNsteps > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0
 	stability = true
@@ -337,7 +337,7 @@ end
 function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	push!(contres.branch, getStateSummary(it, state))
 
-	if state.n_unstable[1] >= 0 # if to deal with n_unstable = -1
+	if state.n_unstable[1] >= 0 # whether to deal with n_unstable = -1
 		push!(contres.n_unstable, state.n_unstable[1])
 		push!(contres.stability, isstable(state))
 	end
@@ -692,5 +692,6 @@ function continuation(Fhandle, Jhandle,
 	return continuation(Fhandle, Jhandle, x0, p0, contParams, _linearAlgo; tangentAlgo = tangentAlgo, plot = plot, printSolution = printSolution, normC = normC, dotPALC = dotPALC, plotSolution = plotSolution, finaliseSolution = finaliseSolution, callbackN = callbackN, filename = filename, verbosity = verbosity)
 
 end
+
 
 continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S, E} = continuation(Fhandle, (x0, p) -> finiteDifferences(u -> Fhandle(u, p), x0), x0, p0, contParams; kwargs...)
