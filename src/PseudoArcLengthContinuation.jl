@@ -13,6 +13,7 @@ module PseudoArcLengthContinuation
 	include("Continuation.jl")
 	include("Bifurcations.jl")
 	include("Predictor.jl")
+	include("NormalForms.jl")
 	include("DeflationOperator.jl")
 	include("BorderedProblem.jl")
 	include("Plotting.jl")

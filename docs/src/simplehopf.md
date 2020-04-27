@@ -1,0 +1,3 @@
+# Simple Hopf branch switching
+
+Work in progress...

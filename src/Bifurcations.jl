@@ -183,10 +183,13 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 	n_inversion = 0
 	status = :guess
 
+	biflocated = false
+
 	while next !== nothing &&
 			abs(state.ds) >= iter.contParams.dsminBisection &&
 			state.step < iter.contParams.maxBisectionSteps &&
-			n_inversion <= iter.contParams.nInversion
+			n_inversion <= iter.contParams.nInversion &&
+			biflocated == false
 
 		if state.isconverged == false
 			@error "----> Newton failed when locating bifurcation!"
@@ -211,7 +214,9 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		end
 
 		verbose &&	printstyled(color=:blue, "----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2), ", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,"\n Eigenvalues:\n")
-		verbose && Base.display(closesttozero(eiginfo[1])[1:5])
+		verbose && Base.display(closesttozero(eiginfo[1])[1:min(5, length(getx(state)))])
+
+		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
 
 		# body
 		next = iterate(iter, state; _verbosity = 0)
@@ -219,7 +224,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
 
 	# update current state
-	if isodd(n_inversion)
+	if isodd(n_inversion) || biflocated
 		status = :converged
 		copyto!(_state.z_pred, state.z_pred)
 		copyto!(_state.z_old,  state.z_old)

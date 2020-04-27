@@ -1,6 +1,7 @@
 using Test
 include("test_ms.jl")
 include("poincareMap.jl")
+include("testNF.jl")
 include("stuartLandauSH.jl")
 include("test_linear.jl")
 include("simple_continuation.jl")

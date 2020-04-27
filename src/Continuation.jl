@@ -349,7 +349,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 
 	# save solution
 	if it.contParams.saveSolEveryNsteps > 0 &&
-		mod(state.step, it.contParams.saveSolEveryNsteps) == 0
+			mod(state.step, it.contParams.saveSolEveryNsteps) == 0
 		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
