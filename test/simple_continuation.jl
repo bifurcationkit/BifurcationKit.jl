@@ -1,7 +1,6 @@
-# using Revise
+# using Revise, Plots
 using PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays
 const PALC = PseudoArcLengthContinuation
-# using Plots
 
 k = 2
 N = 10

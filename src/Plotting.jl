@@ -78,6 +78,7 @@ end
 	for res in brs
 		@series begin
 			putbifptlegend --> false
+			plotfold --> plotfold
 			label --> false
 
 			for pt in res.bifpoint

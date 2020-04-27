@@ -30,6 +30,7 @@ Handling bifurcation detection
 - `dsminBisection` dsmin for the bisection algorithm when locating bifurcation points
 - `nInversion` number of sign inversions in bisection algorithm
 - `maxBisectionSteps` maximum number of bisection steps
+- `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
 Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 - `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iteration per continuation step roughly the same. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
@@ -89,6 +90,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	dsminBisection::T = 1e-5			# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15		# maximum number of bisection steps
+	tolBisectionEigenvalue::Float64 = 1e-5 # maximum number of bisection steps
 	@assert iseven(nInversion) "This number must be even"
 	@assert detectBifurcation < 3 "This option must belong to {0,1,2}"
 end
