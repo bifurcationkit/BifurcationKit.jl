@@ -2,12 +2,21 @@
 
 The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p0::Real, contParams::ContinuationPar;kwargs...)` by turning on the following flags:
 
-- `contParams.detectBifurcation = 1` which also turns on `contParams.computeEigenValues = true`
+- `contParams.detectBifurcation = 1` (which also turns on `contParams.computeEigenValues = true` automatically)
 
-The bifurcation points are first located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalues $\lambda$ are declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
+The bifurcation points are first located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalue λ is declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
+    
+## Precise detection of bifurcation points    
 
-!!! danger 
-    Note that these points are only approximate **bifurcation** points when `detectBifurcation = 1`. If `detectBifurcation = 2`, a bisection algorithm is used to locate them more precisely. They can also be refined using the methods described here after.
+Note that the bifurcation points detected when `detectBifurcation = 1` are only *approximate* bifurcation points. Indeed, we only signal that, in between two continuation steps *which can be large*, a (several) bifurcation has been detected. Hence, we only have a rough idea of where the bifurcation is located, unless your `dsmax` is very small... This can be improved as follows.
+
+If you choose `detectBifurcation = 2`, a bisection algorithm is used to locate the bifurcation points more precisely. It means that we recursively track down the change in stability. Some options in [`ContinuationPar`](@ref) control this behavior:
+
+- `nInversion`: number of sign inversions in the bisection algorithm
+- `maxBisectionSteps` maximum number of bisection steps
+- `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
+
+If this is still not enough, you can use a Newton solver to locate them very precisely. See [`newtonFold`](@ref) and [`newtonHopf`](@ref).
 
 ## Large scale computations
 

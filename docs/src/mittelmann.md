@@ -10,9 +10,7 @@ $$\Delta u +NL(\lambda,u) = 0$$
 
 with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. This is a good example to show how automatic branch switching works and also nonlinear deflation.
 
-At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$.
-
-We start with some imports that will be useful later:
+We start with some imports:
 
 ```julia
 using Revise
@@ -27,7 +25,7 @@ norminf = x -> norm(x, Inf)
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 ```
-and discretization of the problem
+and with the discretization of the problem
 
 ```julia
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
@@ -42,10 +40,11 @@ function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
 	D2xsp = sparse(D2x * Qx)[1]
 	D2ysp = sparse(D2y * Qy)[1]
 	A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
-	return A, D2x
+	return A
 end
 
 ϕ(u, λ)  = -10(u-λ*exp(u))
+dϕ(u, λ) = -10(1-λ*exp(u))
 
 function NL!(dest, u, p)
 	@unpack λ = p
@@ -82,7 +81,7 @@ Ny = 100
 lx = 0.5
 ly = 0.5
 
-Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+Δ = Laplacian2D(Nx, Ny, lx, ly)
 par_mit = (λ = .05, Δ = Δ)
 
 # initial guess f for newton
@@ -99,11 +98,14 @@ eigls = EigArpack(0.5, :LM)
 opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
 # options for continuation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
+	detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 ```	 
-Note here that we put the option `detectBifurcation = 2` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
+Note that we put the option `detectBifurcation = 2` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
 
 ## Branch of homogenous solutions
+At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$. We shall compute this branch now.
 
 We can now call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
 

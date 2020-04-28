@@ -90,7 +90,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	dsminBisection::T = 1e-5			# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15		# maximum number of bisection steps
-	tolBisectionEigenvalue::Float64 = 1e-5 # maximum number of bisection steps
+	tolBisectionEigenvalue::Float64 = 1e-5 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 	@assert iseven(nInversion) "This number must be even"
 	@assert detectBifurcation < 3 "This option must belong to {0,1,2}"
 end
@@ -115,17 +115,29 @@ Structure which holds the results after a call to [`continuation`](@ref).
 - `n_unstable::Vector{Int64}` a vector holding the number of eigenvalues with positive real part for each continuation step	(to detect stationary bifurcation)
 - `n_imag::Vector{Int64}` a vector holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)
 - `stability::Vector{Bool}` a vector holding the stability of the computed solution for each continuation step
-- `bifpoint::Vector{Biftype}` a vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple `(type, idx, param, norm, printsol, u, tau, ind_bif, step, status)` where `step` is the continuation step at which the bifurcation occurs, `ind_bif` is the eigenvalue index responsible for the bifurcation (if applicable) and `idx` is the index in `eig` (see above) for which the bifurcation occurs.
+- `bifpoint::Vector{Biftype}` a vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple `(type, idx, param, norm, printsol, x, tau, ind_bif, step, status, δ)` where:
+    - `type` bifurcation type, `:hopf, :bp...`,
+    - `idx` is the index in `eig` (see above) for which the bifurcation occurs.
+    - `param` parameter value at the bifurcation point
+    - `norm` norm of the equilibrium at the bifurcation point
+    - `printsol = printSolution(x, param)`
+    - `x` equilibrium at the bifurcation point
+    - `tau` tangent along the branch at the bifurcation point
+    - `ind_bif` is the eigenvalue index responsible for the bifurcation (if applicable)
+    - `step` is the continuation step at which the bifurcation occurs,
+    - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
+    - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
+
 - `foldpoint::Vector{Biftype}` a vector holding the set of fold points detected during the computation of the branch.
 - `eig::Vector` contains for each continuation step the eigen elements.
-- `sol`: vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [ContinuationPar](@ref)
+- `sol`: vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts}
 	# this vector is used to hold (param, printSolution(u, param), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
-	# the following variable holds the eigen elements at the index of the point along the curve. This index is the last element of eig[1] (for example). Recording this index is useful for storing only some eigenelements and not all of them along the curve
-	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec ,Int64}}}
+	# the following variable holds the eigen elements at the current step of the point along the curve. Recording this step is useful for storing only some eigen-elements and not all of them along the curve
+	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
 	# the following variable holds information about the detected bifurcation points like
 	# [(:none, idx, normC(u), u, tau, eigenvalue_index, step)] where `tau` is the tangent along the curve and `eigenvalue_index` is the index of the eigenvalue in eig (see above) which changes stability
