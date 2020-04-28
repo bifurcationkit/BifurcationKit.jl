@@ -515,7 +515,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 		# the case state.step = 0 was just done above
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
 
-			# Eigenvalues computation
+			# Eigen-elements computation, they are stored on state
 			if contParams.computeEigenValues
 				itnewton = computeEigenvalues!(it, state)
 

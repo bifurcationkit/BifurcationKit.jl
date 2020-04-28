@@ -113,7 +113,6 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 		detected = true
 	end
 
-
 	if detected
 		# record information about the bifurcation point
 		param_bif = (
@@ -140,7 +139,7 @@ function closesttozero(ev)
 end
 
 """
-Function to locate precisely bifurcation points using bisection.
+Function to locate precisely bifurcation points using a bisection algorithm.
 """
 function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verbose::Bool = true)
 	@assert detectBifucation(_state) "No bifucation detected for the state"
@@ -185,11 +184,8 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 
 	biflocated = false
 
-	while next !== nothing &&
-			abs(state.ds) >= iter.contParams.dsminBisection &&
-			state.step < iter.contParams.maxBisectionSteps &&
-			n_inversion <= iter.contParams.nInversion &&
-			biflocated == false
+	# emulate a do-while
+	while true
 
 		if state.isconverged == false
 			@error "----> Newton failed when locating bifurcation!"
@@ -218,7 +214,12 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 
 		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
 
-		# body
+		!(next !== nothing &&
+				abs(state.ds) >= iter.contParams.dsminBisection &&
+				state.step < iter.contParams.maxBisectionSteps &&
+				n_inversion <= iter.contParams.nInversion &&
+				biflocated == false) && break
+
 		next = iterate(iter, state; _verbosity = 0)
 	end
 	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
