@@ -64,17 +64,18 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |Features|Matrix Free|Custom state| Tutorial |
 |---|---|---|---|
 | Newton | Y | Y | All |
-| Newton + Deflation| Y | Y | 3, 4|
+| Newton + Deflation| Y | Y | 4, 5|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |
 | Branching point detection | Y | Y | All |
 | Fold point detection | Y | Y | All |
-| Hopf detection | Y | Y | 5 - 8 |
-| Fold Point continuation | Y | Y | 1, 7 |
-| Hopf continuation | Y | `AbstractArray` | 5 |
-| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 5, 7 |
-| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  5, 6, 8 |
-| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 5 - 8  |
-| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 7 |
+| Hopf detection | Y | Y | 6 - 9 |
+| Fold Point continuation | Y | Y | 1, 8 |
+| Hopf continuation | Y | `AbstractArray` | 6 |
+| Branch switching at simple branch points | Y | `AbstractArray` | 3 |
+| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 7, 8 |
+| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 |
+| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  |
+| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 |
 
 
 ## Requested methods for Custom State

@@ -10,7 +10,7 @@ $$\Delta u +NL(\lambda,u) = 0$$
 
 with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. This is a good example to show how automatic branch switching works and also nonlinear deflation.
 
-At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_c$ solving $N(\lambda, u_c)=0$.
+At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$.
 
 We start with some imports that will be useful later:
 

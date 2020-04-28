@@ -67,25 +67,21 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/) | GPU |
 |---|---|---|---|---|
 | Newton | Y | Y | All | :heavy_check_mark:  |
-| Newton + Deflation| Y | Y | 3, 4| :heavy_check_mark:|
+| Newton + Deflation| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |:heavy_check_mark:  |
 | Branching point detection | Y | Y | All | :heavy_check_mark: |
 | Fold point detection | Y | Y | All | :heavy_check_mark: |
-| Hopf detection | Y | Y | 5 - 8 | :heavy_check_mark: |
-| Fold Point continuation | Y | Y | 1, 7 | |
+| Hopf detection | Y | Y | 6 - 9 | :heavy_check_mark: |
+| Fold Point continuation | Y | Y | 1, 8 | |
 | Hopf continuation | Y | `AbstractArray` | 5 | |
-| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 5, 7 | :heavy_check_mark:|
-| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  5, 6, 8 | :heavy_check_mark: | 
-| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 5 - 8  | |
-| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 7 | |
+| Branch switching at simple branch points | Y | `AbstractArray` | 3 | |
+| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
+| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | :heavy_check_mark: | 
+| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |
+| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 | |
 
 ## To do or grab
 Without a priority order:
 
-- [ ] improve plotting by using recipies
 - [ ] improve compatibility with `DifferentialEquations.jl`
 - [ ] Add interface to other iterative linear solvers (cg, minres,...) from IterativeSolvers.jl
-- [ ] Check different `struct` and look for potential improvements (type stability, barriers...)
-- [ ] Compute Hopf Normal Form and allow branching from Hopf point using this
-- [ ] Inplace implementation
-- [x] Write continuation loop as an iterator
