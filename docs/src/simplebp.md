@@ -22,7 +22,7 @@ In the above scalar equation,
 The reduced equation (E) can be automatically computed as follows
 
 ```julia
-analyseNF(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; 
+computeNF(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; 
 	δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
 ```
 

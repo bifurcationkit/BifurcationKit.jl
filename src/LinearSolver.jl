@@ -96,6 +96,7 @@ $(TYPEDFIELDS)
 	"Number of restarts"
 	restart::Int64 = 200
 
+	"Maximum number of iterations"
 	maxiter::Int64 = 100
 
 	"Dimension of the problem"
@@ -128,16 +129,37 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwarg
 	return res[1], length(res) > 1, res[2].iters
 end
 
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 @with_kw mutable struct GMRESIterativeSolvers!{T, Tl, Tr} <: AbstractLinearSolver
-	tol::T = 1e-4							# tolerance for solver
-	restart::Int64 = 200					# number of restarts
+	"Tolerance for solver"
+	tol::T = 1e-4
+
+	"Number of restarts"
+	restart::Int64 = 200
+
+	"Maximum number of iterations"
 	maxiter::Int64 = 100
-	N::Int64 = 0							# dimension of the problem
-	verbose::Bool = false					# display information during iterations
-	log::Bool = true						# record information
-	initially_zero::Bool = true				# start with zero guess
-	Pl::Tl = IterativeSolvers.Identity()	# left preconditioner
-	Pr::Tr = IterativeSolvers.Identity()	# right preconditioner
+
+	"Dimension of the problem"
+	N::Int64 = 0
+
+	"Display information during iterations"
+	verbose::Bool = false
+
+	"Record information"
+	log::Bool = true
+
+	"Start with zero guess"
+	initially_zero::Bool = true
+
+	"Left preconditioner"
+	Pl::Tl = IterativeSolvers.Identity()
+
+	"Right preconditioner"
+	Pr::Tr = IterativeSolvers.Identity()
 end
 
 function (l::GMRESIterativeSolvers!{T, Tl, Tr})(J, rhs; kwargs...) where {T, Ts, Tl, Tr}

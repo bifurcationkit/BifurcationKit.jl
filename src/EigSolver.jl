@@ -1,7 +1,7 @@
 using IterativeSolvers, KrylovKit, Arpack, LinearAlgebra
-# In this file, we regroud a way to provide eigen solvers
 
 abstract type AbstractEigenSolver end
+# abstract type for Matrix-Free eigensolvers
 abstract type AbstractMFEigenSolver <: AbstractEigenSolver end
 abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
@@ -69,16 +69,30 @@ $(TYPEDEF)
 $(TYPEDFIELDS)
 """
 @with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
-	dim::Int64 = KrylovDefaults.krylovdim	# Krylov Dimension
-	tol::T = 1e-4							# tolerance for solver
-	restart::Int64 = 200					# number of restarts
+	"Krylov Dimension"
+	dim::Int64 = KrylovDefaults.krylovdim
+
+	"Tolerance"
+	tol::T = 1e-4
+
+	"Number of restarts"
+	restart::Int64 = 200
+
+	"Maximum number of iterations"
 	maxiter::Int64 = KrylovDefaults.maxiter
+
+	"Verbosity ∈ {0,1,2}"
 	verbose::Int = 0
 	which::Symbol = :LR
-	issymmetric::Bool = false				# if the linear map is symmetric, only meaningful if T<:Real
-	ishermitian::Bool = false 				# if the linear map is hermitian
+
+	"If the linear map is symmetric, only meaningful if T<:Real"
+	issymmetric::Bool = false
+
+	"If the linear map is hermitian"
+	ishermitian::Bool = false
+
 	"Example of vector to usen for Krylov iterations"
-	x₀::vectype = nothing					# example of vector in case of a matrix-free operator
+	x₀::vectype = nothing
 end
 
 function (l::EigKrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
