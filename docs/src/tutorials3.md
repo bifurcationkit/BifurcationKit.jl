@@ -109,7 +109,9 @@ We continue the trivial equilibrium to find the Hopf points
 
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
+	pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, _ = @time continuation(
 		(x, p) ->    Fbru(x, @set par_bru.l = p),
@@ -251,12 +253,15 @@ Finally, we can perform continuation of this periodic orbit using the specialize
 
 ```julia
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 30, newtonOptions = opt_po, nev = 5, precisionStability = 1e-8, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, 
+	pMax = 3.0, maxSteps = 30, 
+	newtonOptions = opt_po, nev = 5, precisionStability = 1e-8, detectBifurcation = 0)
 br_po, _ , _= @time continuationPOTrap(poTrap,
-			outpo_f, l_hopf + 0.01,
-			opts_po_cont;
-			verbosity = 2,	plot = true,
-			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+	outpo_f, l_hopf + 0.01,
+	opts_po_cont;
+	verbosity = 2,	plot = true,
+	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), 
+	normC = norminf)
 ```
 
 to obtain the period of the orbit as function of `l`

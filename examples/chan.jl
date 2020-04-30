@@ -59,10 +59,10 @@ deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
 optdef = setproperties(optnewton; tol = 1e-10, maxIter = 1000)
 
 outdef1, _, _ = @time newton(
-						x ->  F_chan(x, a),
-						x -> Jac_mat(x, a),
-						out.*(1 .+ 0.01*rand(n)),
-						optdef, deflationOp)
+	x ->  F_chan(x, a),
+	x -> Jac_mat(x, a),
+	out.*(1 .+ 0.01*rand(n)),
+	optdef, deflationOp)
 plot(out, label="newton")
 	plot!(sol, label="init guess")
 	plot!(outdef1, label="deflation-1")
@@ -70,10 +70,10 @@ plot(out, label="newton")
 #save newly found point to look for new ones
 push!(deflationOp, outdef1)
 outdef2, _, _ = @time newton(
-						x ->  F_chan(x, a),
-						x -> Jac_mat(x, a),
-						outdef1.*(1 .+ 0.01*rand(n)),
-						optdef, deflationOp)
+	x ->  F_chan(x, a),
+	x -> Jac_mat(x, a),
+	outdef1.*(1 .+ 0.01*rand(n)),
+	optdef, deflationOp)
 plot!(outdef2, label="deflation-2")
 #################################################################################################### Continuation of the Fold Point using minimally augmented formulation
 optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; verbose = true, tol = 1e-10))
@@ -81,39 +81,39 @@ optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; 
 indfold = 2
 
 outfold, _, flag = @time newtonFold(
-			(x, α) ->  F_chan(x, α),
-			(x, α) -> Jac_mat(x, α),
-			br, indfold, #index of the fold point
-			optscont.newtonOptions)
+	(x, α) ->  F_chan(x, α),
+	(x, α) -> Jac_mat(x, α),
+	br, indfold, #index of the fold point
+	optscont.newtonOptions)
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 1300)
 	outfoldco, _, _ = @time continuationFold(
-			(x, α, β) ->  F_chan(x, α, β),
-			(x, α, β) -> Jac_mat(x, α, β),
-			br, indfold,
-			0.01, plot = true, verbosity = 2,
-			optcontfold)
+		(x, α, β) ->  F_chan(x, α, β),
+		(x, α, β) -> Jac_mat(x, α, β),
+		br, indfold,
+		0.01, plot = true, verbosity = 2,
+		optcontfold)
 plot(outfoldco, xlabel="beta", ylabel = "alpha", label = "");title!("")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p * d2N.(x; b = b) .* u .* v
 
 outfold, _, flag = @time newtonFold(
-			(x, α) -> F_chan(x, α),
-			(x, α) -> Jac_mat(x, α),
-			br, indfold, #index of the fold point
-			optscont.newtonOptions; Jt = (x, α) -> transpose(Jac_mat(x, α)),
-			d2F = d2F)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
+		(x, α) -> F_chan(x, α),
+		(x, α) -> Jac_mat(x, α),
+		br, indfold, #index of the fold point
+		optscont.newtonOptions; Jt = (x, α) -> transpose(Jac_mat(x, α)),
+		d2F = d2F)
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 
 outfoldco, _, _ = @time continuationFold(
-					(x, α, β) ->  F_chan(x, α, β),
-					(x, α, β) -> Jac_mat(x, α, β),
-					br, indfold, 0.01, optcontfold;
-					Jt = (x, α, β) -> transpose(Jac_mat(x, α, β)),
-					d2F = β -> ((x, α, v1, v2) -> d2F(x,α,v1,v2; b = β)), plot = true)
+		(x, α, β) ->  F_chan(x, α, β),
+		(x, α, β) -> Jac_mat(x, α, β),
+		br, indfold, 0.01, optcontfold;
+		Jt = (x, α, β) -> transpose(Jac_mat(x, α, β)),
+		d2F = β -> ((x, α, v1, v2) -> d2F(x,α,v1,v2; b = β)), plot = true)
 ###################################################################################################
 # Matrix Free example
 function dF_chan(x, dx, α, β = 0.01)

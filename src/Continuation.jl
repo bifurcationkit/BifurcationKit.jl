@@ -197,7 +197,7 @@ function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where 
 		_evvectors = (eigenvals = Complex{T}(1), eigenvec = nothing, step = 0)
 	end
 
-	return ContResult{T, typeof(_evvectors[1]), typeof(_evvectors[2]), typeof(bif0), typeof(sol)}(
+	return ContResult(
 		branch = br,
 		bifpoint = [bif0],
 		foldpoint = [bif0],

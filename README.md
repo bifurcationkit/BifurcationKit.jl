@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/rveltz/PseudoArcLengthContinuation.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/PseudoArcLengthContinuation.jl?branch=master)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev)
 
-This Julia package aims at **performing bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
+This Julia package aims at performing **bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
 It incorporates a pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 

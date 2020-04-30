@@ -181,7 +181,10 @@ deflationOp = DeflationOperator(2.0,(x,y) -> dot(x[1:end-1],y[1:end-1]),1.0,[zer
 # 	ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
 # 	ls(Jpo, rand(ls.N))
 ####################################################################################################
-# slow version DO NOT RUN!!!
+#
+# 									slow version DO NOT RUN!!!
+#
+####################################################################################################
 # opt_po = (@set opt_po.eigsolver = eig_MF_KrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
@@ -231,7 +234,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 
 
 branches = Any[br_pok2]
 # push!(branches, br_po)
-plot([branches[1]]; putbifptlegend = false, label="", xlabel="r",ylabel="Amplitude", legend = :bottomright)
+plot([branches[1]]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
 
 ###################################################################################################
 # preconditioner taking into account the constraint

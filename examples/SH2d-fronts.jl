@@ -44,11 +44,11 @@ X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
 Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
 
 sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
-		sol0 .= sol0 .- minimum(vec(sol0))
-		sol0 ./= maximum(vec(sol0))
-		sol0 = sol0 .- 0.25
-		sol0 .*= 1.7
-		heatmap(sol0', color=:viridis)
+	sol0 .= sol0 .- minimum(vec(sol0))
+	sol0 ./= maximum(vec(sol0))
+	sol0 = sol0 .- 0.25
+	sol0 .*= 1.7
+	heatmap(sol0', color=:viridis)
 
 Δ, D2x = Laplacian2D(Nx, Ny, lx, ly, :Neumann)
 L1 = (I + Δ)^2
@@ -57,10 +57,10 @@ par = (l = -0.1, ν = 1.3, L1 = L1)
 optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
 # optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
 	sol_hexa, hist, flag = @time PALC.newton(
-				x ->  F_sh(x, par),
-				u -> dF_sh(u, par),
-				vec(sol0),
-				optnew)
+		x ->  F_sh(x, par),
+		u -> dF_sh(u, par),
+		vec(sol0),
+		optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
@@ -72,12 +72,12 @@ deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
 outdef, _, flag, _ = @time PALC.newton(
-				x -> F_sh(x, par),
-				u -> dF_sh(u, par),
-				# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
-				0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
+		x -> F_sh(x, par),
+		u -> dF_sh(u, par),
+		# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
+		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
 
-				optnew, deflationOp, normN = x -> norm(x, Inf))
+		optnew, deflationOp, normN = x -> norm(x, Inf))
 	println("--> norm(sol) = ", norm(outdef))
 	heatmapsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
@@ -112,9 +112,9 @@ function dF_sh2(du, u, p)
 end
 
 sol_hexa, _, flag = @time PALC.newton(
-			x ->  F_sh(x, par),
-			u -> (du -> dF_sh2(du, u, par)),
-			vec(sol0),
-			@set optnew.linsolver = ls)
+		x ->  F_sh(x, par),
+		u -> (du -> dF_sh2(du, u, par)),
+		vec(sol0),
+		@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)

@@ -50,7 +50,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, du::
 	T = extractPeriodFDTrap(u0)
 
 	# time step
-	h =  getTimeStep(poPb, 1) / M
+	h =  T * getTimeStep(poPb, 1)
 	Typeh = typeof(h)
 
 	out = copy(du)
@@ -63,7 +63,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, du::
 	out .= res
 
 	for ii = 2:M-1
-		h =  getTimeStep(poPb, ii) / M
+		h =  T * getTimeStep(poPb, ii)
 		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1]), out)
 		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
 		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii]), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
@@ -83,7 +83,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::vectype) where {vect
 	T = extractPeriodFDTrap(u0)
 
 	# time step
-	h =  getTimeStep(poPb, 1) / M
+	h =  T * getTimeStep(poPb, 1)
 
 	u0c = extractTimeSlices(u0, N, M)
 
@@ -93,7 +93,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::vectype) where {vect
 	for ii = 2:M-1
 		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
 		# also I - h/2 .* J seems to hurt (a little) performances
-		h =  getTimeStep(poPb, ii) / M
+		h =  T * getTimeStep(poPb, ii)
 		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii]))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1]))
 		mono .= temp * mono
 	end

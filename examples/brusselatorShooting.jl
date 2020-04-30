@@ -185,13 +185,6 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbos
 	plot!(outpo[1:end-1], label = "sol")
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
-# 	br_po, _, _= @time PALC.continuationPOShooting(
-# 		p -> probSh(@set par_hopf.l = p),
-# 		outpo, par_hopf.l,
-# 		opts_po_cont; verbosity = 2,
-# 		plot = true,
-# 		plotSolution = (x; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
-# 		printSolution = (u, p) -> u[end], normC = norminf)
 
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
