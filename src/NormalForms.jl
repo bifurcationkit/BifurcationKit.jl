@@ -15,7 +15,6 @@ function getAdjointEV(Lstar, λ::Number, options::NewtonPar; nev = 3, verbose = 
 	verbose && println("--> VP = ", λ, ", VPstar = ", λstar[I])
 	@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(λstar[I]) ≈ 0"
 	ζstar = geteigenvector(options.eigsolver ,evstar, I)
-
 	return ζstar, λstar[I]
 end
 
@@ -53,23 +52,28 @@ end
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
 ####################################################################################################
 # type for bifurcation point 1d kernel for the jacobian
+
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
 mutable struct SimpleBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint
-	# "bifurcation point"
+	"bifurcation point"
 	x0::Tv
 
-	# "Parameter value at the bifurcation point"
+	"Parameter value at the bifurcation point"
 	p::T
 
-	# "Right eigenvector"
+	"Right eigenvector(s)"
 	ζ::Tevr
 
-	# "Left eigenvector"
+	"Left eigenvector(s)"
 	ζstar::Tevl
 
-	# "Normal form coefficients"
+	"Normal form coefficients"
 	nf::Tnf
 
-	# type of bifurcation point
+	"Type of bifurcation point"
 	type::Symbol
 end
 
@@ -77,13 +81,21 @@ end
 Compute normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
 """
-function analyseNF(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
+function computeNF1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
-	@assert sum(abs, bifpt.δ) == 1 "We only provide analysis for simple bifurcation points for which the kernel of the jacobian is 1d. Here, the dimension of the BP is $(sum(abs, bifpt.δ))"
+	@assert abs(bifpt.δ[1]) == 1 "We only provide analysis for simple bifurcation points for which the kernel of the jacobian is 1d. Here, the dimension of the BP is $(abs(bifpt.δ[1]))"
 
-	verbose && println("#"^53*"\n--> Normal form Computation")
+	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
+
+	# bifurcation point
+	x0 = bifpt.x
+	p = bifpt.param
+
+	# jacobian at bifurcation point
+	L = dF(x0, p)
+
 	# linear solver
 	ls = options.linsolver
 
@@ -95,9 +107,6 @@ function analyseNF(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::Newto
 	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
 	ζ ./= norm(ζ)
 
-	# jacobian at bifurcation point
-	L = dF(bifpt.x, bifpt.param)
-
 	# extract eigenelements for adjoint(L), needed to build spectral projector
 	if isnothing(Jt)
 		ζstar, λstar = getAdjointEV(adjoint(L), conj(λ), options; nev = nev, verbose = verbose)
@@ -108,9 +117,6 @@ function analyseNF(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::Newto
 	@assert abs(dot(ζ, ζstar)) > 1e-12
 	ζstar ./= dot(ζ, ζstar)
 
-	# bifurcation point
-	x0 = bifpt.x
-	p = bifpt.param
 
 	# differentials and projector on Range(L)
 	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, p, dx1, dx2))
@@ -170,24 +176,29 @@ function predictor(bp::SimpleBranchPoint, ds::T; verbose = false) where T
 end
 
 ####################################################################################################
-mutable struct HopfBifPoint <: BifurcationPoint
-	# "Hopf point"
-	x0
 
-	# "Parameter value at the Hopf point"
-	p
+"""
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
+mutable struct HopfBifPoint{Tv, T, Tω, Tevr, Tevl, Tnf} <: BifurcationPoint
+	"Hopf point"
+	x0::Tv
 
-	# "Frequency of the Hopf point"
-	ω
+	"Parameter value at the Hopf point"
+	p::T
 
-	# "Right eigenvector"
-	ζ
+	"Frequency of the Hopf point"
+	ω::Tω
 
-	# "Left eigenvector"
-	ζstar
+	"Right eigenvector"
+	ζ::Tevr
 
-	# "Normal form coefficient (a = 0., b = 1 + 1im)"
-	nf
+	"Left eigenvector"
+	ζstar::Tevl
+
+	"Normal form coefficient (a = 0., b = 1 + 1im)"
+	nf::Tnf
 end
 
 function hopfNF(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
@@ -295,7 +306,7 @@ function hopfNF(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonP
 		ω,
 		ζ,
 		ζstar,
-		(a = 0 + 0im, b = 0 + 0im)
+		(a = 0. + 0im, b = 0. + 0im)
 	)
 	return hopfNF(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end
@@ -326,7 +337,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	if br.bifpoint[ind_bif].type == :hopf
 		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 	else
-		bifpoint = analyseNF(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
+		bifpoint = computeNF1d(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 	end
 
 	# compute predictor for point on new branch

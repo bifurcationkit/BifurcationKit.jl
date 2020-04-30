@@ -1,5 +1,5 @@
 # using Revise, Plots, Test
-using PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
+using PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays, ForwardDiff, Parameters
 const PALC = PseudoArcLengthContinuation
 norminf = x -> norm(x, Inf)
 
@@ -9,14 +9,14 @@ end
 
 par = (μ = -0.2, ν = 0)
 ####################################################################################################
-opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 20)
+opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = false, maxIter = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = opt_newton, maxSteps = 100)
 
 	br, _ = @time PALC.continuation(
 		(x, p) -> Fbp(x, @set par.μ = p),
 		[0.1, 0.1], par.μ,
 		printSolution = (x, p) -> norminf(x),
-		opts_br; plot = false, verbosity = 3, normC = norminf)
+		opts_br; plot = false, verbosity = 0, normC = norminf)
 
 ####################################################################################################
 # normal form computation
@@ -26,7 +26,7 @@ d1F(x,p,dx1)         = D((z, p0) -> Fbp(z, p0), x, p, dx1)
 d2F(x,p,dx1,dx2)     = D((z, p0) -> d1F(z, p0, dx1), x, p, dx2)
 d3F(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F(z, p0, dx1, dx2), x, p, dx3)
 
-bp = PALC.analyseNF(
+bp = PALC.computeNF1d(
 	(x, p) -> Fbp(x, @set par.μ  = p),
 	(x, p) -> PALC.finiteDifferences(z -> Fbp(z, @set par.μ  = p), x),
 	(x, p, dx1, dx2) -> d2F(x, (@set par.μ  = p), dx1, dx2),

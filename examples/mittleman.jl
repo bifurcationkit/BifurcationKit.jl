@@ -25,8 +25,6 @@ end
 
 ϕ(u, λ)  = -10(u-λ*exp(u))
 dϕ(u, λ) = -10(1-λ*exp(u))
-d2ϕ(u, λ) = -10(-λ*exp(u))
-d3ϕ(u, λ) = -10(-λ*exp(u))
 
 function NL!(dest, u, p)
 	@unpack λ = p
