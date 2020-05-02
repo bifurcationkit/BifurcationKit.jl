@@ -876,3 +876,69 @@ function continuationPOTrap(probPO, orbitguess, p0::Real, _contParams::Continuat
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
 	return continuationPOTrap(probPO, orbitguess, p0, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
 end
+
+####################################################################################################
+# Branch switching
+
+"""
+	continuationPOTrap(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+
+Perform branch switching at Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br`. The periodic orbits are computed using Finite Differences (see [`PeriodicOrbitTrapProblem`](@ref) for more information).
+
+# Arguments
+
+- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differencials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `br` branch result from a call to `continuation`
+- `ind_hopf` index of the bifurcation point in `br`
+- `contParams` parameters for the call to `continuation`
+
+# Optional arguments
+
+- `M = 21` number of time discretization to parametrize the periodic orbits
+- `linearPO` linear algorithm used for the computation of periodic orbits. (see [`PeriodicOrbitTrapProblem`](@ref))
+- `Jt` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector
+- `δ = 1e-8` used for finite differences
+- `δp = 0.1` used to specify a particular guess for the parameter in the branch. This allows to use a step larger than `dsmax`.
+
+!!! note "Linear solver"
+    You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
+"""
+function continuationPOTrap(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+	@assert br.bifpoint[ind_bif].type == :hopf "Error, this call is only for branching from Hopf bifurcation points or from branch points of periodic orbits"
+
+	# compute the normal form of the branch point
+	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+
+	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif::Int, _contParams.newtonOptions ; Jt = Jt, δ = δ, nev = _contParams.nev, verbose = verbose)
+
+	# compute predictor for point on new branch
+	ds = isnothing(δp) ? _contParams.ds : δp
+	pred = predictor(hopfpt, ds; verbose = verbose)
+
+	verbose && printstyled(color = :green, "#"^51*"\n--> Start Hopf branch switching. \n--> Bifurcation type = ", hopfpt.type, "\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param, "\n----> amplitude = ", pred.amp,"\n")
+
+	# build the variable to hold the functional for computing PO based on finite differences
+	probPO = p -> PeriodicOrbitTrapProblem(
+		x ->  F(x, p),
+		x -> dF(x, p),
+		real.(hopfpt.ζ), # vector ψ for the constraint
+		hopfpt.x0,
+		M)
+
+	# we compute a phase so that the constraint equation
+	# < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
+	ζr = real.(hopfpt.ζ); ζi = imag.(hopfpt.ζ)
+	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
+	verbose && printstyled(color = :green,"----> phase ϕ = ", ϕ/pi, "⋅π\n")
+
+	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi ,M)]
+	orbitguess_v = reduce(vcat, orbitguess_a)
+	orbitguess = vcat(vec(orbitguess_v), abs(2pi/pred.ω)) |> vec
+
+	# @show probPO(pred.p)(orbitguess)[end]
+
+	# perform continuation
+	branch, u, tau = continuationPOTrap(probPO, orbitguess, pred.p, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
+
+	return setproperties(branch; type = :PeriodicOrbitPOTrap, functional = probPO), u, tau
+end
