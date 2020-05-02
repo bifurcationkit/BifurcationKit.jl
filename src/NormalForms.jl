@@ -1,24 +1,45 @@
 abstract type BifurcationPoint end
 abstract type BranchPoint <: BifurcationPoint end
 
+
+function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
+	# we compute the eigen-elements of the adjoint of L
+	λstar, evstar = eigsolver(Lstar, nev)
+	# vectors to hold eigen-elements for the adjoint of L
+	λstars = Vector{ComplexF64}()
+	ζstars = Vector{typeof(geteigenvector(eigsolver, evstar, 1))}()
+
+	for λ in λs
+		I = argmin(abs.(λstar .- λ))
+		@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(λstar[I]) ≈ 0"
+		ζstar = geteigenvector(eigsolver, evstar, I)
+		push!(ζstars, ζstar)
+		push!(λstars, λstar[I])
+		# we change λstar so that it is not used twice
+		λstar[I] = 1e9
+	end
+
+	return ζstars, λstars
+end
+
 """
-	getAdjointEV(Lstar, λ::Number, options::NewtonPar; nev = 3)
+	getAdjointBasis(Lstar, λ::Number, options::NewtonPar; nev = 3)
 
 Return an eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver.
 
 More information is provided in [Simple bifurcation branch switching](@ref)
 """
-function getAdjointEV(Lstar, λ::Number, options::NewtonPar; nev = 3, verbose = false)
-	λstar, evstar = options.eigsolver(Lstar, nev)
+function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
+	λstar, evstar = eigsolver(Lstar, nev)
 	I = argmin(abs.(λstar .- λ))
-	verbose && println("--> VPstars = ", λstar)
+	verbose && (println("--> VPstars = ");Base.display(λstar))
 	verbose && println("--> VP = ", λ, ", VPstar = ", λstar[I])
 	@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(λstar[I]) ≈ 0"
-	ζstar = geteigenvector(options.eigsolver ,evstar, I)
+	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return ζstar, λstar[I]
 end
 
-# the following structs are a machinary to extend multilinear mapping from Real valued to Complex valued Arrays
+# the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
 # this is done so as to use AD (ForwardDiff.jl,...) to provide the differentials which only works on reals (usually).
 
 # struct for bilinear map
@@ -81,7 +102,7 @@ end
 Compute normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
 """
-function computeNF1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
 	@assert abs(bifpt.δ[1]) == 1 "We only provide analysis for simple bifurcation points for which the kernel of the jacobian is 1d. Here, the dimension of the BP is $(abs(bifpt.δ[1]))"
@@ -99,28 +120,31 @@ function computeNF1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::New
 	# linear solver
 	ls = options.linsolver
 
-	# "zero" eigenvalue at bifurcation point
-	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
+	# "zero" eigenvalue at bifurcation point, it must be real
+	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
 	verbose && println("--> smallest eigenvalue at bifurcation = ", λ)
 
-	# corresponding eigenvector
-	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+
+	# corresponding eigenvector, it must be real
+	ζ = real.(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
 	ζ ./= norm(ζ)
 
 	# extract eigenelements for adjoint(L), needed to build spectral projector
 	if isnothing(Jt)
-		ζstar, λstar = getAdjointEV(adjoint(L), conj(λ), options; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	else
-		ζstar, λstar = getAdjointEV(Jt(x, p), conj(λ), options; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(Jt(x, p), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
-	verbose && println("--> VP = ", λ,", VPstar = ",λstar)
+
+	ζstar = real.(ζstar); λstar = real.(λstar)
+
 	@assert abs(dot(ζ, ζstar)) > 1e-12
 	ζstar ./= dot(ζ, ζstar)
 
 
-	# differentials and projector on Range(L)
-	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, p, dx1, dx2))
-	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3))
+	# differentials and projector on Range(L), there are real valued
+	R2 = ((dx1, dx2)      -> d2F(x0, p, dx1, dx2))
+	R3 = ((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3))
 	E = x -> x .- dot(x, ζstar) .* ζ
 
 	# we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
@@ -156,23 +180,281 @@ function computeNF1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::New
 end
 
 function predictor(bp::SimpleBranchPoint, ds::T; verbose = false) where T
-	@assert bp.type != :ProbablySaddleNode
+	@assert bp.type != :ProbablySaddleNode "It seems to be a Saddle-Node bifurcation, not applicable here."
 	nf = bp.nf
 	if bp.type == :Transcritical
 		pnew = bp.p + ds
 		# we solve b1 * ds + b2 * amp / 2 = 0
-		amp = -2ds * real(nf.b1 / nf.b2)
+		amp = -2ds * nf.b1 / nf.b2
 		dsfactor = T(1)
 	else
 		# case of the Pitchfork bifurcation
 		# we need to find the type, supercritical or subcritical
-		dsfactor = real(nf.b1) * real(nf.b3) < 0 ? T(1) : T(-1)
+		dsfactor = nf.b1 * nf.b3 < 0 ? T(1) : T(-1)
 		pnew = bp.p + ds * dsfactor
 		# we solve b1 * ds + b3 * amp^2 / 6 = 0
-		amp = sqrt(-6abs(ds) * dsfactor * real(nf.b1 / nf.b3))
+		amp = sqrt(-6abs(ds) * dsfactor * nf.b1 / nf.b3)
 	end
-	verbose && println("--> Prediction from Normal form, δp = $(bp.p - pnew), amp = $amp")
+	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+end
+####################################################################################################
+# type for bifurcation point Nd kernel for the jacobian
+
+"""
+This is a type which holds information for the bifurcation points of equilibria.
+
+$(TYPEDEF)
+$(TYPEDFIELDS)
+"""
+mutable struct NdBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint
+	"bifurcation point"
+	x0::Tv
+
+	"Parameter value at the bifurcation point"
+	p::T
+
+	"Right eigenvectors"
+	ζ::Tevr
+
+	"Left eigenvectors"
+	ζstar::Tevl
+
+	"Normal form coefficients"
+	nf::Tnf
+
+	"Type of bifurcation point"
+	type::Symbol
+end
+
+function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
+	# dimension of the kernel
+	N = length(bp.ζ)
+	# for the output
+	out = zero(x)
+	# normal form
+	nf = bp.nf
+	# coefficient p
+	out = p .* nf.a
+
+	@inbounds for ii=1:N
+		# coefficient x*p
+		for jj=1:N
+			# coefficient x*p
+			out[ii] += p * nf.b1[ii , jj] * x[jj]
+
+			for kk=1:N
+				# coefficients of x^2
+				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk]
+
+				for ll=1:N
+					# coefficients of x^3
+					out[ii] += nf.b3[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll]
+				end
+			end
+		end
+	end
+	return out
+end
+
+function (bp::NdBranchPoint)(x, δp)
+	out = bp.x0 .+ δp .* x[1] .* bp.ζ[1]
+	for ii=2:length(x)
+		out .+= δp .* x[ii] .* bp.ζ[ii]
+	end
+	return out
+end
+
+function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
+	superDigits = [c for c in "⁰ ²³⁴⁵⁶⁷⁸⁹"]
+
+	nf = bp.nf
+	N = length(nf.a)
+	out = ["" for _=1:N]
+
+	for ii = 1:N
+		if abs(nf.a[ii]) > tol
+			out[ii] *= "$(round(nf.a[ii],digits=digits)) ⋅ p"
+		end
+		for jj=1:N
+			coeff = round(nf.b1[ii,jj],digits=digits)
+			if abs(coeff) > tol
+				out[ii] *= " + ($coeff) * x$jj ⋅ p"
+			end
+
+			for kk=jj:N
+				coeff = round(nf.b2[ii,jj,kk] / 2,digits=digits)
+				if abs(coeff) > tol
+					if jj == kk
+						out[ii] *= " + ($coeff) ⋅ x$jj²"
+					else
+						out[ii] *= " + ($(round(2coeff,digits=digits))) ⋅ x$jj ⋅ x$kk"
+					end
+				end
+
+				for ll=kk:N
+					coeff = round(nf.b3[ii,jj,kk,ll] / 6,digits=digits)
+					_pow = zeros(Int64,N)
+					_pow[jj] += 1;_pow[kk] += 1;_pow[ll] += 1;
+
+					if abs(coeff) > tol
+						if jj == kk == ll
+							out[ii] *= " + ($coeff)"
+						else
+							out[ii] *= " + ($(round(3coeff,digits=digits)))"
+						end
+						for mm=1:N
+							if _pow[mm] > 1
+								out[ii] *= " ⋅ x$mm" * (superDigits[_pow[mm]+1])
+							elseif _pow[mm] == 1
+								out[ii] *= " ⋅ x$mm"
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	return out
+end
+
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, ζs = nothing)
+	bifpt = br.bifpoint[ind_bif]
+	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
+		return hopfNormalForm(F, dF, d2F, d3F, br, ind_bif, options ; δ = δ, nev = nev, Jt = Jt, verbose = verbose)
+	elseif abs(bifpt.δ[1]) == 1 # simple branch point
+		return computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif, options ; δ = δ, nev = nev, Jt = Jt, verbose = verbose)
+	end
+	N = abs(bifpt.δ[1])
+	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
+	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
+
+	# bifurcation point
+	x0 = bifpt.x
+	p = bifpt.param
+
+	# jacobian at bifurcation point
+	L = dF(x0, p)
+
+	# linear solver
+	ls = options.linsolver
+
+	# "zero" eigenvalues at bifurcation point
+	rightEv = br.eig[bifpt.idx].eigenvals
+	I = sortperm(abs.(real.(rightEv)))
+	λs = rightEv[I][1:N]
+	verbose && println("--> smallest eigenvalues at bifurcation = ", real.(λs))
+
+	# and corresponding eigenvectors
+	if isnothing(ζs)
+		ζs = [geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii) for ii in I[1:N]]
+	end
+
+	# extract eigenelements for transpose(L), needed to build spectral projector
+	if isnothing(Jt)
+		ζstars, λstars = getAdjointBasis(transpose(L), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
+	else
+		ζstars, λstars = getAdjointBasis(Jt(x, p), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
+	end
+	ζstars = real.(ζstars); λstars = real.(λstars)
+	ζs = real.(ζs); λs = real.(λs)
+	verbose && println("--> VP     = ", λs, "\n--> VPstar = ", λstars)
+
+	# change only the ζstars to have bi-orthogonal left/right eigenvectors
+	# we could use projector P=A(A^{T}A)^{-1}A^{T}
+	# we use Gram-Schmidt algorithm instead
+	tmp = copy(ζstars[1])
+	for ii=1:N
+		tmp .= ζstars[ii]
+		for jj=1:N
+			if !(ii==jj)
+				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj]
+			end
+		end
+		ζstars[ii] .= tmp ./ dot(tmp, ζs[ii])
+	end
+
+	# test the bi-orthogonalization
+	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
+	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right /left eigenvectors. The left eigenvectors do not form a basis."
+
+	# differentials should work as we are looking at reals
+	R2 = ((dx1, dx2)      -> d2F(x0, p, dx1, dx2))
+	R3 = ((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3))
+
+	# projector on Range(L)
+	function E(x)
+		out = copy(x)
+		for ii=1:N
+			out .= out .- dot(x, ζstars[ii]) .* ζs[ii]
+		end
+		out
+	end
+
+	# coefficients of p
+	dgidp = Vector{Float64}(undef, N)
+	R01 = (F(x0, p + δ) .- F(x0, p)) ./ δ
+	for ii = 1:N
+		dgidp[ii] = dot(R01, ζstars[ii])
+	end
+	verbose && printstyled(color=:green,"--> a = ", dgidp,"\n")
+
+	# coefficients of x*p
+	d2gidxjdpk = zeros(Float64, N, N)
+	for ii=1:N, jj=1:N
+		R11 = (apply(dF(x0, p + δ), ζs[jj]) - apply(L, ζs[jj])) ./ δ
+		Ψ01, _ = ls(L, E(R01))
+		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
+	end
+	verbose && (printstyled(color=:green, "\n--> b1 = \n");Base.display( d2gidxjdpk ))
+
+	# coefficients of x^2
+	d2gidxjdxk = zeros(Float64, N, N, N)
+	for ii=1:N, jj=1:N, kk=1:N
+		b2v = R2(ζs[jj], ζs[kk])
+		d2gidxjdxk[ii,jj,kk] = dot(b2v, ζstars[ii])
+	end
+
+	if verbose
+		printstyled(color=:green, "\n--> b2 = \n")
+		for ii = 1:N
+			printstyled(color=:blue, "--> component $ii\n")
+			Base.display( d2gidxjdxk[ii,:,:] ./ 2)
+		end
+	end
+
+	# coefficient of x^3
+	d3gidxjdxkdxl = zeros(Float64, N, N, N, N)
+	for jj=1:N, kk=1:N, ll=1:N
+		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
+		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
+
+		wst, _ = ls(L, E(R2(ζs[ll], ζs[kk])))
+		b3v .-= R2(ζs[jj], wst)
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζstars[ii])
+
+		wst, _ = ls(L, E(R2(ζs[ll], ζs[jj])))
+		b3v .-= R2(ζs[kk], wst)
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζstars[ii])
+
+		wst, _ = ls(L, E(R2(ζs[kk], ζs[jj])))
+		b3v .-= R2(ζs[ll], wst)
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
+		for ii=1:N
+			d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
+		end
+	end
+	if verbose
+		printstyled(color=:green,"\n--> b3 = \n")
+		for ii = 1:N
+			printstyled(color=:blue, "--> component $ii\n")
+			Base.display( d3gidxjdxkdxl[ii,:,:, :] ./ 6 )
+		end
+	end
+
+	return NdBranchPoint(x0, p, ζs, ζstars, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
+
 end
 
 ####################################################################################################
@@ -199,9 +481,12 @@ mutable struct HopfBifPoint{Tv, T, Tω, Tevr, Tevl, Tnf} <: BifurcationPoint
 
 	"Normal form coefficient (a = 0., b = 1 + 1im)"
 	nf::Tnf
+
+	"Type of Hopf bifurcation"
+	type::Symbol
 end
 
-function hopfNF(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
+function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
 	x0 = pt.x0
 	p = pt.p
 	ω = pt.ω
@@ -212,6 +497,7 @@ function hopfNF(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = fals
 	# jacobian at the bifurcation point
 	L = dF(x0, p)
 
+	# we use BilinearMap to be able to call on complex valued arrays
 	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, p, dx1, dx2) ./2)
 	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3) ./6 )
 
@@ -242,6 +528,7 @@ function hopfNF(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = fals
 	printstyled(color = :red,"--> Hopf bifurcation point is supercritical: ", supercritical, "\n")
 	verbose && println((a = a, b = b))
 	pt.nf = (a = a, b = b)
+	pt.type = real(a) * real(b) < 0 ? :Supercritical : :Subcritical
 	return pt
 end
 
@@ -262,9 +549,9 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNF(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false)
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	println("#"^20*"\n--> Hopf Normal form computation")
+	println("#"^53*"\n--> Hopf Normal form computation")
 
 	# bifurcation point
 	bifpt = br.bifpoint[ind_hopf]
@@ -274,41 +561,61 @@ function hopfNF(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonP
 	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_bif]
 	ω = imag(λ)
 
-	# eigenvector
+	# right eigenvector
 	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
 	ζ ./= norm(ζ)
 
 	# jacobian at bifurcation point
 	L = dF(bifpt.x, bifpt.param)
 
-	@show bifpt.param
-
-	@show eigen(L)
-
-	# eigen-elements of the jacobian adjoint
+	# left eigen-elements
 	if isnothing(Jt)
-		ζstar, λstar = getAdjointEV(adjoint(L), conj(λ), options; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	else
-		ζstar, λstar = getAdjointEV(Jt(x, p), conj(λ), options; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(Jt(x, p), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
-	verbose && println("--> VP = ", λ, ", VPstar = ", λstar)
 
 	# check that λstar ≈ conj(λ)
 	@assert abs(λ + λstar) < 1e-3 "We did not find the needed eigenvalues for the jacobian adjoint, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?"
 
-	# normalise adjoint eigenvector
+	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
 
-	# @show abs(dot(ζ, ζstar))
 	hopfpt = HopfBifPoint(
 		bifpt.x,
 		bifpt.param,
 		ω,
 		ζ,
 		ζstar,
-		(a = 0. + 0im, b = 0. + 0im)
+		(a = 0. + 0im, b = 0. + 0im),
+		:Supercritical
 	)
-	return hopfNF(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
+	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
+end
+
+function predictor(hp::HopfBifPoint, ds::T; verbose = false) where T
+	# get the normal form
+	nf = hp.nf
+	a = nf.a
+	b = nf.b
+
+	# we need to find the type, supercritical or subcritical
+	dsfactor = real(a) * real(b) < 0 ? T(1) : T(-1)
+	pnew = hp.p + abs(ds) * dsfactor
+	@show dsfactor
+
+	# we solve a * ds + b * amp^2 = 0
+	amp = sqrt(-abs(ds) * dsfactor * real(a / b))
+
+	# o(1) correction to Hopf Frequency
+	ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+
+	verbose && println("--> Prediction from the $(hp.type) Hopf normal form, δp = $(pnew - hp.p), amp = $amp")
+	return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
+			amp = 2amp,
+			ω = ω,
+			p = pnew,
+			dsfactor = dsfactor)
 end
 
 ####################################################################################################
@@ -332,15 +639,20 @@ Automatic branch switching. More information is provided in [Simple bifurcation 
 - `kwargs` optional arguments to be passed to [`contination`](@ref), the regular `continuation` one.
 
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, kwargs...)
+	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
+
 	# detect bifurcation point type
 	if br.bifpoint[ind_bif].type == :hopf
-		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
-	else
-		bifpoint = computeNF1d(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
+		@error "You need to call `continuationPOTrap` or ``. Thus you need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
+		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+		return bifpoint
 	end
 
-	# compute predictor for point on new branch
+	# compute the normal form of the branch point
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+
+	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, optionsCont.ds / 50; verbose = verbose)
 
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")

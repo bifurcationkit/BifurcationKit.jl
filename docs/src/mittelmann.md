@@ -189,9 +189,82 @@ br2, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
 
 ![](mittlemann4.png)
 
+## Analysis at the 2d-branch points
+
+The second bifurcation point on the branch `br` of homogenous solutions has a 2d kernel. We don't provide automatic branch switching but we provide two methods to deal with such case
+- automatic local bifurcation diagram (see below)
+- branch switching with deflation (see next section)
+
+We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)
+
+```julia
+bp2d = @time PALC.computeNormalForm(
+	(x, p) -> Fmit(x, @set par_mit.λ = p),
+	(x, p) -> JFmit(x, @set par_mit.λ = p),
+	(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
+	(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
+	br, 2, opts_br.newtonOptions;  verbose=true)
+```
+
+You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [`Non-simple bifurcation branch switching`](@ref).
+
+```julia
+julia> PALC.nf(bp2d)
+2-element Array{String,1}:
+ " + (-73.897) * x1 ⋅ p + (-0.0012) ⋅ x1³ + (0.003) ⋅ x1 ⋅ x2²"
+ " + (0.003) ⋅ x1² ⋅ x2 + (-73.897) * x2 ⋅ p + (-0.0012) ⋅ x2³"
+```
+
+You can evaluate this polynomial as follows `bp2d(Val(:reducedForm),[0.1,0.2], 0.01)` which returns a 2d vector or `bp2d([0.1,0.2], 0.01)`. This last expression actually returns a vector corresponding to the PDE problem.
+
+You need to solve these equations to compute the bifurcation diagram in the neighborhood of the bifurcation point. In the present case, we do it using brute force. We suggest to use `IntervalConstraintProgramming.jl` for a more precise way.
+
+```julia
+using ProgressMeter
+Nd = 200; L = 0.9
+# sampling grid
+X = LinRange(-L,L, Nd); Y = LinRange(-L,L, Nd); P = LinRange(-0.0001,0.0001, Nd+1)
+
+# sample reduced equation on the grid for the first component
+V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
+Ind1 = findall( abs.(V1a) .<= 9e-4 * maximum(abs.(V1a)))
+# intersect with second component
+V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
+Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
+
+# get solutions
+resp = Float64[]; resx = Vector{Float64}[]; resnrm = Float64[]
+	@showprogress for k in Ind2
+		ii = Ind1[k]
+		push!(resp, P[ii[1]])
+		push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
+		push!(resx, [X[ii[2]], Y[ii[3]]])
+	end
+```
+
+We can now plot the local bifurcation diagram as follows
+
+```julia
+plot(
+	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
+	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
+```
+![](mittlemann4a.png)
+
+> This looks like a Pitchfork bifurcation with D4 symmetry
+
+We can see that there are two types of solutions. After the bifurcation point, the solutions are of the form $(x_1,x_2) = (\pm x,\pm x)$ for some real $x$. Before the bifurcation point, the solutions are of the form $(x_1,x_2) = (\pm x,0), (0, \pm x)$ for some real $x$. Here is an example `plotsol(bp2d(resx[10], resp[10]))`
+
+![](mittlemann4b.png)
+
+We could use the solutions saved in `resp, resx` as initial guesses for a call to `continuation` but we turn to a different method.
+
+!!! tip "Solutions"
+    The brute force method provided all solutions in a neighborhood of the bifurcation point.
+
 ## Branch switching with deflation
 
-At this stage, we can wonder what happens at the 2d bifurcation point of the curve of homogenous solutions. Although the normal form can be computed, it would be too cumbersome to present here. We chose another method based on [Deflated problems](@ref). We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:
+At this stage, we know what happens at the 2d bifurcation point of the curve of homogenous solutions. We chose another method based on [Deflated problems](@ref). We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:
 
 ```julia
 # deflation operator to 
@@ -202,20 +275,20 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogenous solutions
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param + 0.005), 25)
+vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
-for ii=1:size(ve,2)
-	outdef1, _, flag, _ = @time newton(
-		x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-		x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-		# initial guess for newton
-		br.bifpoint[2].x .+ 0.01.*ve[:,ii] .* (1 .+ 0.1 .* rand(Nx*Ny)),
-		optdef, deflationOp)
-		flag && push!(deflationOp, outdef1)
+for ii=1:size(ve, 2)
+		outdef1, _, flag, _ = @time newton(
+			x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			# initial guess for newton
+			br.bifpoint[2].x .+ 0.01 .* ve[:,ii] .* (1 .+ 0.01 .* rand(Nx*Ny)),
+			optdef, deflationOp)
+			flag && push!(deflationOp, outdef1)
 	end
 ```
 
-This provides `length(deflationOp) = 9` solutions as there are some symmetries in the problem. For example `plotsol(deflationOp[6])` gives
+This provides `length(deflationOp) = 5` solutions as there are some symmetries in the problem. For example `plotsol(deflationOp[5])` gives
 
 ![](mittlemann5.png)
 
@@ -225,19 +298,19 @@ We can continue this solution as follows in one direction
 brdef1, _ = @time PALC.continuation(
 	(x, p) -> Fmit(x, @set par_mit.λ = p),
 	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[6], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = 0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
+	deflationOp[5], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```
 
-and in the other direction
+If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.bifpoint[2].param + 0.005`, we get 3 new solutions that we can continue
 
 ```julia
 brdef2, _ = @time PALC.continuation(
 	(x, p) -> Fmit(x, @set par_mit.λ = p),
 	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[6], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation = 2, dsmax = 0.01);
+	deflationOp[3], br.bifpoint[2].param - 0.005, setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)

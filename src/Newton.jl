@@ -31,7 +31,7 @@ end
 
 ####################################################################################################
 """
-		newton(F, J, x0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, optionsN; kwargs...) -> true, kwargs...)
+		newton(F, J, x0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 
 This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
 

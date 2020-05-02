@@ -26,7 +26,7 @@ d1F(x,p,dx1)         = D((z, p0) -> Fbp(z, p0), x, p, dx1)
 d2F(x,p,dx1,dx2)     = D((z, p0) -> d1F(z, p0, dx1), x, p, dx2)
 d3F(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F(z, p0, dx1, dx2), x, p, dx3)
 
-bp = PALC.computeNF1d(
+bp = PALC.computeNormalForm(
 	(x, p) -> Fbp(x, @set par.μ  = p),
 	(x, p) -> PALC.finiteDifferences(z -> Fbp(z, @set par.μ  = p), x),
 	(x, p, dx1, dx2) -> d2F(x, (@set par.μ  = p), dx1, dx2),
@@ -48,8 +48,46 @@ br, _ = continuation(
 	(x, p) -> PALC.finiteDifferences(z -> Fbp(z, @set par.μ  = p), x),
 	(x, p, dx1, dx2) -> d2F(x, (@set par.μ  = p), dx1, dx2),
 	(x, p, dx1, dx2, dx3) -> d3F(x, (@set par.μ  = p), dx1, dx2, dx3),
-	br, 1, opts_br; verbose=true)
+	br, 1, opts_br; verbosity = 0)
 
+####################################################################################################
+function Fbp2d(x, p)
+	return [ x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
+			 x[2] * (3.23 .* p.μ - 0.456 * x[1]^2 - 0.123 * x[2]^2),
+			 x[3]]
+end
+
+d1F2d(x,p,dx1)         = D((z, p0) -> Fbp2d(z, p0), x, p, dx1)
+	d2F2d(x,p,dx1,dx2)     = D((z, p0) -> d1F2d(z, p0, dx1), x, p, dx2)
+	d3F2d(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F2d(z, p0, dx1, dx2), x, p, dx3)
+
+par = (μ = -0.2, ν = 0)
+
+br, _ = @time PALC.continuation(
+	(x, p) -> Fbp2d(x, @set par.μ = p),
+	[0.01, 0.01, 0.01], par.μ,
+	printSolution = (x, p) -> norminf(x),
+	setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
+
+# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
+bp2d = @time PALC.computeNormalForm(
+	(x, p) -> Fbp2d(x, @set par.μ  = p),
+	(x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, @set par.μ  = p), x),
+	(x, p, dx1, dx2) -> d2F2d(x, (@set par.μ  = p), dx1, dx2),
+	(x, p, dx1, dx2, dx3) -> d3F2d(x, (@set par.μ  = p), dx1, dx2, dx3),
+	br, 1, opts_br.newtonOptions; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+
+PALC.nf(bp2d)
+bp2d(rand(2), 0.2)
+bp2d(Val(:reducedForm), rand(2), 0.2)
+
+@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -0.123) < 1e-10
+@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -0.234) < 1e-10
+@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -0.0)   < 1e-10
+@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -0.456) < 1e-10
+@test norm(bp2d.nf.b2, Inf) < 3e-6
+@test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
+@test norm(bp2d.nf.a, Inf) < 1e-6
 ####################################################################################################
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
@@ -80,13 +118,12 @@ br, _ = @time PALC.continuation(
 	printSolution = (x, p) -> norminf(x),
 	opts_br; plot = false, verbosity = 3, normC = norminf)
 
-hp = PALC.hopfNF(
+hp = PALC.computeNormalForm(
 	(x, p) -> Fsl2(x, @set par_sl.r = p),
 	(x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, @set par_sl.r  = p), x),
 	(x, p, dx1, dx2) -> 	 d2Fsl(x, (@set par_sl.r  = p), dx1, dx2),
 	(x, p, dx1, dx2, dx3) -> d3Fsl(x, (@set par_sl.r  = p), dx1, dx2, dx3),
-	br, 1, opts_br.newtonOptions; verbose = true,
-)
+	br, 1, opts_br.newtonOptions)
 
 nf = hp.nf
 

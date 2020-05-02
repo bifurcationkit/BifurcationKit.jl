@@ -22,7 +22,7 @@ In the above scalar equation,
 The reduced equation (E) can be automatically computed as follows
 
 ```julia
-computeNF1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; 
+computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; 
 	δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
 ```
 
@@ -51,7 +51,7 @@ end
 ```
 
 !!! info "Note"
-    You should not need to call `computeNF1d` except if you want to have the full information about the branch point. Indeed, the call in the next section do it internally.
+    You should not need to call `computeNormalForm` except if you want to have the full information about the branch point. Indeed, the call in the next section do it internally.
 
 ## Automatic branch switching
 

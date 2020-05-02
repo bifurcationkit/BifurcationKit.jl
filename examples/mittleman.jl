@@ -4,7 +4,7 @@ using Revise
 	const PALC = PseudoArcLengthContinuation
 
 norminf = x -> norm(x, Inf)
-plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
+plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
@@ -60,8 +60,8 @@ d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 d1Fmit(x, p, dx) = ForwardDiff.derivative(t -> Fmit(x .+ t .* dx, p), 0.)
 d2Fmit(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fmit(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 ####################################################################################################
-Nx = 200
-	Ny = 100
+Nx = 100
+	Ny = 101
 	lx = 0.5
 	ly = 0.5
 
@@ -98,11 +98,13 @@ d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
 d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
 d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
-br1, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
- 		(x, p) -> JFmit(x, @set par_mit.λ = p),
+jet = ( (x, p) -> Fmit(x, @set par_mit.λ = p),
+		(x, p) -> JFmit(x, @set par_mit.λ = p),
 		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-		br, 3, setproperties(opts_br;ds = 0.001, maxSteps = 40); verbose=true,
+		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3))
+
+br1, _ = continuation(jet...,
+		br, 3, setproperties(opts_br;ds = 0.001, maxSteps = 40);
 		verbosity = 3, plot = true,
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
@@ -110,67 +112,111 @@ br1, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
 
 plot([br,br1],plotfold=false)
 
-br2, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
- 		(x, p) -> JFmit(x, @set par_mit.λ = p),
-		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 40); verbose=true, nev = 15,
+br2, _ = continuation(jet...,
+		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 40);
 		verbosity = 3, plot = true,
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot([br,br1,br2],plotfold=false)
 
-br3, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
+####################################################################################################
+# analyse 2d bifurcation point
+bp2d = @time PALC.computeNormalForm((x, p) -> Fmit(x, @set par_mit.λ = p),
  		(x, p) -> JFmit(x, @set par_mit.λ = p),
 		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
 		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-		br, 4, setproperties(opts_br;ds = 0.001, maxSteps = 40); verbose=true, nev = 15,
-		verbosity = 3, plot = true,
-		printSolution = (x, p) -> norm(x),
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+		br, 2, opts_br.newtonOptions;  verbose=true)
 
-plot([br,br1,br2,br3],plotfold=false)
+PALC.nf(bp2d)[2] |> println
+
+using ProgressMeter
+Nd = 200
+	L = 0.9
+	X = LinRange(-L,L, Nd)
+	Y = LinRange(-L,L, Nd)
+	P = LinRange(-0.0001,0.0001, Nd+1)
+
+V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
+
+Ind1 = findall( abs.(V1a) .<= 9e-4 * maximum(abs.(V1a)))
+
+	V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
+
+	Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
+	@show length(Ind2)
 
 
+
+resp = Float64[]
+	resx = Vector{Float64}[]
+	resnrm = Float64[]
+	@showprogress for k in Ind2
+		ii = Ind1[k]
+		push!(resp, P[ii[1]])
+		# push!(resx, max(X[ii[2]],Y[ii[3]]))
+		push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
+		push!(resx, [X[ii[2]], Y[ii[3]]])
+	end
+
+gr()
+
+plot(
+	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
+	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
+
+plotsol(bp2d.ζ[1])
+plotsol(bp2d(resx[10], resp[10]))
 ####################################################################################################
 # find isolated branch, see Farrell et al.
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
-optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
+optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
-# we find an initial guess. It has to satisfy Neumann BC
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param + 0.005), 25)
+# eigen-elements close to the second bifurcation point on the branch
+# of homogenous solutions
+vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
-for ii=1:size(ve,2)
-	outdef1, _, flag, _ = @time newton(
-		x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-		x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-		br.bifpoint[2].x .+ 0.01.*ve[:,ii] .* (1 .+ 0.1 .* rand(Nx*Ny)),
-		# out,
-		optdef, deflationOp)
-		flag && push!(deflationOp, outdef1)
+for ii=1:size(ve, 2)
+		outdef1, _, flag, _ = @time newton(
+			x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			# initial guess for newton
+			br.bifpoint[2].x .+ 0.01 .* ve[:,ii] .* (1 .+ 0.01 .* rand(Nx*Ny)),
+			optdef, deflationOp)
+			flag && push!(deflationOp, outdef1)
 	end
 	length(deflationOp)
 
-plotsol(deflationOp[6])
+
+
+l = @layout grid(3,2)
+	plot(layout = l)
+	for ii=1:length(deflationOp)
+		plotsol!(deflationOp[ii], title="$ii", subplot = ii, label = "", xlabel="$ii", colorbar=true)
+	end
+	title!("")
 
 brdef1, _ = @time PALC.continuation(
 	(x, p) -> Fmit(x, @set par_mit.λ = p),
 	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[6], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = 0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
+	deflationOp[3], br.bifpoint[2].param - 0.005,
+	# bp2d([0.6,0.6], -0.01), br.bifpoint[2].param - 0.005,
+	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1,br2,br3, brdef1],plotfold=false)
+plot([br,br1,br2, brdef1],plotfold=false)
 
 
 brdef2, _ = @time PALC.continuation(
 	(x, p) -> Fmit(x, @set par_mit.λ = p),
 	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[6], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation = 2, dsmax = 0.01);
+	deflationOp[5], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1,br2,br3, brdef1, brdef2],plotfold=false, putbifptlegend = false)
+plot([br,br1,br2, brdef1, brdef2],plotfold=false, putbifptlegend = false)
+
+plot([brdef1, brdef2],plotfold = false, putbifptlegend = false)

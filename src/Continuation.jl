@@ -106,7 +106,7 @@ end
 ####################################################################################################
 # Structure to hold result
 """
-	ContResult{T, Eigentype, Vectype, Biftype}
+	ContResult{{T, Teigvals, Teigvec, Biftype, Ts, Tfunc}
 
 Structure which holds the results after a call to [`continuation`](@ref).
 
@@ -132,7 +132,7 @@ Structure which holds the results after a call to [`continuation`](@ref).
 - `eig::Vector` contains for each continuation step the eigen elements.
 - `sol`: vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)
 """
-@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts}
+@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc}
 	# this vector is used to hold (param, printSolution(u, param), Newton iterations, ds)
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
@@ -157,6 +157,14 @@ Structure which holds the results after a call to [`continuation`](@ref).
 
 	# vector of solutions
 	sol::Ts
+
+	###############################
+	# internal variables
+	# branch type
+	type::Symbol = :Equilibrium
+
+	# structure associated to the functional, useful for branch switching
+	functional::Tfunc = nothing
 end
 
 length(br::ContResult) = length(br.branch[1, :])
@@ -165,6 +173,7 @@ _show(io, bp, ii) = @printf(io, "- %3i, %7s point around p ≈ %4.8f, step = %3i
 
 function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
+	println(io, "Branch of ", br.type)
 	if length(br.bifpoint) > 0
 		println(io, "Bifurcation points:")
 		for ii in eachindex(br.bifpoint)

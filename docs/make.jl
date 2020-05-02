@@ -26,6 +26,7 @@ makedocs(doctest = false,
 			"Fold / Hopf Continuation" => "codim2Continuation.md",
 			"Branch switching" =>[
 				"Simple branch point" => "simplebp.md",
+				"Non-simple branch point" => "nonsimplebp.md",
 				"Simple Hopf point" => "simplehopf.md",
 			],
 			"Deflated problem" => "deflatedproblem.md",
