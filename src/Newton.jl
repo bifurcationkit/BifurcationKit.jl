@@ -21,8 +21,8 @@ Returns a variable containing parameters to affect the `newton` algorithm when s
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	tol::T			 = 1e-10
 	maxIter::Int64 	 = 50
-	alpha::T         = 1.0        # damping
-	almin::T         = 0.001      # minimal damping
+	alpha::T         = convert(typeof(tol), 1.0)        # damping
+	almin::T         = convert(typeof(tol), 0.001)      # minimal damping
 	verbose::Bool    = false
 	linesearch::Bool = false
 	linsolver::L 	 = DefaultLS()
@@ -40,7 +40,15 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 - `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian `J(x)` can be a matrix or an out-of-place function.
 - `x0` initial guess
 - `options` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The `optionsN` will be `options` passed in order to change the linear / eigen solvers
+- `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
+    - `x` current solution
+    - `f` current residual
+    - `J` current jacobian
+    - `res` current norm of the residual
+    - `iteration` current newton iteration
+    - `itlinear` number of iterations to solve the linear system
+    - `optionsN` a copy of the argument `options` passed to `newton`
+    - `kwargs` kwargs arguments, contain your initial guess `x0`
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
 # Output:

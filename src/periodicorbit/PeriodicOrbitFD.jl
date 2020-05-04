@@ -55,12 +55,12 @@ where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constra
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extractPeriodFDTrap` won't be well defined because it is a scalar operation. One may have to redefine it like `extractPeriodFDTrap(x::CuArray) = x[end:end]` or something else. Also, note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, vectype, Tls <: AbstractLinearSolver, Tm}
+@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tm}
 	# Function F(x, p) = 0
-	F::TF
+	F::TF = nothing
 
 	# Jacobian of F wrt x
-	J::TJ
+	J::TJ = nothing
 
 	# Jacobian transpose of F wrt x. This is mainly used for matrix-free computation of Folds of limit cycles
 	Jt::TJt = nothing
@@ -68,12 +68,15 @@ where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constra
 	# Hessian of F wrt x, useful for continuation of Fold of periodic orbits
 	d2F::Td2F = nothing
 
+	# 3rd differential of F wrt x, useful for branch switching from branch of periodic orbits
+	d3F::Td3F = nothing
+
 	# variables to define a Section for the phase constraint equation
-	ϕ::vectype
-	xπ::vectype
+	ϕ::vectype = nothing
+	xπ::vectype = nothing
 
 	# discretisation of the time interval
-	M::Int = 1
+	M::Int = 0
 	mesh::Tm = TimeMesh(M)
 
 	# dimension of the problem in case of an AbstractVector
@@ -115,6 +118,9 @@ function applyJ(pb::PeriodicOrbitTrapProblem, dest, x, dx)
 	end
 	dest
 end
+
+# dummy constructor, useful for specifying the "algorithm" to look for periodic orbits
+# just call PeriodicOrbitTrapProblem()
 
 function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
 	_length = ϕ isa AbstractVector ? length(ϕ) : 0
@@ -177,7 +183,7 @@ function POTrapFunctional!(pb::PeriodicOrbitTrapProblem, out, u0)
 	h = T * getTimeStep(pb, 1)
 	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], h/2, outc[:, M])
 
-	for ii = 2:M-1
+	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		# this function avoids computing F(u0c[:, ii]) twice
 		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], h/2, outc[:, M])
@@ -221,7 +227,7 @@ function POTrapFunctionalJac!(pb::PeriodicOrbitTrapProblem, out, u0, du)
 
 	h = dT * getTimeStep(pb, 1)
 	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], h/2, tmp, false)
-	for ii = 2:M-1
+	for ii in 2:M-1
 		h = dT * getTimeStep(pb, ii)
 		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], h/2, tmp, false)
 	end
@@ -290,7 +296,7 @@ function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::vectype, T, 
 	@views POTrapSchemeJac!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1],
 											duc[:, 1], duc[:, M-1], h/2, tmp)
 
-	for ii = 2:M-1
+	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		@views POTrapSchemeJac!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1],
 												 duc[:, ii], duc[:, ii-1], h/2, tmp)
@@ -353,7 +359,7 @@ This function populates Jc with the cyclic matrix using the different Jacobians
 	Jn = -In - h/2 .* pb.J(u0c[:, M-1])
 	setblock!(Jc, Jn, 1, M-1)
 
-	for ii=2:M-1
+	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		Jn = -In - h/2 .* tmpJ
 		setblock!(Jc, Jn, ii, ii-1)
@@ -425,7 +431,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		# setblock!(Jc, Jn, 1, M-1)
 		J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
-		for ii=2:M-1
+		for ii in 2:M-1
 			h = T * getTimeStep(pb, ii)
 			Jn = -In - h/2 * tmpJ
 			# the next lines cost the most
@@ -479,7 +485,7 @@ end
 	# setblock!(Jc, Jn, 1, M-1)
 	J0.nzval[indx[1,M-1]] .= Jn.nzval
 
-	for ii=2:M-1
+	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		Jn = -In - tmpJ * (h/2)
 		# the next lines cost the most
@@ -537,7 +543,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::vectype) wh
 	@views Jn = In - h/2 .* pb.J(u0c[:, 1])
 	setblock!(A_diagBlock, Jn, 1, 1)
 
-	for ii=2:M-1
+	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		@views Jn = In - h/2 .* pb.J(u0c[:, ii])
 		setblock!(A_diagBlock, Jn, ii, ii)
@@ -556,7 +562,7 @@ function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
 	u0c = reshape(u0[1:end-1], N, M)
 
 	res = Float64[]
-	for ii=1:M-1
+	for ii in 1:M-1
 		push!(res, norm(u0c[:,ii+1].-u0c[:,ii]) * T/M)
 	end
 	return res
@@ -878,7 +884,7 @@ function continuationPOTrap(probPO, orbitguess, p0::Real, _contParams::Continuat
 end
 
 ####################################################################################################
-# Branch switching
+# Branch switching from Hopf bifurcation point
 
 """
 	continuationPOTrap(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
@@ -903,17 +909,18 @@ Perform branch switching at Hopf bifurcation point labelled `ind_bif` in the lis
 !!! note "Linear solver"
     You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
 """
-function continuationPOTrap(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
-	@assert br.bifpoint[ind_bif].type == :hopf "Error, this call is only for branching from Hopf bifurcation points or from branch points of periodic orbits"
+function continuationPOTrap(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, amp = 1, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+	@assert br.bifpoint[ind_bif].type == :hopf "Error, this call is only for branching from Hopf bifurcation points or from branch points of periodic orbits."
 
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 
-	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif::Int, _contParams.newtonOptions ; Jt = Jt, δ = δ, nev = _contParams.nev, verbose = verbose)
+	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif, br.params.newtonOptions ; Jt = Jt, δ = δ, nev = _contParams.nev, verbose = verbose)
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? _contParams.ds : δp
-	pred = predictor(hopfpt, ds; verbose = verbose)
+	Ty = typeof(ds)
+	pred = predictor(hopfpt, ds; verbose = verbose, ampfactor = Ty(amp))
 
 	verbose && printstyled(color = :green, "#"^51*"\n--> Start Hopf branch switching. \n--> Bifurcation type = ", hopfpt.type, "\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param, "\n----> amplitude = ", pred.amp,"\n")
 

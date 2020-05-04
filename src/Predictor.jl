@@ -22,25 +22,25 @@ end
 DotTheta() = DotTheta( (x,y) -> dot(x,y) / length(x))
 
 # Implementation of the dot product associated to DotTheta
-function (dt::DotTheta)(u1, u2, p1::T, p2::T, theta::T) where {T <: Real}
+function (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real}
 	# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
-	return real(dt.dot(u1, u2) * theta + p1 * p2 * (one(T) - theta))
+	return real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
 end
 
 # Implementation of the norm associated to DotTheta
-function (dt::DotTheta)(u, p::T, theta::T) where T
+function (dt::DotTheta)(u, p::T, θ::T) where T
 	# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
-	return sqrt(dt(u, u, p, p, theta))
+	return sqrt(dt(u, u, p, p, θ))
 end
 
-(dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, theta::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, theta)
+(dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, θ)
 
-(dt::DotTheta)(a::BorderedArray{vec, T}, theta::T) where {vec, T} = dt(a.u, a.p, theta)
+(dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)
 
 ####################################################################################################
 # equation of the arc length constraint
-function arcLengthEq(dt::DotTheta, u, p, du, dp, theta, ds)
-	return dt(u, du, p, dp, theta) - ds
+function arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds)
+	return dt(u, du, p, dp, θ) - ds
 end
 
 ####################################################################################################
@@ -70,19 +70,19 @@ end
 
 # generic corrector based on Bordered formulation
 function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
-			ds, theta, contparams, dottheta::DotTheta,
+			ds, θ, contparams, dottheta::DotTheta,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
 			normC = norm,
 			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPALC(Fhandle, Jhandle,
 			z_old, tau, z_pred,
-			ds, theta,
+			ds, θ,
 			contparams, dottheta; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 
 # corrector based on natural formulation
 function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
-			ds, theta, contparams, dottheta::DotTheta,
+			ds, θ, contparams, dottheta::DotTheta,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm,
 			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
@@ -96,14 +96,14 @@ end
 # tangent computation using Natural / Secant predictor
 # tau is the tangent prediction
 function getTangent!(tau::M, z_new::M, z_old::M, F, J,
-	ds, theta, contparams, normtheta::DotTheta,
+	ds, θ, contparams, normtheta::DotTheta,
 	algo::Talgo, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau, z_new)
 	minus!(tau, z_old)
 	if algo isa SecantPred
-		α = sign(ds) / normtheta(tau, theta)
+		α = sign(ds) / normtheta(tau, θ)
 	else
 		α = sign(ds) / abs(tau.p)
 	end
@@ -113,7 +113,7 @@ end
 # tangent computation using Bordered system
 # tau is the tangent prediction
 function getTangent!(tau::M, z_new::M, z_old::M, F, J,
-	ds, theta, contparams, dottheta::DotTheta,
+	ds, θ, contparams, dottheta::DotTheta,
 	algo::BorderedPred, verbosity, linearbdalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
@@ -124,14 +124,14 @@ function getTangent!(tau::M, z_new::M, z_old::M, F, J,
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	tau_normed = copyto!(similar(tau), tau) #copy(tau_old)
-	rmul!(tau_normed, theta / length(tau.u), 1 - theta)
+	tau_normed = copy(tau)#copyto!(similar(tau), tau) #copy(tau_old)
+	rmul!(tau_normed, θ / length(tau.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_old.u)
 	tauu, taup, flag, it = linearbdalgo( J(z_old.u, z_old.p), dFdl,
-			tau_normed, rmul!(similar(z_old.u), false), T(1), theta)
+			tau_normed, rmul!(similar(z_old.u), false), T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / dottheta(tauu, tau.u, taup, tau.p, theta)
+	α = T(1) / dottheta(tauu, tau.u, taup, tau.p, θ)
 
 	# tau_new = α * tau
 	copyto!(tau.u, tauu)
@@ -139,11 +139,11 @@ function getTangent!(tau::M, z_new::M, z_old::M, F, J,
 	rmul!(tau, α)
 end
 ################################################################################################
-function arcLengthScaling(theta, contparams, tau::M, verbosity) where {M <: BorderedArray}
+function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: BorderedArray}
 	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee, Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,” March 1, 2002. https://doi.org/10.2172/800778.
-	thetanew = theta
-	g = abs(tau.p * theta)
-	(verbosity > 0) && print("Theta changes from $(theta) to ")
+	thetanew = θ
+	g = abs(tau.p * θ)
+	(verbosity > 0) && print("Theta changes from $(θ) to ")
 	if (g > contparams.gMax)
 		thetanew = contparams.gGoal / tau.p * sqrt( abs(1.0 - g^2) / abs(1.0 - tau.p^2) )
 		if (thetanew < contparams.thetaMin)
@@ -154,12 +154,12 @@ function arcLengthScaling(theta, contparams, tau::M, verbosity) where {M <: Bord
 	return thetanew
 end
 ################################################################################################
-function stepSizeControl(ds, theta, contparams, converged::Bool, it_newton_number::Int64, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::Int64, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
 			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
 			# we stop the continuation
-			return ds, theta, true
+			return ds, θ, true
 		end
 		dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
 		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
@@ -181,9 +181,9 @@ function stepSizeControl(ds, theta, contparams, converged::Bool, it_newton_numbe
 	end
 
 	if contparams.doArcLengthScaling
-		thetanew = arcLengthScaling(theta, contparams, tau, verbosity)
+		thetanew = arcLengthScaling(θ, contparams, tau, verbosity)
 	else
-		thetanew = theta
+		thetanew = θ
 	end
 	@assert abs(dsnew) >= contparams.dsmin "Error with ds value"
 	return dsnew, thetanew, false
@@ -191,13 +191,13 @@ end
 ####################################################################################################
 """
 This is the classical matrix-free Newton Solver used to solve `F(x, p) = 0` together
-with the scalar condition `n(x, p) = (x - x0) * xp + (p - p0) * lp - n0`
+with the scalar condition `n(x, p) = (x - x0) * τx + (p - p0) * τp - n0`
 """
 function newtonPALC(F, Jh,
 					z0::BorderedArray{vectype, T},
-					tau0::BorderedArray{vectype, T},
+					τ0::BorderedArray{vectype, T},
 					z_pred::BorderedArray{vectype, T},
-					ds::T, theta::T,
+					ds::T, θ::T,
 					contparams::ContinuationPar{T},
 					dottheta::DotTheta;
 					linearbdalgo = BorderingBLS(),
@@ -208,7 +208,7 @@ function newtonPALC(F, Jh,
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
 	@unpack finDiffEps = contparams
 
-	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
+	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
 	# Initialise iterations
@@ -236,7 +236,7 @@ function newtonPALC(F, Jh,
 	step_ok = true
 
 	# invoke callback before algo really starts
-	callback((x, p), res_f, nothing, res, 0, 0, contparams; kwargs...) == false && (it = maxIter)
+	callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, kwargs...) == false && (it = maxIter)
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok
@@ -244,7 +244,7 @@ function newtonPALC(F, Jh,
 		copyto!(dFdp, F(x, p + finDiffEps)); minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
 		J = Jh(x, p)
-		u, up, flag, liniter = linearbdalgo(J, dFdp, tau0, res_f, res_n, theta)
+		u, up, flag, liniter = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
 
 		if linesearch
 			step_ok = false
@@ -284,10 +284,10 @@ function newtonPALC(F, Jh,
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		callback((x, p), res_f, J, res, it, liniter, contparams; z0 = z_pred, kwargs...) == false && (it = maxIter)
+		callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, kwargs...) == false && (it = maxIter)
 
 	end
-	flag = (resHist[end] < tol) & callback((x, p), res_f, nothing, res, it, nothing, contparams; z0 = z_pred, kwargs...)
+	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it
 end
 ####################################################################################################

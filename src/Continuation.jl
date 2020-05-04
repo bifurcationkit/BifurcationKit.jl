@@ -91,8 +91,8 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15		# maximum number of bisection steps
 	tolBisectionEigenvalue::Float64 = 1e-5 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
-	@assert iseven(nInversion) "This number must be even"
-	@assert detectBifurcation < 3 "This option must belong to {0,1,2}"
+	@assert iseven(nInversion) "The option `nInversion` number must be even"
+	@assert detectBifurcation < 3 "The option `detectBifurcation` must belong to {0,1,2}"
 end
 
 # check the logic of the parameters
@@ -158,13 +158,16 @@ Structure which holds the results after a call to [`continuation`](@ref).
 	# vector of solutions
 	sol::Ts
 
+	# parameters used for the branch
+	params::ContinuationPar
+
 	###############################
 	# internal variables
 	# branch type
 	type::Symbol = :Equilibrium
-
 	# structure associated to the functional, useful for branch switching
 	functional::Tfunc = nothing
+
 end
 
 length(br::ContResult) = length(br.branch[1, :])
@@ -214,7 +217,8 @@ function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where 
 		n_unstable = [n_unstable],
 		stability = [stability],
 		eig = [_evvectors],
-		sol = sol )
+		sol = sol,
+		params =  contParams)
 end
 ####################################################################################################
 # Iterator interface

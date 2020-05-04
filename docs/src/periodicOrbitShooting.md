@@ -89,7 +89,7 @@ The functional is encoded in the composite type [`PoincareShootingProblem`](@ref
 
 ## Floquet multipliers computation
 
-These are the eigenvalues of $M_m\cdots M_1$.
+These are the eigenvalues of $M_M\cdots M_1$.
 
 > Unlike the case with Finite differences, the matrices $M_i$ are not sparse.
 

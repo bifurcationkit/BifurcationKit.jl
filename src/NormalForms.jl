@@ -237,17 +237,17 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
 	# coefficient p
 	out = p .* nf.a
 
-	@inbounds for ii=1:N
+	@inbounds for ii in 1:N
 		# coefficient x*p
-		for jj=1:N
+		for jj in 1:N
 			# coefficient x*p
 			out[ii] += p * nf.b1[ii , jj] * x[jj]
 
-			for kk=1:N
+			for kk in 1:N
 				# coefficients of x^2
 				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk]
 
-				for ll=1:N
+				for ll in 1:N
 					# coefficients of x^3
 					out[ii] += nf.b3[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll]
 				end
@@ -259,7 +259,7 @@ end
 
 function (bp::NdBranchPoint)(x, δp)
 	out = bp.x0 .+ δp .* x[1] .* bp.ζ[1]
-	for ii=2:length(x)
+	for ii in 2:length(x)
 		out .+= δp .* x[ii] .* bp.ζ[ii]
 	end
 	return out
@@ -270,19 +270,19 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 
 	nf = bp.nf
 	N = length(nf.a)
-	out = ["" for _=1:N]
+	out = ["" for _ in 1:N]
 
 	for ii = 1:N
 		if abs(nf.a[ii]) > tol
 			out[ii] *= "$(round(nf.a[ii],digits=digits)) ⋅ p"
 		end
-		for jj=1:N
+		for jj in 1:N
 			coeff = round(nf.b1[ii,jj],digits=digits)
 			if abs(coeff) > tol
 				out[ii] *= " + ($coeff) * x$jj ⋅ p"
 			end
 
-			for kk=jj:N
+			for kk in jj:N
 				coeff = round(nf.b2[ii,jj,kk] / 2,digits=digits)
 				if abs(coeff) > tol
 					if jj == kk
@@ -292,7 +292,7 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 					end
 				end
 
-				for ll=kk:N
+				for ll in kk:N
 					coeff = round(nf.b3[ii,jj,kk,ll] / 6,digits=digits)
 					_pow = zeros(Int64,N)
 					_pow[jj] += 1;_pow[kk] += 1;_pow[ll] += 1;
@@ -303,7 +303,7 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 						else
 							out[ii] *= " + ($(round(3coeff,digits=digits)))"
 						end
-						for mm=1:N
+						for mm in 1:N
 							if _pow[mm] > 1
 								out[ii] *= " ⋅ x$mm" * (superDigits[_pow[mm]+1])
 							elseif _pow[mm] == 1
@@ -364,9 +364,9 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
 	tmp = copy(ζstars[1])
-	for ii=1:N
+	for ii in 1:N
 		tmp .= ζstars[ii]
-		for jj=1:N
+		for jj in 1:N
 			if !(ii==jj)
 				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj]
 			end
@@ -386,7 +386,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	# projector on Range(L)
 	function E(x)
 		out = copy(x)
-		for ii=1:N
+		for ii in 1:N
 			out .= out .- dot(x, ζstars[ii]) .* ζs[ii]
 		end
 		out
@@ -395,14 +395,14 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	# coefficients of p
 	dgidp = Vector{Float64}(undef, N)
 	R01 = (F(x0, p + δ) .- F(x0, p)) ./ δ
-	for ii = 1:N
+	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
 	end
 	verbose && printstyled(color=:green,"--> a = ", dgidp,"\n")
 
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Float64, N, N)
-	for ii=1:N, jj=1:N
+	for ii in 1:N, jj in 1:N
 		R11 = (apply(dF(x0, p + δ), ζs[jj]) - apply(L, ζs[jj])) ./ δ
 		Ψ01, _ = ls(L, E(R01))
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
@@ -411,14 +411,14 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 
 	# coefficients of x^2
 	d2gidxjdxk = zeros(Float64, N, N, N)
-	for ii=1:N, jj=1:N, kk=1:N
+	for ii in 1:N, jj in 1:N, kk in 1:N
 		b2v = R2(ζs[jj], ζs[kk])
 		d2gidxjdxk[ii,jj,kk] = dot(b2v, ζstars[ii])
 	end
 
 	if verbose
 		printstyled(color=:green, "\n--> b2 = \n")
-		for ii = 1:N
+		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
 			Base.display( d2gidxjdxk[ii,:,:] ./ 2)
 		end
@@ -426,7 +426,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 
 	# coefficient of x^3
 	d3gidxjdxkdxl = zeros(Float64, N, N, N, N)
-	for jj=1:N, kk=1:N, ll=1:N
+	for jj in 1:N, kk in 1:N, ll in 1:N
 		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
 
@@ -441,13 +441,13 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 		wst, _ = ls(L, E(R2(ζs[kk], ζs[jj])))
 		b3v .-= R2(ζs[ll], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
-		for ii=1:N
+		for ii in 1:N
 			d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
 		end
 	end
 	if verbose
 		printstyled(color=:green,"\n--> b3 = \n")
-		for ii = 1:N
+		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
 			Base.display( d3gidxjdxkdxl[ii,:,:, :] ./ 6 )
 		end
@@ -593,7 +593,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end
 
-function predictor(hp::HopfBifPoint, ds::T; verbose = false) where T
+function predictor(hp::HopfBifPoint, ds::T; verbose = false, ampfactor = T(1) ) where T
 	# get the normal form
 	nf = hp.nf
 	a = nf.a
@@ -605,12 +605,11 @@ function predictor(hp::HopfBifPoint, ds::T; verbose = false) where T
 	@show dsfactor
 
 	# we solve a * ds + b * amp^2 = 0
-	amp = sqrt(-abs(ds) * dsfactor * real(a / b))
+	amp = ampfactor * sqrt(-abs(ds) * dsfactor * real(a / b))
 
 	# o(1) correction to Hopf Frequency
 	ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
 
-	verbose && println("--> Prediction from the $(hp.type) Hopf normal form, δp = $(pnew - hp.p), amp = $amp")
 	return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
 			amp = 2amp,
 			ω = ω,
@@ -642,15 +641,17 @@ Automatic branch switching. More information is provided in [Simple bifurcation 
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
+	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
+
 	# detect bifurcation point type
 	if br.bifpoint[ind_bif].type == :hopf
-		@error "You need to call `continuationPOTrap` or ``. Thus you need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
-		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+		@error "You need to call `continuationPOTrap`. Thus you need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
+		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
 		return bifpoint
 	end
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif::Int, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, optionsCont.ds / 50; verbose = verbose)

@@ -20,7 +20,7 @@ end
 	xv = x[1:end-1]
 	xc = reshape(xv, N, M)
 
-	for ii = 1:M
+	for ii in 1:M
 		# this avoids the temporary xc - centers
 		res *= dot(xc[:, ii], normals[ii]) - dot(centers[ii], normals[ii])
 	end
@@ -76,10 +76,10 @@ or
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y) = (F(x),dF(x)\\cdot y)``.
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
-	M::Int64							# number of sections
-	flow::Tf							# should be a Flow{TF, Tf, Td}
+	M::Int64 = 0						# number of sections
+	flow::Tf = Flow()					# should be a Flow{TF, Tf, Td}
 	ds::Ts = diff(LinRange(0, 1, 5))	# difference of times for multiple shooting
-	section::Tsection					# sections for phase condition
+	section::Tsection = nothing			# sections for phase condition
 	isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
 end
 
@@ -87,7 +87,7 @@ end
 # if M = 1, we disable parallel processing
 function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; isparallel = false, kwargs...)
 	_M = length(ds)
-	isparallel = _M==1 ? false : isparallel
+	isparallel = _M == 1 ? false : isparallel
 	_pb = isparallel ? EnsembleProblem(prob) : prob
 	return ShootingProblem(M = _M, flow = Flow(F, p, _pb, alg; kwargs...),
 			ds = ds, section = section, isparallel = isparallel)
@@ -100,7 +100,7 @@ ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel
 # idem but with an ODEproblem to define the derivative of the flow
 function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
 	_M = length(ds)
-	isparallel = _M==1 ? false : isparallel
+	isparallel = _M == 1 ? false : isparallel
 	_pb1 = isparallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = isparallel ? EnsembleProblem(prob2) : prob2
 	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, isparallel = isparallel)
@@ -218,7 +218,7 @@ function (sh::ShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
 	outc = reshape(outv, N, M)
 
 	if ~isParallel(sh)
-		for ii = 1:M
+		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
 			tmp = sh.flow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
@@ -227,7 +227,7 @@ function (sh::ShootingProblem)(x::AbstractVector, dx::AbstractVector; δ = 1e-9)
 	else
 		# call jacobian of the flow
 		solOde = sh.flow(xc, dxc, sh.ds .* T)
-		for ii = 1:M
+		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			outc[:, ii] .= solOde[ii].du .+ sh.flow.F(solOde[ii].u) .* sh.ds[ii] * dT .- dxc[:, ip1]
 		end
@@ -250,7 +250,7 @@ function (sh::ShootingProblem)(x::BorderedArray, dx::BorderedArray; δ = 1e-9)
 	out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
 
 	if ~isParallel(sh)
-		for ii = 1:M
+		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
 			tmp = sh.flow(x.u[ii], dx.u[ii], sh.ds[ii] * T)

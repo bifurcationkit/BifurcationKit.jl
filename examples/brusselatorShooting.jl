@@ -35,10 +35,7 @@ function Fbru!(f, x, p)
 	return f
 end
 
-function Fbru(x, p)
-	f = similar(x)
-	Fbru!(f, x, p)
-end
+Fbru(x, p)= Fbru!(similar(x), x, p)
 
 function Jbru_sp(x, p)
 	@unpack α, β, D1, D2, l = p
@@ -108,7 +105,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 		plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200, dsminBisection = 1e-7)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
 
 	br, _ = @time PALC.continuation(
 		(x, p) ->    Fbru(x, @set par_bru.l = p),
@@ -116,7 +113,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 1.9,
 		sol0, par_bru.l,
 		opts_br_eq, verbosity = 0,
 		plot = false,
-		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
+		printSolution = (x, p) -> x[n÷2], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
 	# hopfpt = PALC.HopfPoint(br, ind_hopf)
@@ -128,8 +125,6 @@ ind_hopf = 1
 		opts_br_eq.newtonOptions, normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ####################################################################################################Continuation of Periodic Orbit
-M = 10
-
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
 #
 orbitguess_f2 = reduce(hcat, orbitguess2)

@@ -40,16 +40,16 @@ The user must provide an eigensolver by setting `NewtonOptions.eigsolver` where 
 
 The eigensolver is highly problem dependent and this is why the user should implement / parametrize its own eigensolver through the abstract type `AbstractEigenSolver` or select one among [List of implemented eigen solvers](@ref).
 
-## Fold bifurcation
-The detection of **Fold** point is done by monitoring  the monotonicity of the parameter.
-
-The detection is triggered by setting `detectFold = true` in the parameter `::ContinuationPar` passed to `continuation`. When a **Fold** is detected on a branch `br`, a point is added to `br.bifpoint` allowing for later refinement using the function `newtonFold`.
-
 ## Generic bifurcation
 
 By this we mean a change in the dimension of the Jacobian kernel. The detection of Branch point is done by analysis of the spectrum of the Jacobian.
 
 The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. 
+
+## Fold bifurcation
+The detection of **Fold** point is done by monitoring  the monotonicity of the parameter.
+
+The detection is triggered by setting `detectFold = true` in the parameter `::ContinuationPar` passed to `continuation`. When a **Fold** is detected on a branch `br`, a point is added to `br.foldpoint` allowing for later refinement using the function `newtonFold`.
 
 ## Hopf bifurcation
 

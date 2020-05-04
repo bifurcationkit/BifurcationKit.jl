@@ -35,7 +35,7 @@ function (df::DeflationOperator{T, Tf, vectype})(u::vectype) where {T, Tf, vecty
 	# compute u - df.roots[1]
 	tmp = copyto!(similar(u), u);	axpy!(T(-1), df.roots[1], tmp)
 	out = T(1) / nrm(tmp)^df.power + df.shift
-	for ii = 2:length(df.roots)
+	for ii in 2:length(df.roots)
 		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
 		out *= T(1) / nrm(tmp)^df.power + df.shift
 	end

@@ -112,13 +112,13 @@ function blockToSparse(J::AbstractBlockArray)
 	nl, nc = size(J.blocks)
 	# form the first line of blocks
 	res = J[Block(1,1)]
-	for j=2:nc
+	for j in 2:nc
 		res = hcat(res, J[Block(1,j)])
 	end
 	# continue with the other lines
-	for i=2:nl
+	for i in 2:nl
 		line = J[Block(i,1)]
-		for j=2:nc
+		for j in 2:nc
 			line = hcat(line, J[Block(i,j)])
 		end
 		res = vcat(res,line)

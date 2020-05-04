@@ -110,16 +110,13 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse}
 
 	"Serial version of flow"
 	dfserial::Tse
-
-	function Flow(F::TF, fl::Tf, fts::Tts, flf::Tff, df::Td, fse::Tse) where {TF, Tf, Tts, Tff, Td, Tse}
-		new{TF, Tf, Tts, Tff, Td, Tse}(F, fl, fts, flf, df, fse)
-	end
-
-	function Flow(F::TF, fl::Tf, df::Td) where {TF, Tf, Td}
-		new{TF, Tf, Nothing, Nothing, Td, Td}(F, fl, nothing, nothing, df, df)
-	end
 end
 
+# constructors
+Flow() = Flow(nothing, nothing, nothing, nothing, nothing, nothing)
+Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df)
+
+# callable struct
 (fl::Flow)(x, t)     			  = fl.flow(x, t)
 (fl::Flow)(x, dx, t; kw2...) 	  = fl.dflow(x, dx, t; kw2...)
 (fl::Flow)(::Val{:Full}, x, t) 	  = fl.flowFull(x, t)
@@ -133,9 +130,9 @@ Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The 
 function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 	probserial = prob isa EnsembleProblem ? prob.prob : prob
 	return Flow(F,
-		(x, t) ->			 	flow(x, p, t, prob; alg = alg, kwargs...),
-		(x, t) ->		 flowTimeSol(x, p, t, prob; alg = alg, kwargs...),
-		(x, t) -> 		 	flowFull(x, p, t, prob; alg = alg, kwargs...),
+		(x, t) ->		   flow(x, p, t, prob; alg = alg, kwargs...),
+		(x, t) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs...),
+		(x, t) ->      flowFull(x, p, t, prob; alg = alg, kwargs...),
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
 		(x, dx, t; kw2...) -> dflow_fd(x, dx, p, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients

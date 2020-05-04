@@ -62,7 +62,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, du::
 	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1]), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 	out .= res
 
-	for ii = 2:M-1
+	for ii in 2:M-1
 		h =  T * getTimeStep(poPb, ii)
 		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1]), out)
 		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
@@ -90,7 +90,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::vectype) where {vect
 	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1]))) \ Array(I + h/2 * poPb.J(u0c[:, M-1]))
 	temp = similar(mono)
 
-	for ii = 2:M-1
+	for ii in 2:M-1
 		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
 		# also I - h/2 .* J seems to hurt (a little) performances
 		h =  T * getTimeStep(poPb, ii)
@@ -173,7 +173,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
 
 	out = copy(du)
 
-	for ii = 1:M
+	for ii in 1:M
 		# call the jacobian of the flow
 		@views out .= sh.flow(Val(:Serial), xc[:, ii], out, sh.ds[ii] * T).du
 	end
@@ -199,7 +199,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 	xc = reshape(xv, N, M)
 	du = zeros(N)
 
-	for ii = 1:N
+	for ii in 1:N
 		du[ii] = 1.0
 		# call jacobian of the flow
 		@views Mono[:, ii] .= sh.flow(xc[:, 1], du, T).du
@@ -226,7 +226,7 @@ function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, dx_bar::Abstr
 	outbar = copy(dx_bar)
 	outc = similar(dx_bar, Nm1 + 1)
 
-	for ii = 1:M
+	for ii in 1:M
 		E!(psh.section,  xc,  view(x_barc, :, ii), ii)
 		dE!(psh.section, outc, outbar, ii)
 		outc .= diffPoincareMap(psh, xc, outc, ii)

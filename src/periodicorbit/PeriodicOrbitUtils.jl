@@ -54,11 +54,11 @@ function plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...)
 	outpo = reshape(x[1:end-1], ratio * n, M)
 	po = reshape(x[1:n,1], Nx, Ny)
 	rg = 2:6:M
-	for ii=rg
+	for ii in rg
 		po = hcat(po, reshape(outpo[1:n,ii], Nx, Ny))
 	end
 	heatmap!(po; color = :viridis, fill=true, xlabel = "space", ylabel = "space", kwargs...)
-	for ii=1:length(rg)
+	for ii in 1:length(rg)
 		plot!([ii*Ny, ii*Ny], [1, Nx]; color = :red, width = 3, label = "", kwargs...)
 	end
 end
@@ -76,7 +76,7 @@ end
 ####################################################################################################
 function plotPeriodicShooting!(x, M; kwargs...)
 	N = div(length(x), M);	plot!(x; label = "", kwargs...)
-	for ii=1:M
+	for ii in 1:M
 		plot!([ii*N, ii*N], [minimum(x), maximum(x)] ;color = :red, label = "", kwargs...)
 	end
 end

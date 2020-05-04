@@ -23,7 +23,7 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 	function HyperplaneSections(normals, centers)
 		M = length(normals)
 		indices = zeros(Int64, M)
-		for ii=1:M
+		for ii in 1:M
 			indices[ii] = argmax(abs.(normals[ii]))
 		end
 		nbar = [R(normals[ii], indices[ii]) for ii=1:M]
@@ -32,6 +32,8 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 		return new{typeof(normals), typeof(centers), typeof(indices), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
 	end
 end
+
+HyperplaneSections() = HyperplaneSections(0, nothing, nothing, nothing, nothing, nothing)
 
 (hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 
@@ -46,7 +48,7 @@ function update!(hyp::HyperplaneSections, normals, centers)
 	@assert length(centers) == M "Wrong number of centers"
 	hyp.normals .= normals
 	hyp.centers .= centers
-	for ii=1:M
+	for ii in 1:M
 		hyp.indices[ii] = argmax(abs.(normals[ii]))
 		R!(hyp.normals_bar[ii], normals[ii], hyp.indices[ii])
 		R!(hyp.centers_bar[ii], centers[ii], hyp.indices[ii])
@@ -153,11 +155,11 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
     You can use the function `getPeriod(pb, sol)` to get the period of the solution `sol`
 """
 @with_kw struct PoincareShootingProblem{Tf <: Flow, Tsection <: HyperplaneSections} <: AbstractShootingProblem
-	M::Int64 = 1				# number of Poincaré sections
-	flow::Tf					# should be a Flow{TF, Tf, Td}
-	section::Tsection			# Poincaré sections
-	δ::Float64 = 0e-8			# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
-	isparallel::Bool = false	# whether we use DE in Ensemble mode for multiple shooting
+	M::Int64 = 0								# number of Poincaré sections
+	flow::Tf = nothing							# should be a Flow{TF, Tf, Td}
+	section::Tsection = HyperplaneSections()	# Poincaré sections
+	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
+	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
 @inline getM(psh::PoincareShootingProblem) = psh.M
@@ -246,17 +248,17 @@ function getPeriod(psh::PoincareShootingProblem, x_bar)
 
 	# we extend the state space to be able to call the flow, so we fill xc
 	if ~isParallel(psh)
-		for ii=1:M
+		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
 			period += @views psh.flow(Val(:TimeSol), xc[:, ii], Inf64).t
 		end
 	else
-		for ii=1:M
+		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
 		solOde =  psh.flow(Val(:TimeSol), xc, repeat([Inf64],M))
-		for ii=1:M
+		for ii in 1:M
 			period += solOde[ii].t
 		end
 	end
@@ -276,18 +278,18 @@ function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector; ratio = 1)
 	mx = Th(0)
 
 	if ~isParallel(psh)
-		for ii=1:M
+		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
 			sol = @views psh.flow(Val(:Full), xc[:, ii], Inf64)
 			mx = max(mx, maximum(sol[1:div(Nm1, ratio), :]))
 		end
 	else
-		for ii=1:M
+		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
 		solOde =  psh.flow(Val(:Full), xc, repeat([Inf64], M) )
-		for ii=1:M
+		for ii in 1:M
 			mx = max(mx, maximum(solOde[ii].u[1:div(Nm1, ratio), :]))
 		end
 	end
@@ -311,19 +313,19 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
 
 	# we extend the state space to be able to call the flow, so we fill xc
 	#TODO create the projections on the fly
-	for ii=1:M
+	for ii in 1:M
 		E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 	end
 
 	if ~isParallel(psh)
-		for ii=1:M
+		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			# We need the callback to be active here!!!
 			@views outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], Inf64)
 		end
 	else
 		solOde = psh.flow(xc, repeat([Inf64],M))
-		for ii=1:M
+		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			# We need the callback to be active here!!!
 			@views outc[:, ii] .= xc[:, ii] .- solOde[im1][2]
@@ -333,7 +335,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
 	# build the array to be returned
 	out_bar = similar(x_bar)
 	out_barc = reshape(out_bar, Nm1, M)
-	for i=1:M
+	for i in 1:M
 		R!(psh.section, view(out_barc, :, i), view(outc, :, i), i)
 	end
 	return out_bar
@@ -373,13 +375,13 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractV
 	outc = similar(xc)
 
 	# we extend the state space to be able to call the flow, so we fill xc
-	for ii=1:M
+	for ii in 1:M
 		 E!(psh.section,  view(xc, :, ii),  view(x_barc, :, ii), ii)
 		dE!(psh.section, view(dxc, :, ii), view(dx_barc, :, ii), ii)
 	end
 
 	if ~isParallel(psh)
-		for ii=1:M
+		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			@views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(psh, xc[:, im1], dxc[:, im1], im1)
 		end
@@ -390,7 +392,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractV
 	# build the array to be returned
 	out_bar = similar(x_bar)
 	out_barc = reshape(out_bar, Nm1, M)
-	for ii=1:M
+	for ii in 1:M
 		dR!(psh.section, view(out_barc, :, ii), view(outc, :, ii), ii)
 	end
 	return out_bar
