@@ -1,4 +1,10 @@
 # Snaking in the 2d Swift-Hohenberg equation
+
+```@contents
+Pages = ["tutorials2.md"]
+Depth = 3
+```
+
 We study the following PDE
 
 $$-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3 = 0$$

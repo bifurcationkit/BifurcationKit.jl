@@ -1,4 +1,9 @@
-# The Swift-Hohenberg equation on the GPU
+# The Swift-Hohenberg equation on the GPU (non-local)
+
+```@contents
+Pages = ["tutorials2b.md"]
+Depth = 3
+```
 
 Here we give an example where the continuation can be done **entirely** on the GPU, *e.g.* on a single Tesla K80.
 

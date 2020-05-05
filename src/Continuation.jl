@@ -106,16 +106,14 @@ end
 ####################################################################################################
 # Structure to hold result
 """
-	ContResult{{T, Teigvals, Teigvec, Biftype, Ts, Tfunc}
+$(TYPEDEF)
 
 Structure which holds the results after a call to [`continuation`](@ref).
 
-# Arguments
-- `branch::VectorOfArray` holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`.
-- `n_unstable::Vector{Int64}` a vector holding the number of eigenvalues with positive real part for each continuation step	(to detect stationary bifurcation)
-- `n_imag::Vector{Int64}` a vector holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)
-- `stability::Vector{Bool}` a vector holding the stability of the computed solution for each continuation step
-- `bifpoint::Vector{Biftype}` a vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple `(type, idx, param, norm, printsol, x, tau, ind_bif, step, status, δ)` where:
+$(TYPEDFIELDS)
+
+          A vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple with fields:
+-
     - `type` bifurcation type, `:hopf, :bp...`,
     - `idx` is the index in `eig` (see above) for which the bifurcation occurs.
     - `param` parameter value at the bifurcation point
@@ -127,46 +125,41 @@ Structure which holds the results after a call to [`continuation`](@ref).
     - `step` is the continuation step at which the bifurcation occurs,
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
-
-- `foldpoint::Vector{Biftype}` a vector holding the set of fold points detected during the computation of the branch.
-- `eig::Vector` contains for each continuation step the eigen elements.
-- `sol`: vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc}
-	# this vector is used to hold (param, printSolution(u, param), Newton iterations, ds)
+	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`."
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
-	# the following variable holds the eigen elements at the current step of the point along the curve. Recording this step is useful for storing only some eigen-elements and not all of them along the curve
+	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
-	# the following variable holds information about the detected bifurcation points like
-	# [(:none, idx, normC(u), u, tau, eigenvalue_index, step)] where `tau` is the tangent along the curve and `eigenvalue_index` is the index of the eigenvalue in eig (see above) which changes stability
-	bifpoint::Vector{Biftype}
-
-	# vector holding the set of fold points detected during the computation of the branch.
+	"A vector holding the set of fold points detected during the computation of the branch."
 	foldpoint::Vector{Biftype}
 
-	# whether the associated point is linearly stable
+	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step"
 	stability::Vector{Bool}
 
-	# number of eigenvalues with positive real part and non zero imaginary part
+	"A `Vector{Int64}` holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)"
 	n_imag::Vector{Int64}
 
-	# number of eigenvalues with positive real part
+	"A `Vector{Int64}` holding the number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)"
 	n_unstable::Vector{Int64}
 
-	# vector of solutions
+	" vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)"
 	sol::Ts
 
-	# parameters used for the branch
+	"The parameters used for the call to `continuation` which produced this branch."
 	params::ContinuationPar
 
-	###############################
-	# internal variables
-	# branch type
+	"Type of solutions computed in this branch."
 	type::Symbol = :Equilibrium
-	# structure associated to the functional, useful for branch switching
+
+	"Structure associated to the functional, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
 	functional::Tfunc = nothing
+
+	# the explanation for this field is given after. Always put this field in last position
+	""
+	bifpoint::Vector{Biftype}
 
 end
 

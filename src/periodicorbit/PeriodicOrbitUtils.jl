@@ -1,3 +1,4 @@
+abstract type PeriodicOrbitAlgorithm end
 """
 	guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
 

@@ -31,9 +31,9 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 
 		return new{typeof(normals), typeof(centers), typeof(indices), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
 	end
-end
 
-HyperplaneSections() = HyperplaneSections(0, nothing, nothing, nothing, nothing, nothing)
+	HyperplaneSections() = new{Nothing, Nothing, Nothing, Nothing, Nothing}(0, nothing, nothing, nothing, nothing, nothing)
+end
 
 (hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 
@@ -156,7 +156,7 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 """
 @with_kw struct PoincareShootingProblem{Tf <: Flow, Tsection <: HyperplaneSections} <: AbstractShootingProblem
 	M::Int64 = 0								# number of Poincaré sections
-	flow::Tf = nothing							# should be a Flow{TF, Tf, Td}
+	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
 	section::Tsection = HyperplaneSections()	# Poincaré sections
 	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting

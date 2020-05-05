@@ -1,6 +1,6 @@
 using DiffEqBase
 
-abstract type AbstractShootingProblem end
+abstract type AbstractShootingProblem <: PeriodicOrbitAlgorithm end
 
 function getAmplitude(prob::AbstractShootingProblem, x::AbstractVector; ratio = 1)
 	mx = _getMax(prob, x; ratio = ratio)

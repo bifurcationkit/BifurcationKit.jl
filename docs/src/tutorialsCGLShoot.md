@@ -1,5 +1,10 @@
 # Complex Ginzburg-Landau 2d (shooting)
 
+```@contents
+Pages = ["tutorialsCGLShoot.md"]
+Depth = 3
+```
+
 In this tutorial, we re-visit the example [Complex Ginzburg-Landau 2d](@ref) using a Standard Simple Shooting method. In the tutorial [Brusselator 1d](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
 
 $$\dot x = Ax+g(x)$$ 

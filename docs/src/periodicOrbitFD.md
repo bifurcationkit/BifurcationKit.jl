@@ -10,7 +10,9 @@ We look for periodic orbits as solutions $(x(0),T)$ of
 
 $$\dot x = T\cdot F(x),\ x(0)=x(1).$$
 
-By discretizing this equation, we obtain
+In order to have a unique solution, we need to remove the phase freedom. This is done by imposing a *phase* condition $<x(0)-x_\pi,\phi> = 0$ for some $x_\pi,\phi$ which are chosen (wisely).
+
+By discretizing the above problem, we obtain
 
 $$\begin{array}{l}
 0= \left(x_{j}-x_{j-1}\right)-\frac{h}{2} \left(F\left(x_{j}\right)+F\left(x_{j-1}\right)\right)\equiv G_j(x),\quad j=1,\cdots,m-1 \\ 

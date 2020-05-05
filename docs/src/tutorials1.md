@@ -1,5 +1,10 @@
 # Temperature model
 
+```@contents
+Pages = ["tutorials1.md"]
+Depth = 3
+```
+
 > This is a classical example from the **Trilinos** library.
 
 This is a simple example in which we aim at solving $\Delta T+\alpha N(T,\beta)=0$ with boundary conditions $T(0) = T(1)=\beta$. This example is coded in `examples/chan.jl`. We start with some imports:

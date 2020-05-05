@@ -1,5 +1,10 @@
 # Complex Ginzburg-Landau 2d
 
+```@contents
+Pages = ["tutorialsCGL.md"]
+Depth = 3
+```
+
 > This example is also treated in the MATLAB library [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/).
 
 We look at the Ginzburg-Landau equations in 2d. The code is very similar to the Brusselator example except that some special care has to be taken in order to cope with the "high" dimensionality of the problem.

@@ -1,5 +1,10 @@
 # Brusselator 1d
 
+```@contents
+Pages = ["tutorials3.md"]
+Depth = 3
+```
+
 !!! unknown "References"
     This example is taken from **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations,** Lust, 1997.
 

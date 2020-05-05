@@ -1,5 +1,10 @@
 # A generalized Bratu–Gelfand problem in two dimensions
 
+```@contents
+Pages = ["mittelmann.md"]
+Depth = 3
+```
+
 !!! unknown "References"
     The following example is exposed in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. **The Computation of Disconnected Bifurcation Diagrams.** ArXiv:1603.00809 [Math], March 2, 2016.
 

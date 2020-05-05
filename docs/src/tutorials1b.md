@@ -1,5 +1,9 @@
 # Temperature model with `ApproxFun`
 
+```@contents
+Pages = ["tutorials1b.md"]
+Depth = 3
+```
 
 We reconsider the first example by relying on **spectral collocations** using the package `ApproxFun.jl` which allows very precise function approximation. 
 
