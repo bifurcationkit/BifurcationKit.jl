@@ -1,9 +1,9 @@
-# Simple bifurcation branch switching
+# Simple bifurcation branch point
 
 !!! unknown "References"
     The general method is exposed in Golubitsky, Martin, David G Schaeffer, and Ian Stewart. **Singularities and Groups in Bifurcation Theory**. New York: Springer-Verlag, 1985, VI.1.d page 295
 
-We expose our method to perform branching at a simple branch point. A simple branch point $(x_0,p_0)$ for the problem $F(x,p)=0$ satisfies $\dim \ker dF(x_0,p_0) = 1$. At such point, we can apply **Lyapunov-Schmidt** reduction to transform the initial problem in large dimensions to a **scalar** polynomial: 
+A simple branch point $(x_0,p_0)$ for the problem $F(x,p)=0$ satisfies $\dim \ker dF(x_0,p_0) = 1$. At such point, we can apply **Lyapunov-Schmidt** reduction to transform the initial problem in large dimensions to a **scalar** polynomial: 
 
 $$a\delta p + z\left(b_1\delta p + \frac{b_2}{2}z + \frac{b_3}{6}z^2\right) = 0 \tag{E}$$
 
@@ -51,16 +51,4 @@ end
 ```
 
 !!! info "Note"
-    You should not need to call `computeNormalForm` except if you want to have the full information about the branch point. Indeed, the call in the next section do it internally.
-
-## Automatic branch switching
-
-You can perform automatic branch switching by calling `continuation` with the following options:
-
-```julia
-continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ;
-	Jt = nothing, δ = 1e-8, kwargs...)
-```
-
-where `br` is a branch computed after a call to `continuation` with detection of bifurcation points enabled. This call will compute the branch bifurcating from the `ind_bif `th bifurcation point in `br`. An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
-
+    You should not need to call `computeNormalForm` except if you need the full information about the branch point.

@@ -208,7 +208,7 @@ We provide a generic way to study branch points of arbitrary dimensions by compu
 bp2d = @time PALC.computeNormalForm(jet..., br, 2, opts_br.newtonOptions;  verbose=true)
 ```
 
-You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple bifurcation branch switching](@ref).
+You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple branch point](@ref).
 
 ```julia
 julia> PALC.nf(bp2d)

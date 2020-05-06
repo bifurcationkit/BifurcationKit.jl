@@ -576,7 +576,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 	end
 
 	# check that λstar ≈ conj(λ)
-	@assert abs(λ + λstar) < 1e-3 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?"
+	@assert abs(λ + λstar) < 1e-3 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)

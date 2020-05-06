@@ -15,11 +15,12 @@ makedocs(doctest = false,
 			"Bordered linear solvers" => "borderedlinearsolver.md",
 			"Bifurcation detection" => "detectionBifurcation.md",
 			"Fold / Hopf Continuation" => "codim2Continuation.md",
-			"Branch switching" =>[
+			"Normal form" =>[
 				"Simple branch point" => "simplebp.md",
 				"Non-simple branch point" => "nonsimplebp.md",
 				"Simple Hopf point" => "simplehopf.md",
 			],
+			"Branch switching" => "branchswitching.md",
 			"Deflated problem" => "deflatedproblem.md",
 			"Constrained problem" => "constrainedproblem.md",
 			"Periodic Orbits" => [

@@ -1,4 +1,4 @@
-# Non-simple bifurcation branch switching
+# Non-simple branch point
 
 !!! unknown "References"
     The general method is exposed in Golubitsky, Martin, David G Schaeffer, and Ian Stewart. **Singularities and Groups in Bifurcation Theory**. New York: Springer-Verlag, 1985, VI.1.d page 295

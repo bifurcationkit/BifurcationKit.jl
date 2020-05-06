@@ -18,9 +18,9 @@ We can detect if the curve of solutions $\gamma$ crosses another curve of soluti
 
 ### Branch switching 
 
-In the simple cases, *e.g.* when $dim\ker \partial_xF(x^b,p^b) = 1$, we can compute automatically the **bifurcated branch** $\gamma^{bif}$ by calling [`continuation`](@ref) and passing $\gamma$. This is explained in [Simple bifurcation branch switching](@ref). Recursively, we can compute the curves of solutions which are connected to $(x_0,p_0)$, this is called a **bifurcation diagram**.
+In the simple cases, *e.g.* when $dim\ker \partial_xF(x^b,p^b) = 1$, we can compute automatically the **bifurcated branch** $\gamma^{bif}$ by calling [`continuation`](@ref) and passing $\gamma$. This is explained in [Branch switching from simple branch point to equilibria](@ref). Recursively, we can compute the curves of solutions which are connected to $(x_0,p_0)$, this is called a **bifurcation diagram**.
 
-When $d\equiv dim\ker \partial_xF(x^b,p^b) > 1$, there is no automatic method to perform branch switching. Nevertheless, we can reduce (E) to a system of $d$ dimensional multivariate polynomial equations in $d$ unknowns whose solutions gives the local topology of branches in the neighborhood of the bifurcation point $(x^b,p^b)$. We can then use the solutions of this **reduced equation** as initial guesses and call again [`continuation`](@ref) to compute the bifurcated branches. This is explained in [Non-simple bifurcation branch switching](@ref) and an example of shown in [A generalized Bratu–Gelfand problem in two dimensions](@ref).	
+When $d\equiv dim\ker \partial_xF(x^b,p^b) > 1$, there is no automatic method to perform branch switching. Nevertheless, we can reduce (E) to a system of $d$ dimensional multivariate polynomial equations in $d$ unknowns whose solutions gives the local topology of branches in the neighborhood of the bifurcation point $(x^b,p^b)$. We can then use the solutions of this **reduced equation** as initial guesses and call again [`continuation`](@ref) to compute the bifurcated branches. This is explained in [Branch switching from non simple branch point to equilibria](@ref) and an example of shown in [A generalized Bratu–Gelfand problem in two dimensions](@ref).	
 > In the case $d=1$, the reduced equation can be further simplified into a **normal form**. This is also automatically computed by the package.
 
 
@@ -36,7 +36,7 @@ We can detect the existence of periodic solutions close to $\gamma$. This is don
 
 ### Branch switching at Hopf points
 
-We will not review the bifurcation of equilibria (see above). Therefore, we focus on computing the branch of periodic solutions branching of a Hopf point. This is done automatically by calling again [`continuation`](@ref), passing $\gamma$ and choosing a time discretization algorithm (see [Periodic orbits computation](@ref)). Some details about this branch switching is given in [Simple Hopf branch switching](@ref).
+We will not review the bifurcation of equilibria (see above). Therefore, we focus on computing the branch of periodic solutions branching of a Hopf point. This is done automatically by calling again [`continuation`](@ref), passing $\gamma$ and choosing a time discretization algorithm (see [Periodic orbits computation](@ref)). Some details about this branch switching is given in [Branch switching from Hopf point to periodic orbits](@ref).
 
 ### Branch switching at bifurcation points of periodic orbits
 
