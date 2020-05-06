@@ -79,15 +79,7 @@ newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::N
 ```
 
 ```@docs
-newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar;Jt = nothing, d2F = nothing, kwargs...)
-```
-
-```@docs
 newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
-```
-
-```@docs
-newtonHopf(F, J, br::ContResult, ind_hopf::Int64, options::NewtonPar ; Jt = nothing, d2F = nothing, normN = norm)
 ```
 
 ### Newton for Periodic Orbits
@@ -112,13 +104,6 @@ continuation
 continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,vectype}
 ```
 
-```@docs
-continuationFold(F, J, br::ContResult, ind_fold::Int64, p2_0::Real, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...)
-```
-
-```@docs
-continuationHopf(F, J, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ;  Jt = nothing, d2F = p2 -> nothing, kwargs...)
-```
 
 ```@docs
 continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}

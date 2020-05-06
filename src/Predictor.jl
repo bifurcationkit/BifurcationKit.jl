@@ -212,14 +212,14 @@ function newtonPALC(F, Jh,
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
 	# Initialise iterations
-	x = copyto!(similar(z_pred.u), z_pred.u) # copy(z_pred.u)
+	x = _copy(z_pred.u) # copy(z_pred.u)
 	p = z_pred.p
-	x_pred = copyto!(similar(x), x) # copy(x)
+	x_pred = _copy(x) # copy(x)
 
 	# Initialise residuals
 	res_f = F(x, p);  res_n = N(x, p)
 
-	dX = copyto!(similar(res_f), res_f) # copy(res_f)
+	dX = _copy(res_f) # copy(res_f)
 	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
@@ -236,10 +236,10 @@ function newtonPALC(F, Jh,
 	step_ok = true
 
 	# invoke callback before algo really starts
-	callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, kwargs...) == false && (it = maxIter)
+	compute = callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter) & step_ok
+	while (res > tol) & (it < maxIter) & step_ok & compute
 		# copyto!(dFdp, (F(x, p + epsi) - F(x, p)) / epsi)
 		copyto!(dFdp, F(x, p + finDiffEps)); minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
@@ -284,7 +284,9 @@ function newtonPALC(F, Jh,
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, kwargs...) == false && (it = maxIter)
+		if callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, kwargs...) == false
+			break
+		end
 
 	end
 	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, kwargs...)

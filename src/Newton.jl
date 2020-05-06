@@ -61,12 +61,22 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 When `J` is not passed. It is then computed with finite differences. The call is as follows:
 
 	newton(Fhandle, x0, options::NewtonPar; kwargs...)
+
+# Example
+
+```
+julia> F(x) = x.^3 .- 1
+julia> Jac(x) = diagm(0 => 3 .* x.^2) # sparse jacobian
+julia> x0 = rand(1_000)
+julia> opts = NewtonPar()
+julia> sol, hist, flag, _ = newton(F, Jac, x0, opts, normN = x->norm(x,Inf))
+```
 """
 function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...) where T
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
-	# Initialise iterations
+	# Initialize iterations
 	x = similar(x0); copyto!(x, x0) # x = copy(x0)
 	f = Fhandle(x)
 	d = similar(f); copyto!(d, f)	# d = copy(f)
@@ -80,12 +90,10 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 	verbose && displayIteration(it, neval, res)
 
 	# invoke callback before algo really starts
-	if callback(x, f, nothing, res, it, 0, options; x0 = x0, kwargs...) == false
-		it = maxIter
-	end
+	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter)
+	while (res > tol) & (it < maxIter) & compute
 		J = Jhandle(x)
 		d, _, itlinear = options.linsolver(J, f)
 
@@ -102,7 +110,7 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 		verbose && displayIteration(it, neval, res, itlinear)
 
 		if callback(x, f, J, res, it, itlinear, options; x0 = x0, kwargs...) == false
-			it = maxIter
+			break
 		end
 	end
 	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")

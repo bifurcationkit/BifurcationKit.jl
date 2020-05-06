@@ -140,16 +140,16 @@ struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
 	solver::S
 end
 
+# dummy constructor to simplify user passing options to continuation
 MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
+
 extractVector(x::AbstractVector) = @view x[1:end-1]
 extractVector(x::BorderedArray) = x.u
 
 extractParameter(x::AbstractVector) = x[end]
 extractParameter(x::BorderedArray) = x.p
 
-# dummy constructor to simplify user passing options to continuation
 # We restrict to bordered systems where the added component is scalar
-# For now, we restrict to KrylovKit iterative solver because we did not make BorderedArray a subtype of AbstractVector
 function (lbs::MatrixFreeBLS{S})(J, 		dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}

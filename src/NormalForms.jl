@@ -32,8 +32,8 @@ More information is provided in [Simple bifurcation branch switching](@ref)
 function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	λstar, evstar = eigsolver(Lstar, nev)
 	I = argmin(abs.(λstar .- λ))
-	verbose && (println("--> VPstars = ");Base.display(λstar))
-	verbose && println("--> VP = ", λ, ", VPstar = ", λstar[I])
+	verbose && (println("--> left eigenvalues = ");Base.display(λstar))
+	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
 	@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(λstar[I]) ≈ 0"
 	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return ζstar, λstar[I]
@@ -576,7 +576,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 	end
 
 	# check that λstar ≈ conj(λ)
-	@assert abs(λ + λstar) < 1e-3 "We did not find the needed eigenvalues for the jacobian adjoint, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?"
+	@assert abs(λ + λstar) < 1e-3 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
@@ -635,7 +635,7 @@ Automatic branch switching. More information is provided in [Simple bifurcation 
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `verbose` display information about the bifurcation point (normal form,...)
-- `kwargs` optional arguments to be passed to [`contination`](@ref), the regular `continuation` one.
+- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 """
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, kwargs...)

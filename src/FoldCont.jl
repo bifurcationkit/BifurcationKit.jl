@@ -216,7 +216,7 @@ function newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, o
 				opt_fold, normN = normN)
 end
 
-function newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar;Jt = nothing, d2F = nothing, kwargs...)
+function newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar; Jt = nothing, d2F = nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau
@@ -224,7 +224,6 @@ function newtonFold(F, J, br::ContResult, ind_fold::Int64, options::NewtonPar;Jt
 	# solve the Fold equations
 	return newtonFold(F, J, foldpointguess, eigenvec, options; Jt = Jt, d2F = d2F, kwargs...)
 end
-
 
 """
 	continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,vectype}

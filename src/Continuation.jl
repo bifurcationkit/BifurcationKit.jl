@@ -52,18 +52,17 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	@assert dsmax > 0
 
 	# parameters for scaling arclength step size
-	theta::T			  		= 0.5 	# parameter in the dot product used for the extended system
+	theta::T					= 0.5 	# parameter in the dot product used for the extended system
 	doArcLengthScaling::Bool  	= false
-	gGoal::T			  		= 0.5
-	gMax::T			   			= 0.8
-	thetaMin::T		   			= 1.0e-3
-	# isFirstRescale::Bool  		= true
-	a::T				  		= 0.5  	# aggressiveness factor
+	gGoal::T					= 0.5
+	gMax::T						= 0.8
+	thetaMin::T					= 1.0e-3
+	a::T						= 0.5  	# aggressiveness factor
 	tangentFactorExponent::T 	= 1.5
 
 	# parameters bound
 	pMin::T	= -1.0
-	pMax::T	=  1.0;		@assert pMax >= pMin
+	pMax::T	=  1.0; 			@assert pMax >= pMin
 
 	# maximum number of continuation steps
 	maxSteps::Int64  = 100
@@ -85,7 +84,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 
 	# handling bifucation points
 	precisionStability::T = 1e-10		# lower bound for stability of equilibria and periodic orbits
-	detectFold::Bool = true				# detect fold points?
+	detectFold::Bool = true 			# detect fold points?
 	detectBifurcation::Int64 = 0		# detect bifurcation points?
 	dsminBisection::T = 1e-5			# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm

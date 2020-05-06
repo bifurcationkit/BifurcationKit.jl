@@ -240,7 +240,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		_state.n_unstable = (state.n_unstable[2], _state.n_unstable[2])
 		_state.n_imag = (state.n_imag[2], _state.n_imag[2])
 	else
-		@warn "Bisection failed to locate bifurcation point precisely. Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
+		@warn "Bisection failed to locate bifurcation point precisely around p = $(getp(_state)). Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
 	end
 	verbose && println("----> Leaving [Loc-Bif]")
 	return status

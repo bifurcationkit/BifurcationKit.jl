@@ -157,15 +157,20 @@ d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
 d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 ```
 
+It is convenient to define the jet of `Fmit`
+
+```julia
+jet = ( (x, p) -> Fmit(x, @set par_mit.λ = p),
+	(x, p) -> JFmit(x, @set par_mit.λ = p),
+	(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
+	(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3))
+```
+
 We can now compute the branch off the third bifurcation point:
 
 ```julia
-br1, _ = continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-	(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-	br, 3, setproperties(opts_br;ds = 0.001, maxSteps = 40);
+br1, _ = continuation(jet..., br, 3, 
+	setproperties(opts_br;ds = 0.001, maxSteps = 40);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
@@ -183,13 +188,10 @@ You can also plot the two branches together `plot([br,br1],plotfold=false)` and 
 We continue our journey and compute the branch bifurcating of the first bifurcation point from the last branch we computed:
 
 ```julia
-br2, _ = continuation((x, p) -> Fmit(x, @set par_mit.λ = p),
- 		(x, p) -> JFmit(x, @set par_mit.λ = p),
-		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 40); 		verbosity = 3, plot = true,
-		printSolution = (x, p) -> norm(x),
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+br2, _ = continuation(jet..., br1, 1, 
+	setproperties(opts_br;ds = 0.001, maxSteps = 40); 	verbosity = 3, plot = true,
+	printSolution = (x, p) -> norm(x),
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```
 
 ![](mittlemann4.png)
@@ -203,15 +205,10 @@ The second bifurcation point on the branch `br` of homogenous solutions has a 2d
 We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)
 
 ```julia
-bp2d = @time PALC.computeNormalForm(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-	(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-	br, 2, opts_br.newtonOptions;  verbose=true)
+bp2d = @time PALC.computeNormalForm(jet..., br, 2, opts_br.newtonOptions;  verbose=true)
 ```
 
-You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [`Non-simple bifurcation branch switching`](@ref).
+You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple bifurcation branch switching](@ref).
 
 ```julia
 julia> PALC.nf(bp2d)
