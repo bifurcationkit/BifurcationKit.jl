@@ -10,11 +10,12 @@ function HopfPoint(br::ContResult, index::Int64)
 	return BorderedArray(bifpoint.x, [p, ω] )
 end
 
-@with_kw struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
+@with_kw struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
 	F::TF 								# Function F(x, p) = 0
 	J::TJ 								# Jacobian of F wrt x
 	Jadjoint::TJa						# Adjoint of the Jacobian of F
 	d2F::Td2f = nothing					# Hessian of F
+	lens::Tl							# parameter axis for the Hopf point
 	a::vectype							# close to null vector of (J - iω I)^*
 	b::vectype							# close to null vector of J - iω I
 	linsolver::S						# linear solver
@@ -22,26 +23,26 @@ end
 	linbdsolverAdjoint::Sbda			# linear bordered solver for the jacobian adjoint
 end
 
-hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, vectype, S, Sbd, Sbda} = Td2f != Nothing
+hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = Td2f != Nothing
 
-hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, vectype, S, Sbd, Sbda} = TJa != Nothing
+hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
 
-HopfProblemMinimallyAugmented(F, J, Ja, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, a, b, linsolve, BorderingBLS(linsolve), BorderingBLS(linsolve))
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, BorderingBLS(linsolve), BorderingBLS(linsolve))
 
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, a, b, linsolve, BorderingBLS(linsolve), BorderingBLS(linsolve))
+HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
-function (fp::HopfProblemMinimallyAugmented)(x, p::T, ω::T) where {T}
+function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian has a purely imaginary eigenvalue
 	# - p guess for the parameter for which the jacobian has a purely imaginary eigenvalue
 	# The jacobian of the MA problem is solved with a bordering method
-	a = fp.a
-	b = fp.b
+	a = hp.a
+	b = hp.b
 
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, flag, it = fp.linbdsolver(fp.J(x, p),
+	v, σ1, flag, it = hp.linbdsolver(hp.J(x, set(par, hp.lens, p)),
 							a, b,
 							T(0), zero(x), n; shift = Complex{T}(0, ω))
 
@@ -53,21 +54,21 @@ function (fp::HopfProblemMinimallyAugmented)(x, p::T, ω::T) where {T}
 	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v)) / n
 	# we should have σ = σ1
 
-	return fp.F(x, p), real(σ1), imag(σ1)
+	return hp.F(x, set(par, hp.lens, p)), real(σ1), imag(σ1)
 end
 
-function (hopfpb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, vectypeC, S, Sbd, Sbda})(x::BorderedArray{vectypeR, T}) where {TF, TJ, TJa, Td2f, vectypeC, vectypeR, S, Sbd, Sbda, T}
-	res = hopfpb(x.u, x.p[1], x.p[2])
+function (hopfpb::HopfProblemMinimallyAugmented)(x::BorderedArray, params)
+	res = hopfpb(x.u, x.p[1], x.p[2], params)
 	return BorderedArray(res[1], [res[2], res[3]])
 end
 
 # Struct to invert the jacobian of the Hopf MA problem.
-struct HopfLinearSolveMinAug <: AbstractLinearSolver; end
+struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
 """
 The function solve the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debug_` is used to debug the routine by returning several key quantities.
 """
-function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
+function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented, par,
 	 						duu, dup, duω;
 							debug_ = false) where T
 	# N = length(du) - 2
@@ -91,12 +92,15 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	a = pbMA.a
 	b = pbMA.b
 
+	# parameter axis
+	lens = pbMA.lens
+
 	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
-	J_at_xp = J(x, p)
+	J_at_xp = J(x, set(par, lens, p))
 
 	# we do the following to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
 	if hasAdjoint(pbMA)
-		JAd_at_xp = pbMA.Jadjoint(x, p)
+		JAd_at_xp = pbMA.Jadjoint(x, set(par, lens, p))
 	else
 		JAd_at_xp = transpose(J_at_xp)
 	end
@@ -110,8 +114,8 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	w, σ2, _, _ = pbMA.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
 
 	################### computation of σx σp ####################
-	dpF   = (Fhandle(x, p + ϵ1)	 - Fhandle(x, p - ϵ1)) / T(2ϵ1)
-	dJvdp = (apply(J(x, p + ϵ3), v) - apply(J(x, p - ϵ3), v)) / T(2ϵ3)
+	dpF   = (Fhandle(x, set(par, lens, p + ϵ1))	 - Fhandle(x, set(par, lens, p - ϵ1))) / T(2ϵ1)
+	dJvdp = (apply(J(x, set(par, lens, p + ϵ3)), v) - apply(J(x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
 	σp = -dot(w, dJvdp) / n
 
 	# case of sigma_omega
@@ -130,7 +134,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 		e = zero(x)
 		for ii in CartesianIndices(x)
 			e[ii] = T(1)
-			d2Fve = (apply(J(x + ϵ2 * e, p), v) - apply(J(x - ϵ2 * e, p), v)) / T(2ϵ2)
+			d2Fve = (apply(J(x + ϵ2 * e, set(par, lens, p)), v) - apply(J(x - ϵ2 * e, set(par, lens, p)), v)) / T(2ϵ2)
 			σx[ii] = -dot(w, d2Fve) / n
 			e[ii] = T(0)
 		end
@@ -154,11 +158,12 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	end
 end
 
-function (hopfl::HopfLinearSolveMinAug)(Jhopf, du::BorderedArray{vectype, T}; debug_ = false)  where {vectype, T}
-	out = hopfMALinearSolver((Jhopf[1]).u,
-				(Jhopf[1]).p[1],
-				(Jhopf[1]).p[2],
-				Jhopf[2],
+function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; debug_ = false)  where {vectype, T}
+	out = hopfMALinearSolver((Jhopf.x).u,
+				(Jhopf.x).p[1],
+				(Jhopf.x).p[2],
+				Jhopf.hopfpb,
+				Jhopf.param,
 				du.u, du.p[1], du.p[2];
 				debug_ = debug_)
 	if debug_ == false
@@ -198,31 +203,24 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
-	hopfvariable = HopfProblemMinimallyAugmented(
-		F,
-		J,
-		Jt,
-		d2F,
-		copy(eigenvec),
-		copy(eigenvec_ad),
+function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
+	hopfproblem = HopfProblemMinimallyAugmented(
+		F, J, Jt, d2F, lens,
+		_copy(eigenvec),
+		_copy(eigenvec_ad),
 		options.linsolver)
-	hopfPb = u -> hopfvariable(u)
 
 	# Jacobian for the Hopf problem
-	Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb))
+	Jac_hopf_MA = (x, param) -> (x = x, param = param, hopfpb = hopfproblem)
 
 	# options for the Newton Solver
-	opt_hopf = @set options.linsolver = HopfLinearSolveMinAug()
+	opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
 
 	# solve the hopf equations
-	return newton(x ->  hopfPb(x),
-				x -> Jac_hopf_MA(x, hopfvariable),
-				hopfpointguess,
-				opt_hopf, normN = normN)
+	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN)
 end
 
-function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, options::NewtonPar ; Jt = nothing, d2F = nothing, normN = norm)
+function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens, options::NewtonPar ; Jt = nothing, d2F = nothing, normN = norm)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
@@ -231,8 +229,7 @@ function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, options::NewtonPar ; 
 	eigenvec_ad = conj.(eigenvec)
 
 	# solve the hopf equations
-	outhopf, hist, flag =  newtonHopf(F, J, hopfpointguess, eigenvec_ad, eigenvec, options; Jt = Jt, d2F = d2F, normN = normN)
-	return outhopf, hist, flag
+	return newtonHopf(F, J, hopfpointguess, par, lens, eigenvec_ad, eigenvec, options; Jt = Jt, d2F = d2F, normN = normN)
 end
 
 """
@@ -263,58 +260,43 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` otherwise the jacobian will be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p1, p2) -> transpose(d_xF(x, p1, p2))` otherwise the jacobian would be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
-	# Bad way it creates a struct for every p2?
-	# Jacobian for the hopf problem
-	Jac_hopf_MA(u0, pb) = (return (u0, pb))
+function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
 
-	if isnothing(Jt)
-		hopfvariable = p2 -> HopfProblemMinimallyAugmented(
-			(x, p1) -> F(x, p1, p2),
-			(x, p1) -> J(x, p1, p2),
-			nothing,
-			d2F(p2),
-			copy(eigenvec),
-			copy(eigenvec_ad),
-			options_newton.linsolver)
-		hopfPb = (u, p2) -> hopfvariable(p2)(u)
-	else
-		hopfvariable = p2 -> HopfProblemMinimallyAugmented(
-			(x, p1) -> F(x, p1, p2),
-			(x, p1) -> J(x, p1, p2),
-			(x, p1) -> Jt(x, p1, p2),
-			d2F(p2),
-			copy(eigenvec),
-			copy(eigenvec_ad),
-			options_newton.linsolver)
-		hopfPb = (u, p2) -> hopfvariable(p2)(u)
-	end
+	hopfPb = HopfProblemMinimallyAugmented(
+		F, J, Jt, d2F,
+		lens1,
+		_copy(eigenvec), #copy(eigenvec),
+		_copy(eigenvec_ad),
+		options_newton.linsolver)
 
-	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolveMinAug()
+	# Jacobian for the Hopf problem
+	Jac_hopf_MA = (x, param) -> (x = x, param = param, hopfpb = hopfPb)
+
+	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 
 	# solve the hopf equations
-	return continuation(
-		(x, p2) -> hopfPb(x, p2),
-		(x, p2) -> Jac_hopf_MA(x, hopfvariable(p2)),
-		hopfpointguess, p2_0,
-		opt_hopf_cont,
-		plot = true,
+	branch, u, tau = continuation(
+		hopfPb, Jac_hopf_MA,
+		hopfpointguess, par, lens2,
+		opt_hopf_cont;
 		printSolution = (u, p) -> u.p[1],
-		plotSolution = (x, p;kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ) ; kwargs...)
+		plotSolution = (x, p; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)), kwargs...)
+
+	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
-function continuationHopf(F, J, br::ContResult, ind_hopf::Int64, p2_0::Real, options_cont::ContinuationPar ;  Jt = nothing, d2F = p2 -> nothing, kwargs...)
+function continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jt = nothing, d2F = nothing, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
 	eigenvec_ad = conj.(eigenvec)
-	return continuationHopf(F, J, hopfpointguess, p2_0, eigenvec_ad, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, par, lens1, lens2, eigenvec_ad, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
 end

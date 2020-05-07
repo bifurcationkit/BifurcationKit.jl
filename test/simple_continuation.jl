@@ -4,8 +4,8 @@ const PALC = PseudoArcLengthContinuation
 
 k = 2
 N = 10
-F = (x, p) -> p .* x .+ x.^(k+1)/(k+1) .+ 0.01
-Jac_m = (x, p) -> diagm(0 => p  .+ x.^k)
+F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
+Jac_m = (x, p) -> diagm(0 => p[1]  .+ x.^k)
 
 normInf = x -> norm(x, Inf)
 
@@ -13,14 +13,14 @@ opts = PALC.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 14
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, sol, _ = @time PALC.continuation(F,Jac_m,x0,-1.5,opts,verbosity=0) #(15.28 k allocations: 1.055 MiB)
+br0, sol, _ = @time PALC.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(15.28 k allocations: 1.055 MiB)
 
 # test with callbacks
-br0, sol, _ = @time PALC.continuation(F,Jac_m,x0,-1.5,(@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show x;true))
+br0, sol, _ = @time PALC.continuation(F,Jac_m,x0, -1.5, (@lens _),(@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show x;true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-# iter = PALC.PALCIterable(F,Jac_m,x0,-1.5,opts,verbosity=0)
+# iter = PALC.PALCIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
 # state = iterate(iter)[1]
 # contRes = PALC.initContRes(iter, state)
 # @time continuation!(iter, state, contRes)

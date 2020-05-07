@@ -32,19 +32,22 @@ copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( (x.coefficients = copy(y.coeffic
 N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 
-function F_chan(u, alpha, beta = 0.01)
+function F_chan(u, p)
+	@unpack alpha, beta = p
 	return [Fun(u(0.), domain(u)) - beta,
 			Fun(u(1.), domain(u)) - beta,
 			Δ * u + alpha * N(u, b = beta)]
 end
 
-function dF_chan(u, v, alpha, beta = 0.01)
+function dF_chan(u, v, p)
+	@unpack alpha, beta = p
 	return [Fun(v(0.), domain(u)),
 			Fun(v(1.), domain(u)),
 			Δ * v + alpha * dN(u, b = beta) * v]
 end
 
-function Jac_chan(u, alpha, beta = 0.01)
+function Jac_chan(u, p)
+	@unpack alpha, beta = p
 	return [Evaluation(u.space, 0.),
 			Evaluation(u.space, 1.),
 			Δ + alpha * dN(u, b = beta)]
@@ -58,20 +61,17 @@ end
 
 sol = Fun( x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol.space, 2);
+par_af = (alpha = 3., beta = 0.01)
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
 	out, _, flag = @time PALC.newton(
-		u -> F_chan(u, 3.0),
-		u -> Jac_chan(u, 3.0),
-		sol, optnew, normN = x -> norm(x, Inf64))
+		F_chan, Jac_chan, sol, par_af, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
 
 	br, _ = @time continuation(
-		(x, p) ->   F_chan(x, p),
-		(x, p) -> Jac_chan(x, p),
-		out, 3.0, optcont,
+		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
@@ -84,9 +84,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
 
 	br, _ = @time continuation(
-		(x, p) ->   F_chan(x, p),
-		(x, p) -> Jac_chan(x, p),
-		out, 3.0, optcont;
+		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
 		dotPALC = (x, y) -> dot(x, y),
 		plot = true,
 		# finaliseSolution = finalise_solution,
@@ -97,9 +95,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 ####################################################################################################
 # tangent predictor with Bordered system
 br, _ = @time continuation(
-	(x, p) ->   F_chan(x, p),
-	(x, p) -> Jac_chan(x, p),
-	out, 3.0, optcont,
+	F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
 	tangentAlgo = BorderedPred(),
 	plot = true,
 	finaliseSolution = finalise_solution,
@@ -109,9 +105,9 @@ br, _ = @time continuation(
 # optcont = @set optcont.newtonOptions.verbose = true
 indfold = 2
 outfold, _, flag = @time newtonFold(
-		(x, α) -> F_chan(x, α),
-		(x, p) -> Jac_chan(x, p),
+		F_chan, Jac_chan,
 		br, indfold, #index of the fold point
+		par_af, (@lens _.alpha),
 		optcont.newtonOptions)
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
 #################################################################################################### Continuation of the Fold Point using minimally augmented

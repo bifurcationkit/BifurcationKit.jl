@@ -113,9 +113,7 @@ eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, _ = @time continuation(
-		(x, p) ->    Fbru(x, @set par_bru.l = p),
-		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		sol0, par_bru.l,
+		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
@@ -125,17 +123,15 @@ ind_hopf = 2
 	# hopfpt = PALC.HopfPoint(br, ind_hopf)
 	optnew = opts_br_eq.newtonOptions
 	hopfpoint, _, flag = @time newtonHopf(
-		(x, p) ->    Fbru(x, @set par_bru.l = p),
-		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		br, ind_hopf,
+		Fbru, Jbru_sp,
+		br, ind_hopf, par_bru, (@lens _.l),
 		(@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
 br_hopf, u1_hopf = @time PALC.continuationHopf(
-	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
-	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
-	br, ind_hopf, par_bru.β,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew), verbosity = 2, normC = norminf)
+	Fbru, Jbru_sp,
+	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); verbosity = 2, normC = norminf)
 
 plot(br_hopf, xlabel="beta", ylabel = "l", label="")
 
@@ -143,18 +139,16 @@ plot(br_hopf, xlabel="beta", ylabel = "l", label="")
 d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
 
 hopfpoint, hist, flag = @time PALC.newtonHopf(
-	(x, p) ->  Fbru(x, @set par_bru.l = p),
-	(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-	br, ind_hopf,
-	(@set optnew.verbose = true), Jt = (x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
+	Fbru, Jbru_sp,
+	br, ind_hopf, par_bru, (@lens _.l),
+	(@set optnew.verbose = true);
 	d2F = d2Fbru, normN = norminf)
 
 br_hopf, u1_hopf = @time PALC.continuationHopf(
-	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
-	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
-	br, ind_hopf, par_bru.β,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew), Jt = (x, p, β) -> transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
-	d2F = β -> d2Fbru, verbosity = 2, normC = norminf)
+	Fbru, Jbru_sp,
+	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew);
+	d2F = d2Fbru, verbosity = 2, normC = norminf)
 
 ####################################################################################################Continuation of Periodic Orbit
 # number of time slices

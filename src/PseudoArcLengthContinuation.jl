@@ -1,6 +1,6 @@
 module PseudoArcLengthContinuation
 	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays
-	using Setfield: setproperties, @set
+	using Setfield: setproperties, @set, Lens, get, set
 	using Parameters: @with_kw, @unpack
 	using DocStringExtensions
 

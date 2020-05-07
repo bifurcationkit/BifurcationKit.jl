@@ -31,13 +31,13 @@ end
 
 ####################################################################################################
 """
-		newton(F, J, x0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
+		newton(F, J, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 
-This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x)u = -F(x)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
+This is the Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p0)u = -F(x, p0)`` in the Newton step. You can for example use `linsolver = Default()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
 
 # Arguments:
-- `x -> F(x)` functional whose zeros are looked for. In particular, it is not **inplace**,
-- `dF(x) = x -> J(x)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian `J(x)` can be a matrix or an out-of-place function.
+- `x -> F(x, p0)` functional whose zeros are looked for. In particular, it is not **inplace**,
+- `dF(x) = x -> J(x, p0)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian `J(x)` can be a matrix or an out-of-place function.
 - `x0` initial guess
 - `options` variable holding the internal parameters used by the `newton` method
 - `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
@@ -57,28 +57,34 @@ This is the Newton Solver for `F(x) = 0` with Jacobian `J` and initial guess `x0
 - flag of convergence
 - number of iterations
 
-# Simplified call
+# Simplified calls
 When `J` is not passed. It is then computed with finite differences. The call is as follows:
 
-	newton(Fhandle, x0, options::NewtonPar; kwargs...)
+	newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
+
+You can also pass functions which do not have parameters `x ->F(x)`, `x->J(x)` as follows
+
+	newton(F, J, x0, options::NewtonPar;  kwargs...)
+
+	newton(F, x0, options::NewtonPar;  kwargs...)
 
 # Example
 
 ```
-julia> F(x) = x.^3 .- 1
-julia> Jac(x) = diagm(0 => 3 .* x.^2) # sparse jacobian
+julia> F(x, p) = x.^3 .- 1
+julia> Jac(x, p) = diagm(0 => 3 .* x.^2) # sparse jacobian
 julia> x0 = rand(1_000)
 julia> opts = NewtonPar()
-julia> sol, hist, flag, _ = newton(F, Jac, x0, opts, normN = x->norm(x,Inf))
+julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x, Inf))
 ```
 """
-function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...) where T
+function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialize iterations
 	x = similar(x0); copyto!(x, x0) # x = copy(x0)
-	f = Fhandle(x)
+	f = Fhandle(x, p0)
 	d = similar(f); copyto!(d, f)	# d = copy(f)
 
 	neval = 1
@@ -94,13 +100,13 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & compute
-		J = Jhandle(x)
+		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
 
 		# Update solution: x .= x .- d
 		minus!(x, d)
 
-		copyto!(f, Fhandle(x))
+		copyto!(f, Fhandle(x, p0))
 		res = normN(f)
 
 		neval += 1
@@ -119,7 +125,12 @@ function newton(Fhandle, Jhandle, x0, options::NewtonPar{T}; normN = norm, callb
 end
 
 # simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
-function newton(Fhandle, x0, options::NewtonPar; kwargs...)
-	Jhandle = u -> finiteDifferences(Fhandle, u)
-	return newton(Fhandle, Jhandle, x0, options; kwargs...)
-end
+# function newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
+# 	Jhandle = (u, p) -> finiteDifferences(z -> Fhandle(z, p), u)
+# 	return newton(Fhandle, Jhandle, x0, options; kwargs...)
+# end
+
+# simplified calls to pass F(x) and J(x) instead of F(x, p) and J(x, p)
+# newton(Fhandle, Jhandle, x0, options::NewtonPar; kwargs...) = newton((x, p) -> Fhandle(x), (x, p) -> Jhandle(x), x0, nothing, options; kwargs...)
+#
+# newton(Fhandle, x0, options::NewtonPar; kwargs...) = newton((x, p) -> Fhandle(x), x0, nothing, options; kwargs...)
