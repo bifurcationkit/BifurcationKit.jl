@@ -2,7 +2,7 @@
 
 > If you provide your own linear solver, it must be a subtype of `AbstractLinearSolver` otherwise `PseudoArcLengthContinuation.jl` will not recognize it. See example just below. 
 
-The linear solvers provide a way of inverting the Jacobian `J` or computing `J \ x`.
+The linear solvers provide a way of inverting the Jacobian `J` or solving `J * x = rhs`. Such linear solver `linsolve` will be called like `sol, success, itnumber = linsolve(J, rhs)` throughout the package.
 
 Here is an example of the simplest of them (see `src/LinearSolver.jl` for the true implementation) to give you an idea, the backslash operator:
 
@@ -48,7 +48,8 @@ ls(rand(2,2), rand(2))
 
 > The eigen solvers must be subtypes of `AbstractEigenSolver`. 
 
-They provide a way of computing the eigen elements of the Jacobian `J`.
+They provide a way of computing the eigen elements of the Jacobian `J`. Such eigen solver `eigsolve` will be called like `ev, evecs, itnumber = eigsolve(J, nev)` throughout the package, `nev` being the number of requested eigen elements of largest real part.
+
  
 Here is an example of the simplest of them (see `src/EigSolver.jl` for the true implementation) to give you an idea:
 

@@ -2,7 +2,7 @@
 
 > The bordered linear solvers must be subtypes of `AbstractBorderedLinearSolver <: AbstractLinearSolver`. 
 
-The methods provided here solve bordered linear equations. More precisely, one is interested in the solution to $J\cdot u = v$ where
+The methods provided here solve bordered linear equations. More precisely, one is interested in the solution $u$ to $J\cdot u = v$ where
 
 $$\tag E J=\left(\begin{array}{ll}
 {A} & {b} \\
@@ -12,8 +12,11 @@ $$\tag E J=\left(\begin{array}{ll}
 {v_2}
 \end{array}\right)$$
 
+Such linear solver `bdlsolve` will be called like `sol, success, itnumber = bdlsolve(A, b, c, d, v1, v2)` throughout the package.
+
+
 ## Full matrix
-This easiest way to solve $(E)$ is by forming the matrix $J$. In case it is sparse, it should be relatively efficient. You can create such bordered linear solver using `bls = MatrixBLS(ls)` where `ls::AbstractLinearSolver` is a linear solver which defaults to `\` and which is used to solve $(E)$ with $J$.
+This easiest way to solve $(E)$ is by forming the matrix $J$. In case it is sparse, it should be relatively efficient. You can create such bordered linear solver using `bls = MatrixBLS(ls)` where `ls::AbstractLinearSolver` is a linear solver (which defaults to `\`) used to solve invert $J$.
 
 ## Bordering method
 
