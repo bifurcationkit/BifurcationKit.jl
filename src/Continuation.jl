@@ -346,7 +346,7 @@ isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
 # condition for halting the continuation procedure
 @inline done(it::PALCIterable, state::PALCStateVariables) =
 			(state.step <= it.contParams.maxSteps) &&
-			(it.contParams.pMin < state.z_old.p < it.contParams.pMax) &&
+			(it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) &&
 			(state.stopcontinuation == false)
 
 function updatestability!(state::PALCStateVariables, n_unstable, n_imag)
@@ -624,16 +624,17 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
 # Arguments:
-- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
+- `F = (x, p) -> F(x, p)` where `p` is the set of parameters passed to `F`.
 - `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
 - `x0` initial guess
-- `p0` initial parameter, must be a real number
-- `contParams` parameters for continuatio. See [`ContinuationPar`](@ref) for more information about the options
+- `par` initial set of parameters.
+- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _.[1])`. For more information, we refer to `SetField.jl`.
+- `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
 - `plot = false` whether to plot the solution while computing
 - `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
@@ -651,16 +652,18 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `u::BorderedArray` the last solution computed on the branch
 
 !!! tip "Controlling the argument `linearAlgo`"
-    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, p0, contParams, linearAlgo; kwargs...)`.
+    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, par, lens, contParams, linearAlgo; kwargs...)`.
 
 # Simplified call:
 You can also use the following call for which the jacobian is computed internally using Finite Differences
 
-	continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...)
+	continuation(Fhandle, x0, par, lens, contParams::ContinuationPar; kwargs...)
 
 # Method
 
 ## Bordered system of equations
+
+In what follows, we abuse of notations, `p` refers to the value of the scalar parameter we perform continuation with. Hence, it should be `p = get(par, lens)`.
 
 The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]``. In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
 
@@ -719,6 +722,4 @@ function continuation(Fhandle, Jhandle,
 
 end
 
-# continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar; kwargs...) = continuation((x, p)->Fhandle(x, set(par, lens, p)), (x, p)->Jhandle(x, set(par, lens, p)), x0, get(par, lens), contParams; kwargs...)
-
-# continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S, E} = continuation(Fhandle, (x0, p) -> finiteDifferences(u -> Fhandle(u, p), x0), x0, p0, contParams; kwargs...)
+continuation(Fhandle, x0, par, lens::Lens, contParams::ContinuationPar; kwargs...) = continuation(Fhandle, (x, p) -> finiteDifferences(u -> Fhandle(u, p), x), x0, par, lens, contParams; kwargs...)

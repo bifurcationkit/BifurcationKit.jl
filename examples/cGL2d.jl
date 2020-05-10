@@ -117,10 +117,7 @@ Nx = 41*1
 eigls = EigArpack(1.0, :LM)
 	# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 	opt_newton = PALC.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time PALC.newton(
-		x ->  Fcgl(x, par_cgl),
-		x ->  Jcgl(x, par_cgl),
-		vec(sol0), opt_newton, normN = norminf)
+	out, hist, flag = @time PALC.newton(Fcgl, Jcgl, vec(sol0), par_cgl, opt_newton, normN = norminf)
 ####################################################################################################
 # test for the Jacobian expression
 # sol0 = rand(2Nx*Ny)
@@ -128,13 +125,23 @@ eigls = EigArpack(1.0, :LM)
 # J1 = Jcgl(sol0, par_cgl)
 # norm(J0 - J1, Inf)
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 1, nev = 5, plotEveryNsteps = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 2, nev = 5, plotEveryNsteps = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
 
-	br, u1 = @time PALC.continuation(
-		(x, p) -> Fcgl(x, @set par_cgl.r = p),
-		(x, p) -> Jcgl(x, @set par_cgl.r = p),
-		vec(sol0), par_cgl.r,
-		opts_br, verbosity = 0)
+	br, u1 = @time PALC.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+####################################################################################################
+# normal form computation
+using ForwardDiff
+
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+
+d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
+d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
+d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
+jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+
+hopfpt = PALC.computeNormalForm(jet..., br, 2)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -144,23 +151,15 @@ r_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opt
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = p -> PeriodicOrbitTrapProblem(
-	x ->  Fcgl(x, p),
-	x ->  Jcgl(x, p),
-	real.(vec_hopf),
-	hopfpt.u,
-	M)
+poTrap = PeriodicOrbitTrapProblem(Fcgl, Jcgl, real.(vec_hopf), hopfpt.u, M)
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMF = p -> PeriodicOrbitTrapProblem(
-	x ->  Fcgl(x, p),
-	x ->  (dx -> d1Fcgl(x, p, dx)),
-	real.(vec_hopf),
-	hopfpt.u,
-	M, ls0)
+poTrapMF = PeriodicOrbitTrapProblem(
+	Fcgl,	(x, p) ->  (dx -> d1Fcgl(x, p, dx)),
+	real.(vec_hopf), hopfpt.u, M, ls0)
 
-poTrap(@set par_cgl.r = r_hopf - 0.1)(orbitguess_f) |> plot
-poTrapMF(@set par_cgl.r = r_hopf - 0.1)(orbitguess_f) |> plot
+poTrap(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
+poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 
 
 plot();PALC.plotPeriodicPOTrap(orbitguess_f, M, Nx, Ny; ratio = 2);title!("")
@@ -189,16 +188,15 @@ deflationOp = DeflationOperator(2.0,(x,y) -> dot(x[1:end-1],y[1:end-1]),1.0,[zer
 opt_po = (@set opt_po.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 	@assert 1==0 "Too much memory used!"
-	br_pok2, upo , _= @time PALC.continuationPOTrap(
-			p -> poTrap(@set par_cgl.r = p),
-			orbitguess_f, r_hopf - 0.01,
+	br_pok2, upo , _= @time PALC.continuation(
+			poTrap, orbitguess_f, (@set par_cgl.r = p), (@lens _.r),
 			opts_po_cont; linearPO = :FullLU
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			printSolution = (u,p) -> PALC.amplitude(u, Nx*Ny, M), normC = norminf)
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
-Jpo = @time poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f) # 0.5sec
+Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
 Precilu = @time ilu(Jpo, τ = 0.005) # 2 sec
 # P = @time lu(Jpo) # 97 sec
 # @time Jpo \ rand(ls.N) # 97 sec
@@ -210,8 +208,8 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart
 	ls(Jpo, rand(size(Jpo,1)))
 
 opt_po = @set opt_newton.verbose = true
-	outpo_f, _, flag = @time PALC.newton(poTrapMF(@set par_cgl.r = r_hopf - 0.01),
-			orbitguess_f,
+	outpo_f, _, flag = @time newton(poTrapMF,
+			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 			(@set opt_po.linsolver = ls),
 			:FullMatrixFree;
 			normN = norminf,
@@ -224,9 +222,8 @@ opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbo
 # opt_po = @set opt_po.eigsolver = DefaultEig()
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
-	br_pok2, _ , _= @time PALC.continuationPOTrap(
-			p -> poTrapMF(@set par_cgl.r = p),
-			outpo_f, r_hopf - 0.01,
+	br_po, _ , _= @time continuation(
+			poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
 			opts_po_cont; linearPO = :FullMatrixFree,
 			verbosity = 3,	plot = true,
 			plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -235,6 +232,20 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 
 branches = Any[br_pok2]
 # push!(branches, br_po)
 plot([branches[1]]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
+###################################################################################################
+# automatic branch switching from Hopf point
+br_po, _ = continuation(
+	# arguments for branch switching
+	jet..., br, 2,
+	# arguments for continuation
+	opts_po_cont, poTrapMF;
+	ampfactor = 3, linearPO = :FullMatrixFree,
+	verbosity = 3,	plot = true,
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	finaliseSolution = (z, tau, step, contResult) ->
+	(Base.display(contResult.eig[end].eigenvals) ;true),
+	plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
 # preconditioner taking into account the constraint
@@ -245,26 +256,23 @@ plot([branches[1]]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplit
 # 	ls(Jpo, rand(ls.N))
 ####################################################################################################
 # this preconditioner does not work very well here
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacCyclicSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.003)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 opt_po = @set opt_newton.verbose = true
-	outpo_f, hist, flag = @time PALC.newton(
-			poTrapMF(@set par_cgl.r = r_hopf - 0.01),
-			orbitguess_f,
+	outpo_f, hist, flag = @time PALC.newton(poTrapMF,
+			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 			(@set opt_po.linsolver = ls), :BorderedMatrixFree;
-			normN = norminf,
-			# callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, Nx*Ny, M));@show kwargs;true)
-			)
+			normN = norminf)
 
 function callbackPO(x, f, J, res, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
-	@show kwargs ls.N
+	@show ls.N keys(kwargs)
 	# we update the preconditioner every 10 continuation steps
 	if mod(kwargs[:iterationC], 10) == 9 && iteration == 1
 		@info "update Preconditioner"
-		Jpo = poTrap(@set p.r = kwargs[:p])(Val(:JacCyclicSparse), x)
+		Jpo = poTrap(Val(:JacCyclicSparse), x, (@set p.r = kwargs[:p]))
 		Precilu = @time ilu(Jpo, τ = 0.003)
 		ls.Pl = Precilu
 	end
@@ -275,13 +283,12 @@ opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2n), verb
 opt_po = (@set opt_po.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 # opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls))
-	br_pok2, upo , _= @time PALC.continuationPOTrap(
-			p -> poTrap(@set par_cgl.r = p),
-			outpo_f, r_hopf - 0.01,
-			opts_po_cont;# linearPO = :BorderedMatrixFree,
+	br_pok2, upo , _= @time continuation(
+			poTrap, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
+			opts_po_cont; linearPO = :BorderedMatrixFree,
 			verbosity = 2,	plot = true,
 			plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
-			# callbackN = callbackPO,
+			callbackN = callbackPO,
 			printSolution = (u, p; kwargs...) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2 ),
 			normC = norminf)
 
@@ -378,17 +385,22 @@ out_ = similar(sol0f)
 @time Fcgl!(out_, sol0f, par_cgl)
 @time dFcgl!(out_, sol0f, par_cgl, sol0f)
 
+
+ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+	ls(Jpo, rand(ls.N))
+
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMFi = p -> PeriodicOrbitTrapProblem(
-	(o, x) ->  Fcgl!(o, x, p),
-	(o, x, dx) -> dFcgl!(o, x, p, dx),
-	real.(vec_hopf),
-	hopfpt.u,
+poTrapMFi = PeriodicOrbitTrapProblem(
+	Fcgl!,
+	dFcgl!,
+	real.(vec_hopf), hopfpt.u,
 	M, ls0; isinplace = true)
 
-pb = poTrapMFi(@set par_cgl.r = r_hopf - 0.01)
-outpo_f, _, flag = @time PALC.newton(pb,
-	orbitguess_f, (@set opt_po.linsolver = ls),
+
+# @time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
+
+outpo_f, _, flag = @time newton(poTrapMFi,
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls),
 	:FullMatrixFree; normN = norminf)
 
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
@@ -396,8 +408,8 @@ outpo_f, _, flag = @time PALC.newton(pb,
 
 lsi = GMRESIterativeSolvers!(verbose = false, N = length(orbitguess_f), tol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true)
 
-outpo_f, _, flag = @time PALC.newton(pb,
-	orbitguess_f, (@set opt_po.linsolver = lsi),
+outpo_f, _, flag = @time newton(poTrapMFi,
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi),
 	:FullMatrixFree; normN = norminf)
 
 ####################################################################################################
@@ -426,45 +438,31 @@ end
 indfold = 2
 foldpt = PALC.FoldPoint(br_po, indfold)
 
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 outfold, hist, flag = @time PALC.newtonFold(
-		(x, p) -> poTrap(@set par_cgl.r = p)(x),
-		(x, p) -> poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
-		br_pok2 , indfold, #index of the fold point
+		(x, p) -> poTrap(x, p),
+		(x, p) -> poTrap(Val(:JacFullSparse), x, p),
+		br_po , indfold, #index of the fold point
+		par_cgl, (@lens _.r),
 		@set opt_po.linsolver = ls;
-		d2F = (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_pok2.foldpoint[indfold][3],"\n")
-
-# outfold, hist, flag = @time PALC.newtonFold(
-# 		(x, p) -> poTrapMF(@set par_cgl.r = p)(x),
-# 		(x, p) -> (dx -> poTrapMF(@set par_cgl.r = p)(x, dx)),
-# 		br_pok2, indfold, #index of the fold point
-# 		(@set opt_po.linsolver = ls),
-# 		Jt = (x, p) -> (dx -> JacT(x -> poTrapMF(@set par_cgl.r = p)(x), x, dx))
-# 		# (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2),)
-# 		# opt_po
-# 		)
-# 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_pok2.foldpoint[indfold][3],"\n")
-
-
-
-# @time JacT( poTrapMF(@set par_cgl.r = 0.95), orbitguess_f, orbitguess_f)
-# @time JacT2( poTrapMF(@set par_cgl.r = 0.95), orbitguess_f, orbitguess_f)
-
+		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
+		)
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
 # optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = opt_po, maxSteps = 10)
 
 outfoldco, hist, flag = @time PALC.continuationFold(
-	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
-	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
-	br_pok2, indfold, par_cgl.c5, optcontfold;
-	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	(x, p) -> poTrap(x, p),
+	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
+	br_po, indfold, par_cgl, (@lens _.r), (@lens _.c5),
+	optcontfold;
+	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)
 
 plot(outfoldco, label="", xlabel="c5", ylabel="r")
@@ -480,7 +478,7 @@ mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)
 axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
 par_cgl_gpu = @set par_cgl.Δ = CuArrays.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.01))
 Precilu = @time ilu(Jpo, τ = 0.003)
 
 struct LUperso
@@ -559,9 +557,8 @@ sol_0 = ldiv!(Precilu_gpu, copy(CuArray(rhs)));
 
 # matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
-poTrapMFGPU = p -> PeriodicOrbitTrapProblem(
-	x ->  Fcgl(x, p),
-	x ->  (dx -> dFcgl(x, p, dx)),
+poTrapMFGPU = PeriodicOrbitTrapProblem(
+	Fcgl, dFcgl,
 	CuArray(real.(vec_hopf)),
 	CuArray(hopfpt.u),
 	M, ls0gpu)

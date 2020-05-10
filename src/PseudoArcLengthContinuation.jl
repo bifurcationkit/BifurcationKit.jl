@@ -18,9 +18,11 @@ module PseudoArcLengthContinuation
 	include("BorderedProblem.jl")
 	include("Plotting.jl")
 	include("Utils.jl")
-	include("FoldCont.jl")
-	include("HopfCont.jl")
-
+	include("codim2/codim2.jl")
+	include("codim2/FoldCont.jl")
+	include("codim2/HopfCont.jl")
+		
+	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/StandardShooting.jl")

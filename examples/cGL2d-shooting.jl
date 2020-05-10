@@ -51,11 +51,7 @@ function Fcgl!(f, u, p, t = 0.)
 	f .= f .+ NL(u, p)
 end
 
-function Fcgl(u, p, t = 0.)
-	f = similar(u)
-	Fcgl!(f, u, p, t)
-end
-
+Fcgl(u, p, t = 0.) = Fcgl!(similar(u), u, p, t)
 
 # computation of the first derivative
 # d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
@@ -107,29 +103,25 @@ Nx = 41*1
 	sol0_f = vec(sol0)
 
 ####################################################################################################
-# opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 1, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton)
-# 	opts_br0.newtonOptions.verbose = false
-# 	opts_br0.maxSteps = 1060
-#
-# 	br, u1 = @time PALC.continuation(
-# 		(x, p) -> Fcgl(x, @set par_cgl.r = p),
-# 		(x, p) -> Jcgl(x, @set par_cgl.r = p),
-# 		vec(sol0), par_cgl.r,
-# 		opts_br0, verbosity = 0,
-# 		plot = false)
+eigls = EigArpack(1.0, :LM)
+# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
+opt_newton = PALC.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 2, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
+
+	br, u1 = @time PALC.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+
+plot(br)
 ####################################################################################################
 # Look for periodic orbits
 f1 = DiffEqArrayOperator(par_cgl.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2)
+prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; atol = 1e-14, rtol = 1e-14, dt = 0.1)
 prob = ODEProblem(Fcgl, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2)#; jac = Jbr, jac_prototype = Jbr(sol0_f, par_cgl))
 ####################################################################################################
 # sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
-sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
 # sol = @time solve(prob, LawsonEuler(krylov=true, m=50); abstol=1e-14, reltol=1e-14, dt = 0.1)
 # sol = @time solve(prob_sp, CNAB2(linsolve=LinSolveGMRES()); abstol=1e-14, reltol=1e-14, dt = 0.03)
-# sol = @time solve(prob, KenCarp4(); abstol=1e-12, reltol=1e-10)
-
 
 plot(sol.t, [norm(v[1:Nx*Ny], Inf) for v in sol.u],xlims=(115,120))
 
@@ -140,40 +132,58 @@ end
 
 ####################################################################################################
 # this encodes the functional for the Shooting problem
-probSh = p -> PALC.ShootingProblem(
+probSh = ShootingProblem(
 	# pass the vector field and parameter (to be passed to the vector field)
-	u -> Fcgl(u, p), p,
+	Fcgl, par_cgl,
 
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
 
-	[sol[:, end]];
+	[sol[:, end]])
 
-	# these are options passed to the ODE time stepper
-	atol = 1e-14, rtol = 1e-14, dt = 0.1)
-
-initpo = vcat(sol(116.), 6.9) |> vec
-	probSh(@set par_cgl.r = 1.2)(initpo) |> norminf
+initpo = vcat(sol(116.), 4.9) |> vec
+	probSh(initpo, @set par_cgl.r = 1.2) |> norminf
 
 ls = GMRESIterativeSolvers(tol = 1e-4, N = 2Nx * Ny + 1, maxiter = 50, verbose = false)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
-outpo, _ = @time PALC.newton(
-		x -> probSh(@set par_cgl.r = 1.2)(x),
-		x -> (dx -> probSh(@set par_cgl.r = 1.2)(x, dx)),
-		initpo, optn; normN = norminf,
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
+outpo, _ = @time newton(
+		probSh, initpo, (@set par_cgl.r = 1.2), optn; normN = norminf,
 		# callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> T = ",x[end]);x[end] = max(0.1,x[end]);x[end] = min(30.1,x[end]);true)
 		)
-
+outpo[end]
 heatmap(reshape(outpo[1:Nx*Ny], Nx, Ny), color = :viridis)
 
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 1.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)
-	br_po, upo , _= @time PALC.continuationPOShooting(
-		p -> probSh(@set par_cgl.r = p),
-		# (x, p) -> (dx -> probSh(@set par_cgl.r = p)(x, dx)),
-		outpo, 1.2, opts_po_cont;
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryNsteps = 1)
+br_po, upo , _= @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _.r),
+		opts_po_cont;
 		verbosity = 3,
 		plot = true,
 		# callbackN = cb_ss,
 		plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-		printSolution = (u, p) -> PALC.getAmplitude(probSh(@set par_cgl.r = p), u; ratio = 2), normC = norminf)
+		printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+
+####################################################################################################
+# automatic branch switching
+
+using ForwardDiff
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
+	d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
+	d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
+
+jet  = (Fcgl, Jcgl,
+	(x, p, dx1, dx2) -> d2Fcgl(x, p, dx1, dx2),
+	(x, p, dx1, dx2, dx3) -> d3Fcgl(x, p, dx1, dx2, dx3))
+
+br_po, _ = continuation(
+	jet...,	br, 2,
+	# arguments for continuation
+	opts_po_cont, probSh; verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.001,
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	# printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2),
+	normC = norminf)

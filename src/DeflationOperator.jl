@@ -115,7 +115,7 @@ end
 """
 	function newton(F, J, x0::vectype, p0, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 
-This is the deflated version of the Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)`. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more informations.
+This is the deflated version of the Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)`. We refer to [`newton`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more informations.
 
 # Output:
 - solution:
@@ -126,7 +126,7 @@ This is the deflated version of the Newton Solver for `F(x, p0) = 0` with Jacobi
 # Simplified call
 When `J` is not passed. It then computed with finite differences. The call is as follows:
 
-	newton(F, J, x0, p0, options, defOp; kwargs...)
+	newton(F, x0, p0, options, defOp; kwargs...)
 """
 function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype, S, E}
 	# we create the new functional
@@ -144,5 +144,5 @@ end
 # simplified call when no Jacobian is given
 function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype};kwargs...) where {T, Tf, vectype, S, E}
 	J = (u, p) -> PseudoArcLengthContinuation.finiteDifferences(z -> F(z,p), u)
-	return newton(F,  J,  x0, p0, options, defOp; kwargs...)
+	return newton(F, J, x0, p0, options, defOp; kwargs...)
 end

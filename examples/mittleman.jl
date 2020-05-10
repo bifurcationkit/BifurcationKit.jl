@@ -118,8 +118,7 @@ plot([br,br1,br2],plotfold=false)
 
 ####################################################################################################
 # analyse 2d bifurcation point
-bp2d = @time PALC.computeNormalForm(jet,
-		br, 2, opts_br.newtonOptions;  verbose=true)
+bp2d = @time PALC.computeNormalForm(jet..., br, 2;  verbose=true)
 
 PALC.nf(bp2d)[2] |> println
 
@@ -152,7 +151,9 @@ resp = Float64[]
 		push!(resx, [X[ii[2]], Y[ii[3]]])
 	end
 
-gr()
+
+
+using LaTeXStrings
 
 plot(
 	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),

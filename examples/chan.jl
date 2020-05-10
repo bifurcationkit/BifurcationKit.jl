@@ -77,15 +77,14 @@ optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; 
 
 indfold = 2
 
-outfold, _, flag = @time newtonFold(
+outfold, _, flag = @time newton(
 	F_chan, Jac_mat,
 	#index of the fold point
-	br, indfold, par, (@lens _.α),
-	optscont.newtonOptions)
+	br, indfold, par, (@lens _.α))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300)
-	foldbranch, _, _ = @time continuationFold(
+	foldbranch, _, _ = @time continuation(
 		F_chan, Jac_mat,
 		br, indfold, par, (@lens _.α), (@lens _.β),
 		plot = true, verbosity = 2,
@@ -94,17 +93,16 @@ plot(foldbranch, xlabel="beta", ylabel = "alpha", label = "");title!("")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p.α .* d2N.(x; b = b) .* u .* v
 
-outfold, _, flag = @time newtonFold(
+outfold, _, flag = @time newton(
 		F_chan, Jac_mat,
-		br, indfold, par, (@lens _.α),
-		optscont.newtonOptions;
+		br, indfold, par, (@lens _.α);
 		d2F = d2F
 		)
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 
-outfoldco, _, _ = @time continuationFold(
+outfoldco, _, _ = @time continuation(
 		F_chan, Jac_mat,
 		br, indfold, par, (@lens _.α), (@lens _.β), optcontfold;
 		# Jt = (x, p) -> transpose(Jac_mat(x, p)),
