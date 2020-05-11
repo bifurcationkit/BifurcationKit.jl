@@ -337,7 +337,7 @@ isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
 # condition for halting the continuation procedure
 @inline done(it::PALCIterable, state::PALCStateVariables) =
 			(state.step <= it.contParams.maxSteps) &&
-			(it.contParams.pMin < state.z_old.p < it.contParams.pMax) &&
+			(it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) &&
 			(state.stopcontinuation == false)
 
 function updatestability!(state::PALCStateVariables, n_unstable, n_imag)
