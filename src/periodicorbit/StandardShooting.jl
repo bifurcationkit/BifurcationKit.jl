@@ -91,7 +91,7 @@ function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; isparallel = 
 			ds = ds, section = section, isparallel = isparallel)
 end
 
-ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section, isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
 ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p) for c in centers], centers); isparallel = isparallel, kwargs...)
 

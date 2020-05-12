@@ -75,14 +75,14 @@ or
 
 ```
 julia> F(x, p) = x.^3 .- 1
-julia> Jac(x, p) = diagm(0 => 3 .* x.^2) # sparse jacobian
+julia> Jac(x, p) = spdiagm(0 => 3 .* x.^2) # sparse jacobian
 julia> x0 = rand(1_000)
 julia> opts = NewtonPar()
 julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x, Inf))
 ```
 
 !!! tip "Other formulation"
-    If you don't have parameters, you still use `newton` as follows `newton((x,p) -> F(x), (x,p)-> J(x,p), x0, nothing, options)`
+    If you don't have parameters, you can still use `newton` as follows `newton((x,p) -> F(x), (x,p)-> J(x), x0, nothing, options)`
 """
 function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 	# Extract parameters
@@ -133,7 +133,7 @@ end
 # simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences
 function newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
 	Jhandle = (u, p) -> finiteDifferences(z -> Fhandle(z, p), u)
-	return newton(Fhandle, Jhandle, x0, options; kwargs...)
+	return newton(Fhandle, Jhandle, x0, p0, options; kwargs...)
 end
 
 # simplified calls to pass F(x) and J(x) instead of F(x, p) and J(x, p)

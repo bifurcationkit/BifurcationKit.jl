@@ -1,6 +1,6 @@
 module PseudoArcLengthContinuation
 	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays
-	using Setfield: setproperties, @set, Lens, get, set
+	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack
 	using DocStringExtensions
 
@@ -21,7 +21,7 @@ module PseudoArcLengthContinuation
 	include("codim2/codim2.jl")
 	include("codim2/FoldCont.jl")
 	include("codim2/HopfCont.jl")
-		
+
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")

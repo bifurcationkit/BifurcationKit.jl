@@ -148,7 +148,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	end
 
 	if debug_
-		return dX, dsig, true, sum(it), 0., [J(x, p) dpF ; σx' σp]
+		return dX, dsig, true, sum(it), 0., [J(x, set(par, lens, p)) dpF ; σx' σp]
 	else
 		return dX, dsig, true, sum(it), 0.
 	end
