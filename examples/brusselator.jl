@@ -110,7 +110,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 	plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 4)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-4)
 
 	br, _ = @time continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -267,9 +267,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 
 br_po, _ = continuation(
 	# arguments for branch switching
-	jet..., br, 1,
+	jet..., br, 3,
 	# arguments for continuation
-	opts_po_cont, PeriodicOrbitTrapProblem(M=51);
+	opts_po_cont, PeriodicOrbitTrapProblem(M = 51);
 	ampfactor = 3, δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
@@ -280,5 +280,26 @@ br_po, _ = continuation(
 	normC = norminf)
 
 branches = [br_po]
-# push!(branches, br_po)
+push!(branches, br_po2)
 plot(branches)
+
+####################################################################################################
+# semi-automatic branch switching from bifurcation BP-PO
+br_po2, _ = PALC.continuationPOTrapBPFromPO(
+	# arguments for branch switching
+	branches[end-1], 3,
+	# arguments for continuation
+	(@set opts_po_cont.detectBifurcation = 2);
+	ampfactor = 1., δp = 0.01,
+	verbosity = 3,	plot = true, linearPO = :FullLU,
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...);plot!(branches[end-1],subplot=1)),
+	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
+	normC = norminf)
+
+
+plot();for _b in branches; plot!(_b; label = ""); end; title!("")
+
+plot(branches[end])

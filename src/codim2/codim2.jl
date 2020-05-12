@@ -16,11 +16,11 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
 """
-function newton(F, J, br::ContResult, ind_bif::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, normN = norm, kwargs...)
+function newton(F, J, br::ContResult, ind_bif::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
-		return newtonHopf(F, J, br, ind_bif, par, lens; Jt = Jt, d2F = d2F, kwargs...)
+		return newtonHopf(F, J, br, ind_bif, par, lens; Jt = Jt, d2F = d2F, options = options, kwargs...)
 	elseif br.foldpoint[ind_bif].type == :fold
-		return newtonFold(F, J, br, ind_bif, par, lens; Jt = Jt, d2F = d2F, kwargs...)
+		return newtonFold(F, J, br, ind_bif, par, lens; Jt = Jt, d2F = d2F, options = options, kwargs...)
 	end
 	@error "Bifurcation type $(br[ind_bif].type) not yet handle for codim2 newton / continuation"
 end

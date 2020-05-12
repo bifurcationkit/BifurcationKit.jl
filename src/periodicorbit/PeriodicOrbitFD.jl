@@ -896,39 +896,52 @@ end
 
 ####################################################################################################
 # Branch switching from BP of PO
-function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, amp = 1, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
-	@warn "This branch switching does provide a good predictor for the period of the bifurcated branch. This may impair switching to the bifurcated branch."
+"""
+$(SIGNATURES)
+"""
+function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
 
-	@assert br.type == :PeriodicOrbitPOTrap
+	@assert br.functional isa PeriodicOrbitTrapProblem
 	@assert abs(br.bifpoint[ind_bif].δ[1]) == 1
 
 	bifpt = br.bifpoint[ind_bif]
 
 	# let us compute the kernel
 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
-	ζ0 = geteigenvector(br.params.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+	ζ0 = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
 	# we normalize it by the sup norm because it could be too small/big in L2 norm
 	ζ0 ./= norm(ζ0, Inf)
 
-	plot(real.(ζ0)) |> display
+	pb = br.functional
 
-	pb = br.functional(bifpt.param)
-	@show pb
-
-	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, real.(ζ0))
+	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, set(br.params, br.param_lens, bifpt.param), real.(ζ0))
 	ζ = reduce(vcat, ζ_a)
 	# @show λ typeof(reduce(vcat,ζ_a))
 
 	orbitguess = copy(bifpt.x)
-	orbitguess[1:end-1] .+= amp .*  ζ
+	orbitguess[1:end-1] .+= ampfactor .*  ζ
 	# orbitguess[end] = 3.4
 
 	newp = bifpt.param + δp
 
-	@show br.functional(newp)(orbitguess)[end]
+	pb(orbitguess, set(br.params, br.param_lens, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
+
+	if usedeflation
+		# find point on the branch
+		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), _contParams.newtonOptions, linearPO; kwargs...)
+		# find the bifurcated branch using deflation
+		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+		optn = _contParams.newtonOptions
+		solbif, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp, linearPO; kwargs...)
+		@assert flag "Deflated newton did not converge"
+		orbitguess .= solbif
+	end
+
+	# TODO
+	# we have to adjust the constraint. Right now, it can be quite big.
 
 	# perform continuation
-	branch, u, tau = continuationPOTrap(br.functional, orbitguess, newp, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
+	branch, u, tau = continuation(br.functional, orbitguess, set(br.params, br.param_lens, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
 
-	return setproperties(branch; type = :PeriodicOrbitPOTrap, functional = br.functional), u, tau
+	return setproperties(branch; type = :PeriodicOrbit, functional = br.functional), u, tau
 end

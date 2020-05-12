@@ -222,7 +222,8 @@ opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbo
 # opt_po = @set opt_po.eigsolver = DefaultEig()
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
-	br_po, _ , _= @time continuation(
+
+br_po, _ , _= @time continuation(
 			poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
 			opts_po_cont; linearPO = :FullMatrixFree,
 			verbosity = 3,	plot = true,
@@ -236,7 +237,7 @@ plot([branches[1]]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplit
 # automatic branch switching from Hopf point
 br_po, _ = continuation(
 	# arguments for branch switching
-	jet..., br, 2,
+	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont, poTrapMF;
 	ampfactor = 3, linearPO = :FullMatrixFree,
@@ -415,7 +416,7 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 ####################################################################################################
 # Computation of Fold of limit cycle
 function d2Fcglpb(f, x, dx1, dx2)
-	return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1-> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0.), 0.)
+	return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2), 0.), 0.)
 end
 
 function JacT(F, x, v)
@@ -447,10 +448,9 @@ outfold, hist, flag = @time PALC.newtonFold(
 		(x, p) -> poTrap(x, p),
 		(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 		br_po , indfold, #index of the fold point
-		par_cgl, (@lens _.r),
-		@set opt_po.linsolver = ls;
-		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
-		)
+		par_cgl, (@lens _.r);
+		options = (@set opt_po.linsolver = ls),
+		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)

@@ -74,6 +74,41 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par,
 end
 
 
+function MonodromyQaDFD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+	# extraction of various constants
+	M = poPb.M
+	N = poPb.N
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+	out_a = [copy(out)]
+	# push!(out_a, copy(out))
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+		push!(out_a, copy(out))
+	end
+	push!(out_a, copy(du))
+
+	return out_a
+end
 
 # Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
 function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
