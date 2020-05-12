@@ -94,9 +94,7 @@ d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
 d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
 d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
-jet = ( Fmit, JFmit,
-		(x, p, dx1, dx2) -> d2Fmit(x, p, dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, p, dx1, dx2, dx3))
+jet = ( Fmit, JFmit, d2Fmit, d3Fmit)
 
 br1, _ = continuation(jet...,
 		br, 3,

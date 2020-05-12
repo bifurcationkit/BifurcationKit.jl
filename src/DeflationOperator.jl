@@ -2,10 +2,10 @@ import Base: push!, pop!, length
 import Base: show, getindex
 
 """
-DeflationOperator. It is used to describe the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
+DeflationOperator. It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) / Π_i(dot(u - roots_i, u - roots_i)^{p} + shift) := F(u) / M(u)``. The fields of the struct `DeflationOperator` are as follows:
 - power `p`
-- `dot` function, this function has to be bilinear and symmetric for the linear solver
+- `dot` function, this function has to be bilinear and symmetric for the linear solver to work well
 - shift
 - roots
 The deflation operator is is ``M(u) = \\frac{1}{\\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^p)}``
@@ -46,7 +46,7 @@ end
 """
 	pb = DeflatedProblem(F, J, M::DeflationOperator)
 
-This creates a problem encoded a deflated problem ``M(u) \\cdot F(u) = 0`` where `M` is a `DeflationOperator` which encodes the penalization term. `J` is the jacobian of `F`. Can be used to call `newton` and `continuation`.
+This creates a deflated problem ``M(u) \\cdot F(u) = 0`` where `M` is a `DeflationOperator` which encodes the penalization term. `J` is the jacobian of `F`. Can be used to call `newton` and `continuation`.
 """
 struct DeflatedProblem{T, Tdot, vectype, TF, TJ, def <: DeflationOperator{T, Tdot, vectype}}
 	F::TF
@@ -66,6 +66,7 @@ end
 ###################################################################################################
 # Implement the Jacobian operator of the Deflated problem
 
+# this is used to define a custom linear solver
 struct DeflatedLinearSolver <: AbstractLinearSolver end
 
 """
@@ -115,7 +116,7 @@ end
 """
 	function newton(F, J, x0::vectype, p0, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
 
-This is the deflated version of the Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)`. We refer to [`newton`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more informations.
+This is the deflated version of the Krylov-Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)`. We refer to [`newton`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more information.
 
 # Output:
 - solution:

@@ -1,6 +1,6 @@
 # Detection of bifurcation points
 
-The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p0::Real, contParams::ContinuationPar;kwargs...)` by turning on the following flags:
+The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p0, lens, contParams::ContinuationPar;kwargs...)` by turning on the following flags:
 
 - `contParams.detectBifurcation = 1` (which also turns on `contParams.computeEigenValues = true` automatically)
 
@@ -16,7 +16,7 @@ If you choose `detectBifurcation = 2`, a bisection algorithm is used to locate t
 - `maxBisectionSteps` maximum number of bisection steps
 - `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
-If this is still not enough, you can use a Newton solver to locate them very precisely. See [`newtonFold`](@ref) and [`newtonHopf`](@ref).
+If this is still not enough, you can use a Newton solver to locate them very precisely. See [Fold / Hopf Continuation](@ref).
 
 ## Large scale computations
 
@@ -57,9 +57,6 @@ The detection of Branch point is done by analysis of the spectrum of the Jacobia
 
 The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. When a **Hopf point** is detected, a point is added to `br.bifpoint` allowing for later refinement using the function `newtonHopf`.
 
-```@docs
-guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
-```
 
 ## Bifurcations of periodic orbits
 The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. The detection of bifurcation points is done by analysis of the spectrum of the Monodromy matrix composed of the Floquet multipliers. The following bifurcations are currently detected:

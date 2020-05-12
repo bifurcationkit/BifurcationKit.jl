@@ -79,7 +79,7 @@ $(TYPEDEF)
 $(TYPEDFIELDS)
 
 ## Simplified constructors
-There are some simple constructors for which you only have to pass a `prob::ODEProblem` from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
+There are some simple constructors for which you only have to pass a `prob::ODEProblem` or `prob::EnsembleProblem` (for parallel computation) from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 
 	fl = Flow(F, prob, Tsit5(); kwargs...)
 

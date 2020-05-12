@@ -72,11 +72,7 @@ par = (l = -0.1, ν = 1.3, L1 = L1)
 
 # newton corrections of the initial guess
 optnewton = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
-	sol_hexa, _, _ = @time newton(
-		x ->  F_sh(x, par),
-		u -> dF_sh(u, par),
-		vec(sol0),
-		optnewton)
+	sol_hexa, _, _ = @time newton(F_sh, dF_sh, vec(sol0), par, optnewton)
 	println("--> norm(sol) = ",norm(sol_hexa,Inf64))
 	heatmapsol(sol_hexa)
 ```
@@ -99,7 +95,7 @@ which produces the results
        10               11     7.4767e-03         1
        11               12     7.9505e-05         1
        12               13     8.8395e-09         1
-  1.442878 seconds (43.22 k allocations: 664.210 MiB, 1.45% gc time)
+  1.480938 seconds (3.55 k allocations: 659.404 MiB)
 ```
 
 with `sol_hexa` being
@@ -135,11 +131,8 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00
 	dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
-	br, u1 = @time PALC.continuation(
-		(x, p) ->  F_sh(x, @set par.l = p),
-		(x, p) -> dF_sh(x, @set par.l = p),
-		sol_hexa, -0.1, optcont;
-		plot = true, verbosity = 3,
+	br, u1 = @time PALC.continuation(F_sh, dF_sh,
+		sol_hexa, par, (@lens _.l), optcont;		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
 		printSolution = (x, p) -> norm(x),
@@ -181,11 +174,9 @@ which penalizes `sol_hexa`.
 # and the set of sol_{hexa} is of length ns=1
 deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[sol_hexa])
 optnewton = @set optnewton.maxIter = 250
-outdef, _, flag, _ = @time newton(
-				x ->  F_sh(x, par),
-				x -> dF_sh(x, par),
+outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 				0.2vec(sol_hexa) .* vec([exp.(-(x+lx)^2/25) for x in X, y in Y]),
-				optnewton,deflationOp, normN = x -> norm(x,Inf64))
+				par, optnewton, deflationOp, normN = x -> norm(x,Inf64))
 		heatmapsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
 ```
@@ -196,11 +187,9 @@ which gives:
 Note that `push!(deflationOp, outdef)` deflates the newly found solution so that by repeating the process we find another one:
 
 ```julia
-outdef, _, flag, _ = @time newton(
-				x ->  F_sh(x, par),
-				x -> dF_sh(x, par),
+outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 				0.2vec(sol_hexa) .* vec([exp.(-(x)^2/25) for x in X, y in Y]),
-				optnewton,deflationOp, normN = x -> norm(x,Inf64))
+				par, optnewton, deflationOp, normN = x -> norm(x,Inf64))
 		heatmapsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
 ```
@@ -216,10 +205,8 @@ Again, repeating this from random guesses, we find several more solutions, like 
 We can now continue the solutions located in `deflationOp.roots`
 
 ```julia
-br, _ = @time continuation(
-	(x, p) ->  F_sh(x, @set par.l = p),
-	(x, p) -> dF_sh(x, @set par.l = p),
-	deflationOp[2], -0.1, optcont;
+br, _ = @time continuation(F_sh, dF_sh,
+	deflationOp[2], par, (@lens _.l), optcont;
 	plot = true, 
 	plotSolution = (x, p; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))
 ```

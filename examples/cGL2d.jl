@@ -224,11 +224,11 @@ opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
 
 br_po, _ , _= @time continuation(
-			poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
-			opts_po_cont; linearPO = :FullMatrixFree,
-			verbosity = 3,	plot = true,
-			plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-			printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+		poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
+		opts_po_cont; linearPO = :FullMatrixFree,
+		verbosity = 3,	plot = true,
+		plotSolution = (x, p;kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+		printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 branches = Any[br_pok2]
 # push!(branches, br_po)

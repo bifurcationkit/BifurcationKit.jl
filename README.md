@@ -77,9 +77,9 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Hopf detection | Y | Y | 6 - 9 | :heavy_check_mark: |
 | Fold Point continuation | Y | Y | 1, 8 | |
 | Hopf continuation | Y | `AbstractArray` | 5 | |
-| Branch switching at simple branch points | Y | `AbstractArray` | 3 | |
+| Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
 | Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
-| Periodic Orbit with Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | :heavy_check_mark: | 
+| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | :heavy_check_mark: | 
 | Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |
 | Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 | |
 

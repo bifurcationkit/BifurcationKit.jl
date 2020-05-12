@@ -12,6 +12,10 @@ We look at the Ginzburg-Landau equations in 2d. The code is very similar to the 
 Note that we try to be pedagogical here. Hence, we may write "bad" code that we improve later. Finally, we could use all sort of tricks to take advantage of the specificity of the problem. Rather, we stay quite close to the example in the MATLAB library [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/) (and discussed in **Hopf Bifurcation and Time Periodic Orbits with Pde2path – Algorithms and Applications.**, Uecker, Hannes, Communications in Computational Physics 25, no. 3 (2019)) for fair comparison.
 
 
+!!! info "Goal"
+    We do not use automatic branch switching here. The goal is to show our to use the internals of the package to squeeze most of the performances, use tailored options...
+
+
 The equations are as follows
 
 $$\partial_{t} u=\Delta u+(r+\mathrm{i} v) u-\left(c_{3}+\mathrm{i} \mu\right)|u|^{2} u-c_{5}|u|^{4} u, \quad u=u(t, x) \in \mathbb{C}$$
@@ -124,20 +128,45 @@ and we continue it to find the Hopf bifurcation points. We use a Shift-Invert ei
 # Shift-Invert eigensolver
 eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 1, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 1060)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 2, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
-br, _ = @time continuation(
-	(x, p) -> Fcgl(x, @set par_cgl.r = p),
-	(x, p) -> Jcgl(x, @set par_cgl.r = p),
-	vec(sol0), par_cgl.r, opts_br, verbosity = 0)
+br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
 ![](cgl2d-bif.png)
 
+## Normal form computation
+
+We compute the Hopf normal of the first bifurcation point.
+
+```julia
+using ForwardDiff
+
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+
+d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
+d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
+d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
+jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+
+hopfpt = PALC.computeNormalForm(jet..., br, 1)
+```
+
+We can look at the coefficients of the normal form
+
+```julia
+julia> hopfpt.nf
+(a = 1.0000007875087948 - 3.195135475271046e-8im, b = 0.004870129870129871 + 0.00048701298701298696im)
+```
+
+So the Hopf branch is subcritical.
+
 ## Periodic orbits continuation with stability
 Having found two Hopf bifurcation points, we aim at computing the periodic orbits branching from them. Like for the Brusselator example, we need to find some educated guess for the periodic orbits in order to have a successful Newton call.
 
-The following code is very close to the one explained in the tutorial [Brusselator 1d](@ref) so we won't give too much details here.
+The following code is very close to the one explained in the tutorial [Brusselator 1d (advanced user)](@ref) so we won't give too much details here.
 
 We focus on the first Hopf bifurcation point. Note that, we do not improve the guess for the Hopf bifurcation point, *e.g.* by calling `newtonHopf`, as this is not really needed.
 
@@ -148,24 +177,24 @@ ind_hopf = 1
 # number of time slices in the periodic orbit
 M = 30
 
-# periodic orbit initial guess
-r_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 22*sqrt(0.1); phase = 0.25)
+# periodic orbit initial guess from Hopf point
+r_hopf, Th, orbitguess2, hopfpt, eigvec = guessFromHopf(br, ind_hopf, opt_newton.eigsolver,
+	# we pass the number of time slices M, the amplitude 22*sqrt(0.1) and phase
+	M, 22*sqrt(0.1); phase = 0.25)
 
 # flatten the initial guess
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ```
 
-Like in the [Brusselator 1d](@ref) example, we create a problem to hold the functional and find periodic orbits based on Finite Differences
+We create a problem to hold the functional and compute periodic orbits based on Finite Differences
 
 ```julia
-poTrap = p -> PeriodicOrbitTrapProblem(
-# vector field
-	x ->  Fcgl(x, p),
-# sparse representation of the Jacobian	
-	x ->  Jcgl(x, p),
+poTrap = PeriodicOrbitTrapProblem(
+# vector field and sparse Jacobian	
+	Fcgl, Jcgl,
 # parameters for the phase condition
-	real.(vec_hopf),
+	real.(eigvec),
 	hopfpt.u,
 # number of time slices	
 	M)
@@ -179,8 +208,7 @@ We can use this (family) problem `poTrap` with `newton` on our periodic orbit gu
     
     ```julia
     opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, 	 maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()))
-    br_po, upo , _= @time continuationPOTrap(p -> poTrap(@set par_cgl.r = p),
-     orbitguess_f, r_hopf - 0.01, opts_po_cont)
+    br_po, upo , _= @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_po_cont)
     ```	
 
 
@@ -192,7 +220,7 @@ Instead, we use a preconditioner. We build the jacobian once, compute its **inco
 using IncompleteLU
 
 # Sparse matrix representation of the jacobian of the periodic orbit functional
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 
 # incomplete LU factorization with threshold
 Precilu = @time ilu(Jpo, τ = 0.005)
@@ -210,8 +238,9 @@ We set the parameters for the `newton` solve.
 
 ```julia
 opt_po = @set opt_newton.verbose = true
-outpo_f, _, flag = @time newton(poTrap(@set par_cgl.r = r_hopf - 0.01),
-	orbitguess_f, (@set opt_po.linsolver = ls), 
+outpo_f, _, flag = @time newton(poTrap,
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
+	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),"\n")
 PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
@@ -223,16 +252,16 @@ which gives
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     6.5509e-03         0
-        1                2     1.4311e-03         9
-        2                3     3.6948e-04         9
-        3                4     6.5156e-05        10
-        4                5     4.3270e-06        11
-        5                6     3.9205e-08        12
-        6                7     1.0685e-10        13
-        7                8     1.0492e-13        14
-  1.896905 seconds (165.04 k allocations: 1.330 GiB, 12.03% gc time)
---> T = 6.5367097374070315, amplitude = 0.3507182067194716
+        0                1     6.5412e-03         0
+        1                2     1.4399e-03         8
+        2                3     3.6404e-04         9
+        3                4     6.3013e-05        10
+        4                5     4.3207e-06        11
+        5                6     3.5334e-08        12
+        6                7     1.0874e-10        13
+        7                8     4.4353e-14        15
+  2.021483 seconds (165.06 k allocations: 1.330 GiB, 12.99% gc time)
+--> T = 6.532023020978835, amplitude = 0.2684635643839235
 ```
 
 and
@@ -249,10 +278,9 @@ d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9, Pl = lu(I + par_cgl.Δ))
 
 # matrix-free problem
-poTrapMF = p -> PeriodicOrbitTrapProblem(
-	x ->  Fcgl(x, p),
-	x ->  (dx -> d1Fcgl(x, p, dx)),
-	real.(vec_hopf),
+poTrapMF = PeriodicOrbitTrapProblem(
+	Fcgl,	(x, p) ->  (dx -> d1Fcgl(x, p, dx)),
+	real.(eigvec),
 	hopfpt.u,
 	M, ls0)
 ```
@@ -260,8 +288,9 @@ poTrapMF = p -> PeriodicOrbitTrapProblem(
 We can now use newton
 
 ```julia
-outpo_f, _, flag = @time newton(poTrapMF(@set par_cgl.r = r_hopf - 0.01),
-	orbitguess_f, (@set opt_po.linsolver = ls), 
+outpo_f, _, flag = @time newton(poTrapMF,
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
+	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),"\n")
 ```
@@ -272,16 +301,15 @@ which gives
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     6.5509e-03         0
-        1                2     1.4311e-03         9
-        2                3     3.6948e-04         9
-        3                4     6.5156e-05        10
-        4                5     4.3270e-06        11
-        5                6     3.9205e-08        12
-        6                7     1.0685e-10        13
-        7                8     1.0495e-13        14
-  1.251035 seconds (69.10 k allocations: 488.773 MiB, 3.95% gc time)
---> T = 6.53670973740703, amplitude = 0.3507182067194715
+        0                1     6.5412e-03         0
+        1                2     1.4399e-03         8
+        2                3     3.6404e-04         9
+        3                4     6.3013e-05        10
+        4                5     4.3207e-06        11
+        5                6     3.5334e-08        12
+        6                7     1.0874e-10        13
+        7                8     4.4471e-14        15
+  1.446924 seconds (69.12 k allocations: 488.760 MiB, 5.93% gc time)
 ```
 
 The speedup will increase a lot for larger $N_x, N_y$. Also, for Floquet multipliers computation, the speedup will be substantial.
@@ -356,18 +384,17 @@ We can now define an inplace functional
 
 ```julia
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMFi = p -> PeriodicOrbitTrapProblem(
-	(o, x) ->  Fcgl!(o, x, p),
-	(o, x, dx) -> dFcgl!(o, x, p, dx),
-	real.(vec_hopf),
+poTrapMFi = PeriodicOrbitTrapProblem(
+	Fcgl!, dFcgl!,
+	real.(eigvec),
 	hopfpt.u,
 	M, ls0; isinplace = true)
 ```
 and run the `newton` method:
 
 ```julia
-outpo_f, _, flag = @time newton(poTrapMFi(@set par_cgl.r = r_hopf - 0.01),
-	orbitguess_f, (@set opt_po.linsolver = ls),
+outpo_f, _, flag = @time newton(poTrapMFi,
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),	(@set opt_po.linsolver = ls),
 	:FullMatrixFree; normN = norminf)
 ```
 It gives	
@@ -376,15 +403,15 @@ It gives
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     6.5509e-03         0
-        1                2     1.4311e-03         9
-        2                3     3.6948e-04         9
-        3                4     6.5156e-05        10
-        4                5     4.3270e-06        11
-        5                6     3.9205e-08        12
-        6                7     1.0685e-10        13
-        7                8     1.0592e-13        14
-  1.157987 seconds (23.44 k allocations: 154.468 MiB, 3.39% gc time)
+        0                1     6.5412e-03         0
+        1                2     1.4399e-03         8
+        2                3     3.6404e-04         9
+        3                4     6.3013e-05        10
+        4                5     4.3207e-06        11
+        5                6     3.5334e-08        12
+        6                7     1.0874e-10        13
+        7                8     4.4359e-14        15
+  1.354356 seconds (23.46 k allocations: 154.455 MiB, 2.69% gc time)
 ```
 
 Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
@@ -395,14 +422,14 @@ Notice the small speed boost but the reduced allocations. At this stage, further
 We could use another way to "invert" jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix $J_c$ (see [Periodic orbits based on finite differences](@ref)) which has a smaller memory footprint:
 
 ```julia
-Jpo2 = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacCyclicSparse), orbitguess_f)
+Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
 Precilu = @time ilu(Jpo2, τ = 0.005)
 ls2 = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 
 opt_po = @set opt_newton.verbose = true
 outpo_f, hist, flag = @time newton(
-	poTrapMF(@set par_cgl.r = r_hopf - 0.1),
-	orbitguess_f, (@set opt_po.linsolver = ls2), :BorderedMatrixFree;
+	poTrapMF,	orbitguess_f, (@set par_cgl.r = r_hopf - 0.1),
+	(@set opt_po.linsolver = ls2), :BorderedMatrixFree;
 	normN = norminf)
 ```
 
@@ -412,14 +439,14 @@ but it gives:
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     3.3281e-03         0
-        1                2     9.4520e-03        34
-        2                3     1.2632e-03        26
-        3                4     6.7022e-05        29
-        4                5     4.2398e-07        34
-        5                6     1.4380e-09        43
-        6                7     6.7513e-13        60
-  4.139557 seconds (143.13 k allocations: 1.007 GiB, 3.67% gc time)
+        0                1     3.3294e-03         0
+        1                2     9.5343e-03        34
+        2                3     1.2791e-03        26
+        3                4     6.6873e-05        30
+        4                5     3.2492e-07        36
+        5                6     9.3987e-10        44
+        6                7     3.5842e-13        58
+  3.567416 seconds (143.70 k allocations: 1.010 GiB, 4.59% gc time)
 ```
 
 **Hence, it seems better to use the previous preconditioner.**
@@ -436,10 +463,8 @@ opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbo
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), 
 	nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 
-br_po, _ , _= @time continuationPOTrap(
-	p -> poTrapMF(@set par_cgl.r = p),
-	outpo_f, r_hopf - 0.01,
-	opts_po_cont, linearPO = :FullMatrixFree;
+br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
@@ -457,21 +482,19 @@ We did not change the preconditioner in the previous example as it does not seem
 ```julia
 # callback which will be sent to newton. 
 # `iteration` in the arguments refers to newton iterations
-function callbackPO(x, f, J, res, itlinear, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
+function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
 	# we update the preconditioner every 10 continuation steps
 	if mod(kwargs[:iterationC], 10) == 9 && iteration == 1
 		@info "update Preconditioner"
-		Jpo = poTrap(@set p.r = kwargs[:p])(Val(:JacCyclicSparse), x)
+		Jpo = poTrap(Val(:JacCyclicSparse), x, @set p.r = kwargs[:p])
 		Precilu = @time ilu(Jpo, τ = 0.003)
 		ls.Pl = Precilu
 	end
 	true
 end
 
-br_po, _ , _= @time continuationPOTrap(
-	p -> poTrapMF(@set par_cgl.r = p),
-	outpo_f, r_hopf - 0.01,
-	opts_po_cont, linearPO = :FullMatrixFree;
+br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
 	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -497,20 +520,23 @@ We select the Fold point from the branch `br_po` and redefine our linear solver 
 indfold = 2
 foldpt = FoldPoint(br_po, indfold)
 
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)
 ```
 
-We can then use our functional to call `newtonFold` like for a regular function (see Tutorial 1)
+We can then use our functional to call `newtonFold` unlike for a regular function (see Tutorial 1). Indeed, we specify the change the parameters too much to rely on a generic algorithm.
 
 ```julia
 outfold, hist, flag = @time PALC.newtonFold(
-	(x, p) -> poTrap(@set par_cgl.r = p)(x),
-	(x, p) -> poTrap(@set par_cgl.r = p)(Val(:JacFullSparse), x),
+	(x, p) -> poTrap(x, p),
+	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 	br_po , indfold, #index of the fold point
-	@set opt_po.linsolver = ls;
-	d2F = (x, p, dx1, dx2) -> d2Fcglpb(poTrap(@set par_cgl.r = p), x, dx1, dx2))
+	par_cgl, (@lens _.r);
+	# we change the linear solver for the one we 
+	# defined above
+	options = (@set opt_po.linsolver = ls),
+	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
 ```
 
@@ -593,7 +619,7 @@ par_cgl_gpu = @set par_cgl.Δ = CuArrays.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
 Then, we precompute the preconditioner on the CPU:
 
 ```julia
-Jpo = poTrap(@set par_cgl.r = r_hopf - 0.01)(Val(:JacFullSparse), orbitguess_f)
+Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 Precilu = @time ilu(Jpo, τ = 0.003)
 ```
 
@@ -626,9 +652,8 @@ We can now define our functional:
 ```julia
 # matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
-poTrapMFGPU = p -> PeriodicOrbitTrapProblem(
-	x ->  Fcgl(x, p),
-	x ->  (dx -> dFcgl(x, p, dx)),
+poTrapMFGPU = PeriodicOrbitTrapProblem(
+	Fcgl, (x, p) ->  (dx -> dFcgl(x, p, dx)),
 	CuArray(real.(vec_hopf)),
 	CuArray(hopfpt.u),
 	M, ls0gpu;
@@ -654,11 +679,10 @@ So we can expect a pretty descent x2 speed up in computing the periodic orbits. 
 
 ```julia
 opt_po = @set opt_newton.verbose = true
-	outpo_f, hist, flag = @time newton(
-			poTrapMFGPU(@set par_cgl_gpu.r = r_hopf - 0.01),
-			orbitguess_cu,
-			(@set opt_po.linsolver = lsgpu), :FullMatrixFree;
-			normN = x->maximum(abs.(x))) 
+	outpo_f, hist, flag = @time newton(poTrapMFGPU,
+		orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01),
+		(@set opt_po.linsolver = lsgpu), :FullMatrixFree;
+		normN = x->maximum(abs.(x))) 
 ```
 The computing time is `6.914367 seconds (2.94 M allocations: 130.348 MiB, 1.10% gc time)`. The same computation on the CPU, runs in `13.972836 seconds (551.41 k allocations: 1.300 GiB, 1.05% gc time)`.
 
@@ -666,9 +690,8 @@ You can also perform continuation, here is a simple example:
 
 ```julia
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
-br_po, upo , _= @time continuationPOTrap(
-   p -> poTrapMFGPU(@set par_cgl_gpu.r = p),
-   orbitguess_cu, r_hopf - 0.01,
+br_po, upo , _= @time continuation(poTrapMFGPU,
+   orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
    printSolution = (u,p) -> amplitude(u, Nx*Ny, M), normC = x->maximum(abs.(x)))

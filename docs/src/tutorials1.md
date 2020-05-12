@@ -10,7 +10,8 @@ Depth = 3
 This is a simple example in which we aim at solving $\Delta T+\alpha N(T,\beta)=0$ with boundary conditions $T(0) = T(1)=\beta$. This example is coded in `examples/chan.jl`. We start with some imports:
 
 ```julia
-using PseudoArcLengthContinuation, LinearAlgebra, Plots
+using PseudoArcLengthContinuation, LinearAlgebra, Plots, Parameters, Setfield
+# Setfield.jl is used to provide the parameter axis @lens
 const PALC = PseudoArcLengthContinuation
 
 N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -19,7 +20,8 @@ N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 We then write our functional:
 
 ```julia
-function F_chan(x, α, β = 0.01)
+function F_chan(x, p)
+	@unpack α, β = p
 	f = similar(x)
 	n = length(x)
 	f[1] = x[1] - β
@@ -28,28 +30,30 @@ function F_chan(x, α, β = 0.01)
 		f[i] = (x[i-1] - 2 * x[i] + x[i+1]) * (n-1)^2 + α * N(x[i], b = β)
 	end
 	return f
-end
+end	
 ```
 We want to call a Newton solver. We first need an initial guess:
 
 ```julia
 n = 101
 sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
+
+# set of parameters
+par = (α = 3.3, β = 0.01)
 ```
 
 Finally, we need to provide some parameters for the Newton iterations. This is done by calling
 
 ```julia
-optnewton = NewtonPar(verbose = true)
+optnewton = NewtonPar(tol = 1e-11, verbose = true)
 ```
 
 We call the Newton solver:
 
 ```julia
-out, _, _ = @time newton(
-		x -> F_chan(x, 3.3),
-		sol, optnewton)
+out, _, _ = @time newton( F_chan, sol, par, optnewton)
 ```
+
 and you should see
 
 ```
@@ -61,7 +65,8 @@ and you should see
         2                3     1.6267e-02         1
         3                4     2.4521e-06         1
         4                5     5.9356e-11         1
-  0.125980 seconds (117.21 k allocations: 7.438 MiB)
+        5                6     5.8117e-12         1
+  0.015303 seconds (3.52 k allocations: 2.576 MiB)
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -74,14 +79,15 @@ We can perform numerical continuation w.r.t. the parameter $\alpha$. This time, 
 optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, newtonOptions = NewtonPar(tol = 1e-9))
 ```
 
-Next, we call the continuation routine
-
+Next, we call the continuation routine as follows. 
 
 ```julia
-br, _ = continuation((x, p) -> F_chan(x, p),
-	out, 3.3, optcont, plot = true,
-	plotSolution = (x, p;kwargs...) -> (plot!(x; ylabel="solution",label="",kwargs...)))
+br, _ = @time continuation(F_chan, out, par, (@lens _.α),
+		optcont; plot = true, verbosity = 0,
+		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 ```
+
+The parameter axis `lens = @lens _.α` can be used to extract the component of `par` corresponding to `α`. Internally, it is used as `get(par, lens)` which returns `3.3`.
 
 !!! tip "Tip"
     We don't need to call `newton` first in order to use `continuation`.
@@ -102,9 +108,10 @@ We get a summary of the branch by doing
 ```julia
 julia> br
 Branch number of points: 78
+Branch of Equilibrium
 Fold points:
--   1,    fold point around p ≈ 4.03439121, step =  11, idx =  11, ind_bif =   0
--   2,    fold point around p ≈ 3.15581463, step =  35, idx =  35, ind_bif =   0
+-   1,    fold point around p ≈ 4.03438745, step =  11, idx =  11, ind_bif =   0 [    guess], δ = ( 0,  0)
+-   2,    fold point around p ≈ 3.15581473, step =  35, idx =  35, ind_bif =   0 [    guess], δ = ( 0,  0)
 ```
 
 We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically:
@@ -114,7 +121,8 @@ We can take the first Fold point, which has been guessed during the previous con
 dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 
 # Jacobian of F_chan
-function Jac_mat(u, α, β = 0.01)
+function Jac_mat(u, p)
+	@unpack α, β = p
 	n = length(u)
 	J = zeros(n, n)
 	J[1, 1] = 1.0
@@ -130,12 +138,12 @@ end
 # index of the Fold bifurcation point in br.bifpoint
 indfold = 2
 
-outfold, _, flag = newtonFold(
-		(x, α) -> F_chan(x, α),
-		(x, α) -> Jac_mat(x, α),
-		br, indfold, #index of the fold point
-		optcont.newtonOptions)
-flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param, "\n")
+outfold, _, flag = newton(F_chan, Jac_mat,
+	#index of the fold point
+	br, indfold, 
+	# set of parameters and parameter axis to locate the fold
+	par, (@lens _.α))
+flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
 ```
 
 which gives
@@ -147,17 +155,16 @@ which gives
 We can finally continue this fold point in the plane $(a,b)$ by performing a Fold Point continuation. In the present case, we find a Cusp point.
 
 !!! tip "Tip"
-    We don't need to call `newtonFold ` first in order to use `continuationFold `.
+    We don't need to call `newton` first in order to use `continuation` for the codim 2 curve of bifurcation points.
 
 ```julia
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0.)
-	outfoldco, _, _ = @time continuationFold(
-		(x, α, β) ->  F_chan(x, α, β),
-		(x, α, β) -> Jac_mat(x, α, β),
-		br, indfold,
-		0.01,
-		optcontfold)
-
+	outfoldco, _, _ = @time continuation(
+		F_chan, Jac_mat,
+		br, indfold, 
+		# set of parameters and 2 parameter axis to trace to codim 2 curve
+		par, (@lens _.α), (@lens _.β),
+		plot = true, verbosity = 2, optcontfold)
 plot(outfoldco; xlabel="beta", ylabel="alpha")
 ```
 
@@ -173,7 +180,8 @@ We continue the previous example but now using Matrix Free methods. The user can
 # Matrix Free version of the differential of F_chan
 # Very easy to write since we have F_chan. 
 # We could use Automatic Differentiation as well
-function dF_chan(x, dx, α, β = 0.01)
+function dF_chan(x, dx, p)
+	@unpack α, β = p
 	out = similar(x)
 	n = length(x)
 	out[1] = dx[1]
@@ -192,11 +200,11 @@ optnewton_mf = NewtonPar(verbose = true, linsolver = ls)
 
 # we can then call the newton solver
 out_mf, _, _ = @time newton(
-	x -> F_chan(x, 3.3),
+	F_chan,
 	# we pass the differential a x, 
 	# which is a linear operator in dx
-	x -> (dx -> dF_chan(x, dx, 3.3)),
-	sol,
+	(x, p) -> (dx -> dF_chan(x, dx, p)),
+	sol, par,
 	optnewton_mf)
 ```
 
@@ -226,11 +234,9 @@ P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 # define gmres solver with left preconditioner
 ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter = 10, Pl = lu(P))
 	optnewton_mf = NewtonPar(verbose = true, linsolver = ls)
-	out_mf, _, _ = @time newton(
-		x -> F_chan(x, 3.3),
-		x -> (dx -> dF_chan(x, dx, 3.3)),
-		sol,
-		optnewton_mf)
+	out_mf, _, _ = @time newton(F_chan,
+	(x, p) -> (dx -> dF_chan(x, dx, p)),
+	sol, par, optnewton_mf)
 ```
 
 which gives

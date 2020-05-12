@@ -22,7 +22,7 @@ $$\tag{E}\begin{aligned}
 with Neumann boundary conditions. We start by encoding the model
 
 ```julia
-using Revise
+~~using Revise
 using DiffEqOperators, ForwardDiff, DifferentialEquations, SparseArrays
 using PseudoArcLengthContinuation, LinearAlgebra, Plots, Setfield
 const PALC = PseudoArcLengthContinuation
@@ -68,7 +68,7 @@ function Fbr(x, p, t = 0.)
 end
 
 # this is not very efficient but simple enough ;)
-Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
+Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))~~
 ```	
 
 We can now perform bifurcation of the following Turing solution:
@@ -92,14 +92,11 @@ opt_newton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9
 opts_br = ContinuationPar(dsmax = 0.04, ds = -0.01, pMin = -1.8,
 	detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 400)
 
-br, _ = @time continuation(
-	(x, p) -> Fbr(x, @set par_br.C = p),
-	(x, p) -> Jbr(x, @set par_br.C = p),
-	solc0, -0.2,
-	opts_br;
-	plot = true, verbosity = 2,
+br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
+	plot = true, verbosity = 3,
 	printSolution = (x, p) -> norm(x, Inf),
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+
 ```
 
 which yields
@@ -115,6 +112,9 @@ $$\dot x = Ax+g(x)$$
 where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of (E) just after the Hopf point. 
 
 ```julia
+# parameters close to the Hopf bifurcation
+par_br_hopf = @set par_br.C = -0.86
+# parameters for the ODEProblem
 f1 = DiffEqArrayOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), @set par_br.C = -0.86)
@@ -131,13 +131,15 @@ initpo = vcat(vec(orbitsection), 3.)
 
 # define the functional for the standard simple shooting based on the 
 # ODE solver ETDRK2. SectionShooting implements an appropriate phase condition
-probSh = p -> ShootingProblem(u -> Fbr(u, p), p, prob_sp, ETDRK2(krylov=true), [sol(280.)]; atol = 1e-14, rtol = 1e-14, dt = 0.1)
-
+probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
+	[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
+		
+# parameters for the Newton-Krylov solver
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
-out_po_sh, _, flag = @time newton(probSh(@set par_br.C = -0.86),
-	initpo, optn; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", out_po_sh[end], ", amplitude = ", PALC.getAmplitude(probSh(@set par_br.C = -0.86), out_po_sh; ratio = 2),"\n")
+# Newton-Krylov solver
+out_po_sh, _, flag = @time newton(probSh , initpo, par_br_hopf, optn; normN = norminf)
+flag && printstyled(color=:red, "--> T = ", out_po_sh[end], ", amplitude = ", PALC.getAmplitude(probSh, out_po_sh, par_br_hopf; ratio = 2),"\n")
 ```
 
 which gives
@@ -152,13 +154,10 @@ We can now continue this periodic orbit:
 eig = DefaultEig()
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig),
 	nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
-	br_po_sh, _ , _ = @time continuationPOShooting(
-		p -> probSh(@set par_br.C = p),
-		out_po_sh, -0.86,
-		opts_po_cont; verbosity = 3,
-		plot = true,
-		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
+br_po_sh, _ , _ = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
+	plot = true,
+	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 ```
 
 We plot the result using `plot(vcat(br_po_sh, br), label = "")`:
@@ -173,7 +172,8 @@ We plot the result using `plot(vcat(br_po_sh, br), label = "")`:
 We now compute the periodic orbits branching of the first Period-Doubling bifurcation point. It is straightforward to obtain an initial guess using the flow around the bifurcation point:
 
 ```julia
-prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), @set par_br.C = -1.32)
+par_br_pd = @set par_br.C = -1.32
+prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd)
 # solution close to the PD point.
 solpd = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
 ```
@@ -187,10 +187,8 @@ initpo_pd = vcat(vec(orbitsectionpd), 6.2)
 For educational purposes, we show the newton outputs:
 
 ```julia
-out_po_sh_pd, _, flag = @time newton(
-		probSh(@set par_br.C = -1.32),
-		initpo_pd, optn;normN = norminf)
-flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ", PALC.getAmplitude(probSh(@set par_br.C = -0.86), out_po_sh_pd; ratio = 2),"\n")
+out_po_sh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd , optn; normN = norminf)
+flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ", PALC.getAmplitude(probSh, out_po_sh_pd, par_br_pd; ratio = 2),"\n")
 ```
 which gives
 
@@ -198,31 +196,29 @@ which gives
  Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     1.3462e-01         0
-        1                2     2.1845e-02        11
-        2                3     4.6417e-03        12
-        3                4     6.9467e-04        13
-        4                5     8.3113e-06        12
-        5                6     2.5982e-07        13
-        6                7     1.1674e-08        14
-        7                8     5.2221e-10        13
-  4.845103 seconds (3.07 M allocations: 1.959 GiB, 5.37% gc time)
---> T = 6.126423339476528, amplitude = 1.8457951639694683
+        0                1     5.2811e-01         0
+        1                2     3.0518e-02        13
+        2                3     6.4500e-03        14
+        3                4     1.8029e-03        13
+        4                5     6.9716e-05        11
+        5                6     6.6815e-07        12
+        6                7     2.6769e-08        14
+        7                8     1.0727e-09        13
+        8                9     4.3002e-11        13
+  6.941868 seconds (3.59 M allocations: 2.286 GiB, 8.26% gc time)
+--> T = 6.126399996979465, amplitude = 1.410164896740365
 ```
 
 We also compute the branch of periodic orbits using the following command:
 
 ```julia
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = -1.8, maxSteps = 100, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 1)
-br_po_sh_pd, _ , _ = @time continuationPOShooting(
-	p -> probSh(@set par_br.C = p),
-	out_po_sh_pd, -1.32,
-	opts_po_cont; verbosity = 2,
-	plot = true,
+br_po_sh_pd, _ , _ = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
+	opts_po_cont; verbosity = 2, plot = true,
 	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-	printSolution = (u, p) -> PALC.getMaximum(probSh(@set par_br.C = p), u; ratio = 2), normC = norminf)
+	printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 ```
 
-and plot it using `plot(vcat(br_po_sh, br, br_po_sh_pd), label = "")`:
+and plot it using `plot([br_po_sh, br, br_po_sh_pd], label = "")`:
 
 ![](br_pd3.png)

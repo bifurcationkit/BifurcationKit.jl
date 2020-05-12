@@ -64,8 +64,11 @@ module PseudoArcLengthContinuation
 	# codim2 Hopf continuation
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
+	# normal form
+	export computeNormalForm
+
 	# Periodic orbit computation based on Trapeze method
-	export	PeriodicOrbitTrapProblem, continuationPOTrap
+	export	PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
 	export	Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, getPeriod, AbstractShootingProblem, extractPeriodShooting

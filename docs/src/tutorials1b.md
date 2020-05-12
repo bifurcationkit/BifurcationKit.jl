@@ -48,13 +48,15 @@ We can easily write our functional with boundary conditions in a convenient mann
 N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 
-function F_chan(u, alpha::Float64, beta = 0.01)
+function F_chan(u, p)
+	@unpack alpha, beta = p
 	return [Fun(u(0.), domain(u)) - beta,
 		Fun(u(1.), domain(u)) - beta,
 		Δ * u + alpha * N(u, b = beta)]
 end
 
-function Jac_chan(u, alpha, beta = 0.01)
+function Jac_chan(u, p)
+	@unpack alpha, beta = p
 	return [Evaluation(u.space, 0.),
 		Evaluation(u.space, 1.),
 		Δ + alpha * dN(u, b = beta)]
@@ -66,6 +68,8 @@ We want to call a Newton solver. We first need an initial guess and the Laplacia
 ```julia
 sol = Fun(x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol.space, 2)
+# set of parameters
+par_af = (alpha = 3., beta = 0.01)
 ```
 
 Finally, we need to provide some parameters for the Newton iterations. This is done by calling
@@ -77,10 +81,7 @@ optnewton = NewtonPar(tol = 1e-12, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, _, _ = @time PALC.newton(
-			x -> F_chan(x, 3.0),
-			u -> Jac_chan(u, 3.0),
-			sol, optnewton, normN = x -> norm(x, Inf64))
+out, _, _ = @time PALC.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
 ```
 and you should see
 
@@ -93,7 +94,7 @@ and you should see
         2                3     8.0149e-04         1
         3                4     3.9038e-08         1
         4                5     7.9049e-13         1
-  0.086784 seconds (354.58 k allocations: 14.264 MiB)
+  0.103869 seconds (362.15 k allocations: 14.606 MiB)
 ```
 
 We can also perform numerical continuation with respect to the parameter $\alpha$. Again, we need to provide some parameters for the continuation:
@@ -114,14 +115,11 @@ end
 Then, we can call the continuation routine
 
 ```julia
-br, _ = @time continuation(
-		(x, p) ->   F_chan(x, p),
-		(x, p) -> Jac_chan(x, p),
-		out, 3.0, optcont,
-		plot = true,
-		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
-		verbosity = 2,
-		normC = x -> norm(x, Inf64))
+br, _ = @time continuation(F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
+	plot = true,
+	plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
+	verbosity = 2,
+	normC = x -> norm(x, Inf64))
 ```
 and you should see
 

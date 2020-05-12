@@ -23,17 +23,18 @@ length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. The arguments are as follows
 - `F(x,p)` vector field
 - `J` jacobian of `F`. Can be matrix based `J(x,p)` or Matrix-Free
+- `Jt = nothing` jacobian tranpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
 - `d2F = nothing` second derivative of F (optional), useful for continuation of Fold of periodic orbits. It has the definition `d2F(x,p,dx1,dx2)`.`
 - `ϕ` used to set a section for the phase constraint equation
 - `xπ` used in the section for the phase constraint equation
 - `M::Int` number of time slices
-- `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only used for the computation of the Floquet multipliers.
+- `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers.
 - `isinplace::Bool` whether `F` and `J` are inplace functions (Experimental). In this case, the functions `F` and `J` must have the following definitions `(o, x, p) ->  F(o, x, p)` and `(o, x, p, dx) -> J(o, x, p, dx)`.
 - `ongpu::Bool` whether the computation takes place on the gpu (Experimental)
 
-You can then call `pb(orbitguess)` to compute the functional on a `orbitguess`. Note that `orbitguess` must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
+You can then call `pb(orbitguess, p)` to compute the functional on a `orbitguess`. Note that `orbitguess` must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period of the limit cycle.
 
-The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one look for `T = x[end]` such that
+The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one looks for `T = x[end]` such that
 
  ``\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
 
@@ -48,7 +49,7 @@ where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constra
 - `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
 - `pb(Val(:JacFullSparse), orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess` without the constraints. It is called `A_γ` in the docs.
-- `pb(Val(:JacFullSparseInplace), J, orbitguess, p)`. Same as `pb(Val(:JacFullSparse), orbitguess)` but overwrites `J` inplace. Note that the sparsity pattern must be the same independantly of the values of the parameters or of `orbitguess`. In some cases, this is significantly faster than `pb(Val(:JacFullSparse), orbitguess, p)`.
+- `pb(Val(:JacFullSparseInplace), J, orbitguess, p)`. Same as `pb(Val(:JacFullSparse), orbitguess, p)` but overwrites `J` inplace. Note that the sparsity pattern must be the same independantly of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `pb(Val(:JacFullSparse), orbitguess, p)`.
 - `pb(Val(:JacCyclicSparse), orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
 - `pb(Val(:BlockDiagSparse), orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
 
@@ -748,16 +749,16 @@ end
 """
 	newton(prob::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, linearPO = :BorderedLU; kwargs...)
 
-This is the Newton Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
+This is the Newton-Krylov Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
 # Arguments:
-- `prob` a problem of type `PeriodicOrbitTrapProblem` encoding the functional G
+- `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N,M` in `prob`.
 - `options` same as for the regular `newton` method
 - `linearPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-    - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
+    - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
     - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
+    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
     - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 
@@ -772,7 +773,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, li
 """
 	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
 
-This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the one in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton algorithm from converging to the equilibrium point. We refer
+This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
 newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO::Symbol; kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
 
@@ -780,15 +781,15 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, de
 # continuation wrapper
 
 """
-	continuationPOTrap(probPO, orbitguess, p0::Real, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
+	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
 # Arguments
-- `p -> prob(p)` is a family such that `prob(p)::PeriodicOrbitTrapProblem` encodes the functional G
+- `prob::PeriodicOrbitTrapProblem` encodes the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `p0` initial parameter, must be a real number
-- `contParams` same as for the regular `continuation` method
+- `p0` set of parameters passed to the vector field
+- `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
 - `linearPO = :BorderedLU`. Same as `newton` when applied to `PeriodicOrbitTrapProblem`. More precisely:
     - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
@@ -869,13 +870,20 @@ end
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
 # Arguments
-- `p -> prob(p)` is a family such that `prob(p)::PeriodicOrbitTrapProblem` encodes the functional G
+- `prob::PeriodicOrbitTrapProblem` encodes the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `p0` initial parameter, must be a real number
-- `contParams` same as for the regular `continuation` method
-- `linearPO = :BorderedLU`. Same as `newton` when applied to `PeriodicOrbitTrapProblem`.
+- `p0` set of parameters passed to the vector field
+- `contParams` same as for the regular [`continuation`](@ref) method
+- `linearAlgo` same as in [`continuation`](@ref)
+- `linearPO = :BorderedLU`. Same as `newton` when applied to `PeriodicOrbitTrapProblem`. More precisely:
+    - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
+    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
+    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
+    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 
-Note that by default, the methods prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
+
+Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
 function continuation(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
@@ -898,8 +906,27 @@ end
 # Branch switching from BP of PO
 """
 $(SIGNATURES)
+
+Branch switching at a Branch point of periodic orbits specified by a [`PeriodicOrbitTrapProblem`](@ref). This is still experimental. A deflated Newton-Krylov solver is used to improve the branch switching capabilities.
+
+# Arguments
+- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `ind_bif` index of the branch point
+- `_contParams` parameters to be used by a regular [`continuation`](@ref)
+
+# Optional arguments
+- `Jt = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`
+- `δ` used internally to compute derivatives w.r.t the parameter `p`.
+- `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
+- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `usedeflation = true`,
+- `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
+- `printSolution = (u,p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
+- `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
+- `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 """
-function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+	verbose = get(kwargs, :verbosity, 0) > 0
 
 	@assert br.functional isa PeriodicOrbitTrapProblem
 	@assert abs(br.bifpoint[ind_bif].δ[1]) == 1
@@ -927,11 +954,13 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 	pb(orbitguess, set(br.params, br.param_lens, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
 
 	if usedeflation
+		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
 		# find point on the branch
 		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), _contParams.newtonOptions, linearPO; kwargs...)
 		# find the bifurcated branch using deflation
 		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 		optn = _contParams.newtonOptions
+		verbose && println("\n--> Compute point on bifurcated branch...")
 		solbif, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp, linearPO; kwargs...)
 		@assert flag "Deflated newton did not converge"
 		orbitguess .= solbif

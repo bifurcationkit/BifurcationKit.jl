@@ -42,8 +42,7 @@ We will not review the bifurcation of equilibria (see above). Therefore, we focu
 
 Let us consider the case where a branch of periodic orbits $\gamma^{po}$ have been computed (see for example previous section) and several bifurcation points have been detected (branch point, period doubling and Neimark Sacker). Can we compute bifurcated branches from $\gamma^{po}$? Automatically?
 
-
-We do not provide an *automatic* branch switching for those points. However, for branch points of periodic orbits, you can call [`continuation`](@ref) by passing $\gamma^{po}$ and some simple arguments (amplitude of the periodic orbits) to perform branch switching in a semi-automatic way.
+We do not provide an *automatic* branch switching for those points for all methods (Shooting, Finite differences). However, for branch points of periodic orbits, you can call [`continuation`](@ref) by passing $\gamma^{po}$ and some simple arguments (amplitude of the periodic orbits) to perform branch switching in a semi-automatic way. For the case of [Periodic orbits based on finite differences](@ref), see [Branch switching from Branch point of curve of periodic orbits](@ref).
 
 !!! tip "Manual Branch switching"
-    You can perform **manual** branch switching by computing the nearby solutions close to a bifurcation point using a deflated newton (see [Deflated problems](@ref)), which provides a way to compute solutions other than a set of already known solutions.  You can then use these solutions to compute branches by calling `continuation`. Many, if not all tutorials give example of doing so like [A generalized Bratu–Gelfand problem in two dimensions](@ref) or [Brusselator 1d](@ref).
+    You can perform **manual** branch switching by computing the nearby solutions close to a bifurcation point using a deflated newton (see [Deflated problems](@ref)), which provides a way to compute solutions other than a set of already known solutions.  You can then use these solutions to compute branches by calling `continuation`. Many, if not all tutorials give example of doing so like [A generalized Bratu–Gelfand problem in two dimensions](@ref) or [Brusselator 1d (automatic)](@ref).

@@ -179,7 +179,7 @@ function (fl::FloquetQaDShooting)(J, nev)
 	if fl.eigsolver isa DefaultEig
 		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDShooting(J.pb, J.x)
+		monodromy = MonodromyQaDShooting(J.pb, J.x, J.par)
 	else
 		# we use a Matrix Free version
 		monodromy = dx -> MonodromyQaDShooting(J.pb, J.x, J.par, dx)

@@ -165,7 +165,6 @@ br_po, upo , _= @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens
 
 ####################################################################################################
 # automatic branch switching
-
 using ForwardDiff
 function D(f, x, p, dx)
 	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
@@ -174,16 +173,24 @@ d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
 	d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
 	d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 
-jet  = (Fcgl, Jcgl,
-	(x, p, dx1, dx2) -> d2Fcgl(x, p, dx1, dx2),
-	(x, p, dx1, dx2, dx3) -> d3Fcgl(x, p, dx1, dx2, dx3))
+jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+
+ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
+eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryNsteps = 1)
 
 br_po, _ = continuation(
 	jet...,	br, 2,
 	# arguments for continuation
-	opts_po_cont, probSh; verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.001,
+	opts_po_cont,
+	# probSh;
+	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
+	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	# printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2),
+	printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2),
 	normC = norminf)
+
+#ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;

@@ -74,21 +74,17 @@ We provide a simplified call to `newton` to locate the periodic orbits. Compared
 
 Have a look at the [Continuation of periodic orbits (Finite differences)](@ref) example for the Brusselator for a basic example and at [Complex Ginzburg-Landau 2d](@ref) for a more advanced one. 
 
-The docs for this specific `newton` are located at [Newton for Periodic Orbits](@ref).
+The docs for this specific `newton` are located at [`newton`](@ref).
 
 ## Computation with `newton` and deflation
 
 We also provide a simplified call to `newton` to locate the periodic orbit with a deflation operator. 
 
 ```@docs
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearalgo::Symbol; kwargs...) where {T, Tf, vectype}
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par0, options::NewtonPar, defOp::DeflationOperator, linearalgo::Symbol; kwargs...)
 ```
 
 
 ## Continuation
 
-Have a look at the [Continuation of periodic orbits (Finite differences)](@ref) example for the Brusselator.
-
-```@docs
-continuationPOTrap
-```
+Have a look at the [Continuation of periodic orbits (Finite differences)](@ref) example for the Brusselator. We refer to [`continuation`](@ref) for more information regarding the arguments.

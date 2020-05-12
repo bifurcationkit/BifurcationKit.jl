@@ -161,9 +161,7 @@ d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
 	d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
 	d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 
-jet  = (Fbru, Jbru_sp,
-	(x, p, dx1, dx2) -> d2Fbru(x, p, dx1, dx2),
-	(x, p, dx1, dx2, dx3) -> d3Fbru(x, p, dx1, dx2, dx3))
+jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
 hopfpt = PALC.computeNormalForm(jet..., br, 1; verbose = true)
 ####################################################################################################Continuation of Periodic Orbit
@@ -260,16 +258,18 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ####################################################################################################
 # automatic branch switching from Hopf point
-opt_po = PALC.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
 	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 
+M = 51
 br_po, _ = continuation(
 	# arguments for branch switching
-	jet..., br, 3,
+	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PeriodicOrbitTrapProblem(M = 51);
+	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
+	#
 	ampfactor = 3, δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
@@ -279,27 +279,27 @@ br_po, _ = continuation(
 	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 
-branches = [br_po]
-push!(branches, br_po2)
-plot(branches)
+# branches = [br_po]
+push!(branches, br_po)
+plot(branches, legend = :bottomright, plotfold = false)
 
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO
 br_po2, _ = PALC.continuationPOTrapBPFromPO(
 	# arguments for branch switching
-	branches[end-1], 3,
+	br_po, 1,
 	# arguments for continuation
-	(@set opts_po_cont.detectBifurcation = 2);
+	opts_po_cont;
 	ampfactor = 1., δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...);plot!(branches[end-1],subplot=1)),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...);plot!(branches[2],legend = :bottomright, subplot=1)),
 	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
-
+push!(branches, br_po2)
 
 plot();for _b in branches; plot!(_b; label = ""); end; title!("")
 
-plot(branches[end])
+plot(branches[2])

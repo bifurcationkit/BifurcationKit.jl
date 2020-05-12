@@ -26,9 +26,14 @@ end
 ####################################################################################################
 # newton wrapper
 """
-	newton(prob::T, orbitguess, options::NewtonPar; kwargs...) where {T <: AbstractShootingProblem}
+$(SIGNATURES)
 
-This is the Newton Solver for computing a periodic orbit using Shooting method.
+This is the Newton-Krylov Solver for computing a periodic orbit using (Standard / Poincaré) Shooting method.
+Note that the linear solver has to be apropriately set up.
+
+# Arguments
+
+Similar as [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
 
 # Output:
 - solution
@@ -39,14 +44,17 @@ This is the Newton Solver for computing a periodic orbit using Shooting method.
 function newton(prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar; kwargs...)
 	return newton(prob,
 			(x, p) -> (dx -> prob(x, p, dx)),
-			orbitguess, par,
-			options; kwargs...)
+			orbitguess, par, options; kwargs...)
 end
 
 """
-	newton(prob::T, orbitguess, options::NewtonPar, defOp::DeflationOperator; kwargs...) where {T <: AbstractShootingProblem}
+$(SIGNATURES)
 
-This is the deflated Newton Solver for computing a periodic orbit using Shooting method.
+This is the deflated Newton-Krylov Solver for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
+
+# Arguments
+
+Similar as [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
 
 # Output:
 - solution
@@ -63,6 +71,18 @@ end
 
 ####################################################################################################
 # Continuation for shooting problems
+
+"""
+$(SIGNATURES)
+
+This is the continuation method for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
+
+# Arguments
+
+Similar as [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
+
+- `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
+"""
 
 function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; printPeriod = true, kwargs...)
 
@@ -97,16 +117,15 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 end
 
 """
-	continuationPOShooting(prob, orbitguess, p0::Real, contParams::ContinuationPar; printPeriod = true, kwargs...)
+$(SIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a functional G based on a Shooting method.
+This is the continuation routine for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
 
 # Arguments
-- `p -> prob(p)` is a function or family such that `prob(p)::AbstractShootingProblem` encodes the functional G
-- `orbitguess` a guess for the periodic orbit. For the type of `orbitguess`, please see the information concerning [`ShootingProblem`](@ref) and [`PoincareShootingProblem`](@ref).
-- `p0` initial parameter, must be a real number
-- `contParams` same as for the regular `continuation` method
-- `printPeriod` in the case of Poincaré Shooting, plot the period of the cycle.
+
+Similar as [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
+
+- `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
 """
 function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), printPeriod = true, kwargs...)
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
@@ -115,27 +134,34 @@ end
 
 ####################################################################################################
 """
-	continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, linearPO = :BorderedLU, M = 21, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+$(SIGNATURES)
 
-Perform branch switching from Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br`. The periodic orbits are computed using Finite Differences (see [`PeriodicOrbitTrapProblem`](@ref) for more information).
+Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br::ContResult`. It first compute a Hopf normal form.
 
 # Arguments
 
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differencials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`... These are used to compute the Hopf normal form.
 - `br` branch result from a call to `continuation`
 - `ind_hopf` index of the bifurcation point in `br`
 - `contParams` parameters for the call to `continuation`
+- `prob` problem used to specify the way the periodic orbit is computed. It can be [`PeriodicOrbitTrapProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
 
 # Optional arguments
 
-- `M = 21` number of time discretization to parametrize the periodic orbits
-- `linearPO` linear algorithm used for the computation of periodic orbits. (see [`PeriodicOrbitTrapProblem`](@ref))
+- `linearPO` linear algorithm used for the computation of periodic orbits when `prob` is [`PeriodicOrbitTrapProblem`](@ref))
 - `Jt` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector for the Hopf normal form!!!!!! COMME NEWTON FOLD
 - `δ = 1e-8` used for finite differences
-- `δp = 0.1` used to specify a particular guess for the parameter in the branch. This allows to use a step larger than `dsmax`.
+- `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
+- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 
 !!! note "Linear solver"
     You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
+
+!!! tip "Jacobian tranpose"
+    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+
+!!! warning "Hessian"
+    The hessian of `F`, when `d2F` is not `nothing`, is computed with Finite differences.
 """
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, kwargs...)
 	# compute the normal form of the branch point

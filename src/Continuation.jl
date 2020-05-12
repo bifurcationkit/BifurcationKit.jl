@@ -663,7 +663,7 @@ You can also use the following call for which the jacobian is computed internall
 
 ## Bordered system of equations
 
-In what follows, we abuse of notations, `p` refers to the value of the scalar parameter we perform continuation with. Hence, it should be `p = get(par, lens)`.
+In what follows, we abuse of notations, `p` refers to the scalar value of the parameter we perform continuation with. Hence, it should be `p = get(par, lens)`.
 
 The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]``. In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
 

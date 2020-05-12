@@ -33,22 +33,4 @@ A composite type which implements this functional:
 BorderedProblem
 ```
 
-## Computation with `newton`
-
-We provide a simplified call to `newton` to solve a bordered problem:
-
-```@docs
-newtonBordered
-```
-
-## Continuation
-
-We provide a simplified call to `continue` to solve a bordered problem:
-
-```@docs
-continuationBordered
-```
-
-
-
 

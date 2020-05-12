@@ -33,13 +33,13 @@ end
 """
 		newton(F, J, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 
-This is the Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p0)u = -F(x, p0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
+This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p0)u = -F(x, p0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
 
 # Arguments:
 - `(x, p) -> F(x, p)` functional whose zeros are looked for. In particular, it is not **inplace**,
 - `dF(x, p) = (x, p) -> J(x, p)` compute the jacobian of `F` at `x`. It is then passed to `options.linsolver`. The Jacobian `J(x, p)` can be a matrix or an out-of-place function.
 - `x0` initial guess
-- `p0` parameter to be passed to `F` and `J`
+- `p0` set of parameters to be passed to `F` and `J`
 - `options` variable holding the internal parameters used by the `newton` method
 - `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
     - `x` current solution
@@ -135,8 +135,3 @@ function newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
 	Jhandle = (u, p) -> finiteDifferences(z -> Fhandle(z, p), u)
 	return newton(Fhandle, Jhandle, x0, p0, options; kwargs...)
 end
-
-# simplified calls to pass F(x) and J(x) instead of F(x, p) and J(x, p)
-# newton(Fhandle, Jhandle, x0, options::NewtonPar; kwargs...) = newton((x, p) -> Fhandle(x), (x, p) -> Jhandle(x), x0, nothing, options; kwargs...)
-#
-# newton(Fhandle, x0, options::NewtonPar; kwargs...) = newton((x, p) -> Fhandle(x), x0, nothing, options; kwargs...)
