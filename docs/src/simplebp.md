@@ -22,11 +22,11 @@ In the above scalar equation,
 The reduced equation (E) can be automatically computed as follows
 
 ```julia
-computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; 
-	δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
+computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 1e-8,
+	nev = 5, Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens)
 ```
 
-where `dF, d2F,d3F` are the differentials of `F`. `br` is a branch computed after a call to `continuation` with detection of bifurcation points enabled. The above call returns a point with information needed to compute the bifurcated branch.
+where `dF, d2F,d3F` are the differentials of `F`. `br` is a branch computed after a call to [`continuation`](@ref) with detection of bifurcation points enabled and `ind_bif` is the index of the bifurcation point on the branch `br`. The above call returns a point with information needed to compute the bifurcated branch. For more information about the optional parameters, we refer to [`computeNormalForm`](@ref).
 
 ```julia
 mutable struct SimpleBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint

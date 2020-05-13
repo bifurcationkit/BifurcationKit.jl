@@ -11,7 +11,7 @@ The general method `continuation` is built upon this iterator interface and we r
 The interface is set by defining an iterator, pretty much in the same way one calls [`continuation`](@ref):
 
 ```julia
-iter = PALCIterable(F, J, x0, p0, opts; kwargs...)
+iter = PALCIterable(F, J, x0, p0, lens::Lens, opts; kwargs...)
 ```
 
 ## Stepping
@@ -59,7 +59,7 @@ Jac_m = (x, p) -> diagm(0 => 1  .- x.^k)
 opts = PALC.ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryNsteps = 0, computeEigenValues = true, detectBifurcation = true, newtonOptions = NewtonPar(tol = 1e-8, verbose = true))
 
 # we define an iterator to hold the continuation routine
-iter = PALC.PALCIterable(F, Jac_m, [0.8], 1., opts; verbosity = 2)
+iter = PALC.PALCIterable(F, Jac_m, [0.8], 1., (@lens _), opts; verbosity = 2)
 
 resp = Float64[]
 resx = Float64[]

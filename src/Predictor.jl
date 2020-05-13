@@ -69,19 +69,16 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, v
 end
 
 # generic corrector based on Bordered formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
-			ds, θ, contparams, dottheta::DotTheta,
+function corrector(it, z_old::M, tau::M, z_pred::M,
+			ds, θ,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
 			normC = norm,
-			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M<:BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
-	return newtonPALC(Fhandle, Jhandle,
-			z_old, tau, z_pred,
-			ds, θ,
-			contparams, dottheta; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
+			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+	return newtonPALC(it, z_old, tau, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 
 # corrector based on natural formulation
-function corrector(Fhandle, Jhandle, z_old::M, tau::M, z_pred::M,
+function corrector(it, z_old::M, tau::M, z_pred::M,
 			ds, θ, contparams, dottheta::DotTheta,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm,
@@ -95,15 +92,13 @@ end
 
 # tangent computation using Natural / Secant predictor
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, F, J,
-	ds, θ, contparams, normtheta::DotTheta,
-	algo::Talgo, verbosity, linearalgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::Talgo, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau, z_new)
 	minus!(tau, z_old)
 	if algo isa SecantPred
-		α = sign(ds) / normtheta(tau, θ)
+		α = sign(ds) / it.dottheta(tau, θ)
 	else
 		α = sign(ds) / abs(tau.p)
 	end
@@ -112,26 +107,24 @@ end
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, F, J,
-	ds, θ, contparams, dottheta::DotTheta,
-	algo::BorderedPred, verbosity, linearbdalgo) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
-	ϵ = contparams.finDiffEps
+	ϵ = it.contParams.finDiffEps
 	# dFdl = (F(z_old.u, z_old.p + ϵ) - F(z_old.u, z_old.p)) / ϵ
-	dFdl = F(z_old.u, z_old.p + ϵ)
-	minus!(dFdl, F(z_old.u, z_old.p))
+	dFdl = it.F(z_old.u, set(it.par, it.param_lens, z_old.p + ϵ))
+	minus!(dFdl, it.F(z_old.u, set(it.par, it.param_lens, z_old.p)))
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
 	tau_normed = copy(tau)#copyto!(similar(tau), tau) #copy(tau_old)
 	rmul!(tau_normed, θ / length(tau.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_old.u)
-	tauu, taup, flag, it = linearbdalgo( J(z_old.u, z_old.p), dFdl,
+	tauu, taup, flag, itl = it.linearAlgo( it.J(z_old.u, set(it.par, it.param_lens, z_old.p)), dFdl,
 			tau_normed, rmul!(similar(z_old.u), false), T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / dottheta(tauu, tau.u, taup, tau.p, θ)
+	α = T(1) / it.dottheta(tauu, tau.u, taup, tau.p, θ)
 
 	# tau_new = α * tau
 	copyto!(tau.u, tauu)
@@ -190,10 +183,16 @@ function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::
 end
 ####################################################################################################
 """
-This is the classical matrix-free Newton Solver used to solve `F(x, p) = 0` together
-with the scalar condition `n(x, p) = (x - x0) * τx + (p - p0) * τp - n0`
+This is the classical Newton-Krylov solver used to solve `F(x, p) = 0` together
+with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1-θ) ⋅ (p - p0) * τp - n0 = 0`. This makes a problem of dimension N + 1.
+
+Here, we specify the p as a subfield of `par` with the `paramLens::Lens`
+
+# Arguments
+- `(x, par) -> F(x, par)` where `par` is a set of parameters like `(a=1.0, b=1)`
+- `(x, par) -> Jh(x, par)` the jacobian Jh = ∂xF
 """
-function newtonPALC(F, Jh,
+function newtonPALC(F, Jh, par, paramlens::Lens,
 					z0::BorderedArray{vectype, T},
 					τ0::BorderedArray{vectype, T},
 					z_pred::BorderedArray{vectype, T},
@@ -217,13 +216,13 @@ function newtonPALC(F, Jh,
 	x_pred = _copy(x) # copy(x)
 
 	# Initialise residuals
-	res_f = F(x, p);  res_n = N(x, p)
+	res_f = F(x, set(par, paramlens, p));  res_n = N(x, p)
 
 	dX = _copy(res_f) # copy(res_f)
 	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
-	dFdp = copyto!(similar(res_f), F(x, p + finDiffEps)) # copy(F(x, p + finDiffEps))
+	dFdp = copyto!(similar(res_f), F(x, set(par, paramlens,p + finDiffEps))) # copy(F(x, p + finDiffEps))
 	minus!(dFdp, res_f)	# dFdp = dFdp - res_f
 	rmul!(dFdp, T(1) / finDiffEps)
 
@@ -241,9 +240,10 @@ function newtonPALC(F, Jh,
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok & compute
 		# copyto!(dFdp, (F(x, p + epsi) - F(x, p)) / epsi)
-		copyto!(dFdp, F(x, p + finDiffEps)); minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
+		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
+			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
-		J = Jh(x, p)
+		J = Jh(x, set(par, paramlens, p))
 		u, up, flag, liniter = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
 
 		if linesearch
@@ -274,7 +274,7 @@ function newtonPALC(F, Jh,
 			minus!(x, u) 	# x .= x .- u
 			p = p - up
 
-			copyto!(res_f, F(x, p))
+			copyto!(res_f, F(x, set(par, paramlens, p)))
 
 			res_n  = N(x, p)
 			res = normAC(res_f, res_n)
@@ -292,4 +292,7 @@ function newtonPALC(F, Jh,
 	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it
 end
+
+# conveniency for use in continuation
+newtonPALC(it::PALCIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.param_lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
 ####################################################################################################

@@ -118,15 +118,14 @@ function FslMono!(f, x, p, t)
 end
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
 
-probHPsh = p -> PALC.PoincareShootingProblem(u -> Fsl(u, p), p,
+probHPsh = PALC.PoincareShootingProblem(Fsl, par_sl,
 		prob, algsl,
 		# probMono, Rodas4P(autodiff=false),
 		normals, centers; abstol =1e-10, reltol=1e-10)
 
-psh = probHPsh(par_sl)
-@show PALC.diffPoincareMap(psh, u0, du0, 1)
+@show PALC.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 
 
 resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb; verbose = true)
-resDPPALC = PALC.diffPoincareMap(probHPsh(par_sl), u0, du0, 1)
+resDPPALC = PALC.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 @test norminf(resDP - resDPPALC) < 1e-6

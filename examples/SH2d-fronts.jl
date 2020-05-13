@@ -56,11 +56,7 @@ par = (l = -0.1, ν = 1.3, L1 = L1)
 
 optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
 # optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
-	sol_hexa, hist, flag = @time PALC.newton(
-		x ->  F_sh(x, par),
-		u -> dF_sh(u, par),
-		vec(sol0),
-		optnew)
+	sol_hexa, hist, flag = @time PALC.newton(F_sh, dF_sh, vec(sol0), par, optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
@@ -71,13 +67,10 @@ heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
-outdef, _, flag, _ = @time PALC.newton(
-		x -> F_sh(x, par),
-		u -> dF_sh(u, par),
+outdef, _, flag, _ = @time PALC.newton(F_sh, dF_sh,
 		# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
 		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
-
-		optnew, deflationOp, normN = x -> norm(x, Inf))
+		par, optnew, deflationOp, normN = x -> norm(x, Inf))
 	println("--> norm(sol) = ", norm(outdef))
 	heatmapsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
@@ -86,13 +79,12 @@ heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 0, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 2, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
 	br, u1 = @time PALC.continuation(
-		(x, p) ->  F_sh(x, @set par.l = p),
-		(x, p) -> dF_sh(x, @set par.l = p),
-		deflationOp[1], -0.1, optcont;
+		F_sh, dF_sh,
+		deflationOp[1], par, (@lens _.l), optcont;
 		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
@@ -112,9 +104,9 @@ function dF_sh2(du, u, p)
 end
 
 sol_hexa, _, flag = @time PALC.newton(
-		x ->  F_sh(x, par),
-		u -> (du -> dF_sh2(du, u, par)),
-		vec(sol0),
+		F_sh,
+		(u, p) -> (du -> dF_sh2(du, u, p)),
+		vec(sol0), parSH,
 		@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)

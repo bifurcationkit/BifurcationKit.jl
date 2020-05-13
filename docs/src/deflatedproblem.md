@@ -23,11 +23,13 @@ Note that you can add new solution `x0` to `M` by doing `push!(M, x0)`. Also `M[
 
 ## Computation with `newton`
 
-Most newton functions can be used with a deflated problem, see for example [Newton with deflation](@ref). The idea is to pass the deflation operator `M`. For example, we have the following overloaded method, which works on GPUs: 
+Most newton functions can be used with a deflated problem, see for example [Snaking computed with deflation](@ref). The idea is to pass the deflation operator `M`. For example, we have the following overloaded method, which works on GPUs: 
 
 ```
-newton(Fhandle, Jhandle, x0, options::NewtonPar, M::DeflationOperator; kwargs...)
+newton(F, J, x0, p0, options::NewtonPar, defOp::DeflationOperator; kwargs...)
 ```
+
+We refer to [`newton`](@ref) for more information about the arguments.
 
 !!! tip "Tip"
-    You can use this method for periodic orbits as well by passing the deflation operator `M` to the newton methods in [Newton for Periodic Orbits](@ref)
+    You can use this method for periodic orbits as well by passing the deflation operator `M` to the newton method

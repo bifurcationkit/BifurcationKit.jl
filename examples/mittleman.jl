@@ -71,10 +71,7 @@ Nx = 100
 ####################################################################################################
 eigls = EigArpack(0.5, :LM)
 	opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time PALC.newton(
-		x ->  Fmit(x, par_mit),
-		x -> JFmit(x, par_mit),
-		sol0, opt_newton, normN = norminf)
+	out, hist, flag = @time PALC.newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(out)
 
@@ -82,9 +79,8 @@ plotsol(out)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 
 	br, _ = @time PALC.continuation(
-		(x, p) -> Fmit(x, @set par_mit.λ = p),
-		(x, p) -> JFmit(x, @set par_mit.λ = p),
-		sol0, 0.05,
+		Fmit, JFmit,
+		sol0, par_mit, (@lens _.λ),
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		opts_br; plot = true, verbosity = 3, normC = norminf)
@@ -98,13 +94,11 @@ d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
 d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
 d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
-jet = ( (x, p) -> Fmit(x, @set par_mit.λ = p),
-		(x, p) -> JFmit(x, @set par_mit.λ = p),
-		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3))
+jet = ( Fmit, JFmit, d2Fmit, d3Fmit)
 
 br1, _ = continuation(jet...,
-		br, 3, setproperties(opts_br;ds = 0.001, maxSteps = 40);
+		br, 3,
+		setproperties(opts_br;ds = 0.001, maxSteps = 40);
 		verbosity = 3, plot = true,
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
@@ -122,11 +116,7 @@ plot([br,br1,br2],plotfold=false)
 
 ####################################################################################################
 # analyse 2d bifurcation point
-bp2d = @time PALC.computeNormalForm((x, p) -> Fmit(x, @set par_mit.λ = p),
- 		(x, p) -> JFmit(x, @set par_mit.λ = p),
-		(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-		(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3),
-		br, 2, opts_br.newtonOptions;  verbose=true)
+bp2d = @time PALC.computeNormalForm(jet..., br, 2;  verbose=true)
 
 PALC.nf(bp2d)[2] |> println
 
@@ -159,7 +149,9 @@ resp = Float64[]
 		push!(resx, [X[ii[2]], Y[ii[3]]])
 	end
 
-gr()
+
+
+using LaTeXStrings
 
 plot(
 	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
@@ -178,10 +170,10 @@ vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
 for ii=1:size(ve, 2)
 		outdef1, _, flag, _ = @time newton(
-			x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-			x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			Fmit, JFmit,
 			# initial guess for newton
 			br.bifpoint[2].x .+ 0.01 .* ve[:,ii] .* (1 .+ 0.01 .* rand(Nx*Ny)),
+			(@set par_mit.λ = br.bifpoint[2].param + 0.005),
 			optdef, deflationOp)
 			flag && push!(deflationOp, outdef1)
 	end
@@ -197,9 +189,8 @@ l = @layout grid(3,2)
 	title!("")
 
 brdef1, _ = @time PALC.continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[3], br.bifpoint[2].param - 0.005,
+	Fmit, JFmit,
+	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	# bp2d([0.6,0.6], -0.01), br.bifpoint[2].param - 0.005,
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
@@ -210,9 +201,9 @@ plot([br,br1,br2, brdef1],plotfold=false)
 
 
 brdef2, _ = @time PALC.continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[5], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
+	Fmit, JFmit,
+	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)

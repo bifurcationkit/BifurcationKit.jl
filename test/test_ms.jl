@@ -6,11 +6,12 @@ M = 5
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)
-vf(x) = x
-flow(x, t) = exp(t) .* x
-dflow(x, dx, t) = (t = t, u = flow(x, t), du = exp(t) .* dx)
+vf(x, p) = x
+flow(x, p, t) = exp(t) .* x
+dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = exp(t) .* dx)
 section(x) = dot(x[1:N], ones(N))
 section(x::BorderedArray) = section(vec(x.u[:,:]))
+par = nothing
 
 fl = PALC.Flow(vf, flow, dflow)
 
@@ -27,25 +28,25 @@ dpoguess = VectorOfArray([rand(N) for ii=1:M])
 # use of AbstractArray structure
 pov = vcat(vec(po.u), po.p)
 dpov = vcat(vec(dpo.u), dpo.p)
-resv = probSh(pov)
+resv = probSh(pov, par)
 
-dresv = probSh(pov, dpov; δ = δ)
-resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov), 0.)
+dresv = probSh(pov, par, dpov; δ = δ)
+resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
 # use of BorderedArray structure
-res = probSh(po)
+res = probSh(po, par)
 @test norm(vec(res.u[:,:]) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
-dres = probSh(po, dpo; δ = δ)
+dres = probSh(po, par, dpo; δ = δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
 @test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using nonLinear flow
-vf(x) = x.^2
-flow(x, t) = x ./ (1 .- t .* x)
-dflow(x, dx, t) = (t = t, u = flow(x, t), du = dx ./ (1 .- t .* x).^2)
+vf(x, p) = x.^2
+flow(x, p, t) = x ./ (1 .- t .* x)
+dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = dx ./ (1 .- t .* x).^2)
 
 fl = PALC.Flow(vf, flow, dflow)
 
@@ -62,18 +63,18 @@ dpoguess = VectorOfArray([rand(N) for ii=1:M])
 # use of AbstractArray structure
 pov = vcat(vec(po.u), po.p)
 dpov = vcat(vec(dpo.u), dpo.p)
-resv = probSh(pov)
+resv = probSh(pov, par)
 
-dresv = probSh(pov, dpov; δ = δ)
-resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov), 0.)
+dresv = probSh(pov, par, dpov; δ = δ)
+resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
 # use of BorderedArray structure
-res = probSh(po)
+res = probSh(po, par)
 @test norm(vec(res.u[:,:]) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
-dres = probSh(po, dpo; δ = δ)
+dres = probSh(po, par, dpo; δ = δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
 @test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################

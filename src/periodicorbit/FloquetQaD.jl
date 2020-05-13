@@ -41,7 +41,7 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
 """
-function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, du::AbstractVector)
+function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
 	# extraction of various constants
 	M = poPb.M
 	N = poPb.N
@@ -57,24 +57,61 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, du::
 
 	u0c = extractTimeSlices(u0, N, M)
 
-	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1]), out)
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1]), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 	out .= res
 
 	for ii in 2:M-1
 		h =  T * getTimeStep(poPb, ii)
-		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1]), out)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
 		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii]), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 		out .= res
 	end
 
 	return out
 end
 
+
+function MonodromyQaDFD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+	# extraction of various constants
+	M = poPb.M
+	N = poPb.N
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+	out_a = [copy(out)]
+	# push!(out_a, copy(out))
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+		push!(out_a, copy(out))
+	end
+	push!(out_a, copy(du))
+
+	return out_a
+end
+
 # Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
-function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::vectype) where {vectype <: AbstractVector}
+function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
 	# extraction of various constants
 	M = poPb.M
 	N = poPb.N
@@ -87,14 +124,14 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::vectype) where {vect
 
 	u0c = extractTimeSlices(u0, N, M)
 
-	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1]))) \ Array(I + h/2 * poPb.J(u0c[:, M-1]))
+	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
 	temp = similar(mono)
 
 	for ii in 2:M-1
 		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
 		# also I - h/2 .* J seems to hurt (a little) performances
 		h =  T * getTimeStep(poPb, ii)
-		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii]))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1]))
+		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
 		mono .= temp * mono
 	end
 	return mono
@@ -103,10 +140,10 @@ end
 function (fl::FloquetQaDTrap)(J, nev)
 	if fl.eigsolver isa DefaultEig
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0)
+		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0, J.par)
 	else
 		# we use a Matrix Free version
-		monodromy = x -> MonodromyQaDFD(J.pb, J.orbitguess0, x)
+		monodromy = dx -> MonodromyQaDFD(J.pb, J.orbitguess0, J.par, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
@@ -142,10 +179,10 @@ function (fl::FloquetQaDShooting)(J, nev)
 	if fl.eigsolver isa DefaultEig
 		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDShooting(J.pb, J.x)
+		monodromy = MonodromyQaDShooting(J.pb, J.x, J.par)
 	else
 		# we use a Matrix Free version
-		monodromy = x -> MonodromyQaDShooting(J.pb, J.x, x)
+		monodromy = dx -> MonodromyQaDShooting(J.pb, J.x, J.par, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 
@@ -159,7 +196,7 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Shooting computed at the space-time guess: `x`. The dimension of `u0` is N * M + 1 and the one of `du` is N.
 """
-function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
+function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p, du::AbstractVector)
 	# period of the cycle
 	T = extractPeriodShooting(x)
 
@@ -175,14 +212,14 @@ function MonodromyQaDShooting(sh::ShootingProblem, x, du::AbstractVector)
 
 	for ii in 1:M
 		# call the jacobian of the flow
-		@views out .= sh.flow(Val(:Serial), xc[:, ii], out, sh.ds[ii] * T).du
+		@views out .= sh.flow(Val(:Serial), xc[:, ii], p, out, sh.ds[ii] * T).du
 	end
 
 	return out
 end
 
 # Compute the monodromy matrix at `x` explicitely, not suitable for large systems
-function MonodromyQaDShooting(sh::ShootingProblem, x)
+function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 	# period of the cycle
 	T = extractPeriodShooting(x)
 
@@ -202,7 +239,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x)
 	for ii in 1:N
 		du[ii] = 1.0
 		# call jacobian of the flow
-		@views Mono[:, ii] .= sh.flow(xc[:, 1], du, T).du
+		@views Mono[:, ii] .= sh.flow(xc[:, 1], p, du, T).du
 		du[ii] = 0.0
 	end
 
@@ -214,7 +251,7 @@ end
 
 Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """
-function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, dx_bar::AbstractVector)
+function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, p, dx_bar::AbstractVector)
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
 
@@ -229,7 +266,7 @@ function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, dx_bar::Abstr
 	for ii in 1:M
 		E!(psh.section,  xc,  view(x_barc, :, ii), ii)
 		dE!(psh.section, outc, outbar, ii)
-		outc .= diffPoincareMap(psh, xc, outc, ii)
+		outc .= diffPoincareMap(psh, xc, p, outc, ii)
 		# check to <outc, normals[ii]> = 0
 		# println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
 		dR!(psh.section, outbar, outc, ii)

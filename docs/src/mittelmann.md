@@ -116,9 +116,8 @@ We can now call `continuation` with the initial guess `sol0` which is homogenous
 
 ```julia
 br, _ = @time PALC.continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	sol0, 0.05,
+	Fmit, JFmit,
+	sol0, par_mit, (@lens _.λ),
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	opts_br; plot = true, verbosity = 3, normC = norminf)
@@ -143,7 +142,7 @@ Fold points:
 -   1,    fold point around p ≈ 0.36787944, step =  19, idx =  19, ind_bif =   0 [    guess], δ = ( 0,  0)
 ```
 
-We notice several simple bifurcation point for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
+We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
 
 ## Automatic branch switching 
 
@@ -160,10 +159,7 @@ d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 It is convenient to define the jet of `Fmit`
 
 ```julia
-jet = ( (x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	(x, p, dx1, dx2) -> d2Fmit(x, (@set par_mit.λ = p), dx1, dx2),
-	(x, p, dx1, dx2, dx3) -> d3Fmit(x, (@set par_mit.λ = p), dx1, dx2, dx3))
+jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 ```
 
 We can now compute the branch off the third bifurcation point:
@@ -205,7 +201,7 @@ The second bifurcation point on the branch `br` of homogenous solutions has a 2d
 We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)
 
 ```julia
-bp2d = @time PALC.computeNormalForm(jet..., br, 2, opts_br.newtonOptions;  verbose=true)
+bp2d = PALC.computeNormalForm(jet..., br, 2;  verbose=true)
 ```
 
 You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple branch point](@ref).
@@ -264,13 +260,15 @@ We could use the solutions saved in `resp, resx` as initial guesses for a call t
 !!! tip "Solutions"
     The brute force method provided all solutions in a neighborhood of the bifurcation point.
 
-## Branch switching with deflation
+## Branch switching with deflated newton
 
 At this stage, we know what happens at the 2d bifurcation point of the curve of homogenous solutions. We chose another method based on [Deflated problems](@ref). We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:
 
 ```julia
+
+out = zeros(Nx*Ny)
 # deflation operator to 
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
+deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zeros(Nx*Ny)])
 
 # options for the newton solver
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
@@ -281,10 +279,10 @@ vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
 for ii=1:size(ve, 2)
 		outdef1, _, flag, _ = @time newton(
-			x ->  Fmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
-			x -> JFmit(x, @set par_mit.λ = br.bifpoint[2].param + 0.005),
+			Fmit, JFmit,
 			# initial guess for newton
 			br.bifpoint[2].x .+ 0.01 .* ve[:,ii] .* (1 .+ 0.01 .* rand(Nx*Ny)),
+			(@set par_mit.λ = br.bifpoint[2].param + 0.005),
 			optdef, deflationOp)
 			flag && push!(deflationOp, outdef1)
 	end
@@ -298,9 +296,9 @@ We can continue this solution as follows in one direction
 
 ```julia
 brdef1, _ = @time PALC.continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[5], br.bifpoint[2].param + 0.005, setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
+	Fmit, JFmit,
+	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
@@ -310,14 +308,14 @@ If we repeat the above loop but before the branch point by using `@set par_mit.�
 
 ```julia
 brdef2, _ = @time PALC.continuation(
-	(x, p) -> Fmit(x, @set par_mit.λ = p),
-	(x, p) -> JFmit(x, @set par_mit.λ = p),
-	deflationOp[3], br.bifpoint[2].param - 0.005, setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);
+	Fmit, JFmit,
+	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```	
 
-thereby providing the following bifurcation diagram with `plot([br,br1,br2,br3, brdef1, brdef2],plotfold=false, putbifptlegend = false)`
+thereby providing the following bifurcation diagram with `plot([br,br1,br2,brdef1, brdef2],plotfold=false, putbifptlegend = false)`
 
 ![](mittlemann6.png)

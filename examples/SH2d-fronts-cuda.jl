@@ -116,6 +116,8 @@ function F_shfft(u, p)
 	return -(L * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
 end
 
+J_shfft(u, p) = (u, p.l, p.ν)
+
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
 Leig = SHEigOp(L) # for eigenvalues computation
 # Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
@@ -126,11 +128,12 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 opt_new = PALC.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 	sol_hexa, hist, flag = @time PALC.newton(
-				x -> F_shfft(x, par),
-				u -> (u, par.l, par.ν),
-				AF(sol0),
+				F_shfft, J_shfft,
+				AF(sol0), par,
 				opt_new, normN = norminf)
 	println("--> norm(sol) = ", norminf(sol_hexa))
+
+heatmapsol(sol_hexa)
 ####################################################################################################
 # trial using IterativeSolvers
 
@@ -145,9 +148,9 @@ deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time PALC.newton(
-				x -> F_shfft(x, par),
-				u -> (u, par.l, par.ν),
+				F_shfft, J_shfft,
 				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
+				par,
 				opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 		println("--> norm(sol) = ", norm(outdef))
 		heatmapsol(outdef) |> display
@@ -156,16 +159,14 @@ outdef, _, flag, _ = @time PALC.newton(
 ####################################################################################################
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryNsteps = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
 	computeEigenValues = true,
-	detectBifurcation = 1,
+	detectBifurcation = 0,
 	precisionStability = 1e-5,
 	saveEigenvectors = false,
 	nev = 11 )
 
 	br, u1 = @time PALC.continuation(
-		(u, p) -> F_shfft(u, @set par.l = p),
-		(u, p) -> (u, p, par.ν),
-		deflationOp.roots[2],
-		-0.1,
+		F_shfft, J_shfft,
+		deflationOp.roots[2], par, (@lens _.l),
 		opts_cont, plot = true, verbosity = 2,
 		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...),
 		printSolution = (x, p) -> norm(x), normC = norminf

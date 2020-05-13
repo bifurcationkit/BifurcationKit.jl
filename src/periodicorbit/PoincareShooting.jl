@@ -32,7 +32,7 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 		return new{typeof(normals), typeof(centers), typeof(indices), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
 	end
 
-	HyperplaneSections() = new{Nothing, Nothing, Nothing, Nothing, Nothing}(0, nothing, nothing, nothing, nothing, nothing)
+	HyperplaneSections(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Nothing}(M, nothing, nothing, nothing, nothing, nothing)
 end
 
 (hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
@@ -121,12 +121,12 @@ end
 `pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, isparallel = false)`
 
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. The arguments are as follows
-- `flow::Flow`: implements the flow of the Cauchy problem though the structure `Flow`.
+- `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `M`: the number of Poincaré sections. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `sections`: function or callable strict which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections.
 - `δ = 1e-8` used to compute the jacobian of the fonctional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
 - `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplan section)
-- `isparallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `ODEProblem`.
+- `isparallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
 
 ## Simplified constructors
 - A simpler way is to create a functional is
@@ -135,34 +135,33 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 
 for simple shooting or
 
-`pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; kwargs...)`
+`pb = PoincareShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; kwargs...)`
 
-for multiple shooting . Here `F` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `ODEProblem` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information.
+for multiple shooting . Here `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `Union{ODEProblem, EnsembleProblem}` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. We refere to `DifferentialEquations.jl` for more information.
 
 - Another convenient call is
 
-`pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)`
+`pb = PoincareShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)`
 
 where `normals` (resp. `centers`) is a list of normals (resp. centers) which defines a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps.
 
 ## Computing the functionals
-A functional, hereby called `G` encodes this shooting problem. You can then call `pb(orbitguess)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+A functional, hereby called `G` encodes this shooting problem. You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
-- `pb(orbitguess)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
+- `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
+- `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
 
 !!! tip "Tip"
-    You can use the function `getPeriod(pb, sol)` to get the period of the solution `sol`
+    You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw struct PoincareShootingProblem{Tf <: Flow, Tsection <: HyperplaneSections} <: AbstractShootingProblem
+@with_kw struct PoincareShootingProblem{Tf, Tsection <: HyperplaneSections} <: AbstractShootingProblem
 	M::Int64 = 0								# number of Poincaré sections
 	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
-	section::Tsection = HyperplaneSections()	# Poincaré sections
+	section::Tsection = HyperplaneSections(M)	# Poincaré sections
 	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
-@inline getM(psh::PoincareShootingProblem) = psh.M
 @inline isParallel(psh::PoincareShootingProblem) = psh.isparallel
 
 function PoincareShootingProblem(F, p,
@@ -179,6 +178,12 @@ function PoincareShootingProblem(F, p,
 	_pb = isparallel ? EnsembleProblem(prob) : prob
 	return PoincareShootingProblem(flow = Flow(F, p, _pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, isparallel = isparallel)
 end
+
+# this is the "simplest" constructor to use in automatic branching from Hopf
+# this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
+# appropriate callback for Poincare Shooting to work
+PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), isparallel = isparallel)
+
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
@@ -232,7 +237,8 @@ function update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
 	update!(pb.section, normals, centers)
 end
 
-function getPeriod(psh::PoincareShootingProblem, x_bar)
+function getPeriod(psh::PoincareShootingProblem, x_bar, par)
+
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
 
@@ -251,13 +257,13 @@ function getPeriod(psh::PoincareShootingProblem, x_bar)
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
-			period += @views psh.flow(Val(:TimeSol), xc[:, ii], Inf64).t
+			period += @views psh.flow(Val(:TimeSol), xc[:, ii], par, Inf64).t
 		end
 	else
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
-		solOde =  psh.flow(Val(:TimeSol), xc, repeat([Inf64],M))
+		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf64],M))
 		for ii in 1:M
 			period += solOde[ii].t
 		end
@@ -265,7 +271,7 @@ function getPeriod(psh::PoincareShootingProblem, x_bar)
 	return period
 end
 
-function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector; ratio = 1)
+function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1)
 	# this function extracts the amplitude of the cycle
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
@@ -281,14 +287,14 @@ function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector; ratio = 1)
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
-			sol = @views psh.flow(Val(:Full), xc[:, ii], Inf64)
+			sol = @views psh.flow(Val(:Full), xc[:, ii], par, Inf64)
 			mx = max(mx, maximum(sol[1:div(Nm1, ratio), :]))
 		end
 	else
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
-		solOde =  psh.flow(Val(:Full), xc, repeat([Inf64], M) )
+		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf64], M) )
 		for ii in 1:M
 			mx = max(mx, maximum(solOde[ii].u[1:div(Nm1, ratio), :]))
 		end
@@ -298,7 +304,7 @@ function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector; ratio = 1)
 end
 
 # Poincaré (multiple) shooting with hyperplanes parametrization
-function (psh::PoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
+function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = false)
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
 
@@ -321,7 +327,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
 		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			# We need the callback to be active here!!!
-			@views outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], Inf64)
+			@views outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
 		end
 	else
 		solOde = psh.flow(xc, repeat([Inf64],M))
@@ -341,24 +347,24 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector; verbose = false)
 	return out_bar
 end
 
-function diffPoincareMap(psh::PoincareShootingProblem, x, dx, ii::Int)
+function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 	normal = psh.section.normals[ii]
 	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
 	# compute the Poincare map from x
-	tΣ, solΣ = psh.flow(Val(:TimeSol), x, Inf64)
-	z = psh.flow.F(solΣ)
+	tΣ, solΣ = psh.flow(Val(:TimeSol), x, par, Inf64)
+	z = psh.flow.F(solΣ, par)
 	# solution of the variational equation at time tΣ
 	# We need the callback to be INACTIVE here!!!
-	y = psh.flow(x, dx, tΣ; callback = nothing).du
+	y = psh.flow(x, par, dx, tΣ; callback = nothing).du
 	out = y .- (dot(normal, y) / dot(normal, z)) .* z
 end
 
 # jacobian of the shooting functional
-function (psh::PoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractVector)
+function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::AbstractVector)
 	δ = psh.δ
 	if δ > 0
 		# mostly for debugging purposes
-		return (psh(x_bar .+  δ .* dx_bar) .- psh(x_bar)) ./ δ
+		return (psh(x_bar .+  δ .* dx_bar, par) .- psh(x_bar, par)) ./ δ
 	end
 
 	# otherwise analytical Jacobian
@@ -383,7 +389,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractV
 	if ~isParallel(psh)
 		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
-			@views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(psh, xc[:, im1], dxc[:, im1], im1)
+			@views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(psh, xc[:, im1], par, dxc[:, im1], im1)
 		end
 	else
 		@assert 1==0 "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0."
@@ -396,4 +402,28 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, dx_bar::AbstractV
 		dR!(psh.section, view(out_barc, :, ii), view(outc, :, ii), ii)
 	end
 	return out_bar
+end
+
+####################################################################################################
+# functions needed Branch switching from Hopf bifurcation point
+
+function update(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, period)
+	# make the section
+	normals = [F(u, hopfpt.params) for u in centers]
+	for n in normals; n ./= norm(n); end
+
+
+	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
+
+	# update the problem
+	probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers)
+
+	# create initial guess. We have to pass it through the projection R
+	hyper = probPSh.section
+	orbitguess_bar = zeros(length(centers[1])-1, M)
+	for ii=1:length(normals)
+		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)
+	end
+
+	return probPSh, vec(orbitguess_bar)
 end

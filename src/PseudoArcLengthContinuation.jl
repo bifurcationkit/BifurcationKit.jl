@@ -1,6 +1,6 @@
 module PseudoArcLengthContinuation
 	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays
-	using Setfield: setproperties, @set
+	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack
 	using DocStringExtensions
 
@@ -18,9 +18,11 @@ module PseudoArcLengthContinuation
 	include("BorderedProblem.jl")
 	include("Plotting.jl")
 	include("Utils.jl")
-	include("FoldCont.jl")
-	include("HopfCont.jl")
+	include("codim2/codim2.jl")
+	include("codim2/FoldCont.jl")
+	include("codim2/HopfCont.jl")
 
+	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/StandardShooting.jl")
@@ -62,8 +64,11 @@ module PseudoArcLengthContinuation
 	# codim2 Hopf continuation
 	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
+	# normal form
+	export computeNormalForm
+
 	# Periodic orbit computation based on Trapeze method
-	export	PeriodicOrbitTrapProblem, continuationPOTrap
+	export	PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
 	export	Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, getPeriod, AbstractShootingProblem, extractPeriodShooting

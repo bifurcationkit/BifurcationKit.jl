@@ -102,26 +102,23 @@ A **not very precise** algorithm for computing the Floquet multipliers is provid
 
 We provide a simplified call to `newton` to locate the periodic orbit. Have a look at the tutorial [Continuation of periodic orbits (Standard Shooting)](@ref) for a simple example on how to use the above methods. 
 
-The docs for this specific `newton` are located at [Newton for Periodic Orbits](@ref).
+The docs for this specific `newton` are located at [`newton`](@ref).
 
 ## Computation with `newton` and deflation
 
 We also provide a simplified call to `newton` to locate the periodic orbit with a deflation operator:
 
 ```
-newton(prob::T, orbitguess, options::NewtonPar; kwargs...) where {T <: AbstractShootingProblem}
+newton(prob:: AbstractShootingProblem, orbitguess, par0, options::NewtonPar; kwargs...)
 ```
 
 and
 
 ```
-newton(prob::Tpb, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {Tpb <: AbstractShootingProblem, T, Tf, vectype}
-```
+newton(prob:: AbstractShootingProblem, orbitguess, par0, options::NewtonPar, defOp::DeflationOperator; kwargs...)```
 
 ## Continuation
 
 Have a look at the [Continuation of periodic orbits (Standard Shooting)](@ref) example for the Brusselator.
 
-```@docs
-continuationPOShooting
-```
+The docs for this specific `newton` are located at [`continuation`](@ref).

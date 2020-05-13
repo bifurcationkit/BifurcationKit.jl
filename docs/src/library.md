@@ -60,36 +60,18 @@ FloquetQaDTrap
 FloquetQaDShooting
 ```
 
+```@docs
+guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
+```
+
+```@docs
+computeNormalForm
+```
+
 ## Newton
 
 ```@docs
 newton
-```
-
-## Newton with deflation
-
-```@docs
-newton(Fhandle, Jhandle, x0::vectype, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype}
-```
-
-### Newton for Fold / Hopf
-
-```@docs
-newtonFold(F, J, foldpointguess::BorderedArray{vectype, T}, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {T, vectype}
-```
-
-```@docs
-newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
-```
-
-### Newton for Periodic Orbits
-
-```@docs
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, linearalgo::Symbol = :BorderedLU; kwargs...)
-```
-
-```@docs
-newton(prob::T, orbitguess, options::NewtonPar; kwargs...) where {T <: AbstractShootingProblem}
 ```
 
 ## Continuation
@@ -98,23 +80,3 @@ newton(prob::T, orbitguess, options::NewtonPar; kwargs...) where {T <: AbstractS
 continuation
 ```
 
-### Continuation for Fold / Hopf
-
-```@docs
-continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, p2_0::T, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,vectype}
-```
-
-
-```@docs
-continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, p2_0::T, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
-```
-
-### Continuation for periodic orbits
-
-```@docs
-continuationPOTrap(probPO, orbitguess, p0::Real, contParams::ContinuationPar; linearalgo = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
-```
-
-```@docs
-continuationPOShooting(prob, orbitguess, p0::Real, contParams::ContinuationPar; printPeriod = true, kwargs...)
-```

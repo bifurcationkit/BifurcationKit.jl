@@ -125,7 +125,7 @@ $(TYPEDFIELDS)
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
 """
-@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc}
+@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens}
 	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`."
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
@@ -144,17 +144,23 @@ $(TYPEDFIELDS)
 	"A `Vector{Int64}` holding the number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)"
 	n_unstable::Vector{Int64}
 
-	" vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)"
+	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)"
 	sol::Ts
 
 	"The parameters used for the call to `continuation` which produced this branch."
-	params::ContinuationPar
+	contparams::ContinuationPar
 
 	"Type of solutions computed in this branch."
 	type::Symbol = :Equilibrium
 
 	"Structure associated to the functional, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
 	functional::Tfunc = nothing
+
+	"Parameters passed to continuation and used in the equation F(x, par) = 0"
+	params::Tpar = nothing
+
+	"Parameter axis used for computing the branch"
+	param_lens::Tl
 
 	# the explanation for this field is given after. Always put this field in last position
 	""
@@ -186,7 +192,7 @@ end
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
-function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+function initContRes(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
 	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = x0, ind_bif = 0, step = 0, status = :guess, δ = (0,0))
 	sol = contParams.saveSolEveryNsteps > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
@@ -210,17 +216,20 @@ function initContRes(br, x0, evsol, contParams::ContinuationPar{T, S, E}) where 
 		stability = [stability],
 		eig = [_evvectors],
 		sol = sol,
-		params =  contParams)
+		contparams =  contParams,
+		params = par,
+		param_lens = lens)
 end
 ####################################################################################################
 # Iterator interface
 
-@with_kw struct PALCIterable{TF, TJ, Tv, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
+@with_kw struct PALCIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
 	F::TF
 	J::TJ
 
 	x0::Tv							# initial guess
-	p0::T
+	par::Tp							# reference to parameter, so no worry if this one is big
+	param_lens::Tlens				# param axis to be considered specified by a ::Lens
 
 	contParams::ContinuationPar{T, S, E}
 
@@ -243,10 +252,10 @@ end
 
 import Base: eltype
 
-eltype(it::PALCIterable{TF, TJ, Tv, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
+eltype(it::PALCIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
 
 function PALCIterable(Fhandle, Jhandle,
-					x0, p0::T,
+					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
 					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS()
 					;
@@ -262,7 +271,7 @@ function PALCIterable(Fhandle, Jhandle,
 					verbosity = 0
 					) where {T <: Real, S, E}
 
-	return PALCIterable(F = Fhandle, J = Jhandle, x0 = x0, p0 = p0, contParams = check(contParams), tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+	return PALCIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = check(contParams), tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 end
 
 """
@@ -387,14 +396,14 @@ function initContRes(it::PALCIterable, state::PALCStateVariables)
 	contParams = it.contParams
 
 	if contParams.computeEigenValues
-		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, p0), contParams.nev)
+		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, set(it.par, it.param_lens, p0)), contParams.nev)
 		_, n_unstable, n_imag = is_stable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, eiginfo, contParams)
+		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
 	else
 		T = eltype(it)
 		eiginfo = (Complex{T}(1), nothing, false, 0)
-		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, nothing, contParams)
+		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, nothing, contParams)
 	end
 end
 
@@ -403,10 +412,11 @@ import Base: iterate
 function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	# this is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity)
-	p0 = it.p0
+	pas0 = it.par
+	p0 = get(it.par, it.param_lens)
 	ds = it.contParams.ds
 	theta = it.contParams.theta
-	T = eltype(p0)
+	T = eltype(it)
 
 	(verbosity > 0) && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
@@ -416,29 +426,28 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 
 	# Converge initial guess
 	(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
-	u0, fval, isconverged, itnewton = newton(x -> it.F(x, p0), x -> it.J(x, p0),
-			it.x0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
+	# we pass additional kwargs to newton so that it is sent to the newton callback
+	u0, fval, isconverged, itnewton = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess"
 	(verbosity > 0) && println("\n--> convergence of initial guess = OK")
 	(verbosity > 0) && println("--> parameter = $(p0), initial step")
 	(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
 	η = T(150)
-	u_pred, fval, isconverged, itnewton = newton(
-			x -> it.F(x, p0 + ds / η),
-			x -> it.J(x, p0 + ds / η),
-			u0, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
+	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
+			u0, set(it.par, it.param_lens, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
 	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
 	z_pred	= BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
 	tau  = copy(z_pred)
+
 	# compute the tangents
-	getTangent!(tau, z_pred, z_old, it.F, it.J, ds, theta, it.contParams, it.dottheta, SecantPred(), _verbosity, it.linearAlgo)
+	getTangent!(tau, z_pred, z_old, it, ds, theta, SecantPred(), _verbosity)
 
 	# compute eigenvalues to get the type
 	if it.contParams.computeEigenValues
-		eigvals, eigvecs, _, _ = it.contParams.newtonOptions.eigsolver(it.J(u0, p0), it.contParams.nev)
+		eigvals, eigvecs, _, _ = it.contParams.newtonOptions.eigsolver(it.J(u0, it.par), it.contParams.nev)
 		if it.contParams.saveEigenvectors == false
 			eigvecs = nothing
 		end
@@ -467,10 +476,9 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
-	z_newton, fval, state.isconverged, state.itnewton  = corrector(it.F, it.J,
+	z_newton, fval, state.isconverged, state.itnewton  = corrector(it,
 			state.z_old, state.tau, state.z_pred,
 			ds, theta,
-			it.contParams, it.dottheta,
 			it.tangentAlgo, it.linearAlgo,
 			normC = it.normC, callback = it.callbackN, iterationC = step, p = state.z_old.p)
 
@@ -479,9 +487,8 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 		(verbosity > 0) && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
 		# Get predictor, it only mutates tau
-		getTangent!(state.tau, z_newton, state.z_old, it.F, it.J,
-					ds, theta, it.contParams, it.dottheta,
-					it.tangentAlgo, verbosity, it.linearAlgo)
+		getTangent!(state.tau, z_newton, state.z_old, it,
+					ds, theta, it.tangentAlgo, verbosity)
 
 		# update current solution
 		copyto!(state.z_old, z_newton)
@@ -595,7 +602,7 @@ function continuation(it::PALCIterable)
 end
 
 function continuation(Fhandle, Jhandle,
-					x0, p0::T,
+					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
 					linearAlgo::AbstractBorderedLinearSolver;
 					tangentAlgo = SecantPred(),
@@ -609,7 +616,7 @@ function continuation(Fhandle, Jhandle,
 					filename = "branch-" * string(Dates.now()),
 					verbosity = 0) where {T <: Real, S, E}
 
-	it = PALCIterable(Fhandle, Jhandle, x0, p0, contParams, linearAlgo;
+	it = PALCIterable(Fhandle, Jhandle, x0, par, lens::Lens, contParams, linearAlgo;
 						tangentAlgo = tangentAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dotPALC = dotPALC, finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 	return continuation(it)
 end
@@ -617,16 +624,17 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, p0::Real, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
 # Arguments:
-- `F = (x, p) -> F(x, p)` where `p` is the parameter for the continuation
+- `F = (x, p) -> F(x, p)` where `p` is the set of parameters passed to `F`.
 - `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
 - `x0` initial guess
-- `p0` initial parameter, must be a real number
-- `contParams` parameters for continuatio. See [`ContinuationPar`](@ref) for more information about the options
+- `par` initial set of parameters.
+- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _.[1])`. For more information, we refer to `SetField.jl`.
+- `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
 - `plot = false` whether to plot the solution while computing
 - `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
@@ -644,16 +652,18 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `u::BorderedArray` the last solution computed on the branch
 
 !!! tip "Controlling the argument `linearAlgo`"
-    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, p0, contParams, linearAlgo; kwargs...)`.
+    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, par, lens, contParams, linearAlgo; kwargs...)`.
 
 # Simplified call:
 You can also use the following call for which the jacobian is computed internally using Finite Differences
 
-	continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...)
+	continuation(Fhandle, x0, par, lens, contParams::ContinuationPar; kwargs...)
 
 # Method
 
 ## Bordered system of equations
+
+In what follows, we abuse of notations, `p` refers to the scalar value of the parameter we perform continuation with. Hence, it should be `p = get(par, lens)`.
 
 The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]``. In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
 
@@ -691,7 +701,7 @@ Let us discuss here more about the norm and dot product. First, the option `norm
 As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disavantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`. Further tuning is performed by using `doArcLengthScaling=true` in `ContinuationPar`. This adjusts internally ``\\theta`` so that the relative contributions of ``x`` and ``p`` are balanced in the constraint ``N``.
 """
 function continuation(Fhandle, Jhandle,
-					x0, p0::T,
+					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E};
 					tangentAlgo = SecantPred(),
 					linearAlgo  = BorderingBLS(),
@@ -708,9 +718,8 @@ function continuation(Fhandle, Jhandle,
 	# Create a bordered linear solver using newton linear solver
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
 
-	return continuation(Fhandle, Jhandle, x0, p0, contParams, _linearAlgo; tangentAlgo = tangentAlgo, plot = plot, printSolution = printSolution, normC = normC, dotPALC = dotPALC, plotSolution = plotSolution, finaliseSolution = finaliseSolution, callbackN = callbackN, filename = filename, verbosity = verbosity)
+	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; tangentAlgo = tangentAlgo, plot = plot, printSolution = printSolution, normC = normC, dotPALC = dotPALC, plotSolution = plotSolution, finaliseSolution = finaliseSolution, callbackN = callbackN, filename = filename, verbosity = verbosity)
 
 end
 
-
-continuation(Fhandle, x0, p0::T, contParams::ContinuationPar{T, S, E}; kwargs...) where {T, S, E} = continuation(Fhandle, (x0, p) -> finiteDifferences(u -> Fhandle(u, p), x0), x0, p0, contParams; kwargs...)
+continuation(Fhandle, x0, par, lens::Lens, contParams::ContinuationPar; kwargs...) = continuation(Fhandle, (x, p) -> finiteDifferences(u -> Fhandle(u, p), x), x0, par, lens, contParams; kwargs...)

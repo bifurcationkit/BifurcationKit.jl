@@ -151,6 +151,7 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		sol0 .*= 1.7
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
+J_shfft(u, p) = (u, p.l, p.ν)
 # parameters of the PDE
 par = (l = -0.15, ν = 1.3, L = L)
 ```
@@ -161,10 +162,9 @@ We are now ready to perform Newton iterations:
 
 ```julia
 opt_new = NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
-	sol_hexa, hist, flag = @time PALC.newton(
-		x -> F_shfft(x, par),
-		u -> (u, par.l, par.ν),
-		AF(sol0),
+	sol_hexa, hist, flag = @time newton(
+		F_shfft, J_shfft,
+		AF(sol0), par,
 		opt_new, normN = norminf)
 				
 	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
@@ -205,10 +205,9 @@ deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(
-		x -> F_shfft(x, par),
-		u -> (u, par.l, par.ν),
+		F_shfft, J_shfft,
 		0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
-		opt_new, deflationOp, normN = x-> maximum(abs.(x)))
+		par, opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 	println("--> norm(sol) = ", norm(outdef))
 	heatmapsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
@@ -227,12 +226,9 @@ Finally, we can perform continuation of the branches on the GPU:
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryNsteps = 5, 
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
-	br, _ = @time continuation(
-		(u, p) -> F_shfft(u, @set par.l = p),
-		(u, p) -> (u, p, par.ν),
-		deflationOp[1],
-		-0.1,
-		opts_cont, plot = true,
+	br, _ = @time continuation(F_shfft, J_shfft,
+		deflationOp[1], par, (@lens _.l), opts_cont;
+		plot = true,
 		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
 ```
 

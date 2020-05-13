@@ -25,9 +25,7 @@ end
 """
 	getAdjointBasis(Lstar, λ::Number, options::NewtonPar; nev = 3)
 
-Return an eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver.
-
-More information is provided in [Simple bifurcation branch switching](@ref)
+Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver.
 """
 function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	λstar, evstar = eigsolver(Lstar, nev)
@@ -78,31 +76,37 @@ end
 $(TYPEDEF)
 $(TYPEDFIELDS)
 """
-mutable struct SimpleBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint
-	"bifurcation point"
+mutable struct SimpleBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
+	"bifurcation point."
 	x0::Tv
 
-	"Parameter value at the bifurcation point"
+	"Parameter value at the bifurcation point."
 	p::T
 
-	"Right eigenvector(s)"
+	"Parameters used by the vector field."
+	params::Tpar
+
+	"Parameter axis used to compute the branch on which this Branch point was detected."
+	lens::Tlens
+
+	"Right eigenvector(s)."
 	ζ::Tevr
 
-	"Left eigenvector(s)"
+	"Left eigenvector(s)."
 	ζstar::Tevl
 
-	"Normal form coefficients"
+	"Normal form coefficients."
 	nf::Tnf
 
-	"Type of bifurcation point"
+	"Type of bifurcation point."
 	type::Symbol
 end
 
 """
-Compute normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
+Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false)
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
 	@assert abs(bifpt.δ[1]) == 1 "We only provide analysis for simple bifurcation points for which the kernel of the jacobian is 1d. Here, the dimension of the BP is $(abs(bifpt.δ[1]))"
@@ -110,12 +114,18 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, opti
 	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
 
+	# Newton parameters
+	options = br.contparams.newtonOptions
+
 	# bifurcation point
 	x0 = bifpt.x
 	p = bifpt.param
 
+	# parameter for vector field
+	parbif = set(br.params, lens, p)
+
 	# jacobian at bifurcation point
-	L = dF(x0, p)
+	L = dF(x0, parbif)
 
 	# linear solver
 	ls = options.linsolver
@@ -143,18 +153,18 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, opti
 
 
 	# differentials and projector on Range(L), there are real valued
-	R2 = ((dx1, dx2)      -> d2F(x0, p, dx1, dx2))
-	R3 = ((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3))
+	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
+	R3 = ((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3))
 	E = x -> x .- dot(x, ζstar) .* ζ
 
 	# we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	# coefficient of p
-	R01 = (F(x0, p + δ) .- F(x0, p)) ./ δ
+	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, parbif)) ./ δ
 	a = dot(R01, ζstar)
 	verbose && println("--> a = ", a)
 
 	# coefficient of x*p
-	R11 = (apply(dF(x0, p + δ), ζ) - apply(L, ζ)) ./ δ
+	R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) - apply(L, ζ)) ./ δ
 	Ψ01, _ = ls(L, E(R01))
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζstar)
@@ -176,7 +186,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, opti
 	else
 		type = :ProbablySaddleNode
 	end
-	return SimpleBranchPoint(x0, p, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), type)
+	return SimpleBranchPoint(x0, p, parbif, lens, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), type)
 end
 
 function predictor(bp::SimpleBranchPoint, ds::T; verbose = false) where T
@@ -207,12 +217,18 @@ This is a type which holds information for the bifurcation points of equilibria.
 $(TYPEDEF)
 $(TYPEDFIELDS)
 """
-mutable struct NdBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint
+mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
 	"bifurcation point"
 	x0::Tv
 
 	"Parameter value at the bifurcation point"
 	p::T
+
+	"Parameters used by the vector field."
+	params::Tpar
+
+	"Parameter axis used to compute the branch on which this Branch point was detected."
+	lens::Tlens
 
 	"Right eigenvectors"
 	ζ::Tevr
@@ -227,7 +243,7 @@ mutable struct NdBranchPoint{Tv, T, Tevl, Tevr, Tnf} <: BranchPoint
 	type::Symbol
 end
 
-function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
+function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	# dimension of the kernel
 	N = length(bp.ζ)
 	# for the output
@@ -257,7 +273,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
 	return out
 end
 
-function (bp::NdBranchPoint)(x, δp)
+function (bp::NdBranchPoint)(x, δp::Real)
 	out = bp.x0 .+ δp .* x[1] .* bp.ζ[1]
 	for ii in 2:length(x)
 		out .+= δp .* x[ii] .* bp.ζ[ii]
@@ -318,23 +334,47 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 	return out
 end
 
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, options::NewtonPar ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, ζs = nothing)
+"""
+$(SIGNATURES)
+
+Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif]`.
+
+# Arguments
+- `F, dF, d2F, d3F` vector field `(x, p) -> F(x, p)` and its derivatives w.r.t. `x`.
+- `br` result from a call to [`continuation`](@ref)
+- `ind_bif` index of the bifurcation point in `br.bifpoint`
+
+# Optional arguments
+- `δ` used to compute ∂pF with finite differences
+- `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
+- `Jt = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
+- `verbose` whether to display information
+- `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
+- `lens::Lens` specify which parameter to take the partial derivative ∂pF
+"""
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens)
 	bifpt = br.bifpoint[ind_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
-		return hopfNormalForm(F, dF, d2F, d3F, br, ind_bif, options ; δ = δ, nev = nev, Jt = Jt, verbose = verbose)
+		return hopfNormalForm(F, dF, d2F, d3F, br, ind_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif, options ; δ = δ, nev = nev, Jt = Jt, verbose = verbose)
+		return computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens)
 	end
 	N = abs(bifpt.δ[1])
 	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
 
+	# Newton parameters
+	options = br.contparams.newtonOptions
+
 	# bifurcation point
 	x0 = bifpt.x
 	p = bifpt.param
 
+	# parameter for vector field
+	parbif = set(br.params, br.param_lens, p)
+
 	# jacobian at bifurcation point
-	L = dF(x0, p)
+	L = dF(x0, parbif)
 
 	# linear solver
 	ls = options.linsolver
@@ -380,8 +420,8 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right /left eigenvectors. The left eigenvectors do not form a basis."
 
 	# differentials should work as we are looking at reals
-	R2 = ((dx1, dx2)      -> d2F(x0, p, dx1, dx2))
-	R3 = ((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3))
+	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
+	R3 = ((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3))
 
 	# projector on Range(L)
 	function E(x)
@@ -394,7 +434,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 
 	# coefficients of p
 	dgidp = Vector{Float64}(undef, N)
-	R01 = (F(x0, p + δ) .- F(x0, p)) ./ δ
+	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, parbif)) ./ δ
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
 	end
@@ -403,7 +443,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Float64, N, N)
 	for ii in 1:N, jj in 1:N
-		R11 = (apply(dF(x0, p + δ), ζs[jj]) - apply(L, ζs[jj])) ./ δ
+		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) - apply(L, ζs[jj])) ./ δ
 		Ψ01, _ = ls(L, E(R01))
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
 	end
@@ -453,7 +493,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 		end
 	end
 
-	return NdBranchPoint(x0, p, ζs, ζstars, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
+	return NdBranchPoint(x0, p, parbif, lens, ζs, ζstars, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
 
 end
 
@@ -463,7 +503,7 @@ end
 $(TYPEDEF)
 $(TYPEDFIELDS)
 """
-mutable struct HopfBifPoint{Tv, T, Tω, Tevr, Tevl, Tnf} <: BifurcationPoint
+mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: BifurcationPoint
 	"Hopf point"
 	x0::Tv
 
@@ -472,6 +512,12 @@ mutable struct HopfBifPoint{Tv, T, Tω, Tevr, Tevl, Tnf} <: BifurcationPoint
 
 	"Frequency of the Hopf point"
 	ω::Tω
+
+	"Parameters used by the vector field."
+	params::Tpar
+
+	"Parameter axis used to compute the branch on which this Branch point was detected."
+	lens::Tlens
 
 	"Right eigenvector"
 	ζ::Tevr
@@ -489,20 +535,22 @@ end
 function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
 	x0 = pt.x0
 	p = pt.p
+	lens = pt.lens
+	parbif = set(pt.params, lens, p)
 	ω = pt.ω
 	ζ = pt.ζ
 	cζ = conj.(pt.ζ)
 	ζstar = pt.ζstar
 
 	# jacobian at the bifurcation point
-	L = dF(x0, p)
+	L = dF(x0, parbif)
 
 	# we use BilinearMap to be able to call on complex valued arrays
-	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, p, dx1, dx2) ./2)
-	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, p, dx1, dx2, dx3) ./6 )
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, parbif, dx1, dx2) ./2)
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3) ./6 )
 
 	# −LΨ001 = R01
-	R01 = (F(x0, p + δ) .- F(x0, p)) ./ δ
+	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, parbif)) ./ δ
 	Ψ001, _ = ls(L, -R01)
 
 	# (2iω−L)Ψ200 = R20(ζ,ζ)
@@ -515,7 +563,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	Ψ110, _ = ls(L, -R20)
 
 	# a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
-	av = (apply(dF(x0, p + δ), ζ) - apply(L, ζ)) ./ δ
+	av = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) - apply(L, ζ)) ./ δ
 	av .+= 2 .* R2(ζ, Ψ001)
 	a = dot(av, ζstar)
 
@@ -533,13 +581,13 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 end
 
 """
-	hopfNF(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false)
+	hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens)
 
 Compute the Hopf normal form.
 
 # Arguments
 - `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differencials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
-- `br` branch result from a call to `continuation`
+- `br` branch result from a call to [`continuation`](@ref)
 - `ind_hopf` index of the bifurcation point in `br`
 - `options` options for the Newton solver
 
@@ -549,9 +597,12 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options::NewtonPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false)
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	println("#"^53*"\n--> Hopf Normal form computation")
+
+	# Newton parameters
+	options = br.contparams.newtonOptions
 
 	# bifurcation point
 	bifpt = br.bifpoint[ind_hopf]
@@ -565,8 +616,12 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
 	ζ ./= norm(ζ)
 
+	# parameter for vector field
+	p = bifpt.param
+	parbif = set(br.params, lens, p)
+
 	# jacobian at bifurcation point
-	L = dF(bifpt.x, bifpt.param)
+	L = dF(bifpt.x, parbif)
 
 	# left eigen-elements
 	if isnothing(Jt)
@@ -576,7 +631,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 	end
 
 	# check that λstar ≈ conj(λ)
-	@assert abs(λ + λstar) < 1e-3 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+	@assert abs(λ + λstar) < 1e-2 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
@@ -585,6 +640,8 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int, options:
 		bifpt.x,
 		bifpt.param,
 		ω,
+		parbif,
+		lens,
 		ζ,
 		ζstar,
 		(a = 0. + 0im, b = 0. + 0im),
@@ -602,10 +659,9 @@ function predictor(hp::HopfBifPoint, ds::T; verbose = false, ampfactor = T(1) ) 
 	# we need to find the type, supercritical or subcritical
 	dsfactor = real(a) * real(b) < 0 ? T(1) : T(-1)
 	pnew = hp.p + abs(ds) * dsfactor
-	@show dsfactor
 
 	# we solve a * ds + b * amp^2 = 0
-	amp = ampfactor * sqrt(-abs(ds) * dsfactor * real(a / b))
+	amp = ampfactor * sqrt(-abs(ds) * dsfactor * real(a) / real(b))
 
 	# o(1) correction to Hopf Frequency
 	ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
@@ -619,16 +675,15 @@ end
 
 ####################################################################################################
 """
-	continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
+	continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = optionsCont.nev, kwargs...)
 
-Automatic branch switching. More information is provided in [Simple bifurcation branch switching
-](@ref). An example is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differencials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
-- `br` branch result from a call to `continuation`
+- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br` from which you want to branch from
-- `optionsCont` options for the call to `continuation`
+- `optionsCont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
 - `Jt` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
@@ -636,22 +691,21 @@ Automatic branch switching. More information is provided in [Simple bifurcation 
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `verbose` display information about the bifurcation point (normal form,...)
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
-
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = optionsCont.nev, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
 
 	# detect bifurcation point type
 	if br.bifpoint[ind_bif].type == :hopf
-		@error "You need to call `continuationPOTrap`. Thus you need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
-		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+		@error "You need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
+		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, par, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 		return bifpoint
 	end
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = optionsCont.nev, verbose = verbose)
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, optionsCont.ds / 50; verbose = verbose)
@@ -659,6 +713,6 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
 	# perform continuation
-	return continuation(F, dF, pred.x, pred.p, optionsCont; kwargs...)
+	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
 
 end

@@ -5,7 +5,7 @@ Pages = ["tutorialsCGLShoot.md"]
 Depth = 3
 ```
 
-In this tutorial, we re-visit the example [Complex Ginzburg-Landau 2d](@ref) using a Standard Simple Shooting method. In the tutorial [Brusselator 1d](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
+In this tutorial, we re-visit the example [Complex Ginzburg-Landau 2d](@ref) using a Standard Simple Shooting method. In the tutorial [Brusselator 1d (advanced user)](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
 
 $$\dot x = Ax+g(x)$$ 
 
@@ -70,6 +70,30 @@ function Fcgl(u, p, t = 0.)
 	f = similar(u)
 	Fcgl!(f, u, p, t)
 end
+
+function Jcgl(u, p, t = 0.)
+	@unpack r, μ, ν, c3, c5, Δ = p
+
+	n = div(length(u), 2)
+	u1 = @view u[1:n]
+	u2 = @view u[n+1:2n]
+
+	ua = u1.^2 .+ u2.^2
+
+	f1u = zero(u1)
+	f2u = zero(u1)
+	f1v = zero(u1)
+	f2v = zero(u1)
+
+	@. f1u =  r - 2 * u1 * (c3 * u1 - μ * u2) - c3 * ua - 4 * c5 * ua * u1^2 - c5 * ua^2
+	@. f1v = -ν - 2 * u2 * (c3 * u1 - μ * u2)  + μ * ua - 4 * c5 * ua * u1 * u2
+	@. f2u =  ν - 2 * u1 * (c3 * u2 + μ * u1)  - μ * ua - 4 * c5 * ua * u1 * u2
+	@. f2v =  r - 2 * u2 * (c3 * u2 + μ * u1) - c3 * ua - 4 * c5 * ua * u2 ^2 - c5 * ua^2
+
+	jacdiag = vcat(f1u, f2v)
+
+	Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
+end
 ```
 
 with parameters 
@@ -92,17 +116,79 @@ and the ODE problem
 ```julia
 f1 = DiffEqArrayOperator(par_cgl.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2)
+prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2), dt = 0.1)
 # we solve the PDE!!!
-sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14)
 ```
 
-We now define the Shooting functional
+## Automatic branch switching from the Hopf points
+
+We show how to use automatic branch switching from the Hopf points computed in the previous section. To compute the periodic orbits, we use a Standard Shooting method. 
+
+We first recompute the Hopf points as in the previous tutorial:
 
 ```julia
-probSh = p -> ShootingProblem(
+eigls = EigArpack(1.0, :LM)
+opt_newton = PALC.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 2, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
+
+br, _ = @time PALC.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+```
+
+We then compute the differentials of the vector field, this is needed by the branch switching method because it first computes the Hopf normal form. Thankfully, this is little work using Automatic Differentiation:
+
+```julia
+using ForwardDiff
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
+	d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
+	d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
+
+jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+```
+
+We define the linear solvers to be use by the (Matrix-Free) shooting method
+
+```julia
+ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
+eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
+optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 2, plotEveryNsteps = 1)
+```
+
+as
+
+```julia
+br_po, _ = continuation(
+	# we want to compute the bifurcated branch from 
+	# the first Hopf point
+	jet..., br, 1,
+	# arguments for continuation
+	opts_po_cont,
+	# this is how to pass the method to compute the periodic
+	# orbits. We shall use 1 section and the ODE solver ETDRK2
+	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
+	# regular parameters for the continuation
+	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	normC = norminf)
+```
+
+![](cgl-sh-br.png)
+
+## Manual branch switching from the Hopf points
+
+The goal of this section is to show how to use the package in case automatic branch switching fails. This can happen for tedious PDEs and "one has to get his hands dirty".
+
+We decide to use Standard Shooting and thus define a Shooting functional
+
+```julia
+probSh = ShootingProblem(
 	# pass the vector field and parameter (to be passed to the vector field)
-	u -> Fcgl(u, p), p,
+	Fcgl, par_cgl,
 
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
@@ -111,10 +197,8 @@ probSh = p -> ShootingProblem(
 	[sol[:, end]];
 
 	# these are options passed to the ODE time stepper
-	atol = 1e-14, rtol = 1e-14, dt = 0.1)
+	atol = 1e-14, rtol = 1e-14)
 ```
-
-## Computation of the first branch of periodic orbits
 
 We use the solution from the ODE solver as a starting guess for the shooting method.
 
@@ -132,13 +216,10 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 eig = EigKrylovKit(tol=1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 1.5, maxSteps = 60, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)
 
-br_po, _ , _= @time continuationPOShooting(
-	p -> probSh(@set par_cgl.r = p),
-	initpo, 1.2, opts_po_cont;
+br_po, _ , _= @time continuation(probSh,
+	initpo, (@set par_cgl.r = 1.2), (@lens _.r), opts_po_cont;
 	verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
 	printSolution = (u, p) -> PALC.getAmplitude(probSh(@set par_cgl.r = p), u; ratio = 2), normC = norminf)
 ```
-
-![](cgl-sh-br.png)

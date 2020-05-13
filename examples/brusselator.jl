@@ -110,52 +110,60 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 	plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-4)
 
 	br, _ = @time continuation(
-		(x, p) ->    Fbru(x, @set par_bru.l = p),
-		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		sol0, par_bru.l,
+		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
 		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
-ind_hopf = 2
+ind_hopf = 1
 	# hopfpt = PALC.HopfPoint(br, ind_hopf)
 	optnew = opts_br_eq.newtonOptions
-	hopfpoint, _, flag = @time newtonHopf(
-		(x, p) ->    Fbru(x, @set par_bru.l = p),
-		(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-		br, ind_hopf,
-		(@set optnew.verbose=true), normN = norminf)
+	hopfpoint, _, flag = @time newton(
+		Fbru, Jbru_sp,
+		br, ind_hopf, par_bru, (@lens _.l);
+		options = (@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
-br_hopf, u1_hopf = @time PALC.continuationHopf(
-	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
-	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
-	br, ind_hopf, par_bru.β,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew), verbosity = 2, normC = norminf)
+if 1==0
+	br_hopf, u1_hopf = @time PALC.continuation(
+		Fbru, Jbru_sp,
+		br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); verbosity = 2, normC = norminf)
 
-plot(br_hopf, xlabel="beta", ylabel = "l", label="")
-
+	plot(br_hopf, xlabel="beta", ylabel = "l", label="")
+end
 # test with analytical Hessian but with dummy expression ;)
 d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
 
-hopfpoint, hist, flag = @time PALC.newtonHopf(
-	(x, p) ->  Fbru(x, @set par_bru.l = p),
-	(x, p) -> Jbru_sp(x, @set par_bru.l = p),
-	br, ind_hopf,
-	(@set optnew.verbose = true), Jt = (x, p) -> transpose(Jbru_sp(x, @set par_bru.l = p)),
+hopfpoint, hist, flag = @time PALC.newton(
+	Fbru, Jbru_sp,
+	br, ind_hopf, par_bru, (@lens _.l);
+	options = (@set optnew.verbose = true),
 	d2F = d2Fbru, normN = norminf)
 
-br_hopf, u1_hopf = @time PALC.continuationHopf(
-	(x, p, β) ->  Fbru(x, setproperties(par_bru, (l=p, β=β))),
-	(x, p, β) -> Jbru_sp(x, setproperties(par_bru, (l=p, β=β))),
-	br, ind_hopf, par_bru.β,
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew), Jt = (x, p, β) -> transpose(Jbru_sp(x, setproperties(par_bru, (l=p, β=β)))),
-	d2F = β -> d2Fbru, verbosity = 2, normC = norminf)
+if 1==0
+	br_hopf, u1_hopf = @time PALC.continuation(
+		Fbru, Jbru_sp,
+		br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); plot = true,
+		d2F = d2Fbru, verbosity = 2, normC = norminf)
+end
+####################################################################################################
+using ForwardDiff
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
+	d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
+	d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 
+jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
+
+hopfpt = PALC.computeNormalForm(jet..., br, 1; verbose = true)
 ####################################################################################################Continuation of Periodic Orbit
 # number of time slices
 M = 51
@@ -165,23 +173,19 @@ l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opt
 orbitguess_f2 = reduce(vcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = p -> PeriodicOrbitTrapProblem(
-			x ->	Fbru(x, @set par_bru.l = p),
-			x -> Jbru_sp(x, @set par_bru.l = p),
-			real.(vec_hopf),
-			hopfpt.u,
-			M)
+poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M)
 
-poTrap(l_hopf + 0.01)(orbitguess_f) |> plot
+poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
 PALC.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
+
 
 using ForwardDiff
 d1Fbru(x, p, dx) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
 
 ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMF = p -> PeriodicOrbitTrapProblem(
-			x ->	Fbru(x, @set par_bru.l = p),
-			x -> (dx -> d1Fbru(x, (@set par_bru.l = p), dx)),
+
+poTrapMF = PeriodicOrbitTrapProblem(
+			Fbru, (x, p) -> (dx -> d1Fbru(x, p, dx)),
 			real.(vec_hopf),
 			hopfpt.u,
 			M, ls0)
@@ -189,33 +193,38 @@ poTrapMF = p -> PeriodicOrbitTrapProblem(
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
-opt_po = PALC.NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
-	outpo_f, _, flag = @time PALC.newton(poTrap(l_hopf + 0.01),
-			orbitguess_f,
-			# ig,
-			# (br_po.sol[11].u),
-			(@set opt_po.maxIter = 250),
-			# opt_po,
+opt_po = PALC.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+	outpo_f, _, flag = @time PALC.newton(poTrap,
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
+			opt_po,
 			# deflationOp,
 			# :FullLU;
 			normN = norminf,
-			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
+			callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true)
 			)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
 	PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 
-PALC.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
-opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2)
+
+opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 100, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 0)
-	br_po, _ , _= @time PALC.continuationPOTrap(poTrap,
-			outpo_f, l_hopf + 0.01,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 2, newtonOptions = opt_po, saveSolEveryNsteps = 2,
+	plotEveryNsteps = 5,
+	nev = 11, precisionStability = 1e-6,
+	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15)
+	br_po, _ , _= @time PALC.continuation(poTrap,
+			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont;
-			# linearPO = :FullLU,
+			linearPO = :FullLU,
+			# linearPO = :BorderedLU,
+			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
-			# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
+			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
+			finaliseSolution = (z, tau, step, contResult) ->
+				(Base.display(contResult.eig[end].eigenvals) ;true),
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
+			# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
 			normC = norminf)
 
 ####################################################################################################
@@ -247,3 +256,50 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 			plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M));true),
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+####################################################################################################
+# automatic branch switching from Hopf point
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
+	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
+	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+
+M = 51
+br_po, _ = continuation(
+	# arguments for branch switching
+	jet..., br, 1,
+	# arguments for continuation
+	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
+	#
+	ampfactor = 3, δp = 0.01,
+	verbosity = 3,	plot = true, linearPO = :FullLU,
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
+	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
+	normC = norminf)
+
+# branches = [br_po]
+push!(branches, br_po)
+plot(branches, legend = :bottomright, plotfold = false)
+
+####################################################################################################
+# semi-automatic branch switching from bifurcation BP-PO
+br_po2, _ = PALC.continuationPOTrapBPFromPO(
+	# arguments for branch switching
+	br_po, 1,
+	# arguments for continuation
+	opts_po_cont;
+	ampfactor = 1., δp = 0.01,
+	verbosity = 3,	plot = true, linearPO = :FullLU,
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	finaliseSolution = (z, tau, step, contResult) ->
+		(Base.display(contResult.eig[end].eigenvals) ;true),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...);plot!(branches[2],legend = :bottomright, subplot=1)),
+	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
+	normC = norminf)
+push!(branches, br_po2)
+
+plot();for _b in branches; plot!(_b; label = ""); end; title!("")
+
+plot(branches[2])
