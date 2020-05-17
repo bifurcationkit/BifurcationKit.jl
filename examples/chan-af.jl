@@ -71,12 +71,30 @@ optnew = NewtonPar(tol = 1e-12, verbose = true)
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
 
 	br, _ = @time continuation(
-		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
+		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
-		# printsolution = x -> norm(x, Inf64),
 		normC = x -> norm(x, Inf64))
+####################################################################################################
+# Example with deflation technique
+deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
+par_def = @set par_af.alpha = 3.3
+
+optdef = setproperties(optnew; tol = 1e-9, maxIter = 1000)
+
+solp = copy(out)
+	solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
+
+plot(out);plot!(solp)
+
+outdef1, _, flag = @time newton(
+	F_chan, Jac_chan,
+	solp, par_def,
+	optdef, deflationOp)
+	flag && push!(deflationOp, outdef1)
+
+plot(deflationOp.roots)
 ####################################################################################################
 # other dot product
 # dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y) * length(x) # gives 0.1

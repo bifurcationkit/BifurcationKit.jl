@@ -768,14 +768,16 @@ This is the Newton-Krylov Solver for computing a periodic orbit using a function
 - flag of convergence
 - number of iterations
 """
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :BorderedLU; kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
+
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :BorderedLU, kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
 
 """
 	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
 
 This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO::Symbol; kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
+
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; linearPO::Symbol = :BorderedLU, kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
 
 ####################################################################################################
 # continuation wrapper
@@ -919,7 +921,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `usedeflation = true`,
+- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
 - `printSolution = (u,p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
@@ -935,7 +937,9 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 
 	# let us compute the kernel
 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
+	verbose && print("--> computing kernel...")
 	ζ0 = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+	verbose && println("Done!")
 	# we normalize it by the sup norm because it could be too small/big in L2 norm
 	ζ0 ./= norm(ζ0, Inf)
 
@@ -955,13 +959,14 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 
 	if usedeflation
 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
-		# find point on the branch
-		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), _contParams.newtonOptions, linearPO; kwargs...)
+		optn = _contParams.newtonOptions
+		# find point on the first branch
+		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), optn, linearPO; kwargs...)
+
 		# find the bifurcated branch using deflation
 		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
-		optn = _contParams.newtonOptions
 		verbose && println("\n--> Compute point on bifurcated branch...")
-		solbif, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp, linearPO; kwargs...)
+		solbif, _, flag, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp, linearPO; kwargs...)
 		@assert flag "Deflated newton did not converge"
 		orbitguess .= solbif
 	end

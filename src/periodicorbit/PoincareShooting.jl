@@ -184,6 +184,7 @@ end
 # appropriate callback for Poincare Shooting to work
 PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), isparallel = isparallel)
 
+PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; isparallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), isparallel = isparallel)
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
@@ -330,7 +331,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 			@views outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
 		end
 	else
-		solOde = psh.flow(xc, repeat([Inf64],M))
+		solOde = psh.flow(xc, par, repeat([Inf64],M))
 		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			# We need the callback to be active here!!!
@@ -412,11 +413,14 @@ function update(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, p
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
 
-
-	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
+	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. prob.flow should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
 
 	# update the problem
+	if length(prob.flow) == 3
 	probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers)
+	else
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers)
+	end
 
 	# create initial guess. We have to pass it through the projection R
 	hyper = probPSh.section

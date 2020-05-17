@@ -98,6 +98,8 @@ ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel
 # this is the "simplest" constructor to use in automatic branching from Hopf
 ShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; isparallel = isparallel, kwargs...)
 
+ShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; isparallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; isparallel = isparallel, kwargs...)
+
 # idem but with an ODEproblem to define the derivative of the flow
 function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
 	_M = length(ds)
@@ -118,7 +120,7 @@ isSimple(sh::ShootingProblem) = sh.M == 1
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]
 extractPeriodShooting(x::BorderedArray)  = x.p
-@inline getPeriod(sh::ShootingProblem, x) = extractPeriodShooting(x)
+@inline getPeriod(sh::ShootingProblem, x, par = nothing) = extractPeriodShooting(x)
 
 function extractTimeSlices(x::AbstractVector, M::Int)
 	N = div(length(x) - 1, M)

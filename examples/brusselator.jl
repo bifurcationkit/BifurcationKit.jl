@@ -261,7 +261,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
 	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 
 M = 51
 br_po, _ = continuation(
@@ -270,7 +270,7 @@ br_po, _ = continuation(
 	# arguments for continuation
 	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
 	#
-	ampfactor = 3, δp = 0.01,
+	ampfactor = 1, δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->

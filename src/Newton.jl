@@ -125,7 +125,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 			break
 		end
 	end
-	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
+	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)
 	return x, resHist, flag, it
 end

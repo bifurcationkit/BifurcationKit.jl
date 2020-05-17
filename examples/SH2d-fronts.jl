@@ -4,6 +4,7 @@ using Revise
 	const PALC = PseudoArcLengthContinuation
 
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+heatmapsol!(x; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
 
 Nx = 151*1
 	Ny = 100*1

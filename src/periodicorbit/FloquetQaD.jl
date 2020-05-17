@@ -225,7 +225,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 
 	# extract parameters
 	M = length(sh.ds)
-	M > 1 && @error "This is not yet a practical approach for multiple shooting"
+	M > 1 && @error "This is not yet a practical approach for multiple Poincaré shooting"
 
 	N = div(length(x) - 1, M)
 
@@ -247,7 +247,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 end
 
 """
-	MonodromyQaDShooting(hpsh::HyperplanePoincareShootingProblem, x_bar, dx_bar::AbstractVector)
+	MonodromyQaDShooting(hpsh::PoincareShootingProblem, x_bar, p, dx_bar::AbstractVector)
 
 Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """

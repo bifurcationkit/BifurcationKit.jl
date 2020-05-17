@@ -265,6 +265,11 @@ jac_PO_sp =  poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf 
 println("--> test jacobian expression for Periodic Orbit solve problem")
 @test norm(jac_PO_fd - jac_PO_sp, Inf64) < 1e-4
 
+# test various jacobians and methods
+jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+PALC.getTimeDiff(poTrap, orbitguess_f) |> plot
+# PALC.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
+# PALC.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
@@ -274,6 +279,8 @@ opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
 		orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po)
 	println("--> T = ", outpo_f[end])
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
+
+outpo_f, _, flag = @time PALC.newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO = :FullLU)
 
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -294,9 +301,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	outpo_f, hist, flag = @time PALC.newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp, linalgo; normN = norminf)
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linalgo = linalgo, normN = norminf)
 	outpo_f, hist, flag = @time PALC.newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, linalgo; normN = norminf)
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linalgo= linalgo, normN = norminf)
 	br_pok2, upo , _= @time PALC.continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; linearPO = linalgo, verbosity = 0,

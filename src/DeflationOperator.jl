@@ -32,7 +32,9 @@ end
 # Compute M(u)
 function (df::DeflationOperator{T, Tdot, vectype})(u::vectype) where {T, Tdot, vectype}
 	nrm  = u -> df.dot(u, u)
-	@assert length(df.roots) > 0 "You need to specify some roots for deflation to work"
+	if length(df.roots) == 0
+		return T(1)
+	end
 	# compute u - df.roots[1]
 	tmp = copyto!(similar(u), u);	axpy!(T(-1), df.roots[1], tmp)
 	out = T(1) / nrm(tmp)^df.power + df.shift
@@ -87,6 +89,11 @@ function (dfl::DeflatedLinearSolver)(J, rhs)
 	Fu = defPb.F(u, p)
 	Mu = defPb.M(u)
 	Ju = defPb.J(u, p)
+
+	if length(defPb.M) == 0
+		h1, _, it1 = linsolve(Ju, rhs)
+		return h1, true, (it1, 0)
+	end
 
 	# linear solve for the deflated problem. We note that Mu ∈ R
 	# hence dM(u)⋅du is a scalar. We now solve the following linear problem

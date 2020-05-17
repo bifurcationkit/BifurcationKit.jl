@@ -15,7 +15,7 @@ function flowTimeSol(x::AbstractMatrix, p, tm, epb::EnsembleProblem; alg = Euler
 	# modify the function which asigns new initial conditions
 	# see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(tm[ii]), tm[ii]), p = p)
-	_epb = setproperties(epb, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
+	_epb = setproperties(epb, output_func = (sol, i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
 	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
 	# sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
 	return sol.u
@@ -108,7 +108,7 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse}
 	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last composant being the value of the derivative of the flow."
 	dflow::Td
 
-	"Serial version of flow"
+	"Serial version of dflow"
 	dfserial::Tse
 end
 
@@ -141,11 +141,11 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 end
 
 function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	probserial = prob2 isa EnsembleProblem ? prob2.prob : prob2
+	probserial = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	return Flow(F,
 		(x, p, t) -> 			flow(x, p, t, prob1, alg = alg1; kwargs...),
 		(x, p, t) ->	 flowTimeSol(x, p, t, prob1; alg = alg1, kwargs...),
-		(x, p, t) -> 		flowFull(x, p, t, prob1, alg = alg1; kwargs...),
+		(x, p, t) -> 		flowFull(x, p, t, probserial, alg = alg1; kwargs...),
 		(x, p, dx, t; kw2...) ->  dflow(x, dx, p, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow(x, dx, p, t, probserial; alg = alg2, kwargs..., kw2...),
