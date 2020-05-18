@@ -201,10 +201,10 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					dottheta::DotTheta;
 					linearbdalgo = BorderingBLS(),
 					normN = norm,
-					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, history=false, kwargs...) where {T, vectype}
+					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
-	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
+	@unpack tol, maxIter, verbose, alpha, almin, linesearch, saveIterations = newtonOpts
 	@unpack finDiffEps = contparams
 
 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
@@ -241,7 +241,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		J = Jh(x, set(par, paramlens, p))
 		u, up, flag, liniter = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
 
-		if linesearch & history
+		if linesearch & saveIterations
 			step_ok = false
 			while !step_ok & (alpha > almin)
 
@@ -273,7 +273,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			res = normAC(res_f, res_n)
 		end
 
-		history && push!(resHist, res)
+		saveIterations && push!(resHist, res)
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
