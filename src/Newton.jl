@@ -103,7 +103,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	verbose && displayIteration(it, neval, res)
 
 	# invoke callback before algo really starts
-	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, kwargs...)
+	compute = callback(x, f, nothing, res, it, 0, options; kwargs...)
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & compute
@@ -122,12 +122,12 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 
 		verbose && displayIteration(it, neval, res, itlinear)
 
-		if callback(x, f, J, res, it, itlinear, options; x0 = x0, kwargs...) == false
+		if callback(x, f, J, res, it, itlinear, options; kwargs...) == false
 			break
 		end
 	end
 	(res > tol) && printstyled(color=:red, "\n--> Newton algorithm failed to converge, residual = $(res)")
-	flag = (res < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)
+	flag = (res < tol) & callback(x, f, nothing, res, it, nothing, options; kwargs...)
 	return x, resHist, flag, it
 end
 
