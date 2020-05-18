@@ -84,14 +84,14 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,
 !!! tip "Other formulation"
     If you don't have parameters, you can still use `newton` as follows `newton((x,p) -> F(x), (x,p)-> J(x), x0, nothing, options)`
 """
-function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
+function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, history = false, kwargs...)
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialize iterations
-	x = similar(x0); copyto!(x, x0) # x = copy(x0)
+	x = similar(x0); x = copy(x0)
 	f = Fhandle(x, p0)
-	d = similar(f); copyto!(d, f)	# d = copy(f)
+	d = similar(f); d = copy(f)
 
 	neval = 1
 	res = normN(f)
@@ -109,14 +109,14 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
 
-		# Update solution: x .= x .- d
-		minus!(x, d)
+		# Update solution:
+		x = x .- d
 
-		copyto!(f, Fhandle(x, p0))
+		f = copy(Fhandle(x, p0))
 		res = normN(f)
 
 		neval += 1
-		push!(resHist, res)
+		history && push!(resHist, res)
 		it += 1
 
 		verbose && displayIteration(it, neval, res, itlinear)
@@ -125,8 +125,8 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 			break
 		end
 	end
-	(resHist[end] > tol) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
-	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)
+	(res > tol) && println("\n--> Newton algorithm failed to converge, residual = $(res)")
+	flag = (res < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, kwargs...)
 	return x, resHist, flag, it
 end
 
