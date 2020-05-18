@@ -126,7 +126,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 			break
 		end
 	end
-	(res > tol) && printstyled(color=:red, "\n--> Newton algorithm failed to converge, residual = $(res)")
+	((res > tol) & verbose) && printstyled(color=:red, "\n--> Newton algorithm failed to converge, residual = $(res)")
 	flag = (res < tol) & callback(x, f, nothing, res, it, nothing, options; kwargs...)
 	return x, resHist, flag, it
 end
