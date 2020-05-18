@@ -17,7 +17,7 @@ similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectyp
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
 
 # a version of copy which cope with our requirements concerning the methods
-# availabble for
+# available for
 _copy(b) = copyto!(similar(b), b)
 copy(b::BorderedArray) = copyto!(similar(b), b)# BorderedArray(copy(b.u), copy(b.p))
 
@@ -25,11 +25,10 @@ copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where
 copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
 
 length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
+length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) + 1
 
 dot(a::BorderedArray{Tv1, Tp1}, b::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2} = dot(a.u, b.u) + dot(a.p, b.p)
-
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
-
 zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
 ################################################################################
 function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <: Number, Tv}

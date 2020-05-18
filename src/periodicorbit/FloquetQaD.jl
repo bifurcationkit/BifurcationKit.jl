@@ -212,9 +212,8 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p, du::Abs
 
 	for ii in 1:M
 		# call the jacobian of the flow
-		@views out .= sh.flow(Val(:Serial), xc[:, ii], p, out, sh.ds[ii] * T).du
+		@views out .= sh.flow(Val(:SerialdFlow), xc[:, ii], p, out, sh.ds[ii] * T).du
 	end
-
 	return out
 end
 
@@ -225,7 +224,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 
 	# extract parameters
 	M = length(sh.ds)
-	M > 1 && @error "This is not yet a practical approach for multiple Poincaré shooting"
+	M > 1 && @error "This is not yet a practical approach for multiple shooting"
 
 	N = div(length(x) - 1, M)
 

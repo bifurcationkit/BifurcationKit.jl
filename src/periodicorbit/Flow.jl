@@ -26,7 +26,7 @@ flow(x, p, tm, pb::EnsembleProblem; alg = Euler(), kwargs...) = flowTimeSol(x, p
 flow(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) =  flow(x, nothing, tm, pb; alg = alg, kwargs...)
 ################
 # function used to compute the derivative of the flow, so pb encodes the variational equation
-function dflow(x::AbstractVector, dx, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
+function dflow(x::AbstractVector, p, dx, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 	n = length(x)
 	_prob = DiffEqBase.remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
@@ -35,7 +35,7 @@ function dflow(x::AbstractVector, dx, p, tm, pb::ODEProblem; alg = Euler(), kwar
 end
 
 # same for Parallel computing
-function dflow(x::AbstractMatrix, dx, p, tm, epb::EnsembleProblem; alg = Euler(), kwargs...)
+function dflow(x::AbstractMatrix, p, dx, tm, epb::EnsembleProblem; alg = Euler(), kwargs...)
 	N = size(x,1)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = p)
 	_epb = setproperties(epb, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
@@ -43,21 +43,21 @@ function dflow(x::AbstractMatrix, dx, p, tm, epb::EnsembleProblem; alg = Euler()
 	return sol.u
 end
 
-dflow(x, dx, tspan, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = dflow(x, dx, nothing, tspan, pb; alg = alg, kwargs...)
+dflow(x, dx, tspan, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = dflow(x, nothing, dx, tspan, pb; alg = alg, kwargs...)
 ################
 # this function takes into accound a parameter passed to the vector field
-function dflow_fd(x, dx, p, tm, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...)
+function dflow_fd(x, p, dx, tm, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...)
 	sol1 = flow(x .+ δ .* dx, p, tm, pb; alg = alg, kwargs...)
 	sol2 = flow(x 			, p, tm, pb; alg = alg, kwargs...)
 	return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
 end
 
-function dflow_fd(x, dx, p, tm, pb::EnsembleProblem; alg = Euler(), δ = 1e-9, kwargs...)
+function dflow_fd(x, p, dx, tm, pb::EnsembleProblem; alg = Euler(), δ = 1e-9, kwargs...)
 	sol1 = flow(x .+ δ .* dx, p, tm, pb; alg = alg, kwargs...)
 	sol2 = flow(x 			, p, tm, pb; alg = alg, kwargs...)
 	return [(t = sol1[ii][1], u = sol2[ii][2], du = (sol1[ii][2] .- sol2[ii][2]) ./ δ) for ii = 1:size(x,2) ]
 end
-dflow_fd(x, dx, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), δ = 1e-9, kwargs...) = (@show typeof(pb);dflow_fd(x, dx, nothing, tm, pb; alg = alg, δ = δ, kwargs...))
+dflow_fd(x, dx, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), δ = 1e-9, kwargs...) = dflow_fd(x, nothing, dx, tm, pb; alg = alg, δ = δ, kwargs...)
 ################
 # this gives access to the full solution, convenient for Poincaré shooting
 # this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
@@ -121,7 +121,7 @@ Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df)
 (fl::Flow)(x, p, dx, t; kw2...) 	  = fl.dflow(x, p, dx, t; kw2...)
 (fl::Flow)(::Val{:Full}, x, p, t) 	  = fl.flowFull(x, p, t)
 (fl::Flow)(::Val{:TimeSol}, x, p, t)  = fl.flowTimeSol(x, p, t)
-(fl::Flow)(::Val{:Serial}, x, p, dx, t) = fl.dfserial(x, p, dx, t)
+(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t) = fl.dfserial(x, p, dx, t)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
@@ -134,20 +134,21 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 		(x, p, t) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs...),
 		(x, p, t) ->      flowFull(x, p, t, prob; alg = alg, kwargs...),
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
-		(x, p, dx, t; kw2...) -> dflow_fd(x, dx, p, t, prob; alg = alg, kwargs..., kw2...),
+		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
-		(x, p, dx, t; kw2...) -> dflow_fd(x, dx, p, t, probserial; alg = alg, kwargs..., kw2...)
+		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, probserial; alg = alg, kwargs..., kw2...)
 		)
 end
 
 function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	probserial = prob1 isa EnsembleProblem ? prob1.prob : prob1
+	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
+	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
 	return Flow(F,
 		(x, p, t) -> 			flow(x, p, t, prob1, alg = alg1; kwargs...),
 		(x, p, t) ->	 flowTimeSol(x, p, t, prob1; alg = alg1, kwargs...),
-		(x, p, t) -> 		flowFull(x, p, t, probserial, alg = alg1; kwargs...),
-		(x, p, dx, t; kw2...) ->  dflow(x, dx, p, t, prob2; alg = alg2, kwargs..., kw2...),
+		(x, p, t) -> 		flowFull(x, p, t, probserial1, alg = alg1; kwargs...),
+		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
-		(x, p, dx, t; kw2...) -> dflow(x, dx, p, t, probserial; alg = alg2, kwargs..., kw2...),
+		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),
 		)
 end

@@ -33,11 +33,12 @@ pb = BorderedProblem(F_chan, g, @lens _[1])
 
 # test functional with AbstractVector form
 pb(vcat(sol, 3.1), par)
-# test functional with BorderedVector form
-pb(BorderedArray(sol, 3.1), par)
-
-# test of newton functional, with BorderedVector / vector
-optnewbd = (@set optnewton.linsolver = MatrixBLS(optnewton.linsolver))
+pb(vcat(sol, 3.1), par, vcat(sol, 3.1))
+# # test functional with BorderedVector form
+# pb(BorderedArray(sol, 3.1), par)
+#
+# # test of newton functional, with BorderedVector / vector
+# optnewbd = (@set optnewton.linsolver = MatrixBLS(optnewton.linsolver))
 # newtonBordered(pb, BorderedArray(sol, 3.1), par, optnewbd )
 # newtonBordered(pb, vcat(sol, 3.1), par, optnewbd )
 # optnewbd = (@set optnewton.linsolver = BorderingBLS(optnewton.linsolver))
