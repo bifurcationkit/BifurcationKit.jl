@@ -69,13 +69,13 @@ function (pb::BorderedProblem)(xe, par, dxe)
 	x = extractVector(pb, xe)
 
 	# extract the jacobians
-	J = pb.d1F(x, p)
+	J = pb.dxF(x, par)
 
-	@assert 1==0 "WIP"
+	@error "WIP"
 	out
 end
 
-# # Structure to hold the jacobian of the bordered problem
+# Structure to hold the jacobian of the bordered problem
 # mutable struct JacobianBorderedProblem{Tpb, Tj, Tdpf, Tdg, Tdpg}
 # 	pb::Tpb
 # 	J::Tj
@@ -83,11 +83,11 @@ end
 # 	∇g::Tdg
 # 	dpg::Tdpg
 # end
-#
+
 # # simplified constructor
 # JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, pb.dxF(x, p), pb.dpF(x, p), pb.∇g(x, p), pb.dpg(x, p))
 #
-# JacobianBorderedProblem(pb, x) = JacobianBorderedProblem(pb, extractVector(pb, x), extractParameter(pb, x))
+# JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, extractVector(pb, x), extractParameter(pb, x))
 #
 #
 # function (Jpb::JacobianBorderedProblem)(x, p)
@@ -149,6 +149,7 @@ end
 # This function solves the equation associated with the functional `pb` with initial guess
 # """
 # function newtonBordered(pb::Tpb, z0, par, options::NewtonPar{T, L, S}; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S, Tpb <: BorderedProblem}
+# 	@show z0
 # 	Jac   = JacobianBorderedProblem(pb, z0, par)
 # 	lsbpb = LinearSolverBorderedProblem(options.linsolver)
 # 	options2 = @set options.linsolver = lsbpb

@@ -265,6 +265,11 @@ jac_PO_sp =  poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf 
 println("--> test jacobian expression for Periodic Orbit solve problem")
 @test norm(jac_PO_fd - jac_PO_sp, Inf64) < 1e-4
 
+# test various jacobians and methods
+jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+PALC.getTimeDiff(poTrap, orbitguess_f)
+# PALC.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
+# PALC.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
@@ -275,8 +280,13 @@ opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
 	println("--> T = ", outpo_f[end])
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
+outpo_f, _, flag = @time PALC.newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO = :FullLU)
+
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+
+# calcul des exposants de Floquet, extract full vector
+PALC.MonodromyQaDFD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # calcul des exposants de Floquet
 floquetES = PALC.FloquetQaDTrap(DefaultEig())
@@ -290,15 +300,26 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 0)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
+	# with deflation
 	outpo_f, hist, flag = @time PALC.newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp, linalgo; normN = norminf)
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linalgo = linalgo, normN = norminf)
+	# classic Newton-Krylov
 	outpo_f, hist, flag = @time PALC.newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, linalgo; normN = norminf)
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linalgo= linalgo, normN = norminf)
+	# continuation
 	br_pok2, upo , _= @time PALC.continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; linearPO = linalgo, verbosity = 0,
 			plot = false, normC = norminf)
 end
+
+# test of Matrix free computation of Floquet exponents
+eil = EigKrylovKit(x₀ = rand(2n))
+ls = GMRESKrylovKit()
+ls = DefaultLS()
+opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10, linsolver = ls, eigsolver = eil)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
+br_pok2, upo , _ = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :FullLU, normC = norminf, verbosity = 0)

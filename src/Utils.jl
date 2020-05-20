@@ -146,5 +146,5 @@ apply(f, x) = f(x)
 # apply!(y, f, x) = copyto!(y, f(x))
 
 # empty eigenvectors to save memory
-_empty(a::AbstractVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
-_empty(a::AbstractMatrix{T}, ::Type{U}=T) where {T,U} = similar(a, (0,0))
+# _empty(a::AbstractVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
+# _empty(a::AbstractMatrix{T}, ::Type{U}=T) where {T,U} = similar(a, (0,0))

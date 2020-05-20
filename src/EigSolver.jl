@@ -94,10 +94,12 @@ $(TYPEDFIELDS)
 	x₀::vectype = nothing
 end
 
-function (l::EigKrylovKit{T, vectype})(J, nev::Int64) where {T, vectype}
+function (l::EigKrylovKit{T, vectype})(J, _nev::Int64) where {T, vectype}
 	if J isa AbstractMatrix && isnothing(l.x₀)
+		nev = min(_nev, size(J, 1))
 		vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
 	else
+		nev = min(_nev, length(l.x₀))
 		vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
 	end
 	info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
