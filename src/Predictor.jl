@@ -64,7 +64,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
-	z_pred = copy(z_old)
+	z_pred = copyto!(z_pred, z_old)
 	axpy!(ds, tau, z_pred)
 end
 
@@ -95,7 +95,7 @@ end
 function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::Talgo, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
-	tau = copy(z_new)
+	tau = copyto!(tau, z_new)
 	minus!(tau, z_old)
 	if algo isa SecantPred
 		α = sign(ds) / it.dottheta(tau, θ)
@@ -211,17 +211,17 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
 	# Initialise iterations
-	x = copy(z_pred.u)
+	x = _copy(z_pred.u) # copy(z_pred.u)
 	p = z_pred.p
-	x_pred = copy(x)
+	x_pred = _copy(x) # copy(x)
 
 	# Initialise residuals
 	res_f = F(x, set(par, paramlens, p));  res_n = N(x, p)
 
-	dX = copy(res_f)
+	dX = _copy(res_f) # copy(res_f)
 	dp = T(0)
 	up = T(0)
-	dFdp = ( F(x,set(par,paramlens,p+finDiffEps)) - res_f ) / finDiffEps
+	dFdp = rmul!( minus!( F(x,set(par,paramlens,p+finDiffEps)), res_f ), 1/finDiffEps)
 
 	res     = normAC(res_f, res_n)
 	resHist = [res]
@@ -236,7 +236,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok & compute
-		dFdp = ( F(x,set(par,paramlens,p+finDiffEps)) - res_f ) / finDiffEps
+		dFdp = rmul!( minus!( F(x,set(par,paramlens,p+finDiffEps)), res_f ), 1/finDiffEps)
 
 		J = Jh(x, set(par, paramlens, p))
 		u, up, flag, liniter = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
@@ -245,9 +245,9 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			step_ok = false
 			while !step_ok & (alpha > almin)
 
-				x_pred = x - alpha * u
+				x_pred = axpy!(-alpha, u, copyto!(x_pred, x))
 				p_pred = p - alpha * up
-				res_f = F(x_pred, p_pred)
+				res_f = copyto!(res_f, F(x_pred, p_pred))
 
 				res_n  = N(x_pred, p_pred)
 				res = normAC(res_f, res_n)
@@ -264,10 +264,10 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 				end
 			end
 		else
-			x = x .- u
+			x = minus!(x,u)
 			p = p - up
 
-			res_f = copy(F(x, set(par, paramlens, p)))
+			res_f = copyto!(res_f, F(x, set(par, paramlens, p)))
 
 			res_n  = N(x, p)
 			res = normAC(res_f, res_n)

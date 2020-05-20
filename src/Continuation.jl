@@ -438,8 +438,8 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
-	z_old   = BorderedArray(copy(u0),copy(p0))
-	z_pred	= BorderedArray(copy(u_pred),copy(p0+ds/η))
+	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
+	z_pred  = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
 	tau  = copy(z_pred)
 
 	# compute the tangents
@@ -491,7 +491,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 					ds, theta, it.tangentAlgo, verbosity)
 
 		# update current solution
-		state.z_old = copy(z_newton)
+		state.z_old = copyto!(state.z_old, z_newton)
 	else
 		(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 		(verbosity > 0) && println("--> Newton Residuals history = ", fval)

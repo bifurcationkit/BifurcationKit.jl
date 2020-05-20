@@ -95,10 +95,10 @@ end
 # 	`minus!(x, y)`
 #
 # computes x-y into x and returns x
-minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
-minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
-minus!(x::T, y::T) where {T <: Number} = (x = x - y)
-minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))
+minus!(x, y) = (axpy!(convert(eltype(x), -1), y, x); x)
+minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y; x)
+minus!(x::T, y::T) where {T <: Number} = (x = x - y; x)
+minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p); x)
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Number}
 	minus!(x.u, y.u)
 	# Carefull here. If I use the line below, then x.p will be left unaffected
