@@ -257,14 +257,14 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 						alpha *= 2
 					end
 					step_ok = true
-					x  = x_pred
+					x  = copyto!(x, x_pred)
 					p  = p_pred
 				else
 					alpha /= 2
 				end
 			end
 		else
-			x = minus!(x,u)
+			x = minus!(x,u) 	# x .= x .- u
 			p = p - up
 
 			res_f = copyto!(res_f, F(x, set(par, paramlens, p)))
