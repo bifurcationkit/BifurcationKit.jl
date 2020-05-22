@@ -278,16 +278,16 @@ function _getMax(prob::ShootingProblem, x::AbstractVector, p; ratio = 1)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
 	Th = eltype(x)
-	mx = Th(0)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
 		sol = prob.flow(Val(:Full), xc[:, 1], p, T)
 		mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
-	else
+	else # threaded version
 		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
-		for ii = 1:M
-			mx = max(mx, maximum(sol[ii].u[1:div(N, ratio), :]))
+		mx = maximum(sol[1].u[1:div(N, ratio), :] , dims = 2)
+		for ii = 2:M
+			mx = max.(mx, maximum(sol[ii].u[1:div(N, ratio), :], dims = 2))
 		end
 	end
 	return mx

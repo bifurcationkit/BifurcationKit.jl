@@ -80,10 +80,10 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pM
 
 	br, _ = @time PALC.continuation(
 		Fmit, JFmit,
-		sol0, par_mit, (@lens _.λ),
+		sol0, par_mit, (@lens _.λ), opts_br;
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		opts_br; plot = true, verbosity = 3, normC = norminf)
+		plot = true, verbosity = 3, normC = norminf)
 
 ####################################################################################################
 # branch switching

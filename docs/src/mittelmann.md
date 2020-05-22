@@ -93,7 +93,7 @@ par_mit = (λ = .05, Δ = Δ)
 sol0 = zeros(Nx, Ny) |> vec
 ```
 
-To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.05`
+To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.5`
 
 ```julia
 # eigensolver
@@ -117,10 +117,10 @@ We can now call `continuation` with the initial guess `sol0` which is homogenous
 ```julia
 br, _ = @time PALC.continuation(
 	Fmit, JFmit,
-	sol0, par_mit, (@lens _.λ),
+	sol0, par_mit, (@lens _.λ), opts_br;
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-	opts_br; plot = true, verbosity = 3, normC = norminf)
+	plot = true, verbosity = 3, normC = norminf)
 ```
 
 You should see the following result:

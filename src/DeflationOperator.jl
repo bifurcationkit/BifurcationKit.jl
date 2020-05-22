@@ -1,4 +1,4 @@
-import Base: push!, pop!, length
+import Base: push!, pop!, length, deleteat!
 import Base: show, getindex
 
 """
@@ -24,6 +24,7 @@ push!(df::DeflationOperator{T, Tdot, vectype}, v::vectype) where {T, Tdot, vecty
 pop!(df::DeflationOperator) = pop!(df.roots)
 getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
 length(df::DeflationOperator) = length(df.roots)
+deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 
 function show(io::IO, df::DeflationOperator)
 	println(io, "Deflation operator with ", length(df.roots)," roots")

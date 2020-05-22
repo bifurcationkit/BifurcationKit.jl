@@ -132,7 +132,7 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 	return Flow(F,
 		(x, p, t) ->		   flow(x, p, t, prob; alg = alg, kwargs...),
 		(x, p, t) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs...),
-		(x, p, t) ->      flowFull(x, p, t, prob; alg = alg, kwargs...),
+		(x, p, t) ->       flowFull(x, p, t, prob; alg = alg, kwargs...),
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
 		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
@@ -144,9 +144,9 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
 	return Flow(F,
-		(x, p, t) -> 			flow(x, p, t, prob1, alg = alg1; kwargs...),
-		(x, p, t) ->	 flowTimeSol(x, p, t, prob1; alg = alg1, kwargs...),
-		(x, p, t) -> 		flowFull(x, p, t, probserial1, alg = alg1; kwargs...),
+		(x, p, t) ->			  flow(x, p, t, prob1, alg = alg1; kwargs...),
+		(x, p, t) ->	   flowTimeSol(x, p, t, prob1; alg = alg1, kwargs...),
+		(x, p, t) -> 		  flowFull(x, p, t, prob1, alg = alg1; kwargs...),
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),

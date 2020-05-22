@@ -189,21 +189,21 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	return SimpleBranchPoint(x0, p, parbif, lens, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), type)
 end
 
-function predictor(bp::SimpleBranchPoint, ds::T; verbose = false) where T
+function predictor(bp::SimpleBranchPoint, ds::T; verbose = false, ampfactor = T(1)) where T
 	@assert bp.type != :ProbablySaddleNode "It seems to be a Saddle-Node bifurcation, not applicable here."
 	nf = bp.nf
 	if bp.type == :Transcritical
 		pnew = bp.p + ds
 		# we solve b1 * ds + b2 * amp / 2 = 0
-		amp = -2ds * nf.b1 / nf.b2
+		amp = -2ds * nf.b1 / nf.b2 * ampfactor
 		dsfactor = T(1)
 	else
 		# case of the Pitchfork bifurcation
 		# we need to find the type, supercritical or subcritical
 		dsfactor = nf.b1 * nf.b3 < 0 ? T(1) : T(-1)
-		pnew = bp.p + ds * dsfactor
+		pnew = bp.p + abs(ds) * dsfactor
 		# we solve b1 * ds + b3 * amp^2 / 6 = 0
-		amp = sqrt(-6abs(ds) * dsfactor * nf.b1 / nf.b3)
+		amp = ampfactor * sqrt(-6abs(ds) * dsfactor * nf.b1 / nf.b3)
 	end
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
@@ -675,7 +675,7 @@ end
 
 ####################################################################################################
 """
-	continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = optionsCont.nev, kwargs...)
+$(SIGNATURES)
 
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
 
@@ -688,14 +688,17 @@ Automatic branch switching at branch points based on a computation of the normal
 # Optional arguments
 - `Jt` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
+- `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
+- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `verbose` display information about the bifurcation point (normal form,...)
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, nev = optionsCont.nev, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
+
 
 	# detect bifurcation point type
 	if br.bifpoint[ind_bif].type == :hopf
@@ -704,15 +707,23 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		return bifpoint
 	end
 
+	# compute predictor for point on new branch
+	ds = isnothing(δp) ? optionsCont.ds : δp
+	Ty = typeof(ds)
+
 	# compute the normal form of the branch point
 	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 
 	# compute predictor for a point on new branch
-	pred = predictor(bifpoint, optionsCont.ds / 50; verbose = verbose)
+	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
+	@show pred.x pred.p optionsCont.ds
+	# @assert 1==0
+
 	# perform continuation
+	@error "Super bad prediction"
 	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
 
 end
