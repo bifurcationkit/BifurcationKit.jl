@@ -143,7 +143,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	if isnothing(Jt)
 		ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	else
-		ζstar, λstar = getAdjointBasis(Jt(x, p), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(Jt(x0, parbif), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
