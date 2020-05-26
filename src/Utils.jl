@@ -86,7 +86,7 @@ Save solution / data in JLD2 file
 - `p` is the parameter
 - `i` is the index of the solution to be saved
 """
-function saveToFile(filename, sol, p, i::Int64, br::ContResult, contParam::ContinuationPar)
+function saveToFile(filename, sol, p, i::Int64, br::ContResult)
 	try
 		# create a group in the JLD format
 		jldopen(filename*".jld2", "a+") do file
@@ -97,10 +97,10 @@ function saveToFile(filename, sol, p, i::Int64, br::ContResult, contParam::Conti
 
 		jldopen(filename*"-branch.jld2", "w") do file
 			file["branch"] = br
-			file["contParam"] = contParam
+			file["contParam"] = br.contparams
 		end
 	catch
-		@warn "Could not write in jld2 file"
+		@error "Could not save branch in the jld2 file"
 	end
 end
 ####################################################################################################

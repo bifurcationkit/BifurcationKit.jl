@@ -238,6 +238,11 @@ function update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
 	update!(pb.section, normals, centers)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x_bar`.
+"""
 function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 
 	M = getM(psh)
@@ -272,7 +277,51 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 	return period
 end
 
-function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1)
+"""
+$(SIGNATURES)
+
+Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+"""
+function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
+	# this function extracts the amplitude of the cycle
+	M = getM(prob)
+	Nm1 = div(length(x_bar), M)
+
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+	xc = similar(x_bar, Nm1 + 1, M)
+
+	Th = eltype(x_bar)
+
+	# !!!! we could use @views but then Sundials will complain !!!
+	if ~isParallel(prob)
+		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
+		# We need the callback to be active here!!!
+		sol1 = prob.flow(Val(:Full), xc[:, 1], p, Inf64)
+		@show typeof(sol1.u)
+		for ii in 1:M
+			E!(prob.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+			# We need the callback to be active here!!!
+			sol = @views prob.flow(Val(:Full), xc[:, ii], p, Inf64)
+			append!(sol1.t, sol1.t[end] .+ sol.t)
+			append!(sol1.u, sol.u)
+		end
+		return (t = sol1.t, u = VectorOfArray(sol1.u))
+	else # threaded version
+		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
+		# return sol
+		# we put all the simulations in the first one and return it
+		for ii =2:M
+			append!(sol[1].t, sol[1].t[end] .+ sol[ii].t)
+			append!(sol[1].u.u, sol[ii].u.u)
+		end
+		return sol[1]
+	end
+end
+
+
+
+function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
@@ -282,25 +331,29 @@ function _getMax(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio
 	xc = similar(x_bar, Nm1 + 1, M)
 
 	Th = eltype(x_bar)
-	mx = Th(0)
+	n = div(Nm1, ratio)
 
 	if ~isParallel(psh)
-		for ii in 1:M
+		E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
+		# We need the callback to be active here!!!
+		sol = @views psh.flow(Val(:Full), xc[:, 1], par, Inf64)
+		mx = op[2](sol[1:n, :])
+		for ii in 2:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
 			sol = @views psh.flow(Val(:Full), xc[:, ii], par, Inf64)
-			mx = max(mx, maximum(sol[1:div(Nm1, ratio), :]))
+			mx = op[1](mx, op[2](sol[1:n, :]))
 		end
 	else
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
 		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf64], M) )
+		mx = op[2](solOde[1].u[1:n, :])
 		for ii in 1:M
-			mx = max(mx, maximum(solOde[ii].u[1:div(Nm1, ratio), :]))
+			mx = op[1](mx, op[2](solOde[ii].u[1:n, :]))
 		end
 	end
-
 	return mx
 end
 

@@ -214,17 +214,17 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, e
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryNsteps = 2)
 
-Mt = 3
+Mt = 4
 br_po, _ = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
 	opts_po_cont, ShootingProblem(Mt, par_bru, probsundials, Rodas4P());
-	ampfactor = 1.5, δp = 0.01,
+	ampfactor = 1., δp = 0.01,
 	verbosity = 3,	plot = true,
 	# finaliseSolution = (z, tau, step, contResult) -> (plot(z.u[1:end-1]) |> display;true),
 		# (Base.display(contResult.eig[end].eigenvals) ;true),
 	printSolution = (x, p) -> x[end],
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
+	plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; kwargs...),
 	normC = norminf)
 
 ####################################################################################################

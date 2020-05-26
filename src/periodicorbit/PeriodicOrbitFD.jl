@@ -1,5 +1,5 @@
 using BlockArrays, SparseArrays, Setfield
-import Base: length
+import Base: length, collect
 
 # structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps
 struct TimeMesh{T}
@@ -15,6 +15,9 @@ length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 # access the time steps
 @inline getTimeStep(ms, i::Int) = ms.ds[i]
 @inline getTimeStep(ms::TimeMesh{Ti}, i::Int) where {Ti <: Int} = 1.0 / ms.ds
+
+collect(ms::TimeMesh) = ms.ds
+collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], ms.ds)
 
 ####################################################################################################
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
@@ -553,7 +556,8 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 	A_diag_sp = blockToSparse(A_diagBlock) # most of the computing time is here!!
 	return A_diag_sp
 end
-
+####################################################################################################
+# Utils
 
 function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
 	M = pb.M
@@ -566,6 +570,49 @@ function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
 		push!(res, norm(u0c[:,ii+1].-u0c[:,ii]) * T/M)
 	end
 	return res
+end
+
+"""
+$(SIGNATURES)
+
+Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
+"""
+function getAmplitude(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
+	n = div(length(x)-1, ratio)
+	_max = maximum(x[1:n])
+	_min = minimum(x[1:n])
+	return maximum(_max .- _min)
+end
+
+"""
+$(SIGNATURES)
+
+Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
+"""
+function getMaximum(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
+	n = div(length(x)-1, ratio)
+	_max = maximum(x[1:n])
+end
+
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x`. 
+"""
+@inline getPeriod(prob::PeriodicOrbitTrapProblem, x, p) = extractPeriodFDTrap(x)
+
+"""
+$(SIGNATURES)
+
+Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+"""
+function getTrajectory(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p)
+	T = getPeriod(prob, x, p)
+	M = getM(prob)
+	N = div(length(x) - 1, M)
+	xv = @view x[1:end-1]
+	xc = reshape(xv, N, M)
+	return (t = cumsum(T .* collect(prob.mesh)), u = xc)
 end
 ####################################################################################################
 # The following struct encodes a jacobian of PeriodicOrbitTrapProblem which is a convenient composite type for the computation of Floquet multipliers. Therefore, it is only used in the method continuationPOTrap
@@ -947,11 +994,9 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 
 	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, set(br.params, br.param_lens, bifpt.param), real.(ζ0))
 	ζ = reduce(vcat, ζ_a)
-	# @show λ typeof(reduce(vcat,ζ_a))
 
 	orbitguess = copy(bifpt.x)
 	orbitguess[1:end-1] .+= ampfactor .*  ζ
-	# orbitguess[end] = 3.4
 
 	newp = bifpt.param + δp
 
@@ -961,18 +1006,19 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
 		optn = _contParams.newtonOptions
 		# find point on the first branch
-		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), optn, linearPO; kwargs...)
+		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), optn; linearPO = linearPO, kwargs...)
 
 		# find the bifurcated branch using deflation
 		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 		verbose && println("\n--> Compute point on bifurcated branch...")
-		solbif, _, flag, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp, linearPO; kwargs...)
+		solbif, _, flag, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
 		@assert flag "Deflated newton did not converge"
 		orbitguess .= solbif
 	end
 
 	# TODO
-	# we have to adjust the constraint. Right now, it can be quite big.
+	# we have to adjust the phase constraint.
+	# Right now, it can be quite large.
 
 	# perform continuation
 	branch, u, tau = continuation(br.functional, orbitguess, set(br.params, br.param_lens, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)

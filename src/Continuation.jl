@@ -92,6 +92,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	tolBisectionEigenvalue::Float64 = 1e-5 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 	@assert iseven(nInversion) "The option `nInversion` number must be even"
 	@assert detectBifurcation < 3 "The option `detectBifurcation` must belong to {0,1,2}"
+    @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 end
 
 # check the logic of the parameters
@@ -556,7 +557,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 
 			# Saving Solution to File
 			if contParams.saveToFile
-				saveToFile(it.filename, getx(state), getp(state), state.step, contRes, contParams)
+				saveToFile(it.filename, getx(state), getp(state), state.step, contRes)
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
@@ -655,7 +656,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
     In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, par, lens, contParams, linearAlgo; kwargs...)`.
 
 # Simplified call:
-You can also use the following call for which the jacobian is computed internally using Finite Differences
+You can also use the following call for which the jacobian **matrix** (beware of large systems of equations!) is computed internally using Finite Differences
 
 	continuation(Fhandle, x0, par, lens, contParams::ContinuationPar; kwargs...)
 

@@ -195,8 +195,14 @@ pbspti = PeriodicOrbitTrapProblem(
 			pbsp.ϕ,
 			pbsp.xπ,
 			ones(9) ./ 10)
+
 PALC.getM(pbspti)
 orbitguess_f = rand(2n*10+1)
+PALC.getAmplitude(pbspti, orbitguess_f, par)
+PALC.getMaximum(pbspti, orbitguess_f, par)
+PALC.getPeriod(pbspti, orbitguess_f, par)
+PALC.getTrajectory(pbspti, orbitguess_f, par)
+
 @test pbspti.xπ ≈ pbsp.xπ
 @test pbspti.ϕ ≈ pbsp.ϕ
 pbspti(orbitguess_f, par)

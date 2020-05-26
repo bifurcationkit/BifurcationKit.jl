@@ -109,7 +109,7 @@ Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian St
 function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
-	@assert abs(bifpt.δ[1]) == 1 "We only provide analysis for simple bifurcation points for which the kernel of the jacobian is 1d. Here, the dimension of the BP is $(abs(bifpt.δ[1]))"
+	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))"
 
 	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
@@ -134,7 +134,6 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
 	verbose && println("--> smallest eigenvalue at bifurcation = ", λ)
 
-
 	# corresponding eigenvector, it must be real
 	ζ = real.(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
 	ζ ./= norm(ζ)
@@ -143,7 +142,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	if isnothing(Jt)
 		ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	else
-		ζstar, λstar = getAdjointBasis(Jt(x, p), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+		ζstar, λstar = getAdjointBasis(Jt(x0, parbif), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
@@ -719,11 +718,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
-	@show pred.x pred.p optionsCont.ds
-	# @assert 1==0
-
 	# perform continuation
-	@error "Super bad prediction"
 	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
 
 end

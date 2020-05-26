@@ -18,6 +18,7 @@ module PseudoArcLengthContinuation
 	include("BorderedProblem.jl")
 	include("Plotting.jl")
 	include("Utils.jl")
+
 	include("codim2/codim2.jl")
 	include("codim2/FoldCont.jl")
 	include("codim2/HopfCont.jl")
@@ -67,11 +68,14 @@ module PseudoArcLengthContinuation
 	# normal form
 	export computeNormalForm
 
+	# Periodic orbit computation
+	export getPeriod, getAmplitude, getMaximum, getTrajectory
+
 	# Periodic orbit computation based on Trapeze method
 	export	PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
-	export	Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, getPeriod, AbstractShootingProblem, extractPeriodShooting
+	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem
 
 	# Floquet multipliers computation
 	export	FloquetQaDTrap, FloquetQaDShooting

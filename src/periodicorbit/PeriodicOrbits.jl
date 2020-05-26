@@ -164,12 +164,12 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not `nothing`, is computed with Finite differences.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 	cb = get(kwargs, :callbackN, (args...;kwargs...)->true)
 
-	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jt = Jt, δ = δ, nev = _contParams.nev, verbose = verbose)
+	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? _contParams.ds : δp

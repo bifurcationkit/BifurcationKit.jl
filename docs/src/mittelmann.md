@@ -259,6 +259,10 @@ We could use the solutions saved in `resp, resx` as initial guesses for a call t
 
 !!! tip "Solutions"
     The brute force method provided all solutions in a neighborhood of the bifurcation point.
+    
+    
+!!! info "Advanced computation"
+    Instead of using brute force and computing the vector field on a grid. One can rely on `IntervalConstraintProgramming.jl` to do better using bisection. See also this [discourse post](https://discourse.julialang.org/t/nd-level-sets/38532/13) where the same example is treated by D. P. Sanders.    
 
 ## Branch switching with deflated newton
 

@@ -258,24 +258,24 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ####################################################################################################
 # automatic branch switching from Hopf point
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
 	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 
 M = 51
+probFD = PeriodicOrbitTrapProblem(M = M)
 br_po, _ = continuation(
 	# arguments for branch switching
 	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
-	#
-	ampfactor = 1, δp = 0.01,
+	opts_po_cont, probFD;
+	δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
+	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
 	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 
@@ -290,12 +290,12 @@ br_po2, _ = PALC.continuationPOTrapBPFromPO(
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont;
-	ampfactor = 1., δp = 0.01,
+	δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...);plot!(branches[2],legend = :bottomright, subplot=1)),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...);plot!(branches[2],legend = :bottomright, subplot=1)),
 	# printSolution = (x, p;kwargs...) -> PALC.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 push!(branches, br_po2)

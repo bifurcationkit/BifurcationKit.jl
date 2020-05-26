@@ -84,8 +84,10 @@ outpo, _ = @time PALC.newton(_pb,
 	optn,
 	normN = norminf)
 
-getPeriod(_pb, outpo)
+PALC.getPeriod(_pb, outpo, par_hopf)
 PALC.getAmplitude(_pb, outpo, par_hopf)
+PALC.getMaximum(_pb, outpo, par_hopf)
+PALC.getTrajectory(_pb, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 1, nev = 2, newtonOptions = @set optn.tol = 1e-7)#
 	br_pok2, upo , _= @time PALC.continuation(
@@ -143,8 +145,10 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 500, ve
 			optn; normN = norminf)
 	println("--> Point on the orbit = ", PALC.E(hyper, outpo, 1))
 
-getPeriod(probPsh, outpo, par_hopf)
+PALC.getPeriod(probPsh, outpo, par_hopf)
 PALC.getAmplitude(probPsh, outpo, par_hopf)
+PALC.getMaximum(probPsh, outpo, par_hopf)
+PALC.getTrajectory(probPsh, outpo, par_hopf)
 
 
 probPsh = PoincareShootingProblem(Fsl, par_hopf,

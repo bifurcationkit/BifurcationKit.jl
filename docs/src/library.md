@@ -80,3 +80,16 @@ newton
 continuation
 ```
 
+## Utils for periodic orbits
+
+```@docs
+getPeriod
+```
+
+```@docs
+getAmplitude
+```
+
+```@docs
+getMaximum
+```

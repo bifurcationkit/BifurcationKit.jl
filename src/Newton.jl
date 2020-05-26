@@ -59,11 +59,11 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - number of iterations
 
 # Simplified calls
-When `J` is not passed. It is then computed with finite differences. The call is as follows:
+When `J` is not passed, the jacobian **matrix** is then computed with finite differences (beware of large systems of equations!). The call is as follows:
 
 	newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
 
-You can also pass functions which do not have parameters `x ->F(x)`, `x->J(x)` as follows
+You can also pass functions which do not have parameters `x -> F(x)`, `x -> J(x)` as follows
 
 	newton(F, J, x0, options::NewtonPar;  kwargs...)
 
@@ -83,6 +83,9 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,
 
 !!! tip "Other formulation"
     If you don't have parameters, you can still use `newton` as follows `newton((x,p) -> F(x), (x,p)-> J(x), x0, nothing, options)`
+
+!!! warning "Linear solver"
+    Make sure that the linear solver (Matrix-Free...) corresponds to you jacobian (Matrix-Free vs. Matrix based).
 """
 function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 	# Extract parameters

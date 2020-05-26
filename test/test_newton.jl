@@ -1,6 +1,6 @@
 #using Revise, Test
 using PseudoArcLengthContinuation, LinearAlgebra, Setfield
-const PALC  =  PseudoArcLengthContinuation
+const PALC = PseudoArcLengthContinuation
 
 function test_newton(x0)
 	Ty = eltype(x0)

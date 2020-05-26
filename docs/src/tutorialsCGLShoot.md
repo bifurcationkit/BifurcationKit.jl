@@ -221,5 +221,5 @@ br_po, _ , _= @time continuation(probSh,
 	verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-	printSolution = (u, p) -> PALC.getAmplitude(probSh(@set par_cgl.r = p), u; ratio = 2), normC = norminf)
+	printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 ```

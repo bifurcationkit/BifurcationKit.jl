@@ -1,12 +1,23 @@
 using DiffEqBase
 
+"""
+$(SIGNATURES)
+
+Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
+"""
 function getAmplitude(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-	mx = _getMax(prob, x, p; ratio = ratio)
-	return maximum(mx) - minimum(mx)
+	_max = _getExtremum(prob, x, p; ratio = ratio)
+	_min = _getExtremum(prob, x, p; ratio = ratio, op = (min, minimum))
+	return maximum(_max .- _min)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
+"""
 function getMaximum(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-	mx = _getMax(prob, x, p; ratio = ratio)
+	mx = _getExtremum(prob, x, p; ratio = ratio)
 	return maximum(mx)
 end
 
@@ -120,6 +131,12 @@ isSimple(sh::ShootingProblem) = sh.M == 1
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]
 extractPeriodShooting(x::BorderedArray)  = x.p
+
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x`.
+"""
 @inline getPeriod(sh::ShootingProblem, x, par = nothing) = extractPeriodShooting(x)
 
 function extractTimeSlices(x::AbstractVector, M::Int)
@@ -170,7 +187,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	return out
 end
 
-# # shooting functional, this allows for Array state space
+# shooting functional, this allows for Array state space
 function (sh::ShootingProblem)(x::BorderedArray, par)
 	# period of the cycle
 	T = extractPeriodShooting(x)
@@ -270,8 +287,36 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e
 	return out
 end
 
-function _getMax(prob::ShootingProblem, x::AbstractVector, p; ratio = 1)
+function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
+	T = extractPeriodShooting(x)
+	M = length(prob.ds)
+	N = div(length(x) - 1, M)
+	xv = @view x[1:end-1]
+	xc = reshape(xv, N, M)
+	Th = eltype(x)
+	n = div(N, ratio)
+
+	# !!!! we could use @views but then Sundials will complain !!!
+	if ~isParallel(prob)
+		sol = prob.flow(Val(:Full), xc[:, 1], p, T)
+		mx = @views op[2](sol[1:n, :], dims = 1)
+	else # threaded version
+		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
+		mx = op[2](sol[1].u[1:n, :] , dims = 2)
+		for ii = 2:M
+			mx = op[1].(mx, op[2](sol[ii].u[1:n, :], dims = 2))
+		end
+	end
+	return mx
+end
+
+"""
+$(SIGNATURES)
+
+Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+"""
+function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
 	T = extractPeriodShooting(x)
 	M = length(prob.ds)
 	N = div(length(x) - 1, M)
@@ -281,17 +326,19 @@ function _getMax(prob::ShootingProblem, x::AbstractVector, p; ratio = 1)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		sol = prob.flow(Val(:Full), xc[:, 1], p, T)
-		mx = @views maximum(sol[1:div(N, ratio), :], dims = 1)
+		return prob.flow(Val(:Full), xc[:, 1], p, T)
 	else # threaded version
 		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
-		mx = maximum(sol[1].u[1:div(N, ratio), :] , dims = 2)
-		for ii = 2:M
-			mx = max.(mx, maximum(sol[ii].u[1:div(N, ratio), :], dims = 2))
+		# return sol
+		# we put all the simulations in the first one and return it
+		for ii =2:M
+			append!(sol[1].t, sol[1].t[end] .+ sol[ii].t)
+			append!(sol[1].u.u, sol[ii].u.u)
 		end
+		return sol[1]
 	end
-	return mx
 end
+
 
 ####################################################################################################
 # functions needed Branch switching from Hopf bifurcation point

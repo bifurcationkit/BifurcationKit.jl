@@ -242,7 +242,7 @@ outpo_f, _, flag = @time newton(poTrap,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),"\n")
 PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 ```
 
@@ -292,7 +292,7 @@ outpo_f, _, flag = @time newton(poTrapMF,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),"\n")
 ```
 
 which gives 
@@ -467,7 +467,7 @@ br_po, _ , _= @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+	printSolution = (u, p) -> PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 This gives the following bifurcation diagram:
@@ -498,7 +498,7 @@ br_po, _ , _= @time continuation(poTrapMF, outpo_f,
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
 	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+	printSolution = (u, p) -> PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 ## Continuation of Fold of periodic orbits
@@ -694,7 +694,7 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -> amplitude(u, Nx*Ny, M), normC = x->maximum(abs.(x)))
+   printSolution = (u,p) -> getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x->maximum(abs.(x)))
 ```
 
 !!! info "Preconditioner update"

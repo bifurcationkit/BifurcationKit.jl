@@ -202,7 +202,7 @@ We start by providing a linear solver and some options for the continuation to w
 
 ```julia
 # automatic branch switching from Hopf point
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
 	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
@@ -211,12 +211,13 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 ```julia
 # number of time slices for the periodic orbit
 M = 51
+probFD = PeriodicOrbitTrapProblem(M = M)
 br_po, _ = continuation(
 	# arguments for branch switching from the first 
 	# Hopf bifurcation point
 	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
+	opts_po_cont, probFD;
 	# OPTIONAL parameters
 	# we want to jump on the new branch at phopf + δp
 	# ampfactor is a factor to increase the amplitude of the guess
@@ -226,7 +227,7 @@ br_po, _ = continuation(
 	linearPO = :FullLU,
 	# regular options for continuation
 	verbosity = 3,	plot = true, 
-	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
 ![](bru-po-cont-br0.png)
@@ -247,7 +248,7 @@ br_po2, _ = PALC.continuationPOTrapBPFromPO(
 	opts_po_cont; linearPO = :FullLU,
 	#ampfactor = 1., δp = 0.01,	
 	verbosity = 3,	plot = true,
-	plotSolution = (x, p; kwargs...) -> (heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...)),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)),
 	normC = norminf)
 ```
 
