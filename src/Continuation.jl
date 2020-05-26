@@ -71,6 +71,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	finDiffEps::T  = 1e-9 				#constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
 
+	inPlace::Bool = true                # whether to use inplace operations
 	saveToFile::Bool = false 			# save to file?
 	saveSolEveryNsteps::Int64 = 0		# what steps do we save the current solution
 
@@ -439,7 +440,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
 	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
-	z_pred  = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
+	z_pred	= BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
 	tau  = copy(z_pred)
 
 	# compute the tangents
@@ -468,6 +469,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	verbosity = min(it.verbosity, _verbosity)
 
 	@unpack step, ds, theta = state
+	@unpack inPlace = it.contParams
 
 	# Predictor: z_pred, following method only mutates z_pred
 	state.z_pred = getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
@@ -491,7 +493,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 					ds, theta, it.tangentAlgo, verbosity)
 
 		# update current solution
-		state.z_old = copy(z_newton)
+		inPlace ? copyto!(state.z_old, z_newton) : state.z_old = copy(z_newton)
 	else
 		(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 		(verbosity > 0) && println("--> Newton Residuals history = ", fval)

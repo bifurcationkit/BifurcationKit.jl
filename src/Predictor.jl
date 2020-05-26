@@ -95,7 +95,7 @@ end
 function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::Talgo, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
-	tau = copy(z_new)
+	it.contParams.inPlace ? copyto!(tau, z_new) : tau = copy(z_new)
 	minus!(tau, z_old)
 	if algo isa SecantPred
 		α = sign(ds) / it.dottheta(tau, θ)
@@ -244,10 +244,12 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		if linesearch & saveIterations
 			step_ok = false
 			while !step_ok & (alpha > almin)
+				# x_pred = x - alpha * u
+				copyto!(x_pred, x)
+				axpy!(-alpha, u, x_pred)
 
-				x_pred = axpy!(-alpha, u, copyto!(x_pred, x))
 				p_pred = p - alpha * up
-				res_f = copyto!(res_f, F(x_pred, p_pred))
+				copyto!(res_f, F(x_pred, p_pred))
 
 				res_n  = N(x_pred, p_pred)
 				res = normAC(res_f, res_n)
@@ -257,14 +259,14 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 						alpha *= 2
 					end
 					step_ok = true
-					x  = copyto!(x, x_pred)
+					copyto!(x, x_pred)
 					p  = p_pred
 				else
 					alpha /= 2
 				end
 			end
 		else
-			x = minus!(x,u) 	# x .= x .- u
+			x = minus!(x, u) 	# x .= x .- u
 			p = p - up
 
 			copyto!(res_f, F(x, set(par, paramlens, p)))

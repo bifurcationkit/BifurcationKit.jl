@@ -92,7 +92,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	# Initialize iterations
 	x = similar(x0); copyto!(x, x0) # x = copy(x0)
 	f = Fhandle(x, p0)
-	d = similar(f); copyto!(d, f)   # d = copy(f)
+	d = similar(f); copyto!(d, f)	# d = copy(f)
 
 	neval = 1
 	res = normN(f)
@@ -110,10 +110,10 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
 
-		# Update solution:
-		x = minus!(x,d)
+		# Update solution: x .= x .- d
+		x = minus!(x, d)
 
-		f = copyto!(f,Fhandle(x, p0))
+		copyto!(f, Fhandle(x, p0))
 		res = normN(f)
 
 		neval += 1
