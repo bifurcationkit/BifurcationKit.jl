@@ -64,7 +64,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
-	z_pred = copyto!(z_pred, z_old)
+	copyto!(z_pred, z_old)
 	axpy!(ds, tau, z_pred)
 end
 
@@ -95,7 +95,7 @@ end
 function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::Talgo, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
-	tau = copyto!(tau, z_new)
+	tau = copy(z_new)
 	minus!(tau, z_old)
 	if algo isa SecantPred
 		α = sign(ds) / it.dottheta(tau, θ)
@@ -267,7 +267,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			x = minus!(x,u) 	# x .= x .- u
 			p = p - up
 
-			res_f = copyto!(res_f, F(x, set(par, paramlens, p)))
+			copyto!(res_f, F(x, set(par, paramlens, p)))
 
 			res_n  = N(x, p)
 			res = normAC(res_f, res_n)

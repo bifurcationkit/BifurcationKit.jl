@@ -491,7 +491,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 					ds, theta, it.tangentAlgo, verbosity)
 
 		# update current solution
-		state.z_old = copyto!(state.z_old, z_newton)
+		state.z_old = copy(z_newton)
 	else
 		(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
 		(verbosity > 0) && println("--> Newton Residuals history = ", fval)
