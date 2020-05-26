@@ -170,6 +170,7 @@ $(TYPEDFIELDS)
 end
 
 length(br::ContResult) = length(br.branch[1, :])
+haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 
 _show(io, bp, ii) = @printf(io, "- %3i, %7s point around p ≈ %4.8f, step = %3i, idx = %3i, ind_bif = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_bif, bp.status, bp.δ[1], bp.δ[2])
 
@@ -194,7 +195,7 @@ end
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
 function initContRes(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = x0, ind_bif = 0, step = 0, status = :guess, δ = (0,0))
+	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_bif = 0, step = 0, status = :guess, δ = (0,0))
 	sol = contParams.saveSolEveryNsteps > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0

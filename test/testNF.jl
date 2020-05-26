@@ -39,6 +39,12 @@ nf = bp.nf
 	@test norm(nf[3]/2 - -0.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 
+# same but when the eigenvalues are not saved in the branch
+br_noev, _ = @time PALC.continuation(
+	Fbp, [0.1, 0.1], par, (@lens _.μ),
+	printSolution = (x, p) -> norminf(x),
+	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
+bp = PALC.computeNormalForm(jet..., br_noev, 1; verbose=true)
 ####################################################################################################
 # Automatic branch switching
 br, _ = continuation(jet..., br, 1, opts_br; verbosity = 0)
@@ -77,6 +83,13 @@ bp2d(Val(:reducedForm), rand(2), 0.2)
 @test norm(bp2d.nf.b2, Inf) < 3e-6
 @test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
 @test norm(bp2d.nf.a, Inf) < 1e-6
+
+# same but when the eigenvalues are not saved in the branch
+br_noev, _ = @time PALC.continuation(
+	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
+	printSolution = (x, p) -> norminf(x),
+	setproperties(opts_br; nInversion = 2, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
+bp2d = @time PALC.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 ####################################################################################################
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)

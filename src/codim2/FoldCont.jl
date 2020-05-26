@@ -220,7 +220,7 @@ end
 function newtonFold(F, J, br::ContResult, ind_fold::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
-	eigenvec = bifpt.tau
+	eigenvec = bifpt.tau.u
 
 	# solve the Fold equations
 	return newtonFold(F, J, foldpointguess, par, lens, eigenvec, options; Jt = Jt, d2F = d2F, kwargs...)
@@ -288,6 +288,6 @@ end
 function continuationFold(F, J, br::ContResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jt = nothing, d2F = nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
-	eigenvec = bifpt.tau
+	eigenvec = bifpt.tau.u
 	return continuationFold(F, J, foldpointguess, par, lens1, lens2, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
 end

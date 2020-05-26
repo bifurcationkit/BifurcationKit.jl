@@ -38,7 +38,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 				param = branch[1, end-1],
 				norm = normC(z.u),
 				printsol = branch[2, end-1], #printsolution(z.u, z.p),
-				x = _copy(z.u), tau = normalize(tau.u),
+				x = _copy(z.u), tau = copy(tau),
 				ind_bif = 0,
 				step = length(branch)-1,
 				status = :guess,
@@ -122,7 +122,7 @@ function getBifurcationType(contparams::ContinuationPar{T,S,E}, state::PALCState
 			norm = normC(getx(state)),
 			printsol = printsolution(getx(state), getp(state)),
 			x = _copy(getx(state)),
-			tau = normalize(state.tau.u),
+			tau = copy(state.tau),
 			ind_bif = ind_bif,
 			step = state.step,
 			status = status,
@@ -193,6 +193,9 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		 end
 
 		# we get the current state
+		if isnothing(next)
+			break
+		end
 		(i, state) = next
 
 		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state)
