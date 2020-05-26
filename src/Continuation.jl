@@ -438,8 +438,8 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
 	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
-	z_old  = BorderedArray(copyto!(similar(u0), u0), p0)
-	z_pred = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
+	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
+	z_pred  = BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
 	tau  = copy(z_pred)
 
 	# compute the tangents
