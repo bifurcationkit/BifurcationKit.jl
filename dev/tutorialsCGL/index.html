@@ -132,7 +132,7 @@ outpo_f, _, flag = @time newton(poTrap,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, outpo_f[end], &quot;, amplitude = &quot;, PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),&quot;\n&quot;)
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, outpo_f[end], &quot;, amplitude = &quot;, PALC.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),&quot;\n&quot;)
 PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);</code></pre><p>which gives </p><pre><code class="language-julia"> Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
@@ -160,7 +160,7 @@ poTrapMF = PeriodicOrbitTrapProblem(
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, outpo_f[end], &quot;, amplitude = &quot;, PALC.amplitude(outpo_f, Nx*Ny, M; ratio = 2),&quot;\n&quot;)</code></pre><p>which gives </p><pre><code class="language-julia"> Newton Iterations 
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, outpo_f[end], &quot;, amplitude = &quot;, PALC.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),&quot;\n&quot;)</code></pre><p>which gives </p><pre><code class="language-julia"> Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     6.5412e-03         0
@@ -276,7 +276,7 @@ br_po, _ , _= @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -&gt; PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)</code></pre><p>This gives the following bifurcation diagram:</p><p><img src="../cgl2d-po-cont.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Improved performances</header><div class="admonition-body"><p>Although it would be &quot;cheating&quot; for fair comparisons with existing packages, there is a trick to compute the bifurcation diagram without using preconditionners. We will not detail it here but it allows to handle the case <code>Nx = 200; Ny = 110; M = 30</code> and above.</p></div></div><p>We did not change the preconditioner in the previous example as it does not seem needed. Let us show how to do this nevertheless:</p><pre><code class="language-julia"># callback which will be sent to newton. 
+	printSolution = (u, p) -&gt; PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)</code></pre><p>This gives the following bifurcation diagram:</p><p><img src="../cgl2d-po-cont.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Improved performances</header><div class="admonition-body"><p>Although it would be &quot;cheating&quot; for fair comparisons with existing packages, there is a trick to compute the bifurcation diagram without using preconditionners. We will not detail it here but it allows to handle the case <code>Nx = 200; Ny = 110; M = 30</code> and above.</p></div></div><p>We did not change the preconditioner in the previous example as it does not seem needed. Let us show how to do this nevertheless:</p><pre><code class="language-julia"># callback which will be sent to newton. 
 # `iteration` in the arguments refers to newton iterations
 function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
 	# we update the preconditioner every 10 continuation steps
@@ -294,7 +294,7 @@ br_po, _ , _= @time continuation(poTrapMF, outpo_f,
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
 	plotSolution = (x, p; kwargs...) -&gt; PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -&gt; PALC.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)</code></pre><h2 id="Continuation-of-Fold-of-periodic-orbits-1"><a class="docs-heading-anchor" href="#Continuation-of-Fold-of-periodic-orbits-1">Continuation of Fold of periodic orbits</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-Fold-of-periodic-orbits-1" title="Permalink"></a></h2><p>We continue the Fold point of the first branch of the previous bifurcation diagram in the parameter plane <span>$(r, c_5)$</span>. To this end, we need to be able to compute the Hessian of the periodic orbit functional. This is not yet readily available so we turn to automatic differentiation.</p><pre><code class="language-julia">using ForwardDiff
+	printSolution = (u, p) -&gt; PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)</code></pre><h2 id="Continuation-of-Fold-of-periodic-orbits-1"><a class="docs-heading-anchor" href="#Continuation-of-Fold-of-periodic-orbits-1">Continuation of Fold of periodic orbits</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-Fold-of-periodic-orbits-1" title="Permalink"></a></h2><p>We continue the Fold point of the first branch of the previous bifurcation diagram in the parameter plane <span>$(r, c_5)$</span>. To this end, we need to be able to compute the Hessian of the periodic orbit functional. This is not yet readily available so we turn to automatic differentiation.</p><pre><code class="language-julia">using ForwardDiff
 
 # computation of the second derivative of a function f
 function d2Fcglpb(f, x, dx1, dx2)
@@ -384,4 +384,4 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; amplitude(u, Nx*Ny, M), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 26 May 2020 08:02">Tuesday 26 May 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 27 May 2020 22:20">Wednesday 27 May 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
