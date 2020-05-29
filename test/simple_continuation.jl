@@ -5,7 +5,7 @@ const PALC = PseudoArcLengthContinuation
 k = 2
 N = 10
 F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
-Jac_m = (x, p) -> diagm(0 => p[1]  .+ x.^k)
+Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 
 normInf = x -> norm(x, Inf)
 

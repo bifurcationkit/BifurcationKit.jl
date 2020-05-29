@@ -37,7 +37,7 @@ end
 par_hopf = (@set par_sl.r = 0.1)
 ####################################################################################################
 # continuation
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 2, pMin = -0.5)
+optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 2, pMin = -0.5, nInversion = 4)
 br, _ = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 prob = ODEProblem(Fode, u0, (0., 100.), par_hopf)
@@ -113,7 +113,7 @@ br_pok2, _ = continuation(jet...,br,1, opts_po_cont, ShootingProblem(1, par_hopf
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
-br_pok2, _ = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf)
+br_pok2, _ = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
 ####################################################################################################
 # Single Poincaré Shooting with hyperplane parametrization
 normals = [[-1., 0.]]
@@ -138,7 +138,7 @@ probPsh(initpo_bar, par_hopf)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
-	optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
+	optn = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
 	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
 	outpo, _ = @time PALC.newton(probPsh,
 			initpo_bar, par_hopf,
@@ -231,12 +231,12 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax =
 ####################################################################################################
 # test automatic branch switching
 # calls with jacobian computed with finite differences
-br_hpsh, _ = continuation(jet...,br,1, opts_po_cont, PoincareShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u), normC = norminf)
+br_hpsh, _ = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(1, par_hopf, prob, Rodas4P());printSolution = (u, p) -> norm(u), normC = norminf, verbosity = 0)
 
 br_hpsh, _ = continuation(jet...,br,1, opts_po_cont, PoincareShootingProblem(2, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u), normC = norminf)
 
 # calls with analytical jacobians
-br_hpsh, _ = continuation(jet...,br,1, (@set opts_po_cont.detectBifurcation = 0), PoincareShootingProblem(1, par_hopf, prob, Rodas4(), probMono, Rodas4(),);printSolution = (u, p) -> norm(u), normC = norminf)
+br_hpsh, _ = continuation(jet...,br,1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(1, par_hopf, prob, Rodas4(), probMono, Rodas4(),);printSolution = (u, p) -> norm(u), normC = norminf)
 
 br_hpsh, _ = continuation(jet...,br,1, (@set opts_po_cont.detectBifurcation = 0), PoincareShootingProblem(2, par_hopf, prob, Rodas4(), probMono, Rodas4(),);printSolution = (u, p) -> norm(u), normC = norminf)
 

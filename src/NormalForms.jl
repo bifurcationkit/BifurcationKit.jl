@@ -4,13 +4,15 @@ abstract type BranchPoint <: BifurcationPoint end
 function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 	# we compute the eigen-elements of the adjoint of L
 	λstar, evstar = eigsolver(Lstar, nev)
+	verbose && Base.display(λstar)
 	# vectors to hold eigen-elements for the adjoint of L
 	λstars = Vector{ComplexF64}()
 	ζstars = Vector{typeof(geteigenvector(eigsolver, evstar, 1))}()
 
-	for λ in λs
+	for (idvp,λ) in enumerate(λs)
 		I = argmin(abs.(λstar .- λ))
-		@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(real(λstar[I])) !≈ 0"
+		@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0"
+		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
 		ζstar = geteigenvector(eigsolver, evstar, I)
 		push!(ζstars, copy(ζstar))
 		push!(λstars, λstar[I])
@@ -31,7 +33,7 @@ function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	I = argmin(abs.(λstar .- λ))
 	verbose && (println("--> left eigenvalues = ");Base.display(λstar))
 	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
-	@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalue. We found $(real(λstar[I])) !≈ 0"
+	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re=0. We found $(real(λstar[I])) !≈ 0"
 	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return copy(ζstar), λstar[I]
 end
@@ -106,7 +108,7 @@ $(TYPEDEF)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false)
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))"
@@ -118,7 +120,8 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	options = br.contparams.newtonOptions
 
 	# bifurcation point
-	x0 = bifpt.x
+	# we need this conversion for when running on GPU and loading the branch from the disk
+	x0 = convert(Teigvec, bifpt.x)
 	p = bifpt.param
 
 	# parameter for vector field
@@ -131,25 +134,24 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	ls = options.linsolver
 
 	# "zero" eigenvalue at bifurcation point, it must be real
-	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
+	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	verbose && println("--> smallest eigenvalue at bifurcation = ", λ)
 
 	# corresponding eigenvector, it must be real
 	if haseigenvector(br) == false
 		# we recompute the eigen-elements if there were not saved during the computation of the branch
 		@info "Eigen-elements no saved in the branch. Recomputing them..."
-		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_bif + 2)
-		@assert _λ[bifpt.ind_bif] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
-		ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_bif))
-		@show _ev
+		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
+		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+		ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
 	else
-		ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
+		ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 	end
 	ζ ./= norm(ζ)
 
 	# extract eigen-elements for adjoint(L), needed to build spectral projector
 	if issymmetric
-		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_bif]
+		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
 		ζstar = ζ
 	else
 		if isnothing(Jt)
@@ -163,7 +165,6 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 
 	@assert abs(dot(ζ, ζstar)) > 1e-12
 	ζstar ./= dot(ζ, ζstar)
-
 
 	# differentials and projector on Range(L), there are real valued
 	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
@@ -195,7 +196,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	verbose && println("--> b3/6 = ", b3/6)
 
 	if abs(a) < 1e-5
-		type = abs(b2) < 1e-9 ? :Pitchfork : :Transcritical
+		type = 100abs(b2/2) < abs(b3/6) ? :Pitchfork : :Transcritical
 	else
 		type = :ProbablySaddleNode
 	end
@@ -372,12 +373,12 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
 """
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false)
-	bifpt = br.bifpoint[ind_bif]
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = br.n_unstable[br.bifpoint[id_bif].idx], Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
+	bifpt = br.bifpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
-		return hopfNormalForm(F, dF, d2F, d3F, br, ind_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens)
+		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, Teigvec = Teigvec)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric)
+		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec)
 	end
 	N = abs(bifpt.δ[1])
 	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
@@ -387,7 +388,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 
 	options = br.contparams.newtonOptions
 
 	# bifurcation point
-	x0 = bifpt.x
+	x0 = convert(Teigvec, bifpt.x)
 	p = bifpt.param
 
 	# parameter for vector field
@@ -401,31 +402,34 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 
 
 	# "zero" eigenvalues at bifurcation point
 	rightEv = br.eig[bifpt.idx].eigenvals
-	I = sortperm(abs.(real.(rightEv)))
-	λs = rightEv[I][1:N]
+	indev = br.bifpoint[id_bif].ind_ev
+	λs = rightEv[indev-N+1:indev]
 	verbose && println("--> smallest eigenvalues at bifurcation = ", real.(λs))
 
 	# and corresponding eigenvectors
-	if isnothing(ζs)
-		if haseigenvector(br) == false
+	if isnothing(ζs) # do we pass an eigenbasis?
+		if haseigenvector(br) == false # are the eigenvector saved in the branch?
+			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
-			@assert _λ ≈ br.eig[bifpt.idx].eigenvals "We did not find the correct eigenvalues $(br.eig[bifpt.idx].eigenvals). We found $(_λ)"
-			ζs = _ev[I[1:N]]
+			verbose && (println("--> λs = ");Base.display(rightEv))
+			verbose && (println("--> λs (recomputed) = ");Base.display(_λ))
+			@assert _λ[1:length(rightEv)] ≈ rightEv "We did not find the correct eigenvalues $(rightEv). We found $(_λ)"
+			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
-			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in I[1:N]]
+			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in indev-N+1:indev]
 		end
 	end
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
 	if issymmetric
-		λstar = br.eig[bifpt.idx].eigenvals
+		λstar = λs
 		ζstar = ζs
 	else
 		if isnothing(Jt)
 			ζstars, λstars = getAdjointBasis(transpose(L), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 		else
-			ζstars, λstars = getAdjointBasis(Jt(x, p), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
+			ζstars, λstars = getAdjointBasis(Jt(x0, parbif), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 		end
 	end
 	ζstars = real.(ζstars); λstars = real.(λstars)
@@ -449,7 +453,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, ind_bif::Int ; δ = 
 	# test the bi-orthogonalization
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
 	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
-	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right /left eigenvectors. The left eigenvectors do not form a basis."
+	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right /left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`"
 
 	# differentials should work as we are looking at reals
 	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
@@ -629,7 +633,7 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens)
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens, Teigvec = vectortype(br))
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	println("#"^53*"\n--> Hopf Normal form computation")
 
@@ -641,7 +645,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	eigRes = br.eig
 
 	# eigenvalue
-	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_bif]
+	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
 	ω = imag(λ)
 
 	# parameter for vector field
@@ -649,16 +653,16 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	parbif = set(br.params, lens, p)
 
 	# jacobian at bifurcation point
-	L = dF(bifpt.x, parbif)
+	L = dF(convert(Teigvec, bifpt.x), parbif)
 
 	# right eigenvector
 	if haseigenvector(br) == false
 		# we recompute the eigen-elements if there were not saved during the computation of the branch
-		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_bif + 2)
-		@assert _λ[bifpt.ind_bif] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
-		ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_bif)
+		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
+		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+		ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
 	else
-		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
+		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 	end
 	ζ ./= norm(ζ)
 
@@ -670,7 +674,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	end
 
 	# check that λstar ≈ conj(λ)
-	@assert abs(λ + λstar) < 1e-2 "We did not find the left eigenvalue for the Hopf point, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
@@ -734,18 +738,17 @@ Automatic branch switching at branch points based on a computation of the normal
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
 
-
 	# detect bifurcation point type
 	if br.bifpoint[ind_bif].type == :hopf
 		@error "You need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
-		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, par, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
+		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, par, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose, Teigvec = Teigvec)
 		return bifpoint
 	end
 
@@ -754,12 +757,22 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	Ty = typeof(ds)
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric)
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec)
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
+
+	if usedeflation
+		verbose && println("\n----> Compute point on the current branch...")
+		optn = optionsCont.newtonOptions
+		bifpt = br.bifpoint[ind_bif]
+		# find the bifurcated branch using deflation
+		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), optn; kwargs...)[1]
+		pred.x .= solbif
+
+	end
 
 	# perform continuation
 	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)

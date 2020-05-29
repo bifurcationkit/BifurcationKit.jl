@@ -83,11 +83,11 @@ function dF_chan(x, dx, p)
 end
 
 ls = PALC.GMRESKrylovKit(dim = 100)
-	opt_newton_mf = PALC.NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	opt_newton_mf = PALC.NewtonPar(tol = 1e-10, verbose = true, linsolver = ls, eigsolver = DefaultEig())
 	out_mf, hist, flag = @time newton(
 		F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
 		sol, (a, 0.01),
-		opt_newton_mf)
+		(@set opt_newton_mf.linsolver.Pl = lu(Jac_mat(zero(out),(a, 0.01)))))
 
 opts_cont_mf  = PALC.ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, newtonOptions = setproperties(opt_newton_mf;maxIter = 70, verbose = false, tol = 1e-8), maxSteps = 150)
 
@@ -142,8 +142,16 @@ println("--> Test jacobian expression for deflated problem")
 opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
 outdef1, _, _ = @time newton(
 		F_chan, Jac_mat,
-		out.*(1 .+ 0.01*rand(n)), (a, 0.01),
+		out.*(1 .+ 0.1*rand(n)), (a, 0.01),
 		opt_def, deflationOp)
+
+# matrix free version
+outdef1mf, _, _ = @time newton(
+		F_chan, Jac_mat,
+		out.*(1 .+ 0.1*rand(n)), (a, 0.01),
+		# (@set opt_newton_mf.linsolver.Pl = lu(Jac_mat(zero(out),(a, 0.01)))),
+		(@set opt_newton_mf.maxIter = 3),
+		deflationOp, ls)
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 indfold = 1

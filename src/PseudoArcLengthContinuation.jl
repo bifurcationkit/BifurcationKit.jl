@@ -32,38 +32,38 @@ module PseudoArcLengthContinuation
 	include("periodicorbit/FloquetQaD.jl")
 
 	# linear solvers
-	export	DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
+	export DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
 			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
 	# bordered nonlinear problems
-	export	BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
+	export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
 
 	# preconditioner based on deflation
-	export	PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
+	export PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 
 	# bordered linear problems
-	export	MatrixBLS, BorderingBLS, MatrixFreeBLS, BorderedArray
+	export MatrixBLS, BorderingBLS, MatrixFreeBLS, BorderedArray
 
 	# nonlinear deflation
-	export	DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
+	export DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 
 	# predictors for continuation
-	export	SecantPred, BorderedPred, NaturalPred
+	export SecantPred, BorderedPred, NaturalPred
 
 	# newton methods
-	export	NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
+	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
 
 	# continuation methods
-	export	ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered
+	export ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered
 
 	# iterators for continuation
-	export	PALCIterable, iterate, PALCStateVariables, solution, getx, getp
+	export PALCIterable, iterate, PALCStateVariables, solution, getx, getp
 
 	# codim2 Fold continuation
-	export	FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
+	export FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
 
 	# codim2 Hopf continuation
-	export	HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
+	export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
 	# normal form
 	export computeNormalForm
@@ -72,14 +72,14 @@ module PseudoArcLengthContinuation
 	export getPeriod, getAmplitude, getMaximum, getTrajectory
 
 	# Periodic orbit computation based on Trapeze method
-	export	PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
+	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
 	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem
 
 	# Floquet multipliers computation
-	export	FloquetQaDTrap, FloquetQaDShooting
+	export FloquetQaDTrap, FloquetQaDShooting
 
 	# guess for periodic orbit from Hopf bifurcation point
-	export	guessFromHopf
+	export guessFromHopf
 end

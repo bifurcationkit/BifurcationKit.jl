@@ -76,7 +76,7 @@ eigls = EigArpack(0.5, :LM)
 plotsol(out)
 
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 
 	br, _ = @time PALC.continuation(
 		Fmit, JFmit,
@@ -106,7 +106,7 @@ br1, _ = continuation(jet...,
 plot([br,br1],plotfold=false)
 
 br2, _ = continuation(jet...,
-		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 40);
+		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 400);
 		verbosity = 3, plot = true,
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)

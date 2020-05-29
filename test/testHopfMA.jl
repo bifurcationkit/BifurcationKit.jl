@@ -92,8 +92,8 @@ bifpt = br.bifpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
 					Fbru, Jbru_sp, (x, p) -> transpose(Jbru_sp(x, p)), nothing,
 					(@lens _.l),
-					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_bif]),
-					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_bif]),
+					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
+					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
 					# av,
 					# bv,
 					opts_br0.newtonOptions.linsolver)
@@ -245,7 +245,7 @@ M = 20
 
 orbitguess = zeros(2n, M)
 phase = []; scalphase = []
-vec_hopf = geteigenvector(opt_newton.eigsolver, br.eig[br.bifpoint[ind_hopf].idx][2], br.bifpoint[ind_hopf].ind_bif-1)
+vec_hopf = geteigenvector(opt_newton.eigsolver, br.eig[br.bifpoint[ind_hopf].idx][2], br.bifpoint[ind_hopf].ind_ev-1)
 for ii=1:M
 	t = (ii-1)/(M-1)
 	orbitguess[:, ii] .= real.(hopfpt.u + 26*0.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .252)))

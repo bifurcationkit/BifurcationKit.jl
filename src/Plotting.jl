@@ -1,6 +1,6 @@
 using RecipesBase
 
-@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing )
+@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true )
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	axisDict = Dict(:p => 1, :sol => 1, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# seriestype --> :path
@@ -16,7 +16,7 @@ using RecipesBase
 		ind2 = 2
 	end
 	@series begin
-		if length(contres.stability) > 2
+		if length(contres.stability) > 2 && plotstability
 			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
 		end
 		label --> ""
@@ -33,7 +33,7 @@ using RecipesBase
 
 	# display bifurcation points
 	bifpoints = vcat(contres.bifpoint, filter(x->x.type != :none, contres.foldpoint))
-	if length(bifpoints) >= 1 && ind2 == 2
+	if length(bifpoints) >= 1 && ind2 == 2 && plotbifpoints
 		id = 1
 		bifpoints[1].type == :none ? id = 2 : id = 1
 		if plotfold
@@ -72,13 +72,16 @@ using RecipesBase
 end
 
 
-@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing )
+@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
 	for res in brs
 		@series begin
 			putbifptlegend --> false
 			plotfold --> plotfold
+			plotbifpoints --> plotbifpoints
+			plotstability --> plotstability
+
 			label --> false
 
 			for pt in res.bifpoint

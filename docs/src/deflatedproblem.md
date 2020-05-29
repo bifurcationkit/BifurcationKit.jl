@@ -5,11 +5,11 @@
 
 Assume you want to solve $F(x)=0$ with a Newton algorithm but you want to avoid the algorithm to return some already known solutions $x_i,\ i=1\cdots n$. 
 
-The idea proposed in the paper quoted above is to penalize these solutions by looking for the zeros of the function $G(x):=\frac{F(x)}{M(x)}$ where
+The idea proposed in the paper quoted above is to penalize these solutions by looking for the zeros of the function $G(x):={F(x)}{M(x)}$ where
 
-$$M(x) = \prod_{i=1}^n(\|x - x_i\|^{p} + \alpha)$$
+$$M(x) = \prod_{i=1}^n\left(\|x - x_i\|^{-p} + \alpha\right)$$
 
-and $\alpha>0$. Obviously $F$ and $G$ have the same zeros but the factor $M$ penalizes the residual of the Newton iterations of $G$, effectively producing zeros of $F$ different from $x_i$.
+and $\alpha>0$. Obviously $F$ and $G$ have the same zeros away from the $x_i$s but the factor $M$ penalizes the residual of the Newton iterations of $G$, effectively producing zeros of $F$ different from $x_i$.
 
 ## Encoding of the functional
 
@@ -26,7 +26,7 @@ Note that you can add new solution `x0` to `M` by doing `push!(M, x0)`. Also `M[
 Most newton functions can be used with a deflated problem, see for example [Snaking computed with deflation](@ref). The idea is to pass the deflation operator `M`. For example, we have the following overloaded method, which works on GPUs: 
 
 ```
-newton(F, J, x0, p0, options::NewtonPar, defOp::DeflationOperator; kwargs...)
+newton(F, J, x0, p0, options::NewtonPar, defOp::DeflationOperator, linsolver = DeflatedLinearSolver(); kwargs...)
 ```
 
 We refer to [`newton`](@ref) for more information about the arguments.

@@ -52,11 +52,12 @@ The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuat
 
 ## Main features
 
-- Matrix Free Newton solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
-- Matrix Free Newton solver with deflation and preconditioner. It can be used for branch switching for example.
+- Newton-Krylov solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
+- Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
 - Bifurcation points are located using a bisection algorithm
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at simple branch points
+- Automatic branch switching at simple Hopf points to periodic orbits
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.

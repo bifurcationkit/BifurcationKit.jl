@@ -46,18 +46,18 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	# parameters for arclength continuation
 	dsmin::T	= 1e-3
-	dsmax::T	= 2e-2;		@assert dsmax >= dsmin
-	ds::T		= 1e-3;		@assert dsmax >= abs(ds);	@assert abs(ds) >= dsmin
+	dsmax::T	= 1e-1;		@assert dsmax >= dsmin
+	ds::T		= 1e-2;		@assert dsmax >= abs(ds);	@assert abs(ds) >= dsmin
 	@assert dsmin > 0
 	@assert dsmax > 0
 
 	# parameters for scaling arclength step size
-	theta::T					= 0.5 	# parameter in the dot product used for the extended system
+	theta::T					= 0.5 		# parameter in the dot product used for the extended system
 	doArcLengthScaling::Bool  	= false
 	gGoal::T					= 0.5
 	gMax::T						= 0.8
 	thetaMin::T					= 1.0e-3
-	a::T						= 0.5  	# aggressiveness factor
+		a::T						= 0.5  	# aggressiveness factor
 	tangentFactorExponent::T 	= 1.5
 
 	# parameters bound
@@ -68,29 +68,29 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	maxSteps::Int64  = 100
 
 	# Newton solver parameters
-	finDiffEps::T  = 1e-9 				#constant for finite differences
+	finDiffEps::T  = 1e-9 					# constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
 
-	saveToFile::Bool = false 			# save to file?
-	saveSolEveryNsteps::Int64 = 0		# what steps do we save the current solution
+	saveToFile::Bool = false 				# save to file?
+	saveSolEveryNsteps::Int64 = 0			# what steps do we save the current solution
 
 	# parameters for eigenvalues
  	computeEigenValues::Bool = false
-	nev::Int64 = 3 						# number of eigenvalues
-	saveEigEveryNsteps::Int64 = 1		# what steps do we keep the eigenvectors
-	saveEigenvectors::Bool	= true		# useful options because if puts a high memory pressure
+	nev::Int64 = 3 							# number of eigenvalues
+	saveEigEveryNsteps::Int64 = 1			# what steps do we keep the eigenvectors
+	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
 	plotEveryNsteps::Int64 = 10
 
 	# handling bifucation points
-	precisionStability::T = 1e-10		# lower bound for stability of equilibria and periodic orbits
-	detectFold::Bool = true 			# detect fold points?
-	detectBifurcation::Int64 = 0		# detect bifurcation points?
-	dsminBisection::T = 1e-5			# dsmin for the bisection algorithm when locating bifurcation points
-	nInversion::Int64 = 2				# number of sign inversions in bisection algorithm
-	maxBisectionSteps::Int64 = 15		# maximum number of bisection steps
-	tolBisectionEigenvalue::Float64 = 1e-5 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
-	@assert iseven(nInversion) "The option `nInversion` number must be even"
+	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
+	detectFold::Bool = true 				# detect fold points?
+	detectBifurcation::Int64 = 0			# detect bifurcation points?
+	dsminBisection::T = 1e-5				# dsmin for the bisection algorithm when locating bifurcation points
+	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
+	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
+	tolBisectionEigenvalue::Float64 = 1e-5  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
+	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation < 3 "The option `detectBifurcation` must belong to {0,1,2}"
     @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 end
@@ -121,7 +121,7 @@ $(TYPEDFIELDS)
     - `printsol = printSolution(x, param)`
     - `x` equilibrium at the bifurcation point
     - `tau` tangent along the branch at the bifurcation point
-    - `ind_bif` is the eigenvalue index responsible for the bifurcation (if applicable)
+    - `ind_ev` is the eigenvalue index responsible for the bifurcation (if applicable)
     - `step` is the continuation step at which the bifurcation occurs,
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
@@ -136,7 +136,7 @@ $(TYPEDFIELDS)
 	"A vector holding the set of fold points detected during the computation of the branch."
 	foldpoint::Vector{Biftype}
 
-	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step"
+	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step. Hence, the stability `stability[k]` should match `eig[k]` which corresponds to `branch[k]` for a given `k`"
 	stability::Vector{Bool}
 
 	"A `Vector{Int64}` holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)"
@@ -171,14 +171,15 @@ end
 
 length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
+@inline vectortype(br::ContResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
 
-_show(io, bp, ii) = @printf(io, "- %3i, %7s point around p ≈ %4.8f, step = %3i, idx = %3i, ind_bif = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_bif, bp.status, bp.δ[1], bp.δ[2])
+_show(io, bp, ii) = @printf(io, "- #%3i, %7s point around p ≈ %4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
 
 function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
 	println(io, "Branch of ", br.type)
 	if length(br.bifpoint) > 0
-		println(io, "Bifurcation points:")
+		println(io, "Bifurcation points:\n [ind_ev = index of the bifurcating eigevalue e.g. `br.eig[idx].eigenval[ind_ev]`]")
 		for ii in eachindex(br.bifpoint)
 			_show(io, br.bifpoint[ii], ii)
 		end
@@ -191,11 +192,16 @@ function show(io::IO, br::ContResult)
 	end
 end
 
+# this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
+function getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}
+	br.eig[bp.idx]
+end
+
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
-function initContRes(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = (type = :none, idx = 1, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_bif = 0, step = 0, status = :guess, δ = (0,0))
+function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+	bif0 = (type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0))
 	sol = contParams.saveSolEveryNsteps > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0
@@ -203,10 +209,10 @@ function initContRes(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar
 
 	if contParams.computeEigenValues
 		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
-		stability, n_unstable, n_imag = is_stable(contParams, evsol[1])
+		stability, n_unstable, n_imag = isstable(contParams, evsol[1])
 		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
 	else
-		_evvectors = (eigenvals = Complex{T}(1), eigenvec = nothing, step = 0)
+		_evvectors = (eigenvals = evsol[1], eigenvec = nothing, step = 0)
 	end
 
 	return ContResult(
@@ -279,7 +285,7 @@ end
 """
 	state = PALCStateVariables(ds = 1e-4,...)
 
-Returns a variable containing the state of the continuation procedure.
+Returns a variable containing the state of the continuation procedure. The fields are meant to change during the continuation procedure.
 
 # Arguments
 - `z_pred` current solution on the branch
@@ -343,7 +349,7 @@ end
 solution(state::PALCStateVariables) = state.z_old
 getx(state::PALCStateVariables) = state.z_old.u
 @inline getp(state::PALCStateVariables) = state.z_old.p
-isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
+@inline isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
 
 # condition for halting the continuation procedure
 @inline done(it::PALCIterable, state::PALCStateVariables) =
@@ -361,13 +367,14 @@ function detectBifucation(state::PALCStateVariables)
 	n1, n2 = state.n_unstable
 	# deals with missing value encoded by n_unstable = -1
 	if n1 == -1 || n2 == -1; return false; end
+	# detect a bifurcation if the numbers do not match
 	return n1 !== n2
 end
 
 function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	push!(contres.branch, getStateSummary(it, state))
 
-	if state.n_unstable[1] >= 0 # whether to deal with n_unstable = -1
+	if state.n_unstable[1] >= 0 # to deal with case n_unstable = -1
 		push!(contres.n_unstable, state.n_unstable[1])
 		push!(contres.stability, isstable(state))
 	end
@@ -376,78 +383,73 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	if state.n_imag[1] >= 0; push!(contres.n_imag, state.n_imag[1]); end
 
 	# save solution
-	if it.contParams.saveSolEveryNsteps > 0 &&
-			mod(state.step, it.contParams.saveSolEveryNsteps) == 0
+	if it.contParams.saveSolEveryNsteps > 0 && mod(state.step, it.contParams.saveSolEveryNsteps) == 0
 		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if it.contParams.computeEigenValues
 		if mod(state.step, it.contParams.saveEigEveryNsteps) == 0
-			if it.contParams.saveEigenvectors
-				push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
-			else
-				push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
-			end
+			push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
 		end
 	end
 end
 
-function initContRes(it::PALCIterable, state::PALCStateVariables)
+function ContResult(it::PALCIterable, state::PALCStateVariables)
 	x0 = getx(state)
 	p0 = getp(state)
 	contParams = it.contParams
 
 	if contParams.computeEigenValues
 		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, set(it.par, it.param_lens, p0)), contParams.nev)
-		_, n_unstable, n_imag = is_stable(contParams, eiginfo[1])
+		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
+		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
 	else
 		T = eltype(it)
-		eiginfo = (Complex{T}(1), nothing, false, 0)
-		return initContRes(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, nothing, contParams)
+		eiginfo = (Complex{T}(0), nothing, false, 0)
+		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
 	end
 end
 
 import Base: iterate
 
 function iterate(it::PALCIterable; _verbosity = it.verbosity)
-	# this is to overwrite verbosity behaviour, like when locating bifurcations
-	verbosity = min(it.verbosity, _verbosity)
-	pas0 = it.par
+	# the keyword arguemnt is to overwrite verbosity behaviour, like when locating bifurcations
+	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.param_lens)
 	ds = it.contParams.ds
 	theta = it.contParams.theta
 	T = eltype(it)
 
-	(verbosity > 0) && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
+	verbose && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
 	# Get parameters
 	@unpack pMin, pMax, maxSteps, newtonOptions = it.contParams
-	epsi = it.contParams.finDiffEps
 
 	# Converge initial guess
-	(verbosity > 0) && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
+	verbose && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
 	# we pass additional kwargs to newton so that it is sent to the newton callback
 	u0, fval, isconverged, itnewton = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
-	@assert isconverged "Newton failed to converge initial guess"
-	(verbosity > 0) && println("\n--> convergence of initial guess = OK")
-	(verbosity > 0) && println("--> parameter = $(p0), initial step")
-	(verbosity > 0) && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
+	@assert isconverged "Newton failed to converge initial guess on the branch."
+	verbose && println("\n--> convergence of initial guess = OK")
+	verbose && println("--> parameter = $(p0), initial step")
+	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
 	η = T(150)
 	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
 			u0, set(it.par, it.param_lens, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
-	@assert isconverged "Newton failed to converge for the computation of the initial tangent"
-	(verbosity > 0) && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	(verbosity > 0) && println("--> parameter = $(p0 + ds/η), initial step (bis)")
+	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
+	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("--> parameter = $(p0 + ds/η), initial step (bis)")
+	# this is the last (first) point on the branch
 	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
+	# this is a predictor for the next point on the branch, we could have used z_old as well
 	z_pred	= BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
 	tau  = copy(z_pred)
 
 	# compute the tangents
 	getTangent!(tau, z_pred, z_old, it, ds, theta, SecantPred(), _verbosity)
 
-	# compute eigenvalues to get the type
+	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if it.contParams.computeEigenValues
 		eigvals, eigvecs, _, _ = it.contParams.newtonOptions.eigsolver(it.J(u0, it.par), it.contParams.nev)
 		if it.contParams.saveEigenvectors == false
@@ -459,7 +461,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	end
 
 	# return the state
-	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs)	# previous tangent
+	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)	# previous tangent
 	return state, state
 end
 
@@ -467,15 +469,16 @@ end
 function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
 	# this is to overwrite verbosity behaviour, like when locating bifurcations
-	verbosity = min(it.verbosity, _verbosity)
+	verbosity = min(it.verbosity, _verbosity) > 0
+	verbose = verbosity > 0
 
 	@unpack step, ds, theta = state
 
 	# Predictor: z_pred, following method only mutates z_pred
 	getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
-	(verbosity > 0) && println("#"^35)
-	(verbosity > 0) && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
-	(verbosity > 0) && @printf("Step size = %2.4e\n", ds)
+	verbose && println("#"^35)
+	verbose && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
+	verbose && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
 	z_newton, fval, state.isconverged, state.itnewton  = corrector(it,
@@ -486,7 +489,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 
 	# Successful step
 	if state.isconverged
-		(verbosity > 0) && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
+		verbose && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
 		# Get predictor, it only mutates tau
 		getTangent!(state.tau, z_newton, state.z_old, it,
@@ -495,8 +498,8 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 		# update current solution
 		copyto!(state.z_old, z_newton)
 	else
-		(verbosity > 0) && printstyled("Newton correction failed\n", color=:red)
-		(verbosity > 0) && println("--> Newton Residuals history = ", fval)
+		verbose && printstyled("Newton correction failed\n", color=:red)
+		verbose && println("--> Newton Residuals history = ", fval)
 	end
 
 	if state.stopcontinuation == false && state.stepsizecontrol == true
@@ -516,7 +519,7 @@ end
 
 function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)
 	contParams = it.contParams
-	verbosity = it.verbosity
+	verbose = it.verbosity > 0
 
 	next = (state, state)
 
@@ -529,11 +532,11 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 		# the case state.step = 0 was just done above
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
 
-			# Eigen-elements computation, they are stored on state
+			# Eigen-elements computation, they are stored in state
 			if contParams.computeEigenValues
 				itnewton = computeEigenvalues!(it, state)
 
-				(verbosity > 0) && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
+				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
 			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
@@ -542,13 +545,14 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			if contParams.detectBifurcation > 0 && detectBifucation(state)
 				status::Symbol = :guess
 				if contParams.detectBifurcation > 1
-					(verbosity > 0) && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
+					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 
 					# locate bifurcations, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state
-					status = locateBifurcation!(it, state, verbosity > 2)
+					status = locateBifurcation!(it, state, it.verbosity > 2)
 				end
-				if contParams.detectBifurcation>0 && detectBifucation(state)
-					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, verbosity, status)
+				# we double-ckeck that the previous line which mutated state did not remove the bifurcation point
+				if detectBifucation(state)
+					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status)
 					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
 				end
 			end
@@ -578,9 +582,6 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 	popfirst!(contRes.bifpoint)
 	popfirst!(contRes.foldpoint)
 
-	# we remove the first element of branch, it was just to initialize it
-	# popfirst!(contRes.branch.u)
-
 	it.plot && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
 
 	# return current solution in case the corrector did not converge
@@ -589,36 +590,38 @@ end
 
 function continuation(it::PALCIterable)
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	# contres is not known at compile time so we
-	# need a function barrier to resolve its type
+	# The result type of this method
+	# is not known at compile time so we
+	# need a function barrier to resolve it
 	#############################################
 
-	# we compute the cache pour the continuation, i.e. state::PALCStateVariables
-	state = iterate(it)[1]
+	# we compute the cache for the continuation, i.e. state::PALCStateVariables
+	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
+	state, _ = iterate(it)
 
-	# variable to hold results from continuation
-	contRes = initContRes(it, state)
+	# variable to hold the result from continuation, i.e. a branch
+	contRes = ContResult(it, state)
 
 	# perform the continuation
 	return continuation!(it, state, contRes)
 end
 
 function continuation(Fhandle, Jhandle,
-					x0, par, lens::Lens,
-					contParams::ContinuationPar{T, S, E},
-					linearAlgo::AbstractBorderedLinearSolver;
-					tangentAlgo = SecantPred(),
-					plot = false,
-					plotSolution = (x, p; kwargs...) -> nothing,
-					printSolution = (x, p) -> norm(x),
-					normC = norm,
-					dotPALC = (x,y) -> dot(x,y) / length(x),
-					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
-					filename = "branch-" * string(Dates.now()),
-					verbosity = 0) where {T <: Real, S, E}
+		x0, par, lens::Lens,
+		contParams::ContinuationPar,
+		linearAlgo::AbstractBorderedLinearSolver;
+		tangentAlgo = SecantPred(),
+		plot = false,
+		plotSolution = (x, p; kwargs...) -> nothing,
+		printSolution = (x, p) -> norm(x),
+		normC = norm,
+		dotPALC = (x,y) -> dot(x,y) / length(x),
+		finaliseSolution = (z, tau, step, contResult) -> true,
+		callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
+		filename = "branch-" * string(Dates.now()),
+		verbosity = 0)
 
-	it = PALCIterable(Fhandle, Jhandle, x0, par, lens::Lens, contParams, linearAlgo;
+	it = PALCIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo;
 						tangentAlgo = tangentAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dotPALC = dotPALC, finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 	return continuation(it)
 end
@@ -635,7 +638,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
 - `x0` initial guess
 - `par` initial set of parameters.
-- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _.[1])`. For more information, we refer to `SetField.jl`.
+- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`.
 - `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
 - `plot = false` whether to plot the solution while computing
 - `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
@@ -717,7 +720,7 @@ function continuation(Fhandle, Jhandle,
 					filename = "branch-" * string(Dates.now()),
 					verbosity = 0) where {T <: Real, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 
-	# Create a bordered linear solver using newton linear solver
+	# Create a bordered linear solver using the newton linear solver provided by the user
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
 
 	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; tangentAlgo = tangentAlgo, plot = plot, printSolution = printSolution, normC = normC, dotPALC = dotPALC, plotSolution = plotSolution, finaliseSolution = finaliseSolution, callbackN = callbackN, filename = filename, verbosity = verbosity)

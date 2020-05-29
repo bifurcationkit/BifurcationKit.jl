@@ -197,11 +197,11 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					τ0::BorderedArray{vectype, T},
 					z_pred::BorderedArray{vectype, T},
 					ds::T, θ::T,
-					contparams::ContinuationPar{T},
+					contparams::ContinuationPar{T, S, E},
 					dottheta::DotTheta;
 					linearbdalgo = BorderingBLS(),
 					normN = norm,
-					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
+					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, S, E, vectype}
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts

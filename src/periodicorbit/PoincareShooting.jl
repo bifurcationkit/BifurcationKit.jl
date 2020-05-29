@@ -298,7 +298,6 @@ function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		# We need the callback to be active here!!!
 		sol1 = prob.flow(Val(:Full), xc[:, 1], p, Inf64)
-		@show typeof(sol1.u)
 		for ii in 1:M
 			E!(prob.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!

@@ -27,7 +27,7 @@ function guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitud
 	ωH  = hopfpoint.p[end] |> abs
 
 	# vec_hopf is the eigenvector for the eigenvalues iω
-	vec_hopf = geteigenvector(eigsolver, br.eig[bifpoint.idx][2], bifpoint.ind_bif-1)
+	vec_hopf = geteigenvector(eigsolver, br.eig[bifpoint.idx][2], bifpoint.ind_ev-1)
 	vec_hopf ./=  norm(vec_hopf)
 
 	 orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii=0:M-1]

@@ -4,7 +4,7 @@ const PALC = PseudoArcLengthContinuation
 norminf = x -> norm(x, Inf)
 
 function Fbp(x, p)
-	return [x[1] * (3.23 .* p.μ - 0.12 * x[1] + 0.234 * x[1]^2) + x[2], x[2]]
+	return [x[1] * (3.23 .* p.μ - 0.12 * x[1] + 0.234 * x[1]^2) + x[2], -x[2]]
 end
 
 par = (μ = -0.2, ν = 0)
@@ -14,7 +14,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.1, pM
 
 	br, _ = @time PALC.continuation(
 		Fbp, [0.1, 0.1], par, (@lens _.μ),
-		printSolution = (x, p) -> norminf(x),
+		printSolution = (x, p) -> x[1],
 		opts_br; plot = false, verbosity = 0, normC = norminf)
 
 ####################################################################################################
@@ -53,7 +53,11 @@ nf = bp.nf
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
 # Automatic branch switching
-br, _ = continuation(jet..., br, 1, opts_br; verbosity = 0)
+br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], verbosity = 0)
+# plot([br,br2])
+
+br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
+# plot([br,br2])
 
 ####################################################################################################
 function Fbp2d(x, p)
@@ -91,7 +95,7 @@ bp2d(Val(:reducedForm), rand(2), 0.2)
 @test norm(bp2d.nf.a, Inf) < 1e-6
 
 ##############################
-# same but when the eigenvalues are not saved in the branch but computed in the fly instead
+# same but when the eigenvalues are not saved in the branch but computed on the fly instead
 br_noev, _ = @time PALC.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
@@ -146,7 +150,7 @@ nf = hp.nf
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-10
 
 ##############################
-# same but when the eigenvalues are not saved in the branch but computed in the fly instead
+# same but when the eigenvalues are not saved in the branch but computed on the fly instead
 br, _ = @time PALC.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	printSolution = (x, p) -> norminf(x),

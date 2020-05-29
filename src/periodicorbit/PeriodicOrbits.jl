@@ -136,7 +136,7 @@ end
 """
 $(SIGNATURES)
 
-Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br::ContResult`. It first compute a Hopf normal form.
+Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br::ContResult`. It first computes a Hopf normal form.
 
 # Arguments
 

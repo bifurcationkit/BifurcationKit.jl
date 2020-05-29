@@ -10,7 +10,7 @@ We expose our method to study *non-simple branch points*. Such branch point $(x_
 
 More precisely, it is possible to write $x = u + v$ where $u\in \ker dF(x_0,p_0)$ and $v\approx 0$ belongs to a vector space complement of $\ker dF(x_0,p_0)$. It can be shown that $u$ solves $\Phi(u,\delta p)=0$ with $\Phi(u,\delta p) = (I-\Pi)F(u+\psi(u,\delta p),p_0+\delta p)$ where $\psi$ is known implicitly and $\Pi$ is the spectral projector on $\ker dF(x_0,p_0)$. Fortunately, one can compute the Taylor expansion of $\Phi$ up to order 3. Computing the bifurcation diagram of this $d$-dimensional multivariate polynomials can be done using brute force methods.
 
-Once the zeros of $\Phi$ have been located, we can use them as initial guess for [`continuation`](@ref) but $F$ !!
+Once the zeros of $\Phi$ have been located, we can use them as initial guess for [`continuation`](@ref) but for the original $F$ !!
 
 
 ## Reduced equation computation

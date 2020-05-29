@@ -4,6 +4,8 @@ The iterator interface gives the possibility of stepping through the numerical s
 
 The general method `continuation` is built upon this iterator interface and we refer to the source code for a complete example of use.
 
+> The iterator provided below does not compute eigenvalues nor perform bifurcations detection. 
+
 ## Initialization
 
 > More information about **iterators** can be found on the [page](https://docs.julialang.org/en/v1/base/collections/#Collections-and-Data-Structures-1) of [julialang](https://docs.julialang.org/en/v1/).
@@ -43,9 +45,6 @@ We show a quick and simple example of use. Note that it is not very optimized be
 using PseudoArcLengthContinuation, SparseArrays, LinearAlgebra, Plots, Setfield
 const PALC = PseudoArcLengthContinuation
 
-# define a norm
-normInf = x -> norm(x, Inf)
-
 k = 2
 
 # functional we want to study
@@ -56,7 +55,7 @@ Jac_m = (x, p) -> diagm(0 => 1  .- x.^k)
 
 
 # parameters for the continuation
-opts = PALC.ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryNsteps = 0, computeEigenValues = true, detectBifurcation = true, newtonOptions = NewtonPar(tol = 1e-8, verbose = true))
+opts = PALC.ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryNsteps = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = true))
 
 # we define an iterator to hold the continuation routine
 iter = PALC.PALCIterable(F, Jac_m, [0.8], 1., (@lens _), opts; verbosity = 2)

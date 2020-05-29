@@ -17,6 +17,8 @@ The available arguments specific to our plotting methods are
 
 - `plotfold = true`: plot the fold points with black dots
 - `putbifptlegend = true`: display the legend corresponding to the bifurcation points
+- `plotstability = true`: display the stability of the branch
+- `plotbifpoints = true`: plot the bifurcation points on the branch
 - `vars = nothing`: see below
 
 If you have severals branches `br1, br2`, you can plot them in the same figure by doing 

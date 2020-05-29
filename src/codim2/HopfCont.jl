@@ -6,7 +6,7 @@ function HopfPoint(br::ContResult, index::Int64)
 	bifpoint = br.bifpoint[index]							# Hopf point
 	eigRes   = br.eig										# eigenvector at the Hopf point
 	p = bifpoint.param										# parameter value at the Hopf point
-	ω = (imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_bif]))	# frequency at the Hopf point
+	ω = (imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_ev]))	# frequency at the Hopf point
 	return BorderedArray(bifpoint.x, [p, ω] )
 end
 
@@ -228,7 +228,7 @@ function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jt =
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
-	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	eigenvec_ad = conj.(eigenvec)
 
 	# solve the hopf equations
@@ -302,7 +302,7 @@ end
 function continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jt = nothing, d2F = nothing, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
-	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	eigenvec_ad = conj.(eigenvec)
 	return continuationHopf(F, J, hopfpointguess, par, lens1, lens2, eigenvec_ad, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
 end

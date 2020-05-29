@@ -27,7 +27,7 @@ copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where
 length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
 length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) + 1
 
-dot(a::BorderedArray{Tv1, Tp1}, b::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2} = dot(a.u, b.u) + dot(a.p, b.p)
+dot(a::BorderedArray, b::BorderedArray) = dot(a.u, b.u) + dot(a.p, b.p)
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
 zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
 ################################################################################

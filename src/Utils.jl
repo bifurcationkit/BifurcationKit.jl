@@ -13,39 +13,39 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(contparams::ContinuationPar, n_unstable::Int64, J)
+function computeEigenvalues(contparams::ContinuationPar, n::Int64, J)
 	# the next line is to ensure we compute enough eigenvalues to probe stability
-	nev_ = max(n_unstable + 6, contparams.nev)
+	@assert 1==0 "Used !"
+	nev_ = max(n + 6, contparams.nev)
 	eiginfo = contparams.newtonOptions.eigsolver(J, nev_)
-	isstable, n_unstable, n_imag = is_stable(contparams, eiginfo[1])
-	return eiginfo, isstable, n_unstable, n_imag
+	_isstable, n_unstable, n_imag = isstable(contparams, eiginfo[1])
+	return eiginfo, _isstable, n_unstable, n_imag
 end
 
 function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
-	n_unstable = state.n_unstable[2]
-	nev_ = max(n_unstable + 5, iter.contParams.nev)
+	# we compute the eigen-elements
+	n = state.n_unstable[2]
+	nev_ = max(n + 5, iter.contParams.nev)
 	J = iter.J(getx(state), set(iter.par, iter.param_lens, getp(state)))
 	eiginfo = iter.contParams.newtonOptions.eigsolver(J, nev_)
-	isstable, n_unstable, n_imag = is_stable(iter.contParams, eiginfo[1])
-	return eiginfo, isstable, n_unstable, n_imag
+	_isstable, n_unstable, n_imag = isstable(iter.contParams, eiginfo[1])
+	return eiginfo, _isstable, n_unstable, n_imag
 end
 
+# same as previous but we save the eigen-elements in state
 function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
-	# we compute the eigen-elements
-	n_unstable = state.n_unstable[2]
-	nev_ = max(n_unstable + 5, iter.contParams.nev)
-	J = iter.J(getx(state), set(iter.par, iter.param_lens, getp(state)))
-	eigvals, eigvecs, flag, it_number = iter.contParams.newtonOptions.eigsolver(J, nev_)
-	# we update the state
-	isstable, n_unstable, n_imag = is_stable(iter.contParams, eigvals)
+	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state)
+	# we update the state	
 	updatestability!(state, n_unstable, n_imag)
 	if isnothing(state.eigvals) == false
-		state.eigvals = eigvals
+		state.eigvals = eiginfo[1]
 	end
 	if iter.contParams.saveEigenvectors
-		state.eigvecs = eigvecs
+		state.eigvecs = eiginfo[2]
 	end
-	return it_number
+	# iteration number in eigen-solver
+	it_number = eiginfo[end]
+	return it_number 
 end
 
 ####################################################################################################
