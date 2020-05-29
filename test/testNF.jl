@@ -39,12 +39,18 @@ nf = bp.nf
 	@test norm(nf[3]/2 - -0.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 
-# same but when the eigenvalues are not saved in the branch
+##############################
+# same but when the eigenvalues are not saved in the branch but computed on the fly
 br_noev, _ = @time PALC.continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 bp = PALC.computeNormalForm(jet..., br_noev, 1; verbose=true)
+nf = bp.nf
+@test norm(nf[1]) < 1e-10
+	@test norm(nf[2] - 3.23) < 1e-10
+	@test norm(nf[3]/2 - -0.12) < 1e-10
+	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
 # Automatic branch switching
 br, _ = continuation(jet..., br, 1, opts_br; verbosity = 0)
@@ -84,12 +90,20 @@ bp2d(Val(:reducedForm), rand(2), 0.2)
 @test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
 @test norm(bp2d.nf.a, Inf) < 1e-6
 
-# same but when the eigenvalues are not saved in the branch
+##############################
+# same but when the eigenvalues are not saved in the branch but computed in the fly instead
 br_noev, _ = @time PALC.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 2, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 bp2d = @time PALC.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -0.123) < 1e-10
+@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -0.234) < 1e-10
+@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -0.0)   < 1e-10
+@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -0.456) < 1e-10
+@test norm(bp2d.nf.b2, Inf) < 3e-6
+@test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
+@test norm(bp2d.nf.a, Inf) < 1e-6
 ####################################################################################################
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
@@ -117,7 +131,26 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pM
 br, _ = @time PALC.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	printSolution = (x, p) -> norminf(x),
-	opts_br; plot = false, verbosity = 3, normC = norminf)
+	opts_br; plot = false, verbosity = 0, normC = norminf)
+
+hp = PALC.computeNormalForm(
+	(x, p) -> Fsl2(x, p),
+	(x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x),
+	(x, p, dx1, dx2) -> 	 d2Fsl(x, p, dx1, dx2),
+	(x, p, dx1, dx2, dx3) -> d3Fsl(x, p, dx1, dx2, dx3),
+	br, 1)
+
+nf = hp.nf
+
+@test abs(nf.a - 1) < 1e-10
+@test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-10
+
+##############################
+# same but when the eigenvalues are not saved in the branch but computed in the fly instead
+br, _ = @time PALC.continuation(
+	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
+	printSolution = (x, p) -> norminf(x),
+	setproperties(opts_br, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 
 hp = PALC.computeNormalForm(
 	(x, p) -> Fsl2(x, p),

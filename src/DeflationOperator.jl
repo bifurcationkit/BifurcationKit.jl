@@ -1,4 +1,4 @@
-import Base: push!, pop!, length, deleteat!
+import Base: push!, pop!, length, deleteat!, empty!
 import Base: show, getindex
 
 """
@@ -25,6 +25,7 @@ pop!(df::DeflationOperator) = pop!(df.roots)
 getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
 length(df::DeflationOperator) = length(df.roots)
 deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
+empty!(df::DeflationOperator) = empty!(df.roots)
 
 function show(io::IO, df::DeflationOperator)
 	println(io, "Deflation operator with ", length(df.roots)," roots")
@@ -151,7 +152,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::Defla
 end
 
 # simplified call when no Jacobian is given
-function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype};kwargs...) where {T, Tf, vectype, S, E}
+function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}; kwargs...) where {T, Tf, vectype, S, E}
 	J = (u, p) -> PseudoArcLengthContinuation.finiteDifferences(z -> F(z,p), u)
 	return newton(F, J, x0, p0, options, defOp; kwargs...)
 end

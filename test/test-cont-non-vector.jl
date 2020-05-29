@@ -117,6 +117,9 @@ length(deflationOp)
 # test pop!
 pop!(deflationOp)
 
+# test empty
+empty!(deflationOp)
+
 ####################################################################################################
 using KrylovKit
 

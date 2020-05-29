@@ -644,23 +644,23 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_bif]
 	ω = imag(λ)
 
-	# right eigenvector
-	if haseigenvector(br) == false
-		# we recompute the eigen-elements if there were not saved during the computation of the branch
-		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_bif + 2)
-		@assert _λ[bifpt.ind_bif] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
-		ζ = copy(_ev[bifpt.ind_bif])
-	else
-		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
-	end
-	ζ ./= norm(ζ)
-
 	# parameter for vector field
 	p = bifpt.param
 	parbif = set(br.params, lens, p)
 
 	# jacobian at bifurcation point
 	L = dF(bifpt.x, parbif)
+
+	# right eigenvector
+	if haseigenvector(br) == false
+		# we recompute the eigen-elements if there were not saved during the computation of the branch
+		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_bif + 2)
+		@assert _λ[bifpt.ind_bif] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+		ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_bif)
+	else
+		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_bif))
+	end
+	ζ ./= norm(ζ)
 
 	# left eigen-elements
 	if isnothing(Jt)
@@ -763,5 +763,4 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 
 	# perform continuation
 	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
-
 end

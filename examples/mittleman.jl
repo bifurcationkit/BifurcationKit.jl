@@ -84,7 +84,6 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pM
 		printSolution = (x, p) -> norm(x),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		plot = true, verbosity = 3, normC = norminf)
-
 ####################################################################################################
 # branch switching
 
@@ -94,7 +93,7 @@ d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
 d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
 d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
-jet = ( Fmit, JFmit, d2Fmit, d3Fmit)
+jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 
 br1, _ = continuation(jet...,
 		br, 3,
@@ -148,7 +147,6 @@ resp = Float64[]
 		push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
 		push!(resx, [X[ii[2]], Y[ii[3]]])
 	end
-
 
 
 using LaTeXStrings
