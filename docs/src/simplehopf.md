@@ -5,7 +5,7 @@ At a Hopf branch point $(x_0,p_0)$ for the problem $F(x,p)=0$, we have $\Sigma\ 
 
 $$\dot x = F(x,p)$$
 
-in large dimensions to a **complex** polynomial vector field: 
+in large dimensions to a **complex** polynomial vector field ($\delta p\equiv p-p_0$): 
 
 $$\dot z = z\left(a \cdot\delta p + i\omega + b|z|^2\right)\quad\text{(E)}$$
 
