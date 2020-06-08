@@ -114,26 +114,15 @@ Fold points:
 -   2,    fold point around p ≈ 3.15581473, step =  35, idx =  35, ind_bif =   0 [    guess], δ = ( 0,  0)
 ```
 
-We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically:
+We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically. We use automatic differentiation for that
+
+IL faut utiliser forwarddiff
 
 ```julia
-# derivative of N
-dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+using ForwardDiff
 
 # Jacobian of F_chan
-function Jac_mat(u, p)
-	@unpack α, β = p
-	n = length(u)
-	J = zeros(n, n)
-	J[1, 1] = 1.0
-	J[n, n] = 1.0
-	for i = 2:n-1
-		J[i, i-1] = (n-1)^2
-		J[i, i+1] = (n-1)^2
-		J[i, i] = -2 * (n-1)^2 + α * dN(u[i], b = β)
-	end
-	return J
-end
+Jac_mat = (x,p) -> ForwardDiff.jacobian(z -> F_chan(z,p),x)
 
 # index of the Fold bifurcation point in br.bifpoint
 indfold = 2
@@ -177,6 +166,9 @@ This produces:
 We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of `LinearSolver`. Some linear solvers have been implemented from `KrylovKit.jl` and `IterativeSolvers.jl` (see [Linear solvers](@ref) for more information), we can use them here. Note that we can also use preconditioners as shown below. The same functionality is present for the eigensolver.
 
 ```julia
+# derivative of N
+dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+
 # Matrix Free version of the differential of F_chan
 # Very easy to write since we have F_chan. 
 # We could use Automatic Differentiation as well

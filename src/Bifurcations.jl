@@ -28,6 +28,7 @@ interval(a, b) = (min(a, b), max(a, b))
 
 function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, normC, printsolution, verbosity)
 	branch = contres.branch
+	detected = false
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && size(branch)[2] > 2 && detectFold(branch[1, end-2], branch[1, end-1], branch[1, end])
 		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in $(interval(branch[1, end-1],branch[1, end])) \n")
@@ -45,6 +46,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 				δ = (0, 0)))
 		detected = true
 	end
+	detected
 end
 
 locateFold!(contres::ContResult, iter::PALCIterable, state::PALCStateVariables) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.printSolution, iter.verbosity)
@@ -190,7 +192,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		end
 		(i, state) = next
 
-		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state)
+		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state; bisection = true)
 		updatestability!(state, n_unstable, n_imag)
 		push!(nunstbls, n_unstable)
 		push!(nimags, n_imag)

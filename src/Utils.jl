@@ -13,21 +13,12 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(contparams::ContinuationPar, n::Int64, J)
-	# the next line is to ensure we compute enough eigenvalues to probe stability
-	@assert 1==0 "Used !"
-	nev_ = max(n + 6, contparams.nev)
-	eiginfo = contparams.newtonOptions.eigsolver(J, nev_)
-	_isstable, n_unstable, n_imag = isstable(contparams, eiginfo[1])
-	return eiginfo, _isstable, n_unstable, n_imag
-end
-
-function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
+function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables; kwargs...)
 	# we compute the eigen-elements
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
 	J = iter.J(getx(state), set(iter.par, iter.param_lens, getp(state)))
-	eiginfo = iter.contParams.newtonOptions.eigsolver(J, nev_)
+	eiginfo = iter.contParams.newtonOptions.eigsolver(J, nev_; kwargs...)
 	_isstable, n_unstable, n_imag = isstable(iter.contParams, eiginfo[1])
 	return eiginfo, _isstable, n_unstable, n_imag
 end

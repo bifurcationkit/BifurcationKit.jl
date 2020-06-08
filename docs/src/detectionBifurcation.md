@@ -18,6 +18,9 @@ If you choose `detectBifurcation = 2`, a bisection algorithm is used to locate t
 
 If this is still not enough, you can use a Newton solver to locate them very precisely. See [Fold / Hopf Continuation](@ref).
 
+!!! tip "Bisection mode"
+    During the bisection, the eigensolvers are called like `eil(J, nev; bisection = true)` in order to be able to adapt the solver precision.
+
 ## Large scale computations
 
 The user must specify the number of eigenvalues to be computed (like `nev = 10`) in the parameters `::ContinuationPar` passed to `continuation`. Note that `nev` is automatically incremented whenever a bifurcation point is detected [^1]. Also, there is an option in `::ContinuationPar` to save (or not) the eigenvectors. This can be useful in memory limited environments (like on GPUs).
