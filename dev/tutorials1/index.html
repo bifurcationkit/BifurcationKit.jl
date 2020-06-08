@@ -33,23 +33,10 @@ Branch number of points: 78
 Branch of Equilibrium
 Fold points:
 -   1,    fold point around p ≈ 4.03438745, step =  11, idx =  11, ind_bif =   0 [    guess], δ = ( 0,  0)
--   2,    fold point around p ≈ 3.15581473, step =  35, idx =  35, ind_bif =   0 [    guess], δ = ( 0,  0)</code></pre><p>We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically:</p><pre><code class="language-julia"># derivative of N
-dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+-   2,    fold point around p ≈ 3.15581473, step =  35, idx =  35, ind_bif =   0 [    guess], δ = ( 0,  0)</code></pre><p>We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically. We use automatic differentiation for that</p><p>IL faut utiliser forwarddiff</p><pre><code class="language-julia">using ForwardDiff
 
 # Jacobian of F_chan
-function Jac_mat(u, p)
-	@unpack α, β = p
-	n = length(u)
-	J = zeros(n, n)
-	J[1, 1] = 1.0
-	J[n, n] = 1.0
-	for i = 2:n-1
-		J[i, i-1] = (n-1)^2
-		J[i, i+1] = (n-1)^2
-		J[i, i] = -2 * (n-1)^2 + α * dN(u[i], b = β)
-	end
-	return J
-end
+Jac_mat = (x,p) -&gt; ForwardDiff.jacobian(z -&gt; F_chan(z,p),x)
 
 # index of the Fold bifurcation point in br.bifpoint
 indfold = 2
@@ -66,7 +53,10 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α
 		# set of parameters and 2 parameter axis to trace to codim 2 curve
 		par, (@lens _.α), (@lens _.β),
 		plot = true, verbosity = 2, optcontfold)
-plot(outfoldco; xlabel=&quot;beta&quot;, ylabel=&quot;alpha&quot;)</code></pre><p>This produces:</p><p><img src="../chan-cusp.png" alt/></p><h2 id="Using-GMRES-or-another-linear-solver-1"><a class="docs-heading-anchor" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a><a class="docs-heading-anchor-permalink" href="#Using-GMRES-or-another-linear-solver-1" title="Permalink"></a></h2><p>We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of <code>LinearSolver</code>. Some linear solvers have been implemented from <code>KrylovKit.jl</code> and <code>IterativeSolvers.jl</code> (see <a href="../linearsolver/#Linear-solvers-1">Linear solvers</a> for more information), we can use them here. Note that we can also use preconditioners as shown below. The same functionality is present for the eigensolver.</p><pre><code class="language-julia"># Matrix Free version of the differential of F_chan
+plot(outfoldco; xlabel=&quot;beta&quot;, ylabel=&quot;alpha&quot;)</code></pre><p>This produces:</p><p><img src="../chan-cusp.png" alt/></p><h2 id="Using-GMRES-or-another-linear-solver-1"><a class="docs-heading-anchor" href="#Using-GMRES-or-another-linear-solver-1">Using GMRES or another linear solver</a><a class="docs-heading-anchor-permalink" href="#Using-GMRES-or-another-linear-solver-1" title="Permalink"></a></h2><p>We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of <code>LinearSolver</code>. Some linear solvers have been implemented from <code>KrylovKit.jl</code> and <code>IterativeSolvers.jl</code> (see <a href="../linearsolver/#Linear-solvers-1">Linear solvers</a> for more information), we can use them here. Note that we can also use preconditioners as shown below. The same functionality is present for the eigensolver.</p><pre><code class="language-julia"># derivative of N
+dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
+
+# Matrix Free version of the differential of F_chan
 # Very easy to write since we have F_chan. 
 # We could use Automatic Differentiation as well
 function dF_chan(x, dx, p)
@@ -121,4 +111,4 @@ ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter = 
         2                3     1.6266e-02         3
         3                4     2.3699e-05         2
         4                5     4.8930e-09         3
-        5                6     6.3288e-12         4</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 7 June 2020 21:50">Sunday 7 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+        5                6     6.3288e-12         4</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 8 June 2020 12:57">Monday 8 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
