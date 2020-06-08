@@ -11,7 +11,7 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 
 	for (idvp,λ) in enumerate(λs)
 		I = argmin(abs.(λstar .- λ))
-		@assert abs(real(λstar[I])) < 1e-2 "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0"
+		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might lead to unprecise normal form computation."
 		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
 		ζstar = geteigenvector(eigsolver, evstar, I)
 		push!(ζstars, copy(ζstar))
@@ -110,8 +110,8 @@ Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian St
 """
 function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
 	bifpt = br.bifpoint[ind_bif]
-	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point"
-	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))"
+	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel."
+	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
 	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
@@ -163,7 +163,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
 
-	@assert abs(dot(ζ, ζstar)) > 1e-12
+	@assert abs(dot(ζ, ζstar)) > 1e-12 "We got $(abs(dot(ζ, ζstar))). Perhaps, you can increase nev"
 	ζstar ./= dot(ζ, ζstar)
 
 	# differentials and projector on Range(L), there are real valued
@@ -765,7 +765,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
 	if usedeflation
-		verbose && println("\n----> Compute point on the current branch...")
+		verbose && println("\n----> Compute point on the current branch with nonlinear deflation...")
 		optn = optionsCont.newtonOptions
 		bifpt = br.bifpoint[ind_bif]
 		# find the bifurcated branch using deflation

@@ -37,7 +37,7 @@ end
 par_hopf = (@set par_sl.r = 0.1)
 ####################################################################################################
 # continuation
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 2, pMin = -0.5, nInversion = 4)
+optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
 br, _ = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 prob = ODEProblem(Fode, u0, (0., 100.), par_hopf)
@@ -89,7 +89,7 @@ PALC.getAmplitude(_pb, outpo, par_hopf)
 PALC.getMaximum(_pb, outpo, par_hopf)
 PALC.getTrajectory(_pb, outpo, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 1, nev = 2, newtonOptions = @set optn.tol = 1e-7)#
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 2, nev = 2, newtonOptions = @set optn.tol = 1e-7)#
 	br_pok2, upo , _= @time PALC.continuation(
 		_pb,
 		outpo, par_hopf, (@lens _.r),

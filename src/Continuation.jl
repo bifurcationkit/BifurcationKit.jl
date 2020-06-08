@@ -17,8 +17,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `saveSolEveryNsteps::Int64 = 0` at which continuation steps do we save the current solution`
 - `plotEveryNsteps = 3`
 
-Handling eigen elements
-- `computeEigenValues = false` compute eigenvalues / eigenvectors
+Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
 - `saveEigEveryNsteps = 1`	record eigen vectors every specified steps. **Important** for memory limited ressource, *e.g.* GPU.
 - `saveEigenvectors	= true`	**Important** for memory limited ressource, *e.g.* GPU.
@@ -26,14 +25,14 @@ Handling eigen elements
 Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
 - `detectFold = true` detect Fold bifurcations? It is a useful option although the detection of Fold is cheap. Indeed, it may happen that there is a lot of Fold points and this can saturate the memory in memory limited devices (e.g. on GPU)
-- `detectBifurcation::Int` ∈ {0, 1, 2} detect bifurcations? If set to 0, bifurcation are not detected. If set to 1, bifurcation are detected along the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the bifurcations (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory in memory limited devices (e.g. on GPU)
-- `dsminBisection` dsmin for the bisection algorithm when locating bifurcation points
+- `detectBifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 0, the eigen-elements are computed. If set to 2, bifurcation are detected along the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
+- `dsminBisection` dsmin for the bisection algorithm for locating bifurcation points
 - `nInversion` number of sign inversions in bisection algorithm
 - `maxBisectionSteps` maximum number of bisection steps
 - `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
 Handling `ds` adaptation (see [`continuation`](@ref) for more information)
-- `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iteration per continuation step roughly the same. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
+- `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
 - `thetaMin = 1.0e-3` minimum value of `theta`
 - `doArcLengthScaling` trigger further adaptation of `theta`
 
@@ -75,14 +74,13 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	saveSolEveryNsteps::Int64 = 0			# what steps do we save the current solution
 
 	# parameters for eigenvalues
- 	computeEigenValues::Bool = false
 	nev::Int64 = 3 							# number of eigenvalues
 	saveEigEveryNsteps::Int64 = 1			# what steps do we keep the eigenvectors
 	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
 	plotEveryNsteps::Int64 = 10
 
-	# handling bifucation points
+	# handling bifurcation points
 	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
 	detectFold::Bool = true 				# detect fold points?
 	detectBifurcation::Int64 = 0			# detect bifurcation points?
@@ -91,18 +89,12 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
 	tolBisectionEigenvalue::Float64 = 1e-5  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
-	@assert detectBifurcation < 3 "The option `detectBifurcation` must belong to {0,1,2}"
+	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
     @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 end
 
-# check the logic of the parameters
-function check(contParams::ContinuationPar)
-	if contParams.detectBifurcation > 0
-		@set contParams.computeEigenValues = true
-	else
-		contParams
-	end
-end
+@inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
+
 ####################################################################################################
 # Structure to hold result
 """
@@ -207,7 +199,7 @@ function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{
 	n_imag = 0
 	stability = true
 
-	if contParams.computeEigenValues
+	if computeEigenElements(contParams)
 		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
 		stability, n_unstable, n_imag = isstable(contParams, evsol[1])
 		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
@@ -279,8 +271,10 @@ function PALCIterable(Fhandle, Jhandle,
 					verbosity = 0
 					) where {T <: Real, S, E}
 
-	return PALCIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = check(contParams), tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+	return PALCIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 end
+
+@inline computeEigenElements(it::PALCIterable) = computeEigenElements(it.contParams)
 
 """
 	state = PALCStateVariables(ds = 1e-4,...)
@@ -387,7 +381,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
-	if it.contParams.computeEigenValues
+	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryNsteps) == 0
 			push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
 		end
@@ -399,7 +393,7 @@ function ContResult(it::PALCIterable, state::PALCStateVariables)
 	p0 = getp(state)
 	contParams = it.contParams
 
-	if contParams.computeEigenValues
+	if computeEigenElements(contParams)
 		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, set(it.par, it.param_lens, p0)), contParams.nev)
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
@@ -450,7 +444,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	getTangent!(tau, z_pred, z_old, it, ds, theta, SecantPred(), _verbosity)
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
-	if it.contParams.computeEigenValues
+	if computeEigenElements(it)
 		eigvals, eigvecs, _, _ = it.contParams.newtonOptions.eigsolver(it.J(u0, it.par), it.contParams.nev)
 		if it.contParams.saveEigenvectors == false
 			eigvecs = nothing
@@ -533,18 +527,20 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
 
 			# Eigen-elements computation, they are stored in state
-			if contParams.computeEigenValues
+			if computeEigenElements(contParams)
 				itnewton = computeEigenvalues!(it, state)
 
 				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
 			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
-			if contParams.detectFold; locateFold!(contRes, it, state); end
+			if contParams.detectFold;
+				foldetected = locateFold!(contRes, it, state)
+			end
 
-			if contParams.detectBifurcation > 0 && detectBifucation(state)
+			if contParams.detectBifurcation > 1 && detectBifucation(state)
 				status::Symbol = :guess
-				if contParams.detectBifurcation > 1
+				if contParams.detectBifurcation > 2
 					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 
 					# locate bifurcations, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state

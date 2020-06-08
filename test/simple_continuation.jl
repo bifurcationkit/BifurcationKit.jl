@@ -9,7 +9,7 @@ Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 
 normInf = x -> norm(x, Inf)
 
-opts = PALC.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryNsteps = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), computeEigenValues = false, saveEigenvectors = false)
+opts = PALC.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryNsteps = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false)
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true

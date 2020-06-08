@@ -3,8 +3,8 @@ using Revise
 	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
 	const PALC = PseudoArcLengthContinuation
 
-heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
-heatmapsol!(x; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
+heatmapsol(x, Nx=Nx, Ny=Ny) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+heatmapsol!(x, Nx=Nx, Ny=Ny; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
 
 Nx = 151*1
 	Ny = 100*1

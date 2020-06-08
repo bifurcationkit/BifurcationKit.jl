@@ -17,7 +17,7 @@ The struct `Default` is used to  provide the backslash operator to our Package
 	which::Twh = real		# how do we sort the computed eigenvalues
 end
 
-function (l::DefaultEig)(J, nev::Int64)
+function (l::DefaultEig)(J, nev; kwargs...)
 	# I put Array so we can call it on small sparse matrices
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = l.which, rev = true)
@@ -47,7 +47,7 @@ end
 
 EigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, real, kwargs)
 
-function (l::EigArpack)(J, nev::Int64)
+function (l::EigArpack)(J, nev; kwargs...)
 	if J isa AbstractMatrix
 		λ, ϕ, ncv = Arpack.eigs(J; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
 	else
@@ -97,7 +97,7 @@ $(TYPEDFIELDS)
 	x₀::vectype = nothing
 end
 
-function (l::EigKrylovKit{T, vectype})(J, _nev::Int64) where {T, vectype}
+function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
 	if J isa AbstractMatrix && isnothing(l.x₀)
 		nev = min(_nev, size(J, 1))
 		vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
@@ -137,7 +137,7 @@ end
 
 EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...) = EigArnoldiMethod(sigma, which, real, kwargs, x₀)
 
-function (l::EigArnoldiMethod)(J, nev::Int64)
+function (l::EigArnoldiMethod)(J, nev; kwargs...)
 	if J isa AbstractMatrix
 		if isnothing(l.sigma)
 			decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which, l.kwargs...)

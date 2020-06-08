@@ -4,15 +4,15 @@ const PALC = PseudoArcLengthContinuation
 norminf = x -> norm(x, Inf)
 
 function Fbp(x, p)
-	return [x[1] * (3.23 .* p.μ - 0.12 * x[1] + 0.234 * x[1]^2) + x[2], -x[2]]
+	return [x[1] * (3.23 .* p.μ - p.x2 * x[1] + 0.234 * x[1]^2) + x[2], -x[2]]
 end
 
-par = (μ = -0.2, ν = 0)
+par = (μ = -0.2, ν = 0, x2 = 0.12)
 ####################################################################################################
-opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = false, maxIter = 20)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = opt_newton, maxSteps = 100)
+opt_newton = NewtonPar(tol = 1e-8, verbose = false, maxIter = 20)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 6, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
-	br, _ = @time PALC.continuation(
+	br, _ = @time continuation(
 		Fbp, [0.1, 0.1], par, (@lens _.μ),
 		printSolution = (x, p) -> x[1],
 		opts_br; plot = false, verbosity = 0, normC = norminf)
@@ -58,6 +58,16 @@ br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], ve
 
 br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
 # plot([br,br2])
+####################################################################################################
+# Case of the pitchfork
+par_pf = @set par.x2 = 0.0
+br, _ = @time PALC.continuation(
+	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
+	printSolution = (x, p) -> x[1],
+	opts_br; plot = false, verbosity = 0, normC = norminf)
+bp = PALC.computeNormalForm(jet..., br, 1; verbose=true)
+
+br2, _ = continuation(jet..., br, 1, setproperties(opts_br; maxSteps = 4, dsmax = 0.03, ds = 0.03, detectBifurcation = 0); printSolution = (x, p) -> x[1], tangentAlgo = BorderedPred(), verbosity = 3, ampfactor = 1.)
 
 ####################################################################################################
 function Fbp2d(x, p)
@@ -146,7 +156,7 @@ hp = PALC.computeNormalForm(
 
 nf = hp.nf
 
-@test abs(nf.a - 1) < 1e-10
+@test abs(nf.a - 1) < 1e-9
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-10
 
 ##############################
@@ -165,5 +175,5 @@ hp = PALC.computeNormalForm(
 
 nf = hp.nf
 
-@test abs(nf.a - 1) < 1e-10
+@test abs(nf.a - 1) < 1e-9
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-10

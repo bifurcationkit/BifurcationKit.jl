@@ -1,9 +1,8 @@
 using RecipesBase
 
-@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true )
+@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	axisDict = Dict(:p => 1, :sol => 1, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
-	# seriestype --> :path
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	if typeof(vars) <: Tuple && (typeof(vars[1]) == Symbol && typeof(vars[2]) == Symbol)
 		ind1 = axisDict[vars[1]]
@@ -15,20 +14,13 @@ using RecipesBase
 		ind1 = 1
 		ind2 = 2
 	end
+
 	@series begin
 		if length(contres.stability) > 2 && plotstability
 			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
 		end
-		label --> ""
+		label --> branchlabel
 		contres.branch[ind1, :], contres.branch[ind2, :]
-	end
-	# display last point on the branch
-	@series begin
-		seriestype := :scatter
-		markershape --> :cross
-		seriescolor --> :red
-		label --> ""
-		[contres.branch[ind1, end]], [contres.branch[ind2, end]]
 	end
 
 	# display bifurcation points
@@ -71,18 +63,16 @@ using RecipesBase
 	end
 end
 
-
-@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true)
+@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
-	for res in brs
+	for (id,res) in enumerate(brs)
 		@series begin
 			putbifptlegend --> false
 			plotfold --> plotfold
 			plotbifpoints --> plotbifpoints
 			plotstability --> plotstability
-
-			label --> false
+			branchlabel --> branchlabel[id]
 
 			for pt in res.bifpoint
 				push!(bp, pt.type)
@@ -113,7 +103,7 @@ Plot the branch of solutions during the continuation
 function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 
-	if contparms.computeEigenValues == false
+	if computeEigenElements(contparms) == false
 		l =  Plots.@layout [a{0.5w} [b; c]]
 	else
 		l =  Plots.@layout [a{0.5w} [b; c]; e{0.2h}]
@@ -121,9 +111,11 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	Plots.plot(layout = l)
 
 	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel="p",  ylabel="||x||", label="", subplot=1)
+	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color=:red, label = "", subplot = 1)
+
 	plot!(contres;	vars = (:step,:p), putbifptlegend = false, xlabel="it", ylabel="p", label = "", subplot=2)
 
-	if contparms.computeEigenValues
+	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals
 		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label="", markerstrokewidth=0, markersize = 3, color=:black)
 	end

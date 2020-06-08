@@ -64,15 +64,15 @@ dimBif = [ii for ii in 1:5]; append!(dimBif, [1 1 1 1])
 
 x0 = zeros(size(par.L,1))
 
-optc = ContinuationPar(pMin = -1., pMax = 10., ds = 0.1, maxSteps = 150, detectBifurcation = 1, saveEigenvectors = false)
+optc = ContinuationPar(pMin = -1., pMax = 10., ds = 0.1, maxSteps = 150, detectBifurcation = 2, saveEigenvectors = false)
 	br1, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), optc; plot=false, verbosity = 0)
 @test teststab(br1)
 
-br2, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 2, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-4); plot=false, verbosity = 0)
+br2, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 3)
 @test teststab(br2)
 
 bifpoint2 = [bp.param for bp in br2.bifpoint]
 @test bifpoint2 > bifpoints
-@test norm(bifpoints - bifpoint2, Inf) < 1e-3
+@test norm(bifpoints - bifpoint2, Inf) < 3e-3
 dimBif2 = [abs(bp.δ[1]) for bp in br2.bifpoint]
 @test dimBif2 == dimBif

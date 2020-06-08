@@ -48,7 +48,7 @@ ls(rand(2,2), rand(2))
 
 > The eigen solvers must be subtypes of `AbstractEigenSolver`. 
 
-They provide a way of computing the eigen elements of the Jacobian `J`. Such eigen solver `eigsolve` will be called like `ev, evecs, itnumber = eigsolve(J, nev)` throughout the package, `nev` being the number of requested eigen elements of largest real part.
+They provide a way of computing the eigen elements of the Jacobian `J`. Such eigen solver `eigsolve` will be called like `ev, evecs, itnumber = eigsolve(J, nev; kwargs...)` throughout the package, `nev` being the number of requested eigen elements of largest real part and `kwargs` being used to send information about the algorithm (perform bisection,...).
 
  
 Here is an example of the simplest of them (see `src/EigSolver.jl` for the true implementation) to give you an idea:
@@ -56,7 +56,7 @@ Here is an example of the simplest of them (see `src/EigSolver.jl` for the true 
 ```julia
 struct DefaultEig <: AbstractEigenSolver end
 
-function (l::DefaultEig)(J, nev::Int64)
+function (l::DefaultEig)(J, nev; kwargs...)
 	# I put Array so we can call it on small sparse matrices
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = x-> real(x), rev = true)

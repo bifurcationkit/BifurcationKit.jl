@@ -300,7 +300,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	# with deflation
@@ -321,5 +321,5 @@ eil = EigKrylovKit(x₀ = rand(2n))
 ls = GMRESKrylovKit()
 ls = DefaultLS()
 opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10, linsolver = ls, eigsolver = eil)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), computeEigenValues = true, nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 2)
 br_pok2, upo , _ = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :FullLU, normC = norminf, verbosity = 0)

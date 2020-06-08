@@ -13,21 +13,15 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(contparams::ContinuationPar, n::Int64, J)
-	# the next line is to ensure we compute enough eigenvalues to probe stability
-	@assert 1==0 "Used !"
-	nev_ = max(n + 6, contparams.nev)
-	eiginfo = contparams.newtonOptions.eigsolver(J, nev_)
-	_isstable, n_unstable, n_imag = isstable(contparams, eiginfo[1])
-	return eiginfo, _isstable, n_unstable, n_imag
+function computeEigenvalues(it::PALCIterable, u0, par, nev = it.contParams.nev; kwargs...)
+	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; kwargs...)
 end
 
-function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables)
+function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables; kwargs...)
 	# we compute the eigen-elements
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
-	J = iter.J(getx(state), set(iter.par, iter.param_lens, getp(state)))
-	eiginfo = iter.contParams.newtonOptions.eigsolver(J, nev_)
+	eiginfo = computeEigenvalues(iter, getx(state), set(iter.par, iter.param_lens, getp(state)), nev_; kwargs...)
 	_isstable, n_unstable, n_imag = isstable(iter.contParams, eiginfo[1])
 	return eiginfo, _isstable, n_unstable, n_imag
 end
@@ -35,7 +29,7 @@ end
 # same as previous but we save the eigen-elements in state
 function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
 	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state)
-	# we update the state	
+	# we update the state
 	updatestability!(state, n_unstable, n_imag)
 	if isnothing(state.eigvals) == false
 		state.eigvals = eiginfo[1]
@@ -45,7 +39,7 @@ function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
 	end
 	# iteration number in eigen-solver
 	it_number = eiginfo[end]
-	return it_number 
+	return it_number
 end
 
 ####################################################################################################

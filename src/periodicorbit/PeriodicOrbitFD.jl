@@ -597,7 +597,7 @@ end
 """
 $(SIGNATURES)
 
-Compute the period of the periodic orbit associated to `x`. 
+Compute the period of the periodic orbit associated to `x`.
 """
 @inline getPeriod(prob::PeriodicOrbitTrapProblem, x, p) = extractPeriodFDTrap(x)
 
@@ -850,15 +850,14 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
+function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
 	@assert linearPO in [:FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace]
-	contParams = check(_contParams)
 
 	N = probPO.N
 	M = probPO.M
 	options = contParams.newtonOptions
 
-	if contParams.computeEigenValues
+	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDTrap(contParams.newtonOptions.eigsolver)
 	end
 
