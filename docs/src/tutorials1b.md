@@ -14,8 +14,8 @@ We start with some imports:
 ```julia 
 using ApproxFun, LinearAlgebra, Parameters
 
-using PseudoArcLengthContinuation, Plots
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, Plots
+const BK = BifurcationKit
 ```
 
 We then need to add some methods not available in `ApproxFun` because the state space is not a subtype of `AbstractArray`:
@@ -81,7 +81,7 @@ optnewton = NewtonPar(tol = 1e-12, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, _, _ = @time PALC.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
+out, _, _ = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
 ```
 and you should see
 

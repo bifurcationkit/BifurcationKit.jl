@@ -1,5 +1,5 @@
-using Test, PseudoArcLengthContinuation, ForwardDiff, RecursiveArrayTools, LinearAlgebra
-const PALC = PseudoArcLengthContinuation
+using Test, BifurcationKit, ForwardDiff, RecursiveArrayTools, LinearAlgebra
+const BK = BifurcationKit
 N = 10
 M = 5
 δ = 1e-8
@@ -13,9 +13,9 @@ section(x) = dot(x[1:N], ones(N))
 section(x::BorderedArray) = section(vec(x.u[:,:]))
 par = nothing
 
-fl = PALC.Flow(vf, flow, dflow)
+fl = BK.Flow(vf, flow, dflow)
 
-probSh = PALC.ShootingProblem(M, fl,
+probSh = BK.ShootingProblem(M, fl,
 	LinRange(0, 1, M+1) |> diff,
 	section, false)
 
@@ -48,9 +48,9 @@ vf(x, p) = x.^2
 flow(x, p, t) = x ./ (1 .- t .* x)
 dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = dx ./ (1 .- t .* x).^2)
 
-fl = PALC.Flow(vf, flow, dflow)
+fl = BK.Flow(vf, flow, dflow)
 
-probSh = PALC.ShootingProblem(M, fl,
+probSh = BK.ShootingProblem(M, fl,
 	LinRange(0,1,M+1) |> diff ,
 	section, false)
 
@@ -86,29 +86,29 @@ for ii=1:M
 end
 centers = [rand(50) for ii=1:M]
 
-hyper = PALC.HyperplaneSections(normals, centers)
+hyper = BK.HyperplaneSections(normals, centers)
 
 x = 1:50 |>collect .|> Float64 |> vec
 x = rand(50)
-xb = PALC.R(hyper, x, 1)
+xb = BK.R(hyper, x, 1)
 # test
 for ii=1:M
-	x2 = PALC.E(hyper, xb, ii)
+	x2 = BK.E(hyper, xb, ii)
 	# test that x2 in Sigma2
 	@test dot(x2 - centers[ii], normals[ii]) < 1e-14
 	# that we have Rk∘Ek = Id and Ek∘Rk = IdΣ
-	@test PALC.R(hyper, x2, ii) ≈ xb
+	@test BK.R(hyper, x2, ii) ≈ xb
 end
 
 # test of the derivatives of E and R
 dx = rand(50)
-_out1 = (PALC.R(hyper, x .+ δ .* dx, 1) - PALC.R(hyper, x, 1)) ./ δ
+_out1 = (BK.R(hyper, x .+ δ .* dx, 1) - BK.R(hyper, x, 1)) ./ δ
 _out2 = zero(_out1)
-_out2 = PALC.dR!(hyper, _out2, dx, 1)
+_out2 = BK.dR!(hyper, _out2, dx, 1)
 
 @test norm(_out2 - _out1, Inf) < 1e-5
 
 dx = rand(49)
-_out1 = ForwardDiff.derivative(t -> PALC.E(hyper, xb .+ t .* dx,1), 0.)
-_out2 = PALC.dE(hyper, dx, 1)
+_out1 = ForwardDiff.derivative(t -> BK.E(hyper, xb .+ t .* dx,1), 0.)
+_out2 = BK.dE(hyper, dx, 1)
 @test norm(_out2 - _out1, Inf) < 1e-12

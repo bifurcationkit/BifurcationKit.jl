@@ -1,8 +1,8 @@
-# PseudoArcLengthContinuation.jl
+# BifurcationKit.jl
 
-![Build Status](https://travis-ci.com/rveltz/PseudoArcLengthContinuation.jl.svg?branch=master)
-[![Coverage Status](https://coveralls.io/repos/github/rveltz/PseudoArcLengthContinuation.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/PseudoArcLengthContinuation.jl?branch=master)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev)
+![Build Status](https://travis-ci.com/rveltz/BifurcationKit.jl.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/rveltz/BifurcationKit.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/BifurcationKit.jl?branch=master)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/BifurcationKit.jl/dev)
 
 This Julia package aims at performing **bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
@@ -34,20 +34,20 @@ This package requires Julia >= v1.3.0
 
 To install it, please run
 
-`] add https://github.com/rveltz/PseudoArcLengthContinuation.jl`
+`] add https://github.com/rveltz/BifurcationKit.jl`
 
 ## Website
 
-The package is located [here](https://github.com/rveltz/PseudoArcLengthContinuation.jl).
+The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 
 ## Examples of bifurcation diagrams
 
 
-| ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/bru-po-cont-3br.png) | 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) | 
 |:-------------:|:-------------:|
-| [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorials3/) |  
-| ![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/br_pd3.png) |![](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/cgl-sh-br.png) | 
-| [Period doubling BVAM Model](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/tutorialsCGL/)  |  
+| [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) | 
+| [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |  
 
 
 ## Main features
@@ -68,7 +68,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 **Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
 
-|Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/PseudoArcLengthContinuation.jl/dev/) | GPU |
+|Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/) | GPU |
 |---|---|---|---|---|
 | Newton | Y | Y | All | :heavy_check_mark:  |
 | Newton + Deflation| Y | Y | 4, 5| :heavy_check_mark:|
@@ -80,7 +80,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Hopf continuation | Y | `AbstractArray` | 5 | |
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
 | Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
-| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | :heavy_check_mark: | 
+| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | | 
 | Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |
 | Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 | |
 

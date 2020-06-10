@@ -1,6 +1,6 @@
 using Test
 using KrylovKit, SparseArrays, ArnoldiMethod, LinearMaps, LinearAlgebra
-using PseudoArcLengthContinuation
+using BifurcationKit
 
 N = 110
 A = I + sprand(N, N, 0.05)

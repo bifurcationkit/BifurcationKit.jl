@@ -1,4 +1,4 @@
-module PseudoArcLengthContinuation
+module BifurcationKit
 	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays
 	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack
@@ -22,6 +22,8 @@ module PseudoArcLengthContinuation
 	include("codim2/codim2.jl")
 	include("codim2/FoldCont.jl")
 	include("codim2/HopfCont.jl")
+
+	# include("BifurcationDiagram.jl")
 
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
@@ -67,6 +69,9 @@ module PseudoArcLengthContinuation
 
 	# normal form
 	export computeNormalForm
+
+	# automatic bifurcation diagram
+	# export bifurcationdiagram
 
 	# Periodic orbit computation
 	export getPeriod, getAmplitude, getMaximum, getTrajectory

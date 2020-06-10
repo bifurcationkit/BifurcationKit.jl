@@ -25,8 +25,8 @@ We start by writing the PDE
 
 ```julia
 using Revise
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+const BK = BifurcationKit
 
 f1(u, v) = u * u * v
 norminf = x -> norm(x, Inf)
@@ -147,7 +147,7 @@ d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 # we group the differentials together
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
-hopfpt = PALC.computeNormalForm(jet..., br, 1)
+hopfpt = BK.computeNormalForm(jet..., br, 1)
 ```
 and you should get
 
@@ -244,10 +244,10 @@ For convenience, we provide a simplified newton / continuation methods for perio
 ```julia
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, normN = norminf,
-		callback = (x, f, J, res, itlin, iteration, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true))
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
+		callback = (x, f, J, res, itlin, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true))
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 # plot of the periodic orbit
-PALC.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
+BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 ```
 
 and obtain
@@ -527,7 +527,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5
 br_po, _, _= @time continuation(probSh,	outpo, par_hopf, (@lens _.l),
 	opts_po_cont; verbosity = 2,
 	plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 	printSolution = (u, p) -> u[end], normC = norminf)
 ```
 
@@ -576,7 +576,7 @@ initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 # projection of the initial guess on the hyperplanes. We assume that the centers[ii]
 # form the periodic orbit initial guess.
 for ii=1:length(normals)
-	initpo_bar[:, ii] .= PALC.R(hyper, centers[ii], ii)
+	initpo_bar[:, ii] .= BK.R(hyper, centers[ii], ii)
 end
 ```
 
@@ -598,11 +598,11 @@ opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions =
 	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
 
 # continuation run
-br_po, _ , _ = @time PALC.continuation(probHPsh,
+br_po, _ , _ = @time BK.continuation(probHPsh,
 	vec(initpo_bar), par_hopf, (@lens _.l),
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label="", kwargs...),
 	normC = norminf)		
 ```
 

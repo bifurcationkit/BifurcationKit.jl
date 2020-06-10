@@ -1,6 +1,6 @@
 # using Revise, Test, Plots
-using PseudoArcLengthContinuation, LinearAlgebra, Setfield
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Setfield
+const BK = BifurcationKit
 
 # display internal information about the branch
 function displayBr(contRes)
@@ -19,7 +19,7 @@ function teststab(br)
 	# test that stability corresponds
 	out = true
 	for ii in eachindex(br.branch)
-		n_u = PALC.isstable(br.contparams, br.eig[ii].eigenvals)
+		n_u = BK.isstable(br.contparams, br.eig[ii].eigenvals)
 		# test that the stability matches the one in eig
 		br.n_unstable[ii] != n_u[2] && println( "$ii did not work!!",br.n_unstable[ii] ,", ", n_u[2])
 		out = out && br.n_unstable[ii] == n_u[2]

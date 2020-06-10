@@ -205,16 +205,14 @@ end
 
 function predictor(bp::SimpleBranchPoint, ds::T; verbose = false, ampfactor = T(1)) where T
 	if bp.type == :ProbablySaddleNode
-		@error "It seems to be a Saddle-Node bifurcation. Continuing anyway."
+		@error "It seems the point is a Saddle-Node bifurcation. Continuing anyway."
 	end
 	nf = bp.nf
 	a, b1, b2, b3 = nf
 	if bp.type == :Transcritical
-		# we use b3 to decide on which side of the bifurcation point we compute a guess even if this categorized as a Transcritical BP. Indeed, in case b2 ≈ 0 and the bifurcation point is a Pitchfork up to numerical accuracy, this will behave more gently.
-		ds0 = -abs(ds) * sign(b3)
-		pnew = bp.p + ds0
-		# we solve b1 * ds0 + b2 * amp / 2 = 0
-		amp = -2ds0 * b1 / b2 * ampfactor
+		pnew = bp.p + ds
+		# we solve b1 * ds + b2 * amp / 2 = 0
+		amp = -2ds * b1 / b2 * ampfactor
 		dsfactor = T(1)
 	else
 		# case of the Pitchfork bifurcation

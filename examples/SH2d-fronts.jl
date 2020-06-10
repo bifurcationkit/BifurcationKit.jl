@@ -1,7 +1,7 @@
 using Revise
 	using DiffEqOperators, Setfield, Parameters
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays
+	const BK = BifurcationKit
 
 heatmapsol(x, Nx=Nx, Ny=Ny) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 heatmapsol!(x, Nx=Nx, Ny=Ny; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
@@ -55,9 +55,9 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 L1 = (I + Δ)^2
 par = (l = -0.1, ν = 1.3, L1 = L1)
 
-optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
-# optnew = PALC.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
-	sol_hexa, hist, flag = @time PALC.newton(F_sh, dF_sh, vec(sol0), par, optnew)
+optnew = BK.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
+# optnew = BK.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
+	sol_hexa, hist, flag = @time BK.newton(F_sh, dF_sh, vec(sol0), par, optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
@@ -68,7 +68,7 @@ heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
-outdef, _, flag, _ = @time PALC.newton(F_sh, dF_sh,
+outdef, _, flag, _ = @time BK.newton(F_sh, dF_sh,
 		# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
 		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
 		par, optnew, deflationOp, normN = x -> norm(x, Inf))
@@ -80,22 +80,23 @@ heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.095, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 145, detectBifurcation = 2, nev = 40, detectFold = false, dsminBisection =1e-7, saveSolEveryNsteps = 4)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 2, nev = 40, dsminBisection = 1e-7, nInversion = 4, tolBisectionEigenvalue= 1e-9)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
-	br, u1 = @time PALC.continuation(
+	br, u1 = @time BK.continuation(
 		F_sh, dF_sh,
 		deflationOp[1], par, (@lens _.l), optcont;
 		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
-		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
+		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> norm(x),
 		finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+		callbackN = cb,
 		normC = x -> norm(x, Inf))
 ###################################################################################################
 using IncompleteLU
-prec = ilu(L1 + I,τ=0.05)
+prec = ilu(L1 + I,τ=0.15)
 prec = lu(L1 + I)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = Nx*Ny, Pl = prec)
 
@@ -104,10 +105,47 @@ function dF_sh2(du, u, p)
 	return -L1 * du .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
 end
 
-sol_hexa, _, flag = @time PALC.newton(
+sol_hexa, _, flag = @time newton(
 		F_sh,
 		(u, p) -> (du -> dF_sh2(du, u, p)),
-		vec(sol0), parSH,
+		vec(sol0), par,
 		@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
+
+using ProgressMeter, LaTeXStrings
+Nd = 200; L = 0.9
+# sampling grid
+X = LinRange(-L,L, Nd); Y = LinRange(-L,L, Nd); P = LinRange(-0.0014,0.0014, Nd+1)
+
+# sample reduced equation on the grid for the first component
+V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
+Ind1 = findall( abs.(V1a) .<= 9e-4 * maximum(abs.(V1a)))
+# intersect with second component
+V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
+Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
+
+# get solutions
+resp = Float64[]; resx = Vector{Float64}[]; resnrm = Float64[]
+	@showprogress for k in Ind2
+		ii = Ind1[k]
+		push!(resp, P[ii[1]])
+		push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
+		push!(resx, [X[ii[2]], Y[ii[3]]])
+	end
+
+plot(
+	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
+	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
+
+
+res = BK.multicontinuation(jet..., br, br, 18, setproperties(opts; ds = -0.005, detectBifurcation =  0, plotEveryNsteps = 1, dsmax = 0.005, detectLoop =true);  nev = 30,
+			plot = true, verbosity = 3, usedeflation = true,
+			δp = 0.005,
+			tangentAlgo = BorderedPred(),
+			callbackN = cb,
+			# linearAlgo = MatrixBLS(),
+			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br;subplot=1)),
+			printSolution = (x, p) -> norm(x),
+			finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+			normC = x -> norm(x, Inf))

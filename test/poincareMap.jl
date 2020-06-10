@@ -106,9 +106,9 @@ println("--> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1000δ
 
 ####################################################################################################
-# comparison with PALC
-using PseudoArcLengthContinuation
-	const PALC = PseudoArcLengthContinuation
+# comparison with BK
+using BifurcationKit
+	const BK = BifurcationKit
 
 function FslMono!(f, x, p, t)
 	u = x[1:2]
@@ -118,14 +118,14 @@ function FslMono!(f, x, p, t)
 end
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
 
-probHPsh = PALC.PoincareShootingProblem(Fsl, par_sl,
+probHPsh = BK.PoincareShootingProblem(Fsl, par_sl,
 		prob, algsl,
 		# probMono, Rodas4P(autodiff=false),
 		normals, centers; abstol =1e-10, reltol=1e-10)
 
-@show PALC.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
+@show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 
 
 resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb; verbose = true)
-resDPPALC = PALC.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
-@test norminf(resDP - resDPPALC) < 1e-6
+resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
+@test norminf(resDP - resDPBK) < 1e-6

@@ -22,8 +22,8 @@ We start by writing the PDE
 
 ```julia
 using Revise
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+const BK = BifurcationKit
 
 f1(u, v) = u * u * v
 norminf = x -> norm(x, Inf)
@@ -146,7 +146,7 @@ d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 # we group the differentials together
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
-hopfpt = PALC.computeNormalForm(jet..., br, 1)
+hopfpt = BK.computeNormalForm(jet..., br, 1)
 ```
 and you should get
 
@@ -241,7 +241,7 @@ We note that there are several branch points (blue points) on the above diagram.
 Let us say that we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:
 
 ```julia
-br_po2, _ = PALC.continuationPOTrapBPFromPO(
+br_po2, _ = BK.continuationPOTrapBPFromPO(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
@@ -362,7 +362,7 @@ br_po, _ = continuation(
 	ampfactor = 1.2, δp = 0.01,
 	verbosity = 3,	plot = true,
 	printSolution = (x, p) -> x[end],
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)
 ```
 
@@ -394,7 +394,7 @@ br_po, u = continuation(
 	opts_po_cont, PoincareShootingProblem(Mt, par_bru, probsundials, Rodas4P());
 	ampfactor = 1.4, δp = 0.01,
 	verbosity = 3,	plot = true, printPeriod = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)
 ```	
 

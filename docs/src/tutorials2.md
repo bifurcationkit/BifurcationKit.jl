@@ -13,8 +13,8 @@ with Neumann boundary conditions. This full example is in the file `example/SH2d
 
 ```julia
 using DiffEqOperators, Setfield, Parameters
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays
+const BK = BifurcationKit
 
 # helper function to plot solution
 heatmapsol(x) = heatmap(reshape(x,Nx,Ny)',color=:viridis)
@@ -131,7 +131,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00
 	dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
-	br, u1 = @time PALC.continuation(F_sh, dF_sh,
+	br, u1 = @time BK.continuation(F_sh, dF_sh,
 		sol_hexa, par, (@lens _.l), optcont;		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),

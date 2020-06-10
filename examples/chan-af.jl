@@ -1,8 +1,8 @@
 using Revise
 using ApproxFun, LinearAlgebra, Parameters, Setfield
 
-using PseudoArcLengthContinuation, Plots
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, Plots
+const BK = BifurcationKit
 
 ####################################################################################################
 # specific methods for ApproxFun
@@ -64,7 +64,7 @@ const Δ = Derivative(sol.space, 2);
 par_af = (alpha = 3., beta = 0.01)
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
-	out, _, flag = @time PALC.newton(
+	out, _, flag = @time BK.newton(
 		F_chan, Jac_chan, sol, par_af, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 

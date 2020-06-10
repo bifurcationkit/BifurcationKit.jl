@@ -1,8 +1,8 @@
 using Revise
 using LinearAlgebra, Plots, Setfield, Parameters
 
-using PseudoArcLengthContinuation
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit
+const BK = BifurcationKit
 
 TY = Float64
 AF = Array{TY}
@@ -48,9 +48,9 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \
 
-# Making the linear operator a subtype of PALC.LinearSolver is handy as we will use it
+# Making the linear operator a subtype of BK.LinearSolver is handy as we will use it
 # in the Newton iterations.
-struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: PALC.AbstractLinearSolver
+struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractLinearSolver
 	tmp_real::Treal         # temporary
 	tmp_complex::Tcomp      # temporary
 	l1::Tl1
@@ -58,7 +58,7 @@ struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: PALC.AbstractLinearSolver
 	ifftplan::Tiplan
 end
 
-struct SHEigOp{Tsh <: SHLinearOp} <: PALC.AbstractEigenSolver
+struct SHEigOp{Tsh <: SHLinearOp} <: BK.AbstractEigenSolver
 	sh::Tsh
 end
 
@@ -126,8 +126,8 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 @time F_shfft(sol0, par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-opt_new = PALC.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
-	sol_hexa, hist, flag = @time PALC.newton(
+opt_new = BK.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
+	sol_hexa, hist, flag = @time BK.newton(
 				F_shfft, J_shfft,
 				AF(sol0), par,
 				opt_new, normN = norminf)
@@ -147,7 +147,7 @@ heatmapsol(sol_hexa)
 deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
-outdef, _, flag, _ = @time PALC.newton(
+outdef, _, flag, _ = @time BK.newton(
 				F_shfft, J_shfft,
 				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
 				par,
@@ -164,7 +164,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2
 	saveEigenvectors = false,
 	nev = 11 )
 
-	br, u1 = @time PALC.continuation(
+	br, u1 = @time BK.continuation(
 		F_shfft, J_shfft,
 		deflationOp.roots[2], par, (@lens _.l),
 		opts_cont, plot = true, verbosity = 2,

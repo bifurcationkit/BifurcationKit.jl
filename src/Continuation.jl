@@ -257,8 +257,7 @@ eltype(it::PALCIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplot
 function PALCIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
-					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS()
-					;
+					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS();
 					filename = "branch-" * string(Dates.now()),
 					tangentAlgo = SecantPred(),
 					plot = false,

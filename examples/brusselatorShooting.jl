@@ -1,6 +1,6 @@
 using Revise
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+	const BK = BifurcationKit
 
 f1(u, v) = u^2 * v
 norminf = x -> norm(x, Inf)
@@ -96,8 +96,8 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 			par_bru.β/par_bru.α .- 0.5 .* sin.(pi*xspace/par_bru.l))
 
 # eigls = EigArpack(1.1, :LM)
-# 	opt_newton = PALC.NewtonPar(eigsolver = eigls)
-# 	out, hist, flag = @time PALC.newton(
+# 	opt_newton = BK.NewtonPar(eigsolver = eigls)
+# 	out, hist, flag = @time BK.newton(
 # 		x ->  Fbru(x, par_bru),
 # 		x -> Jbru_sp(x, par_bru),
 # 		sol0, opt_newton, normN = norminf)
@@ -107,14 +107,14 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
 
-	br, _ = @time PALC.continuation(
+	br, _ = @time BK.continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = false,
 		printSolution = (x, p) -> x[n÷2], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
-	# hopfpt = PALC.HopfPoint(br, ind_hopf)
+	# hopfpt = BK.HopfPoint(br, ind_hopf)
 
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
@@ -123,7 +123,7 @@ ind_hopf = 1
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ####################################################################################################Continuation of Periodic Orbit
 M = 10
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
 #
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
@@ -156,7 +156,7 @@ orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.0)
 
-PALC.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
+BK.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 probSh = ShootingProblem(Fbru, par_hopf,
 	probsundials, Rodas4P(),
@@ -169,13 +169,13 @@ norminf(res)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
 	optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-	outpo ,_ = @time PALC.newton(probSh,
+	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+	outpo ,_ = @time BK.newton(probSh,
 			initpo, par_hopf, optn_po;
 			normN = norminf)
 	plot(initpo[1:end-1], label = "Initial guess")
 	plot!(outpo[1:end-1], label = "solution")
-	println("--> amplitude = ", PALC.amplitude(outpo, n, length(1:dM:M); ratio = 2))
+	println("--> amplitude = ", BK.amplitude(outpo, n, length(1:dM:M); ratio = 2))
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0)
 
@@ -191,7 +191,7 @@ br_po, _ , _ = @time continuation(probSh,
 		plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
-		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 		printSolution = (u, p) -> u[end], normC = norminf)
 
 ####################################################################################################
@@ -244,16 +244,16 @@ probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), norm
 hyper = probHPsh.section
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 	for ii=1:length(normals)
-		initpo_bar[:, ii] .= PALC.R(hyper, centers[ii], ii)
+		initpo_bar[:, ii] .= BK.R(hyper, centers[ii], ii)
 	end
 
-P = @time PALC.PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
+P = @time BK.PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
 	scatter(real.(P.eigenvalues), imag.(P.eigenvalues))
 		plot!(1 .+ cos.(LinRange(0,2pi,100)), sin.(LinRange(0,2pi,100)))
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
-	outpo_psh, _ = @time PALC.newton(
+	outpo_psh, _ = @time BK.newton(
 		probHPsh,
 		vec(initpo_bar), par_hopf, optn;
 		normN = norminf)
@@ -261,19 +261,19 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 50
 plot(outpo_psh, label = "Solution")
 	plot!(initpo_bar |> vec, label = "Initial guess")
 
-PALC.getPeriod(probHPsh, outpo_psh, par_hopf)
+BK.getPeriod(probHPsh, outpo_psh, par_hopf)
 
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
 	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.00051, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 1, plotEveryNsteps = 1)
 	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true, maxIter = 15)
 
-br_po, _ , _ = @time PALC.continuation(
+br_po, _ , _ = @time BK.continuation(
 	probHPsh,
 	outpo_psh, par_hopf, (@lens _.l),
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plot!(x; label="", kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label="", kwargs...),
 	# printSolution = (x, p) -> norminf(x),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
@@ -296,5 +296,5 @@ br_po, u = continuation(
 	verbosity = 3,	plot = true, printPeriod = true,
 	# finaliseSolution = (z, tau, step, contResult) -> (plot(z.u[1:end-1]) |> display;true),
 		# (Base.display(contResult.eig[end].eigenvals) ;true)},
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 	normC = norminf)

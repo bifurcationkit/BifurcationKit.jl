@@ -1,6 +1,6 @@
 # using Revise
-using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Setfield, Parameters
-const PALC = PseudoArcLengthContinuation
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, Parameters
+const BK = BifurcationKit
 
 f1(u, v) = u^2 * v
 norminf = x -> norm(x, Inf)
@@ -72,22 +72,22 @@ n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
-opt_newton = PALC.NewtonPar(tol = 1e-11, verbose = true)
-	out, hist, flag = @time PALC.newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
+opt_newton = BK.NewtonPar(tol = 1e-11, verbose = true)
+	out, hist, flag = @time BK.newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
 eigls = EigArpack(1.1, :LM)
-	opt_newton = PALC.NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(tol=1e-4, N = 2n), eigsolver = eigls)
-	out, hist, flag = @time PALC.newton(Fbru, Jbru_sp,
+	opt_newton = BK.NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(tol=1e-4, N = 2n), eigsolver = eigls)
+	out, hist, flag = @time BK.newton(Fbru, Jbru_sp,
 		sol0 .* (1 .+ 0.01rand(2n)), par_bru,
 		opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.0051, pMax = 1.8, theta = 0.01, detectBifurcation = 2, nev = 16)
-	br, u1 = @time PALC.continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, plot = false, printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
+	br, u1 = @time BK.continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, plot = false, printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
 #################################################################################################### Continuation of the Hopf Point using Dense method
 ind_hopf = 1
 # av = randn(Complex{Float64},2n); av = av./norm(av)
 # bv = randn(Complex{Float64},2n); bv = bv./norm(bv)
-hopfpt = PALC.HopfPoint(br, ind_hopf)
+hopfpt = BK.HopfPoint(br, ind_hopf)
 bifpt = br.bifpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
 					Fbru, Jbru_sp, (x, p) -> transpose(Jbru_sp(x, p)), nothing,
@@ -105,7 +105,7 @@ Vec2Bd(x) = BorderedArray(x[1:end-2], x[end-1:end])
 hopfpbVec(x, p) = Bd2Vec(hopfvariable(Vec2Bd(x),p))
 
 # finite differences Jacobian
-Jac_hopf_fdMA(u0, p) = PALC.finiteDifferences( u-> hopfpbVec(u, p), u0)
+Jac_hopf_fdMA(u0, p) = BK.finiteDifferences( u-> hopfpbVec(u, p), u0)
 # ``analytical'' jacobian
 Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0,param=p ,hopfpb=pb))
 
@@ -123,9 +123,9 @@ Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0,param=p ,h
 #
 # dot(res2, Atot*res1)
 #
-# v, σ1, _ = PALC.linearBorderedSolver(Jh + Complex(0, ω) * I, av, bv, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
+# v, σ1, _ = BK.linearBorderedSolver(Jh + Complex(0, ω) * I, av, bv, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
 #
-# w, σ2, _ = PALC.linearBorderedSolver(Jh' - Complex(0, ω) * I, bv, av, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
+# w, σ2, _ = BK.linearBorderedSolver(Jh' - Complex(0, ω) * I, bv, av, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
 #
 # res1[1:end-1]-v |> norm
 # res2[1:end-1]-w |> norm
@@ -166,7 +166,7 @@ rhs = rand(length(hopfpt))
 jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
 sol_fd = jac_hopf_fd \ rhs
 # create a linear solver
-hopfls = PALC.HopfLinearSolverMinAug()
+hopfls = BK.HopfLinearSolverMinAug()
 sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debug_ = true)
 
 # TODO TODO fix these two lines
@@ -208,7 +208,7 @@ outhopf, hist, flag = @time newton(
 
 outhopf, _, flag, _ = @time newton((u, p) -> hopfvariable(u, p),
 							(x, p) -> Jac_hopf_MA(x, p, hopfvariable),
-							hopfpt, par_bru, NewtonPar(verbose = true, linsolver = PALC.HopfLinearSolverMinAug()))
+							hopfpt, par_bru, NewtonPar(verbose = true, linsolver = BK.HopfLinearSolverMinAug()))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], " from ", hopfpt.p, "\n")
 
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
@@ -224,19 +224,19 @@ function d2F(x, p1, du1, du2)
 	return out
 end
 
-outhopf, hist, flag = @time PALC.newton(Fbru, Jbru_sp, br, 1, par_bru, (@lens _.l);
+outhopf, hist, flag = @time BK.newton(Fbru, Jbru_sp, br, 1, par_bru, (@lens _.l);
 		Jt = (x, p) -> transpose(Jbru_sp(x, p)),
 		d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
-br_hopf, u1_hopf = @time PALC.continuation(
+br_hopf, u1_hopf = @time BK.continuation(
 			Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 1, plot = false)
 
-br_hopf, u1_hopf = @time PALC.continuation(Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jt = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
+br_hopf, u1_hopf = @time BK.continuation(Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jt = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
-hopfpt = PALC.HopfPoint(br, ind_hopf)
+hopfpt = BK.HopfPoint(br, ind_hopf)
 
 l_hopf  = hopfpt.p[1]
 ωH		= hopfpt.p[2] |> abs
@@ -254,11 +254,11 @@ end
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 
 # test guess using function
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = PALC.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
 poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M)
 
-jac_PO_fd = PALC.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
+jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp =  poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
 # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
@@ -267,50 +267,50 @@ println("--> test jacobian expression for Periodic Orbit solve problem")
 
 # test various jacobians and methods
 jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
-PALC.getTimeDiff(poTrap, orbitguess_f)
-# PALC.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
-# PALC.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
+BK.getTimeDiff(poTrap, orbitguess_f)
+# BK.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
+# BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
-opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
-	outpo_f, _, flag = @time PALC.newton(
+opt_po = BK.NewtonPar(tol = 1e-8, verbose = true, maxIter = 150)
+	outpo_f, _, flag = @time BK.newton(
 		(x, p) ->  poTrap(x, p),
 		(x, p) ->  poTrap(Val(:JacFullSparse),x,p),
 		orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po)
 	println("--> T = ", outpo_f[end])
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f, n, M; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
-outpo_f, _, flag = @time PALC.newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO = :FullLU)
+outpo_f, _, flag = @time BK.newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO = :FullLU)
 
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
 # calcul des exposants de Floquet, extract full vector
-PALC.MonodromyQaDFD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
+BK.MonodromyQaDFD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # calcul des exposants de Floquet
-floquetES = PALC.FloquetQaDTrap(DefaultEig())
+floquetES = BK.FloquetQaDTrap(DefaultEig())
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
-	br_pok2, upo , _= @time PALC.continuation(
+	br_pok2, upo , _= @time BK.continuation(
 		poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :BorderedLU,
 		plot = false, verbosity = 0)
 
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
-opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10)
+opt_po = BK.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	# with deflation
-	outpo_f, hist, flag = @time PALC.newton(poTrap,
+	outpo_f, hist, flag = @time BK.newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linalgo = linalgo, normN = norminf)
 	# classic Newton-Krylov
-	outpo_f, hist, flag = @time PALC.newton(poTrap,
+	outpo_f, hist, flag = @time BK.newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linalgo= linalgo, normN = norminf)
 	# continuation
-	br_pok2, upo , _= @time PALC.continuation(poTrap,
+	br_pok2, upo , _= @time BK.continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; linearPO = linalgo, verbosity = 0,
 			plot = false, normC = norminf)
@@ -320,6 +320,6 @@ end
 eil = EigKrylovKit(x₀ = rand(2n))
 ls = GMRESKrylovKit()
 ls = DefaultLS()
-opt_po = PALC.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10, linsolver = ls, eigsolver = eil)
+opt_po = BK.NewtonPar(tol = 1e-8, verbose = true, maxIter = 10, linsolver = ls, eigsolver = eil)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 2)
 br_pok2, upo , _ = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :FullLU, normC = norminf, verbosity = 0)

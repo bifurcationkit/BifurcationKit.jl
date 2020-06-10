@@ -1,6 +1,6 @@
 # using Revise, Plots
-using Test, PseudoArcLengthContinuation, KrylovKit, LinearAlgebra, Setfield
-const PALC = PseudoArcLengthContinuation
+using Test, BifurcationKit, KrylovKit, LinearAlgebra, Setfield
+const BK = BifurcationKit
 
 # test for constrained problems
 
@@ -45,9 +45,9 @@ pb(vcat(sol, 3.1), par, vcat(sol, 3.1))
 # newtonBordered(pb, BorderedArray(sol, 3.1),  optnewbd)
 # newtonBordered(pb, vcat(sol, 3.1), optnewbd )
 #
-# # test of _newtonPALC
-# Jchan = (x0, p0) -> PALC.finiteDifferences(x -> F_chan(x, p0), x0)
-# PALC._newtonPALC( (x,p) -> F_chan(x, p), Jchan, BorderedArray(sol, 3.1), _tau, BorderedArray(sol, 3.1), ContinuationPar(newtonOptions = optnewbd), PALC.DotTheta())
+# # test of _newtonBK
+# Jchan = (x0, p0) -> BK.finiteDifferences(x -> F_chan(x, p0), x0)
+# BK._newtonBK( (x,p) -> F_chan(x, p), Jchan, BorderedArray(sol, 3.1), _tau, BorderedArray(sol, 3.1), ContinuationPar(newtonOptions = optnewbd), BK.DotTheta())
 #
 # # test of newton functional, with BorderedVector
 # prob = β -> BorderedProblem((x, p) -> F_chan(x, p, β), (x, p) -> g(x, p))
@@ -57,8 +57,8 @@ pb(vcat(sol, 3.1), par, vcat(sol, 3.1))
 # # problem with 2 constraints
 # g2 = (x, p) -> [g(x,p[1]), p[2] - 0.01]
 #
-# dpF = (x0, p0) -> PALC.finiteDifferences(p ->  F_chan(x0, p[1], p[2]), p0)
-# dpg = (x0, p0) -> PALC.finiteDifferences(p ->  g2(x0, p), p0)
+# dpF = (x0, p0) -> BK.finiteDifferences(p ->  F_chan(x0, p[1], p[2]), p0)
+# dpg = (x0, p0) -> BK.finiteDifferences(p ->  g2(x0, p), p0)
 #
 # nestedpb = BorderedProblem(F = (x, p) -> F_chan(x, p[1], p[2]), g = (x, p) -> g2(x, p), dpF = dpF, dpg = dpg, npar = 2)
 # z0nested = BorderedArray(sol, [3.1, 0.015])

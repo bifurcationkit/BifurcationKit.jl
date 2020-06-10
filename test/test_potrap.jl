@@ -1,6 +1,6 @@
 # using Revise
-using Test, PseudoArcLengthContinuation, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
-const PALC = PseudoArcLengthContinuation
+using Test, BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
+const BK = BifurcationKit
 
 n = 250*150
 M = 30
@@ -27,9 +27,9 @@ pbi = PeriodicOrbitTrapProblem(
 			pb.ϕ,
 			pb.xπ,
 			M ; isinplace = true)
-@test PALC.isInplace(pb) == false
-# @time PALC.POTrapFunctional(pb, res, orbitguess_f)
-# @time PALC.POTrapFunctional(pbi, res, orbitguess_f)
+@test BK.isInplace(pb) == false
+# @time BK.POTrapFunctional(pb, res, orbitguess_f)
+# @time BK.POTrapFunctional(pbi, res, orbitguess_f)
 res = @time pb(orbitguess_f, par)
 resg = @time pbg(orbitguess_f, par)
 resi = @time pbi(orbitguess_f, par)
@@ -42,19 +42,19 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 @test res == resi
 @test res == resg
 
-@time PALC.POTrapFunctional!(pbi, resi, orbitguess_f, par)
-@time PALC.POTrapFunctionalJac!(pbi, resi, orbitguess_f, par, orbitguess_f)
+@time BK.POTrapFunctional!(pbi, resi, orbitguess_f, par)
+@time BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 
-# @code_warntype PALC.POTrapFunctional!(pbi, resi, orbitguess_f)
+# @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
 # @btime pb($orbitguess_f) 					# 13.535 ms (188 allocations: 34.34 MiB)
 # @btime pbi($orbitguess_f) 					# 7.869 ms (128 allocations: 17.17 MiB)
 # @btime pb($orbitguess_f, $orbitguess_f) 	# 25.500 ms (373 allocations: 51.51 MiB)
 # @btime pbi($orbitguess_f, $orbitguess_f)  	# 12.595 ms (253 allocations: 17.18 MiB)
-# @btime PALC.POTrapFunctional!($pbi, $resi, $orbitguess_f) # 7.104 ms (126 allocations: 5.88 KiB)
-# @btime PALC.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $orbitguess_f) # 10.528 ms (251 allocations: 11.69 KiB)
+# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f) # 7.104 ms (126 allocations: 5.88 KiB)
+# @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $orbitguess_f) # 10.528 ms (251 allocations: 11.69 KiB)
 #
 #
 # using IterativeSolvers, LinearMaps
@@ -63,12 +63,12 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # gmres(Jmap, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap, orbitguess_f; verbose = false, maxiter = 10)
 #
-# Jmap! = LinearMap{Float64}((o, dv) -> PALC.POTrapFunctionalJac!(pbi, o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
+# Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pbi, o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 10)
 #
-# # @code_warntype PALC.POTrapFunctional!(pbi, resi, orbitguess_f)
-# # @profiler PALC.POTrapFunctionalJac!(pbi, resi, orbitguess_f, orbitguess_f)
+# # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
+# # @profiler BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, orbitguess_f)
 #
 # Jmap2! = LinearMap{Float64}((o, dv) -> pbi(o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap2!, orbitguess_f; verbose = false, maxiter = 1)
@@ -196,12 +196,12 @@ pbspti = PeriodicOrbitTrapProblem(
 			pbsp.xπ,
 			ones(9) ./ 10)
 
-PALC.getM(pbspti)
+BK.getM(pbspti)
 orbitguess_f = rand(2n*10+1)
-PALC.getAmplitude(pbspti, orbitguess_f, par)
-PALC.getMaximum(pbspti, orbitguess_f, par)
-PALC.getPeriod(pbspti, orbitguess_f, par)
-PALC.getTrajectory(pbspti, orbitguess_f, par)
+BK.getAmplitude(pbspti, orbitguess_f, par)
+BK.getMaximum(pbspti, orbitguess_f, par)
+BK.getPeriod(pbspti, orbitguess_f, par)
+BK.getTrajectory(pbspti, orbitguess_f, par)
 
 @test pbspti.xπ ≈ pbsp.xπ
 @test pbspti.ϕ ≈ pbsp.ϕ

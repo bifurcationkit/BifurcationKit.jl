@@ -40,13 +40,13 @@ which is pre-computed in the composite type `SHLinearOp `. Then, the effect of `
 ```julia
 using Revise
 using AbstractFFTs, FFTW, KrylovKit, Setfield, Parameters
-using PseudoArcLengthContinuation, LinearAlgebra, Plots
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots
+const BK = BifurcationKit
 
 # the following struct encodes the operator L1
-# Making the linear operator a subtype of PALC.AbstractLinearSolver is handy as it will be used
+# Making the linear operator a subtype of BK.AbstractLinearSolver is handy as it will be used
 # in the Newton iterations.
-struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: PALC.AbstractLinearSolver
+struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractLinearSolver
 	tmp_real::Treal         # temporary
 	tmp_complex::Tcomp      # temporary
 	l1::Tl1

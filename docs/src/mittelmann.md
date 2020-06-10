@@ -20,8 +20,8 @@ We start with some imports:
 ```julia
 using Revise
 using DiffEqOperators, ForwardDiff
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+const BK = BifurcationKit
 
 # define the sup norm
 norminf = x -> norm(x, Inf)
@@ -100,7 +100,7 @@ To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.
 eigls = EigArpack(0.5, :LM)
 
 # options for Newton solver
-opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
 # options for continuation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
@@ -115,7 +115,7 @@ At this stage, we note that the problem has a curve of homogenous (constant in s
 We can now call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
 
 ```julia
-br, _ = @time PALC.continuation(
+br, _ = @time BK.continuation(
 	Fmit, JFmit,
 	sol0, par_mit, (@lens _.λ), opts_br;
 	printSolution = (x, p) -> norm(x),
@@ -201,13 +201,13 @@ The second bifurcation point on the branch `br` of homogenous solutions has a 2d
 We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)
 
 ```julia
-bp2d = PALC.computeNormalForm(jet..., br, 2;  verbose=true)
+bp2d = BK.computeNormalForm(jet..., br, 2;  verbose=true)
 ```
 
 You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple branch point](@ref).
 
 ```julia
-julia> PALC.nf(bp2d)
+julia> BK.nf(bp2d)
 2-element Array{String,1}:
  " + (-73.897) * x1 ⋅ p + (-0.0012) ⋅ x1³ + (0.003) ⋅ x1 ⋅ x2²"
  " + (0.003) ⋅ x1² ⋅ x2 + (-73.897) * x2 ⋅ p + (-0.0012) ⋅ x2³"
@@ -299,7 +299,7 @@ This provides `length(deflationOp) = 5` solutions as there are some symmetries i
 We can continue this solution as follows in one direction
 
 ```julia
-brdef1, _ = @time PALC.continuation(
+brdef1, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
@@ -311,7 +311,7 @@ brdef1, _ = @time PALC.continuation(
 If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.bifpoint[2].param + 0.005`, we get 3 new solutions that we can continue
 
 ```julia
-brdef2, _ = @time PALC.continuation(
+brdef2, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);

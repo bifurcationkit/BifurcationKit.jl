@@ -1,6 +1,6 @@
 #using Revise, Test
-using PseudoArcLengthContinuation, LinearAlgebra, Setfield
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Setfield
+const BK = BifurcationKit
 
 function test_newton(x0)
 	Ty = eltype(x0)
@@ -8,8 +8,8 @@ function test_newton(x0)
 	F(x, p) = x.^3 .- 1
 	Jac(x, p) = diagm(0 => 3 .* x.^2)
 
-	opts = PALC.NewtonPar( tol = Ty(1e-8))
-	sol, hist, flag, _ = PALC.newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf))
+	opts = BK.NewtonPar( tol = Ty(1e-8))
+	sol, hist, flag, _ = BK.newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf))
 end
 ######################################################################
 # we test the regular newton algorithm
@@ -25,7 +25,7 @@ function test_newton_palc(x0, p0)
 	N = length(x0)
 
 	θ = Ty(0.2)
-	dotθ = PALC.DotTheta(dot)
+	dotθ = BK.DotTheta(dot)
 
 	F(x, p) = x.^3 .- p
 	Jac(x, p) = diagm(0 => 3 .* x.^2)
@@ -35,7 +35,7 @@ function test_newton_palc(x0, p0)
 	zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
 	optn = NewtonPar{Ty, DefaultLS, DefaultEig}()
 	optc = ContinuationPar{Ty, DefaultLS, DefaultEig}(newtonOptions = optn)
-	sol, hist, flag, _ = @time PALC.newtonPALC(F, Jac, p0, (@lens _), z0, τ0, zpred, Ty(0.02), θ, optc, dotθ)
+	sol, hist, flag, _ = @time BK.newtonPALC(F, Jac, p0, (@lens _), z0, τ0, zpred, Ty(0.02), θ, optc, dotθ)
 end
 
 sol, _, _, _ = test_newton_palc(ones(10) .+ rand(10) * 0.1, 1.)

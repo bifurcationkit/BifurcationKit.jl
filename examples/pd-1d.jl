@@ -1,8 +1,8 @@
 # example taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (August 8, 2012): 026201. https://doi.org/10.1103/PhysRevE.86.026201.
 using Revise
 	using DiffEqOperators, ForwardDiff, DifferentialEquations, Sundials
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 f(u, v, p) = p.η * (      u + p.a * v - p.C * u * v - u * v^2)
@@ -123,19 +123,19 @@ poTrap = p -> PeriodicOrbitTrapProblem(
 	M)
 
 poTrap(-0.9)(orbitguess_f) |> plot
-PALC.plotPeriodicPOTrap(orbitguess_f, N, M)
+BK.plotPeriodicPOTrap(orbitguess_f, N, M)
 
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
 
-outpo_f, _, flag = @time PALC.newton(
+outpo_f, _, flag = @time BK.newton(
 		poTrap(-0.9),
 		orbitguess_f, opt_po, :FullLU;
 		normN = norminf)
-	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.amplitude(outpo_f,2*N, M),"\n")
-	PALC.plotPeriodicPOTrap(outpo_f, N, M)
+	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f,2*N, M),"\n")
+	BK.plotPeriodicPOTrap(outpo_f, N, M)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
@@ -147,7 +147,7 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8,
 		plot = true,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
 		plotSolution = (x, p;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
-		printSolution = (u, p) -> PALC.maximumPOTrap(u, N, M; ratio = 2),
+		printSolution = (u, p) -> BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
 # branches = [br_po]
@@ -165,12 +165,12 @@ vec_pd = geteigenvector(eig,
 # orbitguess_f = br_po.bifpoint[1].u .+ 0.1 * real.(vec_pd)
 # orbitguess_f[end] *= 2
 #
-# outpo_pd, _, _ = @time PALC.newton(
+# outpo_pd, _, _ = @time BK.newton(
 # 		poTrap(br_po.bifpoint[1].param),
 # 		orbitguess_f, opt_po, :FullLU;
 # 		normN = norminf)
-# 	printstyled(color=:red, "--> T = ", outpo_pd[end], ", amplitude = ", PALC.amplitude(outpo_pd, 2N, M),"\n")
-# 	PALC.plotPeriodicPOTrap(outpo_pd, N, M)
+# 	printstyled(color=:red, "--> T = ", outpo_pd[end], ", amplitude = ", BK.amplitude(outpo_pd, 2N, M),"\n")
+# 	BK.plotPeriodicPOTrap(outpo_pd, N, M)
 ####################################################################################################
 # shooting
 par_br_hopf = @set par_br.C = -0.86
@@ -184,7 +184,7 @@ orbitsection = Array(sol[:,[end]])
 
 initpo = vcat(vec(orbitsection), 3.)
 
-PALC.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
+BK.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 
 probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
@@ -195,11 +195,11 @@ probSh(initpo, par_br_hopf)
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh, _, flag = @time newton(probSh, initpo, par_br_hopf, optn;
 		callbackN = (x, f, J, res, iteration; kwargs...) -> (@show x[end];true),
 		normN = norminf)
-	flag && printstyled(color=:red, "--> T = ", outposh[end], ", amplitude = ", PALC.getAmplitude(probSh, outposh, par_br_hopf; ratio = 2),"\n")
+	flag && printstyled(color=:red, "--> T = ", outposh[end], ", amplitude = ", BK.getAmplitude(probSh, outposh, par_br_hopf; ratio = 2),"\n")
 
 plot(initpo[1:end-1], label = "Init guess")
 	plot!(outposh[1:end-1], label = "sol")
@@ -211,8 +211,8 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.
 		verbosity = 3,	plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
-		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
+		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
@@ -238,16 +238,16 @@ solpd.t[end-100]
 
 orbitsectionpd = Array(solpd[:,end-100])
 initpo_pd = vcat(vec(orbitsectionpd), 6.2)
-PALC.plotPeriodicShooting(initpo_pd[1:end-1], 1);title!("")
+BK.plotPeriodicShooting(initpo_pd[1:end-1], 1);title!("")
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
-	# deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh_pd, _, flag = @time newton(probSh, initpo, par_br_pd, optn;
 		callbackN = (x, f, J, res, iteration; kwargs...) -> (@show x[end];true),
 		normN = norminf)
-	flag && printstyled(color=:red, "--> T = ", outposh_pd[end], ", amplitude = ", PALC.getAmplitude(probSh(@set par_br.C = -0.86), outposh_pd; ratio = 2),"\n")
+	flag && printstyled(color=:red, "--> T = ", outposh_pd[end], ", amplitude = ", BK.getAmplitude(probSh(@set par_br.C = -0.86), outposh_pd; ratio = 2),"\n")
 
 	plot(initpo[1:end-1], label = "Init guess")
 	plot!(outposh_pd[1:end-1], label = "sol")
@@ -259,7 +259,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->
 			(Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
-		plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
+		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 
 plot(vcat(br_po_sh_pd, br,), label = "");title!("")

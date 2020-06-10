@@ -1,8 +1,8 @@
 # this test is designed to test the ability of the package to use a state space that is not an AbstractArray.
 # using Revise
 using Test, Random, Setfield
-using PseudoArcLengthContinuation
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit
+const BK = BifurcationKit
 ####################################################################################################
 # We start with a simple Fold problem
 using LinearAlgebra
@@ -10,16 +10,16 @@ function F0(x::Vector, r)
 	out = r .+  x .- x.^3
 end
 
-opt_newton0 = PALC.NewtonPar(tol = 1e-11, verbose = true)
-	out0, hist, flag = @time PALC.newton(F0, [0.8], 1., opt_newton0)
+opt_newton0 = BK.NewtonPar(tol = 1e-11, verbose = true)
+	out0, hist, flag = @time BK.newton(F0, [0.8], 1., opt_newton0)
 
-opts_br0 = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.021, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, detectFold = true)
+opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.021, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, detectFold = true)
 
-	br0, u1 = @time PALC.continuation(F0, out0, 1.0, (@lens _), opts_br0, printSolution = (x, p) -> x[1])
+	br0, u1 = @time BK.continuation(F0, out0, 1.0, (@lens _), opts_br0, printSolution = (x, p) -> x[1])
 
 # plotBranch(br0);title!("a")
 
-outfold, hist, flag = @time PALC.newton(
+outfold, hist, flag = @time BK.newton(
 	F0,
 	(x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 	br0, 2, 1.0, (@lens _);
@@ -48,7 +48,7 @@ function (J::Jacobian)(dx)
 	BorderedArray( (J.s .- 3 .* ((J.x).u).^2) .* dx.u, dx.p)
 end
 
-struct linsolveBd <: PALC.AbstractBorderedLinearSolver end
+struct linsolveBd <: BK.AbstractBorderedLinearSolver end
 
 function (l::linsolveBd)(J, dx)
 	x = J.x
@@ -59,12 +59,12 @@ end
 
 sol = BorderedArray([0.8], 0.0)
 
-opt_newton = PALC.NewtonPar(tol = 1e-11, verbose = true, linsolver = linsolveBd())
-out, hist, flag = @time PALC.newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
+opt_newton = BK.NewtonPar(tol = 1e-11, verbose = true, linsolver = linsolveBd())
+out, hist, flag = @time BK.newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
 
-opts_br = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
+opts_br = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
-	br, u1 = @time PALC.continuation(
+	br, u1 = @time BK.continuation(
 		(x, r) -> Fb(x, r),
 		(x, r) -> Jacobian(x, r[1], r[2]),
 		out,  (1., 1.), (@lens _[1]),
@@ -81,7 +81,7 @@ outfold, hist, flag = @time newton(
 	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.foldpoint[1][3],"\n")
 
-outfoldco, hist, flag = @time PALC.continuation(
+outfoldco, hist, flag = @time BK.continuation(
 	(x, r) -> Fb(x, r),
 	(x, r) -> Jacobian(x, r[1], r[2]),
 	br, 1, (1.0, 1.), (@lens _[1]), (@lens _[2]), opts_br;
@@ -92,7 +92,7 @@ outfoldco, hist, flag = @time PALC.continuation(
 printstyled(color=:green, "--> test with Newton deflation 1")
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zero(sol)])
 soldef0 = BorderedArray([0.1], 0.0)
-soldef1, _, _ = @time PALC.newton(
+soldef1, _, _ = @time BK.newton(
 	(x, r) -> Fb(x, r),
 	(x, r) -> Jacobian(x, r[1], r[2]),
 	soldef0, (0., 1.),
@@ -102,7 +102,7 @@ push!(deflationOp, soldef1)
 
 Random.seed!(1231)
 printstyled(color=:green, "--> test with Newton deflation 2")
-soldef2, _, _ = @time PALC.newton(
+soldef2, _, _ = @time BK.newton(
 	(x, r) -> Fb(x, r),
 	(x, r) -> Jacobian(x, r[1], r[2]),
 	rmul!(soldef0,rand()),  (0., 1.),
@@ -148,7 +148,7 @@ function (J::JacobianR)(dx)
 	return out
 end
 
-struct linsolveBd_r <: PALC.AbstractBorderedLinearSolver end
+struct linsolveBd_r <: BK.AbstractBorderedLinearSolver end
 
 function (l::linsolveBd_r)(J, dx)
 	x = J.x
@@ -159,42 +159,42 @@ function (l::linsolveBd_r)(J, dx)
 	out, true, 1
 end
 
-opt_newton0 = PALC.NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_r())
-	out0, hist, flag = @time PALC.newton(
+opt_newton0 = BK.NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_r())
+	out0, hist, flag = @time BK.newton(
 		Fr, (x, p) -> JacobianR(x, p[1]),
 		RecursiveVec([1 .+ 0.1*rand(10) for _=1:2]), (0., 1.),
 		opt_newton0)
 
-opts_br0 = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
+opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
 
-br0, u1 = @time PALC.continuation(
+br0, u1 = @time BK.continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	plot = false,
 	printSolution = (x,p) -> x[1][1])
 
-br0, u1 = @time PALC.continuation(
+br0, u1 = @time BK.continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	tangentAlgo = BorderedPred(),
 	plot = false,
 	printSolution = (x,p) -> x[1][1])
 
-outfold, hist, flag = @time PALC.newton(
+outfold, hist, flag = @time BK.newton(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1, (0.9, 1.), (@lens _[1]); #index of the fold point
 	Jt = (x, r) -> JacobianR(x, r[1]),
 	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.foldpoint[1][3],"\n")
 
-outfoldco, hist, flag = @time PALC.continuation(
+outfoldco, hist, flag = @time BK.continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(0.9, 1.), (@lens _[1]), (@lens _[2]), opts_br0;
 	Jt = (x, s) -> JacobianR(x, s[1]),
 	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = SecantPred(), plot = false)
 
-outfoldco, hist, flag = @time PALC.continuation(
+outfoldco, hist, flag = @time BK.continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(0.9, 1.), (@lens _[1]), (@lens _[2]), opts_br0;
 	Jt = (x, s) -> JacobianR(x, s[1]),
@@ -204,7 +204,7 @@ outfoldco, hist, flag = @time PALC.continuation(
 # try with newtonDeflation
 printstyled(color=:green, "--> test with Newton deflation 1")
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [(out0)])
-soldef1, _, _ = @time PALC.newton(
+soldef1, _, _ = @time BK.newton(
 	Fr, (x, p) -> JacobianR(x, 0.),
 	out0, (0., 1.0),
 	opt_newton0, deflationOp)

@@ -1,7 +1,7 @@
 using Revise
 	using DiffEqOperators, ForwardDiff, DifferentialEquations
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 
@@ -105,10 +105,10 @@ Nx = 41*1
 ####################################################################################################
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
-opt_newton = PALC.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = BK.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 2, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
 
-	br, u1 = @time PALC.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+	br, u1 = @time BK.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 
 plot(br)
 ####################################################################################################
@@ -161,7 +161,7 @@ br_po, upo , _= @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens
 		plot = true,
 		# callbackN = cb_ss,
 		plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-		printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+		printSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 
 ####################################################################################################
 # automatic branch switching
@@ -187,10 +187,10 @@ br_po, _ = continuation(
 	# probSh;
 	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
-	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", PALC.amplitude(x, n, M; ratio = 2));true),
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2),
+	printSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2),
 	normC = norminf)
 
 #ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;

@@ -1,6 +1,5 @@
 using Revise
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, Setfield, Parameters
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, Setfield, Parameters
 
 N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2

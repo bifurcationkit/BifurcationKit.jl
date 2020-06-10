@@ -14,8 +14,8 @@ where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the same b
 ```julia
 using Revise
 	using DiffEqOperators, DifferentialEquations
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 
@@ -129,10 +129,10 @@ We first recompute the Hopf points as in the previous tutorial:
 
 ```julia
 eigls = EigArpack(1.0, :LM)
-opt_newton = PALC.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 2, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
 
-br, _ = @time PALC.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
 We then compute the differentials of the vector field, this is needed by the branch switching method because it first computes the Hopf normal form. Thankfully, this is little work using Automatic Differentiation:
@@ -221,5 +221,5 @@ br_po, _ , _= @time continuation(probSh,
 	verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-	printSolution = (u, p) -> PALC.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+	printSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 ```

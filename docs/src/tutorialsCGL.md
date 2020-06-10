@@ -25,8 +25,8 @@ with Dirichlet boundary conditions. We discretize the square $\Omega = (0,L_x)\t
 ```julia
 using Revise
 using DiffEqOperators, ForwardDiff
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 
@@ -151,7 +151,7 @@ d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
 d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 
-hopfpt = PALC.computeNormalForm(jet..., br, 1)
+hopfpt = BK.computeNormalForm(jet..., br, 1)
 ```
 
 We can look at the coefficients of the normal form
@@ -242,8 +242,8 @@ outpo_f, _, flag = @time newton(poTrap,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),"\n")
-PALC.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),"\n")
+BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 ```
 
 which gives 
@@ -292,7 +292,7 @@ outpo_f, _, flag = @time newton(poTrapMF,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 	(@set opt_po.linsolver = ls), 
 	:FullMatrixFree; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", PALC.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),"\n")
 ```
 
 which gives 
@@ -466,8 +466,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 
 br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	printSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 This gives the following bifurcation diagram:
@@ -497,8 +497,8 @@ br_po, _ , _= @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> PALC.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	printSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 ## Continuation of Fold of periodic orbits
@@ -528,7 +528,7 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restar
 We can then use our functional to call `newtonFold` unlike for a regular function (see Tutorial 1). Indeed, we specify the change the parameters too much to rely on a generic algorithm.
 
 ```julia
-outfold, hist, flag = @time PALC.newtonFold(
+outfold, hist, flag = @time BK.newtonFold(
 	(x, p) -> poTrap(x, p),
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 	br_po , indfold, #index of the fold point
@@ -562,7 +562,7 @@ Finally, one can perform continuation of the Fold bifurcation point as follows
 ```julia
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
-outfoldco, hist, flag = @time PALC.continuationFold(
+outfoldco, hist, flag = @time BK.continuationFold(
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
 	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
 	br_po, indfold, par_cgl.c5, optcontfold;
@@ -643,7 +643,7 @@ end
 Finally, for the methods in `PeriodicOrbitTrapProblem` to work, we need to redefine the following method. Indeed, we disable the use of scalar on the GPU to increase the speed.
 
 ```julia
-import PseudoArcLengthContinuation: extractPeriodFDTrap
+import BifurcationKit: extractPeriodFDTrap
 extractPeriodFDTrap(x::CuArray) = x[end:end]
 ```
 

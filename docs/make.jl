@@ -1,4 +1,4 @@
-using Documenter, PseudoArcLengthContinuation
+using Documenter, BifurcationKit
 
 makedocs(doctest = false,
 	sitename = "Pseudo Arc Length Continuation in Julia",
@@ -38,5 +38,5 @@ makedocs(doctest = false,
 	)
 
 deploydocs(
-	repo = "github.com/rveltz/PseudoArcLengthContinuation.jl.git",
+	repo = "github.com/rveltz/BifurcationKit.jl.git",
 )

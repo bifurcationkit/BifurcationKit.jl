@@ -1,18 +1,18 @@
 # using Revise
-using Test, PseudoArcLengthContinuation, LinearAlgebra, SparseArrays, Arpack
-const PALC = PseudoArcLengthContinuation
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack
+const BK = BifurcationKit
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
 z_pred = BorderedArray(rand(10),1.0)
 tau_pred = BorderedArray(rand(10),2.0)
-PALC.minus!(z_pred, tau_pred)
-PALC.eltype(z_pred)
+BK.minus!(z_pred, tau_pred)
+BK.eltype(z_pred)
 
 axpy!(2. /3, tau_pred, z_pred)
 axpby!(2. /3, tau_pred, 1.0, z_pred)
 dot(z_pred, tau_pred)
 
-dottheta = PALC.DotTheta((x,y)->dot(x,y)/length(x))
+dottheta = BK.DotTheta((x,y)->dot(x,y)/length(x))
 
 dottheta(z_pred, 0.1)
 dottheta(z_pred, tau_pred, 0.1)
@@ -24,8 +24,8 @@ zero(z2);zero(z_pred)
 @test length(z_pred) == 11
 
 copyto!(z,z2)
-PALC.minus(z.u,z2.u);PALC.minus!(z.u,z2.u)
-PALC.minus(1.,2.);PALC.minus!(1.,2.)
+BK.minus(z.u,z2.u);BK.minus!(z.u,z2.u)
+BK.minus(1.,2.);BK.minus!(1.,2.)
 rmul!(z_pred, 1.0)
 rmul!(z_pred, true)
 mul!(z_pred, tau_pred, 1.0)
@@ -44,34 +44,34 @@ J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
 sol_explicit = J0 \ rhs
 
-linBdsolver = PALC.BorderingBLS(DefaultLS())
+linBdsolver = BK.BorderingBLS(DefaultLS())
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
 
 ls = GMRESIterativeSolvers(tol = 1e-9, N = length(rhs)-1)
-linBdsolver = PALC.BorderingBLS(ls)
+linBdsolver = BK.BorderingBLS(ls)
 sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd2u
 @test sol_explicit[end] ≈ sol_bd2p
 
 ls = GMRESKrylovKit(dim = length(rhs)-1)
-linBdsolver = PALC.BorderingBLS(ls)
+linBdsolver = BK.BorderingBLS(ls)
 sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd2u
 @test sol_explicit[end] ≈ sol_bd2p
 
-linBdsolver = PALC.MatrixBLS(ls)
+linBdsolver = BK.MatrixBLS(ls)
 sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
-linBdsolver = PALC.MatrixFreeBLS(ls)
+linBdsolver = BK.MatrixFreeBLS(ls)
 sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
-linBdsolver = PALC.MatrixFreeBLS(GMRESIterativeSolvers(tol = 1e-9, N = size(J0, 1)))
+linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(tol = 1e-9, N = size(J0, 1)))
 sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd4u
 @test sol_explicit[end] ≈ sol_bd4p
@@ -80,10 +80,10 @@ sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 xiu = rand()
 xip = rand()
 
-linBdsolver = PALC.BorderingBLS(DefaultLS())
+linBdsolver = BK.BorderingBLS(DefaultLS())
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], xiu, xip)
 
-linBdsolver = PALC.MatrixFreeBLS(ls)
+linBdsolver = BK.MatrixFreeBLS(ls)
 sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end], xiu, xip)
 
 @test sol_bd1u ≈ sol_bd2u
@@ -163,27 +163,27 @@ sol1,_ = ls0(J0, rhs; a₀ = 1., a₁ = -h)
 
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
-# eil = PALC.EigIterativeSolvers(tol = 1e-9)
+# eil = BK.EigIterativeSolvers(tol = 1e-9)
 out = Arpack.eigs(J0, nev = 20, which = :LR)
 
-eil = PALC.EigKrylovKit(tol = 1e-9)
+eil = BK.EigKrylovKit(tol = 1e-9)
 outkk = eil(J0, 20)
 geteigenvector(eil, outkk[2], 2)
 
-eil = PALC.EigKrylovKit(tol = 1e-9, x₀ = x0)
+eil = BK.EigKrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
 geteigenvector(eil, outkkmf[2], 2)
 
-eil = PALC.EigArpack()
+eil = BK.EigArpack()
 outdefault = eil(J0, 20)
 @test out[1] ≈ outdefault[1]
 
-eil = PALC.EigArnoldiMethod(;x₀ = x0)
+eil = BK.EigArnoldiMethod(;x₀ = x0)
 outam = eil(J0, 20)
 outam = eil(Jmf, 20)
 geteigenvector(eil, outam[2], 2)
 
-eil = PALC.EigArnoldiMethod(;x₀ = x0, sigma = 1.)
+eil = BK.EigArnoldiMethod(;x₀ = x0, sigma = 1.)
 outam = eil(J0, 20)
 outam = eil(Jmf, 20)
 geteigenvector(eil, outam[2], 2)

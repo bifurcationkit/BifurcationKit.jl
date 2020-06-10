@@ -1,5 +1,5 @@
-name = "PseudoArcLengthContinuation"
-uuid = "e5973c80-1f2a-11e9-1bfb-0bf1dfb8dbf8"
+name = "BifurcationKit"
+uuid = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
 authors = ["Romain Veltz <rveltz@salk.edu>"]
 version = "0.1.0"
 

@@ -1,7 +1,7 @@
 using Revise
 	using DiffEqOperators, ForwardDiff
-	using PseudoArcLengthContinuation, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
@@ -70,15 +70,15 @@ Nx = 100
 	sol0 = 0*ones(Nx, Ny) |> vec
 ####################################################################################################
 eigls = EigArpack(0.5, :LM)
-	opt_newton = PALC.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time PALC.newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
+	opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+	out, hist, flag = @time BK.newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(out)
 
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 101, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-3)
 
-	br, _ = @time PALC.continuation(
+	br, _ = @time BK.continuation(
 		Fmit, JFmit,
 		sol0, par_mit, (@lens _.λ), opts_br;
 		printSolution = (x, p) -> norm(x),
@@ -115,9 +115,9 @@ plot([br,br1,br2],plotfold=false)
 
 ####################################################################################################
 # analyse 2d bifurcation point
-bp2d = @time PALC.computeNormalForm(jet..., br, 2;  verbose=true)
+bp2d = @time BK.computeNormalForm(jet..., br, 2;  verbose=true)
 
-PALC.nf(bp2d)[2] |> println
+BK.nf(bp2d)[2] |> println
 
 using ProgressMeter
 Nd = 200
@@ -186,7 +186,7 @@ l = @layout grid(3,2)
 	end
 	title!("")
 
-brdef1, _ = @time PALC.continuation(
+brdef1, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	# bp2d([0.6,0.6], -0.01), br.bifpoint[2].param - 0.005,
@@ -198,7 +198,7 @@ brdef1, _ = @time PALC.continuation(
 plot([br,br1,br2, brdef1],plotfold=false)
 
 
-brdef2, _ = @time PALC.continuation(
+brdef2, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);

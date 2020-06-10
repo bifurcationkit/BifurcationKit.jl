@@ -24,8 +24,8 @@ with Neumann boundary conditions. We start by encoding the model
 ```julia
 ~~using Revise
 using DiffEqOperators, ForwardDiff, DifferentialEquations, SparseArrays
-using PseudoArcLengthContinuation, LinearAlgebra, Plots, Setfield
-const PALC = PseudoArcLengthContinuation
+using BifurcationKit, LinearAlgebra, Plots, Setfield
+const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 f(u, v, p) = p.η * (      u + p.a * v - p.C * u * v - u * v^2)
@@ -139,7 +139,7 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 # Newton-Krylov solver
 out_po_sh, _, flag = @time newton(probSh , initpo, par_br_hopf, optn; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", out_po_sh[end], ", amplitude = ", PALC.getAmplitude(probSh, out_po_sh, par_br_hopf; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", out_po_sh[end], ", amplitude = ", BK.getAmplitude(probSh, out_po_sh, par_br_hopf; ratio = 2),"\n")
 ```
 
 which gives
@@ -156,8 +156,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -
 	nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
 br_po_sh, _ , _ = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
 	plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-	printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 ```
 
 We plot the result using `plot(vcat(br_po_sh, br), label = "")`:
@@ -188,7 +188,7 @@ For educational purposes, we show the newton outputs:
 
 ```julia
 out_po_sh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd , optn; normN = norminf)
-flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ", PALC.getAmplitude(probSh, out_po_sh_pd, par_br_pd; ratio = 2),"\n")
+flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ", BK.getAmplitude(probSh, out_po_sh_pd, par_br_pd; ratio = 2),"\n")
 ```
 which gives
 
@@ -215,8 +215,8 @@ We also compute the branch of periodic orbits using the following command:
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = -1.8, maxSteps = 100, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 1)
 br_po_sh_pd, _ , _ = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
 	opts_po_cont; verbosity = 2, plot = true,
-	plotSolution = (x, p; kwargs...) -> PALC.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-	printSolution = (u, p) -> PALC.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 ```
 
 and plot it using `plot([br_po_sh, br, br_po_sh_pd], label = "")`:

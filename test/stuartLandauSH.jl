@@ -1,7 +1,7 @@
 # using Revise, Plots
 using OrdinaryDiffEq, ForwardDiff, Test
-	using PseudoArcLengthContinuation, LinearAlgebra, Parameters, Setfield
-	const PALC = PseudoArcLengthContinuation
+	using BifurcationKit, LinearAlgebra, Parameters, Setfield
+	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 
@@ -73,24 +73,24 @@ res = @time _pb(initpo, par_hopf, initpo)
 _pb2 = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1]]; rtol = 1e-9)
 res = @time _pb2(initpo, par_hopf)
 res = @time _pb2(initpo, par_hopf, initpo)
-PALC.isSimple(_pb2)
+BK.isSimple(_pb2)
 ####################################################################################################
 # we test this using Newton - Continuation
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo))
 optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20, linsolver = ls)
-deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zeros(3)])
-outpo, _ = @time PALC.newton(_pb,
+deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zeros(3)])
+outpo, _ = @time BK.newton(_pb,
 	initpo, par_hopf,
 	optn,
 	normN = norminf)
 
-PALC.getPeriod(_pb, outpo, par_hopf)
-PALC.getAmplitude(_pb, outpo, par_hopf)
-PALC.getMaximum(_pb, outpo, par_hopf)
-PALC.getTrajectory(_pb, outpo, par_hopf)
+BK.getPeriod(_pb, outpo, par_hopf)
+BK.getAmplitude(_pb, outpo, par_hopf)
+BK.getMaximum(_pb, outpo, par_hopf)
+BK.getTrajectory(_pb, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 2, nev = 2, newtonOptions = @set optn.tol = 1e-7)#
-	br_pok2, upo , _= @time PALC.continuation(
+	br_pok2, upo , _= @time BK.continuation(
 		_pb,
 		outpo, par_hopf, (@lens _.r),
 		opts_po_cont;
@@ -129,9 +129,9 @@ probPsh = PoincareShootingProblem(Fsl, par_hopf,
 
 hyper = probPsh.section
 
-initpo_bar = PALC.R(hyper, [0,0.4], 1)
+initpo_bar = BK.R(hyper, [0,0.4], 1)
 
-PALC.E(hyper, [1.0,], 1)
+BK.E(hyper, [1.0,], 1)
 initpo_bar = [0.4]
 
 probPsh(initpo_bar, par_hopf)
@@ -139,16 +139,16 @@ probPsh(initpo_bar, par_hopf)
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
-	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
-	outpo, _ = @time PALC.newton(probPsh,
+	deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
+	outpo, _ = @time BK.newton(probPsh,
 			initpo_bar, par_hopf,
 			optn; normN = norminf)
-	println("--> Point on the orbit = ", PALC.E(hyper, outpo, 1))
+	println("--> Point on the orbit = ", BK.E(hyper, outpo, 1))
 
-PALC.getPeriod(probPsh, outpo, par_hopf)
-PALC.getAmplitude(probPsh, outpo, par_hopf)
-PALC.getMaximum(probPsh, outpo, par_hopf)
-PALC.getTrajectory(probPsh, outpo, par_hopf)
+BK.getPeriod(probPsh, outpo, par_hopf)
+BK.getAmplitude(probPsh, outpo, par_hopf)
+BK.getMaximum(probPsh, outpo, par_hopf)
+BK.getTrajectory(probPsh, outpo, par_hopf)
 
 
 probPsh = PoincareShootingProblem(Fsl, par_hopf,
@@ -157,7 +157,7 @@ probPsh = PoincareShootingProblem(Fsl, par_hopf,
 		normals, centers; rtol = 1e-8)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn;tol = 1e-9, eigsolver = eil), detectBifurcation = 1)
-	br_pok2, upo , _= @time PALC.continuation(
+	br_pok2, upo , _= @time BK.continuation(
 		probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
@@ -174,9 +174,9 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probPsh = PALC.PoincareShootingProblem(Fsl, par_hopf, prob, Tsit5(), normals, centers; rtol = 1e-6)
+probPsh = BK.PoincareShootingProblem(Fsl, par_hopf, prob, Tsit5(), normals, centers; rtol = 1e-6)
 # version with analytical jacobian
-probPsh2 = PALC.PoincareShootingProblem(Fsl, par_hopf, prob, Tsit5(), normals, centers; rtol = 1e-6, δ = 0)
+probPsh2 = BK.PoincareShootingProblem(Fsl, par_hopf, prob, Tsit5(), normals, centers; rtol = 1e-6, δ = 0)
 
 hyper = probPsh.section
 
@@ -185,15 +185,15 @@ probPsh(initpo_bar, par_hopf; verbose = true)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls, eigsolver = eil)
-	deflationOp = PALC.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
-	outpo, _ = @time PALC.newton(probPsh2, initpo_bar, par_hopf, optn; normN = norminf)
-	outpo, _ = @time PALC.newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
-println("--> Point on the orbit = ", PALC.E(hyper, [outpo[1]], 1), PALC.E(hyper, [outpo[2]], 2))
+	deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x, y), 1.0, [zero(initpo_bar)])
+	outpo, _ = @time BK.newton(probPsh2, initpo_bar, par_hopf, optn; normN = norminf)
+	outpo, _ = @time BK.newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
+println("--> Point on the orbit = ", BK.E(hyper, [outpo[1]], 1), BK.E(hyper, [outpo[2]], 2))
 
 getPeriod(probPsh, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 1, nev = 2)
-	br_pok2, upo , _= @time PALC.continuation(probPsh, outpo, par_hopf, (@lens _.r),
+	br_pok2, upo , _= @time BK.continuation(probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
 		plot = false,
@@ -208,22 +208,22 @@ initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
 probPsh = PoincareShootingProblem(Fsl, par_hopf, prob, Tsit5(), normals, centers; rtol = 1e-6)
 
 hyper = probPsh.section
-initpo_bar = reduce(vcat, [PALC.R(hyper, initpo[ii], ii) for ii in eachindex(centers)])
+initpo_bar = reduce(vcat, [BK.R(hyper, initpo[ii], ii) for ii in eachindex(centers)])
 
 probPsh(initpo_bar, par_hopf; verbose = true)
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 10, verbose = false)
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 50, linsolver = ls, eigsolver = eil)
-	outpo, _ = @time PALC.newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
+	outpo, _ = @time BK.newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
 
 for ii=1:length(normals)
-	@show PALC.E(hyper, [outpo[ii]], ii)
+	@show BK.E(hyper, [outpo[ii]], ii)
 end
 
 getPeriod(probPsh, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn; tol = 1e-9), detectBifurcation = 1)
-	br_hpsh, upo , _= @time PALC.continuation(probPsh, outpo, par_hopf, (@lens _.r),
+	br_hpsh, upo , _= @time BK.continuation(probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0, plot = false,
 		# plotSolution = (x, p;kwargs...) -> plot!(x, subplot=3),
 		printSolution = (u, p) -> norm(u), normC = norminf)
