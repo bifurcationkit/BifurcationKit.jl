@@ -115,7 +115,7 @@ We continue the trivial equilibrium to find the Hopf points
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060,
 	# specific options for precise localization of Hopf points
 	nInversion = 6, tolBisectionEigenvalue = 1e-4)
@@ -205,7 +205,7 @@ We start by providing a linear solver and some options for the continuation to w
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
 	plotEveryNsteps = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 ```
 
 ```julia
@@ -304,7 +304,7 @@ sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200)
 
 br, _ = @time continuation(Fbru, Jbru_sp,
@@ -386,7 +386,7 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0051, pMax = 2.5, maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 2, plotEveryNsteps = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0051, pMax = 2.5, maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 3, plotEveryNsteps = 2)
 
 br_po, u = continuation(
 	jet...,	br, 1,

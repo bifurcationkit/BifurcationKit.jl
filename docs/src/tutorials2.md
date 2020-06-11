@@ -120,14 +120,14 @@ The reason is that the jacobian operator is not very well conditioned unlike its
 eig = EigArpack(0.1, :LM)
 ```
 
-If we want to compute the bifurcation points along the branches, we have to tell the solver by setting `detectBifurcation = 1`. However, this won't be very precise and each bifurcation point will be located at best at the step size precision. We can use bisection to locate this points more precisely using the option `detectBifurcation = 2` (see [Detection of bifurcation points](@ref) for more information).
+If we want to compute the bifurcation points along the branches, we have to tell the solver by setting `detectBifurcation = 2`. However, this won't be very precise and each bifurcation point will be located at best at the step size precision. We can use bisection to locate this points more precisely using the option `detectBifurcation = 3` (see [Detection of bifurcation points](@ref) for more information).
 
 We are now ready to compute the branches:
 
 ```julia
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00, pMin = -1.0,
 	newtonOptions = setproperties(optnewton; tol = 1e-9, maxIter = 15), maxSteps = 125,
-	detectBifurcation = 2, nev = 40, detectFold = false, 
+	detectBifurcation = 3, nev = 40, detectFold = false, 
 	dsminBisection =1e-7, saveSolEveryNsteps = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 

@@ -104,7 +104,7 @@ opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter
 
 # options for continuation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	detectBifurcation = 3, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
 	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 ```	 
 Note that we put the option `detectBifurcation = 2` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
@@ -302,7 +302,7 @@ We can continue this solution as follows in one direction
 brdef1, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
-	setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
+	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
@@ -314,7 +314,7 @@ If we repeat the above loop but before the branch point by using `@set par_mit.�
 brdef2, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
-	setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);
+	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)

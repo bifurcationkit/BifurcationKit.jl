@@ -118,7 +118,7 @@ We continue the trivial equilibrium to find the Hopf points
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, _ = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -319,7 +319,7 @@ A basic method for computing Floquet cofficients based on the eigenvalues of the
 
 ```Julia
 opt_po = @set opt_po.eigsolver = DefaultEig()
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryNsteps = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 2)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryNsteps = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 3)
 br_po, _ , _= @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont; verbosity = 2, plot = true,
@@ -384,7 +384,7 @@ sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 1, nev = 21, plotEveryNsteps = 50, 
+	detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 br, _ = @time continuation(Fbru, Jbru_sp,
@@ -593,7 +593,7 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
 # continuation options
 opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, 
 	pMax = 2.5, maxSteps = 500, nev = 10, 
-	precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 3)
+	precisionStability = 1e-5, detectBifurcation = 3, plotEveryNsteps = 3)
 opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = 
 	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
 

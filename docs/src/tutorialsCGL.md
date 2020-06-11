@@ -128,7 +128,7 @@ and we continue it to find the Hopf bifurcation points. We use a Shift-Invert ei
 # Shift-Invert eigensolver
 eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 2, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 1060)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
 br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
