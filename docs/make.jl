@@ -1,7 +1,7 @@
 using Documenter, BifurcationKit
 
 makedocs(doctest = false,
-	sitename = "Pseudo Arc Length Continuation in Julia",
+	sitename = "Bifurcation Analysis in Julia",
 	format = Documenter.HTML(collapselevel = 1),
 	# format = DocumenterLaTeX.LaTeX(),
 	authors = "Romain Veltz",

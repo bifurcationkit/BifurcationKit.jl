@@ -11,3 +11,20 @@ All notable changes to this project will be documented in this file.
 
 - The options `computeEigenvalue` in `ContinuationPar` has been removed. It is now controlled with `detectBifurcation` now.
 
+## [0.0.1] - 2020-5-2
+
+
+### Added
+
+- automatic branch switching from simple Hopf points 
+- automatic normal form computation for any kernel dimension
+
+
+## [0.0.1] - 2020-4-27
+
+
+### Added
+
+- automatic branch switching from simple branch points (equilibrium)
+- automatic normal form computation 
+
