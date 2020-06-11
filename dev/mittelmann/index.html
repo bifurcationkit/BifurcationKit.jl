@@ -62,7 +62,7 @@ opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter
 
 # options for continuation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	detectBifurcation = 3, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
 	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)</code></pre><p>Note that we put the option <code>detectBifurcation = 2</code> to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.</p><h2 id="Branch-of-homogenous-solutions-1"><a class="docs-heading-anchor" href="#Branch-of-homogenous-solutions-1">Branch of homogenous solutions</a><a class="docs-heading-anchor-permalink" href="#Branch-of-homogenous-solutions-1" title="Permalink"></a></h2><p>At this stage, we note that the problem has a curve of homogenous (constant in space) solutions <span>$u_h$</span> solving <span>$N(\lambda, u_h)=0$</span>. We shall compute this branch now.</p><p>We can now call <code>continuation</code> with the initial guess <code>sol0</code> which is homogenous, thereby generating homogenous solutions:</p><pre><code class="language-julia">br, _ = @time BK.continuation(
 	Fmit, JFmit,
 	sol0, par_mit, (@lens _.λ), opts_br;
@@ -136,13 +136,13 @@ for ii=1:size(ve, 2)
 	end</code></pre><p>This provides <code>length(deflationOp) = 5</code> solutions as there are some symmetries in the problem. For example <code>plotsol(deflationOp[5])</code> gives</p><p><img src="../mittlemann5.png" alt/></p><p>We can continue this solution as follows in one direction</p><pre><code class="language-julia">brdef1, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
-	setproperties(opts_br;ds = -0.001, detectBifurcation =2, dsmax = 0.01, maxSteps = 500);
+	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -&gt; norm(x),
 	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p>If we repeat the above loop but before the branch point by using <code>@set par_mit.λ = br.bifpoint[2].param + 0.005</code>, we get 3 new solutions that we can continue</p><pre><code class="language-julia">brdef2, _ = @time BK.continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
-	setproperties(opts_br;ds = 0.001, detectBifurcation = 2, dsmax = 0.01);
+	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -&gt; norm(x),
-	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p>thereby providing the following bifurcation diagram with <code>plot([br,br1,br2,brdef1, brdef2],plotfold=false, putbifptlegend = false)</code></p><p><img src="../mittlemann6.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 11 June 2020 15:38">Thursday 11 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p>thereby providing the following bifurcation diagram with <code>plot([br,br1,br2,brdef1, brdef2],plotfold=false, putbifptlegend = false)</code></p><p><img src="../mittlemann6.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 11 June 2020 17:52">Thursday 11 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

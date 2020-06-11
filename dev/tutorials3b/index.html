@@ -66,7 +66,7 @@ end</code></pre><div class="admonition is-success"><header class="admonition-hea
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))</code></pre><p>For the eigensolver, we use a Shift-Invert algorithm (see <a href="../linearsolver/#Eigen-solvers-1">Eigen solvers</a>)</p><pre><code class="language-julia">eigls = EigArpack(1.1, :LM)</code></pre><p>We continue the trivial equilibrium to find the Hopf points</p><pre><code class="language-julia">opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, _ = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -138,7 +138,7 @@ br_po, _ , _= @time continuation(poTrap,
 	plotSolution = (x, p;kwargs...) -&gt; heatmap!(reshape(x[1:end-1], 2*n, M)&#39;; ylabel=&quot;time&quot;, color=:viridis, kwargs...), 
 	normC = norminf)</code></pre><p>to obtain the period of the orbit as function of <code>l</code></p><p><img src="../bru-po-cont.png" alt/></p><h2 id="Deflation-for-periodic-orbit-problems-1"><a class="docs-heading-anchor" href="#Deflation-for-periodic-orbit-problems-1">Deflation for periodic orbit problems</a><a class="docs-heading-anchor-permalink" href="#Deflation-for-periodic-orbit-problems-1" title="Permalink"></a></h2><p>Looking for periodic orbits branching of bifurcation points, it is very useful to use <code>newton</code> algorithm with deflation. We thus define a deflation operator (see previous example)</p><pre><code class="language-Julia">deflationOp = DeflationOperator(2.0, (x,y) -&gt; dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])</code></pre><p>which allows to find periodic orbits different from <code>orbitguess_f</code>. Note that the <code>dot</code> product removes the last component, <em>i.e.</em> the period of the cycle is not considered during this particular deflation. We can now use </p><pre><code class="language-Julia">outpo_f, hist, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp, :BorderedLU; normN = norminf)</code></pre><h2 id="Floquet-coefficients-1"><a class="docs-heading-anchor" href="#Floquet-coefficients-1">Floquet coefficients</a><a class="docs-heading-anchor-permalink" href="#Floquet-coefficients-1" title="Permalink"></a></h2><p>A basic method for computing Floquet cofficients based on the eigenvalues of the monodromy operator is available (see <a href="../library/#BifurcationKit.FloquetQaDTrap"><code>FloquetQaDTrap</code></a>). It is precise enough to locate bifurcations. Their computation is triggered like in the case of a regular call to <code>continuation</code>:</p><pre><code class="language-Julia">opt_po = @set opt_po.eigsolver = DefaultEig()
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryNsteps = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 2)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryNsteps = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 3)
 br_po, _ , _= @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont; verbosity = 2, plot = true,
@@ -177,7 +177,7 @@ sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 1, nev = 21, plotEveryNsteps = 50, 
+	detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 br, _ = @time continuation(Fbru, Jbru_sp,
@@ -303,7 +303,7 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
 # continuation options
 opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, 
 	pMax = 2.5, maxSteps = 500, nev = 10, 
-	precisionStability = 1e-5, detectBifurcation = 2, plotEveryNsteps = 3)
+	precisionStability = 1e-5, detectBifurcation = 3, plotEveryNsteps = 3)
 opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = 
 	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
 
@@ -320,4 +320,4 @@ Bifurcation points:
 -   2,      ns point around p ≈ 1.76774516, step =  27, idx =  28, ind_bif =   3 [converged], δ = ( 2,  2)
 -   3,      ns point around p ≈ 1.85809384, step =  29, idx =  30, ind_bif =   5 [converged], δ = ( 2,  2)
 -   4,      bp point around p ≈ 1.87009173, step =  30, idx =  31, ind_bif =   5 [converged], δ = (-1,  0)
--   5,      bp point around p ≈ 2.47577299, step =  39, idx =  40, ind_bif =   5 [converged], δ = ( 1,  0)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 11 June 2020 15:38">Thursday 11 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+-   5,      bp point around p ≈ 2.47577299, step =  39, idx =  40, ind_bif =   5 [converged], δ = ( 1,  0)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 11 June 2020 17:52">Thursday 11 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
