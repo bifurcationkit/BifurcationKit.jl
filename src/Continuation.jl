@@ -4,7 +4,7 @@ import Base: show, length		# simplified display method for ContRes
 """
 	options = ContinuationPar(dsmin = 1e-4,...)
 
-Returns a variable containing parameters to affect the `continuation` algorithm when solving `F(x,p) = 0`.
+Returns a variable containing parameters to affect the `continuation` algorithm used to solve `F(x,p) = 0`.
 
 # Arguments
 - `dsmin, dsmax` are the minimum, maximum arclength allowed value. It controls the density of points in the computed branch of solutions.
