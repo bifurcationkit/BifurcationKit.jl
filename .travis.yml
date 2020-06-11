@@ -9,7 +9,6 @@ notifications:
   email: false
 jobs:
   allow_failures:
-    - os: linux
     - julia: nightly
   include:
     - stage: "Documentation"
