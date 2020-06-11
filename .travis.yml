@@ -9,7 +9,7 @@ notifications:
   email: false
 jobs:
   allow_failures:
-	- os: osx
+    - os: osx
     - julia: nightly
   include:
     - stage: "Documentation"
