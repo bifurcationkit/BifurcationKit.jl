@@ -1,7 +1,7 @@
-site_name:        PseudoArcLengthContinuation.jl
-repo_url:         https://github.com/rveltz/PseudoArcLengthContinuation.jl
-edit_uri:         https://github.com/rveltz/PseudoArcLengthContinuation.jl/blob/master/docs/src/index.md
-site_description: Pseudo Arc Length Continuation in Julia
+site_name:        BifurcationKit.jl
+repo_url:         https://github.com/rveltz/BifurcationKit.jl
+edit_uri:         https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/index.md
+site_description: Bifurcation Analysis in Julia
 site_author:      rveltz
 
 theme: readthedocs
