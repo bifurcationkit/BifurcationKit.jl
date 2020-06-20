@@ -263,6 +263,7 @@ mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: Bra
 end
 
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
+	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
 	# dimension of the kernel
 	N = length(bp.ζ)
 	# for the output

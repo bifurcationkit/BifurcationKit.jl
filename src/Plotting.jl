@@ -129,24 +129,24 @@ end
 
 function filterBifurcations(bifpt)
 	# this function filters Fold points and Branch points which are located at the same/previous/next point
-	res = [(type = :none, idx = 1, param = 1., printsol = 1.)]
+	res = [(type = :none, idx = 1, param = 1., printsol = 1., status = :guess)]
 	ii = 1
 	while ii <= length(bifpt) - 1
 		if (abs(bifpt[ii].idx - bifpt[ii+1].idx) <= 1) && bifpt[ii].type ∈ [:fold, :bp]
 			if (bifpt[ii].type == :fold && bifpt[ii].type == :bp) ||
 				(bifpt[ii].type == :bp && bifpt[ii].type == :fold)
-				push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol) )
+				push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
 			else
-				push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol) )
-				push!(res, (type = bifpt[ii+1].type, idx = bifpt[ii+1].idx, param = bifpt[ii+1].param, printsol = bifpt[ii+1].printsol) )
+				push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
+				push!(res, (type = bifpt[ii+1].type, idx = bifpt[ii+1].idx, param = bifpt[ii+1].param, printsol = bifpt[ii+1].printsol,status = bifpt[ii].status) )
 			end
 			ii += 2
 		else
-			push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol) )
+			push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol,status = bifpt[ii].status) )
 			ii += 1
 		end
 	end
-	0<ii<=length(bifpt) &&	push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol) )
+	0<ii<=length(bifpt) &&	push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol,status = bifpt[ii].status) )
 
 	# for p in (res[2:end])
 	# 	println(p)

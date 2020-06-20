@@ -24,7 +24,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 
 	if kerneldim(br, ind_bif) > 1
 		@info "kernel dimension = $(kerneldim(br, ind_bif))"
-		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, kwargs...)
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, kwargs...)
 	end
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false

@@ -78,7 +78,7 @@ BK.isSimple(_pb2)
 # we test this using Newton - Continuation
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo))
 optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20, linsolver = ls)
-deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zeros(3)])
+deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zeros(3)])
 outpo, _ = @time BK.newton(_pb,
 	initpo, par_hopf,
 	optn,
@@ -98,7 +98,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 		verbosity = 0,
 		plot = false,
 		# plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; kwargs...),
-		printSolution = (u, p) -> norm(u[1:2]), normC = norminf)
+		printSolution = (u, p) -> norm(u[1:2]),
+		normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
 # test automatic branch switching
@@ -113,6 +114,7 @@ br_pok2, _ = continuation(jet...,br,1, opts_po_cont, ShootingProblem(1, par_hopf
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
+opts_po_contMF = @set opts_po_cont.detectBifurcation=0
 br_pok2, _ = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
 ####################################################################################################
 # Single Poincaré Shooting with hyperplane parametrization
