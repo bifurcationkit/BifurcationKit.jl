@@ -3,13 +3,21 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.1] - 2020-6-10
-
-- change the name of the package
+## [0.0.1] - 2020-6-20
 
 ### Deprecated
 
-- The options `computeEigenvalue` in `ContinuationPar` has been removed. It is now controlled with `detectBifurcation` now.
+- Rename option `ContinuationPar`: `saveSolEveryNsteps` --> `saveSolEveryStep`
+- Rename option `ContinuationPar`: `saveEigEveryNsteps` --> `saveEigEveryStep`
+- Rename option `ContinuationPar`: `plotEveryNsteps` --> `plotEveryStep` 
+
+## [0.0.1] - 2020-6-10
+
+- change the name of the package into `BifurcationKit.jl`
+
+### Deprecated
+
+- The options `computeEigenvalue` in `ContinuationPar` has been removed. It is now controlled with `detectBifurcation`.
 
 ## [0.0.1] - 2020-5-2
 
