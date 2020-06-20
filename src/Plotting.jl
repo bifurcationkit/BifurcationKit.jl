@@ -2,7 +2,7 @@ using RecipesBase
 
 @recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-	axisDict = Dict(:p => 1, :sol => 1, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
+	axisDict = Dict(:p => 1, :sol => 2, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	if typeof(vars) <: Tuple && (typeof(vars[1]) == Symbol && typeof(vars[2]) == Symbol)
 		ind1 = axisDict[vars[1]]
