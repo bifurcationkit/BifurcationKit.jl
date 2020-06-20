@@ -26,6 +26,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 Documenter = "0.24.3"
+KrylovKit = "<=0.4.2"
 RecipesBase = "1.0.0"
 
 [extras]

@@ -162,5 +162,3 @@ function (lbs::MatrixFreeBLS{S})(J, 		dR,
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return extractVector(sol), extractParameter(sol), cv, it
 end
-####################################################################################################
-# Nested algorithm for solving the bordered linear system

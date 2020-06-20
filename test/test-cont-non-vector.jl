@@ -10,10 +10,10 @@ function F0(x::Vector, r)
 	out = r .+  x .- x.^3
 end
 
-opt_newton0 = BK.NewtonPar(tol = 1e-11, verbose = true)
+opt_newton0 = BK.NewtonPar(tol = 1e-11, verbose = false)
 	out0, hist, flag = @time BK.newton(F0, [0.8], 1., opt_newton0)
 
-opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.021, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, detectFold = true)
+opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.021, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
 	br0, u1 = @time BK.continuation(F0, out0, 1.0, (@lens _), opts_br0, printSolution = (x, p) -> x[1])
 
@@ -59,7 +59,7 @@ end
 
 sol = BorderedArray([0.8], 0.0)
 
-opt_newton = BK.NewtonPar(tol = 1e-11, verbose = true, linsolver = linsolveBd())
+opt_newton = BK.NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
 out, hist, flag = @time BK.newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
 
 opts_br = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
@@ -162,7 +162,7 @@ end
 opt_newton0 = BK.NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_r())
 	out0, hist, flag = @time BK.newton(
 		Fr, (x, p) -> JacobianR(x, p[1]),
-		RecursiveVec([1 .+ 0.1*rand(10) for _=1:2]), (0., 1.),
+		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),
 		opt_newton0)
 
 opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
