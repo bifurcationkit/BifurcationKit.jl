@@ -108,7 +108,7 @@ $(TYPEDEF)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
@@ -195,7 +195,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	b3 = dot(b3v, ζstar)
 	verbose && println("--> b3/6 = ", b3/6)
 
-	if abs(a) < 1e-5
+	if abs(a) < tolFold
 		type = 100abs(b2/2) < abs(b3/6) ? :Pitchfork : :Transcritical
 	else
 		type = :ProbablySaddleNode
@@ -272,6 +272,8 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	nf = bp.nf
 	# coefficient p
 	out = p .* nf.a
+	# factor to account for factorials
+	factor = 1.0
 
 	@inbounds for ii in 1:N
 		# coefficient x*p
@@ -281,11 +283,20 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 
 			for kk in 1:N
 				# coefficients of x^2
-				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk]
+				factor = jj == kk ? 0.5 : 1.0
+				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk] * factor
 
 				for ll in 1:N
 					# coefficients of x^3
-					out[ii] += nf.b3[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll]
+					_power = length(unique((jj,kk,ll)))
+					if _power == 1
+						factor = 1/6.
+					elseif _power == 2
+						factor = 1/2.
+					else
+						factor = 1.0
+					end
+					out[ii] += nf.b3[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll] * factor
 				end
 			end
 		end
