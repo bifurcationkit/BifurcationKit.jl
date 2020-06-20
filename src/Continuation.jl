@@ -413,7 +413,6 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.param_lens)
 	ds = it.contParams.ds
-	theta = it.contParams.theta
 	T = eltype(it)
 
 	verbose && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
@@ -435,10 +434,16 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = $(p0 + ds/η), initial step (bis)")
+	return iterate(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
+end
+
+function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
+	theta = it.contParams.theta
+	ds = it.contParams.ds
 	# this is the last (first) point on the branch
 	z_old   = BorderedArray(copyto!(similar(u0), u0), p0)
 	# this is a predictor for the next point on the branch, we could have used z_old as well
-	z_pred	= BorderedArray(copyto!(similar(u_pred), u_pred), p0 + ds / η)
+	z_pred	= BorderedArray(copyto!(similar(u1), u1), p1)
 	tau  = copy(z_pred)
 
 	# compute the tangents
@@ -537,6 +542,9 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
 			if contParams.detectFold;
 				foldetected = locateFold!(contRes, it, state)
+				if foldetected && contParams.detectLoop
+					state.stopcontinuation = detectLoop(contRes, nothing)
+				end
 			end
 
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
@@ -606,23 +614,9 @@ function continuation(it::PALCIterable)
 	return continuation!(it, state, contRes)
 end
 
-function continuation(Fhandle, Jhandle,
-		x0, par, lens::Lens,
-		contParams::ContinuationPar,
-		linearAlgo::AbstractBorderedLinearSolver;
-		tangentAlgo = SecantPred(),
-		plot = false,
-		plotSolution = (x, p; kwargs...) -> nothing,
-		printSolution = (x, p) -> norm(x),
-		normC = norm,
-		dotPALC = (x,y) -> dot(x,y) / length(x),
-		finaliseSolution = (z, tau, step, contResult) -> true,
-		callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
-		filename = "branch-" * string(Dates.now()),
-		verbosity = 0)
-
-	it = PALCIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo;
-						tangentAlgo = tangentAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dotPALC = dotPALC, finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar,
+		linearAlgo::AbstractBorderedLinearSolver; kwargs...)
+	it = PALCIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
 	return continuation(it)
 end
 
@@ -705,26 +699,13 @@ Let us discuss here more about the norm and dot product. First, the option `norm
 
 As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disavantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`. Further tuning is performed by using `doArcLengthScaling=true` in `ContinuationPar`. This adjusts internally ``\\theta`` so that the relative contributions of ``x`` and ``p`` are balanced in the constraint ``N``.
 """
-function continuation(Fhandle, Jhandle,
-					x0, par, lens::Lens,
-					contParams::ContinuationPar{T, S, E};
-					tangentAlgo = SecantPred(),
-					linearAlgo  = BorderingBLS(),
-					plot = false,
-					printSolution = (x, p) -> norm(x),
-					normC = norm,
-					dotPALC = (x,y) -> dot(x, y) / length(x),
-					plotSolution = (x, p; kwargs...) -> nothing,
-					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
-					filename = "branch-" * string(Dates.now()),
-					verbosity = 0) where {T <: Real, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar;
+					linearAlgo = BorderingBLS(), kwargs...)
 
 	# Create a bordered linear solver using the newton linear solver provided by the user
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
 
-	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; tangentAlgo = tangentAlgo, plot = plot, printSolution = printSolution, normC = normC, dotPALC = dotPALC, plotSolution = plotSolution, finaliseSolution = finaliseSolution, callbackN = callbackN, filename = filename, verbosity = verbosity)
-
+	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; kwargs...)
 end
 
 continuation(Fhandle, x0, par, lens::Lens, contParams::ContinuationPar; kwargs...) = continuation(Fhandle, (x, p) -> finiteDifferences(u -> Fhandle(u, p), x), x0, par, lens, contParams; kwargs...)
