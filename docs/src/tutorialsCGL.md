@@ -128,7 +128,7 @@ and we continue it to find the Hopf bifurcation points. We use a Shift-Invert ei
 # Shift-Invert eigensolver
 eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 1060)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
 br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
@@ -207,7 +207,7 @@ We can use this (family) problem `poTrap` with `newton` on our periodic orbit gu
     It uses too much memory 
     
     ```julia
-    opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, 	 maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()))
+    opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, 	 maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()))
     br_po, upo , _= @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_po_cont)
     ```	
 
@@ -460,7 +460,7 @@ We can now perform continuation of the newly found periodic orbit and compute th
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 
 # parameters for the continuation
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), 
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), 
 	nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 
 br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
@@ -689,7 +689,7 @@ The computing time is `6.914367 seconds (2.94 M allocations: 130.348 MiB, 1.10% 
 You can also perform continuation, here is a simple example:
 
 ```julia
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds= 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
 br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;

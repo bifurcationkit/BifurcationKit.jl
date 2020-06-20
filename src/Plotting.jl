@@ -65,6 +65,7 @@ end
 
 @recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+	if length(brs) == 0; return; end
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
 	for (id,res) in enumerate(brs)
 		@series begin

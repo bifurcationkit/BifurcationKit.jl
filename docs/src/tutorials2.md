@@ -128,7 +128,7 @@ We are now ready to compute the branches:
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00, pMin = -1.0,
 	newtonOptions = setproperties(optnewton; tol = 1e-9, maxIter = 15), maxSteps = 125,
 	detectBifurcation = 3, nev = 40, detectFold = false, 
-	dsminBisection =1e-7, saveSolEveryNsteps = 4)
+	dsminBisection =1e-7, saveSolEveryStep = 4)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
 	br, u1 = @time BK.continuation(F_sh, dF_sh,

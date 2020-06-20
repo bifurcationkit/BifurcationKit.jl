@@ -85,7 +85,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 
 
 ## Requested methods for Custom State
-Needless to say, if you use regulars arrays, you don't need to worry about what follows.
+Needless to say, if you use regular arrays, you don't need to worry about what follows.
 
 We make the same requirements than `KrylovKit.jl`. Hence, we refer to its [docs](https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1) for more information. We additionally require the following methods to be available:
 

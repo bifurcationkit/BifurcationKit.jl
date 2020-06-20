@@ -90,7 +90,7 @@ solc0 = vcat(u0, u0)
 eigls = EigArpack(0.5, :LM)
 opt_newton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9)
 opts_br = ContinuationPar(dsmax = 0.04, ds = -0.01, pMin = -1.8,
-	detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, newtonOptions = opt_newton, maxSteps = 400)
+	detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 400)
 
 br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
 	plot = true, verbosity = 3,

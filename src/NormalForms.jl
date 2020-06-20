@@ -110,7 +110,7 @@ Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian St
 """
 function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
 	bifpt = br.bifpoint[ind_bif]
-	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel."
+	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
 	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
@@ -163,7 +163,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
 
-	@assert abs(dot(ζ, ζstar)) > 1e-12 "We got $(abs(dot(ζ, ζstar))). Perhaps, you can increase nev"
+	@assert abs(dot(ζ, ζstar)) > 1e-10 "We got ζ⋅ζstar = $((dot(ζ, ζstar))). This dot product should not be zero. Perhaps, you can increase nev which is currently $nev."
 	ζstar ./= dot(ζ, ζstar)
 
 	# differentials and projector on Range(L), there are real valued
@@ -205,7 +205,8 @@ end
 
 function predictor(bp::SimpleBranchPoint, ds::T; verbose = false, ampfactor = T(1)) where T
 	if bp.type == :ProbablySaddleNode
-		@error "It seems the point is a Saddle-Node bifurcation. Continuing anyway."
+		@error "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
+		return nothing
 	end
 	nf = bp.nf
 	a, b1, b2, b3 = nf
@@ -739,16 +740,15 @@ Automatic branch switching at branch points based on a computation of the normal
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
+	if kerneldim(br, ind_bif) > 1
+		@info "kernel dimension = $(kerneldim(br, ind_bif))"
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, kwargs...)
+	end
+
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
-
-	# detect bifurcation point type
-	if br.bifpoint[ind_bif].type == :hopf
-		@error "You need to chose an algorithm for computing the periodic orbit either a Shooting one or one based on Finite differences"
-		bifpoint = hopfNF(F, dF, d2F, d3F, br, ind_bif, par, optionsCont.newtonOptions ; Jt = Jt, δ = δ, nev = nev, verbose = verbose, Teigvec = Teigvec)
-		return bifpoint
-	end
+	@assert br.bifpoint[ind_bif].type == :bp "Error! This bifurcation type is not handled.\n Branch point from $(br.bifpoint[ind_bif].type)"
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp
@@ -759,6 +759,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
+	if isnothing(pred); return nothing, nothing; end
 
 	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
@@ -766,9 +767,9 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		verbose && println("\n----> Compute point on the current branch with nonlinear deflation...")
 		optn = optionsCont.newtonOptions
 		bifpt = br.bifpoint[ind_bif]
-		# find the bifurcated branch using deflation
+		# find the bifurcated branch using nonlinear deflation
 		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), optn; kwargs...)[1]
-		pred.x .= solbif
+		copyto!(pred.x, solbif)
 
 	end
 

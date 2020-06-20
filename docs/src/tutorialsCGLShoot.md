@@ -155,7 +155,7 @@ We define the linear solvers to be use by the (Matrix-Free) shooting method
 ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryNsteps = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)
 ```
 
 as

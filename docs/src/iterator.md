@@ -55,7 +55,7 @@ Jac_m = (x, p) -> diagm(0 => 1  .- x.^k)
 
 
 # parameters for the continuation
-opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryNsteps = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = true))
+opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = true))
 
 # we define an iterator to hold the continuation routine
 iter = BK.PALCIterable(F, Jac_m, [0.8], 1., (@lens _), opts; verbosity = 2)
@@ -80,4 +80,4 @@ and you should see:
 
 ## Additional information
 
-If you want to customize the iterator to your needs, perhaps the best source of inspiration is the code of the function `continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)` where the iterator at its fullest. You will see how the eigen-elements and the stability are computed, how bifurcations are detected and how results are saved.
+If you want to customize the iterator to your needs, perhaps the best source of inspiration is the code of the function `continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)` where the iterator is used at its fullest. You will see how the eigen-elements and the stability are computed, how bifurcations are detected and how results are saved.

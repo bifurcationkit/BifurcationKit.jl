@@ -1,7 +1,7 @@
 # Brusselator 1d (advanced user)
 
 ```@contents
-Pages = ["tutorials3.md"]
+Pages = ["tutorials3b.md"]
 Depth = 3
 ```
 

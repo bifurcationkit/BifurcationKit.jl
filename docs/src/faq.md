@@ -29,7 +29,7 @@ You can use the callback `finaliseSolution` but the best way is probably to use 
 
 ## How do I dissociate the computation of eigenvalues from the jacobian that I passed?
 
-Sometimes, for example when implementing boundary conditions, you pass a jacobian `J` but the eigenvalues, and the bifurcation points are not simply related to `J`. One way to do bypass this issue is to define a new eigensolver `<: AbstractEigenSolver` and pass it to `NewtonPar` field `eigsolver`. This is done for example in `example/SH2d-fronts-cuda.jl`.
+Sometimes, for example when implementing boundary conditions, you pass a jacobian `J` but the eigenvalues, and the bifurcation points are not simply related to `J`. One way to bypass this issue is to define a new eigensolver `<: AbstractEigenSolver` and pass it to the `NewtonPar` field `eigsolver`. This is done for example in `example/SH2d-fronts-cuda.jl`.
 
 ## How can I print the eigenvalues during `continuation`?
 
@@ -42,7 +42,7 @@ finaliseSolution = (z, tau, step, contResult) ->
 
 ## How can I reject a Newton Step?
 
-You can reject a newton step by passing to `continuation` the arguement `callbackN` 
+You can reject a newton step by passing to `continuation` the argument `callbackN` 
 
 ```julia
 function mycallback(x, f, J, res, iteration, itlinear, options; kwargs...)

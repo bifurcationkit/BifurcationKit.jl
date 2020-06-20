@@ -14,8 +14,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pM
 
 	br, _ = @time continuation(
 		Fbp, [0.1, 0.1], par, (@lens _.μ),
-		printSolution = (x, p) -> x[1],
-		opts_br; plot = false, verbosity = 0, normC = norminf)
+		opts_br; plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> x[1])
 
 ####################################################################################################
 # normal form computation

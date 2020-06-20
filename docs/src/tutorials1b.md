@@ -100,7 +100,7 @@ and you should see
 We can also perform numerical continuation with respect to the parameter $\alpha$. Again, we need to provide some parameters for the continuation:
 
 ```julia
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.005, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 200)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.005, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 200)
 ```
 
 We provide a callback function to check how the `ApproxFun` solution vector grows during the continuation:

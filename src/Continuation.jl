@@ -1,4 +1,4 @@
- using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
+using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
 import Base: show, length		# simplified display method for ContRes
 
 """
@@ -71,14 +71,14 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
 
 	saveToFile::Bool = false 				# save to file?
-	saveSolEveryNsteps::Int64 = 0			# what steps do we save the current solution
+	saveSolEveryStep::Int64 = 0			# what steps do we save the current solution
 
 	# parameters for eigenvalues
 	nev::Int64 = 3 							# number of eigenvalues
-	saveEigEveryNsteps::Int64 = 1			# what steps do we keep the eigenvectors
+	saveEigEveryStep::Int64 = 1			# what steps do we keep the eigenvectors
 	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
-	plotEveryNsteps::Int64 = 10
+	plotEveryStep::Int64 = 10
 
 	# handling bifurcation points
 	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
@@ -87,7 +87,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	dsminBisection::T = 1e-5				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
-	tolBisectionEigenvalue::Float64 = 1e-5  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
+	tolBisectionEigenvalue::Float64 = 1e-9  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
     @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
@@ -166,6 +166,8 @@ haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl
 @inline vectortype(br::ContResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
 
 _show(io, bp, ii) = @printf(io, "- #%3i, %7s point around p ≈ %4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
+@inline kerneldim(bp) = abs(bp.δ[1])
+@inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
 function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
@@ -194,7 +196,7 @@ This function is used to initialize the composite type `ContResult` according to
 """
 function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
 	bif0 = (type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0))
-	sol = contParams.saveSolEveryNsteps > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
+	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0
 	stability = true
@@ -376,12 +378,12 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	if state.n_imag[1] >= 0; push!(contres.n_imag, state.n_imag[1]); end
 
 	# save solution
-	if it.contParams.saveSolEveryNsteps > 0 && mod(state.step, it.contParams.saveSolEveryNsteps) == 0
+	if it.contParams.saveSolEveryStep > 0 && mod(state.step, it.contParams.saveSolEveryStep) == 0
 		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if computeEigenElements(it)
-		if mod(state.step, it.contParams.saveEigEveryNsteps) == 0
+		if mod(state.step, it.contParams.saveEigEveryStep) == 0
 			push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
 		end
 	end
@@ -549,11 +551,14 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 				if detectBifucation(state)
 					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status)
 					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
+					if contParams.detectLoop
+						state.stopcontinuation = detectLoop(contRes, bifpt)
+					end
 				end
 			end
 
 			# Plotting
-			(it.plot && mod(state.step, contParams.plotEveryNsteps) == 0 ) && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
+			(it.plot && mod(state.step, contParams.plotEveryStep) == 0 ) && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
 
 			# Saving Solution to File
 			if contParams.saveToFile

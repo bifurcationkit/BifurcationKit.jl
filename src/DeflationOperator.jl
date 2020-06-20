@@ -197,7 +197,7 @@ end
 
 # simplified call when no Jacobian is given
 function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {T, Tf, vectype, S, E}
-	J = (u, p) -> PseudoArcLengthContinuation.finiteDifferences(z -> F(z,p), u)
+	J = (u, p) -> finiteDifferences(z -> F(z,p), u)
 	return newton(F, J, x0, p0, options, defOp, linsolver; kwargs...)
 end
 
@@ -208,9 +208,9 @@ This specific Newton-Kyrlov method first tries to converge to a solution `sol0` 
 """
 function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, Vector{vectype}()); kwargs...) where {T, Tf, vectype, S, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)
-	@assert res0[3] "Newton did not converge to x0."
+	@assert res0[3] "Newton did not converge to the trivial solution x0."
 	push!(defOp, res0[1])
 	res1 = newton(F, J, x1, p0, (@set options.maxIter = 10options.maxIter), defOp; kwargs...)
-	@assert res1[3] "Deflated Newton did not converge to x1 (on the bifurcated branch)."
+	@assert res1[3] "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
 	return res1, res0
 end

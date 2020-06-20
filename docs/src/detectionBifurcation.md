@@ -47,7 +47,7 @@ The eigensolver is highly problem dependent and this is why the user should impl
 
 By this we mean a change in the dimension of the Jacobian kernel. The detection of Branch point is done by analysis of the spectrum of the Jacobian.
 
-The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. 
+The detection is triggered by setting `detectBifurcation > 0` in the parameter `::ContinuationPar` passed to `continuation`. 
 
 ## Fold bifurcation
 The detection of **Fold** point is done by monitoring  the monotonicity of the parameter.
@@ -58,11 +58,11 @@ The detection is triggered by setting `detectFold = true` in the parameter `::Co
 
 The detection of Branch point is done by analysis of the spectrum of the Jacobian.
 
-The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. When a **Hopf point** is detected, a point is added to `br.bifpoint` allowing for later refinement using the function `newtonHopf`.
+The detection is triggered by setting `detectBifurcation > 0` in the parameter `::ContinuationPar` passed to `continuation`. When a **Hopf point** is detected, a point is added to `br.bifpoint` allowing for later refinement using the function `newtonHopf`.
 
 
 ## Bifurcations of periodic orbits
-The detection is triggered by setting `detectBifurcation = true` in the parameter `::ContinuationPar` passed to `continuation`. The detection of bifurcation points is done by analysis of the spectrum of the Monodromy matrix composed of the Floquet multipliers. The following bifurcations are currently detected:
+The detection is triggered by setting `detectBifurcation > 0` in the parameter `::ContinuationPar` passed to `continuation`. The detection of bifurcation points is done by analysis of the spectrum of the Monodromy matrix composed of the Floquet multipliers. The following bifurcations are currently detected:
 
 - Fold of periodic orbit
 - Neimark-Sacker 
