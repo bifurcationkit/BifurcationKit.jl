@@ -38,7 +38,8 @@ using RecipesBase
 		end
 		@series begin
 			seriestype := :scatter
-			seriescolor --> map(x->colorbif[x.type], bifpt)
+			seriescolor --> map(x -> colorbif[x.type], bifpt)
+			markershape --> map(x -> x.status == :guess ? :square : :circle, bifpt)
 			markersize --> 4
 			markerstrokewidth --> 0
 			label --> ""
@@ -111,14 +112,14 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 	Plots.plot(layout = l)
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel="p",  ylabel="||x||", label="", subplot=1)
-	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color=:red, label = "", subplot = 1)
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = "p",  ylabel = "||x||", label = "", subplot = 1)
+	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color = :red, label = "", subplot = 1)
 
-	plot!(contres;	vars = (:step,:p), putbifptlegend = false, xlabel="it", ylabel="p", label = "", subplot=2)
+	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = "p", label = "", subplot=2)
 
 	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals
-		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label="", markerstrokewidth=0, markersize = 3, color=:black)
+		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
 	end
 
 	plotuserfunction(sol.u, sol.p; subplot = 3)
