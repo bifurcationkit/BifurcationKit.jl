@@ -68,7 +68,7 @@ optnew = NewtonPar(tol = 1e-12, verbose = true)
 		F_chan, Jac_chan, sol, par_af, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
 
 	br, _ = @time continuation(
 		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
@@ -99,7 +99,7 @@ plot(deflationOp.roots)
 # other dot product
 # dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y) * length(x) # gives 0.1
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryNsteps = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
 
 	br, _ = @time continuation(
 		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;

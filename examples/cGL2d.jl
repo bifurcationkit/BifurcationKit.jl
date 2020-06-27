@@ -125,7 +125,7 @@ eigls = EigArpack(1.0, :LM)
 # J1 = Jcgl(sol0, par_cgl)
 # norm(J0 - J1, Inf)
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 2, nev = 5, plotEveryNsteps = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 2, nev = 5, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
 
 	br, u1 = @time BK.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ####################################################################################################
@@ -186,7 +186,7 @@ deflationOp = DeflationOperator(2.0,(x,y) -> dot(x[1:end-1],y[1:end-1]),1.0,[zer
 ####################################################################################################
 # opt_po = (@set opt_po.eigsolver = eig_MF_KrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 	@assert 1==0 "Too much memory used!"
 	br_pok2, upo , _= @time BK.continuation(
 			poTrap, orbitguess_f, (@set par_cgl.r = p), (@lens _.r),
@@ -221,7 +221,7 @@ plot();BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);title!("")
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 # opt_po = @set opt_po.eigsolver = DefaultEig()
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
 
 br_po, _ , _= @time continuation(
 		poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
@@ -282,8 +282,8 @@ end
 
 opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2n), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
-# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = ls))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
+# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls))
 	br_pok2, upo , _= @time continuation(
 			poTrap, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
 			opts_po_cont; linearPO = :BorderedMatrixFree,
@@ -611,7 +611,7 @@ opt_po = @set opt_newton.verbose = true
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end:end], ", amplitude = ", amplitude(outpo_f, Nx*Ny, M),"\n")
 
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.2, maxSteps = 35, plotEveryNsteps = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.2, maxSteps = 35, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
 	br_pok2, upo , _= @time BK.continuationPOTrap(
 		p -> poTrapMFGPU(@set par_cgl_gpu.r = p),
 		orbitguess_cu, r_hopf - 0.01,

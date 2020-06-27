@@ -1,6 +1,6 @@
 using RecipesBase
 
-@recipe function f(contres::Union{ContResult, Branch}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
+@recipe function f(contres::BranchResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	axisDict = Dict(:p => 1, :sol => 2, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
@@ -18,6 +18,9 @@ using RecipesBase
 	@series begin
 		if length(contres.stability) > 2 && plotstability
 			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
+		end
+		if ind1 == 1
+			xguide --> getLensParam(contres.param_lens)
 		end
 		label --> branchlabel
 		contres.branch[ind1, :], contres.branch[ind2, :]
@@ -64,7 +67,7 @@ using RecipesBase
 	end
 end
 
-@recipe function Plots(brs::AbstractVector{<:Union{ContResult, Branch}}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
+@recipe function Plots(brs::AbstractVector{<:BranchResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	if length(brs) == 0; return; end
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
@@ -112,10 +115,10 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 	Plots.plot(layout = l)
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = "p",  ylabel = "||x||", label = "", subplot = 1)
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = "||x||", label = "", subplot = 1)
 	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color = :red, label = "", subplot = 1)
 
-	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = "p", label = "", subplot=2)
+	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = getLensParam(contres.param_lens), label = "", subplot=2)
 
 	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals

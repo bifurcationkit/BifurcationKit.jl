@@ -4,6 +4,7 @@ using Revise
 	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
+normbratu = x-> norm(x) / sqrt(length(x))
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 
@@ -76,16 +77,33 @@ eigls = EigArpack(0.5, :LM)
 plotsol(out)
 
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 3.5, pMin = 0.025, detectBifurcation = 2, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 101, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-3)
+function finSol(z, tau, step, br)
+	if ~isnothing(br.bifpoint)
+		if br.bifpoint[end].step == step
+			BK._show(stdout, br.bifpoint[end], step)
+		end
+	end
+	return true
+end
+
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
 
 	br, _ = @time BK.continuation(
 		Fmit, JFmit,
 		sol0, par_mit, (@lens _.λ), opts_br;
-		printSolution = (x, p) -> norm(x),
+		printSolution = (x, p) -> normbratu(x),
+		finaliseSolution = finSol,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		plot = true, verbosity = 3, normC = norminf)
+		plot = true, verbosity = 0, normC = norminf)
 ####################################################################################################
 # branch switching
+function cb(x,f,J,res,it,itl,optN; kwargs...)
+	_x = get(kwargs, :z0, nothing)
+	if _x isa BorderedArray
+		return (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05)
+	end
+	true
+end
 
 D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
 
@@ -95,23 +113,32 @@ d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
 jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 
+BK.computeNormalForm(jet..., br, 2; verbose = false, nev = 50)
+
 br1, _ = continuation(jet...,
 		br, 3,
-		setproperties(opts_br;ds = 0.001, maxSteps = 40);
-		verbosity = 3, plot = true,
-		printSolution = (x, p) -> norm(x),
+		setproperties(opts_br;ds = 0.001, maxSteps = 140);
+		verbosity = 0, plot = true,
+		printSolution = (x, p) -> normbratu(x),
+		finaliseSolution = finSol,
+		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		normC = norminf)
 
 plot([br,br1],plotfold=false)
 
+
 br2, _ = continuation(jet...,
-		br1, 1, setproperties(opts_br;ds = 0.001, maxSteps = 400);
-		verbosity = 3, plot = true,
-		printSolution = (x, p) -> norm(x),
+		br1, 1, setproperties(opts_br;ds = 0.0025, maxSteps = 400, detectBifurcation = 0);
+		verbosity = 0, plot = true,
+		# tangentAlgo = BorderedPred(),
+		printSolution = (x, p) -> normbratu(x),
+		finaliseSolution = finSol,
+		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1,br2],plotfold=false)
+plot([br,br1, br2],plotfold=false)
+####################################################################################################
 
 ####################################################################################################
 # analyse 2d bifurcation point
@@ -159,7 +186,7 @@ plotsol(bp2d.ζ[1])
 plotsol(bp2d(resx[10], resp[10]))
 ####################################################################################################
 # find isolated branch, see Farrell et al.
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
 # eigen-elements close to the second bifurcation point on the branch

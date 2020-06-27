@@ -33,9 +33,9 @@ sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 	Plots.plot(X, sol1)
 
 
-opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.005,
-		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-10), pMin = -1.,
-		maxSteps = 300, plotEveryNsteps = 40, detectBifurcation = 2, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
+opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
+		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMin = -2.1,
+		maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 
 	plot = true,
 		# tangentAlgo = BorderedPred(),

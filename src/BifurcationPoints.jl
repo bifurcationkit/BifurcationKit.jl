@@ -47,6 +47,7 @@ istranscritical(bp::SimpleBranchPoint) = bp isa Transcritical
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
+type(::Nothing) = nothing
 
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian

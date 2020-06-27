@@ -139,7 +139,7 @@ plot(
 	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
 
 
-res = BK.multicontinuation(jet..., br, br, 18, setproperties(opts; ds = -0.005, detectBifurcation =  0, plotEveryNsteps = 1, dsmax = 0.005, detectLoop =true);  nev = 30,
+res = BK.multicontinuation(jet..., br, br, 18, setproperties(opts; ds = -0.005, detectBifurcation =  0, plotEveryStep = 1, dsmax = 0.005, detectLoop =true);  nev = 30,
 			plot = true, verbosity = 3, usedeflation = true,
 			δp = 0.005,
 			tangentAlgo = BorderedPred(),

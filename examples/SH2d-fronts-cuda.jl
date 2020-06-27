@@ -157,7 +157,7 @@ outdef, _, flag, _ = @time BK.newton(
 		flag && push!(deflationOp, outdef)
 
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryNsteps = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
 	computeEigenValues = true,
 	detectBifurcation = 0,
 	precisionStability = 1e-5,

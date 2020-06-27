@@ -1,6 +1,6 @@
 using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
 import Base: show, length		# simplified display method for ContRes
-
+abstract type BranchResult end
 """
 	options = ContinuationPar(dsmin = 1e-4,...)
 
@@ -119,7 +119,7 @@ $(TYPEDFIELDS)
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
 """
-@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens}
+@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`."
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 

@@ -154,7 +154,7 @@ outpo[end]
 heatmap(reshape(outpo[1:Nx*Ny], Nx, Ny), color = :viridis)
 
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryNsteps = 1)
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
 br_po, upo , _= @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _.r),
 		opts_po_cont;
 		verbosity = 3,
@@ -178,7 +178,7 @@ jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryNsteps = 1)
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
 
 br_po, _ = continuation(
 	jet...,	br, 2,

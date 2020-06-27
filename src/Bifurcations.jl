@@ -20,6 +20,7 @@ function isstable(contparams::ContinuationPar, eigvalues)::Tuple{Bool, Int64, In
 	n_imag = mapreduce(x -> (abs(imag(x)) > precision) * (real(x) > precision), +, eigvalues)
 	return n_unstable == 0, n_unstable, n_imag
 end
+isstable(contparams::ContinuationPar, ::Nothing) = (true, 0, 0)
 ####################################################################################################
 interval(a, b) = (min(a, b), max(a, b))
 

@@ -1,3 +1,5 @@
+using Setfield
+getLensParam(lens::Setfield.PropertyLens{F}) where F = F
 ####################################################################################################
 function displayIteration(i, funceval, residual, itlinear = 0)
 	(i == 0) && println("\n Newton Iterations \n   Iterations      Func-count      f(x)      Linear-Iterations\n")

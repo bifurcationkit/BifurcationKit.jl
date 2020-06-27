@@ -41,8 +41,7 @@ n = 101
 	# ca fait dans les 63.59k Allocations
 	out, hist, flag = @time newton( F_chan,	Jac_mat, sol, par, optnewton)
 
-
-optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryNsteps = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
 	br, _ = @time continuation(
 		F_chan, Jac_mat,
 		out, par, (@lens _.α),
@@ -128,7 +127,7 @@ ls = GMRESKrylovKit(dim = 100)
 		(x, p) -> (dx -> dF_chan(x, dx, p)),
 		sol, par, optnewton_mf)
 
-opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, plotEveryNsteps = 40, newtonOptions = setproperties(optnewton_mf; maxIter = 70, tol = 1e-8), maxSteps = 150)
+opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, plotEveryStep = 40, newtonOptions = setproperties(optnewton_mf; maxIter = 70, tol = 1e-8), maxSteps = 150)
 	brmf, _ = @time continuation(
 		F_chan,
 		(x, p) -> (dx -> dF_chan(x, dx, p)),

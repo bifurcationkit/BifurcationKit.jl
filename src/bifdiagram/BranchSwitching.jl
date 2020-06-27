@@ -2,31 +2,25 @@ import Base: getproperty, propertynames
 """
 A Branch is a structure which encapsulates the result of a continuation run on a branch bifurcating from a bifurcation point.
 """
-struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp}
+struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
 	γ::T
 	bp::Tbp
 end
 
 from(br::Branch) = br.bp
-from(br::Vector{Branch}) = from(br[1])
+from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
-function getproperty(br::Branch, s::Symbol)
-	if s in (:γ, :bp)
-		getfield(br, s)
-	else
-		getproperty(br.γ, s)
-	end
-end
+getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
 
 propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################
 """
 This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
-function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where {Tv}
+function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv
 	# Create a bordered linear solver using the newton linear solver provided by the user
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
 

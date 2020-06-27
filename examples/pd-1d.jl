@@ -79,7 +79,7 @@ out, _, _ = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
 	plot();plot!(X,out[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 
-optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, newtonOptions = optnewton, maxSteps = 370)
+optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 2, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370)
 
 	br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
 		plot = true, verbosity = 3,
