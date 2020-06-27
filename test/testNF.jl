@@ -12,7 +12,7 @@ par = (μ = -0.2, ν = 0, x2 = 1.12)
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, maxIter = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
-	br, _ = @time continuation(
+	br, = @time continuation(
 		Fbp, [0.1, 0.1], par, (@lens _.μ),
 		opts_br; plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> x[1])
 
@@ -40,7 +40,7 @@ nf = bp.nf
 
 ##############################
 # same but when the eigenvalues are not saved in the branch but computed on the fly
-br_noev, _ = @time BK.continuation(
+br_noev, = @time BK.continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
@@ -60,7 +60,7 @@ br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], ve
 ####################################################################################################
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0
-brp, _ = @time BK.continuation(
+brp, = @time BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
 	printSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
@@ -76,9 +76,9 @@ br2, _ = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 2, dsmax
 # plot(br2.branch[1,:], marker = :d)
 ####################################################################################################
 function Fbp2d(x, p)
-	return [ x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
-			 x[2] * (3.23 .* p.μ - 0.456 * x[1]^2 - 0.123 * x[2]^2),
-			 x[3]]
+	return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
+			 p.α * x[2] * (3.23 .* p.μ - 0.456 * x[1]^2 - 0.123 * x[2]^2),
+			 -x[3]]
 end
 
 d1F2d(x,p,dx1) = D((z, p0) -> Fbp2d(z, p0), x, p, dx1)
@@ -87,31 +87,33 @@ d1F2d(x,p,dx1) = D((z, p0) -> Fbp2d(z, p0), x, p, dx1)
 
 jet = (Fbp2d, (x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, p), x), d2F2d, d3F2d)
 
-par = (μ = -0.2, ν = 0)
+par = (μ = -0.2, ν = 0, α = -1)
 
-br, _ = @time BK.continuation(
+for α in [-1,1]
+	global par = @set par.α = α
+	br, = BK.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
+	# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
+	bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 
-# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
-bp2d = @time BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+	BK.nf(bp2d)
+	bp2d(rand(2), 0.2)
+	bp2d(Val(:reducedForm), rand(2), 0.2)
 
-BK.nf(bp2d)
-bp2d(rand(2), 0.2)
-bp2d(Val(:reducedForm), rand(2), 0.2)
-
-@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -0.123) < 1e-10
-@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -0.234) < 1e-10
-@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -0.0)   < 1e-10
-@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -0.456) < 1e-10
-@test norm(bp2d.nf.b2, Inf) < 3e-6
-@test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
-@test norm(bp2d.nf.a, Inf) < 1e-6
+	@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -par.α * 0.123) < 1e-10
+	@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -par.α * 0.234) < 1e-10
+	@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -par.α * 0.0)   < 1e-10
+	@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -par.α * 0.456) < 1e-10
+	@test norm(bp2d.nf.b2, Inf) < 3e-6
+	@test norm(bp2d.nf.b1 - par.α * 3.23 * I, Inf) < 1e-10
+	@test norm(bp2d.nf.a, Inf) < 1e-6
+end
 
 ##############################
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
-br_noev, _ = @time BK.continuation(
+br_noev, = @time BK.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 2, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)

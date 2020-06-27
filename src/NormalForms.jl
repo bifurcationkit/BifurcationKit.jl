@@ -9,7 +9,7 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 	λstars = Vector{ComplexF64}()
 	ζstars = Vector{typeof(geteigenvector(eigsolver, evstar, 1))}()
 
-	for (idvp,λ) in enumerate(λs)
+	for (idvp, λ) in enumerate(λs)
 		I = argmin(abs.(λstar .- λ))
 		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might lead to unprecise normal form computation."
 		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
@@ -391,7 +391,10 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec)
 	end
+	# kernel dimension:
 	N = abs(bifpt.δ[1])
+	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
+	nev = max(2N, nev)
 	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
 

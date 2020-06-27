@@ -64,16 +64,15 @@ function getBifurcationType(contparams::ContinuationPar, state::PALCStateVariabl
 	n_imag, n_imag_prev = state.n_imag
 
 	# computation of the index of the bifurcating eigenvalue
-	ind_ev = n_unstable
-	if n_unstable < n_unstable_prev; ind_ev += 1; end
+	ind_ev = n_unstable > 0 ? n_unstable : abs(n_unstable - n_unstable_prev)
 
+	# bifurcation type
 	tp = :none
 
 	δn_unstable = abs(n_unstable - n_unstable_prev)
 	δn_imag		= abs(n_imag - n_imag_prev)
 
 	# codim 1 bifurcation point detection based on eigenvalues distribution
-
 	if δn_unstable == 1
 	# In this case, only a single eigenvalue crossed the imaginary axis
 	# Either it is a Branch Point
@@ -99,7 +98,7 @@ function getBifurcationType(contparams::ContinuationPar, state::PALCStateVariabl
 	end
 
 	if δn_unstable < δn_imag
-		@warn "Error in eigenvalues computation. It seems an eigenvalue is missing, probably conj(λ) for some already computed eigenvalue λ. This makes the identification (but not the detection) of bifurcation points erroneous. You should increase the number of requested eigenvalues."
+		@warn "Error in eigenvalues computation. It seems an eigenvalue is missing, probably conj(λ) for some already computed eigenvalue λ. This makes the identification (but not the detection) of bifurcation points erroneous. You should increase the number of requested eigenvalues `nev`."
 		tp = :nd
 		detected = true
 	end
@@ -133,7 +132,7 @@ end
 closesttozero(ev) = ev[sortperm(abs.(real.(ev)))]
 
 """
-Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point.
+Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
 function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verbose::Bool = true)
 	@assert detectBifucation(_state) "No bifucation detected for the state"

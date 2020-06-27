@@ -396,7 +396,7 @@ function ContResult(it::PALCIterable, state::PALCStateVariables)
 	contParams = it.contParams
 
 	if computeEigenElements(contParams)
-		eiginfo = contParams.newtonOptions.eigsolver(it.J(x0, set(it.par, it.param_lens, p0)), contParams.nev)
+		eiginfo = computeEigenvalues(it, x0, set(it.par, it.param_lens, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
 		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
@@ -452,7 +452,7 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
-		eigvals, eigvecs, _, _ = it.contParams.newtonOptions.eigsolver(it.J(u0, it.par), it.contParams.nev)
+		eigvals, eigvecs, _, _ = computeEigenvalues(it, u0, it.par, it.contParams.nev)
 		if it.contParams.saveEigenvectors == false
 			eigvecs = nothing
 		end
