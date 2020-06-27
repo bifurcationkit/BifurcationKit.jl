@@ -169,6 +169,8 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	return
 end
 
+computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = computeNormalForm1d(F, dF, d2F, d3F, getContResult(br), ind_bif; kwargs...)
+
 function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
 	nf = bp.nf
 	a, b1, b2, b3 = nf
@@ -492,6 +494,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 
 end
 
+computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
 ####################################################################################################
 
 function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)

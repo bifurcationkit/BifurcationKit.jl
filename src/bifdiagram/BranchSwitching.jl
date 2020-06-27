@@ -1,3 +1,4 @@
+import Base: getproperty, propertynames
 """
 A Branch is a structure which encapsulates the result of a continuation run on a branch bifurcating from a bifurcation point.
 """
@@ -6,21 +7,22 @@ struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp}
 	bp::Tbp
 end
 
-from(br::Branch) = typeof(br.bp)
+from(br::Branch) = br.bp
+from(br::Vector{Branch}) = from(br[1])
+show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
+show(io::IO, br::Branch{T, Tbp}) where {T <: Vector{ContResult}, Tbp} = for γ in br.γ; println(io,"\n"); show(io, γ, " from $(type(br.bp)) bifurcation point."); end
 
-# plot recipe for branch
-@recipe function f(branch::Branch; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
-	@series begin
-		plotfold --> plotfold
-		putbifptlegend --> putbifptlegend
-		filterbifpoints --> filterbifpoints
-		vars --> vars
-		plotstability --> plotstability
-		plotbifpoints --> plotbifpoints
-		branchlabel --> branchlabel
-		branch.γ
+# extend the getproperty for easy manipulation of a Branch
+# for example, it allows to use the plot recipe for ContResult as is
+function getproperty(br::Branch, s::Symbol)
+	if s in (:γ, :bp)
+		getfield(br, s)
+	else
+		getproperty(br.γ, s)
 	end
 end
+
+propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################
 """
 This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
@@ -116,6 +118,8 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	return Branch(branch, bifpoint), u, tau
 end
 
+continuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
+
 
 function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), kwargs...)
 
@@ -184,3 +188,5 @@ function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 
 	return branches, (before = defOpm, after = defOpp)
 end
+
+multicontinuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = multicontinuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)

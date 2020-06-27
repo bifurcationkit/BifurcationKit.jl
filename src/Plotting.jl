@@ -1,6 +1,6 @@
 using RecipesBase
 
-@recipe function f(contres::ContResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
+@recipe function f(contres::Union{ContResult, Branch}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	axisDict = Dict(:p => 1, :sol => 2, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
@@ -64,7 +64,7 @@ using RecipesBase
 	end
 end
 
-@recipe function Plots(brs::AbstractVector{<:ContResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
+@recipe function Plots(brs::AbstractVector{<:Union{ContResult, Branch}}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	if length(brs) == 0; return; end
 	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
