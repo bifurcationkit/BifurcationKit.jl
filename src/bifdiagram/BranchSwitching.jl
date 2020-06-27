@@ -10,7 +10,6 @@ end
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = from(br[1])
 show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
-show(io::IO, br::Branch{T, Tbp}) where {T <: Vector{ContResult}, Tbp} = for γ in br.γ; println(io,"\n"); show(io, γ, " from $(type(br.bp)) bifurcation point."); end
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
@@ -54,7 +53,6 @@ function continuation(it::PALCIterable, x0, p0::Real, x1, p1::Real)
 	# perform the continuation
 	return continuation!(it, state, contRes)
 end
-
 
 """
 $(SIGNATURES)
@@ -118,14 +116,15 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	return Branch(branch, bifpoint), u, tau
 end
 
+# same but for a Branch
 continuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
 
 
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), ζs = nothing, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-	bpnf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec)
+	bpnf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, ζs = ζs)
 
 	# dimension of the kernel
 	n = length(bpnf.ζ)

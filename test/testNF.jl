@@ -4,12 +4,12 @@ const BK = BifurcationKit
 norminf = x -> norm(x, Inf)
 
 function Fbp(x, p)
-	return [x[1] * (3.23 .* p.μ - p.x2 * x[1] + 0.234 * x[1]^2) + x[2], -x[2]]
+	return [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
 end
 
-par = (μ = -0.2, ν = 0, x2 = 1.12)
+par = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
 ####################################################################################################
-opt_newton = NewtonPar(tol = 1e-8, verbose = false, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-9, verbose = false, maxIter = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
 	br, = @time continuation(
@@ -18,7 +18,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pM
 
 ####################################################################################################
 # normal form computation
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+D(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0.)
 
 d1F(x,p,dx1)         = D((z, p0) -> Fbp(z, p0), x, p, dx1)
 d2F(x,p,dx1,dx2)     = D((z, p0) -> d1F(z, p0, dx1), x, p, dx2)
@@ -54,16 +54,25 @@ nf = bp.nf
 # Automatic branch switching
 br2, _ = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01); printSolution = (x, p) -> x[1], verbosity = 0)
 # plot([br,br2])
+br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
 
 br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
 # plot([br,br2])
 ####################################################################################################
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0
+par_pf = @set par_pf.x3 = -1.0
 brp, = @time BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
 	printSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
+bpp = BK.computeNormalForm(jet..., brp, 1; verbose=true)
+nf = bpp.nf
+@test norm(nf[1]) < 1e-9
+	@test norm(nf[2] - 3.23) < 1e-9
+	@test norm(nf[3]/2 - 0) < 1e-9
+	@test norm(nf[4]/6 + 0.234) < 1e-9
+
 
 br2, _ = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 2, dsmax = 0.01, ds = -0.01, detectBifurcation = 0, newtonOptions = (@set opt_newton.verbose=true)); printSolution = (x, p) -> x[1], tangentAlgo = BorderedPred(), verbosity = 3)
 	# plot([brp,br2])
@@ -126,6 +135,55 @@ bp2d = @time BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 
 @test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
 @test norm(bp2d.nf.a, Inf) < 1e-6
 ####################################################################################################
+# vector field to test close secondary bifurcations
+function FbpSecBif(u, p)
+	return @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
+end
+
+dFbpSecBif(x,p)         =  ForwardDiff.jacobian( z-> FbpSecBif(z,p), x)
+d1FbpSecBif(x,p,dx1)         = D((z, p0) -> FbpSecBif(z, p0), x, p, dx1)
+d2FbpSecBif(x,p,dx1,dx2)     = D((z, p0) -> d1FbpSecBif(z, p0, dx1), x, p, dx2)
+d3FbpSecBif(x,p,dx1,dx2,dx3) = D((z, p0) -> d2FbpSecBif(z, p0, dx1, dx2), x, p, dx3)
+jet = (FbpSecBif, dFbpSecBif, d2FbpSecBif, d3FbpSecBif)
+
+
+br_snd1, = @time BK.continuation(
+	FbpSecBif, [0.0], -0.2, (@lens _),
+	printSolution = (x, p) -> x[1],
+	# tangentAlgo = BorderedPred(),
+	setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation=3); plot = false, verbosity = 0, normC = norminf)
+
+####################################################################################################
+# test of the D6 normal form
+function FbpD6(x, p)
+	return [ p.μ * x[1] + (p.a * x[2] * x[3] - p.b * x[1]^3 - p.c*(x[2]^2 + x[3]^2) * x[1]),
+			 p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c*(x[3]^2 + x[1]^2) * x[2]),
+			 p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c*(x[2]^2 + x[1]^2) * x[3])]
+end
+d1FbpD6(x,p,dx1) = D((z, p0) -> FbpD6(z, p0), x, p, dx1)
+d2FbpD6(x,p,dx1,dx2)     = D((z, p0) -> d1FbpD6(z, p0, dx1), x, p, dx2)
+d3FbpD6(x,p,dx1,dx2,dx3) = D((z, p0) -> d2FbpD6(z, p0, dx1, dx2), x, p, dx3)
+
+jet = (FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x), d2FbpD6, d3FbpD6)
+
+pard6 = (μ = -0.2, a = 0.3, b = 1.5, c = 2.9)
+
+br, = BK.continuation(
+	FbpD6, zeros(3), pard6, (@lens _.μ),
+	printSolution = (x, p) -> norminf(x),
+	setproperties(opts_br; nInversion = 6, ds = 0.001); plot = false, verbosity = 0, normC = norminf)
+
+# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
+bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.], [0, 0, 1.]])
+BK.nf(bp2d)
+
+@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -pard6.b) < 1e-10
+	@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -pard6.c) < 1e-10
+	@test abs(bp2d.nf.b2[1,2,3] - pard6.a)   < 1e-10
+
+# test the evaluation of the normal form
+x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.param_lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-14
+
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
 	@unpack r, μ, ν, c3, c5 = p

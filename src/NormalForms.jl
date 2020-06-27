@@ -208,6 +208,21 @@ function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
 end
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
+function factor3d(i,j,k)
+	if i == j == k
+		return 1/6
+	else
+		_power = length(unique((i,j,k)))
+		if _power == 1
+			factor = 1/6 /2
+		elseif _power == 2
+			factor = 1/2 / 3
+		else
+			factor = 1.0
+		end
+		return factor
+	end
+end
 
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
@@ -223,6 +238,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	factor = 1.0
 
 	@inbounds for ii in 1:N
+		factor = 1.
 		# coefficient x*p
 		for jj in 1:N
 			# coefficient x*p
@@ -230,19 +246,12 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 
 			for kk in 1:N
 				# coefficients of x^2
-				factor = jj == kk ? 0.5 : 1.0
-				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk] * factor
+				factor = jj == kk ? 1/2 : 1
+				out[ii] += nf.b2[ii, jj, kk] * x[jj] * x[kk] * factor / 2
 
 				for ll in 1:N
 					# coefficients of x^3
-					_power = length(unique((jj,kk,ll)))
-					if _power == 1
-						factor = 1/6.
-					elseif _power == 2
-						factor = 1/2.
-					else
-						factor = 1.0
-					end
+					factor = factor3d(ii, jj, kk)
 					out[ii] += nf.b3[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll] * factor
 				end
 			end
@@ -252,9 +261,9 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 end
 
 function (bp::NdBranchPoint)(x, δp::Real)
-	out = bp.x0 .+ δp .* x[1] .* bp.ζ[1]
+	out = bp.x0 .+ x[1] .* bp.ζ[1]
 	for ii in 2:length(x)
-		out .+= δp .* x[ii] .* bp.ζ[ii]
+		out .+= x[ii] .* bp.ζ[ii]
 	end
 	return out
 end
