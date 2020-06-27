@@ -18,14 +18,16 @@ getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getprop
 propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################
 """
-This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
+This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
 function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv
 	# Create a bordered linear solver using the newton linear solver provided by the user
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
-
+	# check the sign of ds
+	dsfactor = sign(p1 - get(par0, lens))
 	# create an iterable
-	it = PALCIterable(Fhandle, Jhandle, x0, par0, lens, contParams, _linearAlgo; kwargs...)
+	_contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
+	it = PALCIterable(Fhandle, Jhandle, x0, par0, lens, _contParams, _linearAlgo; kwargs...)
 	return continuation(it, x0, get(par0, lens), x1, p1)
 end
 
@@ -105,8 +107,12 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	end
 
 	# perform continuation
-	branch, u, tau = continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
-	# branch, u, tau =  continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.bifpoint[ind_bif].x, br.bifpoint[ind_bif].param, br.param_lens, optionsCont; kwargs...)
+	@info "changer -> 2pts [1d]" bifpoint.param
+	# branch, u, tau = continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
+	branch, u, tau =  continuation(F, dF,
+			bifpoint.x0, bifpoint.params,	# first point on the branch
+			pred.x, pred.p,					# second point on the branch
+			br.param_lens, optionsCont; kwargs...)
 	return Branch(branch, bifpoint), u, tau
 end
 

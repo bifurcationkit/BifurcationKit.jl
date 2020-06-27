@@ -6,12 +6,12 @@ using Revise
 ################################################################################
 # case of the SH equation
 norminf(x) = norm(x, Inf64)
-Nx = 200; Lx = 10.;
+Nx = 200; Lx = 6.;
 X = -Lx .+ 2Lx/Nx*(0:Nx-1) |> collect
 hx = X[2]-X[1]
 
-Q = Neumann0BC(hx)
-# Q = Dirichlet0BC(hx |> typeof)
+# Q = Neumann0BC(hx)
+Q = Dirichlet0BC(hx |> typeof)
 Dxx = sparse(CenteredDifference(2, 2, hx, Nx) * Q)[1]
 Lsh = -(I + Dxx)^2
 
@@ -32,45 +32,54 @@ sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 	sol0, (@set parSH.p = -1.95), optnew)
 	Plots.plot(X, sol1)
 
-
 opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
 		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMin = -2.1,
 		maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 
+function cb(x,f,J,res,it,itl,optN; kwargs...)
+	_x = get(kwargs, :z0, nothing)
+
+	# @assert itc > 0 && isnothing(_x) == false
+	if _x isa BorderedArray
+		@show norm(_x.u - x) abs(_x.p - kwargs[:p])
+		@show (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p])<0.05)
+		return norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p])<0.05
+	end
+	true
+end
+
+args = (verbosity = 3,
 	plot = true,
 		# tangentAlgo = BorderedPred(),
 	linearAlgo  = MatrixBLS(),
-		plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)), normC = norminf)
-	brs = [br]
-#####################################################
-# case with computation of eigenvalues
-# optnew = PALC.NewtonPar(linsolver = Default(),	eigsolver = eig_KrylovKit{Float64}())
-plot(brs, label = "")
+	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
+	callbackN = cb
+	)
 
+brflat, u1 = @time continuation(
+	R_SH, Jac_sp, sol1, (@set parSH.p = 1.), (@lens _.p), opts;
+	args...)
 
+plot(brflat)
 ####################################################################################################
-sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
-	optnew = PALC.NewtonPar(verbose = true, tol = 1e-12)
-	# allocations 26.47k, 0.038s, tol = 1e-10
-	sol1, hist, flag = @time PALC.newton(
-	R_SH, Jac_sp,
-	sol0, (@set parSH.p = -1.95), optnew)
-	Plots.plot(X, sol1)
+# branch switching
+d2R(u,p,dx1,dx2) = @. p.b * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
+d3R(u,p,dx1,dx2,dx3) = @. p.b * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
+jet = (R_SH, Jac_sp, d2R, d3R)
 
+function optrec(x, p, l; opt = opts)
+	level =  l
+	if level <= 2
+		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx, detectLoop = false)
+	else
+		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = Nx, detectLoop = true)
+	end
+end
 
-opts = PALC.ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001,
-		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-11), pMin = -2.,
-		maxSteps = 1000, theta = .4, plotEveryNsteps = 200, computeEigenValues = true)
-	@assert opts.a<=1.5 "sinon ca peut changer le sens du time step"
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args...)
 
-	br, u1 = @time PALC.continuation(
-		R_SH, Jac_sp, sol1, (@set parSH.p = -1.), (@lens _.p), opts,
-		verbosity = 2,
-		plot = true,
-		# tangentAlgo = BorderedPred(),
-		# linearAlgo  = MatrixBLS(),
-		plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
+plot(diagram; code = (1,), plotfold = false,  markersize = 2, putbifptlegend = false, xlims=(-1,1))
+	# title!("#branches = $(size(branches))")
 
-push!(brs, br)
 
 plot(brs)

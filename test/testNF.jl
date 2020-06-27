@@ -143,6 +143,11 @@ br_snd1, = @time BK.continuation(
 	# tangentAlgo = BorderedPred(),
 	setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation=3); plot = false, verbosity = 0, normC = norminf)
 
+bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
+	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3,dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
+	printSolution = (x, p) -> x[1],
+	# tangentAlgo = BorderedPred(),
+	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 # test of the D6 normal form
 function FbpD6(x, p)

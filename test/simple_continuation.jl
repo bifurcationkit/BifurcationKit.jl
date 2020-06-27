@@ -74,3 +74,16 @@ brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,ver
 brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,verbosity=0,linearAlgo = BK.MatrixBLS())
 # plotBranch(br1,marker=:d);title!("")
 # plotBranch!(br8,marker=:d);title!("")
+####################################################################################################
+# testing when starting with 2 points on the branch
+opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 3)
+x0 = 0.01 * ones(2)
+
+x0, = newton(F,Jac_m,x0, -1.5, opts.newtonOptions)
+x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
+
+br0, = BK.continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
+
+br1, = BK.continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001), verbosity=0)
+
+br2, = BK.continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts, verbosity=0, tangentAlgo = BorderedPred())
