@@ -612,8 +612,7 @@ function continuation(it::PALCIterable)
 	return continuation!(it, state, contRes)
 end
 
-function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar,
-		linearAlgo::AbstractBorderedLinearSolver; kwargs...)
+function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...)
 	it = PALCIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
 	return continuation(it)
 end

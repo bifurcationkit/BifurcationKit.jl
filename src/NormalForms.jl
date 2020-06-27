@@ -1,6 +1,3 @@
-abstract type BifurcationPoint end
-abstract type BranchPoint <: BifurcationPoint end
-
 function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 	# we compute the eigen-elements of the adjoint of L
 	λstar, evstar = eigsolver(Lstar, nev)
@@ -70,38 +67,6 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
-####################################################################################################
-# type for bifurcation point 1d kernel for the jacobian
-
-"""
-$(TYPEDEF)
-$(TYPEDFIELDS)
-"""
-mutable struct SimpleBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
-	"bifurcation point."
-	x0::Tv
-
-	"Parameter value at the bifurcation point."
-	p::T
-
-	"Parameters used by the vector field."
-	params::Tpar
-
-	"Parameter axis used to compute the branch on which this Branch point was detected."
-	lens::Tlens
-
-	"Right eigenvector(s)."
-	ζ::Tevr
-
-	"Left eigenvector(s)."
-	ζstar::Tevl
-
-	"Normal form coefficients."
-	nf::Tnf
-
-	"Type of bifurcation point."
-	type::Symbol
-end
 
 """
 $(TYPEDEF)
@@ -195,72 +160,52 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	b3 = dot(b3v, ζstar)
 	verbose && println("--> b3/6 = ", b3/6)
 
+	bp = (x0, p, parbif, lens, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), :NA)
 	if abs(a) < tolFold
-		type = 100abs(b2/2) < abs(b3/6) ? :Pitchfork : :Transcritical
+		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else
-		type = :ProbablySaddleNode
+		return Fold(bp...)
 	end
-	return SimpleBranchPoint(x0, p, parbif, lens, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), type)
+	return
 end
 
-function predictor(bp::SimpleBranchPoint, ds::T; verbose = false, ampfactor = T(1)) where T
-	if bp.type == :ProbablySaddleNode
-		@error "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
-		return nothing
-	end
+function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
 	nf = bp.nf
 	a, b1, b2, b3 = nf
-	if bp.type == :Transcritical
-		pnew = bp.p + ds
-		# we solve b1 * ds + b2 * amp / 2 = 0
-		amp = -2ds * b1 / b2 * ampfactor
-		dsfactor = T(1)
-	else
-		# case of the Pitchfork bifurcation
-		# we need to find the type, supercritical or subcritical
-		dsfactor = b1 * b3 < 0 ? T(1) : T(-1)
-		pnew = bp.p + abs(ds) * dsfactor
-		# we solve b1 * ds + b3 * amp^2 / 6 = 0
-		amp = ampfactor * sqrt(-6abs(ds) * dsfactor * b1 / b3)
-	end
+	pnew = bp.p + ds
+	# we solve b1 * ds + b2 * amp / 2 = 0
+	amp = -2ds * b1 / b2 * ampfactor
+	dsfactor = T(1)
 
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
 end
+
+function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) where T
+	nf = bp.nf
+	a, b1, b2, b3 = nf
+
+	# we need to find the type, supercritical or subcritical
+	dsfactor = b1 * b3 < 0 ? T(1) : T(-1)
+	if 1==1
+		# we solve b1 * ds + b3 * amp^2 / 6 = 0
+		amp = ampfactor * sqrt(-6abs(ds) * dsfactor * b1 / b3)
+		pnew = bp.p + abs(ds) * dsfactor
+	# else
+	# 	# we solve b1 * ds + b3 * amp^2 / 6 = 0
+	# 	amp = ampfactor * abs(ds)
+	# 	pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
+	end
+	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+end
+
+function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
+	@error "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
+	return nothing
+end
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
-
-"""
-This is a type which holds information for the bifurcation points of equilibria.
-
-$(TYPEDEF)
-$(TYPEDFIELDS)
-"""
-mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
-	"bifurcation point"
-	x0::Tv
-
-	"Parameter value at the bifurcation point"
-	p::T
-
-	"Parameters used by the vector field."
-	params::Tpar
-
-	"Parameter axis used to compute the branch on which this Branch point was detected."
-	lens::Tlens
-
-	"Right eigenvectors"
-	ζ::Tevr
-
-	"Left eigenvectors"
-	ζstar::Tevl
-
-	"Normal form coefficients"
-	nf::Tnf
-
-	"Type of bifurcation point"
-	type::Symbol
-end
 
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
@@ -549,39 +494,6 @@ end
 
 ####################################################################################################
 
-"""
-$(TYPEDEF)
-$(TYPEDFIELDS)
-"""
-mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: BifurcationPoint
-	"Hopf point"
-	x0::Tv
-
-	"Parameter value at the Hopf point"
-	p::T
-
-	"Frequency of the Hopf point"
-	ω::Tω
-
-	"Parameters used by the vector field."
-	params::Tpar
-
-	"Parameter axis used to compute the branch on which this Branch point was detected."
-	lens::Tlens
-
-	"Right eigenvector"
-	ζ::Tevr
-
-	"Left eigenvector"
-	ζstar::Tevl
-
-	"Normal form coefficient (a = 0., b = 1 + 1im)"
-	nf::Tnf
-
-	"Type of Hopf bifurcation"
-	type::Symbol
-end
-
 function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
 	x0 = pt.x0
 	p = pt.p
@@ -626,7 +538,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	printstyled(color = :red,"--> Hopf bifurcation point is supercritical: ", supercritical, "\n")
 	verbose && println((a = a, b = b))
 	pt.nf = (a = a, b = b)
-	pt.type = real(a) * real(b) < 0 ? :Supercritical : :Subcritical
+	pt.type = real(a) * real(b) < 0 ? :SuperCritical : :SubCritical
 	return pt
 end
 
@@ -702,7 +614,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 		ζ,
 		ζstar,
 		(a = 0. + 0im, b = 0. + 0im),
-		:Supercritical
+		:SuperCritical
 	)
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end

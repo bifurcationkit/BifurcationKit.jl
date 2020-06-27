@@ -1,4 +1,60 @@
 """
+A Branch is a structure which encapsulates the result of a continuation run on a branch bifurcating from a bifurcation point.
+"""
+struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp}
+	γ::T
+	bp::Tbp
+end
+
+from(br::Branch) = typeof(br.bp)
+
+# plot recipe for branch
+@recipe function f(branch::Branch; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
+	@series begin
+		plotfold --> plotfold
+		putbifptlegend --> putbifptlegend
+		filterbifpoints --> filterbifpoints
+		vars --> vars
+		plotstability --> plotstability
+		plotbifpoints --> plotbifpoints
+		branchlabel --> branchlabel
+		branch.γ
+	end
+end
+####################################################################################################
+"""
+This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
+"""
+function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where {Tv}
+	# Create a bordered linear solver using the newton linear solver provided by the user
+	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+
+	# create an iterable
+	it = PALCIterable(Fhandle, Jhandle, x0, par0, lens, contParams, _linearAlgo; kwargs...)
+	@warn "J'ai du inverser les deux points"
+	return continuation(it, x1, p1, x0, get(par0, lens))
+end
+
+function continuation(it::PALCIterable, x0, p0::Real, x1, p1::Real)
+	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	# The result type of this method
+	# is not known at compile time so we
+	# need a function barrier to resolve it
+	#############################################
+
+	# we compute the cache for the continuation, i.e. state::PALCStateVariables
+	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
+	state, _ = iterate(it, x0, p0, x1, p1)
+
+	# variable to hold the result from continuation, i.e. a branch
+	contRes = ContResult(it, state)
+
+	# perform the continuation
+	return continuation!(it, state, contRes)
+end
+
+
+"""
 $(SIGNATURES)
 
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
@@ -43,7 +99,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 	if isnothing(pred); return nothing, nothing; end
 
-	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ",bifpoint.type, "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
+	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ", type(bifpoint), "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
 
 	if usedeflation
 		verbose && println("\n----> Compute point on the current branch with nonlinear deflation...")
@@ -54,8 +110,10 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		copyto!(pred.x, solbif)
 
 	end
+
 	# perform continuation
-	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
+	branch, u, tau =  continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.bifpoint[ind_bif].x, br.bifpoint[ind_bif].param,br.param_lens, optionsCont; kwargs...)
+	return Branch(branch, bifpoint), u, tau
 end
 
 

@@ -13,7 +13,10 @@ module BifurcationKit
 	include("Continuation.jl")
 	include("Bifurcations.jl")
 	include("Predictor.jl")
+
+	include("BifurcationPoints.jl")
 	include("NormalForms.jl")
+
 	include("DeflationOperator.jl")
 	include("BorderedProblem.jl")
 	include("Plotting.jl")
