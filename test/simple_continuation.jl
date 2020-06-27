@@ -13,10 +13,10 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140,
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, sol, _ = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(15.28 k allocations: 1.055 MiB)
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(17.18 k allocations: 1.014 MiB)
 
 # test with callbacks
-br0, sol, _ = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show x;true))
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show x;true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools

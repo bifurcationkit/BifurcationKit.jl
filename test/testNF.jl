@@ -28,7 +28,7 @@ jet = (Fbp,
 	(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2),
 	(x, p, dx1, dx2, dx3) -> d3F(x, p, dx1, dx2, dx3))
 
-bp = BK.computeNormalForm(jet..., br, 1; verbose=true)
+bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 
 # normal form
 nf = bp.nf
@@ -44,7 +44,7 @@ br_noev, = @time BK.continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
-bp = BK.computeNormalForm(jet..., br_noev, 1; verbose=true)
+bp = BK.computeNormalForm(jet..., br_noev, 1; verbose=false)
 nf = bp.nf
 @test norm(nf[1]) < 1e-10
 	@test norm(nf[2] - 3.23) < 1e-10
@@ -52,12 +52,11 @@ nf = bp.nf
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
 # Automatic branch switching
-br2, _ = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01); printSolution = (x, p) -> x[1], verbosity = 0)
-# plot([br,br2])
 br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
+# plot([br,br2], marker = :d)
 
-br2, _ = continuation(jet..., br, 1, opts_br; printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
-# plot([br,br2])
+br3, _ = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
+# plot([br,br3])
 ####################################################################################################
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0
@@ -66,23 +65,15 @@ brp, = @time BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
 	printSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
-bpp = BK.computeNormalForm(jet..., brp, 1; verbose=true)
+bpp = BK.computeNormalForm(jet..., brp, 1; verbose=false)
 nf = bpp.nf
 @test norm(nf[1]) < 1e-9
 	@test norm(nf[2] - 3.23) < 1e-9
 	@test norm(nf[3]/2 - 0) < 1e-9
 	@test norm(nf[4]/6 + 0.234) < 1e-9
 
-
-br2, _ = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 2, dsmax = 0.01, ds = -0.01, detectBifurcation = 0, newtonOptions = (@set opt_newton.verbose=true)); printSolution = (x, p) -> x[1], tangentAlgo = BorderedPred(), verbosity = 3)
-	# plot([brp,br2])
-
-# plot(br, branchlabel = "flat", putbifptlegend=false)
-# plot!(br2, label = "pitchfork", putbifptlegend=false, marker=:d)
-#
-# plot([br,br2]; branchlabel=["0","1"],putbifptlegend=false)
-#
-# plot(br2.branch[1,:], marker = :d)
+br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax = 0.01, ds = 0.001, detectBifurcation = 2, newtonOptions = (@set opt_newton.verbose=false)); printSolution = (x, p) -> x[1], verbosity = 0, ampfactor = 1)
+	# plot([brp,br2], marker=:d)
 ####################################################################################################
 function Fbp2d(x, p)
 	return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
@@ -146,7 +137,6 @@ d2FbpSecBif(x,p,dx1,dx2)     = D((z, p0) -> d1FbpSecBif(z, p0, dx1), x, p, dx2)
 d3FbpSecBif(x,p,dx1,dx2,dx3) = D((z, p0) -> d2FbpSecBif(z, p0, dx1, dx2), x, p, dx3)
 jet = (FbpSecBif, dFbpSecBif, d2FbpSecBif, d3FbpSecBif)
 
-
 br_snd1, = @time BK.continuation(
 	FbpSecBif, [0.0], -0.2, (@lens _),
 	printSolution = (x, p) -> x[1],
@@ -173,6 +163,7 @@ br, = BK.continuation(
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 6, ds = 0.001); plot = false, verbosity = 0, normC = norminf)
 
+# plot(br;  plotfold = false)
 # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.], [0, 0, 1.]])
 BK.nf(bp2d)
@@ -205,7 +196,7 @@ d2Fsl(x,p,dx1,dx2)     = D((z, p0) -> d1Fsl(z, p0, dx1), x, p, dx2)
 d3Fsl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fsl(z, p0, dx1, dx2), x, p, dx3)
 
 # detect hopf bifurcation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = (@set opt_newton.verbose = true), maxSteps = 100)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
 br, _ = @time BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),

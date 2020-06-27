@@ -23,8 +23,9 @@ using DiffEqOperators, ForwardDiff
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 const BK = BifurcationKit
 
-# define the sup norm
+# define the sup norm and a L2 norm
 norminf = x -> norm(x, Inf)
+normbratu = x-> norm(x) / sqrt(length(x))
 
 # some plotting function to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -81,8 +82,8 @@ end
 We need to pass the parameters associated to this problem:
 
 ```julia
-Nx = 200
-Ny = 100
+Nx = 30
+Ny = 30
 lx = 0.5
 ly = 0.5
 
@@ -97,7 +98,7 @@ To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.
 
 ```julia
 # eigensolver
-eigls = EigArpack(0.5, :LM)
+eigls = EigKrylovKit(dim = 70)
 
 # options for Newton solver
 opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
@@ -107,7 +108,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pM
 	detectBifurcation = 3, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
 	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 ```	 
-Note that we put the option `detectBifurcation = 2` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
+Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
 
 ## Branch of homogenous solutions
 At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$. We shall compute this branch now.
@@ -118,7 +119,7 @@ We can now call `continuation` with the initial guess `sol0` which is homogenous
 br, _ = @time BK.continuation(
 	Fmit, JFmit,
 	sol0, par_mit, (@lens _.λ), opts_br;
-	printSolution = (x, p) -> norm(x),
+	printSolution = (x, p) -> normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 ```
@@ -131,15 +132,18 @@ Several branch point were detected as can be seen using the command
 
 ```julia
 julia> br
-Branch number of points: 85
+Branch number of points: 123
+Branch of Equilibrium
 Bifurcation points:
--   1,      bp point around p ≈ 0.36787944, step =  18, idx =  19, ind_bif =   1 [converged], δ = ( 1,  0)
--   2,      bp point around p ≈ 0.27243768, step =  33, idx =  34, ind_bif =   3 [converged], δ = ( 2,  0)
--   3,      bp point around p ≈ 0.15198538, step =  48, idx =  49, ind_bif =   4 [converged], δ = ( 1,  0)
--   4,      bp point around p ≈ 0.03515924, step =  76, idx =  77, ind_bif =   5 [converged], δ = ( 1,  0)
--   5,      bp point around p ≈ 0.03513245, step =  78, idx =  79, ind_bif =   6 [converged], δ = ( 1,  0)
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp point around p ≈ 0.36731369, step =  24, eigenelements in eig[ 25], ind_ev =   1 [    guess], δ = ( 1,  0)
+- #  2,      nd point around p ≈ 0.27255058, step =  41, eigenelements in eig[ 42], ind_ev =   3 [converged], δ = ( 2,  0)
+- #  3,      bp point around p ≈ 0.15215677, step =  59, eigenelements in eig[ 60], ind_ev =   4 [converged], δ = ( 1,  0)
+- #  4,      nd point around p ≈ 0.03552798, step =  94, eigenelements in eig[ 95], ind_ev =   6 [converged], δ = ( 2,  0)
+- #  5,      nd point around p ≈ 0.01590310, step = 112, eigenelements in eig[113], ind_ev =   8 [converged], δ = ( 2,  0)
 Fold points:
--   1,    fold point around p ≈ 0.36787944, step =  19, idx =  19, ind_bif =   0 [    guess], δ = ( 0,  0)
+- #  1,    fold point around p ≈ 0.36787944, step =  24, eigenelements in eig[ 24], ind_ev =   0 [    guess], δ = ( 0,  0)
+
 ```
 
 We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
@@ -168,7 +172,7 @@ We can now compute the branch off the third bifurcation point:
 br1, _ = continuation(jet..., br, 3, 
 	setproperties(opts_br;ds = 0.001, maxSteps = 40);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
+	printSolution = (x, p) -> normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	normC = norminf)
 ```	

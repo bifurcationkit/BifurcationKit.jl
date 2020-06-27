@@ -26,8 +26,7 @@ function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Le
 
 	# create an iterable
 	it = PALCIterable(Fhandle, Jhandle, x0, par0, lens, contParams, _linearAlgo; kwargs...)
-	@warn "J'ai du inverser les deux points"
-	return continuation(it, x1, p1, x0, get(par0, lens))
+	return continuation(it, x0, get(par0, lens), x1, p1)
 end
 
 function continuation(it::PALCIterable, x0, p0::Real, x1, p1::Real)
@@ -106,7 +105,8 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	end
 
 	# perform continuation
-	branch, u, tau =  continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.bifpoint[ind_bif].x, br.bifpoint[ind_bif].param,br.param_lens, optionsCont; kwargs...)
+	branch, u, tau = continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
+	# branch, u, tau =  continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.bifpoint[ind_bif].x, br.bifpoint[ind_bif].param, br.param_lens, optionsCont; kwargs...)
 	return Branch(branch, bifpoint), u, tau
 end
 
