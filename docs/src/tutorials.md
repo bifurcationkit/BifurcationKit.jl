@@ -14,9 +14,11 @@ Depth = 1
 
 ### Automatic bifurcation diagram
 ```@contents
-Pages = ["mittelmannAuto.md", "Swift-Hohenberg1d.md"]
+Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md"]
 Depth = 1
 ```
+
+## Bifurcation diagrams with periodic orbits
 ```@contents
 Pages = ["tutorials3.md","tutorials3b.md", "tutorialsPD.md", "tutorialsCGL.md", "tutorialsCGLShoot.md"]
 Depth = 1
