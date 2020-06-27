@@ -64,8 +64,7 @@ function getBifurcationType(contparams::ContinuationPar, state::PALCStateVariabl
 	n_imag, n_imag_prev = state.n_imag
 
 	# computation of the index of the bifurcating eigenvalue
-	ind_ev = n_unstable > 0 ? n_unstable : abs(n_unstable - n_unstable_prev)
-
+	ind_ev = n_unstable < n_unstable_prev ? n_unstable_prev : n_unstable
 	# bifurcation type
 	tp = :none
 

@@ -14,12 +14,9 @@ module BifurcationKit
 	include("Bifurcations.jl")
 	include("Predictor.jl")
 
-	include("BifurcationPoints.jl")
-	include("NormalForms.jl")
-
 	include("DeflationOperator.jl")
 	include("BorderedProblem.jl")
-	include("Plotting.jl")
+
 	include("Utils.jl")
 
 	include("codim2/codim2.jl")
@@ -27,6 +24,8 @@ module BifurcationKit
 	include("codim2/HopfCont.jl")
 
 	include("bifdiagram/BranchSwitching.jl")
+	include("BifurcationPoints.jl")
+	include("NormalForms.jl")
 
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
@@ -35,6 +34,8 @@ module BifurcationKit
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/PeriodicOrbitFD.jl")
 	include("periodicorbit/FloquetQaD.jl")
+
+	include("Plotting.jl")
 
 	# linear solvers
 	export DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,

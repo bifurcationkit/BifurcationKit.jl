@@ -170,9 +170,9 @@ _show(io, bp, ii) = @printf(io, "- #%3i, %7s point around p ≈ %4.8f, step = %3
 @inline kerneldim(bp) = abs(bp.δ[1])
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
-function show(io::IO, br::ContResult)
+function show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
-	println(io, "Branch of ", br.type)
+	println(io, "Branch of ", br.type, comment)
 	if length(br.bifpoint) > 0
 		println(io, "Bifurcation points:\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)")
 		for ii in eachindex(br.bifpoint)
