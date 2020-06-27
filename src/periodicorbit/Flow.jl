@@ -83,7 +83,7 @@ There are some simple constructors for which you only have to pass a `prob::ODEP
 
 	fl = Flow(F, prob, Tsit5(); kwargs...)
 
-If your vector field depends on parameters `p`, you can define a `Flow` using
+where `kwargs` is passed to `DiffEqBase::solve`. If your vector field depends on parameters `p`, you can define a `Flow` using
 
 	fl = Flow(F, p, prob, Tsit5(); kwargs...)
 
@@ -102,7 +102,7 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse}
 	"Flow which returns the tuple (t, u(t))"
 	flowTimeSol::Tts
 
-	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval (0,t) must be returned. It is not strictly necessary to provide this."
+	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this."
 	flowFull::Tff
 
 	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last composant being the value of the derivative of the flow."

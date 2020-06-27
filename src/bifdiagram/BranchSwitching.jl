@@ -54,7 +54,6 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		copyto!(pred.x, solbif)
 
 	end
-
 	# perform continuation
 	return continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
 end
@@ -88,25 +87,26 @@ function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	rootsNFp =  getRootsNf(ds)
 	rootsNFm =  getRootsNf(-ds)
 	println("\n--> BS from Non simple branch point")
-	println("--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point.")
-	Base.display(rootsNFm)
-	Base.display(rootsNFp)
+	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point (Reduced equation).\n")
 
 	# attempting to convert the guesses from the normal form into true zeros of F
 	par = br.params
-	defOpp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, Vector{typeof(bpnf.x0)}())
+	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 
 	optn = optionsCont.newtonOptions
+	cbnewton = get(kwargs, :callbackN, (x, f, J, res, iteration, itlinear, optionsN; kwgs...) -> true)
+	@show cbnewton
 	for xsol in rootsNFp
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p + ds), setproperties(optn; maxIter = 10optn.maxIter, verbose = false), defOpp)
+		@show 1
+		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p + ds), setproperties(optn; maxIter = 10optn.maxIter, verbose = true), defOpp; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
-	defOpm = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, Vector{typeof(bpnf.x0)}())
+	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFm
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p - ds), setproperties(optn; maxIter = 15optn.maxIter, verbose = false), defOpm)
 		flag && push!(defOpm, solbif)
 	end
-	println("--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.")
+	printstyled(color=:green, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\nprintstyled(color=:green, ")
 
 	# compute the different branches
 	function _continue(_sol, _dp, _ds)

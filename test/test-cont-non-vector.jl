@@ -90,7 +90,7 @@ outfoldco, hist, flag = @time BK.continuation(
 
 # try with newtonDeflation
 printstyled(color=:green, "--> test with Newton deflation 1")
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zero(sol)])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(sol)])
 soldef0 = BorderedArray([0.1], 0.0)
 soldef1, _, _ = @time BK.newton(
 	(x, r) -> Fb(x, r),
@@ -203,7 +203,7 @@ outfoldco, hist, flag = @time BK.continuation(
 
 # try with newtonDeflation
 printstyled(color=:green, "--> test with Newton deflation 1")
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [(out0)])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [(out0)])
 soldef1, _, _ = @time BK.newton(
 	Fr, (x, p) -> JacobianR(x, 0.),
 	out0, (0., 1.0),

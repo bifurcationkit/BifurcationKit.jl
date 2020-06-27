@@ -113,7 +113,7 @@ brmf, u1 = @time BK.continuation(
 	linearAlgo = BK.MatrixFreeBLS())
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x,y), 1.0, [out])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 
 # quick test of scalardM deflation
 # BK.scalardM(deflationOp, sol, 5sol)

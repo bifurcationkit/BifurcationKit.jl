@@ -144,7 +144,7 @@ heatmapsol(sol_hexa)
 # 	return res, true, info.numops
 # end
 ####################################################################################################
-deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time BK.newton(

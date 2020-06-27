@@ -65,7 +65,7 @@ heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
 ###################################################################################################
 # recherche de solutions
-deflationOp = DeflationOperator(2.0, (x, y)->dot(x, y), 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
 outdef, _, flag, _ = @time BK.newton(F_sh, dF_sh,

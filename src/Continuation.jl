@@ -174,7 +174,7 @@ function show(io::IO, br::ContResult)
 	println(io, "Branch number of points: ", length(br.branch))
 	println(io, "Branch of ", br.type)
 	if length(br.bifpoint) > 0
-		println(io, "Bifurcation points:\n [ind_ev = index of the bifurcating eigevalue e.g. `br.eig[idx].eigenval[ind_ev]`]")
+		println(io, "Bifurcation points:\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)")
 		for ii in eachindex(br.bifpoint)
 			_show(io, br.bifpoint[ii], ii)
 		end
@@ -524,7 +524,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 
 	next = (state, state)
 
-	while next !== nothing
+	while ~isnothing(next)
 		# we get the current state
 		(i, state) = next
 		########################################################################################
@@ -536,7 +536,6 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			# Eigen-elements computation, they are stored in state
 			if computeEigenElements(contParams)
 				itnewton = computeEigenvalues!(it, state)
-
 				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
@@ -552,17 +551,15 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 				status::Symbol = :guess
 				if contParams.detectBifurcation > 2
 					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
-
-					# locate bifurcations, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state
+					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status = locateBifurcation!(it, state, it.verbosity > 2)
 				end
-				# we double-ckeck that the previous line which mutated state did not remove the bifurcation point
+				# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 				if detectBifucation(state)
 					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status)
 					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
-					if contParams.detectLoop
-						state.stopcontinuation = detectLoop(contRes, bifpt)
-					end
+					# detect loop in the branch
+					contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
 				end
 			end
 
@@ -575,7 +572,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-			if it.finaliseSolution(state.z_old, state.tau, state.step, contRes) == false
+			if ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes)
 				state.stopcontinuation = true
 			end
 

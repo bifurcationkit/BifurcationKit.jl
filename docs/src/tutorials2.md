@@ -172,7 +172,7 @@ which penalizes `sol_hexa`.
 ```julia
 # this define the above penalizing factor with p=2, sigma=1, norm associated to dot
 # and the set of sol_{hexa} is of length ns=1
-deflationOp = DeflationOperator(2.0,(x,y) -> dot(x,y),1.0,[sol_hexa])
+deflationOp = DeflationOperator(2.0,dot,1.0,[sol_hexa])
 optnewton = @set optnewton.maxIter = 250
 outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 				0.2vec(sol_hexa) .* vec([exp.(-(x+lx)^2/25) for x in X, y in Y]),
