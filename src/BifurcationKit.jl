@@ -76,7 +76,7 @@ module BifurcationKit
 	export computeNormalForm
 
 	# automatic bifurcation diagram
-	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode
+	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch
 
 	# Periodic orbit computation
 	export getPeriod, getAmplitude, getMaximum, getTrajectory

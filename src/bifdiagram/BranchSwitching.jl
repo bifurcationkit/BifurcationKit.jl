@@ -107,8 +107,6 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	end
 
 	# perform continuation
-	@info "changer -> 2pts [1d]" bifpoint.param
-	# branch, u, tau = continuation(F, dF, pred.x, set(br.params, br.param_lens, pred.p), br.param_lens, optionsCont; kwargs...)
 	branch, u, tau =  continuation(F, dF,
 			bifpoint.x0, bifpoint.params,	# first point on the branch
 			pred.x, pred.p,					# second point on the branch

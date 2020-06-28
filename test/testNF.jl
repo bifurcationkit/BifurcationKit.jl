@@ -9,7 +9,7 @@ end
 
 par = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
 ####################################################################################################
-opt_newton = NewtonPar(tol = 1e-9, verbose = false, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-9, maxIter = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
 	br, = @time continuation(
@@ -72,8 +72,16 @@ nf = bpp.nf
 	@test norm(nf[3]/2 - 0) < 1e-9
 	@test norm(nf[4]/6 + 0.234) < 1e-9
 
+# test automatic branch switching
 br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax = 0.01, ds = 0.001, detectBifurcation = 2, newtonOptions = (@set opt_newton.verbose=false)); printSolution = (x, p) -> x[1], verbosity = 0, ampfactor = 1)
 	# plot([brp,br2], marker=:d)
+
+# test methods for aBS
+BK.from(br2) |> BK.type
+BK.from(br2) |> BK.istranscritical
+BK.type(nothing)
+BK.show(stdout,br2)
+BK.propertynames(br2)
 ####################################################################################################
 function Fbp2d(x, p)
 	return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
@@ -148,6 +156,14 @@ bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 	printSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
+
+# test calls for aBD
+BK.hasbranch(bdiag)
+BK.getContResult(br)
+BK.getContResult(br_snd2)
+size(bdiag)
+getBranch(bdiag, (1,))
+show(stdout, bdiag)
 ####################################################################################################
 # test of the D6 normal form
 function FbpD6(x, p)
@@ -203,7 +219,7 @@ d3Fsl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fsl(z, p0, dx1, dx2), x, p, dx3)
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
-br, _ = @time BK.continuation(
+br, = @time BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	printSolution = (x, p) -> norminf(x),
 	opts_br; plot = false, verbosity = 0, normC = norminf)
@@ -216,6 +232,7 @@ hp = BK.computeNormalForm(
 	br, 1)
 
 nf = hp.nf
+BK.type(hp)
 
 @test abs(nf.a - 1) < 1e-9
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-10

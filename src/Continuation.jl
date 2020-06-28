@@ -375,7 +375,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 		push!(contres.stability, isstable(state))
 	end
 
-	# if condition to deal with n_imag = -1
+	# condition to deal with n_imag = -1
 	if state.n_imag[1] >= 0; push!(contres.n_imag, state.n_imag[1]); end
 
 	# save solution
@@ -401,8 +401,7 @@ function ContResult(it::PALCIterable, state::PALCStateVariables)
 		updatestability!(state, n_unstable, n_imag)
 		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
 	else
-		T = eltype(it)
-		eiginfo = (Complex{T}(0), nothing, false, 0)
+		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
 		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
 	end
 end
@@ -457,12 +456,11 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 			eigvecs = nothing
 		end
 	else
-		eigvals = nothing
-		eigvecs = nothing
+		eigvals, eigvecs = nothing, nothing
 	end
 
 	# return the state
-	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)	# previous tangent
+	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)
 	return state, state
 end
 

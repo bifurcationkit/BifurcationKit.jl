@@ -61,16 +61,18 @@ d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 d1Fmit(x, p, dx) = ForwardDiff.derivative(t -> Fmit(x .+ t .* dx, p), 0.)
 d2Fmit(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fmit(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 ####################################################################################################
-Nx = 100
-	Ny = 101
+Nx = 30
+	Ny = 30
 	lx = 0.5
 	ly = 0.5
 
 	Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
-	par_mit = (λ = .05, Δ = Δ)
+	par_mit = (λ = .01, Δ = Δ)
 	sol0 = 0*ones(Nx, Ny) |> vec
 ####################################################################################################
-eigls = EigArpack(0.5, :LM)
+eigls = EigArpack(20.5, :LM)
+eigls = EigKrylovKit(dim = 70)
+# eigls = EigArpack()
 	opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 	out, hist, flag = @time BK.newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
@@ -113,14 +115,15 @@ d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
 
 jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 
-BK.computeNormalForm(jet..., br, 2; verbose = false, nev = 50)
+BK.computeNormalForm(jet..., br, 3; verbose = false, nev = 50)
 
-br1, _ = continuation(jet...,
+br1, = continuation(jet...,
 		br, 3,
-		setproperties(opts_br;ds = 0.001, maxSteps = 140);
+		setproperties(opts_br;ds = 0.001, maxSteps = 140, detectBifurcation = 0);
 		verbosity = 0, plot = true,
 		printSolution = (x, p) -> normbratu(x),
 		finaliseSolution = finSol,
+		tangentAlgo = BorderedPred(),
 		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		normC = norminf)
@@ -128,10 +131,10 @@ br1, _ = continuation(jet...,
 plot([br,br1],plotfold=false)
 
 
-br2, _ = continuation(jet...,
-		br1, 1, setproperties(opts_br;ds = 0.0025, maxSteps = 400, detectBifurcation = 0);
+br2, = continuation(jet...,
+		br1, 1, setproperties(opts_br;ds = 0.0025, maxSteps = 140, detectBifurcation = 0);
 		verbosity = 0, plot = true,
-		# tangentAlgo = BorderedPred(),
+		tangentAlgo = BorderedPred(),
 		printSolution = (x, p) -> normbratu(x),
 		finaliseSolution = finSol,
 		callbackN = cb,
@@ -142,16 +145,16 @@ plot([br,br1, br2],plotfold=false)
 
 ####################################################################################################
 # analyse 2d bifurcation point
-bp2d = @time BK.computeNormalForm(jet..., br, 2;  verbose=true)
+bp2d = @time BK.computeNormalForm(jet..., br, 4,  verbose=true, nev=30)
 
 BK.nf(bp2d)[2] |> println
 
 using ProgressMeter
-Nd = 200
-	L = 0.9
+Nd = 100
+	L = 3.9
 	X = LinRange(-L,L, Nd)
 	Y = LinRange(-L,L, Nd)
-	P = LinRange(-0.0001,0.0001, Nd+1)
+	P = LinRange(-0.001,0.001, Nd+1)
 
 V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
 

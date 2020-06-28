@@ -21,7 +21,7 @@ const BK = BifurcationKit
 
 We then define a discretization of the problem
 
-```
+```julia
 # define a norm
 norminf(x) = norm(x, Inf64)
 
@@ -83,7 +83,7 @@ end
 
 Next, we specify the arguments to be used during continuation, such as plotting function, tangent predictors, callbacks...
 
-```
+```julia
 args = (verbosity = 3,
 	plot = true,
 	linearAlgo  = MatrixBLS(),

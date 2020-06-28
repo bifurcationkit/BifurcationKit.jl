@@ -78,8 +78,10 @@ end
 
 diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args...)
 
-plot(diagram; code = (1,), plotfold = false,  markersize = 2, putbifptlegend = false, xlims=(-1,1))
-	# title!("#branches = $(size(branches))")
+code = ()
+	plot(diagram; code = code, plotfold = false,  markersize = 2, putbifptlegend = false)
+	plot!(brflat)
+	title!("#branches = $(size(branches, code))")
 
+diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (2,)),  (current = 1, maxlevel = 2), optrec; args...)
 
-plot(brs)

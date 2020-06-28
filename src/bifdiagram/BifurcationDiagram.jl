@@ -13,7 +13,8 @@ getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
 
 # total size of the tree
-size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
+_size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
+size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
 
 """
 $(TYPEDEF)
@@ -42,7 +43,7 @@ function bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options
 	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
-function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level, options; code = "0", usedeflation = false, kwargs...)
+function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTuple{(:current, :maxlevel),Tuple{Int64,Int64}}, options; code = "0", usedeflation = false, kwargs...)
 	if level[1] >= level[2] || isnothing(node.γ); return node; end
 
 	# convenient function for branching
