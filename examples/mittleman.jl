@@ -73,8 +73,8 @@ Nx = 30
 eigls = EigArpack(20.5, :LM)
 eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
-	opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time BK.newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
+	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+	out, hist, flag = @time newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(out)
 
@@ -119,7 +119,7 @@ BK.computeNormalForm(jet..., br, 3; verbose = false, nev = 50)
 
 br1, = continuation(jet...,
 		br, 3,
-		setproperties(opts_br;ds = 0.001, maxSteps = 140, detectBifurcation = 0);
+		setproperties(opts_br;ds = 0.001, maxSteps = 140, detectBifurcation = 3);
 		verbosity = 0, plot = true,
 		printSolution = (x, p) -> normbratu(x),
 		finaliseSolution = finSol,
@@ -142,6 +142,48 @@ br2, = continuation(jet...,
 
 plot([br,br1, br2],plotfold=false)
 ####################################################################################################
+# bifurcation diagram
+function optionsCont(x,p,l; opt = opts_br)
+	if l <= 2
+		return opt
+	elseif l==3
+		return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
+	else
+		return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
+	end
+end
+
+code = ()
+	plot(diagram; code = code, plotfold = false, putbifptlegend=false, markersize=2);title!("")
+	plot!(br)
+	# xlims!(0.01, 0.4)
+	title!("#branches = $(size(BK.getBranch(diagram, code)))")
+	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
+
+diagram = bifurcationdiagram(jet...,
+		sol0, par_mit, (@lens _.λ), 4, optionsCont;
+		# δp = 0.001,
+		verbosity = 0, plot = true,
+		printSolution = (x, p) -> normbratu(x),
+		callbackN = cb,
+		tangentAlgo = BorderedPred(),
+		usedeflation = true,
+		finaliseSolution = finSol,
+		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+		normC = norminf)
+
+bifurcationdiagram!(jet...,
+		getBranch(diagram, (14,)), (current = 3, maxlevel = 6), optionsCont;
+		# δp = 0.001,
+		verbosity = 0, plot = true,
+		printSolution = (x, p) -> normbratu(x),
+		callbackN = cb,
+		finaliseSolution = finSol,
+		usedeflation = true,
+		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+		normC = norminf)
+
+BK.getBranch(diagram, (10,1,1)) |> plot
 
 ####################################################################################################
 # analyse 2d bifurcation point
@@ -185,8 +227,6 @@ plot(
 	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
 	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
 
-plotsol(bp2d.ζ[1])
-plotsol(bp2d(resx[10], resp[10]))
 ####################################################################################################
 # find isolated branch, see Farrell et al.
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])

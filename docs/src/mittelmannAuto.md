@@ -68,7 +68,7 @@ end
 Fmit(u, p) = Fmit!(similar(u), u, p)
 ```
 
-It will also prove useful to have the jacobian of our functional: 
+It will also prove useful to have the jacobian of our functional and the other derivatives: 
 
 ```julia
 function JFmit(x,p)
@@ -76,39 +76,157 @@ function JFmit(x,p)
 	dg = dϕ.(x, p.λ)
 	return J + spdiagm(0 => dg)
 end
+
+D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
+d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
+d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
+jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 ```
 
 We need to pass the parameters associated to this problem:
 
 ```julia
-Nx = 200
-Ny = 100
+Nx = 30
+Ny = 30
 lx = 0.5
 ly = 0.5
 
-Δ = Laplacian2D(Nx, Ny, lx, ly)
-par_mit = (λ = .05, Δ = Δ)
+Δ, = Laplacian2D(Nx, Ny, lx, ly)
 
-# initial guess f for newton
-sol0 = zeros(Nx, Ny) |> vec
+# parameters associated with the PDE
+par_mit = (λ = .01, Δ = Δ)
+
+# initial condition
+sol0 = 0*ones(Nx, Ny) |> vec
 ```
 
-To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.5`
+To compute the eigenvalues, we opt for the solver in `KrylovKit`
 
 ```julia
 # eigensolver
-eigls = EigArpack(0.5, :LM)
+eigls = EigKrylovKit(dim = 70)
 
 # options for Newton solver
-opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
-# options for continuation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 3, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
-	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
+# options for continuation, we want to locate very precisely the 
+# bifurcation points, so we tune the bisection accordingly
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
 ```	 
-Note that we put the option `detectBifurcation = 2` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
+
+Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
+
+In order to have an output like Auto07p, we provide the finaliser (see arguments of [`continuation`](@ref))
+
+```julia
+function finSol(z, tau, step, br)
+	if ~isnothing(br.bifpoint)
+		if br.bifpoint[end].step == step
+			BK._show(stdout, br.bifpoint[end], step)
+		end
+	end
+	return true
+end
+```
 
 ## Automatic bifurcation diagram
 
+In order to avoid spurious branch switching, we use a callback (see [`continuation`](@ref)) to reject specific continuation steps where the jump in parameters is too large or when the residual is too large:
+
+```julia
+function cb(x,f,J,res,it,itl,optN; kwargs...)
+	_x = get(kwargs, :z0, nothing)
+	if _x isa BorderedArray
+		return (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05)
+	end
+	true
+end
+```
+
+Finally, before calling the automatic `bifurcationdiagram`, we need to provide a function to adjust the continuation parameters as function of the branching level (Note that this function can be constant).
+
+```julia
+function optionsCont(x,p,l; opt0 = opts_br)
+	if l == 1
+		return opt
+	elseif l==2
+		return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
+	else
+		return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
+	end
+end
+```
+
+We are then ready to compute the bifurcation diagram. If we choose a level 5 of recursion like 
+
+```julia
+diagram = bifurcationdiagram(jet...,
+	sol0, par_mit, (@lens _.λ), 
+	# important argument: this is the maximal 
+	# recursion level 
+	5, 
+	optionsCont;
+	verbosity = 0, plot = true,
+	printSolution = (x, p) -> normbratu(x),
+	callbackN = cb,
+	usedeflation = true,
+	finaliseSolution = finSol,
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	normC = norminf)
+```
+this gives using `plot(diagram; plotfold = false, putbifptlegend=false, markersize=2);title!("")`:
+
 ![](mittlemanBD.png)
+
+
+## Interactive exploration
+
+We can see that the non 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the first one which is composed of 8 branches
+
+`plot( plot(diagram; code = (2,), plotfold = false, putbifptlegend=false, markersize=2)`
+
+## Interactive computation
+
+Let's say you have been cautious and did not launch a deep bifurcation diagram by using a small recursion level 2:
+
+```julia
+diagram = bifurcationdiagram(jet...,
+	sol0, par_mit, (@lens _.λ), 
+	# here the recusion level is
+	2,
+	optionsCont;
+	verbosity = 0, plot = true,
+	printSolution = (x, p) -> normbratu(x),
+	callbackN = cb,
+	tangentAlgo = BorderedPred(),
+	usedeflation = true,
+	finaliseSolution = finSol,
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	normC = norminf)
+```
+
+You would end up with this diagram 
+
+![](mittlemanBD2.png)
+
+How can we complete this diagram without recomputing it from scratch? It is easy! For example, let us complete the magenta branches as follow
+
+```julia
+bifurcationdiagram!(jet...,
+	# this improve the first branch on the violet curve. Note that
+	# for symmetry reasons, the first bifurcation point
+	# has 8 branches
+	getBranch(diagram, (1,)), (current = 3, maxlevel = 6), optionsCont;
+	verbosity = 0, plot = true,
+	printSolution = (x, p) -> normbratu(x),
+	callbackN = cb,
+	finaliseSolution = finSol,
+	usedeflation = true,
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	normC = norminf)
+```
+
+This gives the following diagram. Using this call, you can pinpoint the particular location where to refine the diagram.
+
+![](mittlemanBD3.png)
