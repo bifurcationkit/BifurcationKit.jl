@@ -186,4 +186,5 @@ function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, option
 	return branches, (before = defOpm, after = defOpp)
 end
 
+# same but for a Branch
 multicontinuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = multicontinuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)

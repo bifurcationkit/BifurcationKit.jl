@@ -14,6 +14,12 @@ getContResult(br::Branch) = br.γ
 
 # total size of the tree
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
+
+"""
+$(TYPEDEF)
+
+Return the size of the bifurcation diagram. The arguement `code` is the same as in `getBranch`.
+"""
 size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
 
 """
@@ -29,9 +35,26 @@ end
 show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
 
 """
-options = (x, p, level) -> contparams
+$(TYPEDEF)
 
-kwargs... Should be  options for `continuation` with branch switching. See
+Compute the bifurcation diagram associated with the problem `F=0` recursively.
+
+# Arguments
+- `F, dF, d2F, d3F` functional and its derivatives
+- `x0` initial guess
+- `par0` parameter values at `x0`
+- `lens` lens to select the parameter axis
+- `level` maximum branching (or recursion) level for computing the bifurcation diagram
+- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. `x,p` is the current solution to `F(x,p)=0`.
+- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](@ref).
+
+# Simplified call:
+
+We also provide the call
+
+`bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options; usedeflation = false, kwargs...)`
+
+where `br` is a branch computed after a call to [`continuation`](@ref) from which we want to compute the bifurcating branches recursively.
 """
 function bifurcationdiagram(F, dF, d2F, d3F, x0, par0, lens::Lens, level::Int, options; usedeflation = false, kwargs...)
 	γ, u = continuation(F, dF, x0, par0, lens, options(x0, par0, 1); kwargs...)
@@ -43,6 +66,11 @@ function bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options
 	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
+"""
+$(TYPEDEF)
+
+Same as [`bifurcationdiagram`](@ref) but you pass a part of a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches with increased branch level. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
+"""
 function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTuple{(:current, :maxlevel),Tuple{Int64,Int64}}, options; code = "0", usedeflation = false, kwargs...)
 	if level[1] >= level[2] || isnothing(node.γ); return node; end
 

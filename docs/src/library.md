@@ -80,6 +80,16 @@ newton
 continuation
 ```
 
+## Bifurcation diagram
+
+```@docs
+bifurcationdiagram
+```
+
+```@docs
+bifurcationdiagram!
+```
+
 ## Utils for periodic orbits
 
 ```@docs
