@@ -446,7 +446,7 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	z_pred	= BorderedArray(copyto!(similar(u1), u1), p1)
 	tau  = copy(z_pred)
 
-	# compute the tangents
+	# compute the tangent using Secant predictor
 	getTangent!(tau, z_pred, z_old, it, ds, theta, SecantPred(), _verbosity)
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
