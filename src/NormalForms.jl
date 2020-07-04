@@ -367,8 +367,16 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	# jacobian at bifurcation point
 	L = dF(x0, parbif)
 
+	# we only invert L repeatdly, so we try to factorize it
+	if L isa AbstractMatrix
+		Linv = factorize(L)
+	else
+		Linv = L
+	end
+
 	# linear solver
 	ls = options.linsolver
+
 
 	# "zero" eigenvalues at bifurcation point
 	rightEv = br.eig[bifpt.idx].eigenvals
@@ -450,7 +458,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	d2gidxjdpk = zeros(Float64, N, N)
 	for ii in 1:N, jj in 1:N
 		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) - apply(L, ζs[jj])) ./ δ
-		Ψ01, _ = ls(L, E(R01))
+		Ψ01, _ = ls(Linv, E(R01))
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
 	end
 	verbose && (printstyled(color=:green, "\n--> b1 = \n");Base.display( d2gidxjdpk ))
@@ -476,15 +484,15 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
 
-		wst, _ = ls(L, E(R2(ζs[ll], ζs[kk])))
+		wst, _ = ls(Linv, E(R2(ζs[ll], ζs[kk])))
 		b3v .-= R2(ζs[jj], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζstars[ii])
 
-		wst, _ = ls(L, E(R2(ζs[ll], ζs[jj])))
+		wst, _ = ls(Linv, E(R2(ζs[ll], ζs[jj])))
 		b3v .-= R2(ζs[kk], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζstars[ii])
 
-		wst, _ = ls(L, E(R2(ζs[kk], ζs[jj])))
+		wst, _ = ls(Linv, E(R2(ζs[kk], ζs[jj])))
 		b3v .-= R2(ζs[ll], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
 		for ii in 1:N
