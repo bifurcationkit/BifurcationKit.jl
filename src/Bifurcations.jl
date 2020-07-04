@@ -53,7 +53,8 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 				# it means the fold occurs between step-2 and step:
 				step = length(branch)-1,
 				status = :guess,
-				δ = (0, 0)))
+				δ = (0, 0),
+				precision = -1.))
 		detected = true
 	end
 	detected
@@ -132,7 +133,8 @@ function getBifurcationType(contparams::ContinuationPar, state::PALCStateVariabl
 			ind_ev = ind_ev,
 			step = state.step,
 			status = status,
-			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev))
+			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
+			precision = abs(state.z_old.p - state.z_pred.p))
 		(verbosity>0) && printstyled(color=:red, "!! $(tp) Bifurcation point at p ≈ $(getp(state)), δn_unstable = $δn_unstable, δn_imag = $δn_imag \n")
 	end
 	return detected, param_bif

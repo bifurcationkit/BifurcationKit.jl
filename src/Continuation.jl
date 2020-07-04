@@ -118,6 +118,7 @@ $(TYPEDFIELDS)
     - `step` is the continuation step at which the bifurcation occurs,
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
+    - `precision` precision in location of the bifurcation point
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`."
@@ -166,7 +167,8 @@ length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline vectortype(br::ContResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
 
-_show(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
+_show(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f ± %1.0e, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.precision, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
+_showFold(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
 @inline kerneldim(bp) = abs(bp.δ[1])
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
@@ -182,7 +184,7 @@ function show(io::IO, br::ContResult, comment = "")
 	if length(br.foldpoint) > 0
 		println(io, "Fold points:")
 		for ii in eachindex(br.foldpoint)
-			_show(io, br.foldpoint[ii], ii)
+			_showFold(io, br.foldpoint[ii], ii)
 		end
 	end
 end
@@ -196,7 +198,7 @@ end
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
 function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = (type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0))
+	bif0 = (type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1))
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0
@@ -485,7 +487,8 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 		getTangent!(state.tau, z_newton, state.z_old, it,
 					ds, theta, it.tangentAlgo, verbosity)
 
-		# update current solution
+		# record previous parameter (cheap) and update current solution
+		state.z_pred.p = state.z_old.p
 		copyto!(state.z_old, z_newton)
 	else
 		verbose && printstyled("Newton correction failed\n", color=:red)
