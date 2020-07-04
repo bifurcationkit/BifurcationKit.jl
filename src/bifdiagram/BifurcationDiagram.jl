@@ -18,14 +18,14 @@ show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
 
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Return the size of the bifurcation diagram. The arguement `code` is the same as in `getBranch`.
 """
 size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
 
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Return the part of the tree (bifurcation diagram) by recursively descending the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
 """
@@ -35,7 +35,7 @@ function getBranch(tree::BifDiagNode, code)
 end
 
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Return the part of the tree corresponding to the indbith-th bifurcation point on the root branch.
 """
@@ -46,7 +46,7 @@ function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
 end
 
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Compute the bifurcation diagram associated with the problem `F=0` recursively.
 
@@ -78,7 +78,7 @@ function bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options
 end
 
 """
-$(TYPEDEF)
+$(SIGNATURES)
 
 Same as [`bifurcationdiagram`](@ref) but you pass a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
 """

@@ -174,8 +174,8 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	Ty = typeof(ds)
 	pred = predictor(hopfpt, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 
-	verbose && printstyled(color = :green, "#"^51*
-			"\n--> Start Hopf branch switching.
+	verbose && printstyled(color = :green, "#"^61*
+			"\n--> Start branching from Hopf branch to periodic orbits.
 			\n--> Bifurcation type = ", hopfpt.type,
 			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,
@@ -201,6 +201,6 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	# perform continuation
 	branch, u, tau = continuation(probPO, orbitguess, set(br.params, br.param_lens, pred.p), br.param_lens, _contParams; kwargs...)
 
-	return setproperties(branch; type = :PeriodicOrbit, functional = probPO), u, tau
+	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = probPO), hopfpt), u, tau
 
 end
