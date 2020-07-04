@@ -504,6 +504,29 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 end
 
 computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
+
+function predictor(bpnf::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1)) where T
+	# dimension of the kernel
+	n = length(bpnf.ζ)
+
+	# find zeros for the normal on each side of the bifurcation point
+	function getRootsNf(_ds)
+		deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zeros(n)])
+		failures = 0
+		# we allow for 10 failures of nonlinear deflation
+		while failures < 10
+			outdef1, _, flag, _ = newton((x, p) -> bpnf(Val(:reducedForm), x, p), rand(n), _ds, NewtonPar(maxIter = 50), deflationOp)
+			flag && push!(deflationOp, outdef1)
+			~flag && (failures += 1)
+		end
+		return deflationOp.roots
+	end
+	rootsNFp =  getRootsNf(abs(δp))
+	rootsNFm =  getRootsNf(-abs(δp))
+	println("\n--> BS from Non simple branch point")
+	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point (Reduced equation).\n")
+	return (before = rootsNFm, after = rootsNFp)
+end
 ####################################################################################################
 
 function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
