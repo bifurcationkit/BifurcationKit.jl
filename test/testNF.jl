@@ -34,7 +34,7 @@ bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 nf = bp.nf
 
 @test norm(nf[1]) < 1e-10
-	@test norm(nf[2] - 3.23) < 1e-10
+	@test norm(nf[2] - 3.23) < 1e-8
 	@test norm(nf[3]/2 - -1.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 
@@ -47,7 +47,7 @@ br_noev, = @time BK.continuation(
 bp = BK.computeNormalForm(jet..., br_noev, 1; verbose=false)
 nf = bp.nf
 @test norm(nf[1]) < 1e-10
-	@test norm(nf[2] - 3.23) < 1e-10
+	@test norm(nf[2] - 3.23) < 1e-8
 	@test norm(nf[3]/2 - -1.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
@@ -115,7 +115,7 @@ for α in [-1,1]
 	@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -par.α * 0.0)   < 1e-10
 	@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -par.α * 0.456) < 1e-10
 	@test norm(bp2d.nf.b2, Inf) < 3e-6
-	@test norm(bp2d.nf.b1 - par.α * 3.23 * I, Inf) < 1e-10
+	@test norm(bp2d.nf.b1 - par.α * 3.23 * I, Inf) < 1e-9
 	@test norm(bp2d.nf.a, Inf) < 1e-6
 end
 
@@ -131,7 +131,7 @@ bp2d = @time BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 
 @test abs(bp2d.nf.b3[1,1,1,2] / 2 - -0.0)   < 1e-10
 @test abs(bp2d.nf.b3[2,1,1,2] / 2 - -0.456) < 1e-10
 @test norm(bp2d.nf.b2, Inf) < 3e-6
-@test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-10
+@test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-9
 @test norm(bp2d.nf.a, Inf) < 1e-6
 ####################################################################################################
 # vector field to test close secondary bifurcations
@@ -194,7 +194,7 @@ BK.nf(bp2d)
 	@test abs(bp2d.nf.b2[1,2,3] - pard6.a)   < 1e-10
 
 # test the evaluation of the normal form
-x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.param_lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-14
+x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.param_lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
