@@ -36,10 +36,11 @@ d3R(u,p,dx1,dx2,dx3) = @. p.b * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
 jet = (R_SH, Jac_sp, d2R, d3R)
 
 # parameters associated with the equation
-parSH = (p = 0.7, b = 2., L1 = Lsh)</code></pre><p>We then choose the parameters for <a href="../library/#BifurcationKit.continuation"><code>continuation</code></a> with precise detection of bifurcation points by bisection:</p><pre><code class="language-julia">opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01, pMin = -2.1,
+parSH = (p = 0.7, b = 2., L1 = Lsh)</code></pre><p>We then choose the parameters for <a href="../library/#BifurcationKit.continuation"><code>continuation</code></a> with precise detection of bifurcation points by bisection:</p><pre><code class="language-julia">optnew = NewtonPar(verbose = true, tol = 1e-12)
+opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01, pMin = -2.1,
 	newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), 
 	maxSteps = 300, plotEveryStep = 40, 
-	detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)</code></pre><p>Before we continue, it is useful to define a callback (see <a href="../library/#BifurcationKit.continuation"><code>continuation</code></a>) for the <a href="../library/#BifurcationKit.newton"><code>newton</code></a> to avoid spurious branch switching. It is not strictly necessary for what follows but </p><pre><code class="language-julia">function cb(x,f,J,res,it,itl,optN; kwargs...)
+	detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)</code></pre><p>Before we continue, it is useful to define a callback (see <a href="../library/#BifurcationKit.continuation"><code>continuation</code></a>) for <a href="../library/#BifurcationKit.newton"><code>newton</code></a> to avoid spurious branch switching. It is not strictly necessary for what follows. </p><pre><code class="language-julia">function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
 	if _x isa BorderedArray
 		# if the residual is too large or if the parameter jump
@@ -52,15 +53,20 @@ end</code></pre><p>Next, we specify the arguments to be used during continuation
 	linearAlgo  = MatrixBLS(),
 	plotSolution = (x, p;kwargs...)-&gt;(plot!(X, x; ylabel=&quot;solution&quot;, label=&quot;&quot;, kwargs...)),
 	callbackN = cb
-	)</code></pre><p>Depending on the level of recursion in the bifurcation diagram, we change a bit the options as follows</p><pre><code class="language-julia">function optrec(x, p, l; opt = opts)
-	level =  l
+	)</code></pre><p>Depending on the level of recursion in the bifurcation diagram, we change a bit the options as follows</p><pre><code class="language-julia">function optrec(x, p, level; opt = opts)
 	if level &lt;= 2
 		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx)
 	end
 	return opt
-end</code></pre><div class="admonition is-success"><header class="admonition-header">Tuning</header><div class="admonition-body"><p>The function <code>optrec</code> modifies the continuation options <code>opts</code> as function of the branching <code>level</code>. It can be used to alter the continuation parameters inside the bifurcation diagram.</p></div></div><p>We are now in position to compute the bifurcation diagram</p><pre><code class="language-julia">diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args...)</code></pre><p>and plot it  </p><pre><code class="language-julia">plot(diagram;  code = (1,), plotfold = false,  
+end</code></pre><div class="admonition is-success"><header class="admonition-header">Tuning</header><div class="admonition-body"><p>The function <code>optrec</code> modifies the continuation options <code>opts</code> as function of the branching <code>level</code>. It can be used to alter the continuation parameters inside the bifurcation diagram.</p></div></div><p>We are now in position to compute the bifurcation diagram</p><pre><code class="language-julia"># initial condition
+sol0 = zeros(Nx)
+
+diagram = bifurcationdiagram(jet..., 
+	sol0, (@set parSH.p = 1.), (@lens _.p), 
+	# here we specify a maximum branching level of 4
+	4, optrec; args...)</code></pre><p>and plot it  </p><pre><code class="language-julia">plot(diagram;  plotfold = false,  
 	markersize = 2, putbifptlegend = false, xlims=(-1,1))
-title!(&quot;#branches = $(size(branches))&quot;)</code></pre><p><img src="../BDSH1d.png" alt/></p><p>Et voilà!</p><h2 id="Exploration-of-the-diagram-1"><a class="docs-heading-anchor" href="#Exploration-of-the-diagram-1">Exploration of the diagram</a><a class="docs-heading-anchor-permalink" href="#Exploration-of-the-diagram-1" title="Permalink"></a></h2><p>The bifurcation diagram <code>diagram</code> is stored as tree:</p><pre><code class="language-julia">julia&gt; diagram
+title!(&quot;#branches = $(size(diagram))&quot;)</code></pre><p><img src="../BDSH1d.png" alt/></p><p>Et voilà!</p><h2 id="Exploration-of-the-diagram-1"><a class="docs-heading-anchor" href="#Exploration-of-the-diagram-1">Exploration of the diagram</a><a class="docs-heading-anchor-permalink" href="#Exploration-of-the-diagram-1" title="Permalink"></a></h2><p>The bifurcation diagram <code>diagram</code> is stored as tree:</p><pre><code class="language-julia">julia&gt; diagram
 Bifurcation diagram. Root branch (level 1) has 6 children and is such that:
 Branch number of points: 224
 Branch of Equilibrium
@@ -71,4 +77,4 @@ Bifurcation points:
 - #  3,      bp point around p ≈ -0.48386427, step = 107, eigenelements in eig[108], ind_ev =   3 [converged], δ = ( 1,  0)
 - #  4,      bp point around p ≈ -0.53115204, step = 111, eigenelements in eig[112], ind_ev =   4 [converged], δ = ( 1,  0)
 - #  5,      bp point around p ≈ -0.86889220, step = 135, eigenelements in eig[136], ind_ev =   5 [converged], δ = ( 1,  0)
-- #  6,      bp point around p ≈ -2.07693994, step = 221, eigenelements in eig[222], ind_ev =   6 [converged], δ = ( 1,  0)</code></pre><p>We can access the different branches with <code>BK.getBranch(diagram, (1,))</code>. Alternatively, you can plot a specific branch:</p><pre><code class="language-julia">plot(diagram; code = (1,), plotfold = false,  markersize = 2, putbifptlegend = false, xlims=(-1,1))</code></pre><p><img src="../BDSH1d-1.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 28 June 2020 21:36">Sunday 28 June 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+- #  6,      bp point around p ≈ -2.07693994, step = 221, eigenelements in eig[222], ind_ev =   6 [converged], δ = ( 1,  0)</code></pre><p>We can access the different branches with <code>BK.getBranch(diagram, (1,))</code>. Alternatively, you can plot a specific branch:</p><pre><code class="language-julia">plot(diagram; code = (1,), plotfold = false,  markersize = 2, putbifptlegend = false, xlims=(-1,1))</code></pre><p><img src="../BDSH1d-1.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 4 July 2020 07:05">Saturday 4 July 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
