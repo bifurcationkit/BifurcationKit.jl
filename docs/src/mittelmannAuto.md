@@ -206,9 +206,11 @@ title!("#branches = $(size(getBranch(diagram, code)))")
 
 ## Interactive exploration
 
-We can see that the non 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the first one which is composed of 8 branches
+We can see that the non 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second one (the first is the fold) which is composed of 8 branches
 
-`plot( plot(diagram; code = (2,), plotfold = false, putbifptlegend=false, markersize=2)`
+`plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false)`
+
+![](mittlemannBD-2-1.png)
 
 ## Interactive computation
 

@@ -6,11 +6,13 @@ mutable struct BifDiagNode{Tγ, Tc}
 end
 
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
+from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::BranchResult, l::Int) = push!(tree.child, BifDiagNode(l, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: BranchResult}, l::Int) = map(x->add!(tree,x,l),γ)
 add!(tree::BifDiagNode, γ::Nothing, l::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
+show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
 
 # total size of the tree
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
@@ -32,7 +34,11 @@ function getBranch(tree::BifDiagNode, code)
 	return getBranch(tree.child[code[1]], code[2:end])
 end
 
-show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
+function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
+	# parameter value at the bp
+	p = tree.γ.bifpoint[indbif].param
+	return BifDiagNode[br for br in tree.child if from(br).p == p]
+end
 
 """
 $(TYPEDEF)

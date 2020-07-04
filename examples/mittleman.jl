@@ -155,13 +155,14 @@ function optionsCont(x,p,l; opt = opts_br)
 	end
 end
 
-code = (2,)
-	plot(diagram; code = code, level = (1, 8), plotfold = false, putbifptlegend=false, markersize=2)
+code = ()
+	plot(diagram; code = code, level = (0, 2), plotfold = false, putbifptlegend=false, markersize=2)
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")
 	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
+plot(getBranchesFromBP(diagram, 4); plotfold = false, legend = false)
 
 diagram = bifurcationdiagram(jet...,
 		sol0, par_mit, (@lens _.λ), 5, optionsCont;

@@ -68,7 +68,7 @@ opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01, pMin = -2.1,
 	detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 ```
 
-Before we continue, it is useful to define a callback (see [`continuation`](@ref)) for the [`newton`](@ref) to avoid spurious branch switching. It is not strictly necessary for what follows but 
+Before we continue, it is useful to define a callback (see [`continuation`](@ref)) for [`newton`](@ref) to avoid spurious branch switching. It is not strictly necessary for what follows. 
 
 ```julia
 function cb(x,f,J,res,it,itl,optN; kwargs...)
@@ -96,8 +96,7 @@ args = (verbosity = 3,
 Depending on the level of recursion in the bifurcation diagram, we change a bit the options as follows
 
 ```julia
-function optrec(x, p, l; opt = opts)
-	level =  l
+function optrec(x, p, level; opt = opts)
 	if level <= 2
 		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx)
 	end
