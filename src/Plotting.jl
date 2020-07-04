@@ -46,7 +46,7 @@ getLensParam(::Setfield.IdentityLens) = :p
 			seriestype := :scatter
 			seriescolor --> map(x -> colorbif[x.type], bifpt)
 			markershape --> map(x -> x.status == :guess ? :square : :circle, bifpt)
-			markersize --> 4
+			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""
 			map(x -> x.param, bifpt), map(x -> x.printsol, bifpt)
@@ -118,7 +118,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 	Plots.plot(layout = l)
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = "||x||", label = "", subplot = 1)
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = "||x||", label = "", plotfold = false, subplot = 1)
 	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color = :red, label = "", subplot = 1)
 
 	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = getLensParam(contres.param_lens), label = "", subplot=2)

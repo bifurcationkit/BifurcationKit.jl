@@ -289,7 +289,7 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 				coeff = round(nf.b2[ii,jj,kk] / 2,digits=digits)
 				if abs(coeff) > tol
 					if jj == kk
-						out[ii] *= " + ($coeff) ⋅ x$jj²"
+						out[ii] *= " + ($coeff) ⋅ x$(jj)²"
 					else
 						out[ii] *= " + ($(round(2coeff,digits=digits))) ⋅ x$jj ⋅ x$kk"
 					end

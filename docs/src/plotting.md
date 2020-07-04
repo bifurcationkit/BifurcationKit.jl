@@ -1,12 +1,14 @@
 # Plotting 
 
+## Plotting branches
+
 Plotting is provided by calling `Plots.jl`. It means that to plot a branch `br`, you just need to call 
 
 ```
 plot(br)
 ```
 
-where `br` is a branch computed after a call to `br,_ = continuation(...)`. You can use the keywords provided by `Plots.jl` and the different backends. You can thus call 
+where `br` is a branch computed after a call to `br, = continuation(...)`. You can use the keywords provided by `Plots.jl` and the different backends. You can thus call 
 
 ```
 scatter(br)
@@ -35,7 +37,7 @@ plot(br1)
 plot!(br2)
 ```
 
-## Choosing Variables
+### Choosing Variables
 
 You can select which variables to plot using the keyword argument vars:
 
@@ -44,7 +46,7 @@ plot(br, vars = (:p, :sol))
 ```
 The available symbols are `:p, :sol, :itnewton, :ds, :theta, :step`.
 
-## Plotting directly using the field names
+### Plotting directly using the field names
 
 You can define your own plotting functions using the internal fields of `br` which is of type [`ContResult`](@ref). For example, the previous plot can be done as follows:
 
@@ -61,3 +63,16 @@ eigvals = br.eig[step].eigenvals
 # plot them in the complex plane
 scatter(real.(eigvals), imag.(eigvals))
 ```
+
+## Plotting bifurcation diagrams
+
+To do this, you just need to call 
+
+```
+plot(diagram)
+```
+
+where `diagram` is a branch computed after a call to `diagram, = bifurcationdiagram(...)`. You can use the keywords provided by `Plots.jl` and the different backends. You can thus call `scatter(diagram)`. In addition to the options for plotting branches (see above), there are specific arguments available for bifurcation diagrams
+
+- `code` specify the part of the bifurcation diagram to plot. For example `code = (1,1,)` plots the part after the first branch of the first branch of the root branch.
+- `level = (-Inf, Inf)` restrict the branching level for plotting.

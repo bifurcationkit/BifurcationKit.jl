@@ -166,7 +166,7 @@ length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline vectortype(br::ContResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
 
-_show(io, bp, ii) = @printf(io, "- #%3i, %7s point around p ≈ %4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
+_show(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
 @inline kerneldim(bp) = abs(bp.δ[1])
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 

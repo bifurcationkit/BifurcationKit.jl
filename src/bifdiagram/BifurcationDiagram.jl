@@ -69,7 +69,7 @@ end
 """
 $(TYPEDEF)
 
-Same as [`bifurcationdiagram`](@ref) but you pass a part of a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches with increased branch level. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
+Same as [`bifurcationdiagram`](@ref) but you pass a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
 """
 function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTuple{(:current, :maxlevel),Tuple{Int64,Int64}}, options; code = "0", usedeflation = false, kwargs...)
 	if level[1] >= level[2] || isnothing(node.γ); return node; end
@@ -89,8 +89,8 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 	for (id, pt) in enumerate(node.γ.bifpoint)
 		# we put this condition in case the bifpoint at step = 0 corresponds to the one where are branching from. If we remove this, we keep computing the same branch (possibly).
 		if pt.step > 1
-			try
-				println("#"^50*"\n--> New branch level = $(level[1]+1), dim = $(kerneldim(pt)), code = $code")
+			# try
+				println("─"^80*"\n--> New branch level = $(level[1]+1), dim = $(kerneldim(pt)), code = $code")
 				γ, = letsbranch(id, pt, level)
 				add!(node, γ, level.current+1)
 				 ~isnothing(γ) && printstyled(color = :green, "----> From ", type(from(γ)), "\n")
@@ -101,10 +101,10 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 					add!(node, γ, level.current+1)
 				end
 
-			catch ex
-				@error ex
+			# catch ex
+				# @error ex
 			# 	return node
-			end
+			# end
 		end
 	end
 	for (ii, _node) in enumerate(node.child)

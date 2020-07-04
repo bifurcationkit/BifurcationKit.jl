@@ -4,7 +4,7 @@ using Revise
 	const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
-normbratu = x-> norm(x) / sqrt(length(x))
+normbratu = x -> norm(x .* w) / sqrt(length(x))
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 
@@ -66,9 +66,11 @@ Nx = 30
 	lx = 0.5
 	ly = 0.5
 
-	Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+	Δ, = Laplacian2D(Nx, Ny, lx, ly)
 	par_mit = (λ = .01, Δ = Δ)
 	sol0 = 0*ones(Nx, Ny) |> vec
+	w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
+	w .-= minimum(w)
 ####################################################################################################
 eigls = EigArpack(20.5, :LM)
 eigls = EigKrylovKit(dim = 70)
@@ -144,24 +146,25 @@ plot([br,br1, br2],plotfold=false)
 ####################################################################################################
 # bifurcation diagram
 function optionsCont(x,p,l; opt = opts_br)
-	if l <= 2
+	if l <= 1
 		return opt
-	elseif l==3
+	elseif l==2
 		return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
 	else
 		return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
 	end
 end
 
-code = ()
-	plot(diagram; code = code, plotfold = false, putbifptlegend=false, markersize=2);title!("")
-	plot!(br)
+code = (2,)
+	plot(diagram; code = code, level = (1, 8), plotfold = false, putbifptlegend=false, markersize=2)
+	# plot!(br)
 	# xlims!(0.01, 0.4)
-	title!("#branches = $(size(BK.getBranch(diagram, code)))")
+	title!("#branches = $(size(getBranch(diagram, code)))")
 	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
+
 diagram = bifurcationdiagram(jet...,
-		sol0, par_mit, (@lens _.λ), 4, optionsCont;
+		sol0, par_mit, (@lens _.λ), 5, optionsCont;
 		# δp = 0.001,
 		verbosity = 0, plot = true,
 		printSolution = (x, p) -> normbratu(x),

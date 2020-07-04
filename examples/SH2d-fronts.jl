@@ -41,6 +41,10 @@ function dF_sh(u, p)
 	return -L1 .+ spdiagm(0 => l .+ 2 .* ν .* u .- 3 .* u.^2)
 end
 
+d2F_sh(u, p, dx1, dx2) = (2 .* p.ν .* dx2 .- 6 .* dx2 .* u) .* dx1
+d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
+jet = (F_sh, dF_sh, d2F_sh, d3F_sh)
+
 X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
 Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
 
@@ -68,7 +72,7 @@ heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
-outdef, _, flag, _ = @time BK.newton(F_sh, dF_sh,
+outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 		# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
 		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
 		par, optnew, deflationOp, normN = x -> norm(x, Inf))
@@ -80,14 +84,14 @@ heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 2, nev = 40, dsminBisection = 1e-7, nInversion = 4, tolBisectionEigenvalue= 1e-9)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
-	br, u1 = @time BK.continuation(
+	br, = @time BK.continuation(
 		F_sh, dF_sh,
 		deflationOp[1], par, (@lens _.l), optcont;
 		plot = true, verbosity = 3,
-		tangentAlgo = BorderedPred(),
+		# tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> norm(x),
@@ -96,7 +100,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		normC = x -> norm(x, Inf))
 ###################################################################################################
 using IncompleteLU
-prec = ilu(L1 + I,τ=0.15)
+prec = ilu(L1 + I,τ = 0.15)
 prec = lu(L1 + I)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = Nx*Ny, Pl = prec)
 
@@ -112,9 +116,22 @@ sol_hexa, _, flag = @time newton(
 		@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
+###################################################################################################
+function cb(x,f,J,res,it,itl,optN; kwargs...)
+	_x = get(kwargs, :z0, nothing)
+
+	if _x isa BorderedArray
+		@show norm(_x.u - x)   abs(_x.p - kwargs[:p]) res
+		return norm(_x.u - x) < 1e4 && abs(_x.p - kwargs[:p])<0.05 && res < 1e5
+	else
+		@show res
+		return res < 1e5
+	end
+	true
+end
 
 using ProgressMeter, LaTeXStrings
-Nd = 200; L = 0.9
+Nd = 140; L = 0.9
 # sampling grid
 X = LinRange(-L,L, Nd); Y = LinRange(-L,L, Nd); P = LinRange(-0.0014,0.0014, Nd+1)
 

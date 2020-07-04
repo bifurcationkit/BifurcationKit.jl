@@ -161,6 +161,11 @@ end
 We are then ready to compute the bifurcation diagram. If we choose a level 5 of recursion like 
 
 ```julia
+# weight for normbratu
+const w = ones(Nx*Ny)
+normbratu = x -> norm(x .* w) / sqrt(length(x))
+
+
 diagram = bifurcationdiagram(jet...,
 	sol0, par_mit, (@lens _.λ), 
 	# important argument: this is the maximal 
@@ -179,6 +184,25 @@ this gives using `plot(diagram; plotfold = false, putbifptlegend=false, markersi
 
 ![](mittlemanBD.png)
 
+Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries and use it to print the solution, we get
+
+```julia
+w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
+w .-= minimum(w)
+normbratu = x -> norm(x .* w) / sqrt(length(x))
+```
+and redo the computation, we get:
+
+![](mittlemannBD-1.png)
+
+We can make more sense of these spaghetti by only plotting the first two level of recursion
+
+```julia
+plot(diagram; level = (1, 2), plotfold = false, putbifptlegend=false, markersize=2)
+title!("#branches = $(size(getBranch(diagram, code)))")
+```
+
+![](mittlemannBD-2.png)
 
 ## Interactive exploration
 

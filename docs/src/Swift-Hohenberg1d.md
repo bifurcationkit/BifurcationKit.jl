@@ -61,7 +61,8 @@ parSH = (p = 0.7, b = 2., L1 = Lsh)
 We then choose the parameters for [`continuation`](@ref) with precise detection of bifurcation points by bisection:
 
 ```julia
-opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01, pMin = -2.1,
+optnew = NewtonPar(verbose = true, tol = 1e-12)
+opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01, pMin = -2.1,
 	newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), 
 	maxSteps = 300, plotEveryStep = 40, 
 	detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
@@ -110,15 +111,21 @@ end
 We are now in position to compute the bifurcation diagram
 
 ```julia
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args...)
+# initial condition
+sol0 = zeros(Nx)
+
+diagram = bifurcationdiagram(jet..., 
+	sol0, (@set parSH.p = 1.), (@lens _.p), 
+	# here we specify a maximum branching level of 4
+	4, optrec; args...)
 ```  
 
 and plot it  
 
 ```julia
-plot(diagram;  code = (1,), plotfold = false,  
+plot(diagram;  plotfold = false,  
 	markersize = 2, putbifptlegend = false, xlims=(-1,1))
-title!("#branches = $(size(branches))")
+title!("#branches = $(size(diagram))")
 ```	
 
 ![](BDSH1d.png)
