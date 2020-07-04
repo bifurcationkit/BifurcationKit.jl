@@ -13,7 +13,7 @@ We consider the problem of Mittelmann:
 
 $$\Delta u +NL(\lambda,u) = 0$$
 
-with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. This is a good example to show how automatic branch switching works and also nonlinear deflation.
+with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. This is a good example to show how automatic bifurcation diagram computation works.
 
 We start with some imports:
 
@@ -26,7 +26,7 @@ const BK = BifurcationKit
 # define the sup norm
 norminf = x -> norm(x, Inf)
 
-# some plotting function to simplify our life
+# some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 ```
@@ -101,7 +101,7 @@ par_mit = (λ = .01, Δ = Δ)
 sol0 = 0*ones(Nx, Ny) |> vec
 ```
 
-To compute the eigenvalues, we opt for the solver in `KrylovKit`
+To compute the eigenvalues, we opt for the solver in `KrylovKit.jl`
 
 ```julia
 # eigensolver
@@ -115,7 +115,7 @@ opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
 ```	 
 
-Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
+Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a **bisection** method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
 
 In order to have an output like Auto07p, we provide the finaliser (see arguments of [`continuation`](@ref))
 
@@ -184,18 +184,18 @@ this gives using `plot(diagram; plotfold = false, putbifptlegend=false, markersi
 
 ![](mittlemanBD.png)
 
-Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries and use it to print the solution, we get
+Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries
 
 ```julia
 w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
 w .-= minimum(w)
 normbratu = x -> norm(x .* w) / sqrt(length(x))
 ```
-and redo the computation, we get:
+and use it to print the solution (we get redo the computation), we get:
 
 ![](mittlemannBD-1.png)
 
-We can make more sense of these spaghetti by only plotting the first two level of recursion
+We can make more sense of these spaghetti by only plotting the first two levels of recursion
 
 ```julia
 plot(diagram; level = (1, 2), plotfold = false, putbifptlegend=false, markersize=2)
@@ -206,7 +206,7 @@ title!("#branches = $(size(getBranch(diagram, code)))")
 
 ## Interactive exploration
 
-We can see that the non 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second one (the first is the fold) which is composed of 8 branches
+We can see that the non-simple 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second one (the first is the fold) which is composed of 8 branches
 
 `plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false)`
 
@@ -214,7 +214,7 @@ We can see that the non 2d branch points (magenta points) have produced non triv
 
 ## Interactive computation
 
-Let's say you have been cautious and did not launch a deep bifurcation diagram by using a small recursion level 2:
+Let's say you have been cautious and did not launch a deep bifurcation diagram computation by using a small recursion level 2:
 
 ```julia
 diagram = bifurcationdiagram(jet...,
@@ -240,7 +240,7 @@ How can we complete this diagram without recomputing it from scratch? It is easy
 
 ```julia
 bifurcationdiagram!(jet...,
-	# this improve the first branch on the violet curve. Note that
+	# this improves the first branch on the violet curve. Note that
 	# for symmetry reasons, the first bifurcation point
 	# has 8 branches
 	getBranch(diagram, (1,)), (current = 3, maxlevel = 6), optionsCont;

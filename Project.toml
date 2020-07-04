@@ -25,9 +25,21 @@ Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+ArnoldiMethod = "0.0.4"
+Arpack = "0.4.0"
+BlockArrays = "0.12.8"
+DiffEqBase = "6.38.4"
+DocStringExtensions = "0.8.2"
 Documenter = "0.24.3"
+IterativeSolvers = "0.8.4"
+JLD2 = "0.1.13"
 KrylovKit = "<0.4.3"
+LinearMaps = "2.6.1"
+Parameters = "0.12.1"
+Plots = "1.4.1"
 RecipesBase = "1.0.0"
+RecursiveArrayTools = "2.4.4"
+Setfield = "0.6.0"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

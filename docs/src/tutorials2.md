@@ -143,18 +143,21 @@ Note that we can get some information about the branch as follows. The `[converg
 
 ```julia
 julia> br
-Branch number of points: 43
+Branch number of points: 98
+Branch of Equilibrium
 Bifurcation points:
--   1,      bp point around p ≈ -0.21554685, step =  21, idx =  22, ind_bif =   1 [converged], δ = ( 1,  0)
--   2,      bp point around p ≈ -0.21504230, step =  22, idx =  23, ind_bif =   3 [converged], δ = ( 2,  0)
--   3,      bp point around p ≈ -0.21095557, step =  24, idx =  25, ind_bif =   5 [converged], δ = ( 2,  0)
--   4,      bp point around p ≈ -0.21001596, step =  25, idx =  26, ind_bif =   6 [converged], δ = ( 1,  0)
--   5,      bp point around p ≈ -0.20684791, step =  26, idx =  27, ind_bif =   8 [converged], δ = ( 2,  0)
--   6,      bp point around p ≈ -0.19986385, step =  28, idx =  29, ind_bif =   9 [converged], δ = ( 1,  0)
--   7,      bp point around p ≈ -0.18895070, step =  30, idx =  31, ind_bif =  10 [converged], δ = ( 1,  0)
--   8,      bp point around p ≈ -0.18103775, step =  32, idx =  33, ind_bif =  11 [converged], δ = ( 1,  0)
--   9,      bp point around p ≈ -0.13841646, step =  37, idx =  38, ind_bif =  10 [converged], δ = (-2,  0)
--  10,      bp point around p ≈ -0.11180884, step =  40, idx =  41, ind_bif =   9 [converged], δ = (-1,  0)
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈ -0.21554724 ± 3e-07, step =  35, eigenelements in eig[ 36], ind_ev =   1 [converged], δ = ( 1,  0)
+- #  2,      bp at p ≈ -0.21551263 ± 9e-06, step =  36, eigenelements in eig[ 37], ind_ev =   2 [converged], δ = ( 1,  0)
+- #  3,      bp at p ≈ -0.21499087 ± 7e-05, step =  38, eigenelements in eig[ 39], ind_ev =   3 [converged], δ = ( 1,  0)
+- #  4,      bp at p ≈ -0.21289710 ± 8e-05, step =  41, eigenelements in eig[ 42], ind_ev =   4 [converged], δ = ( 1,  0)
+- #  5,      nd at p ≈ -0.20993438 ± 2e-04, step =  43, eigenelements in eig[ 44], ind_ev =   6 [converged], δ = ( 2,  0)
+- #  6,      nd at p ≈ -0.20628011 ± 6e-04, step =  45, eigenelements in eig[ 46], ind_ev =   8 [converged], δ = ( 2,  0)
+- #  7,      bp at p ≈ -0.19981594 ± 9e-05, step =  48, eigenelements in eig[ 49], ind_ev =   9 [converged], δ = ( 1,  0)
+- #  8,      bp at p ≈ -0.18868881 ± 2e-04, step =  52, eigenelements in eig[ 53], ind_ev =  10 [converged], δ = ( 1,  0)
+- #  9,      bp at p ≈ -0.18103471 ± 8e-06, step =  55, eigenelements in eig[ 56], ind_ev =  11 [converged], δ = ( 1,  0)
+- # 10,      bp at p ≈ -0.14472469 ± 6e-04, step =  64, eigenelements in eig[ 65], ind_ev =  11 [converged], δ = (-1,  0)
+- # 11,      bp at p ≈ -0.13818751 ± 6e-04, step =  66, eigenelements in eig[ 67], ind_ev =  10 [converged], δ = (-1,  0)
 ```
 
 We get the following plot during computation:

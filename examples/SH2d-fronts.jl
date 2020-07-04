@@ -130,6 +130,25 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	true
 end
 
+
+br2, = continuation(jet..., br, 4, setproperties(optcont; ds = -0.001, detectBifurcation =  0, plotEveryStep = 5, dsmax = 0.01, detectLoop =true, maxSteps = 150);  nev = 30,
+			plot = true, verbosity = 0,
+			# usedeflation = true,
+			# δp = 0.005,
+			# tangentAlgo = BorderedPred(),
+			callbackN = cb,
+			# linearAlgo = MatrixBLS(),
+			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br;subplot=1,plotfold=false)),
+			printSolution = (x, p) -> norm(x),
+			finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+			normC = x -> norm(x, Inf))
+
+plot(br2)
+
+bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)
+BK.nf(bp2d)
+
+
 using ProgressMeter, LaTeXStrings
 Nd = 140; L = 0.9
 # sampling grid
@@ -154,15 +173,31 @@ resp = Float64[]; resx = Vector{Float64}[]; resnrm = Float64[]
 plot(
 	scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
 	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
+###################################################################################################
+function optionsCont(x,p,l; opt = optcont)
+	if l <= 1
+		return opt
+	elseif l==2
+		return setproperties(opt ;detectBifurcation = 0,ds = 0.001, a = 0.75)
+	else
+		return setproperties(opt ;detectBifurcation = 0,ds = 0.00051, dsmax = 0.01)
+	end
+end
 
-
-res = BK.multicontinuation(jet..., br, br, 18, setproperties(opts; ds = -0.005, detectBifurcation =  0, plotEveryStep = 1, dsmax = 0.005, detectLoop =true);  nev = 30,
-			plot = true, verbosity = 3, usedeflation = true,
-			δp = 0.005,
-			tangentAlgo = BorderedPred(),
+diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
+	plot = true, verbosity = 0,
+	# usedeflation = true,
+	# δp = 0.005,
+	# tangentAlgo = BorderedPred(),
 			callbackN = cb,
 			# linearAlgo = MatrixBLS(),
-			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br;subplot=1)),
+	plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 			printSolution = (x, p) -> norm(x),
 			finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
-			normC = x -> norm(x, Inf))
+	normC = x -> norm(x, Inf)
+	)
+
+plot(diagram; code = (), legend = false, plotfold = false)
+	plot!(br)
+
+# BK.add!(diagram, br2, 2)

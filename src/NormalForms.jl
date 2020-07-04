@@ -577,11 +577,10 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	b = dot(bv, ζstar)
 
 	# return coefficients of the normal form
-	supercritical = real(a) * real(b) < 0
-	printstyled(color = :red,"--> Hopf bifurcation point is supercritical: ", supercritical, "\n")
 	verbose && println((a = a, b = b))
 	pt.nf = (a = a, b = b)
 	pt.type = real(a) * real(b) < 0 ? :SuperCritical : :SubCritical
+	printstyled(color = :red,"--> Hopf bifurcation point is: ", pt.type, "\n")
 	return pt
 end
 

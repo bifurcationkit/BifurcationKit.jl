@@ -105,7 +105,7 @@ opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter
 
 # options for continuation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 3, nev = 30, plotEveryNsteps = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	detectBifurcation = 3, nev = 30, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
 	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 ```	 
 Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
@@ -132,18 +132,16 @@ Several branch point were detected as can be seen using the command
 
 ```julia
 julia> br
-Branch number of points: 123
+Branch number of points: 84
 Branch of Equilibrium
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp point around p ≈ 0.36731369, step =  24, eigenelements in eig[ 25], ind_ev =   1 [    guess], δ = ( 1,  0)
-- #  2,      nd point around p ≈ 0.27255058, step =  41, eigenelements in eig[ 42], ind_ev =   3 [converged], δ = ( 2,  0)
-- #  3,      bp point around p ≈ 0.15215677, step =  59, eigenelements in eig[ 60], ind_ev =   4 [converged], δ = ( 1,  0)
-- #  4,      nd point around p ≈ 0.03552798, step =  94, eigenelements in eig[ 95], ind_ev =   6 [converged], δ = ( 2,  0)
-- #  5,      nd point around p ≈ 0.01590310, step = 112, eigenelements in eig[113], ind_ev =   8 [converged], δ = ( 2,  0)
+- #  1,      bp at p ≈  0.36787944 ± 2e-10, step =  18, eigenelements in eig[ 19], ind_ev =   1 [converged], δ = ( 1,  0)
+- #  2,      nd at p ≈  0.27255474 ± 5e-06, step =  33, eigenelements in eig[ 34], ind_ev =   3 [converged], δ = ( 2,  0)
+- #  3,      bp at p ≈  0.15215124 ± 7e-06, step =  48, eigenelements in eig[ 49], ind_ev =   4 [converged], δ = ( 1,  0)
+- #  4,      nd at p ≈  0.03551852 ± 3e-05, step =  76, eigenelements in eig[ 77], ind_ev =   6 [converged], δ = ( 2,  0)
 Fold points:
-- #  1,    fold point around p ≈ 0.36787944, step =  24, eigenelements in eig[ 24], ind_ev =   0 [    guess], δ = ( 0,  0)
-
+- #  1,    fold at p ≈  0.36787944, step =  19, eigenelements in eig[ 19], ind_ev =   0 [    guess], δ = ( 0,  0)
 ```
 
 We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.

@@ -43,6 +43,9 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 ## Examples of bifurcation diagrams
 
 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/mittlemannBD-1.png) | 
+|:-------------:|:-------------:|
+| [Automatic Bif. Diagram 1D in Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/Swift-Hohenberg1d/#Swift-Hohenberg-equation-1d-1) |  [Automatic Bif. Diagram 1D in 2d Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) |
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) | 
 |:-------------:|:-------------:|
 | [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
@@ -58,6 +61,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at simple branch points
 - Automatic branch switching at simple Hopf points to periodic orbits
+- **Automatic bifurcation diagram computation**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
@@ -68,7 +72,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 **Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
 
-|Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/) | GPU |
+|Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |
 |---|---|---|---|---|
 | Newton | Y | Y | All | :heavy_check_mark:  |
 | Newton + Deflation| Y | Y | 4, 5| :heavy_check_mark:|
@@ -79,6 +83,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Fold Point continuation | Y | Y | 1, 8 | |
 | Hopf continuation | Y | `AbstractArray` | 5 | |
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
+| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Y | `AbstractArray` |  Yes | |
 | Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | | 
 | Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |

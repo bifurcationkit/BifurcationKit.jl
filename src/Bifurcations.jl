@@ -216,7 +216,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 			n_inversion += 1
 		end
 
-		verbose &&	printstyled(color=:blue, "----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2), ", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,"\n Eigenvalues:\n")
+		verbose &&	printstyled(color=:blue, "----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2), ", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,"\n 5 Eigenvalues closest to ℜ=0:\n")
 		verbose && Base.display(closesttozero(eiginfo[1])[1:min(5, length(getx(state)))])
 
 		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
