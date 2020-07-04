@@ -301,10 +301,10 @@ Returns a variable containing the state of the continuation procedure. The field
 - `getp(state)` returns the p component of the current solution
 """
 @with_kw mutable struct PALCStateVariables{Tv, T, Teigvals, Teigvec}
-	z_pred::Tv								# current solution
+	z_pred::Tv								# predictor solution
 	tau::Tv									# tangent predictor
 
-	z_old::Tv								# previous solution
+	z_old::Tv								# current solution
 
 	isconverged::Bool						# Boolean for newton correction
 	itnewton::Int64							# Number of newton iteration (in corrector)
@@ -356,15 +356,6 @@ getx(state::PALCStateVariables) = state.z_old.u
 function updatestability!(state::PALCStateVariables, n_unstable, n_imag)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
 	state.n_imag = (n_imag, state.n_imag[1])
-end
-
-# we detect a bifurcation by a change in the number of unstable eigenvalues
-function detectBifucation(state::PALCStateVariables)
-	n1, n2 = state.n_unstable
-	# deals with missing value encoded by n_unstable = -1
-	if n1 == -1 || n2 == -1; return false; end
-	# detect a bifurcation if the numbers do not match
-	return n1 !== n2
 end
 
 function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)

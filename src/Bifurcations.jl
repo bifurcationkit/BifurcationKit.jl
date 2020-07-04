@@ -21,6 +21,15 @@ function isstable(contparams::ContinuationPar, eigvalues)::Tuple{Bool, Int64, In
 	return n_unstable == 0, n_unstable, n_imag
 end
 isstable(contparams::ContinuationPar, ::Nothing) = (true, 0, 0)
+
+# we detect a bifurcation by a change in the number of unstable eigenvalues
+function detectBifucation(state::PALCStateVariables)
+	n1, n2 = state.n_unstable
+	# deals with missing value encoded by n_unstable = -1
+	if n1 == -1 || n2 == -1; return false; end
+	# detect a bifurcation if the numbers do not match
+	return n1 !== n2
+end
 ####################################################################################################
 interval(a, b) = (min(a, b), max(a, b))
 
