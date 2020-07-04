@@ -23,10 +23,11 @@ module BifurcationKit
 	include("codim2/FoldCont.jl")
 	include("codim2/HopfCont.jl")
 
-	include("bifdiagram/BranchSwitching.jl")
-	include("bifdiagram/BifurcationDiagram.jl")
 	include("BifurcationPoints.jl")
+
+	include("bifdiagram/BranchSwitching.jl")
 	include("NormalForms.jl")
+	include("bifdiagram/BifurcationDiagram.jl")
 
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
@@ -76,7 +77,7 @@ module BifurcationKit
 	export computeNormalForm
 
 	# automatic bifurcation diagram
-	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch
+	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
 	# Periodic orbit computation
 	export getPeriod, getAmplitude, getMaximum, getTrajectory

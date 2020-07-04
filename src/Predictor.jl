@@ -111,17 +111,17 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo:
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
-	# dFdl = (F(z_old.u, z_old.p + ϵ) - F(z_old.u, z_old.p)) / ϵ
-	dFdl = it.F(z_old.u, set(it.par, it.param_lens, z_old.p + ϵ))
-	minus!(dFdl, it.F(z_old.u, set(it.par, it.param_lens, z_old.p)))
+	# dFdl = (F(z_new.u, z_new.p + ϵ) - F(z_new.u, z_new.p)) / ϵ
+	dFdl = it.F(z_new.u, set(it.par, it.param_lens, z_new.p + ϵ))
+	minus!(dFdl, it.F(z_new.u, set(it.par, it.param_lens, z_new.p)))
 	rmul!(dFdl, 1/ϵ)
 
-	# tau = getTangent(J(z_old.u, z_old.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
+	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
 	tau_normed = copy(tau)#copyto!(similar(tau), tau) #copy(tau_old)
 	rmul!(tau_normed, θ / length(tau.u), 1 - θ)
-	# extract tangent as solution of bordered linear system, using zero(z_old.u)
-	tauu, taup, flag, itl = it.linearAlgo( it.J(z_old.u, set(it.par, it.param_lens, z_old.p)), dFdl,
-			tau_normed, rmul!(similar(z_old.u), false), T(1), θ)
+	# extract tangent as solution of bordered linear system, using zero(z_new.u)
+	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, set(it.par, it.param_lens, z_new.p)), dFdl,
+			tau_normed, rmul!(similar(z_new.u), false), T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
 	α = T(1) / it.dottheta(tauu, tau.u, taup, tau.p, θ)
