@@ -34,6 +34,11 @@ function getBranch(tree::BifDiagNode, code)
 	return getBranch(tree.child[code[1]], code[2:end])
 end
 
+"""
+$(TYPEDEF)
+
+Return the part of the tree corresponding to the indbith-th bifurcation point on the root branch.
+"""
 function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
 	# parameter value at the bp
 	p = tree.γ.bifpoint[indbif].param

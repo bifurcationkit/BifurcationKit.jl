@@ -90,6 +90,14 @@ bifurcationdiagram
 bifurcationdiagram!
 ```
 
+```@docs
+getBranch
+```
+
+```@docs
+getBranchesFromBP
+```
+
 ## Utils for periodic orbits
 
 ```@docs
