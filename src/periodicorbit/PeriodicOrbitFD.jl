@@ -1023,7 +1023,7 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 	branch, u, tau = continuation(br.functional, orbitguess, set(br.params, br.param_lens, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
 
 	#create a branch
-	bppo = Pitchfork(bifpt.x, bifpot.param, set(br.params, br.param_lens, bifpot.param), ζ, ζ, nothing, nothing)
+	bppo = Pitchfork(bifpt.x, bifpt.param, set(br.params, br.param_lens, bifpt.param), br.param_lens, ζ, ζ, nothing, :nothing)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
 end
