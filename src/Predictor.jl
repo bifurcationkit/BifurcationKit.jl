@@ -254,7 +254,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 				axpy!(-alpha, u, x_pred)
 
 				p_pred = p - alpha * up
-				copyto!(res_f, F(x_pred, p_pred))
+				copyto!(res_f, F(x_pred, set(par, paramlens, p)))
 
 				res_n  = N(x_pred, p_pred)
 				res = normAC(res_f, res_n)

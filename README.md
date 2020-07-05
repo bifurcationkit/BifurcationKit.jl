@@ -47,7 +47,6 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 |:-------------:|:-------------:|
 | [Automatic Bif. Diagram 1D in Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/Swift-Hohenberg1d/#Swift-Hohenberg-equation-1d-1) |  [Automatic Bif. Diagram 1D in 2d Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) |
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) | 
-|:-------------:|:-------------:|
 | [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) | 
 | [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |  
