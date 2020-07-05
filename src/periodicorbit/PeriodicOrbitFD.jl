@@ -1025,5 +1025,5 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 	#create a branch
 	bppo = Pitchfork(bifpt.x, bifpot.param, set(br.params, br.param_lens, bifpot.param), ζ, ζ, nothing, nothing)
 
-	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), ), u, tau
+	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
 end
