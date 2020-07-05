@@ -973,7 +973,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 """
-function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	@assert br.functional isa PeriodicOrbitTrapProblem
@@ -982,9 +982,9 @@ function continuationPOTrapBPFromPO(br::ContResult, ind_bif::Int, _contParams::C
 	bifpt = br.bifpoint[ind_bif]
 
 	# let us compute the kernel
-	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_bif])
-	verbose && print("--> computing kernel...")
-	ζ0 = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_bif)
+	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
+	verbose && print("--> computing nullspace...")
+	ζ0 = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	verbose && println("Done!")
 	# we normalize it by the sup norm because it could be too small/big in L2 norm
 	ζ0 ./= norm(ζ0, Inf)

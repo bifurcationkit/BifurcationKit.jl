@@ -137,7 +137,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
 	return mono
 end
 
-function (fl::FloquetQaDTrap)(J, nev)
+function (fl::FloquetQaDTrap)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		# we build the monodromy matrix and compute the spectrum
 		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0, J.par)
@@ -175,7 +175,7 @@ struct FloquetQaDShooting{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 	end
 end
 
-function (fl::FloquetQaDShooting)(J, nev)
+function (fl::FloquetQaDShooting)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum

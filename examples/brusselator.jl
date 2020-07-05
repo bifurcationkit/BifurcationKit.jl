@@ -110,7 +110,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 	plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 2, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-4)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-84)
 
 	br, _ = @time continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -259,9 +259,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 ####################################################################################################
 # automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryNsteps = 2,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
@@ -295,7 +295,7 @@ br_po2, _ = BK.continuationPOTrapBPFromPO(
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...);plot!(branches[2],legend = :bottomright, subplot=1)),
+	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...);plot!(branches,legend = :bottomright, subplot=1)),
 	# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 push!(branches, br_po2)
