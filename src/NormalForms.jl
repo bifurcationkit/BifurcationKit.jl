@@ -339,6 +339,8 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
+
+Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = br.n_unstable[br.bifpoint[id_bif].idx], Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
 	bifpt = br.bifpoint[id_bif]
@@ -401,8 +403,8 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
 	if issymmetric
-		λstar = λs
-		ζstar = ζs
+		λstars = λs
+		ζstars = ζs
 	else
 		if isnothing(Jt)
 			ζstars, λstars = getAdjointBasis(transpose(L), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
@@ -431,7 +433,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	# test the bi-orthogonalization
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
 	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
-	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right /left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`"
+	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`."
 
 	# differentials should work as we are looking at reals
 	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
