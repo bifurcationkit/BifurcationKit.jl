@@ -1,6 +1,6 @@
 import Base: getproperty, propertynames
 """
-A Branch is a structure which encapsulates the result of a continuation run on a branch bifurcating from a bifurcation point.
+A Branch is a structure which encapsulates the result of a continuation run of a branch bifurcating from a bifurcation point.
 """
 struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
 	γ::T
