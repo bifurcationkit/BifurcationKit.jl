@@ -403,14 +403,11 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
 	if issymmetric
-		λstars = λs
-		ζstars = ζs
+		λstars = copy(λs)
+		ζstars = copy.(ζs)
 	else
-		if isnothing(Jt)
-			ζstars, λstars = getAdjointBasis(transpose(L), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
-		else
-			ζstars, λstars = getAdjointBasis(Jt(x0, parbif), conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
-		end
+		_Jt = isnothing(Jt) ? transpose(L) : Jt(x0, parbif)
+		ζstars, λstars = getAdjointBasis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 	end
 	ζstars = real.(ζstars); λstars = real.(λstars)
 	ζs = real.(ζs); λs = real.(λs)
