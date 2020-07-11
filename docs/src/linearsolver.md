@@ -61,7 +61,7 @@ function (l::DefaultEig)(J, nev; kwargs...)
 	F = eigen(Array(J))
 	I = sortperm(F.values, by = x-> real(x), rev = true)
 	nev2 = min(nev, length(I))
-	return F.values[I[1:nev2]], F.vectors[:, I[1:nev2]], 1
+	return F.values[I[1:nev2]], F.vectors[:, I[1:nev2]], true, 1
 end
 ```
 

@@ -73,7 +73,7 @@ $(SIGNATURES)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3)
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = 5, Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3, scaleζ = norm)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
@@ -112,18 +112,15 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	else
 		ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 	end
-	ζ ./= norm(ζ)
+	ζ ./= scaleζ(ζ)
 
 	# extract eigen-elements for adjoint(L), needed to build spectral projector
 	if issymmetric
 		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-		ζstar = ζ
+		ζstar = copy(ζ)
 	else
-		if isnothing(Jt)
-			ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
-		else
-			ζstar, λstar = getAdjointBasis(Jt(x0, parbif), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
-		end
+		_Jt = isnothing(Jt) ? adjoint(L) : Jt(x0, parbif)
+		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
@@ -339,15 +336,16 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
+- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coeffocient being super small.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = br.n_unstable[br.bifpoint[id_bif].idx], Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br))
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = br.n_unstable[br.bifpoint[id_bif].idx], Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), scaleζ = norm)
 	bifpt = br.bifpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
-		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, Teigvec = Teigvec)
+		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec)
+		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 	end
 	# kernel dimension:
 	N = abs(bifpt.δ[1])
@@ -370,11 +368,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	L = dF(x0, parbif)
 
 	# we only invert L repeatdly, so we try to factorize it
-	if L isa AbstractMatrix
-		Linv = factorize(L)
-	else
-		Linv = L
-	end
+	Linv = L isa AbstractMatrix ? factorize(L) : L
 
 	# linear solver
 	ls = options.linsolver
@@ -387,7 +381,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	verbose && println("--> smallest eigenvalues at bifurcation = ", real.(λs))
 
 	# and corresponding eigenvectors
-	if isnothing(ζs) # do we pass an eigenbasis?
+	if isnothing(ζs) # do we have a basis for the kernel?
 		if haseigenvector(br) == false # are the eigenvector saved in the branch?
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -402,6 +396,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	end
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
+	for ζ in ζs;ζ ./= scaleζ(ζ);end
 	if issymmetric
 		λstars = copy(λs)
 		ζstars = copy.(ζs)
@@ -421,7 +416,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		tmp .= ζstars[ii]
 		for jj in 1:N
 			if !(ii==jj)
-				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj]
+				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
 			end
 		end
 		ζstars[ii] .= tmp ./ dot(tmp, ζs[ii])
@@ -457,7 +452,8 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	d2gidxjdpk = zeros(Float64, N, N)
 	for ii in 1:N, jj in 1:N
 		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) - apply(L, ζs[jj])) ./ δ
-		Ψ01, _ = ls(Linv, E(R01))
+		Ψ01, flag = ls(Linv, E(R01))
+		~flag && @warn "linear solver did not converge"
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
 	end
 	verbose && (printstyled(color=:green, "\n--> b1 = \n");Base.display( d2gidxjdpk ))
@@ -483,15 +479,18 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
 
-		wst, _ = ls(Linv, E(R2(ζs[ll], ζs[kk])))
+		wst, flag = ls(Linv, E(R2(ζs[ll], ζs[kk])))
+		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[jj], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζstars[ii])
 
-		wst, _ = ls(Linv, E(R2(ζs[ll], ζs[jj])))
+		wst, flag = ls(Linv, E(R2(ζs[ll], ζs[jj])))
+		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[kk], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζstars[ii])
 
-		wst, _ = ls(Linv, E(R2(ζs[kk], ζs[jj])))
+		wst, flag = ls(Linv, E(R2(ζs[kk], ζs[jj])))
+		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[ll], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
 		for ii in 1:N
@@ -560,7 +559,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	# (2iω−L)Ψ200 = R20(ζ,ζ)
 	R20 = R2(ζ, ζ)
 	Ψ200, _ = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
-	@assert Ψ200 ≈ (Complex(0, 2ω)*I - L) \ R20
+	# @assert Ψ200 ≈ (Complex(0, 2ω)*I - L) \ R20
 
 	# −LΨ110 = 2R20(ζ,cζ).
 	R20 = 2 .* R2(ζ, cζ)
@@ -600,7 +599,7 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens, Teigvec = vectortype(br))
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = 5, verbose = false, lens = br.param_lens, Teigvec = vectortype(br), scaleζ = norm)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	println("#"^53*"\n--> Hopf Normal form computation")
 
@@ -631,20 +630,18 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	else
 		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 	end
-	ζ ./= norm(ζ)
+	ζ ./= scaleζ(ζ)
 
 	# left eigen-elements
-	if isnothing(Jt)
-		ζstar, λstar = getAdjointBasis(adjoint(L), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
-	else
-		ζstar, λstar = getAdjointBasis(Jt(x, p), conj(λ), options.eigsolver; nev = nev, verbose = verbose)
-	end
+	_Jt = isnothing(Jt) ? adjoint(L) : Jt(x, p)
+	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
 	# check that λstar ≈ conj(λ)
 	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
+	@assert dot(ζ, ζstar) ≈ 1
 
 	hopfpt = HopfBifPoint(
 		bifpt.x,

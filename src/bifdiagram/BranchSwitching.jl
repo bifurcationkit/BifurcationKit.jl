@@ -66,15 +66,18 @@ Automatic branch switching at branch points based on a computation of the normal
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
+- `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
+
+!!! tip "Advanced use"
+    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), scaleζ = norm, kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	if kerneldim(br, ind_bif) > 1
-		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, kwargs...)
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, scaleζ = scaleζ, kwargs...)
 	end
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -87,7 +90,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	Ty = typeof(ds)
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec)
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
@@ -102,7 +105,6 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		# find the bifurcated branch using nonlinear deflation
 		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), optn; kwargs...)[1]
 		copyto!(pred.x, solbif)
-
 	end
 
 	# perform continuation
@@ -117,7 +119,7 @@ end
 continuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
 
 
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), ζs = nothing, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
