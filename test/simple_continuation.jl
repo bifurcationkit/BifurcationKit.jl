@@ -32,9 +32,11 @@ br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 
 #     @code_warntype continuation!(iter, state, contRes)
 #####
 
-opts = @set opts.doArcLengthScaling = false
+opts = @set opts.detectBifurcation = 1
 br1, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
+length(br1)
+BK.eigenvals(br1,20)
 
 br2, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, printSolution = (x,p) -> norm(x,2))
 
@@ -64,7 +66,6 @@ br7, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat,verbosity
 
 # tangent prediction with Bordered predictor
 br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.BorderedPred())
-
 
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)

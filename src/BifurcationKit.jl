@@ -62,7 +62,7 @@ module BifurcationKit
 	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
 
 	# continuation methods
-	export ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered
+	export ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
 
 	# iterators for continuation
 	export PALCIterable, iterate, PALCStateVariables, solution, getx, getp
@@ -74,7 +74,7 @@ module BifurcationKit
 	export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
 	# normal form
-	export computeNormalForm
+	export computeNormalForm, predictor
 
 	# automatic bifurcation diagram
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP

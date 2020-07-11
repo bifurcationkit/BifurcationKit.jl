@@ -46,7 +46,7 @@ getLensParam(::Setfield.IdentityLens) = :p
 			seriestype := :scatter
 			seriescolor --> map(x -> colorbif[x.type], bifpt)
 			markershape --> map(x -> x.status == :guess ? :square : :circle, bifpt)
-			markersize --> 3
+			markersize --> 2
 			markerstrokewidth --> 0
 			label --> ""
 			map(x -> x.param, bifpt), map(x -> x.printsol, bifpt)

@@ -72,8 +72,8 @@ function bifurcationdiagram(F, dF, d2F, d3F, x0, par0, lens::Lens, level::Int, o
 	bifurcationdiagram(F, dF, d2F, d3F, γ, level, options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
-function bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options; usedeflation = false, kwargs...)
-	printstyled(color = :magenta, "#"^50 * "\n-- > Automatic computation of bifurcation diagram\n\n")
+function bifurcationdiagram(F, dF, d2F, d3F, br::BranchResult, level::Int, options; usedeflation = false, kwargs...)
+	printstyled(color = :magenta, "#"^50 * "\n---> Automatic computation of bifurcation diagram\n\n")
 	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
@@ -94,14 +94,14 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
 			usedeflation = usedeflation,
-			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kerneldim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize =3)))
+			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kerneldim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize = 2)))
 	end
 
 	for (id, pt) in enumerate(node.γ.bifpoint)
 		# we put this condition in case the bifpoint at step = 0 corresponds to the one where are branching from. If we remove this, we keep computing the same branch (possibly).
 		if pt.step > 1
 			# try
-				println("─"^80*"\n--> New branch level = $(level[1]+1), dim = $(kerneldim(pt)), code = $code")
+				println("─"^80*"\n--> New branch level = $(level[1]+1), dim(Kernel) = $(kerneldim(pt)), code = $code, from bp #",id," at p = ", pt.param)
 				γ, = letsbranch(id, pt, level)
 				add!(node, γ, level.current+1)
 				 ~isnothing(γ) && printstyled(color = :green, "----> From ", type(from(γ)), "\n")

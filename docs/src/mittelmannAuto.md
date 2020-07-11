@@ -5,6 +5,9 @@ Pages = ["mittelmannAuto.md"]
 Depth = 3
 ```
 
+!!! warning "Work in progress"
+    This tutorial is under construction, the code below is not fully functional.
+
 !!! unknown "References"
     The following example is exposed in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. **The Computation of Disconnected Bifurcation Diagrams.** ArXiv:1603.00809 [Math], March 2, 2016.
 
@@ -183,6 +186,10 @@ diagram = bifurcationdiagram(jet...,
 this gives using `plot(diagram; plotfold = false, putbifptlegend=false, markersize=2);title!("")`:
 
 ![](mittlemanBD.png)
+
+We can zoom in on the left part to get 
+
+![](mittlemanBD1.png)
 
 Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries
 

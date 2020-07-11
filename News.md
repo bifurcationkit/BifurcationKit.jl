@@ -3,6 +3,9 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.0] - 2020-7-9
+The package is registered.
+
 ## [0.0.1] - 2020-6-20
 
 ### Deprecated

@@ -14,12 +14,12 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `maxSteps` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
 - `saveToFile = false`: save to file. A name is automatically generated.
-- `saveSolEveryNsteps::Int64 = 0` at which continuation steps do we save the current solution`
-- `plotEveryNsteps = 3`
+- `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution`
+- `plotEveryStep = 3`
 
 Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
-- `saveEigEveryNsteps = 1`	record eigen vectors every specified steps. **Important** for memory limited ressource, *e.g.* GPU.
+- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited ressource, *e.g.* GPU.
 - `saveEigenvectors	= true`	**Important** for memory limited ressource, *e.g.* GPU.
 
 Handling bifurcation detection
@@ -119,9 +119,14 @@ $(TYPEDFIELDS)
     - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
     - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
     - `precision` precision in location of the bifurcation point
+
+# Associated methods
+- `length(br)` number of the continuation steps
+- `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
+- `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, i)` for each continuation step `i`."
+	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, theta, i)` for each continuation step `i`."
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
 	"A vector with eigen-elements at each continuation step."
@@ -165,7 +170,9 @@ end
 
 length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-@inline vectortype(br::ContResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
+@inline vectortype(br::BranchResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
+eigenvals(br::BranchResult, ind) = br.eig[ind].eigenvals
+eigenvec(br::BranchResult, ind, indev) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
 
 _show(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f ± %1.0e, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.precision, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
 _showFold(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
@@ -656,7 +663,7 @@ In what follows, we abuse of notations, `p` refers to the scalar value of the pa
 The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]``. In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
 
 !!! warning "Parameter `theta`"
-    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, dx_0\\rangle`` component in the constraint might be favoured too much. Also, large `theta`s favour `p` as the corresponding term in ``N``
+    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, dx_0\\rangle`` component in the constraint might be favoured too much. Also, large `theta`s favour `p` as the corresponding term in ``N`` involves the term ``1-\\theta``.
 
 The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`.
 

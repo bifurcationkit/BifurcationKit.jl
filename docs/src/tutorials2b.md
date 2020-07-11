@@ -113,10 +113,10 @@ end
 We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
 
 ```julia
-using CuArrays
+using CUDA
 
 # this disable slow operations but errors if you use one of them
-CuArrays.allowscalar(false)
+CUDA.allowscalar(false)
 
 # type used for the arrays, can be Float32 is GPU requires it
 TY = Float64
@@ -133,7 +133,7 @@ using LinearAlgebra, Plots
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 
-# norm compatible with CuArrays
+# norm compatible with CUDA
 norminf(x) = maximum(abs.(x))
 
 Nx = 2^10
@@ -223,7 +223,8 @@ and get:
 Finally, we can perform continuation of the branches on the GPU:
 
 ```julia
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, 
+	pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
 	br, _ = @time continuation(F_shfft, J_shfft,

@@ -221,7 +221,7 @@ function factor3d(i,j,k)
 	end
 end
 
-function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
+function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
 	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
 	# dimension of the kernel
 	N = length(bp.ζ)
@@ -230,12 +230,13 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::Real)
 	# normal form
 	nf = bp.nf
 	# coefficient p
-	out = p .* nf.a
+	out .= p .* nf.a
 	# factor to account for factorials
 	factor = 1.0
 
 	@inbounds for ii in 1:N
 		factor = 1.
+		out[ii] = 0
 		# coefficient x*p
 		for jj in 1:N
 			# coefficient x*p
@@ -279,16 +280,18 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 		for jj in 1:N
 			coeff = round(nf.b1[ii,jj],digits=digits)
 			if abs(coeff) > tol
-				out[ii] *= " + ($coeff) * x$jj ⋅ p"
+				out[ii] *= " + $coeff * x$jj ⋅ p"
 			end
+		end
 
+		for jj in 1:N
 			for kk in jj:N
 				coeff = round(nf.b2[ii,jj,kk] / 2,digits=digits)
 				if abs(coeff) > tol
 					if jj == kk
-						out[ii] *= " + ($coeff) ⋅ x$(jj)²"
+						out[ii] *= " + $coeff ⋅ x$(jj)²"
 					else
-						out[ii] *= " + ($(round(2coeff,digits=digits))) ⋅ x$jj ⋅ x$kk"
+						out[ii] *= " + $(round(2coeff,digits=digits)) ⋅ x$jj ⋅ x$kk"
 					end
 				end
 
@@ -299,9 +302,9 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 
 					if abs(coeff) > tol
 						if jj == kk == ll
-							out[ii] *= " + ($coeff)"
+							out[ii] *= " + $coeff"
 						else
-							out[ii] *= " + ($(round(3coeff,digits=digits)))"
+							out[ii] *= " + $(round(3coeff,digits=digits))"
 						end
 						for mm in 1:N
 							if _pow[mm] > 1
@@ -396,6 +399,8 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	end
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
+	# it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
+	# only adjust ζstars
 	for ζ in ζs;ζ ./= scaleζ(ζ);end
 	if issymmetric
 		λstars = copy(λs)
@@ -415,7 +420,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	for ii in 1:N
 		tmp .= ζstars[ii]
 		for jj in 1:N
-			if !(ii==jj)
+			if ii != jj
 				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
 			end
 		end
@@ -511,24 +516,30 @@ end
 
 computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
 
-function predictor(bpnf::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1)) where T
+function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity,jac = nothing) where T
 	# dimension of the kernel
-	n = length(bpnf.ζ)
+	n = length(bp.ζ)
 
 	# find zeros for the normal on each side of the bifurcation point
 	function getRootsNf(_ds)
-		deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zeros(n)])
+		deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(n)])
 		failures = 0
 		# we allow for 10 failures of nonlinear deflation
-		while failures < 10
-			outdef1, _, flag, _ = newton((x, p) -> bpnf(Val(:reducedForm), x, p), rand(n), _ds, NewtonPar(maxIter = 50), deflationOp)
+		outdef1 = rand(n)
+		while failures < nbfailures
+			if isnothing(jac)
+				outdef1, _, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), outdef1 .+ 0.1rand(n), _ds, NewtonPar(maxIter = maxiter), deflationOp)
+			else
+				outdef1, _, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)),jac, outdef1 .+ 0.1rand(n), _ds, NewtonPar(maxIter = maxiter), deflationOp)
+			end
 			flag && push!(deflationOp, outdef1)
 			~flag && (failures += 1)
+			@show failures, length(deflationOp)
 		end
 		return deflationOp.roots
 	end
-	rootsNFp =  getRootsNf(abs(δp))
 	rootsNFm =  getRootsNf(-abs(δp))
+	rootsNFp =  getRootsNf(abs(δp))
 	println("\n--> BS from Non simple branch point")
 	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point (Reduced equation).\n")
 	return (before = rootsNFm, after = rootsNFp)

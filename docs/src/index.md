@@ -18,7 +18,7 @@ This package requires Julia >= v1.3.0 because of the use of methods added to abt
 
 To install it, please run
 
-`] add https://github.com/rveltz/BifurcationKit.jl`
+`] add BifurcationKit`
 
 ## Citing this work
 If you use this package for your work, please **cite** it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:
@@ -58,6 +58,7 @@ For example, in the first tutorial on [Temperature model](@ref), one could use `
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at simple branch points
 - Automatic branch switching at simple Hopf points to periodic orbits
+- **Automatic bifurcation diagram computation**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
@@ -78,6 +79,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Fold Point continuation | Y | Y | 1, 8 |
 | Hopf continuation | Y | `AbstractArray` | 6 |
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 |
+| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Y | `AbstractArray` |  Yes | |
 | Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 7, 8 |
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 |
 | Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  |

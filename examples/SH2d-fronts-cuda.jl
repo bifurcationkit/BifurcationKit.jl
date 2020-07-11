@@ -7,31 +7,31 @@ const BK = BifurcationKit
 TY = Float64
 AF = Array{TY}
 #################################################################
-if 1==1
-	ENV["GKSwstype"] = "nul"    # needed for the GR backend on headless servers
-	using Plots
-	using SixelTerm
-else
-	using GR
-	GR.inline("iterm")
-end
+# if 1==1
+# 	ENV["GKSwstype"] = "nul"    # needed for the GR backend on headless servers
+# 	using Plots
+# 	using SixelTerm
+# else
+# 	using GR
+# 	GR.inline("iterm")
+# end
 
-using CuArrays
-CuArrays.allowscalar(false)
-# import LinearAlgebra: mul!, axpby!
-# mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
-# mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
-# axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
+using CUDA
+CUDA.allowscalar(false)
+import LinearAlgebra: mul!, axpby!
+mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
+mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
+axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
-const TY = Float64
-const AF = CuArray{TY}
+TY = Float64
+AF = CuArray{TY}
 #################################################################
 # to simplify plotting of the solution
 heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 norminf(x) = maximum(abs.(x))
 
-Nx = 2^8
-Ny = 2^8
+Nx = 2^10
+Ny = 2^10
 lx = 8pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
@@ -89,7 +89,6 @@ function \(c::SHLinearOp, u)
 	return copy(c.tmp_real)
 end
 
-
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
@@ -97,16 +96,15 @@ function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	return res, true, info.numops
 end
 
-function (sheig::SHEigOp)(J, nev::Int; σ = 0.3)
+function (sheig::SHEigOp)(J, nev::Int; σ = 0.3, kwargs...)
 	u, l, ν = J
 	sh = sheig.sh
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-	N = size(u)
 
 	A = du -> sh(J, du; shift = σ, tol = 1e-5)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
-	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), N)), nev, :LM, tol = 1e-10, maxiter = 40, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))
+	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 40, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))
 	@show 1 ./vals .+ σ
 	return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -124,7 +122,7 @@ Leig = SHEigOp(L) # for eigenvalues computation
 
 par = (l = -0.1, ν = 1.3, L = L)
 
-@time F_shfft(sol0, par); # 0.008022 seconds (12 allocations: 1.500 MiB)
+@time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
 opt_new = BK.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 	sol_hexa, hist, flag = @time BK.newton(
@@ -147,8 +145,7 @@ heatmapsol(sol_hexa)
 deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
-outdef, _, flag, _ = @time BK.newton(
-				F_shfft, J_shfft,
+outdef, _, flag, _ = @time newton(F_shfft, J_shfft,
 				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
 				par,
 				opt_new, deflationOp, normN = x-> maximum(abs.(x)))
@@ -158,22 +155,15 @@ outdef, _, flag, _ = @time BK.newton(
 
 ####################################################################################################
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
-	computeEigenValues = true,
-	detectBifurcation = 0,
+	detectBifurcation = 3,
 	precisionStability = 1e-5,
 	saveEigenvectors = false,
 	nev = 11 )
 
-	br, u1 = @time BK.continuation(
+	br, u1 = @time continuation(
 		F_shfft, J_shfft,
-		deflationOp.roots[2], par, (@lens _.l),
-		opts_cont, plot = true, verbosity = 2,
+		deflationOp[1], par, (@lens _.l),
+		opts_cont, plot = true, verbosity = 3,
 		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...),
 		printSolution = (x, p) -> norm(x), normC = norminf
 		)
-
-# branches = [br]
-# push!(branches, br)
-# plot(branches)
-#
-# plot(br)
