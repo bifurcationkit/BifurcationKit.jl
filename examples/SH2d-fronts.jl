@@ -189,11 +189,11 @@ diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
 	# usedeflation = true,
 	# δp = 0.005,
 	# tangentAlgo = BorderedPred(),
-			callbackN = cb,
-			# linearAlgo = MatrixBLS(),
+	callbackN = cb,
+	# linearAlgo = MatrixBLS(),
 	plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
-			printSolution = (x, p) -> norm(x),
-			finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+	printSolution = (x, p) -> norm(x),
+	finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = x -> norm(x, Inf)
 	)
 

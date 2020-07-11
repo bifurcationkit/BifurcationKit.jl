@@ -14,7 +14,7 @@ Finally, we leave it to the user to take advantage of automatic differentiation 
 
 ## Installation 
 
-This package requires Julia >= v1.3.0 because of the use of methods added to abtract types (see [#31916](https://github.com/JuliaLang/julia/pull/31916)).
+This package requires Julia >= v1.3.0 because of the use of methods added to abstract types (see [#31916](https://github.com/JuliaLang/julia/pull/31916)).
 
 To install it, please run
 

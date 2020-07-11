@@ -198,7 +198,7 @@ w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
 w .-= minimum(w)
 normbratu = x -> norm(x .* w) / sqrt(length(x))
 ```
-and use it to print the solution (we get redo the computation), we get:
+and use it to print the solution (we redid the computation), we get:
 
 ![](mittlemannBD-1.png)
 
@@ -213,7 +213,7 @@ title!("#branches = $(size(getBranch(diagram, code)))")
 
 ## Interactive exploration
 
-We can see that the non-simple 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second one (the first is the fold) which is composed of 8 branches
+We can see that the non-simple 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second bifurcation point (the first is the fold) which is composed of 8 branches
 
 `plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false)`
 

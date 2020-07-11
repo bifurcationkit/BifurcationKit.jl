@@ -29,6 +29,8 @@ Most newton functions can be used with a deflated problem, see for example [Snak
 newton(F, J, x0, p0, options::NewtonPar, defOp::DeflationOperator, linsolver = DeflatedLinearSolver(); kwargs...)
 ```
 
+If you pass a linear solver other than the default one `::DeflatedLinearSolver`, a Matrix-Free is used in place of the dedicated solver `DeflatedLinearSolver` which is akin to a Bordering method.
+
 We refer to [`newton`](@ref) for more information about the arguments.
 
 !!! tip "Tip"

@@ -146,9 +146,9 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(F_shfft, J_shfft,
-				0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
-				par,
-				opt_new, deflationOp, normN = x-> maximum(abs.(x)))
+			0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
+			par,
+			opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 		println("--> norm(sol) = ", norm(outdef))
 		heatmapsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
