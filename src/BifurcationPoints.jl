@@ -14,29 +14,29 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 		$(TYPEDFIELDS)
 		"""
 		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: SimpleBranchPoint
-	"bifurcation point."
-	x0::Tv
+			"bifurcation point."
+			x0::Tv
 
-	"Parameter value at the bifurcation point."
-	p::T
+			"Parameter value at the bifurcation point."
+			p::T
 
-	"Parameters used by the vector field."
-	params::Tpar
+			"Parameters used by the vector field."
+			params::Tpar
 
-	"Parameter axis used to compute the branch on which this Branch point was detected."
-	lens::Tlens
+			"Parameter axis used to compute the branch on which this Branch point was detected."
+			lens::Tlens
 
-	"Right eigenvector(s)."
-	ζ::Tevr
+			"Right eigenvector(s)."
+			ζ::Tevr
 
-	"Left eigenvector(s)."
-	ζstar::Tevl
+			"Left eigenvector(s)."
+			ζstar::Tevl
 
-	"Normal form coefficients."
-	nf::Tnf
+			"Normal form coefficients."
+			nf::Tnf
 
-	"Type of bifurcation point"
-	type::Symbol
+			"Type of bifurcation point"
+			type::Symbol
 		end
 	end
 end

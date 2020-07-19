@@ -84,10 +84,10 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
 	detectFold::Bool = true 				# detect fold points?
 	detectBifurcation::Int64 = 0			# detect bifurcation points?
-	dsminBisection::T = 1e-5				# dsmin for the bisection algorithm when locating bifurcation points
+	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
-	tolBisectionEigenvalue::Float64 = 1e-9  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
+	tolBisectionEigenvalue::Float64 = 1e-16 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
     @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"

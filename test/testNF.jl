@@ -151,11 +151,27 @@ br_snd1, = @time BK.continuation(
 	# tangentAlgo = BorderedPred(),
 	setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation=3); plot = false, verbosity = 0, normC = norminf)
 
+# plot(br_snd1)
+
+br_snd2, = @time BK.continuation(
+	jet..., br_snd1, 1,
+	printSolution = (x, p) -> x[1],
+	setproperties(opts_br; pMin = -1.2, pMax = 0.2, ds = 0.001, detectBifurcation = 3, maxSteps=19, nInversion = 8, newtonOptions = NewtonPar(opts_br.newtonOptions),dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20); plot = false, verbosity = 0, normC = norminf,
+	# tangentAlgo = BorderedPred(),
+	# finaliseSolution = (z, tau, step, contResult) ->
+	# 	(Base.display(contResult.eig[end].eigenvals) ;true)
+	)
+
+	# plot(plot(br_snd2.branch[1,:] |> diff, marker = :d),
+	# plot([br_snd1,br_snd2], putbifptlegend=false))
+
 bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3,dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
 	printSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
+
+# plot(bdiag; putbifptlegend=false, markersize=2, plotfold=false, title = "#branch = $(size(bdiag))")
 
 # test calls for aBD
 BK.hasbranch(bdiag)

@@ -534,7 +534,6 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 			end
 			flag && push!(deflationOp, outdef1)
 			~flag && (failures += 1)
-			@show failures, length(deflationOp)
 		end
 		return deflationOp.roots
 	end

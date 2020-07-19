@@ -51,9 +51,9 @@ function (l::EigArpack)(J, nev; kwargs...)
 	if J isa AbstractMatrix
 		λ, ϕ, ncv = Arpack.eigs(J; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
 	else
-                if !(:v0 in keys(l.kwargs))
-                    error("The v0 argument must be set for EigArpack in the matrix-free case")
-                end
+		if !(:v0 in keys(l.kwargs))
+			error("The v0 argument must be set for EigArpack in the matrix-free case")
+		end
 		N = length(l.kwargs[:v0])
 		T = eltype(l.kwargs[:v0])
 		Jmap = LinearMap{T}(J, N, N; ismutating = false)

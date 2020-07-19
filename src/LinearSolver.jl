@@ -79,7 +79,8 @@ function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
 		Jfact = factorize(_axpy(J, a₀, a₁))
 		return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
 	else
-		return J \ rhs1, J \ rhs2, true, (1, 1)
+		_J = _axpy(J, a₀, a₁)
+		return _J \ rhs1, _J \ rhs2, true, (1, 1)
 	end
 end
 ####################################################################################################
