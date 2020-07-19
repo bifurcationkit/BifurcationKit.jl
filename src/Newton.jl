@@ -92,7 +92,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialize iterations
-	x = _copy(x0
+	x = _copy(x0)
 	f = Fhandle(x, p0)
 	d = _copy(f)
 
