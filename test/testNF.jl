@@ -181,7 +181,7 @@ size(bdiag)
 getBranch(bdiag, (1,))
 show(stdout, bdiag)
 ####################################################################################################
-# test of the D6 normal form
+# test of the pitchfork-D6 normal form
 function FbpD6(x, p)
 	return [ p.μ * x[1] + (p.a * x[2] * x[3] - p.b * x[1]^3 - p.c*(x[2]^2 + x[3]^2) * x[1]),
 			 p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c*(x[3]^2 + x[1]^2) * x[2]),
