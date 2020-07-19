@@ -134,7 +134,7 @@ bp2d = @time BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 
 @test norm(bp2d.nf.b1 - 3.23 * I, Inf) < 1e-9
 @test norm(bp2d.nf.a, Inf) < 1e-15
 ####################################################################################################
-# vector field to test close secondary bifurcations
+# vector field to test nearby secondary bifurcations
 function FbpSecBif(u, p)
 	return @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
 end
@@ -212,6 +212,20 @@ BK.nf(bp2d)
 # test the evaluation of the normal form
 x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.param_lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
+br1, = BK.continuation(
+	jet..., br, 1,
+	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 300, pMax = 1.); plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> norminf(x))
+	# plot([br1..., br], plotfold=false, putbifptlegend=false)
+
+bdiag = bifurcationdiagram(jet..., zeros(3), pard6, (@lens _.μ), 3,
+	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
+	printSolution = (x, p) -> norminf(x),
+	# tangentAlgo = BorderedPred(),
+	plot = false, verbosity = 0, normC = norminf)
+
+# plot(bdiag; putbifptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
+
+####################################################################################################
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
 	@unpack r, μ, ν, c3, c5 = p
