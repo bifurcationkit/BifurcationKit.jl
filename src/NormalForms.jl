@@ -324,6 +324,56 @@ end
 """
 $(SIGNATURES)
 
+Bi-orthogonalise the arguments.
+"""
+function biorthogonalise(ζs, ζstars, verbose)
+	# change only the ζstars to have bi-orthogonal left/right eigenvectors
+	# we could use projector P=A(A^{T}A)^{-1}A^{T}
+	# we use Gram-Schmidt algorithm instead
+
+	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G))"
+
+	# save those in case the first algo fails
+	_ζs = copy.(ζs)
+	_ζstars = copy.(ζstars)
+
+	# first algo
+	tmp = copy(ζstars[1])
+	for ii in eachindex(ζstars)
+		tmp .= ζstars[ii]
+		for jj in eachindex(ζs)
+			if ii != jj
+				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
+			end
+		end
+		ζstars[ii] .= tmp ./ dot(tmp, ζs[ii])
+	end
+
+	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+
+	# we switch to another algo if the above fails
+	if norm(G - LinearAlgebra.I, Inf) >= 1e-5
+		G = [ dot(ζ, ζstar) for ζ in _ζs, ζstar in _ζstars]
+		@warn "Gram matrix not equal to idendity. Switching to LU algorithm."
+		display(G)
+		@show det(G)
+		_F = lu(G)
+		display(inv(_F.L) * G * inv(_F.U)')
+		ζs = inv(_F.L) * _ζs
+		ζstars = inv(_F.U)' * _ζstars
+	end
+
+	# test the bi-orthogonalization
+	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
+	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`."
+	return ζs, ζstars
+end
+
+"""
+$(SIGNATURES)
+
 Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif]`.
 
 # Arguments
@@ -413,24 +463,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	ζs = real.(ζs); λs = real.(λs)
 	verbose && println("--> VP     = ", λs, "\n--> VPstar = ", λstars)
 
-	# change only the ζstars to have bi-orthogonal left/right eigenvectors
-	# we could use projector P=A(A^{T}A)^{-1}A^{T}
-	# we use Gram-Schmidt algorithm instead
-	tmp = copy(ζstars[1])
-	for ii in 1:N
-		tmp .= ζstars[ii]
-		for jj in 1:N
-			if ii != jj
-				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
-			end
-		end
-		ζstars[ii] .= tmp ./ dot(tmp, ζs[ii])
-	end
-
-	# test the bi-orthogonalization
-	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
-	@assert norm(G - LinearAlgebra.I(N), Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`."
+	ζs, ζstars = biorthogonalise(ζs, ζstars, verbose)
 
 	# differentials should work as we are looking at reals
 	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
