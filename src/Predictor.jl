@@ -121,7 +121,7 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo:
 	rmul!(tau_normed, θ / length(tau.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_new.u)
 	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, set(it.par, it.param_lens, z_new.p)), dFdl,
-			tau_normed, rmul!(similar(z_new.u), false), T(1), θ)
+			tau_normed, 0*z_new.u, T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
 	α = T(1) / it.dottheta(tauu, tau.u, taup, tau.p, θ)
@@ -222,7 +222,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
-	dFdp = copyto!(similar(res_f), F(x, set(par, paramlens,p + finDiffEps))) # copy(F(x, p + finDiffEps))
+	dFdp = 1*F(x, set(par, paramlens,p + finDiffEps)) # copy(F(x, p + finDiffEps))
 	minus!(dFdp, res_f)	# dFdp = dFdp - res_f
 	rmul!(dFdp, T(1) / finDiffEps)
 

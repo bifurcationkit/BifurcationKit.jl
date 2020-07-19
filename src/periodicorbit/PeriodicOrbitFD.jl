@@ -878,13 +878,13 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 
 		lspo = PeriodicOrbitTrapLS(options.linsolver)
 
-		return continuation(
-			probPO,
-			(x, p) -> PeriodicOrbitTrapJacobianFull(probPO, jac(x, p), x, p),
-			orbitguess, par, lens,
-			(@set contParams.newtonOptions.linsolver = lspo);
-			printSolution = printSolution,
-			kwargs...)
+			return continuation(
+				probPO,
+				(x, p) -> PeriodicOrbitTrapJacobianFull(probPO, jac(x, p), x, p),
+				orbitguess, par, lens,
+				(@set contParams.newtonOptions.linsolver = lspo);
+				printSolution = printSolution,
+				kwargs...)
 	else
 		@assert orbitguess isa AbstractVector
 		@assert length(orbitguess) == N * M + 1 "Error with size of the orbitguess"

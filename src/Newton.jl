@@ -92,9 +92,9 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	@unpack tol, maxIter, verbose, linesearch = options
 
 	# Initialize iterations
-	x = similar(x0); copyto!(x, x0) # x = copy(x0)
+	x = 1*x0 # x = copy(x0)
 	f = Fhandle(x, p0)
-	d = similar(f); copyto!(d, f)	# d = copy(f)
+	d = 1*f	# d = copy(f)
 
 	neval = 1
 	res = normN(f)
@@ -115,7 +115,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 		# Update solution: x .= x .- d
 		minus!(x, d)
 
-		copyto!(f, Fhandle(x, p0))
+		f = Fhandle(x, p0)
 		res = normN(f)
 
 		neval += 1

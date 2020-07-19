@@ -20,16 +20,16 @@ br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-# iter = BK.BKIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
+# iter = BK.PALCIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
 # state = iterate(iter)[1]
-# contRes = BK.initContRes(iter, state)
+# contRes = ContResult(iter, state)
 # @time continuation!(iter, state, contRes)
 #
 # typeof(contRes)
 #
 # state = iterate(iter)[1]
-#	 contRes = BK.initContRes(iter, state)
-#	 @code_warntype continuation!(iter, state, contRes)
+# 	 contRes = BK.ContResult(iter, state)
+# 	 @code_warntype continuation!(iter, state, contRes)
 #####
 
 opts = @set opts.detectBifurcation = 1

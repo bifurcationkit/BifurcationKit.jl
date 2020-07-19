@@ -1,5 +1,5 @@
 # composite type for Bordered arrays
-import Base: copy, copyto!, eltype, zero
+import Base: copy, copyto!, eltype, zero, eltype
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 
 """
@@ -16,10 +16,12 @@ eltype(b::BorderedArray{vectype, T}) where {T, vectype} = eltype(b.p)
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
 
+Base.:*(a::S, b::BorderedArray{vectype, T}) where {vectype, T, S <: Number} = BorderedArray(*(a, b.u),*(a, b.p))
+
 # a version of copy which cope with our requirements concerning the methods
 # available for
-_copy(b) = copyto!(similar(b), b)
-copy(b::BorderedArray) = copyto!(similar(b), b)# BorderedArray(copy(b.u), copy(b.p))
+_copy(b) = 1*b
+copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
 
 copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1, T2 } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p); dest)
 copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
@@ -94,7 +96,7 @@ end
 # 	`minus!(x, y)`
 #
 # computes x-y into x and returns x
-minus!(x, y) = axpy!(convert(eltype(x), -1), y, x)
+minus!(x, y) = axpy!(-1, y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <: Number} = (x = x - y)
 minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))
@@ -110,7 +112,7 @@ end
 #	`minus(x,y)`
 #
 # returns x - y
-minus(x, y) = (x1 = copyto!(similar(x), x); minus!(x1, y); return x1)
+minus(x, y) = (x1 = 1*x; minus!(x1, y); return x1)
 # minus(x, y) = (x - y)
 minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 minus(x::T, y::T) where {T <:Real} = (return x - y)

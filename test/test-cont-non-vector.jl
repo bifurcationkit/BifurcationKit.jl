@@ -165,6 +165,8 @@ opt_newton0 = BK.NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_
 		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),
 		opt_newton0)
 
+Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copyto!(dest.vecs, in.vecs)
+
 opts_br0 = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
 
 br0, u1 = @time BK.continuation(
