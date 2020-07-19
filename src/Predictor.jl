@@ -222,7 +222,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
-	dFdp = 1*F(x, set(par, paramlens,p + finDiffEps)) # copy(F(x, p + finDiffEps))
+	dFdp = _copy(F(x, set(par, paramlens,p + finDiffEps)))
 	minus!(dFdp, res_f)	# dFdp = dFdp - res_f
 	rmul!(dFdp, T(1) / finDiffEps)
 

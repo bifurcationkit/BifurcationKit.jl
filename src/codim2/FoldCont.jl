@@ -144,7 +144,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 		dsig = (rhsp - σx1) / (σp - σx2)
 
 		# dX = x1 .- dsig .* x2
-		dX = 1*x1; axpy!(-dsig, x2, dX)
+		dX = _copy(x1); axpy!(-dsig, x2, dX)
 	end
 
 	if debug_

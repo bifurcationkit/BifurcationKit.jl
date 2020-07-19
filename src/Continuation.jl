@@ -441,10 +441,10 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	theta = it.contParams.theta
 	ds = it.contParams.ds
 	# this is the last (first) point on the branch
-	z_old   = BorderedArray(1 * u0, p0)
+	z_old   = BorderedArray(_copy(u0), p0)
 	# this is a predictor for the next point on the branch, we could have used z_old as well
-	z_pred	= BorderedArray(1 * u1, p1)
-	tau  = 1 * z_pred # copy(z_pred)
+	z_pred	= BorderedArray(_copy(u1), p1)
+	tau  = _copy(z_pred)
 
 	# compute the tangent using Secant predictor
 	getTangent!(tau, z_pred, z_old, it, ds, theta, SecantPred(), _verbosity)
