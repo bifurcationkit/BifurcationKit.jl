@@ -237,6 +237,58 @@ plot(
 	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
 
 ####################################################################################################
+bp = @time computeNormalForm(jet..., br, 2, nev = 30; issymmetric = true)
+BK.nf(bp; digits = 5)
+
+res, = BK.continuation(jet..., br, 2,
+	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
+	nev = 30, verbosity = 3,
+	# callbackN = cb,
+	plot = true,
+	plotSolution = (x, p; k...) ->(plotsol!(x; k...); plot!(br,subplot=1)),
+	printSolution = (x, p) -> normbratu(x),
+	tangentAlgo = BorderedPred()
+	)
+
+
+plot(res;plotfold= false)
+	plot!([br];plotfold= false)
+
+δp = 0.005
+	deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(2)])
+		success = [0]
+while sum(success) < 10
+	outdef1, _, flag, _ = newton((x, p) -> bp2d(Val(:reducedForm),x, p[1]), rand(2), [δp], NewtonPar(maxIter = 50), deflationOp)
+	@show flag
+	flag && push!(deflationOp, outdef1)
+	(flag==false) && push!(success, 1)
+end
+	println("--> found $(length(deflationOp)) solutions")
+
+plotsol(bp2d(deflationOp[3], δp))
+solbif, flag, _ = newton(Fmit, JFmit, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2d.p + δp), opts_br.newtonOptions)[1]
+
+plotsol(solbif-0*bp2d(deflationOp[2], δp))
+
+brnf1, _, _ = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
+	printSolution = (x, p) -> norm(x),
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	plot = true, verbosity = 3, normC = norminf)
+
+branches2 = [br,br1,br2,brnf1]
+push!(branches2, brnf1)
+# plot([br,br1,br2])
+# plot!(brnf1)
+
+brnf2, _, _ = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
+	printSolution = (x, p) -> norm(x),
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	plot = true, verbosity = 3, normC = norminf)
+
+# plot([br,br1,br2]);plot!(brnf1);plot!(brnf2)
+plot(branches2)
+plot!(brnf2)
+####################################################################################################
 # find isolated branch, see Farrell et al.
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)

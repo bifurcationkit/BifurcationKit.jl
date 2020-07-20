@@ -104,6 +104,7 @@ end
 """
 	Bordered Tangent predictor
 """
+struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
