@@ -18,6 +18,8 @@ getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getprop
 propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################
 """
+$(SIGNATURES)
+
 This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
 function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv

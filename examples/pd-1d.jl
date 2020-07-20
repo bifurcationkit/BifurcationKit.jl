@@ -79,7 +79,7 @@ out, _, _ = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
 	plot();plot!(X,out[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 
-optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 2, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370)
+optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370)
 
 	br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
 		plot = true, verbosity = 3,
@@ -102,7 +102,7 @@ M = 61
 orbitguess = zeros(2N, M)
 vec_hopf = geteigenvector(optnewton.eigsolver,
 			br.eig[br.bifpoint[ind_hopf].idx][2],
-			br.bifpoint[ind_hopf].ind_bif-1)
+			br.bifpoint[ind_hopf].ind_ev-1)
 vec_hopf ./=  norm(vec_hopf)
 # vec_hopf is the eigenvector for the eigenvalues iω
 phase = []
@@ -115,14 +115,14 @@ phase = []
 plot(phase)
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 
-poTrap = p -> PeriodicOrbitTrapProblem(
-	x ->  Fbr(x, @set par_br.C = p),
-	x ->  Jbr(x, @set par_br.C = p),
+poTrap = PeriodicOrbitTrapProblem(
+	Fbr, Jbr,
+	par_br,
 	real.(vec_hopf),
 	hopfpoint.u,
 	M)
 
-poTrap(-0.9)(orbitguess_f) |> plot
+poTrap(orbitguess_f, @set par_br.C = -0.9) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, N, M)
 
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
@@ -131,13 +131,12 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
 
 outpo_f, _, flag = @time BK.newton(
-		poTrap(-0.9),
-		orbitguess_f, opt_po, :FullLU;
+		poTrap, orbitguess_f, par_br, opt_po; linearPO = :FullLU,
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f,2*N, M),"\n")
 	BK.plotPeriodicPOTrap(outpo_f, N, M)
 
-eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
+eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)}
 # eig = EigArpack()
 eig = DefaultEig()
 optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
@@ -205,8 +204,8 @@ plot(initpo[1:end-1], label = "Init guess")
 	plot!(outposh[1:end-1], label = "sol")
 
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2N), verbose = 2, dim = 40)
-eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 2)
+# eig = DefaultEig()
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
 	br_po_sh, _ , _ = @time continuation(probSh, outposh, par_br_hopf, (@lens _.C), optcontpo;
 		verbosity = 3,	plot = true,
 		finaliseSolution = (z, tau, step, contResult) ->

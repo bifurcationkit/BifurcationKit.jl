@@ -100,9 +100,9 @@ par = (μ = -0.2, ν = 0, α = -1)
 for α in [-1,1]
 	global par = @set par.α = α
 	br, = BK.continuation(
-	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
-	printSolution = (x, p) -> norminf(x),
-	setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
+		Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
+		printSolution = (x, p) -> norminf(x),
+		setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
 	# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 	bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 

@@ -47,21 +47,6 @@ end
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
-"""
-	Natural predictor / corrector
-"""
-struct NaturalPred <: AbstractSecantPredictor end
-
-"""
-	Secant tangent predictor
-"""
-struct SecantPred <: AbstractSecantPredictor end
-
-"""
-	Bordered Tangent predictor
-"""
-struct BorderedPred <: AbstractTangentPredictor end
-
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
 	copyto!(z_pred, z_old)
@@ -77,6 +62,12 @@ function corrector(it, z_old::M, tau::M, z_pred::M,
 	return newtonPALC(it, z_old, tau, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 
+####################################################################################################
+"""
+	Natural predictor / corrector
+"""
+struct NaturalPred <: AbstractSecantPredictor end
+
 # corrector based on natural formulation
 function corrector(it, z_old::M, tau::M, z_pred::M,
 			ds, θ, contparams, dottheta::DotTheta,
@@ -89,6 +80,11 @@ function corrector(it, z_old::M, tau::M, z_pred::M,
 				 normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
+####################################################################################################
+"""
+	Secant tangent predictor
+"""
+struct SecantPred <: AbstractSecantPredictor end
 
 # tangent computation using Natural / Secant predictor
 # tau is the tangent prediction
@@ -104,6 +100,10 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo:
 	end
 	rmul!(tau, α)
 end
+####################################################################################################
+"""
+	Bordered Tangent predictor
+"""
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
@@ -146,7 +146,7 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 	(verbosity > 0) && print("$(thetanew)\n")
 	return thetanew
 end
-################################################################################################
+####################################################################################################
 function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::Int64, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
@@ -250,8 +250,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			step_ok = false
 			while !step_ok & (alpha > almin)
 				# x_pred = x - alpha * u
-				copyto!(x_pred, x)
-				axpy!(-alpha, u, x_pred)
+				copyto!(x_pred, x); axpy!(-alpha, u, x_pred)
 
 				p_pred = p - alpha * up
 				copyto!(res_f, F(x_pred, set(par, paramlens, p)))

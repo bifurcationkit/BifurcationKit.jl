@@ -57,7 +57,7 @@ Compute the bifurcation diagram associated with the problem `F=0` recursively.
 - `lens` lens to select the parameter axis
 - `level` maximum branching (or recursion) level for computing the bifurcation diagram
 - `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. `x,p` is the current solution to `F(x,p)=0`.
-- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](@ref).
+- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://rveltz.github.io/BifurcationKit.jl/dev/library/#Continuation-1).
 
 # Simplified call:
 

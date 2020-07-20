@@ -13,7 +13,13 @@ where `br` is a branch computed after a call to `continuation` with detection of
 
 ## Branch switching from non simple branch point to equilibria
 
-We do not provide automatic branch switching in this case. The method is to first compute the reduced equation (see [Non-simple branch point](@ref)) and use it to compute the nearby solutions (see tutorial [A generalized Bratu–Gelfand problem in two dimensions](@ref)). You can then use these solutions as initial guess for [`continuation`](@ref).
+We provide an *experimental* automatic branch switching method in this case. The method is to first compute the reduced equation (see [Non-simple branch point](@ref)) and use it to compute the nearby solutions. These solutions are seeded as initial guess for [`continuation`](@ref). Hence, you can perform automatic branch switching by calling `continuation` with the following options:
+
+```julia
+continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar;
+	Jt = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
+```
+
 
 ## Branch switching from Hopf point to periodic orbits
 

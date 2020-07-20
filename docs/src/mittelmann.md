@@ -146,7 +146,7 @@ Fold points:
 
 We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
 
-## Automatic branch switching 
+## Automatic branch switching at simple branch points
 
 To be able to perform branch switching, we need to pass the differentials of our functional. Using automatic differentiation, this is not a big deal:
 
@@ -194,7 +194,7 @@ br2, _ = continuation(jet..., br1, 1,
 
 ![](mittlemann4.png)
 
-## Analysis at the 2d-branch points
+## Analysis at the 2d-branch points (manual)
 
 The second bifurcation point on the branch `br` of homogenous solutions has a 2d kernel. We don't provide automatic branch switching but we provide two methods to deal with such case
 - automatic local bifurcation diagram (see below)
@@ -266,7 +266,7 @@ We could use the solutions saved in `resp, resx` as initial guesses for a call t
 !!! info "Advanced computation"
     Instead of using brute force and computing the vector field on a grid. One can rely on `IntervalConstraintProgramming.jl` to do better using bisection. See also this [discourse post](https://discourse.julialang.org/t/nd-level-sets/38532/13) where the same example is treated by D. P. Sanders.    
 
-## Branch switching with deflated newton
+## Branch switching with deflated newton (manual)
 
 At this stage, we know what happens at the 2d bifurcation point of the curve of homogenous solutions. We chose another method based on [Deflated problems](@ref). We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:
 
@@ -325,3 +325,98 @@ brdef2, _ = @time BK.continuation(
 thereby providing the following bifurcation diagram with `plot([br,br1,br2,brdef1, brdef2],plotfold=false, putbifptlegend = false)`
 
 ![](mittlemann6.png)
+
+## Automatic branch switching at the 2d-branch points
+
+We now show how to perform automatic branch switching at the nonsimple branch points. However, we think it is important that the user is able to use the previous tools in case automatic branch switching fails.
+
+The call for automatic branch switching is the same as in the case of simple branch points (see above) except that many branches are returned.
+
+```julia
+branches, = continuation(jet..., br, 2,
+	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
+	nev = 30, verbosity = 3,	
+	plot = true,
+	plotSolution = (x, p; k...) ->(plotsol!(x; k...); plot!(br,subplot=1)),
+	tangentAlgo = BorderedPred()
+	)
+```
+
+You can plot the branches using `plot(branches)`. The branches are as follows
+
+
+```julia
+julia> branches
+8-element Array{Branch,1}:
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255723 ± 9e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.14420035 ± 6e-07, step =  28, eigenelements in eig[ 29], ind_ev =   3 [converged], δ = ( 1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255723 ± 9e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.14420007 ± 3e-07, step =  28, eigenelements in eig[ 29], ind_ev =   3 [converged], δ = ( 1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255723 ± 9e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.14420007 ± 3e-07, step =  28, eigenelements in eig[ 29], ind_ev =   3 [converged], δ = ( 1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255723 ± 9e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.14420035 ± 6e-07, step =  28, eigenelements in eig[ 29], ind_ev =   3 [converged], δ = ( 1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255724 ± 3e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.27868730 ± 4e-09, step =  16, eigenelements in eig[ 17], ind_ev =   2 [converged], δ = (-1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27868730, step =  17, eigenelements in eig[ 17], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255724 ± 3e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.27868730 ± 4e-09, step =  16, eigenelements in eig[ 17], ind_ev =   2 [converged], δ = (-1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27868730, step =  17, eigenelements in eig[ 17], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255724 ± 3e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.27868730 ± 4e-09, step =  16, eigenelements in eig[ 17], ind_ev =   2 [converged], δ = (-1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27868730, step =  17, eigenelements in eig[ 17], ind_ev =   0 [    guess], δ = ( 0,  0)
+
+ Branch number of points: 33
+Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,      bp at p ≈  0.27255724 ± 3e-11, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0)
+- #  2,      bp at p ≈  0.27868730 ± 4e-09, step =  16, eigenelements in eig[ 17], ind_ev =   2 [converged], δ = (-1,  0)
+Fold points:
+- #  1,    fold at p ≈  0.27868730, step =  17, eigenelements in eig[ 17], ind_ev =   0 [    guess], δ = ( 0,  0)
+```

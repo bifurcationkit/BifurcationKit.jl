@@ -7,7 +7,7 @@ Thanks to the functionality presented in this part, we can compute the bifurcati
 
 - compute a branch $\gamma$ of equilibria
 - detect all bifurcations on the branch
-- recursively compute the branches emanating from the **simple** branch points on $\gamma$.
+- recursively compute the branches emanating from branch points on $\gamma$.
 
 ## Pitfalls
  
@@ -74,7 +74,7 @@ You can plot the diagram like `plot(bdiag; putbifptlegend=false, markersize=2, p
 
 ## Example with nonsimple branch points
 
-To show the ability of the branch switching method to cope with non simple branch points, we look at the normal form of the Pitchfork with D6 symmetry which occurs frequently in problems with hexagonal symmetry. You may want to look at [`Automatic diagram of 2d Bratu–Gelfand problem (Intermediate)`](@ref) for a non trivial example of use.
+To show the ability of the branch switching method to cope with non simple branch points, we look at the normal form of the Pitchfork with D6 symmetry which occurs frequently in problems with hexagonal symmetry. You may want to look at [Automatic diagram of 2d Bratu–Gelfand problem (Intermediate)](@ref) for a non trivial example of use.
 
 ```julia
 using Revise, Plots

@@ -1,6 +1,6 @@
 # BifurcationKit.jl
 
-This Julia package aims at performing **bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
+This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
 It incorporates a pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
@@ -24,15 +24,16 @@ To install it, please run
 If you use this package for your work, please **cite** it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:
 
 ```
-@misc{veltz:hal-02071874,
-  TITLE = {{PseudoArcLengthContinuation.jl}},
+@misc{veltz:hal-02902346,
+  TITLE = {{BifurcationKit.jl}},
   AUTHOR = {Veltz, Romain},
-  URL = {https://hal.inria.fr/hal-02071874},
-  YEAR = {2019},
-  MONTH = Mar,
-  KEYWORDS = {Pseudo Arclength Continuation},
-  PDF = {https://hal.inria.fr/hal-02071874/file/PseudoArcLengthContinuation.jl-master.zip},
-  HAL_ID = {hal-02071874},
+  URL = {https://hal.archives-ouvertes.fr/hal-02902346},
+  INSTITUTION = {{Inria Sophia-Antipolis}},
+  YEAR = {2020},
+  MONTH = Jul,
+  KEYWORDS = {pseudo-arclength-continuation ; periodic-orbits ; floquet ; gpu ; bifurcation-diagram ; deflation ; newton-krylov},
+  PDF = {https://hal.archives-ouvertes.fr/hal-02902346/file/354c9fb0d148262405609eed2cb7927818706f1f.tar.gz},
+  HAL_ID = {hal-02902346},
   HAL_VERSION = {v1},
 }
 ```
