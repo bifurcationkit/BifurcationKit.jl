@@ -504,7 +504,7 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 
 	if state.stopcontinuation == false && state.stepsizecontrol == true
 		# we update the PALC paramters ds and theta, they are in the state variable
-		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, verbosity)
+		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
 	end
 
 	state.step += 1
