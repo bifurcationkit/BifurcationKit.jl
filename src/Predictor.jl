@@ -233,7 +233,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	step_ok = true
 
 	# invoke callback before algo really starts
-	compute = callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, kwargs...)
+	compute = callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...)
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok & compute
@@ -281,12 +281,12 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		if callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, kwargs...) == false
+		if callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...) == false
 			break
 		end
 
 	end
-	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, kwargs...)
+	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it
 end
 
