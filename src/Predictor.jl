@@ -49,7 +49,7 @@ abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
-	copyto!(z_pred, z_old)
+	copyto!(z_pred, z_old) # z_pred <-- z_old
 	axpy!(ds, tau, z_pred)
 end
 
@@ -130,6 +130,152 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo:
 end
 ####################################################################################################
 """
+	Multiple Tangent predictor
+"""
+mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
+	tangentalgo::Talgo	# tangent algo used
+	α::T				# damping factor
+	τ::Tvec				# record the current tangent
+	nb::Int64			# number of predictors
+	indconverged::Int	# index of the largest converged predictor
+	imax::Int			# index for lookup in residual history
+end
+MultiplePred(α::Real,nb::Int,τ) = MultiplePred(SecantPred(),α,τ,nb,0,1)
+MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,1)
+
+# callback for newton
+function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
+	resHist = get(kwargs, :resHist, nothing)
+	iteration - mpred.imax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.imax] : true
+end
+
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# compute tangent and store it
+	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
+	getTangent!(tau, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
+	copyto!(algo.τ, tau)
+end
+
+function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
+			algo::MultiplePred, linearalgo = MatrixFreeLBS(); normC = norm,
+			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# we combine the callbacks for the newton iterations
+	cb = (x, f, J, res, iteration, itlinear, options; kwargs...) -> callback(x, f, J, res, iteration, itlinear, options; kwargs...) & algo(x, f, J, res, iteration, itlinear, options; kwargs...)
+	for ii in algo.nb:-1:1
+		zpred = _copy(z_pred)
+		axpy!(ii*ds, algo.τ, zpred)
+		# we restore the original callback if it reaches the usual case ii=0
+		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
+				algo.tangentalgo, linearalgo; normC = normC, callback = cb)
+		if flag
+			# record the largest converged guess
+			algo.indconverged = ii
+			return zold, res, flag, itnewton
+		end
+		# @warn "----> MultiPred corrector did not converge for i = $ii"
+	end
+	algo.indconverged = 0
+	return corrector(it, z_old, tau, z_pred, ds, θ,
+			algo.tangentalgo, linearalgo; normC = normC, callback = callback)
+end
+####################################################################################################
+"""
+	Polynomial Tangent predictor
+"""
+struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
+	n::Int64							# order of the polynomial
+	k::Int64							# last solution vectors
+	A::Matrix{T}						# matrix for the interpolation
+	tangentalgo::Talgo					# algo for tangent when polynomial predictor is not possible
+	solutions::CircularBuffer{Tvec}		# vector of solutions
+	parameters::CircularBuffer{T}		# vector of parameters
+	arclengths::CircularBuffer{T}		# vector of arclengths
+	coeffsSol::Vector{Tvec}		# coefficients for the polynomials for the solution
+	coeffsPar::Vector{T}		# coefficients for the polynomials for the parameter
+end
+
+PolynomialPred(n,k,v0, algo) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
+	CircularBuffer{typeof(v0)}(k),CircularBuffer{eltype(v0)}(k),
+	CircularBuffer{eltype(v0)}(k),
+	Vector{typeof(v0)}(undef, n+1),
+	Vector{eltype(v0)}(undef, n+1)))
+PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
+
+isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
+
+function getStats(polypred)
+	Sbar = sum(polypred.arclengths) / polypred.n
+	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) /  polypred.n)
+	return Sbar, σ
+end
+
+function (polypred::PolynomialPred)(ds)
+	sbar, σ = getStats(polypred)
+
+	s = polypred.arclengths[end] + ds
+	S = [((s-sbar)/σ)^(jj-1) for jj=1:polypred.n+1]
+	p = sum(S .* polypred.coeffsPar)
+	x = sum(S .* polypred.coeffsSol)
+	return x,p
+end
+
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# compute tangent and store it
+	(verbosity > 0) && println("--> predictor = PolynomialPred")
+	@show z_new z_old
+
+	# update the list of solutions
+	if length(polypred.arclengths)==0
+		push!(polypred.arclengths, ds)
+	else
+		push!(polypred.arclengths, polypred.arclengths[end]+ds)
+	end
+	push!(polypred.solutions, z_new.u)
+	push!(polypred.parameters, z_new.p)
+
+	Sbar, σ = getStats(polypred)
+	@show polypred.solutions
+	@show polypred.parameters
+	@show polypred.coeffsSol
+	@show polypred.coeffsPar
+	@show polypred.arclengths
+
+	if isready(polypred) == false
+		return getTangent!(tau, z_new, z_old, it, ds, θ, polypred.tangentalgo, verbosity)
+	else
+		# construction of the matrix A
+		for ii in 1:polypred.k
+			for jj in 1:polypred.n+1
+				Sk = polypred.arclengths[ii]
+				polypred.A[ii,jj] = ((Sk-Sbar)/σ)^(polypred.n-jj-1)
+			end
+		end
+		display(polypred.A)
+		# display(transpose(polypred.A) * polypred.A)
+		# @show det(transpose(polypred.A) * polypred.A)
+		# invert linear system
+		B = (transpose(polypred.A) * polypred.A) \ transpose(polypred.A)
+		# display(B)
+		# B * polypred.parameters |> display
+		# compute coefficients of the polynomial
+		mul!(polypred.coeffsSol, B, polypred.solutions)
+		mul!(polypred.coeffsPar, B, polypred.parameters)
+	end
+end
+
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred) where {T, vectype, M <: BorderedArray{vectype, T}}
+	if isready(polypred) == false
+		return getPredictor!(z_pred, z_old, tau, ds, polypred.tangentalgo)
+	else
+		x, p = polypred(ds)
+		copyto!(z_pred.u, x)
+		z_pred.p = p
+		return true
+	end
+end
+
+
+####################################################################################################
 function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: BorderedArray}
 	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee, Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,” March 1, 2002. https://doi.org/10.2172/800778.
 	thetanew = θ
@@ -145,7 +291,7 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 	return thetanew
 end
 ####################################################################################################
-function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::Int, tau::M, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
 			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)

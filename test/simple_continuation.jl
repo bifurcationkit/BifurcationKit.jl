@@ -1,9 +1,9 @@
-# using Revise, Plots
+using Revise, Plots,Test
 using BifurcationKit, LinearAlgebra, Setfield, SparseArrays
 const BK = BifurcationKit
 
 k = 2
-N = 10
+N = 1
 F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
 Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 
@@ -67,6 +67,35 @@ br7, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat,verbosity
 # tangent prediction with Bordered predictor
 br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.BorderedPred(),printSolution = (x,p)->x[1])
 
+# tangent prediction with Multiple predictor
+opts9 = (@set opts.newtonOptions.verbose=true)
+	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
+	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=2,
+	tangentAlgo = BK.BorderedPred(),
+	printSolution = (x,p)->x[1],
+	# tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
+	)
+	plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
+
+polpred = BK.PolynomialPred(2,3,x0)
+	opts9 = (@set opts.newtonOptions.verbose=false)
+	opts9 = ContinuationPar(opts9; maxSteps = 20, ds = 0.045, dsmin = 1e-4, dsmax = 0.05, plotEveryStep = 3,)
+	br10, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=2,
+	tangentAlgo = polpred, plot=false,
+	printSolution = (x,p)->x[1],
+	)
+	plot(br10, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
+	# plot!(br9)
+
+polpred(0.01)
+	for _ds in LinRange(0,.5,20)
+		_x,_p = polpred(_ds)
+		@show _x[1], _p
+		scatter!([_p],[_x[1]],label="")
+	end
+	title!("")
+BK.isready(polpred)
+polpred.coeffsPar
 
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
