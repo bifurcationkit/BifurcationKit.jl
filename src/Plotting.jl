@@ -2,6 +2,7 @@ using RecipesBase
 using Setfield
 getLensParam(lens::Setfield.PropertyLens{F}) where F = F
 getLensParam(::Setfield.IdentityLens) = :p
+getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
 @recipe function f(contres::BranchResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)

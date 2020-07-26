@@ -16,7 +16,7 @@ opts = @set opts.doArcLengthScaling = true
 br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(17.18 k allocations: 1.014 MiB)
 
 # test with callbacks
-br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show x;true))
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
@@ -61,11 +61,12 @@ br5a, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=2
 # test for different predictors
 br6, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.SecantPred())
 
-optsnat = setproperties(opts; ds = 0.001, dsmax = 0.02, dsmin = 0.0001)
-br7, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat,verbosity=0, tangentAlgo = BK.NaturalPred())
+optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
+br7, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat,verbosity=0, tangentAlgo = BK.NaturalPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Bordered predictor
-br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.BorderedPred())
+br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.BorderedPred(),printSolution = (x,p)->x[1])
+
 
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)

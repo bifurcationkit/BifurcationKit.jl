@@ -65,9 +65,8 @@ br_tg, u1 = @time BK.continuation(F_chan, Jac_mat,
 
 # test with natural continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton)
-	br_nat, u1 = @time BK.continuation(
-				F_chan, Jac_mat,
-				out, (a, 0.01), (@lens _[1]), opts_br0; plot = false, verbosity = 0, printSolution= (x,p) ->norm(x,Inf64), tangentAlgo = BK.NaturalPred())
+	br_nat, u1 = @time BK.continuation(F_chan, Jac_mat,
+				out, (a, 0.01), (@lens _[1]), opts_br0; plot = false, verbosity = 3, printSolution= (x,p) ->norm(x,Inf64), tangentAlgo = BK.NaturalPred())
 
 # idem with Matrix-Free solver
 function dF_chan(x, dx, p)
