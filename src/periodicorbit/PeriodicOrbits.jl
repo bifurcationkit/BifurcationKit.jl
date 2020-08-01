@@ -165,7 +165,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
-	cb = get(kwargs, :callbackN, (args...;kwargs...)->true)
+	cb = get(kwargs, :callbackN, cbDefault)
 
 	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
 

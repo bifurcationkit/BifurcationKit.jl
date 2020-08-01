@@ -175,21 +175,22 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
 
-	rootsNFm, rootsNFp = solfromRE
+	rootsNFm = solfromRE.before
+	rootsNFp = solfromRE.after
 
 	# attempting now to convert the guesses from the normal form into true zeros of F
 	par = bpnf.params
 	optn = optionsCont.newtonOptions
 	cbnewton = get(kwargs, :callbackN, (x, f, J, res, iteration, itlinear, optionsN; kwgs...) -> true)
 
-	println("--> Case before the bifurcation point...")
+	println("--> Case after the bifurcation point...")
 	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFp
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
 
-	println("--> Case after the bifurcation point...")
+	println("--> Case before the bifurcation point...")
 	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFm
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
@@ -199,6 +200,9 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 
 	# compute the different branches
 	function _continue(_sol, _dp, _ds)
+		# needed to reset the tangent algorithm in case fields are used
+		empty!(get(kwargs,:tangentAlgo,nothing))
+		println("#"^50)
 		continuation(F, dF,
 			bpnf.x0, par,		# first point on the branch
 			_sol, bpnf.p + _dp, # second point on the branch

@@ -1,3 +1,4 @@
+import Base: empty!
 ####################################################################################################
 """
 	dt = DotTheta( (x,y) -> dot(x,y) / length(x) )
@@ -47,6 +48,8 @@ end
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
+empty!(::AbstractTangentPredictor) = nothing
+
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
 	copyto!(z_pred, z_old) # z_pred <-- z_old
@@ -56,8 +59,8 @@ end
 # generic corrector based on Bordered formulation
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
-			normC = norm,
-			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+			normC = norm, callback = cbDefault, kwargs...) where
+			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	return newtonPALC(it, z_old, tau, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 
@@ -70,8 +73,8 @@ struct NaturalPred <: AbstractSecantPredictor end
 # corrector based on natural formulation
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
-			normC = norm,
-			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
+			normC = norm, callback = cbDefault, kwargs...) where
+			{T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(it.F, it.J, z_pred.u, set(it.par,it.param_lens,z_pred.p), it.contParams.newtonOptions;
 				 normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
@@ -297,7 +300,18 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 	return thetanew
 end
 ####################################################################################################
-function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function clampDs(dsnew, contparams::ContinuationPar)
+	if abs(dsnew) < contparams.dsmin
+		dsnew = sign(dsnew) * contparams.dsmin
+	end
+
+	if abs(dsnew) > contparams.dsmax
+		dsnew = sign(dsnew) * contparams.dsmax
+	end
+	return dsnew
+end
+
+function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
 			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
@@ -315,20 +329,10 @@ function stepSizeControl(ds, θ, contparams, converged::Bool, it_newton_number::
 	end
 
 	# control step to stay between bounds
-	if abs(dsnew) < contparams.dsmin
-		dsnew = sign(dsnew) * contparams.dsmin
-	end
+	dsnew = clampDs(dsnew, contparams)
 
-	if abs(dsnew) > contparams.dsmax
-		dsnew = sign(dsnew) * contparams.dsmax
-	end
+	thetanew = contparams.doArcLengthScaling ? arcLengthScaling(θ, contparams, tau, verbosity) : θ
 
-	if contparams.doArcLengthScaling
-		thetanew = arcLengthScaling(θ, contparams, tau, verbosity)
-	else
-		thetanew = θ
-	end
-	@assert abs(dsnew) >= contparams.dsmin "Error with ds value"
 	return dsnew, thetanew, false
 end
 ####################################################################################################
@@ -351,7 +355,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					dottheta::DotTheta;
 					linearbdalgo = BorderingBLS(),
 					normN = norm,
-					callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) ->  true, kwargs...) where {T, S, E, vectype}
+					callback = cbDefault, kwargs...) where {T, S, E, vectype}
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
@@ -385,11 +389,11 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	step_ok = true
 
 	# invoke callback before algo really starts
-	compute = callback(x, res_f, nothing, res, 0, 0, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...)
+	compute = callback(x, res_f, nothing, res, 0, 0, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & step_ok & compute
-		# copyto!(dFdp, (F(x, p + epsi) - F(x, p)) / epsi)
+		# dFdp = (F(x, p + epsi) - F(x, p)) / epsi)
 		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
 			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
@@ -425,20 +429,20 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 
 			copyto!(res_f, F(x, set(par, paramlens, p)))
 
-			res_n  = N(x, p)
-			res = normAC(res_f, res_n)
+			res_n  = N(x, p); res = normAC(res_f, res_n)
 		end
 
 		push!(resHist, res)
 		it += 1
 
 		verbose && displayIteration(it, 1, res, liniter)
-		if callback(x, res_f, J, res, it, liniter, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...) == false
-			break
-		end
 
+		# shall we break the loop?
+		# @assert 1==0 "on ne veut pas zold mais le point precedent!!"
+		# @warn p, z_pred.p, z0.p
+		compute = callback(x, res_f, J, res, it, liniter, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	end
-	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, nothing, contparams; z0 = z_pred, p = p, resHist = resHist, kwargs...)
+	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, -1, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it
 end
 

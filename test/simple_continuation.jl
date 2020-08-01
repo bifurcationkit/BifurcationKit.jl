@@ -20,10 +20,11 @@ br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-# iter = BK.PALCIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
-# state = iterate(iter)[1]
-# contRes = ContResult(iter, state)
-# @time continuation!(iter, state, contRes)
+iter = BK.PALCIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
+state = iterate(iter)[1]
+contRes = ContResult(iter, state)
+@time continuation!(iter, state, contRes)
+eltype(iter)
 #
 # typeof(contRes)
 #
@@ -32,11 +33,14 @@ br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 
 # 	 @code_warntype continuation!(iter, state, contRes)
 #####
 
-opts = @set opts.detectBifurcation = 1
+opts = ContinuationPar(opts;detectBifurcation = 1,saveEigenvectors=true)
 br1, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
 BK.eigenvals(br1,20)
+BK.eigenvec(br1,20,1)
+BK.haseigenvector(br1)
+
 
 br2, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, printSolution = (x,p) -> norm(x,2))
 

@@ -87,7 +87,7 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,
 !!! warning "Linear solver"
     Make sure that the linear solver (Matrix-Free...) corresponds to you jacobian (Matrix-Free vs. Matrix based).
 """
-function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
+function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
 	# Extract parameters
 	@unpack tol, maxIter, verbose, linesearch = options
 
@@ -105,7 +105,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	verbose && displayIteration(it, neval, res)
 
 	# invoke callback before algo really starts
-	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, kwargs...)
+	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 
 	# Main loop
 	while (res > tol) & (it < maxIter) & compute
@@ -124,12 +124,10 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 
 		verbose && displayIteration(it, neval, res, itlinear)
 
-		if callback(x, f, J, res, it, itlinear, options; x0 = x0, resHist = resHist, kwargs...) == false
-			break
-		end
+		compute = callback(x, f, J, res, it, itlinear, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 	end
 	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
-	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, resHist = resHist, kwargs...)
+	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 	return x, resHist, flag, it
 end
 
@@ -138,3 +136,5 @@ function newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
 	Jhandle = (u, p) -> finiteDifferences(z -> Fhandle(z, p), u)
 	return newton(Fhandle, Jhandle, x0, p0, options; kwargs...)
 end
+
+cbDefault = (x, f, J, res, it, itlinear, options; k...) -> true

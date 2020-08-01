@@ -1,6 +1,6 @@
 ####################################################################################################
 function normalize(x)
-	out = copyto!(similar(x), x)
+	out = _copy(x)
 	rmul!(out, norm(x))
 	return out
 end
@@ -200,7 +200,7 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 		if isnothing(next)
 			break
 		end
-		(i, state) = next
+		(_, state) = next
 
 		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state; bisection = true)
 		updatestability!(state, n_unstable, n_imag)

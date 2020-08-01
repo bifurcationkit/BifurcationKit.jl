@@ -168,7 +168,7 @@ end
 # 					dottheta::DotTheta;
 # 					linearbdalgo = BorderingBLS(),
 # 					normN = norm,
-# 					callback = (x, f, J, res, iteration, optionsN; kwargs...) ->  true, kwargs...) where {T, vectype}
+# 					callback = cbDefault, kwargs...) where {T, vectype}
 # 	# Extract parameters
 # 	@error "WIP - will replace newtonPALC once performances improve"
 # 	newtonOpts = options.newtonOptions

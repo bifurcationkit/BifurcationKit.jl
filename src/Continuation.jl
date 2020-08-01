@@ -278,7 +278,7 @@ function PALCIterable(Fhandle, Jhandle,
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = (z, tau, step, contResult) -> true,
-					callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true,
+					callbackN = cbDefault,
 					verbosity = 0
 					) where {T <: Real, S, E}
 
@@ -452,7 +452,7 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
 		eigvals, eigvecs, _, _ = computeEigenvalues(it, u0, it.par, it.contParams.nev)
-		if it.contParams.saveEigenvectors == false
+		if ~it.contParams.saveEigenvectors
 			eigvecs = nothing
 		end
 	else
@@ -464,10 +464,9 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	return state, state
 end
 
-
 function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
-	# this is to overwrite verbosity behaviour, like when locating bifurcations
+	# next line is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity) > 0
 	verbose = verbosity > 0
 
@@ -483,14 +482,14 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 	z_newton, fval, state.isconverged, state.itnewton  = corrector(it,
 			state.z_old, state.tau, state.z_pred,
 			ds, theta,
-			it.tangentAlgo, it.linearAlgo,
-			normC = it.normC, callback = it.callbackN, iterationC = step, p = state.z_old.p)
+			it.tangentAlgo, it.linearAlgo;
+			normC = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
 
 	# Successful step
 	if state.isconverged
 		verbose && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
 
-		# Get predictor, it only mutates tau
+		# Get tangent, it only mutates tau
 		getTangent!(state.tau, z_newton, state.z_old, it,
 					ds, theta, it.tangentAlgo, verbosity)
 
@@ -499,10 +498,10 @@ function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.ve
 		copyto!(state.z_old, z_newton)
 	else
 		verbose && printstyled("Newton correction failed\n", color=:red)
-		verbose && println("--> Newton Residuals history = ", fval)
+		verbose && (println("--> Newton Residuals history = ");display(fval))
 	end
 
-	if state.stopcontinuation == false && state.stepsizecontrol == true
+	if ~state.stopcontinuation && state.stepsizecontrol
 		# we update the PALC paramters ds and theta, they are in the state variable
 		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
 	end
@@ -571,9 +570,7 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-			if ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes)
-				state.stopcontinuation = true
-			end
+			state.stopcontinuation = ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes)
 
 			# Save solution
 			save!(contRes, it, state)
