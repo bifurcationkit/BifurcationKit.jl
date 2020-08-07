@@ -1,5 +1,4 @@
-using RecursiveArrayTools, Parameters # for bifurcation point handling in ContRes
-import Base: show, length		# simplified display method for ContRes
+import Base: show, length		# simplified display methods for ContRes
 abstract type BranchResult end
 """
 	options = ContinuationPar(dsmin = 1e-4,...)
@@ -668,7 +667,7 @@ The parameter ds is adjusted internally depending on the number of Newton iterat
 
 The algorithm works as follows:
 0. Start from a known solution ``(x_0, p_0)`` with tangent to the curve of solutions: ``(dx_0 ,dp_0)``
-1. **Predictor:** set ``(x_1, p_1) = (x_0, p_0) + ds\\cdot (dx_0, dp_0)``
+1. **Predictor:** set ``(x_1, p_1) = (x_0, p_0) + ds\\cdot (dx_0, dp_0)``. Note that a different predictor can be used.
 2. **Corrector:** solve ``F(x, p)=0,\\ N(x, p)=0`` with a (Bordered) Newton Solver with initial guess ``(x_1, p_1)``.
     - if Newton in 3. did not converge, update ds/2 ⟶ ds in ``N`` and go to 1.
 3. **New tangent:** Compute a new tangent (see below) ``(dx_1, dp_1)`` and update ``N`` with it. Set ``(x_0, p_0, dx_0, dp_0) = (x_1, p_1, dx_1, dp_1)`` and return to step 2

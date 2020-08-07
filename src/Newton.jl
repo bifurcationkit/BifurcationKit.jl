@@ -137,4 +137,6 @@ function newton(Fhandle, x0, p0, options::NewtonPar; kwargs...)
 	return newton(Fhandle, Jhandle, x0, p0, options; kwargs...)
 end
 
-cbDefault = (x, f, J, res, it, itlinear, options; k...) -> true
+
+# default callback
+cbDefault(x, f, J, res, it, itlinear, options; k...) = true
