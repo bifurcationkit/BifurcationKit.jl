@@ -2,6 +2,7 @@ module BifurcationKit
 	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase
 	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack
+	using RecursiveArrayTools: VectorOfArray
 	using DocStringExtensions
 
 	include("BorderedArrays.jl")
