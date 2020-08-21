@@ -620,8 +620,8 @@ end
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
 # Arguments:
-- `F = (x, p) -> F(x, p)` where `p` is the set of parameters passed to `F`.
-- `J = (x, p) -> d_xF(x, p)` its associated jacobian. It can be a matrix, a function or a callable struct.
+- `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` that represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
+- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
 - `x0` initial guess
 - `par` initial set of parameters.
 - `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`.
