@@ -1,5 +1,4 @@
-import Base: empty!
-empty!(::Nothing) = nothing
+emptypredictor!(::Nothing) = nothing
 ####################################################################################################
 """
 	dt = DotTheta( (x,y) -> dot(x,y) / length(x) )
@@ -50,7 +49,7 @@ abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
 # reset the predictor
-empty!(::AbstractTangentPredictor) = nothing
+emptypredictor!(::AbstractTangentPredictor) = nothing
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
@@ -154,7 +153,7 @@ mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
 end
 MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,5,1)
 MultiplePred(α::Real,nb::Int,τ) = MultiplePred(α,nb,τ,SecantPred())
-empty!(mpd::MultiplePred) = (mpd.indconverged = 0; mpd.pmimax = 1)
+emptypredictor!(mpd::MultiplePred) = (mpd.indconverged = 0; mpd.pmimax = 1)
 
 # callback for newton
 function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
@@ -250,7 +249,7 @@ PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
 
 isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
 
-function empty!(ppd::PolynomialPred)
+function emptypredictor!(ppd::PolynomialPred)
 	empty!(ppd.solutions);empty!(ppd.parameters);empty!(ppd.arclengths);
 end
 

@@ -38,8 +38,10 @@ This predictor is parametrized by `tangentAlgo = PolynomialPred(n, k, v0, algo =
 
 The predictor is especially designed [^Uecker2014] to avoid spurious branch switching and pass singular points especially in PDE where branch point density can be quite high. It is based on the idea that one uses many predictors
 $$(x_i,p_i) = (x_0,p_0) + i\cdot ds\cdot \tau,\ i\leq nb$$
-and use a PALC Newton with the following twist. The criterion is that in each Newton step, the residual has to decrease by a factor $0<\alpha<1$ 
+and use a PALC Newton with the following twist. The criterion is that in each Newton step, the residual has to decrease by a factor $0<\alpha<1$:
+ 
 $$\| F(u_n,p_n)\|\leq \alpha \| F(u_{n-1},p_{n-1}) \|$$
+
 otherwise the corrector fails. The solution that is returned is the one for the highest $i$. We refer to [^Uecker2014] for an exposition of the step size adaption strategy.
 
 This predictor is parametrized by `tangentAlgo = MultiplePred(α, nb, τ, algo = SecantPred() )` where `τ` is an initial tangent vector (used to set the types) and `algo` is a predictor.
