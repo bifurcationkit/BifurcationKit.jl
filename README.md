@@ -75,12 +75,9 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |
 |---|---|---|---|---|
-| Newton | Y | Y | All | :heavy_check_mark:  |
-| Newton + Deflation| Y | Y | 4, 5| :heavy_check_mark:|
+| (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |:heavy_check_mark:  |
-| Branching point detection | Y | Y | All | :heavy_check_mark: |
-| Fold point detection | Y | Y | All | :heavy_check_mark: |
-| Hopf detection | Y | Y | 6 - 9 | :heavy_check_mark: |
+| Branching / Fold / Hopf point detection | Y | Y | All / All / 6 - 9 | :heavy_check_mark: |
 | Fold Point continuation | Y | Y | 1, 8 | |
 | Hopf continuation | Y | `AbstractArray` | 5 | |
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
