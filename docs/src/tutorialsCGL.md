@@ -239,9 +239,9 @@ We set the parameters for the `newton` solve.
 ```julia
 opt_po = @set opt_newton.verbose = true
 outpo_f, _, flag = @time newton(poTrap,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-	(@set opt_po.linsolver = ls), 
-	:FullMatrixFree; normN = norminf)
+   orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
+   (@set opt_po.linsolver = ls); 
+   linearPO = :FullMatrixFree, normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),"\n")
 BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 ```
@@ -290,8 +290,8 @@ We can now use newton
 ```julia
 outpo_f, _, flag = @time newton(poTrapMF,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-	(@set opt_po.linsolver = ls), 
-	:FullMatrixFree; normN = norminf)
+	(@set opt_po.linsolver = ls); 
+	linearPO = :FullMatrixFree, normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),"\n")
 ```
 
@@ -394,8 +394,8 @@ and run the `newton` method:
 
 ```julia
 outpo_f, _, flag = @time newton(poTrapMFi,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),	(@set opt_po.linsolver = ls),
-	:FullMatrixFree; normN = norminf)
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),	(@set opt_po.linsolver = ls);
+	linearPO = :FullMatrixFree, normN = norminf)
 ```
 It gives	
 
@@ -429,7 +429,7 @@ ls2 = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo2,1), resta
 opt_po = @set opt_newton.verbose = true
 outpo_f, hist, flag = @time newton(
 	poTrapMF,	orbitguess_f, (@set par_cgl.r = r_hopf - 0.1),
-	(@set opt_po.linsolver = ls2), :BorderedMatrixFree;
+	(@set opt_po.linsolver = ls2), linearPO = :BorderedMatrixFree,
 	normN = norminf)
 ```
 

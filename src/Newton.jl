@@ -33,7 +33,7 @@ end
 """
 		newton(F, J, x0, p0, options::NewtonPar; normN = norm, callback = (x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
 
-This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p0)u = -F(x, p0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
+This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
 
 # Arguments:
 - `(x, p) -> F(x, p)` functional whose zeros are looked for. In particular, it is not **inplace**,

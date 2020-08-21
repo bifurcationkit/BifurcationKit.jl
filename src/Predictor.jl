@@ -439,8 +439,6 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		verbose && displayIteration(it, 1, res, liniter)
 
 		# shall we break the loop?
-		# @assert 1==0 "on ne veut pas zold mais le point precedent!!"
-		# @warn p, z_pred.p, z0.p
 		compute = callback(x, res_f, J, res, it, liniter, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	end
 	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, -1, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)

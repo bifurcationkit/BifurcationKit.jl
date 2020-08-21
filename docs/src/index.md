@@ -71,8 +71,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 
 |Features|Matrix Free|Custom state| Tutorial |
 |---|---|---|---|
-| Newton | Y | Y | All |
-| Newton + Deflation| Y | Y | 4, 5|
+| (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |
 | Branching point detection | Y | Y | All |
 | Fold point detection | Y | Y | All |

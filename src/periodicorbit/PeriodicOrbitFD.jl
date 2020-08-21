@@ -794,7 +794,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 end
 
 """
-	newton(prob::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, linearPO = :BorderedLU; kwargs...)
+$(SIGNATURES)
 
 This is the Newton-Krylov Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
