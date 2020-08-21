@@ -133,55 +133,90 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo:
 	rmul!(tau, α)
 end
 ####################################################################################################
-# """
-# 	Multiple Tangent predictor
-# """
-# mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-# 	tangentalgo::Talgo	# tangent algo used
-# 	α::T				# damping factor
-# 	τ::Tvec				# record the current tangent
-# 	nb::Int64			# number of predictors
-# 	indconverged::Int	# index of the largest converged predictor
-# 	imax::Int			# index for lookup in residual history
-# end
-# MultiplePred(α::Real,nb::Int,τ) = MultiplePred(SecantPred(),α,τ,nb,0,1)
-# MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,1)
-#
-# # callback for newton
-# function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
-# 	resHist = get(kwargs, :resHist, nothing)
-# 	iteration - mpred.imax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.imax] : true
-# end
-#
-# function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
-# 	# compute tangent and store it
-# 	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
-# 	getTangent!(tau, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
-# 	copyto!(algo.τ, tau)
-# end
-#
-# function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
-# 			algo::MultiplePred, linearalgo = MatrixFreeLBS(); normC = norm,
-# 			callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
-# 	# we combine the callbacks for the newton iterations
-# 	cb = (x, f, J, res, iteration, itlinear, options; kwargs...) -> callback(x, f, J, res, iteration, itlinear, options; kwargs...) & algo(x, f, J, res, iteration, itlinear, options; kwargs...)
-# 	for ii in algo.nb:-1:1
-# 		zpred = _copy(z_pred)
-# 		axpy!(ii*ds, algo.τ, zpred)
-# 		# we restore the original callback if it reaches the usual case ii=0
-# 		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
-# 				algo.tangentalgo, linearalgo; normC = normC, callback = cb)
-# 		if flag
-# 			# record the largest converged guess
-# 			algo.indconverged = ii
-# 			return zold, res, flag, itnewton
-# 		end
-# 		# @warn "----> MultiPred corrector did not converge for i = $ii"
-# 	end
-# 	algo.indconverged = 0
-# 	return corrector(it, z_old, tau, z_pred, ds, θ,
-# 			algo.tangentalgo, linearalgo; normC = normC, callback = callback)
-# end
+"""
+	Multiple Tangent predictor
+"""
+mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
+	tangentalgo::Talgo	# tangent algo used
+	α::T				# damping factor
+	τ::Tvec				# save the current tangent
+	nb::Int64			# number of predictors
+	indconverged::Int	# index of the largest converged predictor
+	imax::Int			# maximum value of imax
+	pmimax::Int			# index for lookup in residual history
+end
+MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,5,1)
+MultiplePred(α::Real,nb::Int,τ) = MultiplePred(α,nb,τ,SecantPred())
+empty!(mpd::MultiplePred) = (mpd.indconverged = 0; mpd.pmimax = 1)
+
+# callback for newton
+function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
+	resHist = get(kwargs, :resHist, nothing)
+	iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
+end
+
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# compute tangent and store it
+	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
+	getTangent!(tau, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
+	copyto!(algo.τ, tau)
+end
+
+function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
+		algo::MultiplePred, linearalgo = MatrixFreeLBS(); normC = norm,
+		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# we combine the callbacks for the newton iterations
+	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
+	_range = algo.nb:-1:0
+	for ii in _range
+		# record the largest converged guess
+		algo.indconverged = ii
+		zpred = _copy(z_pred)
+		axpy!(ii*ds, algo.τ, zpred)
+		# we restore the original callback if it reaches the usual case ii=0
+		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
+				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
+		if flag || ii == _range[end]
+			return zold, res, flag, itnewton
+		end
+	end
+	return zold, res, flag, itnewton
+end
+
+function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+	if converged == false || mpd.indconverged == 0
+		dsnew = ds
+		if abs(ds) >= (1 + mpd.nb) * contparams.dsmin
+			dsnew = ds / (1 + mpd.nb)
+		end
+		if  abs(ds) < contparams.dsmin * (1 + mpd.nb)
+			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
+			# we stop the continuation
+			mpd.pmimax = min(mpd.imax, mpd.pmimax+1)
+			return ds, θ, true
+		end
+		# dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
+		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
+	else
+		# control to have the same number of Newton iterations
+		Nmax = contparams.newtonOptions.maxIter
+		factor = (Nmax - it_newton_number) / Nmax
+		# dsnew = ds * (1 + contparams.a * factor^2)
+		dsfact =  (1 + contparams.a * factor^2)
+		dsnew = ds
+		if mpd.indconverged == mpd.nb && abs(ds)*dsfact <= contparams.dsmax
+			(verbosity > 0) && @show 1 + contparams.a * factor^2
+			dsnew = ds * dsfact
+		end
+	end
+
+	# control step to stay between bounds
+	dsnew = clampDs(dsnew, contparams)
+
+	thetanew = contparams.doArcLengthScaling ? arcLengthScaling(θ, contparams, tau, verbosity) : θ
+
+	return dsnew, thetanew, false
+end
 ####################################################################################################
 # """
 # 	Polynomial Tangent predictor

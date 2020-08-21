@@ -73,9 +73,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |---|---|---|---|
 | (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |
-| Branching point detection | Y | Y | All |
-| Fold point detection | Y | Y | All |
-| Hopf detection | Y | Y | 6 - 9 |
+| Branching / Fold / Hopf point detection | Y | Y | All / All / 6 - 9 | :heavy_check_mark: |
 | Fold Point continuation | Y | Y | 1, 8 |
 | Hopf continuation | Y | `AbstractArray` | 6 |
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 |

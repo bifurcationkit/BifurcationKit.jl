@@ -75,9 +75,8 @@ br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0,
 opts9 = (@set opts.newtonOptions.verbose=true)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=2,
-	tangentAlgo = BK.BorderedPred(),
 	printSolution = (x,p)->x[1],
-	# tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
+	tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
 	)
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 

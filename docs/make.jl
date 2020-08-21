@@ -11,6 +11,7 @@ makedocs(doctest = false,
 		"Tutorials" => "tutorials.md",
 		"Functionalities" => [
 			"Plotting" => "plotting.md",
+			"Predictors / correctors" => "Predictors.md",
 			"Bifurcation detection" => "detectionBifurcation.md",
 			"Fold / Hopf Continuation (codim 2)" => "codim2Continuation.md",
 			"Normal form" =>[
