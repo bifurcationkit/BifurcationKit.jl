@@ -187,6 +187,9 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 	status = :guess
 
 	biflocated = false
+	if iter.tangentAlgo isa PolynomialPred
+		iter.tangentAlgo.update = false
+	end
 
 	# emulate a do-while
 	while true
@@ -233,6 +236,10 @@ function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verb
 	end
 
 	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
+
+	if iter.tangentAlgo isa PolynomialPred
+		iter.tangentAlgo.update = true
+	end
 
 	######## update current state
 	# So far we have (possibly) performed an even number of bifurcation crossings

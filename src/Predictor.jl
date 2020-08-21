@@ -218,108 +218,97 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 	return dsnew, thetanew, false
 end
 ####################################################################################################
-# """
-# 	Polynomial Tangent predictor
-# """
-# struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-# 	n::Int64							# order of the polynomial
-# 	k::Int64							# last solution vectors
-# 	A::Matrix{T}						# matrix for the interpolation
-# 	tangentalgo::Talgo					# algo for tangent when polynomial predictor is not possible
-# 	solutions::CircularBuffer{Tvec}		# vector of solutions
-# 	parameters::CircularBuffer{T}		# vector of parameters
-# 	arclengths::CircularBuffer{T}		# vector of arclengths
-# 	coeffsSol::Vector{Tvec}		# coefficients for the polynomials for the solution
-# 	coeffsPar::Vector{T}		# coefficients for the polynomials for the parameter
-# end
-#
-# PolynomialPred(n,k,v0, algo) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
-# 	CircularBuffer{typeof(v0)}(k),CircularBuffer{eltype(v0)}(k),
-# 	CircularBuffer{eltype(v0)}(k),
-# 	Vector{typeof(v0)}(undef, n+1),
-# 	Vector{eltype(v0)}(undef, n+1)))
-# PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
-#
-# isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
-#
-# function getStats(polypred)
-# 	Sbar = sum(polypred.arclengths) / polypred.n
-# 	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) /  polypred.n)
-# 	return Sbar, σ
-# end
-#
-# function (polypred::PolynomialPred)(ds)
-# 	sbar, σ = getStats(polypred)
-#
-# 	s = polypred.arclengths[end] + ds
-# 	S = [((s-sbar)/σ)^(jj-1) for jj=1:polypred.n+1]
-# 	p = sum(S .* polypred.coeffsPar)
-# 	x = sum(S .* polypred.coeffsSol)
-# 	return x, p
-# end
-#
-# function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
-# 	# compute tangent and store it
-# 	(verbosity > 0) && println("--> predictor = PolynomialPred")
-# 	@show z_new z_old
-#
-# 	# update the list of solutions
-# 	if length(polypred.arclengths)==0
-# 		push!(polypred.arclengths, ds)
-# 	else
-# 		push!(polypred.arclengths, polypred.arclengths[end]+ds)
-# 	end
-# 	push!(polypred.solutions, z_new.u)
-# 	push!(polypred.parameters, z_new.p)
-#
-# 	Sbar, σ = getStats(polypred)
-# 	@show polypred.solutions
-# 	@show polypred.parameters
-# 	@show polypred.coeffsSol
-# 	@show polypred.coeffsPar
-# 	@show polypred.arclengths
-#
-# 	if isready(polypred) == false
-# 		return getTangent!(tau, z_new, z_old, it, ds, θ, polypred.tangentalgo, verbosity)
-# 	else
-# 		# construction of the matrix A
-# 		# for ii in 1:polypred.k
-# 		# 	for jj in 1:polypred.n+1
-# 		# 		Sk = polypred.arclengths[polypred.k-ii+1]
-# 		# 		polypred.A[ii,jj] = ((Sk-Sbar)/σ)^(jj-1)
-# 		# 	end
-# 		# end
-# 		Ss = (polypred.arclengths .- Sbar) ./ σ
-# 		polypred.A[:, 1] .= 1
-# 		for jj=1:polypred.n
-# 			polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss
-# 		end
-#
-# 		display(polypred.A)
-# 		# display(transpose(polypred.A) * polypred.A)
-# 		# @show det(transpose(polypred.A) * polypred.A)
-# 		# invert linear system
-# 		B = (polypred.A' * polypred.A) \ polypred.A'
-# 		# display(B)
-# 		# B * polypred.parameters |> display
-# 		# compute coefficients of the polynomial
-# 		mul!(polypred.coeffsSol, B, polypred.solutions)
-# 		mul!(polypred.coeffsPar, B, polypred.parameters)
-# 	end
-# end
-#
-# function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred) where {T, vectype, M <: BorderedArray{vectype, T}}
-# 	if isready(polypred) == false
-# 		return getPredictor!(z_pred, z_old, tau, ds, polypred.tangentalgo)
-# 	else
-# 		x, p = polypred(ds)
-# 		copyto!(z_pred.u, x)
-# 		z_pred.p = p
-# 		return true
-# 	end
-# end
+"""
+	Polynomial Tangent predictor
+"""
+mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
+	n::Int64							# order of the polynomial
+	k::Int64							# last solutions vector
+	A::Matrix{T}						# matrix for the interpolation
+	tangentalgo::Talgo					# algo for tangent when polynomial predictor is not possible
+	solutions::CircularBuffer{Tvec}		# vector of solutions
+	parameters::CircularBuffer{T}		# vector of parameters
+	arclengths::CircularBuffer{T}		# vector of arclengths
+	coeffsSol::Vector{Tvec}				# coefficients for the polynomials for the solution
+	coeffsPar::Vector{T}				# coefficients for the polynomials for the parameter
+	update::Bool
+end
 
+PolynomialPred(n,k,v0,algo) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
+	CircularBuffer{typeof(v0)}(k),CircularBuffer{eltype(v0)}(k),
+	CircularBuffer{eltype(v0)}(k),
+	Vector{typeof(v0)}(undef, n+1),
+	Vector{eltype(v0)}(undef, n+1),true))
+PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
 
+isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
+
+function empty!(ppd::PolynomialPred)
+	empty!(ppd.solutions);empty!(ppd.parameters);empty!(ppd.arclengths);
+end
+
+function getStats(polypred)
+	Sbar = sum(polypred.arclengths) / polypred.n
+	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / (polypred.n))
+	# return 0,1
+	return Sbar, σ
+end
+
+function (polypred::PolynomialPred)(ds)
+	sbar, σ = getStats(polypred)
+	s = polypred.arclengths[end] + ds
+	S = [((s-sbar)/σ)^(jj-1) for jj=1:polypred.n+1]
+	p = sum(S .* polypred.coeffsPar)
+	x = sum(S .* polypred.coeffsSol)
+	return x, p
+end
+
+function updatePred!(polypred::PolynomialPred)
+	Sbar, σ = getStats(polypred)
+	Ss = (polypred.arclengths .- Sbar) ./ σ
+	# construction of the Vandermond Matrix
+	polypred.A[:, 1] .= 1
+	for jj in 1:polypred.n
+		polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss
+	end
+	# invert linear system for least square fitting
+	B = (polypred.A' * polypred.A) \ polypred.A'
+	mul!(polypred.coeffsSol, B, polypred.solutions)
+	mul!(polypred.coeffsPar, B, polypred.parameters)
+end
+
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+	# compute tangent and store it
+	(verbosity > 0) && println("--> predictor = PolynomialPred")
+
+	if polypred.update
+		# update the list of solutions
+		if length(polypred.arclengths)==0
+			push!(polypred.arclengths, ds)
+		else
+			push!(polypred.arclengths, polypred.arclengths[end]+ds)
+		end
+		push!(polypred.solutions, z_new.u)
+		push!(polypred.parameters, z_new.p)
+	end
+
+	if ~isready(polypred) || ~polypred.update
+		return getTangent!(tau, z_new, z_old, it, ds, θ, polypred.tangentalgo, verbosity)
+	else
+		return polypred.update ? updatePred!(polypred) : true
+	end
+end
+
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred) where {T, vectype, M <: BorderedArray{vectype, T}}
+	if ~isready(polypred)
+		return getPredictor!(z_pred, z_old, tau, ds, polypred.tangentalgo)
+	else
+		x, p = polypred(ds)
+		copyto!(z_pred.u, x)
+		z_pred.p = p
+		return true
+	end
+end
 ####################################################################################################
 function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: BorderedArray}
 	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee, Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,” March 1, 2002. https://doi.org/10.2172/800778.

@@ -4,6 +4,7 @@ module BifurcationKit
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
 	using RecursiveArrayTools: VectorOfArray
 	using DocStringExtensions
+	using DataStructures: CircularBuffer
 
 	include("BorderedArrays.jl")
 	include("LinearSolver.jl")
@@ -57,7 +58,7 @@ module BifurcationKit
 	export DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 
 	# predictors for continuation
-	export SecantPred, BorderedPred, NaturalPred
+	export SecantPred, BorderedPred, NaturalPred, MultiplePred, PolynomialPred
 
 	# newton methods
 	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
