@@ -1,4 +1,4 @@
-# using Revise, Plots,Test
+# using Revise, Plots, Test
 using BifurcationKit, LinearAlgebra, Setfield, SparseArrays
 const BK = BifurcationKit
 
@@ -16,7 +16,7 @@ opts = @set opts.doArcLengthScaling = true
 br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(17.18 k allocations: 1.014 MiB)
 
 # test with callbacks
-br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=2, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=0, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
@@ -59,7 +59,7 @@ br5, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0,
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult) -> (step < 20)
-br5a, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=2, finaliseSolution = finaliseSolution)
+br5a, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, finaliseSolution = finaliseSolution)
 @test length(br5a.branch) == 21
 
 # test for different predictors
@@ -74,7 +74,7 @@ br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0,
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=true)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=2,
+	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=0,
 	printSolution = (x,p)->x[1],
 	tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
 	)
@@ -84,7 +84,7 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 polpred = BK.PolynomialPred(2,3,x0)#, BorderedPred())
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 11, ds = 0.045, dsmin = 1e-4, dsmax = 0.1, plotEveryStep = 3,)
-	br10, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=2,
+	br10, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=0,
 	tangentAlgo = polpred, plot=false,
 	printSolution = (x,p)->x[1],
 	)

@@ -21,7 +21,7 @@ struct DotTheta{Tdot}
 	dot::Tdot		# defaults to (x,y) -> dot(x,y) / length(x)
 end
 
-DotTheta() = DotTheta( (x,y) -> dot(x,y) / length(x))
+DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x))
 
 # Implementation of the dot product associated to DotTheta
 function (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real}
@@ -49,6 +49,7 @@ end
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
+# reset the predictor
 empty!(::AbstractTangentPredictor) = nothing
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
@@ -69,7 +70,7 @@ end
 """
 	Natural predictor / corrector
 """
-struct NaturalPred <: AbstractSecantPredictor end
+struct NaturalPred <: AbstractTangentPredictor end
 
 # corrector based on natural formulation
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
@@ -80,15 +81,21 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 				 normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
+
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+	(verbosity > 0) && println("--> predictor = ", algo)
+	rmul!(tau.u, 0)
+	tau.p = one(tau.p)
+end
 ####################################################################################################
 """
 	Secant tangent predictor
 """
 struct SecantPred <: AbstractSecantPredictor end
 
-# tangent computation using Natural / Secant predictor
+# tangent computation using Secant predictor
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::Talgo, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractSecantPredictor}
+function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau, z_new)

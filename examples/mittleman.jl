@@ -15,8 +15,8 @@ function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
 	D2y = CenteredDifference(2, 2, hy, Ny)
 
 	if bc == :Neumann
-	Qx = Neumann0BC(hx)
-	Qy = Neumann0BC(hy)
+		Qx = Neumann0BC(hx)
+		Qy = Neumann0BC(hy)
 	elseif bc == :Dirichlet
 		Qx = Dirichlet0BC(typeof(hx))
 		Qy = Dirichlet0BC(typeof(hy))

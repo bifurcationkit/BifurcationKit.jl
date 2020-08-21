@@ -2,14 +2,14 @@
 
 As explained in the docs of [continuation](@docs), the continuation method works with the following pattern (see [^Allgower1990]):
 
-1. call **predictor** (based on tangent, mostly)
-2. call **corrector**
-3. compute **tangent**
+1. compute **tangent**
+2. call **predictor** (based on tangent, mostly)
+3. call **corrector**
 
 
 [^Allgower1990]: > Allgower and Georg, Numerical Continuation Methods, 1990
 
-There are several triple predictor/corrector/tangent which can be used in **BifurcationKit.jl** as we now explain.
+There are several couple predictor-tangent/corrector which can be used in **BifurcationKit.jl** as we now explain. The tangent computation is formally included in the predictor whereas it is a distinct function in the code.
 
 ## 1) Natural, zeroth order predictor
 

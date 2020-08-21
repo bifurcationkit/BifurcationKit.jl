@@ -50,7 +50,7 @@ end
 
 args = (verbosity = 3,
 	plot = true,
-		# tangentAlgo = BorderedPred(),
+	# tangentAlgo = BorderedPred(),
 	linearAlgo  = MatrixBLS(),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
 	callbackN = cb
