@@ -18,6 +18,12 @@ Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md"]
 Depth = 1
 ```
 
+### Solving PDEs using Finite elements with [Gridap.jl](https://github.com/gridap/Gridap.jl)
+```@contents
+Pages = ["mittelmannGridap.md"]
+Depth = 1
+```
+
 ## Bifurcation diagrams with periodic orbits
 ```@contents
 Pages = ["tutorials3.md","tutorials3b.md", "tutorialsPD.md", "tutorialsCGL.md", "tutorialsCGLShoot.md"]
