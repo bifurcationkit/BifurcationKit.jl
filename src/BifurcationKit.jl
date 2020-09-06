@@ -12,6 +12,8 @@ module BifurcationKit
 	include("LinearBorderSolver.jl")
 	include("Preconditioner.jl")
 	include("Newton.jl")
+	include("ContParameters.jl")
+	include("Results.jl")
 	include("Continuation.jl")
 	include("Bifurcations.jl")
 	include("Predictor.jl")
