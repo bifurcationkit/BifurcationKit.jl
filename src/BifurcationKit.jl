@@ -33,6 +33,8 @@ module BifurcationKit
 	include("NormalForms.jl")
 	include("bifdiagram/BifurcationDiagram.jl")
 
+	include("DeflatedContinuation.jl")
+
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
