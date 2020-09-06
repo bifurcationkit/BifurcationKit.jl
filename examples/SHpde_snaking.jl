@@ -25,7 +25,7 @@ Jac_sp = (u, par) -> par.L1 + spdiagm(0 => -par.p .+ 3*par.b .* u.^2 .- 5 .* u.^
 parSH = (p = 0.7, b = 2., L1 = Lsh)
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
-	optnew = NewtonPar(verbose = true, tol = 1e-12)
+	optnew = NewtonPar(verbose = false, tol = 1e-12)
 	# allocations 26.47k, 0.038s, tol = 1e-10
 	sol1, hist, flag = @time BK.newton(
 	R_SH, Jac_sp,
@@ -72,7 +72,7 @@ function optrec(x, p, l; opt = opts)
 	end
 end
 
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args...)
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args..., verbosity=0)
 
 code = ()
 	plot(diagram; code = code, plotfold = false,  markersize = 2, putbifptlegend = false)
