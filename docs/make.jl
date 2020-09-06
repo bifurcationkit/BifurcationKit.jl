@@ -21,6 +21,7 @@ makedocs(doctest = false,
 			],
 			"Branch switching" => "branchswitching.md",
 			"Bifurcation diagram" => "BifurcationDiagram.md",
+			"Deflated Continuation" => "DeflatedContinuation.md",
 			"Deflated problem" => "deflatedproblem.md",
 			"Constrained problem" => "constrainedproblem.md",
 			"Periodic Orbits" => [

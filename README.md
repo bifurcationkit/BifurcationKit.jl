@@ -7,7 +7,7 @@
 
 This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
-It incorporates continuation algorithms which provide a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
+It incorporates continuation algorithms (PALC, deflated continuation, ...) which provide a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
 By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems by casting them into an equation F(u,λ)=0 of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences to compute periodic orbits.**
 
@@ -58,6 +58,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 
 - Newton-Krylov solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
 - Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
+- Deflated continuation
 - Bifurcation points are located using a bisection algorithm
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at simple branch points
@@ -77,6 +78,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |---|---|---|---|---|
 | (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |:heavy_check_mark:  |
+| Deflated Continuation | Y | Y | |:heavy_check_mark:  |
 | Branching / Fold / Hopf point detection | Y | Y | All / All / 6 - 9 | :heavy_check_mark: |
 | Fold Point continuation | Y | Y | 1, 8 | |
 | Hopf continuation | Y | `AbstractArray` | 5 | |

@@ -2,7 +2,7 @@
 
 This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
-It incorporates continuation algorithms which provide a *predictor* $(u_1,p_1)$ from a known solution $(u_0,p_0)$. A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
+It incorporates continuation algorithms (PALC, deflated continuation, ...) which provide a *predictor* $(u_1,p_1)$ from a known solution $(u_0,p_0)$. A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
 By leveraging on the above method, the package can also seek for periodic orbits of Cauchy problems by casting them into an equation $F(u,p)=0$ of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences to compute periodic orbits.**
 
@@ -73,6 +73,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |---|---|---|---|
 | (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
 | Continuation (Natural, Secant, Tangent) | Y | Y | All |
+| Deflated Continuation | Y | Y | |:heavy_check_mark:  |
 | Branching / Fold / Hopf point detection | Y | Y | All / All / 6 - 9 | :heavy_check_mark: |
 | Fold Point continuation | Y | Y | 1, 8 |
 | Hopf continuation | Y | `AbstractArray` | 6 |

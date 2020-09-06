@@ -8,7 +8,7 @@ in large dimensions as function of a *real* parameter $p$. We want to be able to
 
 The core of the package is built around a Newton-Krylov solver (see [`newton`](@ref)) which allows to solve equations of the form $F(x)=0$, or a solution $x_0$ to (E) for a particular $p_0$.
 
-Once such a solution $(x_0,p_0)$ is known, we can continue it by building a 1d curve of solutions $\gamma = (x(s),p(s))_{s\in I}$ passing through $(x_0,p_0)$ (see [`continuation`](@ref)).
+Once such a solution (or several) $(x_0,p_0)$ is known, we can continue it by building a 1d curve of solutions $\gamma = (x(s),p(s))_{s\in I}$ passing through $(x_0,p_0)$ (see [`continuation`](@ref) and [Deflated Continuation](@ref).
 
 > In practice, you don't need to know exactly $(x_0,p_0)$ to compute $\gamma$. Indeed, [`continuation`](@ref) will call [`newton`](@ref) to refine any initial guess that you will pass.
 

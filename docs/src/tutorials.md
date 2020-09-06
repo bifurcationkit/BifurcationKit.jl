@@ -2,7 +2,7 @@
 
 There are three levels of tutorials:
 
-1. fully automatic bifurcation diagram (**aBD**) computation: one uses the function `bifurcationdiagram` and let it compute the diagram fully automatically. Note that you may have to tune the options before hand.
+1. fully automatic bifurcation diagram (**aBD**) computation: one uses the function `bifurcationdiagram` and let it compute the diagram fully automatically. Note that you may have to tune the options before hand. Another possibility is to use **deflated continuation**.
 2. semi-automatic bifurcation diagram computation: one uses automatic branch switching (**aBS**) to compute branching at specified bifurcation points
 3. manual bifurcation diagram computation: one does not uses automatic branch switching. This has only educational purposes and for complex problems where aBS fails.
 
@@ -14,7 +14,7 @@ Depth = 1
 
 ### Automatic bifurcation diagram
 ```@contents
-Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md"]
+Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md", "tutorialCarrier.md"]
 Depth = 1
 ```
 
