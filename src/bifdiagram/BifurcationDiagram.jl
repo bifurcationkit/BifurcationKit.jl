@@ -111,10 +111,10 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 					add!(node, γ, level.current+1)
 				end
 
-			# catch ex
-				# @error ex
+			catch ex
+				@error ex
 				# return node
-			# end
+			end
 		end
 	end
 	for (ii, _node) in enumerate(node.child)
