@@ -51,6 +51,7 @@ abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 # reset the predictor
 emptypredictor!(::AbstractTangentPredictor) = nothing
 
+# this function only mutates z_pred
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
 	copyto!(z_pred, z_old) # z_pred <-- z_old
@@ -71,20 +72,25 @@ end
 """
 struct NaturalPred <: AbstractTangentPredictor end
 
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::NaturalPred) where {T, vectype, M <: BorderedArray{vectype, T}}
+	# we do z_pred .= z_old
+	copyto!(z_pred, z_old) # z_pred <-- z_old
+	z_pred.p += ds
+end
+
 # corrector based on natural formulation
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(it.F, it.J, z_pred.u, set(it.par,it.param_lens,z_pred.p), it.contParams.newtonOptions;
+	res = newton(it.F, it.J, z_pred.u, set(it.par, it.param_lens, z_pred.p), it.contParams.newtonOptions;
 				 normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 
 function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
-	rmul!(tau.u, 0)
-	tau.p = one(tau.p)
+	# we do nothing here, the predictor will just copy z_old into z_pred
 end
 ####################################################################################################
 """

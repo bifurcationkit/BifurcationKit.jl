@@ -13,14 +13,14 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140,
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts,verbosity=0) #(17.18 k allocations: 1.014 MiB)
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _),opts) #(17.18 k allocations: 1.014 MiB)
 
 # test with callbacks
-br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), verbosity=0, callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
+br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-iter = BK.ContIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
+iter = BK.ContIterable(F,Jac_m,x0,-1.5, (@lens _), opts)
 state = iterate(iter)[1]
 contRes = ContResult(iter, state)
 @time continuation!(iter, state, contRes)
@@ -34,7 +34,7 @@ eltype(iter)
 #####
 
 opts = ContinuationPar(opts;detectBifurcation = 1,saveEigenvectors=true)
-br1, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0) #(14.28 k allocations: 1001.500 KiB)
+br1, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
 BK.eigenvals(br1,20)
@@ -42,39 +42,39 @@ BK.eigenvec(br1,20,1)
 BK.haseigenvector(br1)
 
 
-br2, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, printSolution = (x,p) -> norm(x,2))
+br2, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
 
 # test for different norms
-br3, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, normC = normInf)
+br3, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf)
 
 # test for linesearch in Newton method
 opts = @set opts.newtonOptions.linesearch = true
-br4, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, normC = normInf) # (15.61 k allocations: 1.020 MiB)
+br4, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts = @set opts.newtonOptions.linesearch = false
-br5, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, normC = normInf, linearAlgo = BK.BorderingBLS())
+br5, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = BK.BorderingBLS())
 
-br5, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, normC = normInf, linearAlgo = BK.MatrixBLS())
+br5, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = BK.MatrixBLS())
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult) -> (step < 20)
-br5a, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, finaliseSolution = finaliseSolution)
+br5a, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, finaliseSolution = finaliseSolution)
 @test length(br5a.branch) == 21
 
 # test for different predictors
-br6, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.SecantPred())
+br6, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BK.SecantPred())
 
 optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
-br7, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat,verbosity=0, tangentAlgo = BK.NaturalPred(),printSolution = (x,p)->x[1])
+br7, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = BK.NaturalPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Bordered predictor
-br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts,verbosity=0, tangentAlgo = BK.BorderedPred(),printSolution = (x,p)->x[1])
+br8, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BK.BorderedPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=true)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=0,
+	br9, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	printSolution = (x,p)->x[1],
 	tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
 	)
@@ -84,7 +84,7 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 polpred = BK.PolynomialPred(2,3,x0)#, BorderedPred())
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 11, ds = 0.045, dsmin = 1e-4, dsmax = 0.1, plotEveryStep = 3,)
-	br10, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,verbosity=0,
+	br10, sol, _ = @time BK.continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	tangentAlgo = polpred, plot=false,
 	printSolution = (x,p)->x[1],
 	)
@@ -128,10 +128,10 @@ polpred = BK.PolynomialPred(2,3,x0)#, BorderedPred())
 
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
-brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,verbosity=0)
-brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,verbosity=0, printSolution = (x,p) -> norm(x,2))
-brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,verbosity=0,linearAlgo = BK.BorderingBLS())
-brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,verbosity=0,linearAlgo = BK.MatrixBLS())
+brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts)
+brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
+brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.BorderingBLS())
+brsp, sol, _ = @time BK.continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.MatrixBLS())
 # plotBranch(br1,marker=:d);title!("")
 # plotBranch!(br8,marker=:d);title!("")
 ####################################################################################################
@@ -144,6 +144,6 @@ x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
 
 br0, = BK.continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
 
-br1, = BK.continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001), verbosity=0)
+br1, = BK.continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001))
 
-br2, = BK.continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts, verbosity=0, tangentAlgo = BorderedPred())
+br2, = BK.continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts, tangentAlgo = BorderedPred())
