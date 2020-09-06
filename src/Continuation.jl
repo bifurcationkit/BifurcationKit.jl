@@ -385,13 +385,15 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 # Arguments:
 - `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` that represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
-- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
-- `x0` initial guess
-- `par` initial set of parameters.
+- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
+- `x0` initial guess,
+- `par` initial set of parameters,
 - `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`.
 - `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
+
+# Optional Arguments:
 - `plot = false` whether to plot the solution while computing
-- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `x -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
+- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
 - `finaliseSolution = (z, tau, step, contResult) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting... The notations are ``z=(x,p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners
