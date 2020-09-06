@@ -1,4 +1,3 @@
-import Base: getproperty, propertynames
 abstract type BranchResult end
 
 # Structure to hold result
@@ -72,7 +71,7 @@ $(TYPEDFIELDS)
 
 end
 
-length(br::ContResult) = length(br.branch[1, :])
+Base.length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline vectortype(br::BranchResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
 eigenvals(br::BranchResult, ind) = br.eig[ind].eigenvals
@@ -83,7 +82,7 @@ _showFold(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, ei
 @inline kerneldim(bp) = abs(bp.δ[1])
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
-function show(io::IO, br::ContResult, comment = "")
+function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
 	println(io, "Branch of ", br.type, comment)
 	if length(br.bifpoint) > 0
@@ -147,11 +146,10 @@ end
 
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
-show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
+Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
-getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
-
-propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
+Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
+Base.propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################

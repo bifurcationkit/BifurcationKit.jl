@@ -1,4 +1,3 @@
-import Base: getproperty
 abstract type BifurcationPoint end
 abstract type BranchPoint <: BifurcationPoint end
 abstract type SimpleBranchPoint <: BranchPoint end

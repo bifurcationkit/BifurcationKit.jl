@@ -1,4 +1,3 @@
-import Base: size, show
 mutable struct BifDiagNode{Tγ, Tc}
 	level::Int64
 	γ::Tγ
@@ -12,7 +11,7 @@ add!(tree::BifDiagNode, γ::Vector{ <: BranchResult}, l::Int) = map(x->add!(tree
 add!(tree::BifDiagNode, γ::Nothing, l::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
-show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
+Base.show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
 
 # total size of the tree
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
@@ -22,7 +21,7 @@ $(SIGNATURES)
 
 Return the size of the bifurcation diagram. The arguement `code` is the same as in `getBranch`.
 """
-size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
+Base.size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
 
 """
 $(SIGNATURES)

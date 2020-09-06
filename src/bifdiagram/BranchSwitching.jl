@@ -1,22 +1,3 @@
-import Base: getproperty, propertynames
-"""
-A Branch is a structure which encapsulates the result of the computation of a branch bifurcating from a bifurcation point.
-"""
-struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
-	γ::T
-	bp::Tbp
-end
-
-from(br::Branch) = br.bp
-from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
-show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
-
-# extend the getproperty for easy manipulation of a Branch
-# for example, it allows to use the plot recipe for ContResult as is
-getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
-
-propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
-####################################################################################################
 """
 $(SIGNATURES)
 

@@ -1,4 +1,4 @@
-import Base: show, length		# simplified display methods for ContRes
+import Base: iterate
 abstract type ContinuationState end
 
 
@@ -32,9 +32,7 @@ abstract type ContinuationState end
 	filename::Tfilename
 end
 
-import Base: eltype
-
-eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
+Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
 
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
@@ -82,7 +80,6 @@ Returns a variable containing the state of the continuation procedure. The field
 @with_kw mutable struct ContState{Tv, T, Teigvals, Teigvec} <: ContinuationState
 	z_pred::Tv								# predictor solution
 	tau::Tv									# tangent predictor
-
 	z_old::Tv								# current solution
 
 	isconverged::Bool						# Boolean for newton correction
@@ -102,9 +99,7 @@ Returns a variable containing the state of the continuation procedure. The field
 	eigvecs::Teigvec = nothing				# current eigenvectors
 end
 
-import Base: copy
-
-function copy(state::ContState)
+function Base.copy(state::ContState)
 	return ContState(
 		z_pred 	= _copy(state.z_pred),
 		tau = _copy(state.tau),
@@ -176,9 +171,7 @@ function ContResult(it::ContIterable, state::ContState)
 	end
 end
 
-import Base: iterate
-
-function iterate(it::ContIterable; _verbosity = it.verbosity)
+function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# the keyword arguemnt is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.param_lens)
@@ -242,7 +235,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	@unpack step, ds, theta = state
 
-	# Predictor: z_pred, following method only mutates z_pred
+	# Predictor: z_pred, the following method only mutates z_pred
 	getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
 	verbose && println("#"^35)
 	verbose && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)

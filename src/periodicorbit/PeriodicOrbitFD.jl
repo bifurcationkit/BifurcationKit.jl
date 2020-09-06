@@ -1,5 +1,4 @@
 using BlockArrays, SparseArrays, Setfield
-import Base: length, collect
 
 # structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps
 struct TimeMesh{T}
@@ -9,15 +8,15 @@ end
 TimeMesh(M::Int64) = TimeMesh{Int64}(M)
 
 @inline canAdapt(ms::TimeMesh{Ti}) where Ti = !(Ti == Int64)
-length(ms::TimeMesh{Ti}) where Ti = length(ms.ds)
-length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
+Base.length(ms::TimeMesh{Ti}) where Ti = length(ms.ds)
+Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 
 # access the time steps
 @inline getTimeStep(ms, i::Int) = ms.ds[i]
 @inline getTimeStep(ms::TimeMesh{Ti}, i::Int) where {Ti <: Int} = 1.0 / ms.ds
 
-collect(ms::TimeMesh) = ms.ds
-collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], ms.ds)
+Base.collect(ms::TimeMesh) = ms.ds
+Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], ms.ds)
 
 ####################################################################################################
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
