@@ -20,7 +20,7 @@ br0, = @time BK.continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-iter = BK.PALCIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
+iter = BK.ContIterable(F,Jac_m,x0,-1.5, (@lens _), opts,verbosity=0)
 state = iterate(iter)[1]
 contRes = ContResult(iter, state)
 @time continuation!(iter, state, contRes)

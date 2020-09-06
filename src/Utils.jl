@@ -13,11 +13,11 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 	end
 end
 ####################################################################################################
-function computeEigenvalues(it::PALCIterable, u0, par, nev = it.contParams.nev; kwargs...)
+function computeEigenvalues(it::ContIterable, u0, par, nev = it.contParams.nev; kwargs...)
 	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; kwargs...)
 end
 
-function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables; kwargs...)
+function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 	# we compute the eigen-elements
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
@@ -27,7 +27,7 @@ function computeEigenvalues(iter::PALCIterable, state::PALCStateVariables; kwarg
 end
 
 # same as previous but we save the eigen-elements in state
-function computeEigenvalues!(iter::PALCIterable, state::PALCStateVariables)
+function computeEigenvalues!(iter::ContIterable, state::ContState)
 	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state)
 	# we update the state
 	updatestability!(state, n_unstable, n_imag)

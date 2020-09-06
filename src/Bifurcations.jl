@@ -23,7 +23,7 @@ end
 isstable(contparams::ContinuationPar, ::Nothing) = (true, 0, 0)
 
 # we detect a bifurcation by a change in the number of unstable eigenvalues
-function detectBifucation(state::PALCStateVariables)
+function detectBifucation(state::ContState)
 	n1, n2 = state.n_unstable
 	# deals with missing value encoded by n_unstable = -1
 	if n1 == -1 || n2 == -1; return false; end
@@ -60,12 +60,12 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	detected
 end
 
-locateFold!(contres::ContResult, iter::PALCIterable, state::PALCStateVariables) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.printSolution, iter.verbosity)
+locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.printSolution, iter.verbosity)
 ####################################################################################################
 """
 Function for coarse detection of bifurcation points.
 """
-function getBifurcationType(contparams::ContinuationPar, state::PALCStateVariables, normC, printsolution, verbosity, status::Symbol)
+function getBifurcationType(contparams::ContinuationPar, state::ContState, normC, printsolution, verbosity, status::Symbol)
 	# this boolean ensures that edge cases are handled
 	detected = false
 
@@ -145,7 +145,7 @@ closesttozero(ev) = ev[sortperm(abs.(real.(ev)))]
 """
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
-function locateBifurcation!(iter::PALCIterable, _state::PALCStateVariables, verbose::Bool = true)
+function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
 	@assert detectBifucation(_state) "No bifucation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 

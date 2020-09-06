@@ -235,7 +235,7 @@ end
 ####################################################################################################
 # Iterator interface
 
-@with_kw struct PALCIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
+@with_kw struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
 	F::TF
 	J::TJ
 
@@ -264,9 +264,9 @@ end
 
 import Base: eltype
 
-eltype(it::PALCIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
+eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
 
-function PALCIterable(Fhandle, Jhandle,
+function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
 					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS();
@@ -282,13 +282,13 @@ function PALCIterable(Fhandle, Jhandle,
 					verbosity = 0
 					) where {T <: Real, S, E}
 
-	return PALCIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+	return ContIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 end
 
-@inline computeEigenElements(it::PALCIterable) = computeEigenElements(it.contParams)
+@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams)
 
 """
-	state = PALCStateVariables(ds = 1e-4,...)
+	state = ContState(ds = 1e-4,...)
 
 Returns a variable containing the state of the continuation procedure. The fields are meant to change during the continuation procedure.
 
@@ -309,7 +309,7 @@ Returns a variable containing the state of the continuation procedure. The field
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
 """
-@with_kw mutable struct PALCStateVariables{Tv, T, Teigvals, Teigvec}
+@with_kw mutable struct ContState{Tv, T, Teigvals, Teigvec} <: ContinuationState
 	z_pred::Tv								# predictor solution
 	tau::Tv									# tangent predictor
 
@@ -334,8 +334,8 @@ end
 
 import Base: copy
 
-function copy(state::PALCStateVariables)
-	return PALCStateVariables(
+function copy(state::ContState)
+	return ContState(
 		z_pred 	= _copy(state.z_pred),
 		tau = _copy(state.tau),
 		z_old 	= _copy(state.z_old),
@@ -351,23 +351,23 @@ function copy(state::PALCStateVariables)
 	)
 end
 
-solution(state::PALCStateVariables) = state.z_old
-getx(state::PALCStateVariables) = state.z_old.u
-@inline getp(state::PALCStateVariables) = state.z_old.p
-@inline isstable(state::PALCStateVariables) = state.n_unstable[1] == 0
+solution(state::ContState) = state.z_old
+getx(state::ContState) = state.z_old.u
+@inline getp(state::ContState) = state.z_old.p
+@inline isstable(state::ContState) = state.n_unstable[1] == 0
 
 # condition for halting the continuation procedure
-@inline done(it::PALCIterable, state::PALCStateVariables) =
+@inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
 			(it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) &&
 			(state.stopcontinuation == false)
 
-function updatestability!(state::PALCStateVariables, n_unstable, n_imag)
+function updatestability!(state::ContState, n_unstable, n_imag)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
 	state.n_imag = (n_imag, state.n_imag[1])
 end
 
-function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
+function save!(contres::ContResult, it::ContIterable, state::ContState)
 	push!(contres.branch, getStateSummary(it, state))
 
 	if state.n_unstable[1] >= 0 # to deal with case n_unstable = -1
@@ -390,7 +390,7 @@ function save!(contres::ContResult, it::PALCIterable, state::PALCStateVariables)
 	end
 end
 
-function ContResult(it::PALCIterable, state::PALCStateVariables)
+function ContResult(it::ContIterable, state::ContState)
 	x0 = getx(state)
 	p0 = getp(state)
 	contParams = it.contParams
@@ -408,7 +408,7 @@ end
 
 import Base: iterate
 
-function iterate(it::PALCIterable; _verbosity = it.verbosity)
+function iterate(it::ContIterable; _verbosity = it.verbosity)
 	# the keyword arguemnt is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.param_lens)
@@ -437,7 +437,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	return iterate(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
 end
 
-function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
+function iterate(it::ContIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	theta = it.contParams.theta
 	ds = it.contParams.ds
 	# this is the last (first) point on the branch
@@ -460,11 +460,11 @@ function iterate(it::PALCIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	end
 
 	# return the state
-	state = PALCStateVariables(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)
+	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)
 	return state, state
 end
 
-function iterate(it::PALCIterable, state::PALCStateVariables; _verbosity = it.verbosity)
+function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
 	# next line is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity) > 0
@@ -516,7 +516,7 @@ function getStateSummary(it, state)
 	vcat(p, it.printSolution(x, p), state.itnewton, state.ds, state.theta, state.step)
 end
 
-function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::ContResult)
+function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 	contParams = it.contParams
 	verbose = it.verbosity > 0
 
@@ -590,14 +590,14 @@ function continuation!(it::PALCIterable, state::PALCStateVariables, contRes::Con
 	return contRes, state.z_old, state.tau
 end
 
-function continuation(it::PALCIterable)
+function continuation(it::ContIterable)
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	# The result type of this method
 	# is not known at compile time so we
 	# need a function barrier to resolve it
 	#############################################
 
-	# we compute the cache for the continuation, i.e. state::PALCStateVariables
+	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
 	state, _ = iterate(it)
 
@@ -609,7 +609,7 @@ function continuation(it::PALCIterable)
 end
 
 function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...)
-	it = PALCIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
+	it = ContIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
 	return continuation(it)
 end
 

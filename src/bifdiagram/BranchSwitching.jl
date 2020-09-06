@@ -1,6 +1,6 @@
 import Base: getproperty, propertynames
 """
-A Branch is a structure which encapsulates the result of a continuation run of a branch bifurcating from a bifurcation point.
+A Branch is a structure which encapsulates the result of the computation of a branch bifurcating from a bifurcation point.
 """
 struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
 	γ::T
@@ -29,18 +29,18 @@ function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Le
 	dsfactor = sign(p1 - get(par0, lens))
 	# create an iterable
 	_contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
-	it = PALCIterable(Fhandle, Jhandle, x0, par0, lens, _contParams, _linearAlgo; kwargs...)
+	it = ContIterable(Fhandle, Jhandle, x0, par0, lens, _contParams, _linearAlgo; kwargs...)
 	return continuation(it, x0, get(par0, lens), x1, p1)
 end
 
-function continuation(it::PALCIterable, x0, p0::Real, x1, p1::Real)
+function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	# The result type of this method
 	# is not known at compile time so we
 	# need a function barrier to resolve it
 	#############################################
 
-	# we compute the cache for the continuation, i.e. state::PALCStateVariables
+	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
 	state, _ = iterate(it, x0, p0, x1, p1)
 

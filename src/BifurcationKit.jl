@@ -67,7 +67,7 @@ module BifurcationKit
 	export ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
 
 	# iterators for continuation
-	export PALCIterable, iterate, PALCStateVariables, solution, getx, getp
+	export ContIterable, iterate, ContState, solution, getx, getp
 
 	# codim2 Fold continuation
 	export FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint

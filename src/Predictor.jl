@@ -81,7 +81,7 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	rmul!(tau.u, 0)
 	tau.p = one(tau.p)
@@ -94,7 +94,7 @@ struct SecantPred <: AbstractSecantPredictor end
 
 # tangent computation using Secant predictor
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau, z_new)
@@ -114,7 +114,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
@@ -161,7 +161,7 @@ function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwarg
 	iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
 	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
 	getTangent!(tau, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
@@ -283,7 +283,7 @@ function updatePred!(polypred::PolynomialPred)
 	mul!(polypred.coeffsPar, B, polypred.parameters)
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::PALCIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
 	(verbosity > 0) && println("--> predictor = PolynomialPred")
 
@@ -476,5 +476,5 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 end
 
 # conveniency for use in continuation
-newtonPALC(it::PALCIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.param_lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
+newtonPALC(it::ContIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.param_lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
 ####################################################################################################
