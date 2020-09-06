@@ -36,7 +36,7 @@ end
 This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers](@ref) for more informations.
 
 # Arguments:
-- `F` is a function with input arguments `(x, p)` returning a vector `r` that represents the functional and for type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
+- `F` is a function with input arguments `(x, p)` returning a vector `r` that represents the functional and for type stability, the types of `x` and `r` should match. In particular, it is not **inplace**.
 - `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `NewtonPar` will make `newton` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `NewtonPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`

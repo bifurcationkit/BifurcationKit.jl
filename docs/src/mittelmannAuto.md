@@ -92,7 +92,7 @@ Ny = 30
 lx = 0.5
 ly = 0.5
 
-Δ, = Laplacian2D(Nx, Ny, lx, ly)
+Δ = Laplacian2D(Nx, Ny, lx, ly)
 
 # parameters associated with the PDE
 par_mit = (λ = .01, Δ = Δ)
@@ -149,11 +149,11 @@ Finally, before calling the automatic `bifurcationdiagram`, we need to provide a
 ```julia
 function optionsCont(x,p,l; opt0 = opts_br)
 	if l == 1
-		return opt
+		return opt0
 	elseif l==2
-		return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
+		return setproperties(opt0 ;detectBifurcation = 3,ds = 0.001, a = 0.75)
 	else
-		return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
+		return setproperties(opt0 ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
 	end
 end
 ```

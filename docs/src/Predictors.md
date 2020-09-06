@@ -9,7 +9,7 @@ As explained in the docs of [continuation](@docs), the continuation method works
 
 [^Allgower1990]: > Allgower and Georg, Numerical Continuation Methods, 1990
 
-There are several couple predictor-tangent/corrector which can be used in **BifurcationKit.jl** as we now explain. The tangent computation is formally included in the predictor whereas it is a distinct function in the code.
+There are several couples predictor-tangent/corrector which can be used in **BifurcationKit.jl** as we now explain. The tangent computation is formally included in the predictor whereas it is a distinct function in the code.
 
 ## 1) Natural, zeroth order predictor
 
