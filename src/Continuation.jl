@@ -68,6 +68,7 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	# Newton solver parameters
 	finDiffEps::T  = 1e-9 					# constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
+	η::T = 150.							# parameter to estimate tangent at first point
 
 	saveToFile::Bool = false 				# save to file?
 	saveSolEveryStep::Int64 = 0			# what steps do we save the current solution
@@ -427,7 +428,7 @@ function iterate(it::PALCIterable; _verbosity = it.verbosity)
 	verbose && println("\n--> convergence of initial guess = OK")
 	verbose && println("--> parameter = $(p0), initial step")
 	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
-	η = T(150)
+	η = it.contParams.η
 	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
 			u0, set(it.par, it.param_lens, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
