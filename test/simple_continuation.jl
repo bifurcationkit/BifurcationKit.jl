@@ -149,4 +149,8 @@ br1, = BK.continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(
 br2, = BK.continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts, tangentAlgo = BorderedPred())
 ####################################################################################################
 # test for deflated continuation
-brdc, = continuation(F,Jac_m, -1.5, (@lens _), opts, DeflationOperator(2.0, dot, 1.0, [x0]); showplot=false, verbosity = 0)
+brdc, = continuation(F,Jac_m, 0.5, (@lens _),
+	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
+	DeflationOperator(2.0, dot, .001, [[0.]]); showplot=false, verbosity = 1,
+	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
+	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)

@@ -41,3 +41,27 @@ while λ < λmax do
 	λ←λ+∆λ
 return S
 ```
+
+## Basic example
+
+We show a quick and simple example of use. Note in particular that the algoritm is able to find the disconnected branch. The starting points are marked with crosses
+
+```julia
+using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, Plots
+const BK = BifurcationKit
+
+k = 2
+N = 1
+F = (x, p) -> p .* x .+ x.^(k+1)/(k+1) .+ 0.01
+Jac_m = (x, p) -> diagm(0 => p .+ x.^k)
+
+opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false)
+
+brdc, = continuation(F,Jac_m, 0.5, (@lens _),
+	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = true, maxIter = 6), plotEveryStep = 40),
+	DeflationOperator(2.0, dot, .001, [[0.]]); showplot=true, verbosity = 1,
+	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
+	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)
+```
+
+![](DCexample.png)

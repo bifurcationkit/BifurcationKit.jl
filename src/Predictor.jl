@@ -48,14 +48,21 @@ end
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
+getPredictor!(state::ContState, iter::ContIterable, nrm = false) = getPredictor!(state.z_pred, state.z_old, state.tau, state.ds, iter.tangentAlgo, nrm)
+
 # reset the predictor
 emptypredictor!(::AbstractTangentPredictor) = nothing
 
 # this function only mutates z_pred
-function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+# the nrm argument allows to just increment z_pred.p by ds
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
 	copyto!(z_pred, z_old) # z_pred .= z_old
-	axpy!(ds, tau, z_pred)
+	if nrm
+		axpy!(ds / tau.p, tau, z_pred)
+	else
+		axpy!(ds, tau, z_pred)
+	end
 end
 
 # generic corrector based on Bordered formulation
@@ -72,7 +79,7 @@ end
 """
 struct NaturalPred <: AbstractTangentPredictor end
 
-function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::NaturalPred) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do z_pred .= z_old
 	copyto!(z_pred, z_old) # z_pred .= z_old
 	z_pred.p += ds
