@@ -121,7 +121,6 @@ This function is used to initialize the composite type `ContResult` according to
 	else
 		_evvectors = (eigenvals = evsol[1], eigenvec = nothing, step = 0)
 	end
-
 	return ContResult(
 		branch = br,
 		bifpoint = [bif0],

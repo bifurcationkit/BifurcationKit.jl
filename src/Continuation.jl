@@ -235,7 +235,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	@unpack step, ds, theta = state
 
-	# Predictor: z_pred, the following method only mutates z_pred
+	# Predictor: z_pred. The following method only mutates z_pred
 	getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
 	verbose && println("#"^35)
 	verbose && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)

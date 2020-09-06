@@ -54,7 +54,7 @@ emptypredictor!(::AbstractTangentPredictor) = nothing
 # this function only mutates z_pred
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
-	copyto!(z_pred, z_old) # z_pred <-- z_old
+	copyto!(z_pred, z_old) # z_pred .= z_old
 	axpy!(ds, tau, z_pred)
 end
 
@@ -74,7 +74,7 @@ struct NaturalPred <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::NaturalPred) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do z_pred .= z_old
-	copyto!(z_pred, z_old) # z_pred <-- z_old
+	copyto!(z_pred, z_old) # z_pred .= z_old
 	z_pred.p += ds
 end
 

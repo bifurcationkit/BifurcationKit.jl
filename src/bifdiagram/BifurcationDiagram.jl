@@ -47,7 +47,7 @@ end
 """
 $(SIGNATURES)
 
-Compute the bifurcation diagram associated with the problem `F=0` recursively.
+Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recursively.
 
 # Arguments
 - `F, dF, d2F, d3F` functional and its derivatives
@@ -55,7 +55,7 @@ Compute the bifurcation diagram associated with the problem `F=0` recursively.
 - `par0` parameter values at `x0`
 - `lens` lens to select the parameter axis
 - `level` maximum branching (or recursion) level for computing the bifurcation diagram
-- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. `x,p` is the current solution to `F(x,p)=0`.
+- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x,p)=0`.
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://rveltz.github.io/BifurcationKit.jl/dev/library/#Continuation-1).
 
 # Simplified call:
@@ -99,7 +99,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 	for (id, pt) in enumerate(node.γ.bifpoint)
 		# we put this condition in case the bifpoint at step = 0 corresponds to the one where are branching from. If we remove this, we keep computing the same branch (possibly).
 		if pt.step > 1
-			# try
+			try
 				println("─"^80*"\n--> New branch level = $(level[1]+1), dim(Kernel) = $(kerneldim(pt)), code = $code, from bp #",id," at p = ", pt.param)
 				γ, = letsbranch(id, pt, level)
 				add!(node, γ, level.current+1)
@@ -153,6 +153,8 @@ end
 	end
 end
 
+# this might well be type piracy
+# TODO try to remove it
 @recipe function f(bd::Nothing)
 	nothing
 end

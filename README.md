@@ -7,7 +7,7 @@
 
 This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 
-It incorporates a pseudo arclength continuation algorithm which provides a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
+It incorporates continuation algorithms which provide a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
 By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems by casting them into an equation F(u,λ)=0 of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences to compute periodic orbits.**
 
