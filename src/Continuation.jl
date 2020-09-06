@@ -303,9 +303,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
 			if contParams.detectFold;
 				foldetected = locateFold!(contRes, it, state)
-				if foldetected && contParams.detectLoop
-					state.stopcontinuation = detectLoop(contRes, nothing)
-				end
+				# if foldetected && contParams.detectLoop
+				# 	state.stopcontinuation = detectLoop(contRes, nothing)
+				# end
 			end
 
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
@@ -320,7 +320,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status)
 					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
 					# detect loop in the branch
-					contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
+					# contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
 				end
 			end
 

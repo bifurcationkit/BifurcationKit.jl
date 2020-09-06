@@ -88,8 +88,8 @@ Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 	tolBisectionEigenvalue::Float64 = 1e-16 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
-    @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
-    detectLoop::Bool = false				# detect if the branch loops
+	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
+	detectLoop::Bool = false				# detect if the branch loops
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0

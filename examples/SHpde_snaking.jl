@@ -25,7 +25,7 @@ Jac_sp = (u, par) -> par.L1 + spdiagm(0 => -par.p .+ 3*par.b .* u.^2 .- 5 .* u.^
 parSH = (p = 0.7, b = 2., L1 = Lsh)
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
-	optnew = BK.NewtonPar(verbose = true, tol = 1e-12)
+	optnew = NewtonPar(verbose = true, tol = 1e-12)
 	# allocations 26.47k, 0.038s, tol = 1e-10
 	sol1, hist, flag = @time BK.newton(
 	R_SH, Jac_sp,
@@ -38,11 +38,7 @@ opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
 
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
-
-	# @assert itc > 0 && isnothing(_x) == false
 	if _x isa BorderedArray
-		@show norm(_x.u - x) abs(_x.p - kwargs[:p])
-		@show (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p])<0.05)
 		return norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p])<0.05
 	end
 	true
@@ -81,7 +77,7 @@ diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p
 code = ()
 	plot(diagram; code = code, plotfold = false,  markersize = 2, putbifptlegend = false)
 	plot!(brflat)
-	title!("#branches = $(size(branches, code))")
+	title!("#branches = $(size(diagram, code))")
 
 diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (2,)),  (current = 1, maxlevel = 2), optrec; args...)
 

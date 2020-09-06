@@ -121,4 +121,4 @@ diagram = bifurcationdiagram(jet...,
 		printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
 		plot = true)
 
-plot(diagram)
+plot(diagram, legend=false)
