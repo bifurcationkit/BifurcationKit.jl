@@ -65,3 +65,4 @@ brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 ```
 
 ![](DCexample.png)
+![](DCexample.png)
