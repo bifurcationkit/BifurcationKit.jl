@@ -209,4 +209,3 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 
 	return branches, [getx(c.contState) for c in states if isactive(c)], current_param
 end
-end
