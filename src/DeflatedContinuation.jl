@@ -31,9 +31,8 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), set(it.par,it.param_lens,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
 	if converged
 		# record previous parameter (cheap) and update current solution
+		copyto!(state.z_old.u, sol1); state.z_old.p = current_param
 		state.z_pred.p = current_param
-		copyto!(state.z_old.u, sol1)
-		state.z_old.p = current_param
 		# Get tangent, it only mutates tau
 		getTangent!(state.tau, state.z_pred, state.z_old, it,
 					ds, theta, it.tangentAlgo, verbosity)
@@ -42,7 +41,7 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 		if it.contParams.detectBifurcation > 1 && detectBifucation(state)
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
-				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, status)
+				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, :guess)
 				if bifpt.type != :none; push!(contResult.bifpoint, bifpt); end
 			end
 		end
