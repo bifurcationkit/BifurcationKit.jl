@@ -138,13 +138,14 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 	optnewton = contParams.newtonOptions
 
 	ii = 0
-	while (contParams.pMin <= current_param <= contParams.pMax) &&
+	while ((contParams.pMin < current_param < contParams.pMax) || ii == 0) &&
 		 		ii < contParams.maxSteps
-		verbosity > 0 && println("#"^51)
-		verbosity > 0 && println("--> step = $ii has $(length(branches)) branche(s), p = $current_param")
-
 		# we update the parameter value
 		current_param += contParams.ds
+		current_param = clampPred(current_param, contIt)
+
+		verbosity > 0 && println("#"^51)
+		verbosity > 0 && println("--> step = $ii has $(length(branches)) branche(s), p = $current_param")
 
 		# we empty the set of known solutions
 		empty!(deflationOp.roots)

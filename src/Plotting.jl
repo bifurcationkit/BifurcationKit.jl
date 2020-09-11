@@ -120,7 +120,10 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	Plots.plot(layout = l)
 
 	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = "||x||", label = "", plotfold = false, subplot = 1)
-	scatter!([contres.branch[1, end]], [contres.branch[2, end]], marker = :cross, color = :red, label = "", subplot = 1)
+	if length(contres) >1
+		# put arrow to indicate the order of computation
+		plot!([contres.branch[1, end-1:end]], [contres.branch[2, end-1:end]], label = "", arrow = true, subplot = 1)
+	end
 
 	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = getLensParam(contres.param_lens), label = "", subplot=2)
 
