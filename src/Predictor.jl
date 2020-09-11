@@ -1,5 +1,3 @@
-emptypredictor!(::Nothing) = nothing
-####################################################################################################
 """
 	dt = DotTheta( (x,y) -> dot(x,y) / length(x) )
 
@@ -48,10 +46,15 @@ end
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
+# wrapper to use iterators and state
 getPredictor!(state::ContState, iter::ContIterable, nrm = false) = getPredictor!(state.z_pred, state.z_old, state.tau, state.ds, iter.tangentAlgo, nrm)
+getTangent!(state::ContState, it::ContIterable, verbosity) = getTangent!(state.tau, state.z_new, state.z_old, it, state.ds, θ, it.tangenAlgo::NaturalPred, it.verbosity)
 
 # reset the predictor
-emptypredictor!(::AbstractTangentPredictor) = nothing
+emptypredictor!(::Union{Nothing, AbstractTangentPredictor}) = nothing
+
+# clamp p value
+clampPred(p::Number, it::ContIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
 
 # this function only mutates z_pred
 # the nrm argument allows to just increment z_pred.p by ds
@@ -62,36 +65,39 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo, nrm = false
 end
 
 # generic corrector based on Bordered formulation
-function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
+function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			algo::Talgo, linearalgo = MatrixFreeLBS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
-	return newtonPALC(it, z_old, tau, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
+	if z_pred.p <= it.contParams.pMin || z_pred.p >= it.contParams.pMax
+		z_pred.p = clampPred(z_pred.p, it)
+		return corrector(it, z_old, τ, z_pred, ds, θ, NaturalPred(), linearalgo;
+						normC = normC, callback = callback, kwargs...)
+	end
+	return newtonPALC(it, z_old, τ, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
-
 ####################################################################################################
 """
 	Natural predictor / corrector
 """
 struct NaturalPred <: AbstractTangentPredictor end
 
-function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, τ::M, ds, algo::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do z_pred .= z_old
 	copyto!(z_pred, z_old) # z_pred .= z_old
 	z_pred.p += ds
 end
 
 # corrector based on natural formulation
-function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
+function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			algo::NaturalPred, linearalgo = MatrixFreeLBS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(it.F, it.J, z_pred.u, set(it.par, it.param_lens, z_pred.p), it.contParams.newtonOptions;
-				 normN = normC, callback = callback, kwargs...)
+	res = newton(it.F, it.J, z_pred.u, set(it.par, it.param_lens, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# we do nothing here, the predictor will just copy z_old into z_pred
 end
@@ -103,13 +109,13 @@ struct SecantPred <: AbstractSecantPredictor end
 
 # tangent computation using Secant predictor
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
-	copyto!(tau, z_new)
-	minus!(tau, z_old)
-	α = algo isa SecantPred ? sign(ds) / it.dottheta(tau, θ) : sign(ds) / abs(tau.p)
-	rmul!(tau, α)
+	copyto!(τ, z_new)
+	minus!(τ, z_old)
+	α = algo isa SecantPred ? sign(ds) / it.dottheta(τ, θ) : sign(ds) / abs(τ.p)
+	rmul!(τ, α)
 end
 ####################################################################################################
 """
@@ -119,7 +125,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
-function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("--> predictor = Bordered")
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
@@ -129,19 +135,19 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo:
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	tau_normed = copy(tau)#copyto!(similar(tau), tau) #copy(tau_old)
-	rmul!(tau_normed, θ / length(tau.u), 1 - θ)
+	tau_normed = copy(τ)#copyto!(similar(tau), tau) #copy(tau_old)
+	rmul!(tau_normed, θ / length(τ.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_new.u)
 	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, set(it.par, it.param_lens, z_new.p)), dFdl,
 			tau_normed, 0*z_new.u, T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / it.dottheta(tauu, tau.u, taup, tau.p, θ)
+	α = T(1) / it.dottheta(tauu, τ.u, taup, τ.p, θ)
 
 	# tau_new = α * tau
-	copyto!(tau.u, tauu)
-	tau.p = taup
-	rmul!(tau, α)
+	copyto!(τ.u, tauu)
+	τ.p = taup
+	rmul!(τ, α)
 end
 ####################################################################################################
 """
@@ -166,11 +172,11 @@ function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwarg
 	iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
 	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
-	getTangent!(tau, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
-	copyto!(algo.τ, tau)
+	getTangent!(τ, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
+	copyto!(algo.τ, τ)
 end
 
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,

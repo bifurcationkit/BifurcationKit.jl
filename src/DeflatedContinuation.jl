@@ -156,7 +156,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			flag, itnewton = updatebranch!(iter, state, branches[idb], deflationOp;
 					current_param = current_param, step = ii)
 			(verbosity >= 2 && isactive(state)) && println("----> Continuation for branch $idb in $itnewton iterations")
-			(verbosity >= 1 && ~flag && itnewton>0) && printstyled(color=:red, "--> Fold for branch $idb ?\n")
+			verbosity >= 1 && ~flag && itnewton>0 && printstyled(color=:red, "--> Fold for branch $idb ?\n")
 		end
 
 		verbosity>1 && printstyled(color = :magenta,"--> looking for new branches\n")

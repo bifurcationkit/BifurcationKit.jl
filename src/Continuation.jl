@@ -123,8 +123,14 @@ getx(state::ContState) = state.z_old.u
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
-			((it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) || state.step == 0) &&
+			((it.contParams.pMin < state.z_old.p < it.contParams.pMax) || state.step == 0) &&
 			(state.stopcontinuation == false)
+
+function getStateSummary(it, state)
+	x = getx(state)
+	p = getp(state)
+	vcat(p, it.printSolution(x, p), state.itnewton, state.ds, state.theta, state.step)
+end
 
 function updatestability!(state::ContState, n_unstable, n_imag)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
@@ -181,6 +187,10 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
 	# Get parameters
 	@unpack pMin, pMax, maxSteps, newtonOptions = it.contParams
+	if !(pMin <= p0 <= pMax)
+		@error "Initial parameter $p0 must be within bounds [$pMin, $pMax]"
+		return nothing
+	end
 
 	# Converge initial guess
 	verbose && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
@@ -272,12 +282,6 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	return state, state
 end
 
-function getStateSummary(it, state)
-	x = getx(state)
-	p = getp(state)
-	vcat(p, it.printSolution(x, p), state.itnewton, state.ds, state.theta, state.step)
-end
-
 function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 	contParams = it.contParams
 	verbose = it.verbosity > 0
@@ -361,13 +365,14 @@ function continuation(it::ContIterable)
 
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
-	state, _ = iterate(it)
+	states = iterate(it)
+	isnothing(states) && return nothing, nothing, nothing
 
 	# variable to hold the result from continuation, i.e. a branch
-	contRes = ContResult(it, state)
+	contRes = ContResult(it, states[1])
 
 	# perform the continuation
-	return continuation!(it, state, contRes)
+	return continuation!(it, states[1], contRes)
 end
 
 function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...)
