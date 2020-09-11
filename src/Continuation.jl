@@ -123,7 +123,7 @@ getx(state::ContState) = state.z_old.u
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
-			(it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) &&
+			((it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) || state.step == 0) &&
 			(state.stopcontinuation == false)
 
 function updatestability!(state::ContState, n_unstable, n_imag)
