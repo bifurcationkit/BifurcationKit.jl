@@ -58,11 +58,7 @@ emptypredictor!(::AbstractTangentPredictor) = nothing
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * tau
 	copyto!(z_pred, z_old) # z_pred .= z_old
-	if nrm
-		axpy!(ds / tau.p, tau, z_pred)
-	else
-		axpy!(ds, tau, z_pred)
-	end
+	nrm ? axpy!(ds / tau.p, tau, z_pred) : axpy!(ds, tau, z_pred)
 end
 
 # generic corrector based on Bordered formulation
@@ -112,11 +108,7 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo:
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(tau, z_new)
 	minus!(tau, z_old)
-	if algo isa SecantPred
-		α = sign(ds) / it.dottheta(tau, θ)
-	else
-		α = sign(ds) / abs(tau.p)
-	end
+	α = algo isa SecantPred ? sign(ds) / it.dottheta(tau, θ) : sign(ds) / abs(tau.p)
 	rmul!(tau, α)
 end
 ####################################################################################################

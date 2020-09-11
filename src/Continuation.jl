@@ -1,7 +1,6 @@
 import Base: iterate
 abstract type ContinuationState end
 
-
 ####################################################################################################
 # Iterator interface
 
@@ -121,7 +120,7 @@ getx(state::ContState) = state.z_old.u
 @inline getp(state::ContState) = state.z_old.p
 @inline isstable(state::ContState) = state.n_unstable[1] == 0
 
-# condition for halting the continuation procedure
+# condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
 			(it.contParams.pMin <= state.z_old.p <= it.contParams.pMax) &&
@@ -235,8 +234,8 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	@unpack step, ds, theta = state
 
-	# Predictor: z_pred. The following method only mutates z_pred
-	getPredictor!(state.z_pred, state.z_old, state.tau, ds, it.tangentAlgo)
+	# Predictor: state.z_pred. The following method only mutates z_pred
+	getPredictor!(state, it)
 	verbose && println("#"^35)
 	verbose && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
 	verbose && @printf("Step size = %2.4e\n", ds)
