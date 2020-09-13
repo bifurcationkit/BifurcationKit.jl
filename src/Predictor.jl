@@ -33,15 +33,12 @@ function (dt::DotTheta)(u, p::T, θ::T) where T
 end
 
 (dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, θ)
-
 (dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)
-
 ####################################################################################################
 # equation of the arc length constraint
 function arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds)
 	return dt(u, du, p, dp, θ) - ds
 end
-
 ####################################################################################################
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
@@ -152,15 +149,23 @@ end
 ####################################################################################################
 """
 	Multiple Tangent predictor
+$(TYPEDFIELDS)
 """
 mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-	tangentalgo::Talgo	# tangent algo used
-	α::T				# damping factor
-	τ::Tvec				# save the current tangent
-	nb::Int64			# number of predictors
-	indconverged::Int	# index of the largest converged predictor
-	imax::Int			# maximum value of imax
-	pmimax::Int			# index for lookup in residual history
+	"tangent algorithm used"
+	tangentalgo::Talgo
+	"damping factor"
+	α::T
+	"save the current tangent"
+	τ::Tvec
+	"number of predictors"
+	nb::Int64
+	"index of the largest converged predictor"
+	indconverged::Int
+	"maximum value of imax"
+	imax::Int
+	"index for lookup in residual history"
+	pmimax::Int
 end
 MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,5,1)
 MultiplePred(α::Real,nb::Int,τ) = MultiplePred(α,nb,τ,SecantPred())
@@ -169,7 +174,7 @@ emptypredictor!(mpd::MultiplePred) = (mpd.indconverged = 0; mpd.pmimax = 1)
 # callback for newton
 function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
 	resHist = get(kwargs, :resHist, nothing)
-	iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
+	return iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
 end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
@@ -181,7 +186,7 @@ end
 
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		algo::MultiplePred, linearalgo = MatrixFreeLBS(); normC = norm,
-		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we combine the callbacks for the newton iterations
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
 	_range = algo.nb:-1:0
@@ -237,17 +242,29 @@ end
 ####################################################################################################
 """
 	Polynomial Tangent predictor
+
+$(TYPEDFIELDS)
 """
 mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-	n::Int64							# order of the polynomial
-	k::Int64							# last solutions vector
-	A::Matrix{T}						# matrix for the interpolation
-	tangentalgo::Talgo					# algo for tangent when polynomial predictor is not possible
-	solutions::CircularBuffer{Tvec}		# vector of solutions
-	parameters::CircularBuffer{T}		# vector of parameters
-	arclengths::CircularBuffer{T}		# vector of arclengths
-	coeffsSol::Vector{Tvec}				# coefficients for the polynomials for the solution
-	coeffsPar::Vector{T}				# coefficients for the polynomials for the parameter
+	"order of the polynomial"
+	n::Int64
+	"last solutions vector"
+	k::Int64
+	"matrix for the interpolation"
+	A::Matrix{T}
+	"algo for tangent when polynomial predictor is not possible"
+	tangentalgo::Talgo
+	"vector of solutions"
+	solutions::CircularBuffer{Tvec}
+	"vector of parameters"
+	parameters::CircularBuffer{T}
+	"vector of arclengths"
+	arclengths::CircularBuffer{T}
+	"coefficients for the polynomials for the solution"
+	coeffsSol::Vector{Tvec}
+	"coefficients for the polynomials for the parameter"
+	coeffsPar::Vector{T}
+	"update?"
 	update::Bool
 end
 

@@ -7,6 +7,14 @@ N = 1
 F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
 Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 
+####################################################################################################
+# test creation of specific scalar product
+_dt = BK.DotTheta()
+# tests for the predictors
+BK.emptypredictor!(nothing)
+
+####################################################################################################
+
 normInf = x -> norm(x, Inf)
 
 opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false)

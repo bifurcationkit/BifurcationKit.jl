@@ -64,30 +64,32 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 
 # Arguments:
 - `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` that represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
-- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
+- `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
+    1. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
+    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
+    3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
 - `par` initial set of parameters,
 - `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`,
 - `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options,
 - `defOp::DeflationOperator` a Deflation Operator (see [`DeflationOperator`](@ref)) which contains the set of solution guesses for the parameter `par`.
 
 # Optional Arguments:
-- `seekEveryStep::Int = 1` we look for additional solution, using deflated newton, every `seekEveryStep` step
-- `maxBranches::Int = 10` maximum number of branches considered
+- `seekEveryStep::Int = 1` we look for additional solution, using deflated newton, every `seekEveryStep` step,
+- `maxBranches::Int = 10` maximum number of branches considered,
 - `showplot = false` whether to plot the solution while computing,
-- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
-- `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
-- `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners
-- `tangentAlgo = NaturalPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`.
-- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3,4,5}`
-- `normN = norm` norm used in the different Newton solves
-- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
-- `perturbSolution = (x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...)),` perturbation applied to the solution when trying to fimnd new solutions using Deflated Newton
--
+- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...),
+- `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution,
+- `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners or affect the newton iterations. In the deflation part of the algorithm, when seeking for new branches, the callback is passed the keyword argument `fromDeflatedNewton = true` to tell the user can it is not in the continuation part (regular newton) of the algorithm,
+- `tangentAlgo = NaturalPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`,
+- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3,4,5}`,
+- `normN = norm` norm used in the different Newton solves,
+- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
+- `perturbSolution = (x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...)),` perturbation applied to the solution when trying to fimnd new solutions using Deflated Newton.
 
 # Outputs:
-- `contres::Vector{ContResult}` composite type which contains the computed branches. See [`ContResult`](@ref) for more information.
-- the solutions at the last parameter value
-- current parameter value
+- `contres::Vector{ContResult}` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,
+- the solutions at the last parameter value,
+- current parameter value.
 """
 function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp::DeflationOperator;
 			verbosity::Int = 2,
@@ -105,8 +107,6 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			normN = norm) where vectype
 
 	if length(defOp) == 0; return nothing, nothing, 0; end
-
-	~(tangentAlgo isa NaturalPred) && @warn "Pour SecantPred et TangentPred, il faut faire attention d'avoir pred.p ∈ ds⋅Z"
 
 	# function to get new solutions based on Deflated Newton
 	function getNewSolution(_st::DCState, _p::Real, _idb)
