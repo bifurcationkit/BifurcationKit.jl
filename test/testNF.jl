@@ -108,6 +108,7 @@ for α in [-1,1]
 	bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 
 	BK.nf(bp2d)
+	length(bp2d)
 	bp2d(rand(2), 0.2)
 	bp2d(Val(:reducedForm), rand(2), 0.2)
 

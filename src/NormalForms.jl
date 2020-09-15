@@ -266,6 +266,11 @@ function (bp::NdBranchPoint)(x, δp::Real)
 	return out
 end
 
+"""
+	 nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
+
+Print the normal form `bp` with a nice string.
+"""
 function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
 	superDigits = [c for c in "⁰ ²³⁴⁵⁶⁷⁸⁹"]
 

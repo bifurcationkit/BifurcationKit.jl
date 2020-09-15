@@ -11,6 +11,12 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 		"""
 		$(TYPEDEF)
 		$(TYPEDFIELDS)
+
+		# Associated methods
+
+		## Predictor
+
+		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp` to get to find zeros of the normal form polynomials.
 		"""
 		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: SimpleBranchPoint
 			"bifurcation point."
@@ -56,6 +62,20 @@ This is a type which holds information for the bifurcation points of equilibria.
 
 $(TYPEDEF)
 $(TYPEDFIELDS)
+
+# Associated methods
+
+## Predictor
+
+You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find zeros of the normal form polynomials.
+
+## Manipulating the normal form
+
+- You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on thw vector `x` for (scalar) parameter `p`.
+
+- You can use `bp(x, δp::Real)` to get the (large dimensional guess) associated to the low dimensional vector `x`. Note that we must have `length(x) == length(bp)`.
+
+- You can use `BifurcationKit.nf(bp; kwargs...)` to print the normal form with a nice string.
 """
 mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
 	"bifurcation point"
@@ -84,13 +104,19 @@ mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: Bra
 end
 
 type(bp::NdBranchPoint) = :NonSimpleBranchPoint
-
+Base.length(bp::NdBranchPoint) = bp.ζ
 ####################################################################################################
 # type for Hopf bifurcation point
 
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
+
+# Associated methods
+
+## Predictor
+
+You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find the guess for the periodic orbit.
 """
 mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: BifurcationPoint
 	"Hopf point"
