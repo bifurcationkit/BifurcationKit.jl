@@ -164,14 +164,14 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 	optn = optionsCont.newtonOptions
 	cbnewton = get(kwargs, :callbackN, (x, f, J, res, iteration, itlinear, optionsN; kwgs...) -> true)
 
-	println("--> Case after the bifurcation point...")
+	println("--> Looking for solutions after the bifurcation point...")
 	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFp
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
 
-	println("--> Case before the bifurcation point...")
+	println("--> Looking for solutions before the bifurcation point...")
 	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFm
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)

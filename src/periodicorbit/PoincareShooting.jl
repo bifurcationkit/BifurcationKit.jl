@@ -10,7 +10,17 @@ function sectionHyp!(out, x, normals, centers)
 	out
 end
 
-# this composite type encodes a set of hyperplanes which are used as Poincaré sections
+"""
+$(TYPEDEF)
+
+This composite type encodes a set of hyperplanes which are used as Poincaré sections.
+
+$(TYPEDFIELDS)
+
+# Constructor(s)
+    HyperplaneSections(normals::Vector{Tv}, centers::Vector{Tv})
+
+"""
 struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 	M::Int64		# number of hyperplanes
 	normals::Tn 	# normals to define hyperplanes
@@ -21,6 +31,7 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 	centers_bar::Tcb
 
 	function HyperplaneSections(normals, centers)
+		@assert length(normals) == length(centers)
 		M = length(normals)
 		indices = zeros(Int64, M)
 		for ii in 1:M

@@ -136,7 +136,11 @@ This function is used to initialize the composite type `ContResult` according to
 end
 ####################################################################################################
 """
+$(TYPEDEF)
+
 A Branch is a structure which encapsulates the result of the computation of a branch bifurcating from a bifurcation point.
+
+$(TYPEDFIELDS)
 """
 struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
 	γ::T
