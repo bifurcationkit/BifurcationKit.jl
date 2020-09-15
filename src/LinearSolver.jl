@@ -187,9 +187,6 @@ $(TYPEDFIELDS)
 	"Relative tolerance for solver"
 	rtol::T  = KrylovDefaults.tol
 
-	"Number of restarts"
-	restart::Int64 = 200
-
 	"Maximum number of iterations"
 	maxiter::Int64 = KrylovDefaults.maxiter
 
