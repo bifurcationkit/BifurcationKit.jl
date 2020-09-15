@@ -573,7 +573,7 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 	rootsNFm =  getRootsNf(-abs(δp))
 	rootsNFp =  getRootsNf(abs(δp))
 	println("\n--> BS from Non simple branch point")
-	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point (Reduced equation).\n")
+	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point counting the trivial solution (Reduced equation).\n")
 	return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################

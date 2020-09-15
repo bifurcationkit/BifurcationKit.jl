@@ -68,7 +68,7 @@ function Fbr(x, p, t = 0.)
 end
 
 # this is not very efficient but simple enough ;)
-Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))~~
+Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
 ```	
 
 We can now perform bifurcation of the following Turing solution:

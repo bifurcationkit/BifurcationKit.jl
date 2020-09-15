@@ -82,7 +82,6 @@ end
 			plotbifpoints --> plotbifpoints
 			plotstability --> plotstability
 			branchlabel --> branchlabel[id]
-
 			for pt in res.bifpoint
 				push!(bp, pt.type)
 			end

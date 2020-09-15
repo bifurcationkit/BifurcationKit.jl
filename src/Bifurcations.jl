@@ -195,7 +195,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	while true
 
 		if state.isconverged == false
-			@error "----> Newton failed when locating bifurcation!"
+			@error "----> Newton failed when locating bifurcation using bisection method!"
 			break
 		 end
 

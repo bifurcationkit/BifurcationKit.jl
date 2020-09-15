@@ -78,7 +78,13 @@ flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
-## Simplified constructors
+# Simplified constructor(s) 
+We provide a simple constructor where you only pass the vector fiels `F`, the flow `ϕ` and its differential `dϕ`:
+
+	fl = Flow(F, ϕ, dϕ)
+
+# Simplified constructors for DifferentialEquations.jl
+
 There are some simple constructors for which you only have to pass a `prob::ODEProblem` or `prob::EnsembleProblem` (for parallel computation) from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 
 	fl = Flow(F, prob, Tsit5(); kwargs...)
@@ -99,16 +105,16 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse}
 	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned."
 	flow::Tf
 
-	"Flow which returns the tuple (t, u(t))"
+	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side. Please use `nothing` as default."
 	flowTimeSol::Tts
 
-	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this."
+	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, mainly used for plotting on the user side. Please use `nothing` as default."
 	flowFull::Tff
 
 	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last composant being the value of the derivative of the flow."
 	dflow::Td
 
-	"Serial version of dflow"
+	"Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
 	dfserial::Tse
 end
 
