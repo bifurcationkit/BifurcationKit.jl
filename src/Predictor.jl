@@ -63,7 +63,7 @@ end
 
 # generic corrector based on Bordered formulation
 function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			algo::Talgo, linearalgo = MatrixFreeLBS();
+			algo::Talgo, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	if z_pred.p <= it.contParams.pMin || z_pred.p >= it.contParams.pMax
@@ -71,6 +71,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 		return corrector(it, z_old, τ, z_pred, ds, θ, NaturalPred(), linearalgo;
 						normC = normC, callback = callback, kwargs...)
 	end
+	@show linearalgo
 	return newtonPALC(it, z_old, τ, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 ####################################################################################################
@@ -87,7 +88,7 @@ end
 
 # corrector based on natural formulation
 function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			algo::NaturalPred, linearalgo = MatrixFreeLBS();
+			algo::NaturalPred, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(it.F, it.J, z_pred.u, set(it.par, it.param_lens, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
@@ -185,7 +186,7 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::
 end
 
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
-		algo::MultiplePred, linearalgo = MatrixFreeLBS(); normC = norm,
+		algo::MultiplePred, linearalgo = MatrixFreeBLS(); normC = norm,
 		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we combine the callbacks for the newton iterations
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)

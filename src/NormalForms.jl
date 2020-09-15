@@ -554,7 +554,7 @@ end
 
 computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
 
-function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity,jac = nothing) where T
+function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity, jac = nothing, normN = x->norm(x,Inf)) where T
 	# dimension of the kernel
 	n = length(bp.ζ)
 
