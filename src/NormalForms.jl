@@ -554,7 +554,7 @@ end
 
 computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
 
-function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity, jac = nothing, normN = x->norm(x,Inf)) where T
+function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity, jac = nothing, normN = x->norm(x,Inf), optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
 	# dimension of the kernel
 	n = length(bp.ζ)
 
@@ -566,10 +566,11 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 		outdef1 = rand(n)
 		while failures < nbfailures
 			if isnothing(jac)
-				outdef1, _, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), outdef1 .+ 0.1rand(n), _ds, NewtonPar(maxIter = maxiter), deflationOp)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
 			else
-				outdef1, _, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)),jac, outdef1 .+ 0.1rand(n), _ds, NewtonPar(maxIter = maxiter), deflationOp)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)),jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
 			end
+			flag && @show hist[end]
 			flag && push!(deflationOp, outdef1)
 			~flag && (failures += 1)
 		end
