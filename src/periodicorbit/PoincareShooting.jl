@@ -13,15 +13,15 @@ end
 """
 $(TYPEDEF)
 
-This composite type encodes a set of hyperplanes which are used as Poincaré sections.
+This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShootingProblem`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
 
 $(TYPEDFIELDS)
 
 # Constructor(s)
-    HyperplaneSections(normals::Vector{Tv}, centers::Vector{Tv})
+    SectionPS(normals::Vector{Tv}, centers::Vector{Tv})
 
 """
-struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
+struct SectionPS{Tn, Tc, Ti, Tnb, Tcb}
 	M::Int64		# number of hyperplanes
 	normals::Tn 	# normals to define hyperplanes
 	centers::Tc 	# representative point on each hyperplane
@@ -30,7 +30,7 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 	normals_bar::Tnb
 	centers_bar::Tcb
 
-	function HyperplaneSections(normals, centers)
+	function SectionPS(normals, centers)
 		@assert length(normals) == length(centers)
 		M = length(normals)
 		indices = zeros(Int64, M)
@@ -43,17 +43,17 @@ struct HyperplaneSections{Tn, Tc, Ti, Tnb, Tcb}
 		return new{typeof(normals), typeof(centers), typeof(indices), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
 	end
 
-	HyperplaneSections(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Nothing}(M, nothing, nothing, nothing, nothing, nothing)
+	SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Nothing}(M, nothing, nothing, nothing, nothing, nothing)
 end
 
-(hyp::HyperplaneSections)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
+(hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 
 """
-	update!(hyp::HyperplaneSections, normals, centers)
+	update!(hyp::SectionPS, normals, centers)
 
 Update the hyperplanes saved in `hyp`.
 """
-function update!(hyp::HyperplaneSections, normals, centers)
+function update!(hyp::SectionPS, normals, centers)
 	M = hyp.M
 	@assert length(normals) == M "Wrong number of normals"
 	@assert length(centers) == M "Wrong number of centers"
@@ -75,23 +75,23 @@ function R!(out, x::AbstractVector, k::Int)
 	return out
 end
 
-R!(hyp::HyperplaneSections, out, x::AbstractVector, ii::Int) = R!(out, x, hyp.indices[ii])
+R!(hyp::SectionPS, out, x::AbstractVector, ii::Int) = R!(out, x, hyp.indices[ii])
 
 function R(x::AbstractVector, k::Int)
 	out = similar(x, length(x) - 1)
 	R!(out, x, k)
 end
 
-function R(hyp::HyperplaneSections, x::AbstractVector, ii::Int)
+function R(hyp::SectionPS, x::AbstractVector, ii::Int)
 	out = similar(x, length(x) - 1)
 	R!(hyp, out, x, ii)
 end
 
 # differential of R
-dR!(hyp::HyperplaneSections, out, dx::AbstractVector, ii::Int) = R!(hyp, out, dx, ii)
+dR!(hyp::SectionPS, out, dx::AbstractVector, ii::Int) = R!(hyp, out, dx, ii)
 
 # Operateur Ek from the paper above
-function E!(hyp::HyperplaneSections, out, xbar::AbstractVector, ii::Int)
+function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
 	@assert length(xbar) == length(hyp.normals[1]) - 1 "Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))"
 	k = hyp.indices[ii]
 	nbar = hyp.normals_bar[ii]
@@ -104,13 +104,13 @@ function E!(hyp::HyperplaneSections, out, xbar::AbstractVector, ii::Int)
 	return out
 end
 
-function E(hyp::HyperplaneSections, xbar::AbstractVector, ii::Int)
+function E(hyp::SectionPS, xbar::AbstractVector, ii::Int)
 	out = similar(xbar, length(xbar) + 1)
 	E!(hyp, out, xbar, ii)
 end
 
 # differential of E!
-function dE!(hyp::HyperplaneSections, out, dxbar::AbstractVector, ii::Int)
+function dE!(hyp::SectionPS, out, dxbar::AbstractVector, ii::Int)
 	k = hyp.indices[ii]
 	nbar = hyp.normals_bar[ii]
 	xcbar = hyp.centers_bar[ii]
@@ -122,7 +122,7 @@ function dE!(hyp::HyperplaneSections, out, dxbar::AbstractVector, ii::Int)
 	return out
 end
 
-function dE(hyp::HyperplaneSections, dxbar::AbstractVector, ii::Int)
+function dE(hyp::SectionPS, dxbar::AbstractVector, ii::Int)
 	out = similar(dxbar, length(dxbar) + 1)
 	dE!(hyp, out, dxbar, ii)
 end
@@ -134,7 +134,7 @@ end
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `M`: the number of Poincaré sections. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `sections`: function or callable strict which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections.
+- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
 - `δ = 1e-8` used to compute the jacobian of the fonctional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
 - `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplan section)
 - `isparallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
@@ -165,10 +165,10 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw struct PoincareShootingProblem{Tf, Tsection <: HyperplaneSections} <: AbstractShootingProblem
+@with_kw struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
 	M::Int64 = 0								# number of Poincaré sections
 	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
-	section::Tsection = HyperplaneSections(M)	# Poincaré sections
+	section::Tsection = SectionPS(M)	# Poincaré sections
 	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
@@ -177,7 +177,7 @@ end
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
-			hyp::HyperplaneSections;
+			hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
@@ -203,14 +203,14 @@ function PoincareShootingProblem(F, p,
 			δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
 	return PoincareShootingProblem(F, p,
 					prob, alg,
-					HyperplaneSections(normals, centers);
+					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, isparallel = isparallel, kwargs...)
 end
 
 function PoincareShootingProblem(F, p,
 				prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
-				hyp::HyperplaneSections;
+				hyp::SectionPS;
 				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
@@ -231,7 +231,7 @@ function PoincareShootingProblem(F, p,
 				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
 	return PoincareShootingProblem(F, p,
 					prob1, alg2, prob2, alg2,
-					HyperplaneSections(normals, centers);
+					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, isparallel = isparallel, kwargs...)
 end
 
