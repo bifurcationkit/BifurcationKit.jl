@@ -92,7 +92,7 @@ module BifurcationKit
 	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
-	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem
+	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem, SectionPS, SectionSS
 
 	# Floquet multipliers computation
 	export FloquetQaDTrap, FloquetQaDShooting
