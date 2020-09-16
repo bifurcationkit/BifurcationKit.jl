@@ -37,9 +37,20 @@ end
 end
 
 # section for Standard Shooting
+"""
+$(TYPEDEF)
+
+This composite type (named for SectionStandardShooting) encodes a type of sections implemented by hyperplanes. It can be used in conjunction with [`ShootingProblem`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
+
+$(TYPEDFIELDS)
+
+"""
 struct SectionSS{Tn, Tc}
-	normals::Tn 	# normals to define hyperplanes
-	centers::Tc 	# representative point on each hyperplane
+	"Normals to define hyperplanes"
+	normals::Tn
+
+	"Representative point on each hyperplane"
+	centers::Tc
 end
 
 (sect::SectionSS)(u) = sectionShooting(u, sect.normals, sect.centers)
@@ -58,7 +69,7 @@ end
 This composite type implements the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver.
+- `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for type of section defined as a hyperplane.
 - `isparallel` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
