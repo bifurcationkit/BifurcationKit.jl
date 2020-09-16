@@ -14,12 +14,12 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution`
 - `plotEveryStep = 3`
 
-Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
+## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
 - `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited ressource, *e.g.* GPU.
 - `saveEigenvectors	= true`	**Important** for memory limited ressource, *e.g.* GPU.
 
-Handling bifurcation detection
+## Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
 - `detectFold = true` detect Fold bifurcations? It is a useful option although the detection of Fold is cheap. Indeed, it may happen that there is a lot of Fold points and this can saturate the memory in memory limited devices (e.g. on GPU)
 - `detectBifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 0, the eigen-elements are computed. If set to 2, bifurcation are detected along the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
@@ -28,12 +28,12 @@ Handling bifurcation detection
 - `maxBisectionSteps` maximum number of bisection steps
 - `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
-Handling `ds` adaptation (see [`continuation`](@ref) for more information)
+## Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 - `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
 - `thetaMin = 1.0e-3` minimum value of `theta`
 - `doArcLengthScaling` trigger further adaptation of `theta`
 
- Misc
+ ## Misc
 - `finDiffEps::T  = 1e-9` ε used in finite differences computations
 
 !!! tip "Mutating"
