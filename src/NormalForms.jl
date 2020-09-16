@@ -489,7 +489,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
 	end
-	verbose && printstyled(color=:green,"--> a = ", dgidp,"\n")
+	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp,"\n")
 
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Float64, N, N)
@@ -499,8 +499,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		~flag && @warn "linear solver did not converge"
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
 	end
-	verbose && (printstyled(color=:green, "\n--> b1 = \n");Base.display( d2gidxjdpk ))
-
+	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n");Base.display( d2gidxjdpk ))
 	# coefficients of x^2
 	d2gidxjdxk = zeros(Float64, N, N, N)
 	for ii in 1:N, jj in 1:N, kk in 1:N
@@ -509,7 +508,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	end
 
 	if verbose
-		printstyled(color=:green, "\n--> b2 = \n")
+		printstyled(color=:green, "\n--> b2 (∂²/∂x²) = \n")
 		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
 			Base.display( d2gidxjdxk[ii,:,:] ./ 2)
@@ -541,7 +540,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		end
 	end
 	if verbose
-		printstyled(color=:green,"\n--> b3 = \n")
+		printstyled(color=:green,"\n--> b3 (∂³/∂x³) = \n")
 		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
 			Base.display( d3gidxjdxkdxl[ii,:,:, :] ./ 6 )

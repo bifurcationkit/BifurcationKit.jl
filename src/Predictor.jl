@@ -71,7 +71,6 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 		return corrector(it, z_old, τ, z_pred, ds, θ, NaturalPred(), linearalgo;
 						normC = normC, callback = callback, kwargs...)
 	end
-	@show linearalgo
 	return newtonPALC(it, z_old, τ, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
 end
 ####################################################################################################
