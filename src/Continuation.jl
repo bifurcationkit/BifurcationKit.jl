@@ -186,7 +186,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	verbose && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
 	# Get parameters
-	@unpack pMin, pMax, maxSteps, newtonOptions = it.contParams
+	@unpack pMin, pMax, maxSteps, newtonOptions, η = it.contParams
 	if !(pMin <= p0 <= pMax)
 		@error "Initial parameter $p0 must be within bounds [$pMin, $pMax]"
 		return nothing
@@ -200,7 +200,6 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	verbose && println("\n--> convergence of initial guess = OK")
 	verbose && println("--> parameter = $(p0), initial step")
 	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
-	η = it.contParams.η
 	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
 			u0, set(it.par, it.param_lens, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."

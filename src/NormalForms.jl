@@ -489,17 +489,18 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
 	end
-	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp,"\n")
+	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp, "\n")
 
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Float64, N, N)
 	for ii in 1:N, jj in 1:N
-		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) - apply(L, ζs[jj])) ./ δ
+		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(dF(x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
 		Ψ01, flag = ls(Linv, E(R01))
 		~flag && @warn "linear solver did not converge"
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
 	end
-	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n");Base.display( d2gidxjdpk ))
+	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
+
 	# coefficients of x^2
 	d2gidxjdxk = zeros(Float64, N, N, N)
 	for ii in 1:N, jj in 1:N, kk in 1:N
@@ -540,7 +541,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		end
 	end
 	if verbose
-		printstyled(color=:green,"\n--> b3 (∂³/∂x³) = \n")
+		printstyled(color=:green, "\n--> b3 (∂³/∂x³) = \n")
 		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
 			Base.display( d3gidxjdxkdxl[ii,:,:, :] ./ 6 )
@@ -600,7 +601,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3) ./6 )
 
 	# −LΨ001 = R01
-	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, parbif)) ./ δ
+	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
 	Ψ001, _ = ls(L, -R01)
 
 	# (2iω−L)Ψ200 = R20(ζ,ζ)
@@ -613,7 +614,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	Ψ110, _ = ls(L, -R20)
 
 	# a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
-	av = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) - apply(L, ζ)) ./ δ
+	av = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) .- apply(dF(x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	av .+= 2 .* R2(ζ, Ψ001)
 	a = dot(av, ζstar)
 
