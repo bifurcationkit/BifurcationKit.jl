@@ -79,7 +79,7 @@ outfold, _, flag = @time newton(
 	F_chan, Jac_mat,
 	#index of the fold point
 	br, indfold, par, (@lens _.α))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300)
 	foldbranch, _, _ = @time continuation(
@@ -96,7 +96,7 @@ outfold, _, flag = @time newton(
 		br, indfold, par, (@lens _.α);
 		d2F = d2F
 		)
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 

@@ -164,7 +164,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# so we want to first iterate backward with half step size
 	# we turn off stepsizecontrol because it would not make a
 	# bisection otherwise
-	state.ds /= -1
+	state.ds *= -1
 	state.step = 0
 	state.stepsizecontrol = false
 
@@ -172,7 +172,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	if abs(state.ds) < iter.contParams.dsmin; return :none; end
 
-	# record sequence of unstable eigenvalue number
+	# record sequence of unstable eigenvalue number and parameters
 	nunstbls = [n2]
 	nimags   = [state.n_imag[1]]
 
@@ -187,14 +187,16 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	status = :guess
 
 	biflocated = false
+
+	# for a polynomial tangent predictor, we disable the update of the predictor parameters
+	# TODO Find better way to do this
 	if iter.tangentAlgo isa PolynomialPred
 		iter.tangentAlgo.update = false
 	end
 
 	# emulate a do-while
 	while true
-
-		if state.isconverged == false
+		if ~state.isconverged
 			@error "----> Newton failed when locating bifurcation using bisection method!"
 			break
 		 end
@@ -203,6 +205,8 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		if isnothing(next)
 			break
 		end
+
+		# perform one continuation step
 		(_, state) = next
 
 		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state; bisection = true)

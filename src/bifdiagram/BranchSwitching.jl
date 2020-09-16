@@ -38,7 +38,7 @@ $(SIGNATURES)
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br` from which you want to branch from
 - `optionsCont` options for the call to [`continuation`](@ref)
@@ -107,7 +107,7 @@ $(SIGNATURES)
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br` from which you want to branch from
 - `optionsCont` options for the call to [`continuation`](@ref)

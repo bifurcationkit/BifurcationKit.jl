@@ -10,7 +10,7 @@ end
 par = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
 ####################################################################################################
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 2, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
 	br, = continuation(
 		Fbp, [0.1, 0.1], par, (@lens _.μ),

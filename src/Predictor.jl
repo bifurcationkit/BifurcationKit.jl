@@ -264,7 +264,7 @@ mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredicto
 	coeffsSol::Vector{Tvec}
 	"coefficients for the polynomials for the parameter"
 	coeffsPar::Vector{T}
-	"update?"
+	"update the predictor ?"
 	update::Bool
 end
 

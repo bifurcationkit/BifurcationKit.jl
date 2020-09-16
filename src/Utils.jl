@@ -8,7 +8,7 @@ function displayIteration(i, funceval, residual, itlinear = 0)
 			@printf("%9d %16d %14.4e (%6d, %6d)\n", i, funceval, residual, itlinear[1], itlinear[2]);
 		else
 			# used for nested linear solves
-			@printf("%9d %16d %14.4e  ", i, funceval, residual);println(itlinear);
+			@printf("%9d %16d %14.4e  ", i, funceval, residual); println(itlinear);
 		end
 	end
 end

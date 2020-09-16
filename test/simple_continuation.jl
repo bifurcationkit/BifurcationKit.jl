@@ -21,7 +21,7 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140,
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _),opts) #(17.18 k allocations: 1.014 MiB)
+br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _),opts) #(16.12 k allocations: 772.250 KiB)
 
 # test with callbacks
 br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
@@ -34,8 +34,8 @@ contRes = ContResult(iter, state)
 @time continuation!(iter, state, contRes)
 eltype(iter)
 #
-# typeof(contRes)
-#
+typeof(contRes)
+
 # state = iterate(iter)[1]
 # 	 contRes = BK.ContResult(iter, state)
 # 	 @code_warntype continuation!(iter, state, contRes)
