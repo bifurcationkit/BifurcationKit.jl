@@ -54,13 +54,13 @@ end
 
 function _show(io::IO, bp::GenericBifPoint, ii)
 	if bp.status == :converged
-		@printf(io, "- #%3i, %7s at p ≈ %4.8f ± %1.0e, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i), bifurcation ∈ (%4.8f, %4.8f)\n", ii, bp.type, bp.param, bp.precision, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ..., bp.interval...)
+		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else
-		@printf(io, "- #%3i, %7s at p ≈ %4.8f        , step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ...)
+		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	end
 end
 
-_showFold(io, bp::GenericBifPoint, ii) = @printf(io, "- #%3i, %7s at p ≈ %4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s]\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status)
+_showFold(io, bp::GenericBifPoint, ii) = @printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;34m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 @inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
 # types for bifurcation point 1d kernel for the jacobian
