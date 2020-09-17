@@ -240,7 +240,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		verbose &&	printstyled(color=:blue,
 			"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
 			", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
-			"\n----> bifurcation ∈ ", interval,
+			"\n----> bifurcation ∈ ", getinterval(interval...),
 			", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
 			"\n----> 5 Eigenvalues closest to ℜ=0:\n")
 		verbose && Base.display(closesttozero(eiginfo[1])[1:min(5, length(getx(state)))])
@@ -289,5 +289,5 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		@warn "Bisection failed to locate bifurcation point precisely around p = $(getp(_state)). Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
 	end
 	verbose && println("----> Leaving [Loc-Bif]")
-	return status, interval
+	return status, getinterval(interval...)
 end
