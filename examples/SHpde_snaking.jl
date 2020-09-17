@@ -37,8 +37,9 @@ opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
 		maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 
 function cb(x,f,J,res,it,itl,optN; kwargs...)
+	fromNewton = get(kwargs, :fromNewton, false)
 	_x = get(kwargs, :z0, nothing)
-	if _x isa BorderedArray
+	if ~fromNewton
 		return norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p])<0.05
 	end
 	true

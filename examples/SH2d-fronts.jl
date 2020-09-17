@@ -96,7 +96,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> norm(x),
 		finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
-		callbackN = cb,
+		# callbackN = cb,
 		normC = x -> norm(x, Inf))
 ###################################################################################################
 using IncompleteLU
@@ -119,8 +119,9 @@ sol_hexa, _, flag = @time newton(
 ###################################################################################################
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
+	fromNewton = get(kwargs, :fromNewton, false)
+	if ~fromNewton
 
-	if _x isa BorderedArray
 		@show norm(_x.u - x)   abs(_x.p - kwargs[:p]) res
 		return norm(_x.u - x) < 1e4 && abs(_x.p - kwargs[:p])<0.05 && res < 1e5
 	else

@@ -111,7 +111,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 
 	# function to get new solutions based on Deflated Newton
 	function getNewSolution(_st::DCState, _p::Real, _idb)
-		newton(F, J, perturbSolution(getx(_st), _p, _idb), set(par, lens, _p), setproperties(optnewton; maxIter = 5optnewton.maxIter), deflationOp; normN = normN, callback = callbackN)
+		newton(F, J, perturbSolution(getx(_st), _p, _idb), set(par, lens, _p), setproperties(optnewton; maxIter = 5optnewton.maxIter), deflationOp; normN = normN, callback = callbackN, fromDeflatedNewton = true)
 	end
 
 	# we make a copy of the deflation operator

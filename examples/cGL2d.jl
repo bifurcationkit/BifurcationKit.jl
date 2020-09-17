@@ -163,7 +163,7 @@ poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 
 
 plot();BK.plotPeriodicPOTrap(orbitguess_f, M, Nx, Ny; ratio = 2);title!("")
-deflationOp = DeflationOperator(2.0,(x,y) -> dot(x[1:end-1],y[1:end-1]),1.0,[zero(orbitguess_f)])
+deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [zero(orbitguess_f)])
 
 ####################################################################################################
 # circulant pre-conditioner

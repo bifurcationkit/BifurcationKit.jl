@@ -108,7 +108,8 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, 
 # branch switching
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
-	if _x isa BorderedArray
+	fromNewton = get(kwargs, :fromNewton, false)
+	if ~fromNewton
 		return (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05)
 	end
 	true
