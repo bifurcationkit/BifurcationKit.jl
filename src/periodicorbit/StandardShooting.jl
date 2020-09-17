@@ -98,7 +98,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
 	M::Int64 = 0						# number of sections
 	flow::Tf = Flow()					# should be a Flow{TF, Tf, Td}
-	ds::Ts = diff(LinRange(0, 1, 5))	# difference of times for multiple shooting
+	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
 	section::Tsection = nothing			# sections for phase condition
 	isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
 end
