@@ -41,7 +41,8 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 		if it.contParams.detectBifurcation > 1 && detectBifucation(state)
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
-				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, :guess)
+				_T  = eltype(it)
+				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, :guess, (_T(0), _T(0)))
 				if bifpt.type != :none; push!(contResult.bifpoint, bifpt); end
 			end
 		end

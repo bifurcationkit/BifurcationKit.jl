@@ -25,7 +25,7 @@ outfold, hist, flag = @time BK.newton(
 	br0, 2, 1.0, (@lens _);
 	Jt = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 	d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.foldpoint[2][3], "\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.foldpoint[2].param, "\n")
 
 ####################################################################################################
 # Here is a more involved example
@@ -79,7 +79,7 @@ outfold, hist, flag = @time newton(
 	br, 1, (1.0, 1.), (@lens _[1]);
 	Jt = (x, r) -> Jacobian(x, r[1], r[2]),
 	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.foldpoint[1][3],"\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.foldpoint[1].param,"\n")
 
 outfoldco, hist, flag = @time BK.continuation(
 	(x, r) -> Fb(x, r),
@@ -187,7 +187,7 @@ outfold, hist, flag = @time BK.newton(
 	br0, 1, (0.9, 1.), (@lens _[1]); #index of the fold point
 	Jt = (x, r) -> JacobianR(x, r[1]),
 	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.foldpoint[1][3],"\n")
+		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.foldpoint[1].param,"\n")
 
 outfoldco, hist, flag = @time BK.continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),

@@ -160,19 +160,19 @@ foldpb = FoldProblemMinimallyAugmented(
 		(x, p) -> (Jac_mat(x, p)),
 		(x, p) -> transpose(Jac_mat(x, p)), nothing,
 		(@lens _[1]),
-		br.foldpoint[indfold][6],
-		br.foldpoint[indfold][6],
+		br.foldpoint[indfold].x,
+		br.foldpoint[indfold].x,
 		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, (a, 0.01)) |> norm
 
-outfold, _ = BK.newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold][6],	NewtonPar(verbose=true) )
+outfold, _ = BK.newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold].x,	NewtonPar(verbose=true) )
 	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold].param)
 
 # example with KrylovKit
 P = Jac_mat(sol.*0,(0,0))
 optils = NewtonPar(verbose=true, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
-outfold, _ = BK.newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold][6], optils )
-	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold][3])
+outfold, _ = BK.newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold].x, optils )
+	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold].param)
 
 # continuation of the fold point
 optcontfold = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 5)
@@ -189,7 +189,7 @@ foldpbVec(x,p) = Bd2Vec(foldpb(Vec2Bd(x),p))
 outfold, _ = newton((x, p) -> foldpbVec(x, p),
 			Bd2Vec(foldpt), (a, 0.01),
 			NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold[end], " from ", br.foldpoint[indfold][3])
+	println("--> Fold found at α = ", outfold[end], " from ", br.foldpoint[indfold].param)
 
 rhs = rand(n+1)
 Jac_fold_fdMA(u0) = BK.finiteDifferences( u-> foldpbVec(u, (a, 0.01)), u0)

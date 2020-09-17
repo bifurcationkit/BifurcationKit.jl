@@ -68,7 +68,7 @@ module BifurcationKit
 	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
 
 	# continuation methods
-	export ContinuationPar, ContResult, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
+	export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
 
 	# iterators for continuation
 	export ContIterable, iterate, ContState, solution, getx, getp

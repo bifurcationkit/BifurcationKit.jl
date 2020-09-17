@@ -42,19 +42,20 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && size(branch)[2] > 2 && detectFold(branch[1, end-2], branch[1, end-1], branch[1, end])
 		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in $(interval(branch[1, end-1],branch[1, end])) \n")
-		push!(contres.foldpoint, (
-				type = :fold,
-				idx = length(branch)-1,
-				param = branch[1, end-1],
-				norm = normC(z.u),
-				printsol = branch[2, end-1],
-				x = _copy(z.u), tau = copy(tau),
-				ind_ev = 0,
-				# it means the fold occurs between step-2 and step:
-				step = length(branch)-1,
-				status = :guess,
-				δ = (0, 0),
-				precision = -1.))
+		push!(contres.foldpoint, GenericBifPoint(
+			type = :fold,
+			idx = length(branch)-1,
+			param = branch[1, end-1],
+			norm = normC(z.u),
+			printsol = branch[2, end-1],
+			x = _copy(z.u), tau = copy(tau),
+			ind_ev = 0,
+			# it means the fold occurs between step-2 and step:
+			step = length(branch)-1,
+			status = :guess,
+			δ = (0, 0),
+			precision = -1.,
+			interval = (branch[1, end-1],branch[1, end-1])))
 		detected = true
 	end
 	detected
@@ -65,7 +66,7 @@ locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateF
 """
 Function for coarse detection of bifurcation points.
 """
-function getBifurcationType(contparams::ContinuationPar, state::ContState, normC, printsolution, verbosity, status::Symbol)
+function getBifurcationType(contparams::ContinuationPar, state::ContState, normC, printsolution, verbosity, status::Symbol, interval::Tuple{T, T}) where T
 	# this boolean ensures that edge cases are handled
 	detected = false
 
@@ -121,7 +122,7 @@ function getBifurcationType(contparams::ContinuationPar, state::ContState, normC
 
 	if detected
 		# record information about the bifurcation point
-		param_bif = (
+		param_bif = GenericBifPoint(
 			type = tp,
 			# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
 			idx = state.step + 1,
@@ -134,7 +135,8 @@ function getBifurcationType(contparams::ContinuationPar, state::ContState, normC
 			step = state.step,
 			status = status,
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
-			precision = abs(state.z_old.p - state.z_pred.p))
+			precision = abs(interval[2] - interval[1]),
+			interval = interval)
 		(verbosity>0) && printstyled(color=:red, "!! $(tp) Bifurcation point at p ≈ $(getp(state)), δn_unstable = $δn_unstable, δn_imag = $δn_imag \n")
 	end
 	return detected, param_bif
@@ -149,9 +151,14 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	@assert detectBifucation(_state) "No bifucation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
+	getinterval(a,b) = (min(a,b), max(a,b))
+
+	# type of scalars in iter
+	_T = eltype(iter)
+
 	# number of unstable eigenvalues
 	n2, n1 = _state.n_unstable
-	if n1 == -1 || n2 == -1 return :none end
+	if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
 
 	# we create a new state for stepping through the continuation routine
 	state = copy(_state)
@@ -170,11 +177,15 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	next = (state, state)
 
-	if abs(state.ds) < iter.contParams.dsmin; return :none; end
+	if abs(state.ds) < iter.contParams.dsmin; return :none, (_T(0), _T(0)); end
 
 	# record sequence of unstable eigenvalue number and parameters
 	nunstbls = [n2]
 	nimags   = [state.n_imag[1]]
+
+	# interval which contains the bifurcation point
+	interval = getinterval(getp(state), state.z_pred.p)
+	indinterval = 2 # index of active bound in the bisection, allows to track interval
 
 	verbose && println("----> [Loc-Bif] state.ds = ", state.ds)
 
@@ -221,9 +232,17 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			# we passed the bifurcation point, reverse continuation
 			state.ds /= -2
 			n_inversion += 1
+			indinterval = (indinterval == 2) ? 1 : 2
 		end
 
-		verbose &&	printstyled(color=:blue, "----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2), ", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,"\n 5 Eigenvalues closest to ℜ=0:\n")
+		state.step > 0 &&( interval = @set interval[indinterval] = getp(state))
+
+		verbose &&	printstyled(color=:blue,
+			"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
+			", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
+			"\n----> bifurcation ∈ ", interval,
+			", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
+			"\n----> 5 Eigenvalues closest to ℜ=0:\n")
 		verbose && Base.display(closesttozero(eiginfo[1])[1:min(5, length(getx(state)))])
 
 		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
@@ -270,5 +289,5 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		@warn "Bisection failed to locate bifurcation point precisely around p = $(getp(_state)). Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
 	end
 	verbose && println("----> Leaving [Loc-Bif]")
-	return status
+	return status, interval
 end

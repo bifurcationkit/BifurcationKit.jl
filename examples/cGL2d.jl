@@ -210,8 +210,7 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart
 opt_po = @set opt_newton.verbose = true
 	outpo_f, _, flag = @time newton(poTrapMF,
 			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-			(@set opt_po.linsolver = ls),
-			:FullMatrixFree;
+			(@set opt_po.linsolver = ls); linearPO = :FullMatrixFree,
 			normN = norminf,
 			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M; ratio = 2));true)
 			)
@@ -263,9 +262,9 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart
 	ls(Jpo, rand(ls.N))
 
 opt_po = @set opt_newton.verbose = true
-	outpo_f, hist, flag = @time BK.newton(poTrapMF,
+	outpo_f, hist, flag = @time newton(poTrapMF,
 			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-			(@set opt_po.linsolver = ls), :BorderedMatrixFree;
+			(@set opt_po.linsolver = ls); linearPO = :BorderedMatrixFree,
 			normN = norminf)
 
 function callbackPO(x, f, J, res, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
@@ -282,7 +281,7 @@ end
 
 opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2n), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-7, detectBifurcation = 1)
 # opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls))
 	br_pok2, upo , _= @time continuation(
 			poTrap, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
@@ -401,8 +400,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 # @time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls),
-	:FullMatrixFree; normN = norminf)
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls); normN = norminf, linearPO = :FullMatrixFree)
 
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
 @assert 1==0 "tester code_warntype dans POTrapFunctionalJac! st POTrapFunctional!"
@@ -410,8 +408,7 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 lsi = GMRESIterativeSolvers!(verbose = false, N = length(orbitguess_f), tol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi),
-	:FullMatrixFree; normN = norminf)
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi); normN = norminf, linearPO = :FullMatrixFree)
 
 ####################################################################################################
 # Computation of Fold of limit cycle
@@ -451,7 +448,7 @@ outfold, hist, flag = @time BK.newtonFold(
 		par_cgl, (@lens _.r);
 		options = (@set opt_po.linsolver = ls),
 		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
@@ -590,7 +587,7 @@ _dxh = rand(length(orbitguess_f));
 	norm(outh-Array(outd), Inf)
 
 
-outpo_f, hist, flag = @time BK.newton(
+outpo_f, hist, flag = @time newton(
 		poTrapMF(@set par_cgl.r = r_hopf - 0.01),
 		orbitguess_f,
 		(@set opt_po.linsolver = ls), :FullMatrixFree;

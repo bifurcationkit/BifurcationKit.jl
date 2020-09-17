@@ -87,14 +87,14 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [sol1])
 br, _ = @time continuation(
 	R_SH, Jac_sp,
 	(@set parSH.p = 1.), (@lens _.p),
-	setproperties(opts; ds = -0.01, maxSteps = 10000, pMax = 2.7, pMin = 0.5, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 0),
+	setproperties(opts; ds = -0.001, maxSteps = 20000, pMax = 2.7, pMin = -2.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 2),
 	deflationOp;
 	verbosity = 1,
-	maxBranches = 100,
+	maxBranches = 150,
 	perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),
 	normN = x -> norm(x, Inf64),
 	# tangentAlgo = SecantPred(),
 	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)
 
-plot(br, legend=false)
+plot(br, legend=false, color=:red, linewidth=1)

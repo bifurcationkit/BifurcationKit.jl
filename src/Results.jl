@@ -1,6 +1,7 @@
 abstract type BranchResult end
 
-# Structure to hold result
+####################################################################################################
+# Structure to hold continuation result
 """
 $(TYPEDEF)
 
@@ -8,34 +9,19 @@ Structure which holds the results after a call to [`continuation`](@ref).
 
 $(TYPEDFIELDS)
 
-          A vector holding the set of bifurcation points detected during the computation of the branch. Each entry of the vector contains a tuple with fields:
--
-    - `type` bifurcation type, `:hopf, :bp...`,
-    - `idx` is the index in `eig` (see above) for which the bifurcation occurs.
-    - `param` parameter value at the bifurcation point
-    - `norm` norm of the equilibrium at the bifurcation point
-    - `printsol = printSolution(x, param)`
-    - `x` equilibrium at the bifurcation point
-    - `tau` tangent along the branch at the bifurcation point
-    - `ind_ev` is the eigenvalue index responsible for the bifurcation (if applicable)
-    - `step` is the continuation step at which the bifurcation occurs,
-    - `status ∈ {:converged, :guess}` indicates if the bisection algorithm was successful in detecting the bifurcation point
-    - `δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point.
-    - `precision` precision in location of the bifurcation point
-
 # Associated methods
 - `length(br)` number of the continuation steps
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 """
 @with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:,i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, theta, i)` for each continuation step `i`."
+	"holds the low-dimensional information about the branch. More precisely, `branch[:, i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, theta, i)` for each continuation step `i`."
 	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
 
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
-	"A vector holding the set of fold points detected during the computation of the branch."
+	"A vector holding the set of fold points detected during the computation of the branch. See [`GenericBifPoint`](@docs) for a description of the fields."
 	foldpoint::Vector{Biftype}
 
 	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step. Hence, the stability `stability[k]` should match `eig[k]` which corresponds to `branch[k]` for a given `k`"
@@ -65,21 +51,15 @@ $(TYPEDFIELDS)
 	"Parameter axis used for computing the branch"
 	param_lens::Tl
 
-	# the explanation for this field is given after. Always put this field in last position
-	""
+	"A vector holding the set of bifurcation points (other than fold) detected during the computation of the branch. See [`GenericBifPoint`](@docs) for a description of the fields."
 	bifpoint::Vector{Biftype}
-
 end
 
 Base.length(br::ContResult) = length(br.branch[1, :])
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-@inline vectortype(br::BranchResult) = ((eltype(br.bifpoint)).parameters[2]).parameters[6]
+@inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[2]
 eigenvals(br::BranchResult, ind) = br.eig[ind].eigenvals
 eigenvec(br::BranchResult, ind, indev) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
-
-_show(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f ± %1.0e, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.precision, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
-_showFold(io, bp, ii) = @printf(io, "- #%3i, %7s at p ≈ % 4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ[1], bp.δ[2])
-@inline kerneldim(bp) = abs(bp.δ[1])
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
 function Base.show(io::IO, br::ContResult, comment = "")
@@ -108,7 +88,7 @@ end
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
  function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = (type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1))
+	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0

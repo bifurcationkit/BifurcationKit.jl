@@ -68,7 +68,7 @@ optc = ContinuationPar(pMin = -1., pMax = 10., ds = 0.1, maxSteps = 150, detectB
 	br1, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), optc; plot=false, verbosity = 0)
 @test teststab(br1)
 
-br2, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 3)
+br2, _ = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
 @test teststab(br2)
 
 bifpoint2 = [bp.param for bp in br2.bifpoint]

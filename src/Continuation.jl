@@ -312,14 +312,16 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
 				status::Symbol = :guess
+				_T = eltype(it)
+				interval::Tuple{_T, _T} = (zero(_T), zero(_T))# interval containing the bifurcation point
 				if contParams.detectBifurcation > 2
 					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
-					status = locateBifurcation!(it, state, it.verbosity > 2)
+					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end
 				# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 				if detectBifucation(state)
-					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status)
+					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status, interval)
 					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
 					# detect loop in the branch
 					# contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))

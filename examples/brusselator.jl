@@ -129,7 +129,7 @@ ind_hopf = 1
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
 if 1==0
-	br_hopf, u1_hopf = @time BK.continuation(
+	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
 		br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); verbosity = 2, normC = norminf)
@@ -139,14 +139,14 @@ end
 # test with analytical Hessian but with dummy expression ;)
 d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
 
-hopfpoint, hist, flag = @time BK.newton(
+hopfpoint, hist, flag = @time newton(
 	Fbru, Jbru_sp,
 	br, ind_hopf, par_bru, (@lens _.l);
 	options = (@set optnew.verbose = true),
 	d2F = d2Fbru, normN = norminf)
 
 if 1==0
-	br_hopf, u1_hopf = @time BK.continuation(
+	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
 		br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); plot = true,
@@ -209,7 +209,7 @@ opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 2, newtonOptions = opt_po, saveSolEveryNsteps = 2,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 2, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 5,
 	nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15)
@@ -229,9 +229,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0
 
 ####################################################################################################
 using IncompleteLU
-Jpo = @time poTrap(l_hopf + 0.01)(Val(:JacFullSparse), orbitguess_f)
+Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
 @time lu(Jpo)
-Jpo = @time poTrap(l_hopf + 0.01)(Val(:JacCyclicSparse), orbitguess_f)
+Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
 @time lu(Jpo)
 
 Precilu = @time ilu(Jpo, τ = 0.005)
@@ -239,9 +239,9 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo,1), restart
 	@time ls(Jpo, rand(ls.N))
 
 opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-	outpo_f, _, flag = @time BK.newton(poTrap(l_hopf + 0.01),
-			orbitguess_f,
-			(@set opt_po.linsolver = ls), :BorderedMatrixFree;
+	outpo_f, = @time BK.newton(poTrap,
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
+			(@set opt_po.linsolver = ls); linearPO = :BorderedMatrixFree,
 			normN = norminf,
 			# callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x), " T = ", x[end], ", T0 = ",orbitguess_f[end]);true)
 			)
@@ -249,9 +249,9 @@ opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 	BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
-	br_pok, _ , _= @time BK.continuationPOTrap(poTrap,
-			outpo_f, l_hopf + 0.01,
-			opts_po_cont; linearPO = :FullMatrixFree,
+	br_pok, _ , _= @time BK.continuation(poTrap,
+			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
+			opts_po_cont; linearPO = :BorderedMatrixFree,
 			verbosity = 2,
 			plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
@@ -261,7 +261,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0., nInversion = 4)
 
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)

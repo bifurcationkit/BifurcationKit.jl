@@ -4,6 +4,65 @@ abstract type SimpleBranchPoint <: BranchPoint end
 
 istranscritical(bp::BranchPoint) = false
 ####################################################################################################
+"""
+$(TYPEDEF)
+
+Structure to record a generic bifurcation point which was only detected by a change in the number of stable eigenvalues.
+
+$(TYPEDFIELDS)
+"""
+@with_kw struct GenericBifPoint{T, Tv} <: BifurcationPoint
+	"Bifurcation type, `:hopf, :bp...`,"
+	type::Symbol = :none
+
+	"Index in `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
+	idx::Int64 = 0
+
+	"Parameter value at the bifurcation point, this is an estimate."
+	param::T = T(0)
+
+	"Norm of the equilibrium at the bifurcation point"
+	norm::T  = T(0)
+
+	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
+	printsol::T = T(0)
+
+	"Equilibrium at the bifurcation point"
+	x::Tv = Vector{T}(undef, 0)
+
+	"Tangent along the branch at the bifurcation point"
+	tau::BorderedArray{Tv, T} = BorderedArray(x0, T(0))
+
+	"Eigenvalue index responsible for the bifurcation (if applicable)"
+	ind_ev::Int64 = 0
+
+	"Continuation step at which the bifurcation occurs"
+	step::Int64 = 0
+
+	"`status ∈ {:converged, :guess}` indicates whether the bisection algorithm was successful in detecting the bifurcation point"
+	status::Symbol = :guess
+
+	"`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point."
+	δ::Tuple{Int64,Int64} = (0,0)
+
+	"Precision in the location of the bifurcation point"
+	precision::T = T(-1)
+
+	"Interval containing the bifurcation point"
+	interval::Tuple{T,T} = (T(0), T(0))
+end
+
+function _show(io::IO, bp::GenericBifPoint, ii)
+	if bp.status == :converged
+		@printf(io, "- #%3i, %7s at p ≈ %4.8f ± %1.0e, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i), bifurcation ∈ (%4.8f, %4.8f)\n", ii, bp.type, bp.param, bp.precision, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ..., bp.interval...)
+	else
+		@printf(io, "- #%3i, %7s at p ≈ %4.8f        , step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s], δ = (%2i, %2i)\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status, bp.δ...)
+	end
+end
+
+_showFold(io, bp::GenericBifPoint, ii) = @printf(io, "- #%3i, %7s at p ≈ %4.8f, step = %3i, eigenelements in eig[%3i], ind_ev = %3i [%9s]\n", ii, bp.type, bp.param, bp.step, bp.idx, bp.ind_ev, bp.status)
+@inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
+####################################################################################################
 # types for bifurcation point 1d kernel for the jacobian
 
 for op in (:Pitchfork, :Fold, :Transcritical)
