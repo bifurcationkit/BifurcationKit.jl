@@ -1,4 +1,4 @@
-# Temperature model with `ApproxFun`
+# Temperature model with `ApproxFun` (intermediate)
 
 ```@contents
 Pages = ["tutorials1b.md"]

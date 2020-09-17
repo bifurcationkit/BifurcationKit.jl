@@ -1,4 +1,4 @@
-# Temperature model
+# Temperature model (simplest example for equilibria)
 
 ```@contents
 Pages = ["tutorials1.md"]

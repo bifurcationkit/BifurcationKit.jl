@@ -1,4 +1,4 @@
-# The Swift-Hohenberg equation on the GPU (non-local)
+# The Swift-Hohenberg equation (non-local) on the GPU (Advanced)
 
 ```@contents
 Pages = ["tutorials2b.md"]

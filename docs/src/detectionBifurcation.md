@@ -4,13 +4,13 @@ The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p
 
 - `contParams.detectBifurcation = 2`
 
-The bifurcation points are first located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalue λ is declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
+The bifurcation points are located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalue λ is declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
     
-## Precise detection of bifurcation points    
+## Precise detection of bifurcation points using Bisection    
 
 Note that the bifurcation points detected when `detectBifurcation = 2` are only *approximate* bifurcation points. Indeed, we only signal that, in between two continuation steps *which can be large*, a (several) bifurcation has been detected. Hence, we only have a rough idea of where the bifurcation is located, unless your `dsmax` is very small... This can be improved as follows.
 
-If you choose `detectBifurcation = 3`, a bisection algorithm is used to locate the bifurcation points more precisely. It means that we recursively track down the change in stability. Some options in [`ContinuationPar`](@ref) control this behavior:
+If you choose `detectBifurcation = 3`, a **bisection algorithm** is used to locate the bifurcation points more precisely. It means that we recursively track down the change in stability. Some options in [`ContinuationPar`](@ref) control this behavior:
 
 - `nInversion`: number of sign inversions in the bisection algorithm
 - `maxBisectionSteps` maximum number of bisection steps
