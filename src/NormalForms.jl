@@ -8,7 +8,7 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 
 	for (idvp, λ) in enumerate(λs)
 		I = argmin(abs.(λstar .- λ))
-		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might lead to unprecise normal form computation."
+		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might lead to unprecise normal form computation. You can perhaps increase the argument `nev`."
 		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
 		ζstar = geteigenvector(eigsolver, evstar, I)
 		push!(ζstars, copy(ζstar))
@@ -30,7 +30,7 @@ function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	I = argmin(abs.(λstar .- λ))
 	verbose && (println("--> left eigenvalues = ");Base.display(λstar))
 	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
-	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re=0. We found $(real(λstar[I])) !≈ 0"
+	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re=0. We found $(real(λstar[I])) !≈ 0.  You can perhaps increase the argument `nev`."
 	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return copy(ζstar), λstar[I]
 end

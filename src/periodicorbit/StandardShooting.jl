@@ -96,10 +96,10 @@ or
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
-	M::Int64 = 0						# number of sections
-	flow::Tf = Flow()					# should be a Flow{TF, Tf, Td}
+	M::Int64 = 0							# number of sections
+	flow::Tf = Flow()						# should be a Flow{TF, Tf, Td}
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
-	section::Tsection = nothing			# sections for phase condition
+	section::Tsection = nothing				# sections for phase condition
 	isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
 end
 
