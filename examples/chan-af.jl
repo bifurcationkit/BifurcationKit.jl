@@ -19,7 +19,7 @@ length(x::ApproxFun.Fun) = length(x.coefficients)
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 
 # do not put y .= a .* x .+ y, this puts a lot of coefficients!
-axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a * x + y)
+axpy!(a, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a * x + y)
 axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a * x + b * y)
 rmul!(y::ApproxFun.Fun, b::Float64) = (y.coefficients .*= b; y)
 rmul!(y::ApproxFun.Fun, b::Bool) = b == true ? y : (y.coefficients .*= 0; y)

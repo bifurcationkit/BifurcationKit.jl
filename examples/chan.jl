@@ -31,8 +31,6 @@ function Jac_mat(u, p)
 	return J
 end
 
-Jac_fd(u0, α, β = 0.) = finiteDifferences(u -> F_chan(u, α, β = β), u0)
-
 n = 101
 	a = 3.3
 	par = (α = 3.3, β = 0.01)
