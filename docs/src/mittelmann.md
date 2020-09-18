@@ -141,7 +141,8 @@ Bifurcation points:
 - #  3,      bp at p ≈ 0.15215124 ± 7e-06, step =  48, eigenelements in eig[ 49], ind_ev =   4 [converged], δ = ( 1,  0), bifurcation ∈ (0.15215818, 0.15215124)
 - #  4,      nd at p ≈ 0.03551852 ± 3e-05, step =  76, eigenelements in eig[ 77], ind_ev =   6 [converged], δ = ( 2,  0), bifurcation ∈ (0.03554981, 0.03551852)
 Fold points:
-- #  1,    fold at p ≈ 0.36787944, step =  19, eigenelements in eig[ 19], ind_ev =   0 [    guess]```
+- #  1,    fold at p ≈ 0.36787944, step =  19, eigenelements in eig[ 19], ind_ev =   0 [    guess]
+```
 
 We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
 
