@@ -82,7 +82,7 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
-br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)</code></pre><p><img src="../cgl2d-bif.png" alt/></p><h2 id="Normal-form-computation-1"><a class="docs-heading-anchor" href="#Normal-form-computation-1">Normal form computation</a><a class="docs-heading-anchor-permalink" href="#Normal-form-computation-1" title="Permalink"></a></h2><p>We compute the Hopf normal of the first bifurcation point.</p><pre><code class="language-julia">using ForwardDiff
+br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)</code></pre><p><img src="../cgl2d-bif.png" alt/></p><h2 id="Normal-form-computation-1"><a class="docs-heading-anchor" href="#Normal-form-computation-1">Normal form computation</a><a class="docs-heading-anchor-permalink" href="#Normal-form-computation-1" title="Permalink"></a></h2><p>We compute the Hopf normal of the first bifurcation point.</p><pre><code class="language-julia">using ForwardDiff
 
 function D(f, x, p, dx)
 	return ForwardDiff.derivative(t-&gt;f(x .+ t .* dx, p), 0.)
@@ -144,7 +144,7 @@ BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);</code></pre><p>which gives
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4353e-14        15
-  2.021483 seconds (165.06 k allocations: 1.330 GiB, 12.99% gc time)
+  2.021483 seconds (136.39 k allocations: 1.329 GiB, 8.33% gc time)
 --&gt; T = 6.532023020978835, amplitude = 0.2684635643839235</code></pre><p>and</p><p><img src="../cgl2d-po-newton.png" alt/></p><p>At this point, we are still wasting a lot of resources, because the matrix-free version of the jacobian of the functional uses the jacobian of the vector field <code>x -&gt;  Jcgl(x, p)</code>. Hence, it builds <code>M</code> sparse matrices for each evaluation!! Let us create a problem which is fully Matrix Free:</p><pre><code class="language-julia"># computation of the first derivative using automatic differentiation
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -&gt; Fcgl(x .+ t .* dx, p), 0.)
 
@@ -171,7 +171,7 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, outpo_f[end], &
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4471e-14        15
-  1.446924 seconds (69.12 k allocations: 488.760 MiB, 5.93% gc time)</code></pre><p>The speedup will increase a lot for larger <span>$N_x, N_y$</span>. Also, for Floquet multipliers computation, the speedup will be substantial.</p><h3 id="Removing-most-allocations-(Advanced-and-Experimental)-1"><a class="docs-heading-anchor" href="#Removing-most-allocations-(Advanced-and-Experimental)-1">Removing most allocations (Advanced and Experimental)</a><a class="docs-heading-anchor-permalink" href="#Removing-most-allocations-(Advanced-and-Experimental)-1" title="Permalink"></a></h3><p>We show here how to remove most allocations and speed up the computations. This is an <strong>experimental</strong> feature as the Floquet multipliers computation is not yet readily available in this case. To this end, we rewrite the functional using <em>inplace</em> formulation and trying to avoid allocations. This can be done as follows:</p><pre><code class="language-julia"># compute just the nonlinearity
+  1.446924 seconds (28.68 k allocations: 486.953 MiB, 6.45% gc time)</code></pre><p>The speedup will increase a lot for larger <span>$N_x, N_y$</span>. Also, for Floquet multipliers computation, the speedup will be substantial.</p><h3 id="Removing-most-allocations-(Advanced-and-Experimental)-1"><a class="docs-heading-anchor" href="#Removing-most-allocations-(Advanced-and-Experimental)-1">Removing most allocations (Advanced and Experimental)</a><a class="docs-heading-anchor-permalink" href="#Removing-most-allocations-(Advanced-and-Experimental)-1" title="Permalink"></a></h3><p>We show here how to remove most allocations and speed up the computations. This is an <strong>experimental</strong> feature as the Floquet multipliers computation is not yet readily available in this case. To this end, we rewrite the functional using <em>inplace</em> formulation and trying to avoid allocations. This can be done as follows:</p><pre><code class="language-julia"># compute just the nonlinearity
 function NL!(f, u, p, t = 0.)
 	@unpack r, μ, ν, c3, c5 = p
 	n = div(length(u), 2)
@@ -247,7 +247,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4359e-14        15
-  1.354356 seconds (23.46 k allocations: 154.455 MiB, 2.69% gc time)</code></pre><p>Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of <code>BlockBandedMatrices.jl</code> for the Laplacian operator, etc.</p><h3 id="Other-linear-formulation-1"><a class="docs-heading-anchor" href="#Other-linear-formulation-1">Other linear formulation</a><a class="docs-heading-anchor-permalink" href="#Other-linear-formulation-1" title="Permalink"></a></h3><p>We could use another way to &quot;invert&quot; jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix <span>$J_c$</span> (see <a href="../periodicOrbitFD/#Periodic-orbits-based-on-finite-differences-1">Periodic orbits based on finite differences</a>) which has a smaller memory footprint:</p><pre><code class="language-julia">Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
+  1.354356 seconds (2.22 k allocations: 153.499 MiB)</code></pre><p>Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of <code>BlockBandedMatrices.jl</code> for the Laplacian operator, etc.</p><h3 id="Other-linear-formulation-1"><a class="docs-heading-anchor" href="#Other-linear-formulation-1">Other linear formulation</a><a class="docs-heading-anchor-permalink" href="#Other-linear-formulation-1" title="Permalink"></a></h3><p>We could use another way to &quot;invert&quot; jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix <span>$J_c$</span> (see <a href="../periodicOrbitFD/#Periodic-orbits-based-on-finite-differences-1">Periodic orbits based on finite differences</a>) which has a smaller memory footprint:</p><pre><code class="language-julia">Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
 Precilu = @time ilu(Jpo2, τ = 0.005)
 ls2 = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 
@@ -265,14 +265,14 @@ outpo_f, hist, flag = @time newton(
         4                5     3.2492e-07        36
         5                6     9.3987e-10        44
         6                7     3.5842e-13        58
-  3.567416 seconds (143.70 k allocations: 1.010 GiB, 4.59% gc time)</code></pre><p><strong>Hence, it seems better to use the previous preconditioner.</strong></p><h2 id="Continuation-of-periodic-solutions-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-solutions-1">Continuation of periodic solutions</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-solutions-1" title="Permalink"></a></h2><p>We can now perform continuation of the newly found periodic orbit and compute the Floquet multipliers using Matrix-Free methods.</p><pre><code class="language-julia"># set the eigensolver for the computation of the Floquet multipliers
+  3.567416 seconds (61.43 k allocations: 1.003 GiB, 4.46% gc time)</code></pre><p><strong>Hence, it seems better to use the previous preconditioner.</strong></p><h2 id="Continuation-of-periodic-solutions-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-solutions-1">Continuation of periodic solutions</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-solutions-1" title="Permalink"></a></h2><p>We can now perform continuation of the newly found periodic orbit and compute the Floquet multipliers using Matrix-Free methods.</p><pre><code class="language-julia"># set the eigensolver for the computation of the Floquet multipliers
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 
 # parameters for the continuation
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), 
 	nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 
-br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f, 
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -289,7 +289,7 @@ function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = po
 	true
 end
 
-br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f, 
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
@@ -313,7 +313,7 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restar
 	# defined above
 	options = (@set opt_po.linsolver = ls),
 	d2F = (x, p, dx1, dx2) -&gt; d2Fcglpb(z -&gt; poTrap(z, p), x, dx1, dx2))
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p,&quot; from &quot;, br_po.foldpoint[indfold][3],&quot;\n&quot;)</code></pre><p>and this gives</p><pre><code class="language-julia"> Newton Iterations 
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α = &quot;, outfold.p,&quot; from &quot;, br_po.foldpoint[indfold].param,&quot;\n&quot;)</code></pre><p>and this gives</p><pre><code class="language-julia"> Newton Iterations 
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     4.6366e-01         0
@@ -327,10 +327,10 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α
 --&gt; We found a Fold Point at α = 0.9470569704262517 from 0.9481896723164748</code></pre><p>Finally, one can perform continuation of the Fold bifurcation point as follows</p><pre><code class="language-julia">optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
 outfoldco, hist, flag = @time BK.continuationFold(
-	(x, r, p) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
-	(x, r, p) -&gt; poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
-	br_po, indfold, par_cgl.c5, optcontfold;
-	d2F = p -&gt; ((x, r, dx1, dx2) -&gt; d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	(x, p) -&gt; poTrap(x, p),
+	(x, p) -&gt; poTrap(Val(:JacFullSparse), x, p),
+	br_po, indfold, par_cgl, (@lens _.r), (@lens _.c5), optcontfold;
+	d2F = (x, p, dx1, dx2) -&gt; d2Fcglpb(z-&gt;poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)</code></pre><p>which yields:</p><p><img src="../cgl2d-po-foldcont.png" alt/></p><p>There is still room for a lot of improvements here. Basically, the idea would be to use full Matrix-Free the jacobian functional and its transpose.</p><h2 id="Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1">Continuation of periodic orbits on the GPU (Advanced)</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1" title="Permalink"></a></h2><div class="admonition is-success"><header class="admonition-header"></header><div class="admonition-body"><p>This is a very neat example <strong>all done</strong> on the GPU using the following ingredients: Matrix-Free computation of periodic orbits using preconditioners.</p></div></div><p>We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the <strong>big</strong> preconditioner. </p><blockquote><p>Note that we use the parameters <code>Nx = 82; Ny = 42; M=30</code>.</p></blockquote><pre><code class="language-julia"># computation of the first derivative
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -&gt; Fcgl(x .+ t .* dx, p), 0.)
 
@@ -368,14 +368,14 @@ poTrapMFGPU = PeriodicOrbitTrapProblem(
 	M, ls0gpu;
 	ongpu = true) # this is required to alter the way the constraint is handled</code></pre><p>Let us have a look at the linear solvers and compare the speed on CPU and GPU:</p><pre><code class="language-julia">ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
    # runs in 	2.990495 seconds (785 allocations: 31.564 MiB, 0.98% gc time)
-	outh, _, _ = @time ls((Jpo), orbitguess_f)
+	outh, = @time ls((Jpo), orbitguess_f)
 
 Precilu_gpu = LUperso(LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U&#39;))));
 lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
 	Jpo_gpu = CuArrays.CUSPARSE.CuSparseMatrixCSR(Jpo);
 	orbitguess_cu = CuArray(orbitguess_f)
 	# runs in 1.751230 seconds (6.54 k allocations: 188.500 KiB, 0.43% gc time)
-	outd, _, _ = @time lsgpu(Jpo_gpu, orbitguess_cu)</code></pre><p>So we can expect a pretty descent x2 speed up in computing the periodic orbits. We can thus call newton:</p><pre><code class="language-julia">opt_po = @set opt_newton.verbose = true
+	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)</code></pre><p>So we can expect a pretty descent x2 speed up in computing the periodic orbits. We can thus call newton:</p><pre><code class="language-julia">opt_po = @set opt_newton.verbose = true
 	outpo_f, hist, flag = @time newton(poTrapMFGPU,
 		orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01),
 		(@set opt_po.linsolver = lsgpu), :FullMatrixFree;
@@ -384,4 +384,4 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 13 September 2020 19:39">Sunday 13 September 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 September 2020 19:46">Friday 18 September 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

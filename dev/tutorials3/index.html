@@ -69,9 +69,9 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060,
 	# specific options for precise localization of Hopf points
-	nInversion = 6, tolBisectionEigenvalue = 1e-4)
+	nInversion = 6)
 
-	br, _ = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
+	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		printSolution = (x,p) -&gt; x[div(n,2)], normC = norminf)</code></pre><p>We obtain the following bifurcation diagram with 3 Hopf bifurcation points</p><p><img src="../bru-sol-hopf.png" alt/></p><h2 id="Normal-form-computation-1"><a class="docs-heading-anchor" href="#Normal-form-computation-1">Normal form computation</a><a class="docs-heading-anchor-permalink" href="#Normal-form-computation-1" title="Permalink"></a></h2><p>We can compute the normal form of the Hopf points as follows</p><pre><code class="language-julia">using ForwardDiff
@@ -91,7 +91,7 @@ hopfpt = BK.computeNormalForm(jet..., br, 1)</code></pre><p>and you should get</
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
 	br, ind_hopf, par_bru, (@lens _.l); normN = norminf)
-flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, hopfpoint.p[1], &quot;, ω = &quot;, hopfpoint.p[2], &quot;, from l = &quot;, br.bifpoint[ind_hopf].param, &quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 1.0239851696548035, ω = 2.1395092895339842, from l = 1.0353910524340078</code></pre><p>We now perform a Hopf continuation with respect to the parameters <code>l, β</code></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>You don&#39;t need to call <code>newtonHopf</code> first in order to use <code>continuationHopf</code>.</p></div></div><pre><code class="language-julia">br_hopf, _ = @time continuation(Fbru, Jbru_sp,
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, hopfpoint.p[1], &quot;, ω = &quot;, hopfpoint.p[2], &quot;, from l = &quot;, br.bifpoint[ind_hopf].param, &quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia">--&gt; We found a Hopf Point at l = 1.0239851696548035, ω = 2.1395092895339842, from l = 1.0353910524340078</code></pre><p>We now perform a Hopf continuation with respect to the parameters <code>l, β</code></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>You don&#39;t need to call <code>newtonHopf</code> first in order to use <code>continuationHopf</code>.</p></div></div><pre><code class="language-julia">br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)</code></pre><p>which gives using <code>plot(br_hopf, xlabel=&quot;beta&quot;, ylabel = &quot;l&quot;)</code></p><p><img src="../bru-hopf-cont.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Finite-differences)-1"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Finite-differences)-1">Computation of the branch of periodic orbits (Finite differences)</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Finite-differences)-1" title="Permalink"></a></h2><p>We now compute the bifurcated branches of periodic solutions from the Hopf points using <a href="../periodicOrbitFD/#Periodic-orbits-based-on-finite-differences-1">Periodic orbits based on finite differences</a>. One has just to pass a <a href="../library/#BifurcationKit.PeriodicOrbitTrapProblem"><code>PeriodicOrbitTrapProblem</code></a>.</p><p>We start by providing a linear solver and some options for the continuation to work</p><pre><code class="language-julia"># automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
@@ -100,7 +100,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)</code></pre><pre><code class="language-julia"># number of time slices for the periodic orbit
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
-br_po, _ = continuation(
+br_po, = continuation(
 	# arguments for branch switching from the first 
 	# Hopf bifurcation point
 	jet..., br, 1,
@@ -115,15 +115,15 @@ br_po, _ = continuation(
 	linearPO = :FullLU,
 	# regular options for continuation
 	verbosity = 3,	plot = true, 
-	plotSolution = (x, p; kwargs...) -&gt; heatmap!(getTrajectory(probFD, x, par_bru).u&#39;; ylabel=&quot;time&quot;, color=:viridis, kwargs...), normC = norminf)</code></pre><p><img src="../bru-po-cont-br0.png" alt/></p><p>Using the above call, it is very easy to find the first branches:</p><p><img src="../bru-po-cont-3br0.png" alt/></p><p>We note that there are several branch points (blue points) on the above diagram. This means that there are additional branches in the neighborhood of these points. We now turn to automatic branch switching on these branches. This functionality, as we shall see, is only provided for <a href="../library/#BifurcationKit.PeriodicOrbitTrapProblem"><code>PeriodicOrbitTrapProblem</code></a>.</p><p>Let us say that we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:</p><pre><code class="language-julia">br_po2, _ = BK.continuationPOTrapBPFromPO(
+	plotSolution = (x, p; kwargs...) -&gt; heatmap!(getTrajectory(probFD, x, par_bru).u&#39;; ylabel=&quot;time&quot;, color=:viridis, kwargs...), normC = norminf)</code></pre><p><img src="../bru-po-cont-br0.png" alt/></p><p>Using the above call, it is very easy to find the first branches:</p><p><img src="../bru-po-cont-3br0.png" alt/></p><p>We note that there are several branch points (blue points) on the above diagram. This means that there are additional branches in the neighborhood of these points. We now turn to automatic branch switching on these branches. This functionality, as we shall see, is only provided for <a href="../library/#BifurcationKit.PeriodicOrbitTrapProblem"><code>PeriodicOrbitTrapProblem</code></a>.</p><p>Let&#39;s say we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:</p><pre><code class="language-julia">br_po2, = BK.continuationPOTrapBPFromPO(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont; linearPO = :FullLU,
-	#ampfactor = 1., δp = 0.01,	
+	ampfactor = 1., δp = 0.01,	
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; (heatmap!(getTrajectory(probFD, x, par_bru).u&#39;; ylabel=&quot;time&quot;, color=:viridis, kwargs...)),
-	normC = norminf)</code></pre><p>It is now straightforward to get the full following diagram</p><p><img src="../bru-po-cont-3br.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1">Computation of the branch of periodic orbits (Standard Shooting)</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1" title="Permalink"></a></h2><blockquote><p>Note that what follows is not really optimized on the <code>DifferentialEquations.jl</code> side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern,...</p></blockquote><p>We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field <code>Fbru</code>. We will show how to do this with an implicit method <code>Rodas4P</code> from <code>DifferentialEquations.jl</code>. Note that the user can pass its own time stepper but for convenience, we use the ones in <code>DifferentialEquations.jl</code>. More information regarding the shooting method is contained in <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method-1">Periodic orbits based on the shooting method</a>. To define the flow, it is better to have an <strong>inplace</strong> version of the vector field:</p><pre><code class="language-julia">function Fbru!(f, x, p)
+	normC = norminf)</code></pre><p>It is now straightforward to get the full following diagram</p><p><img src="../bru-po-cont-3br.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1">Computation of the branch of periodic orbits (Standard Shooting)</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1" title="Permalink"></a></h2><blockquote><p>Note that what follows is not really optimized on the <code>DifferentialEquations.jl</code> side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern, ...</p></blockquote><p>We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field <code>Fbru</code>. We will show how to do this with an implicit method <code>Rodas4P</code> from <code>DifferentialEquations.jl</code>. Note that the user can pass its own time stepper but for convenience, we use the ones in <code>DifferentialEquations.jl</code>. More information regarding the shooting method is contained in <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method-1">Periodic orbits based on the shooting method</a>. To define the flow, it is better to have an <strong>inplace</strong> version of the vector field:</p><pre><code class="language-julia">function Fbru!(f, x, p)
 	@unpack α, β, D1, D2, l = p
 	n = div(length(x), 2)
 	h = 1.0 / n; h2 = h*h
@@ -161,7 +161,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax =
 	detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200)
 
-br, _ = @time continuation(Fbru, Jbru_sp,
+br, = @time continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
 	printSolution = (x, p)-&gt;x[div(n,2)], normC = norminf)</code></pre><p>We need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper:</p><pre><code class="language-julia">using DifferentialEquations, DiffEqOperators
@@ -189,7 +189,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, e
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
 
 Mt = 4 # number of shooting sections
-br_po, _ = continuation(
+br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont,
@@ -216,4 +216,4 @@ br_po, u = continuation(
 	ampfactor = 1.4, δp = 0.01,
 	verbosity = 3,	plot = true, printPeriod = true,
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
-	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 13 September 2020 19:39">Sunday 13 September 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 September 2020 19:46">Friday 18 September 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
