@@ -51,7 +51,7 @@ optnewton = NewtonPar(tol = 1e-11, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, _, _ = @time newton( F_chan, sol, par, optnewton)
+out, = @time newton( F_chan, sol, par, optnewton)
 ```
 
 and you should see
@@ -66,7 +66,7 @@ and you should see
         3                4     2.4521e-06         1
         4                5     5.9356e-11         1
         5                6     5.8117e-12         1
-  0.015303 seconds (3.52 k allocations: 2.576 MiB)
+  0.015303 seconds (3.00 k allocations: 2.557 MiB)
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -76,13 +76,13 @@ Note that, in this case, we did not give the Jacobian. It was computed internall
 We can perform numerical continuation w.r.t. the parameter $\alpha$. This time, we need to provide additional parameters, but now for the continuation method:
 
 ```julia
-optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, newtonOptions = NewtonPar(tol = 1e-9))
+optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newtonOptions = NewtonPar(tol = 1e-8))
 ```
 
 Next, we call the continuation routine as follows. 
 
 ```julia
-br, _ = @time continuation(F_chan, out, par, (@lens _.α),
+br, = @time continuation(F_chan, out, par, (@lens _.α),
 		optcont; plot = true, verbosity = 0,
 		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 ```
@@ -110,8 +110,8 @@ julia> br
 Branch number of points: 78
 Branch of Equilibrium
 Fold points:
--   1,    fold point around p ≈ 4.03438745, step =  11, idx =  11, ind_bif =   0 [    guess], δ = ( 0,  0)
--   2,    fold point around p ≈ 3.15581473, step =  35, idx =  35, ind_bif =   0 [    guess], δ = ( 0,  0)
+- #  1,    fold at p ≈ 4.03926020, step =   6, eigenelements in eig[  6], ind_ev =   0 [    guess]
+- #  2,    fold at p ≈ 3.15599445, step =  24, eigenelements in eig[ 24], ind_ev =   0 [    guess]
 ```
 
 We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically. We use automatic differentiation for that
@@ -130,7 +130,7 @@ outfold, _, flag = newton(F_chan, Jac_mat,
 	br, indfold, 
 	# set of parameters and parameter axis to locate the fold
 	par, (@lens _.α))
-flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold][3],"\n")
+flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
 ```
 
 which gives

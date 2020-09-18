@@ -132,7 +132,7 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
 
-br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
 We then compute the differentials of the vector field, this is needed by the branch switching method because it first computes the Hopf normal form. Thankfully, this is little work using Automatic Differentiation:
@@ -161,7 +161,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.
 as
 
 ```julia
-br_po, _ = continuation(
+br_po, = continuation(
 	# we want to compute the bifurcated branch from 
 	# the first Hopf point
 	jet..., br, 1,
@@ -207,7 +207,7 @@ We use the solution from the ODE solver as a starting guess for the shooting met
 initpo = vcat(sol(116.), 6.9) |> vec
 
 # linear solver for shooting functional
-ls = GMRESIterativeSolvers(tol = 1e-4, N = 2Nx * Ny + 1, maxiter=50, verbose = false)
+ls = GMRESIterativeSolvers(tol = 1e-4, N = 2Nx * Ny + 1, maxiter = 50, verbose = true)
 
 # newton parameters
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
@@ -216,7 +216,7 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 eig = EigKrylovKit(tol=1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 1.5, maxSteps = 60, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 3)
 
-br_po, _ , _= @time continuation(probSh,
+br_po, = @time continuation(probSh,
 	initpo, (@set par_cgl.r = 1.2), (@lens _.r), opts_po_cont;
 	verbosity = 3,
 	plot = true,

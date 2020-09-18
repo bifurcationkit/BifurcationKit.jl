@@ -34,7 +34,7 @@ length(x::ApproxFun.Fun) = length(x.coefficients)
 
 dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
 
-axpy!(a::Float64, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a * x + y)
+axpy!(a, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a * x + y)
 axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a * x + b * y)
 rmul!(y::ApproxFun.Fun, b::Float64) = (y.coefficients .*= b; y)
 rmul!(y::ApproxFun.Fun, b::Bool) = b == true ? y : (y.coefficients .*= 0; y)
@@ -81,7 +81,7 @@ optnewton = NewtonPar(tol = 1e-12, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, _, _ = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
+out, = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
 ```
 and you should see
 
@@ -115,7 +115,7 @@ end
 Then, we can call the continuation routine
 
 ```julia
-br, _ = @time continuation(F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
+br, = @time continuation(F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 	verbosity = 2,

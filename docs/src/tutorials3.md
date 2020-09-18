@@ -118,9 +118,9 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060,
 	# specific options for precise localization of Hopf points
-	nInversion = 6, tolBisectionEigenvalue = 1e-4)
+	nInversion = 6)
 
-	br, _ = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
+	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		printSolution = (x,p) -> x[div(n,2)], normC = norminf)
@@ -185,7 +185,7 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
     You don't need to call `newtonHopf` first in order to use `continuationHopf`.
 
 ```julia
-br_hopf, _ = @time continuation(Fbru, Jbru_sp,
+br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
@@ -212,7 +212,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 # number of time slices for the periodic orbit
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
-br_po, _ = continuation(
+br_po, = continuation(
 	# arguments for branch switching from the first 
 	# Hopf bifurcation point
 	jet..., br, 1,
@@ -238,15 +238,15 @@ Using the above call, it is very easy to find the first branches:
 
 We note that there are several branch points (blue points) on the above diagram. This means that there are additional branches in the neighborhood of these points. We now turn to automatic branch switching on these branches. This functionality, as we shall see, is only provided for [`PeriodicOrbitTrapProblem`](@ref).
 
-Let us say that we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:
+Let's say we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:
 
 ```julia
-br_po2, _ = BK.continuationPOTrapBPFromPO(
+br_po2, = BK.continuationPOTrapBPFromPO(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont; linearPO = :FullLU,
-	#ampfactor = 1., δp = 0.01,	
+	ampfactor = 1., δp = 0.01,	
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)),
 	normC = norminf)
@@ -258,7 +258,7 @@ It is now straightforward to get the full following diagram
 
 ## Computation of the branch of periodic orbits (Standard Shooting)
 
-> Note that what follows is not really optimized on the `DifferentialEquations.jl` side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern,...
+> Note that what follows is not really optimized on the `DifferentialEquations.jl` side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern, ...
 
 We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field `Fbru`. We will show how to do this with an implicit method `Rodas4P` from `DifferentialEquations.jl`. Note that the user can pass its own time stepper but for convenience, we use the ones in `DifferentialEquations.jl`. More information regarding the shooting method is contained in [Periodic orbits based on the shooting method](@ref). To define the flow, it is better to have an **inplace** version of the vector field:
 
@@ -307,7 +307,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax =
 	detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200)
 
-br, _ = @time continuation(Fbru, Jbru_sp,
+br, = @time continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
 	printSolution = (x, p)->x[div(n,2)], normC = norminf)
@@ -353,7 +353,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, e
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
 
 Mt = 4 # number of shooting sections
-br_po, _ = continuation(
+br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont,

@@ -270,7 +270,6 @@ function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, p, dx_bar::Ab
 		# println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
 		dR!(psh.section, outbar, outc, ii)
 	end
-	# @assert 1==0
 	return outbar
 
 end

@@ -22,7 +22,7 @@ $$\tag{E}\begin{aligned}
 with Neumann boundary conditions. We start by encoding the model
 
 ```julia
-~~using Revise
+using Revise
 using DiffEqOperators, ForwardDiff, DifferentialEquations, SparseArrays
 using BifurcationKit, LinearAlgebra, Plots, Setfield
 const BK = BifurcationKit
@@ -92,11 +92,10 @@ opt_newton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9
 opts_br = ContinuationPar(dsmax = 0.04, ds = -0.01, pMin = -1.8,
 	detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 400)
 
-br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
+br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
 	plot = true, verbosity = 3,
 	printSolution = (x, p) -> norm(x, Inf),
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
-
 ```
 
 which yields
@@ -154,7 +153,7 @@ We can now continue this periodic orbit:
 eig = DefaultEig()
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig),
 	nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
-br_po_sh, _ , _ = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
+br_po_sh, = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
@@ -213,7 +212,7 @@ We also compute the branch of periodic orbits using the following command:
 
 ```julia
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = -1.8, maxSteps = 100, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)
-br_po_sh_pd, _ , _ = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
+br_po_sh_pd, = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
 	opts_po_cont; verbosity = 2, plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)

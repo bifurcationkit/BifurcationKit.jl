@@ -73,7 +73,8 @@ Before we continue, it is useful to define a callback (see [`continuation`](@ref
 ```julia
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
-	if _x isa BorderedArray
+	fromNewton = get(kwargs, :fromNewton, false)
+	if ~fromNewton
 		# if the residual is too large or if the parameter jump
 		# is too big, abord continuation step
 		return norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05
@@ -96,11 +97,13 @@ args = (verbosity = 3,
 Depending on the level of recursion in the bifurcation diagram, we change a bit the options as follows
 
 ```julia
-function optrec(x, p, level; opt = opts)
+function optrec(x, p, l; opt = opts)
+	level =  l
 	if level <= 2
-		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx)
+		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx, detectLoop = false)
+	else
+		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = Nx, detectLoop = true)
 	end
-	return opt
 end
 ```
 
@@ -113,13 +116,13 @@ We are now in position to compute the bifurcation diagram
 # initial condition
 sol0 = zeros(Nx)
 
-diagram = bifurcationdiagram(jet..., 
+diagram = @time bifurcationdiagram(jet..., 
 	sol0, (@set parSH.p = 1.), (@lens _.p), 
 	# here we specify a maximum branching level of 4
 	4, optrec; args...)
 ```  
 
-and plot it  
+After ~700s, you can plot the result  
 
 ```julia
 plot(diagram;  plotfold = false,  
@@ -142,12 +145,12 @@ Branch number of points: 224
 Branch of Equilibrium
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp point around p ≈ -0.00729225, step =  72, eigenelements in eig[ 73], ind_ev =   1 [converged], δ = ( 1,  0)
-- #  2,      bp point around p ≈ -0.15169672, step =  83, eigenelements in eig[ 84], ind_ev =   2 [converged], δ = ( 1,  0)
-- #  3,      bp point around p ≈ -0.48386427, step = 107, eigenelements in eig[108], ind_ev =   3 [converged], δ = ( 1,  0)
-- #  4,      bp point around p ≈ -0.53115204, step = 111, eigenelements in eig[112], ind_ev =   4 [converged], δ = ( 1,  0)
-- #  5,      bp point around p ≈ -0.86889220, step = 135, eigenelements in eig[136], ind_ev =   5 [converged], δ = ( 1,  0)
-- #  6,      bp point around p ≈ -2.07693994, step = 221, eigenelements in eig[222], ind_ev =   6 [converged], δ = ( 1,  0)
+- #  1,    bp at p ≈ -0.00729225 ∈ (-0.00728880, -0.00729225), |δp|=3e-06, [converged], δ = ( 1,  0), step =  72, eigenelements in eig[ 73], ind_ev =   1
+- #  2,    bp at p ≈ -0.15169672 ∈ (-0.15158623, -0.15169672), |δp|=1e-04, [converged], δ = ( 1,  0), step =  83, eigenelements in eig[ 84], ind_ev =   2
+- #  3,    bp at p ≈ -0.48386427 ∈ (-0.48385737, -0.48386427), |δp|=7e-06, [converged], δ = ( 1,  0), step = 107, eigenelements in eig[108], ind_ev =   3
+- #  4,    bp at p ≈ -0.53115204 ∈ (-0.53071010, -0.53115204), |δp|=4e-04, [converged], δ = ( 1,  0), step = 111, eigenelements in eig[112], ind_ev =   4
+- #  5,    bp at p ≈ -0.86889220 ∈ (-0.86887839, -0.86889220), |δp|=1e-05, [converged], δ = ( 1,  0), step = 135, eigenelements in eig[136], ind_ev =   5
+- #  6,    bp at p ≈ -2.07693994 ∈ (-2.07671897, -2.07693994), |δp|=2e-04, [converged], δ = ( 1,  0), step = 221, eigenelements in eig[222], ind_ev =   6
 ```
 
 We can access the different branches with `BK.getBranch(diagram, (1,))`. Alternatively, you can plot a specific branch:

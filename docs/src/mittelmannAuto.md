@@ -137,7 +137,8 @@ In order to avoid spurious branch switching, we use a callback (see [`continuati
 ```julia
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
-	if _x isa BorderedArray
+	fromNewton = get(kwargs, :fromNewton, false)
+	if ~fromNewton
 		return (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05)
 	end
 	true

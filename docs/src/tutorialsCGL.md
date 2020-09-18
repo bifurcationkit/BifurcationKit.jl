@@ -130,7 +130,7 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
-br, _ = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
 ![](cgl2d-bif.png)
@@ -260,7 +260,7 @@ which gives
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4353e-14        15
-  2.021483 seconds (165.06 k allocations: 1.330 GiB, 12.99% gc time)
+  2.021483 seconds (136.39 k allocations: 1.329 GiB, 8.33% gc time)
 --> T = 6.532023020978835, amplitude = 0.2684635643839235
 ```
 
@@ -309,7 +309,7 @@ which gives
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4471e-14        15
-  1.446924 seconds (69.12 k allocations: 488.760 MiB, 5.93% gc time)
+  1.446924 seconds (28.68 k allocations: 486.953 MiB, 6.45% gc time)
 ```
 
 The speedup will increase a lot for larger $N_x, N_y$. Also, for Floquet multipliers computation, the speedup will be substantial.
@@ -411,7 +411,7 @@ It gives
         5                6     3.5334e-08        12
         6                7     1.0874e-10        13
         7                8     4.4359e-14        15
-  1.354356 seconds (23.46 k allocations: 154.455 MiB, 2.69% gc time)
+  1.354356 seconds (2.22 k allocations: 153.499 MiB)
 ```
 
 Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
@@ -446,7 +446,7 @@ but it gives:
         4                5     3.2492e-07        36
         5                6     9.3987e-10        44
         6                7     3.5842e-13        58
-  3.567416 seconds (143.70 k allocations: 1.010 GiB, 4.59% gc time)
+  3.567416 seconds (61.43 k allocations: 1.003 GiB, 4.46% gc time)
 ```
 
 **Hence, it seems better to use the previous preconditioner.**
@@ -463,7 +463,7 @@ opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbo
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), 
 	nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 
-br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f, 
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -493,7 +493,7 @@ function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = po
 	true
 end
 
-br_po, _ , _= @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f, 
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
@@ -537,7 +537,7 @@ outfold, hist, flag = @time BK.newtonFold(
 	# defined above
 	options = (@set opt_po.linsolver = ls),
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
-flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold][3],"\n")
+flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
 ```
 
 and this gives
@@ -563,10 +563,10 @@ Finally, one can perform continuation of the Fold bifurcation point as follows
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
 outfoldco, hist, flag = @time BK.continuationFold(
-	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(x),
-	(x, r, p) -> poTrap(setproperties(par_cgl, (r=r, c5=p)))(Val(:JacFullSparse), x),
-	br_po, indfold, par_cgl.c5, optcontfold;
-	d2F = p -> ((x, r, dx1, dx2) -> d2Fcglpb(poTrap(setproperties(par_cgl, (r=r, c5=p))), x, dx1, dx2)),
+	(x, p) -> poTrap(x, p),
+	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
+	br_po, indfold, par_cgl, (@lens _.r), (@lens _.c5), optcontfold;
+	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)
 ```
 
@@ -665,14 +665,14 @@ Let us have a look at the linear solvers and compare the speed on CPU and GPU:
 ```julia
 ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
    # runs in 	2.990495 seconds (785 allocations: 31.564 MiB, 0.98% gc time)
-	outh, _, _ = @time ls((Jpo), orbitguess_f)
+	outh, = @time ls((Jpo), orbitguess_f)
 
 Precilu_gpu = LUperso(LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
 lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
 	Jpo_gpu = CuArrays.CUSPARSE.CuSparseMatrixCSR(Jpo);
 	orbitguess_cu = CuArray(orbitguess_f)
 	# runs in 1.751230 seconds (6.54 k allocations: 188.500 KiB, 0.43% gc time)
-	outd, _, _ = @time lsgpu(Jpo_gpu, orbitguess_cu)
+	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)
 ```	 
 
 So we can expect a pretty descent x2 speed up in computing the periodic orbits. We can thus call newton:

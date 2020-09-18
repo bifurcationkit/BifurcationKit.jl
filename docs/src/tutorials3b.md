@@ -118,10 +118,10 @@ We continue the trivial equilibrium to find the Hopf points
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryNsteps = 50, 
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
-	br, _ = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
+	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		printSolution = (x,p) -> x[div(n,2)], normC = norminf)
@@ -186,7 +186,7 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
     You don't need to call `newtonHopf` first in order to use `continuationHopf`.
 
 ```julia
-br_hopf, _ = @time continuation(Fbru, Jbru_sp,
+br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
@@ -271,7 +271,7 @@ and obtain
         6                7     8.0280e-14         2
 --> amplitude = 0.3514625387168946
 
-  8.377266 seconds (904.76 k allocations: 8.824 GiB, 19.55% gc time)
+  8.223328 seconds (886.68 k allocations: 8.825 GiB, 19.14% gc time)
 --> T = 3.0094049008917816, amplitude = 0.35305974130245743
 ```
 
@@ -286,7 +286,7 @@ opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, 
 	pMax = 3.0, maxSteps = 30, 
 	newtonOptions = opt_po, nev = 5, precisionStability = 1e-8, detectBifurcation = 0)
-br_po, _ , _= @time continuation(poTrap,
+br_po, = @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont;
 	verbosity = 2,	plot = true,
@@ -310,7 +310,7 @@ which allows to find periodic orbits different from `orbitguess_f `. Note that t
 
 ```Julia
 outpo_f, hist, flag = @time newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp, :BorderedLU; normN = norminf)
+			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linearPO = :BorderedLU, normN = norminf)
 ```
 
 ## Floquet coefficients
@@ -319,10 +319,10 @@ A basic method for computing Floquet cofficients based on the eigenvalues of the
 
 ```Julia
 opt_po = @set opt_po.eigsolver = DefaultEig()
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryNsteps = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 3)
-br_po, _ , _= @time continuation(poTrap,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.0, maxSteps = 200, saveSolEveryStep = 1, newtonOptions = opt_po, nev = 5, precisionStability = 1e-6, detectBifurcation = 3)
+br_po, = @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
-	opts_po_cont; verbosity = 2, plot = true,
+	opts_po_cont; verbosity = 3, plot = true,
 	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
@@ -384,10 +384,10 @@ sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 2, nev = 21, plotEveryNsteps = 50, 
+	detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
-br, _ = @time continuation(Fbru, Jbru_sp,
+br, = @time continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
 	printSolution = (x, p)->x[div(n,2)], normC = norminf)
@@ -459,7 +459,7 @@ We are now ready to call `newton`
 ```julia
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
-outpo ,_ = @time newton(probSh,
+outpo, = @time newton(probSh,
 	initpo, par_hopf, optn_po;
 	normN = norminf)
 plot(initpo[1:end-1], label = "Init guess")
@@ -524,7 +524,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5
 	maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25,
 	precisionStability = 1e-8, detectBifurcation = 0)
 
-br_po, _, _= @time continuation(probSh,	outpo, par_hopf, (@lens _.l),
+br_po, = @time continuation(probSh,	outpo, par_hopf, (@lens _.l),
 	opts_po_cont; verbosity = 2,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
@@ -593,12 +593,12 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
 # continuation options
 opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, 
 	pMax = 2.5, maxSteps = 500, nev = 10, 
-	precisionStability = 1e-5, detectBifurcation = 3, plotEveryNsteps = 3)
+	precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 3)
 opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = 
 	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
 
 # continuation run
-br_po, _ , _ = @time BK.continuation(probHPsh,
+br_po, = @time BK.continuation(probHPsh,
 	vec(initpo_bar), par_hopf, (@lens _.l),
 	opts_po_cont_floquet; verbosity = 3,
 	plot = true,
@@ -614,10 +614,10 @@ We also obtain the following information:
 julia> br_po
 Branch number of points: 41
 Bifurcation points:
--   1,      bp point around p ≈ 1.22791659, step =  18, idx =  19, ind_bif =   1 [converged], δ = ( 1,  0)
--   2,      ns point around p ≈ 1.76774516, step =  27, idx =  28, ind_bif =   3 [converged], δ = ( 2,  2)
--   3,      ns point around p ≈ 1.85809384, step =  29, idx =  30, ind_bif =   5 [converged], δ = ( 2,  2)
--   4,      bp point around p ≈ 1.87009173, step =  30, idx =  31, ind_bif =   5 [converged], δ = (-1,  0)
--   5,      bp point around p ≈ 2.47577299, step =  39, idx =  40, ind_bif =   5 [converged], δ = ( 1,  0)
+- #  1,    bp at p ≈ 1.20987963 ∈ (1.20128196, 1.20987963), |δp|=9e-03, [converged], δ = ( 1,  0), step =  21, eigenelements in eig[ 22], ind_ev =   1
+- #  2,    ns at p ≈ 1.78687615 ∈ (1.77831727, 1.78687615), |δp|=9e-03, [converged], δ = ( 2,  2), step =  30, eigenelements in eig[ 31], ind_ev =   3
+- #  3,    pd at p ≈ 1.85103701 ∈ (1.84676466, 1.85103701), |δp|=4e-03, [converged], δ = ( 1,  1), step =  31, eigenelements in eig[ 32], ind_ev =   4
+- #  4,    ns at p ≈ 1.87667870 ∈ (1.86813520, 1.87667870), |δp|=9e-03, [converged], δ = ( 2,  2), step =  32, eigenelements in eig[ 33], ind_ev =   6
+
 ```
 

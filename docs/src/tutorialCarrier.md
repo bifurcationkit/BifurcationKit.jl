@@ -79,6 +79,8 @@ d2F_carr(x,p,dx1,dx2)     = D((z, p0) -> d1F_carr(z, p0, dx1), x, p, dx2)
 d3F_carr(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F_carr(z, p0, dx1, dx2), x, p, dx3)
 jet = (F_carr, Jac_carr, d2F_carr, d3F_carr)
 
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 3, nev = 40)
+
 diagram = bifurcationdiagram(jet...,
 		0*out, par_car,
 		(@lens _.ϵ), 2,
@@ -104,12 +106,14 @@ optdef = setproperties(optnew; tol = 1e-7, maxIter = 200)
 
 # function to encode a perturbation of the old solutions
 function perturbsol(sol, p, id)
+	# we use this sol0 for the boundary conditions
+	sol0 = @. exp(-.01/(1-par_car.X^2)^2)
 	solp = 0.02*rand(length(sol))
 	return sol .+ solp .* sol0
 end
 
 # call the deflated continuation method
-br, _ = @time continuation(
+br, = @time continuation(
 	F_carr, Jac_carr,
 	par_def, (@lens _.ϵ),
 	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, pMax = 0.7, pMin = 0.05, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 40),

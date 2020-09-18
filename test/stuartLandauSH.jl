@@ -38,7 +38,7 @@ par_hopf = (@set par_sl.r = 0.1)
 ####################################################################################################
 # continuation
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
-br, _ = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
+br, = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 prob = ODEProblem(Fode, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
