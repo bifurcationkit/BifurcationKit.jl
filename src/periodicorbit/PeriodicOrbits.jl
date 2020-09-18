@@ -12,16 +12,23 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 function update(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
 
 ####################################################################################################
-# if we use the same code as for newton (see below) in continuation, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix. So we have to use a dedicated composite type for the jacobian to handle this case.
+"""
+$(TYPEDEF)
 
-struct ShootingJacobian{Tpb <: AbstractShootingProblem, Torbitguess, Tp}
+If we use the same code as for newton (see below) in continuation, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix. So we have to use a dedicated composite type for the jacobian to handle this case.
+
+$(TYPEDFIELDS)
+"""
+struct ShootingJacobian{Tpb, Tjacpb, Torbitguess, Tp}
 	pb::Tpb
+	jacpb::Tjacpb
 	x::Torbitguess
 	par::Tp
 end
+ShootingJacobian(pb, x, par) = ShootingJacobian(pb, dx -> pb(x, par, dx), x, par)
 
 # evaluation of the jacobian
-(shjac::ShootingJacobian)(dx) = shjac.pb(shjac.x, shjac.par, dx)
+(shjac::ShootingJacobian)(dx) = shjac.jacpb(dx)
 
 ####################################################################################################
 # newton wrapper

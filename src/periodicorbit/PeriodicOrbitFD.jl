@@ -829,7 +829,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::Newt
 # continuation wrapper
 
 """
-	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
+	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u, p) -> u[end], kwargs...)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -912,7 +912,7 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 end
 
 """
-	continuation(probPO, orbitguess, p0::Real, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+$(SIGNATURES)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
