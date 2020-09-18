@@ -1,6 +1,11 @@
 abstract type BranchResult end
 
 ####################################################################################################
+mergefromuser(x, a::NamedTuple) = merge((x = x,), a)
+mergefromuser(x::NamedTuple, a::NamedTuple) = merge(x, a)
+mergefromuser(x::Number, a::NamedTuple) = merge((x = x,), a)
+
+####################################################################################################
 # Structure to hold continuation result
 """
 $(TYPEDEF)
@@ -14,9 +19,9 @@ $(TYPEDFIELDS)
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 """
-@with_kw_noshow struct ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
+@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i]` contains the following information `(param, printSolution(u, param), Newton iterations, ds, theta, i)` for each continuation step `i`."
-	branch::VectorOfArray{T, 2, Array{Vector{T}, 1}}
+	branch::StructArray{Ta}
 
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
@@ -55,12 +60,14 @@ $(TYPEDFIELDS)
 	bifpoint::Vector{Biftype}
 end
 
-Base.length(br::ContResult) = length(br.branch[1, :])
+Base.length(br::ContResult) = length(br.branch)
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-@inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[2]
+getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
+@inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
 eigenvals(br::BranchResult, ind) = br.eig[ind].eigenvals
 eigenvec(br::BranchResult, ind, indev) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
+
 
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
@@ -87,9 +94,9 @@ end
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
- function ContResult(br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = T(0), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
-	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = br[1,1], step = 0)] : nothing
+ function ContResult(pt, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = pt, x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
+	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0
 	stability = true
@@ -102,7 +109,7 @@ This function is used to initialize the composite type `ContResult` according to
 		_evvectors = (eigenvals = evsol[1], eigenvec = nothing, step = 0)
 	end
 	return ContResult(
-		branch = br,
+		branch = StructArray([br]),
 		bifpoint = [bif0],
 		foldpoint = [bif0],
 		n_imag = [n_imag],

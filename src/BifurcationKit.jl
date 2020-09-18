@@ -1,5 +1,5 @@
 module BifurcationKit
-	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase
+	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays
 	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
 	using RecursiveArrayTools: VectorOfArray

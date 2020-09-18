@@ -168,8 +168,8 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 		nactive = mapreduce(x -> x.isactive, +, states)
 		if showplot && mod(ii, contParams.plotEveryStep) == 0
 			plot(branches, label = "", title  = "$nc branches, actives = $(nactive), step = $ii")
-			scatter!([br.branch[1][1] for br in branches], [br.branch[1][2] for br in branches], marker = :cross, color=:green, label = "")
-			scatter!([br.branch[end][1] for br in branches], [br.branch[end][2] for br in branches], marker = :circle, color=:red, label = "") |> display
+			scatter!([br.branch[1].param for br in branches], [br.branch[1][1] for br in branches], marker = :cross, color=:green, label = "")
+			scatter!([br.branch[end].param for br in branches], [br.branch[end][1] for br in branches], marker = :circle, color=:red, label = "") |> display
 
 		end
 

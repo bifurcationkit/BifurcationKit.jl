@@ -15,8 +15,8 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 		ind1 = vars[1]
 		ind2 = vars[2]
 	else
-		ind1 = 1
-		ind2 = 2
+		ind1 = :param
+		ind2 = getfirstusertype(contres)
 	end
 
 	@series begin
@@ -27,7 +27,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 			xguide --> getLensParam(contres.param_lens)
 		end
 		label --> branchlabel
-		contres.branch[ind1, :], contres.branch[ind2, :]
+		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)
 	end
 
 	# display bifurcation points
@@ -118,10 +118,10 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 	Plots.plot(layout = l)
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = "||x||", label = "", plotfold = false, subplot = 1)
-	if length(contres) >1
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = getfirstusertype(contres), label = "", plotfold = false, subplot = 1)
+	if length(contres) > 1
 		# put arrow to indicate the order of computation
-		plot!([contres.branch[1, end-1:end]], [contres.branch[2, end-1:end]], label = "", arrow = true, subplot = 1)
+		plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 	end
 
 	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = getLensParam(contres.param_lens), label = "", subplot=2)

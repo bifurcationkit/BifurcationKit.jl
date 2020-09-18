@@ -126,10 +126,16 @@ getx(state::ContState) = state.z_old.u
 			((it.contParams.pMin < state.z_old.p < it.contParams.pMax) || state.step == 0) &&
 			(state.stopcontinuation == false)
 
+function initStateSummary(it, state)
+	x = getx(state); p = getp(state)
+	pt = it.printSolution(x, p)
+	return pt, mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, step = state.step))
+end
+
 function getStateSummary(it, state)
-	x = getx(state)
-	p = getp(state)
-	vcat(p, it.printSolution(x, p), state.itnewton, state.ds, state.theta, state.step)
+	x = getx(state); p = getp(state)
+	pt = it.printSolution(x, p)
+	return mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, step = state.step))
 end
 
 function updatestability!(state::ContState, n_unstable, n_imag)
@@ -169,10 +175,10 @@ function ContResult(it::ContIterable, state::ContState)
 		eiginfo = computeEigenvalues(it, x0, set(it.par, it.param_lens, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
+		return ContResult(initStateSummary(it, state)..., x0, it.par, it.param_lens, eiginfo, contParams)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
-		return ContResult(VectorOfArray([getStateSummary(it, state)]), x0, it.par, it.param_lens, eiginfo, contParams)
+		return ContResult(initStateSummary(it, state)..., x0, it.par, it.param_lens, eiginfo, contParams)
 	end
 end
 
@@ -401,7 +407,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution while computing
-- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...).
+- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below).
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution.
 - `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning false), saving personal data, plotting... The notations are ``z=(x,p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners

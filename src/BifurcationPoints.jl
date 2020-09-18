@@ -11,7 +11,7 @@ Structure to record a generic bifurcation point which was only detected by a cha
 
 $(TYPEDFIELDS)
 """
-@with_kw struct GenericBifPoint{T, Tv} <: BifurcationPoint
+@with_kw struct GenericBifPoint{T, Tp, Tv} <: BifurcationPoint
 	"Bifurcation type, `:hopf, :bp...`,"
 	type::Symbol = :none
 
@@ -25,7 +25,7 @@ $(TYPEDFIELDS)
 	norm::T  = T(0)
 
 	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
-	printsol::T = T(0)
+	printsol::Tp
 
 	"Equilibrium at the bifurcation point"
 	x::Tv = Vector{T}(undef, 0)
