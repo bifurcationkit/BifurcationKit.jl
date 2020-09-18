@@ -39,19 +39,23 @@ plot!(br2)
 
 ### Choosing Variables
 
-You can select which variables to plot using the keyword argument vars:
+You can select which variables to plot using the keyword argument `vars`:
 
 ```
-plot(br, vars = (:p, :sol))
+plot(br, vars = (:param, :x))
 ```
-The available symbols are `:p, :sol, :itnewton, :ds, :theta, :step`.
+The available symbols are `:param, :sol, :itnewton, :ds, :theta, :step` and:
+
+- `x` if `printSolution` (see [`continuation`](@docs)) returns a `Number`.
+- `x1, x2,...` if `printSolution` returns a `Tuple`.
+- the keys of the `NamedTuple` returned by `printSolution`.
 
 ### Plotting directly using the field names
 
 You can define your own plotting functions using the internal fields of `br` which is of type [`ContResult`](@ref). For example, the previous plot can be done as follows:
 
 ```
-plot(br.branch[1, :], br.branch[2, :])
+plot(br.branch.param, br.branch.x)
 ```
 
 You can also plot the spectrum at a specific continuation `step::Int` by calling 
