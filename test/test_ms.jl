@@ -86,7 +86,7 @@ for ii=1:M
 end
 centers = [rand(50) for ii=1:M]
 
-hyper = BK.HyperplaneSections(normals, centers)
+hyper = BK.SectionPS(normals, centers)
 
 x = 1:50 |>collect .|> Float64 |> vec
 x = rand(50)
