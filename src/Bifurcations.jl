@@ -47,7 +47,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 			idx = length(branch)-1,
 			param = branch[end-1].param,
 			norm = normC(z.u),
-			printsol = branch[end-1].x,
+			printsol = printsolution(z.u, branch[end-1].param),
 			x = _copy(z.u), tau = copy(tau),
 			ind_ev = 0,
 			# it means the fold occurs between step-2 and step:

@@ -9,8 +9,8 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 	axisDict = Dict(:p => 1, :sol => 2, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	if typeof(vars) <: Tuple && (typeof(vars[1]) == Symbol && typeof(vars[2]) == Symbol)
-		ind1 = axisDict[vars[1]]
-		ind2 = axisDict[vars[2]]
+		ind1 = vars[1]
+		ind2 = vars[2]
 	elseif typeof(vars) <: Tuple && (typeof(vars[1]) <: Int && typeof(vars[2]) <: Int)
 		ind1 = vars[1]
 		ind2 = vars[2]
@@ -32,7 +32,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
 	# display bifurcation points
 	bifpoints = vcat(contres.bifpoint, filter(x->x.type != :none, contres.foldpoint))
-	if length(bifpoints) >= 1 && ind2 == 2 && plotbifpoints
+	if length(bifpoints) >= 1 && plotbifpoints
 		id = 1
 		bifpoints[1].type == :none ? id = 2 : id = 1
 		if plotfold
@@ -50,7 +50,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 			markersize --> 2
 			markerstrokewidth --> 0
 			label --> ""
-			map(x -> x.param, bifpt), map(x -> x.printsol, bifpt)
+			map(x -> x.param, bifpt), map(x -> x.printsol[1], bifpt)
 		end
 
 		# add legend for bifurcation points
@@ -124,7 +124,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 		plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 	end
 
-	plot!(contres;	vars = (:step, :p), putbifptlegend = false, xlabel = "it", ylabel = getLensParam(contres.param_lens), label = "", subplot=2)
+	plot!(contres;	vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2)
 
 	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals
