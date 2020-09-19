@@ -12,6 +12,7 @@ vals = eigvals(Array(A))
 P = PrecPartialSchurKrylovKit(A, rand(N), 4, :LM)
 P = PrecPartialSchurArnoldiMethod(A, 4, LM())
 P = PrecPartialSchurArnoldiMethod(A, N, 4, LM())
+P = PrecPartialSchurArnoldiMethod(x -> A*x, N, 4, LM())
 
 # test some function
 ldiv!(P, rand(N))

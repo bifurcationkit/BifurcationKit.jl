@@ -12,7 +12,9 @@ Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 _dt = BK.DotTheta()
 # tests for the predictors
 BK.emptypredictor!(nothing)
-
+BK.mergefromuser(1., (a=1,))
+BK.mergefromuser(rand(2), (a=1,))
+BK.mergefromuser((1,2), (a=1,))
 ####################################################################################################
 
 normInf = x -> norm(x, Inf)
@@ -21,7 +23,8 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140,
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _),opts) #(16.12 k allocations: 772.250 KiB)
+br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
+BK.getfirstusertype(br0)
 
 # test with callbacks
 br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
@@ -86,16 +89,20 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 	printSolution = (x,p)->x[1],
 	tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
 	)
+	BK.emptypredictor!(BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0)))
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 
 # tangent prediction with Polynomial predictor
-polpred = BK.PolynomialPred(2,3,x0)#, BorderedPred())
+polpred = BK.PolynomialPred(2,6,x0, BorderedPred())
 	opts9 = (@set opts.newtonOptions.verbose=false)
-	opts9 = ContinuationPar(opts9; maxSteps = 11, ds = 0.045, dsmin = 1e-4, dsmax = 0.1, plotEveryStep = 3,)
+	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
 	br10, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	tangentAlgo = polpred, plot=false,
 	printSolution = (x,p)->x[1],
 	)
+	# plot(br10) |> display
+	polpred(0.1)
+	BK.emptypredictor!(polpred)
 	# plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
 	# plot!(br9)
 
@@ -160,6 +167,7 @@ x0, = newton(F,Jac_m,x0, -1.5, opts.newtonOptions)
 x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
 
 br0, = continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
+BK.getEigenelements(br0, br0.bifpoint[1])
 
 br1, = continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001))
 

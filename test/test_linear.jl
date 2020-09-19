@@ -174,8 +174,10 @@ eil = BK.EigKrylovKit(tol = 1e-9, x₀ = x0)
 outkkmf = eil(Jmf, 20)
 geteigenvector(eil, outkkmf[2], 2)
 
-eil = BK.EigArpack()
+eil = BK.EigArpack(v0 = copy(x0))
 outdefault = eil(J0, 20)
+@test out[1] ≈ outdefault[1]
+outdefault = eil(x ->J0*x, 20)
 @test out[1] ≈ outdefault[1]
 
 eil = BK.EigArnoldiMethod(;x₀ = x0)

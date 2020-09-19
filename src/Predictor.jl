@@ -278,7 +278,7 @@ PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
 isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
 
 function emptypredictor!(ppd::PolynomialPred)
-	empty!(ppd.solutions);empty!(ppd.parameters);empty!(ppd.arclengths);
+	empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
 end
 
 function getStats(polypred)
@@ -333,9 +333,9 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::ContIterable, ds, θ, polyp
 	end
 end
 
-function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	if ~isready(polypred)
-		return getPredictor!(z_pred, z_old, tau, ds, polypred.tangentalgo)
+		return getPredictor!(z_pred, z_old, tau, ds, polypred.tangentalgo, nrm)
 	else
 		x, p = polypred(ds)
 		copyto!(z_pred.u, x)

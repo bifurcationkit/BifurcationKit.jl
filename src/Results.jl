@@ -3,6 +3,7 @@ abstract type BranchResult end
 ####################################################################################################
 mergefromuser(x, a::NamedTuple) = merge((x = x,), a)
 mergefromuser(x::NamedTuple, a::NamedTuple) = merge(x, a)
+mergefromuser(x::Tuple, a::NamedTuple) = merge((;zip((Symbol("x$i") for i in 1:length(x)), x)...), a)
 mergefromuser(x::Number, a::NamedTuple) = merge((x = x,), a)
 
 ####################################################################################################
@@ -136,6 +137,7 @@ end
 
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
+getfirstusertype(br::Branch) = getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
 
 # extend the getproperty for easy manipulation of a Branch
