@@ -150,31 +150,53 @@ end
 """
 	Multiple Tangent predictor
 $(TYPEDFIELDS)
+
+# Constructor(s)
+
+	MultiplePred(algo, x0, α, n)
+
+	MultiplePred(x0, α, n)
+
+- `α` damping in Newton iterations
+- `n` number of predictors
+- `x0` example of vector solution to be stored
 """
-mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-	"tangent algorithm used"
+@with_kw mutable struct MultiplePred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
+	"Tangent algorithm used"
 	tangentalgo::Talgo
-	"damping factor"
-	α::T
-	"save the current tangent"
+
+	"Save the current tangent"
 	τ::Tvec
-	"number of predictors"
+
+	"Damping factor"
+	α::T
+
+	"Number of predictors"
 	nb::Int64
-	"index of the largest converged predictor"
-	indconverged::Int
-	"maximum value of imax"
-	imax::Int
-	"index for lookup in residual history"
-	pmimax::Int
+
+	"Index of the largest converged predictor"
+	currentind::Int64 = 0
+
+	"Index for lookup in residual history"
+	pmimax::Int64 = 1
+
+	"Maximum index for lookup in residual history"
+	imax::Int64 = 4
+
+	"Factor to increase ds upon successfull step"
+	dsfact::T = 1.5
 end
-MultiplePred(α::Real,nb::Int,τ,algo::AbstractTangentPredictor) = MultiplePred(algo,α,τ,nb,0,5,1)
-MultiplePred(α::Real,nb::Int,τ) = MultiplePred(α,nb,τ,SecantPred())
-emptypredictor!(mpd::MultiplePred) = (mpd.indconverged = 0; mpd.pmimax = 1)
+MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo= algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
+MultiplePred(x0, α, nb) = MultiplePred(SecantPred(), x0, α, nb)
+emptypredictor!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 
 # callback for newton
 function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
 	resHist = get(kwargs, :resHist, nothing)
-	return iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
+	if mpred.currentind > 1
+		return iteration - mpred.pmimax > 0 ?  resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
+	end
+	return true
 end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
@@ -189,16 +211,20 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we combine the callbacks for the newton iterations
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
-	_range = algo.nb:-1:0
-	for ii in _range
+	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
+	for ii in algo.nb:-1:1
+		@show ii, algo.pmimax, ds
+		printstyled(color=:magenta, "--> ii = $ii
+	\n")
 		# record the current index
-		algo.indconverged = ii
+		algo.currentind = ii
 		zpred = _copy(z_pred)
-		axpy!(ii*ds, algo.τ, zpred)
+		axpy!(ii * ds, algo.τ, zpred)
 		# we restore the original callback if it reaches the usual case ii == 0
 		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
 				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
-		if flag || ii == _range[end]
+		if flag || ii == 1 # for i==1, we return the result anyway
+			@show ii, algo.nb, algo.pmimax, flag, ds
 			return zold, res, flag, itnewton
 		end
 	end
@@ -212,13 +238,13 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 			dsnew = ds / (1 + mpd.nb)
 		end
 		if  abs(ds) < contparams.dsmin * (1 + mpd.nb)
-			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
-			# we stop the continuation
+				(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
+				# we stop the continuation
 			mpd.pmimax = min(mpd.imax, mpd.pmimax+1)
-			return ds, θ, true
-		end
+				return ds, θ, true
+			end
 		# dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
-		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
+			(verbosity > 0) && printstyled("Halving continuation step, ds = $(dsnew)\n", color=:red)
 	else # the newton correction has converged
 		# control to have the same number of Newton iterations
 		Nmax = contparams.newtonOptions.maxIter
@@ -244,36 +270,55 @@ end
 	Polynomial Tangent predictor
 
 $(TYPEDFIELDS)
+
+# Constructor(s)
+
+	PolynomialPred(algo, n, k, v0)
+
+	PolynomialPred(n, k, v0)
+
+- `n` order of the polynomial
+- `k` length of the last solutions vector used for the polynomial fit
+- `v0` example of solution to be stored
 """
 mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
-	"order of the polynomial"
+	"Order of the polynomial"
 	n::Int64
-	"length of the last solutions vector used for the polynomial fit"
+
+	"Length of the last solutions vector used for the polynomial fit"
 	k::Int64
-	"matrix for the interpolation"
+
+	"Matrix for the interpolation"
 	A::Matrix{T}
-	"algo for tangent when polynomial predictor is not possible"
+
+	"Algo for tangent when polynomial predictor is not possible"
 	tangentalgo::Talgo
-	"vector of solutions"
+
+	"Vector of solutions"
 	solutions::CircularBuffer{Tvec}
-	"vector of parameters"
+
+	"Vector of parameters"
 	parameters::CircularBuffer{T}
-	"vector of arclengths"
+
+	"Vector of arclengths"
 	arclengths::CircularBuffer{T}
-	"coefficients for the polynomials for the solution"
+
+	"Coefficients for the polynomials for the solution"
 	coeffsSol::Vector{Tvec}
-	"coefficients for the polynomials for the parameter"
+
+	"Coefficients for the polynomials for the parameter"
 	coeffsPar::Vector{T}
-	"update the predictor ?"
+
+	"Update the predictor ?"
 	update::Bool
 end
 
-PolynomialPred(n,k,v0,algo) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
+PolynomialPred(algo, n, k, v0) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
 	CircularBuffer{typeof(v0)}(k),CircularBuffer{eltype(v0)}(k),
 	CircularBuffer{eltype(v0)}(k),
 	Vector{typeof(v0)}(undef, n+1),
 	Vector{eltype(v0)}(undef, n+1),true))
-PolynomialPred(n,k,v0) = PolynomialPred(n,k,v0, SecantPred())
+PolynomialPred(n, k, v0) = PolynomialPred(SecantPred(),n,k,v0)
 
 isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
 
@@ -384,7 +429,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 	dsnew = clampDs(dsnew, contparams)
 
 	thetanew = contparams.doArcLengthScaling ? arcLengthScaling(θ, contparams, tau, verbosity) : θ
-
+	# we do not stop the continuation
 	return dsnew, thetanew, false
 end
 ####################################################################################################
