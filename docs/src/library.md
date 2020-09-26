@@ -102,6 +102,10 @@ getBranch
 getBranchesFromBP
 ```
 
+```@docs
+GenericBifPoint
+```
+
 ## Utils for periodic orbits
 
 ```@docs
@@ -114,4 +118,12 @@ getAmplitude
 
 ```@docs
 getMaximum
+```
+
+```@docs
+SectionSS
+```
+
+```@docs
+SectionPS
 ```

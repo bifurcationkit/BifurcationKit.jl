@@ -1,6 +1,6 @@
 # Fold / Hopf Continuation
 
-For this to work, it is important to have an analytical expression for the jacobian. See the tutorial [Temperature model](@ref) for more details.
+For this to work, it is important to have an analytical expression for the jacobian. See the tutorial [Temperature model (simplest example for equilibria)](@ref) for more details.
 
 ## Newton refinement
 
@@ -16,7 +16,7 @@ outfold, hist, flag = newton(F, J, br::ContResult, ind_bif::Int64,
 
 where `par` is the set of parameters used in the call to [`continuation`](@ref) to get `br` and `lens` is the parameter axis which is used to find the Fold/Hopf point. For the options parameters, we refer to [Newton](@ref).
 
-It is important to note that for improved performances, a function implementing the expression of the **hessian** should be provided. This is by far the fastest. Reader interested in this advanced usage should look at the code `example/chan.jl` of the tutorial [Temperature model](@ref). 
+It is important to note that for improved performances, a function implementing the expression of the **hessian** should be provided. This is by far the fastest. Reader interested in this advanced usage should look at the code `example/chan.jl` of the tutorial [Temperature model (simplest example for equilibria)](@ref). 
 
 ## Codim 2 continuation
 
@@ -28,7 +28,7 @@ br_codim2, _ = continuation(F, J, br, ind_bif,
 	Jt = nothing, d2F = nothing, kwargs...)
 ```
 
-where the options are as above except with have two parameter axis `lens1, lens2` which are used to locate the bifurcation points. See [Temperature model](@ref) for an example of use. 
+where the options are as above except with have two parameter axis `lens1, lens2` which are used to locate the bifurcation points. See [Temperature model (simplest example for equilibria)](@ref) for an example of use. 
 
 ## Advanced use
 

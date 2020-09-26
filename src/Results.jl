@@ -29,7 +29,7 @@ $(TYPEDFIELDS)
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
-	"A vector holding the set of fold points detected during the computation of the branch. See [`GenericBifPoint`](@docs) for a description of the fields."
+	"A vector holding the set of fold points detected during the computation of the branch. See [`GenericBifPoint`](@ref) for a description of the fields."
 	foldpoint::Vector{Biftype}
 
 	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step. Hence, the stability `stability[k]` should match `eig[k]` which corresponds to `branch[k]` for a given `k`"
@@ -59,7 +59,7 @@ $(TYPEDFIELDS)
 	"Parameter axis used for computing the branch"
 	param_lens::Tl
 
-	"A vector holding the set of bifurcation points (other than fold) detected during the computation of the branch. See [`GenericBifPoint`](@docs) for a description of the fields."
+	"A vector holding the set of bifurcation points (other than fold) detected during the computation of the branch. See [`GenericBifPoint`](@ref) for a description of the fields."
 	bifpoint::Vector{Biftype}
 end
 

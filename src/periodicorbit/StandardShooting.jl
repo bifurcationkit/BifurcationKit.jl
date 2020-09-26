@@ -352,7 +352,7 @@ end
 
 
 ####################################################################################################
-# functions needed Branch switching from Hopf bifurcation point
+# functions needed for Branch switching from Hopf bifurcation point
 
 function update(prob::ShootingProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period)
 	# append period at the end of the initial guess

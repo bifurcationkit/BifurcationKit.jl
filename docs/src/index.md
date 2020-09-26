@@ -54,7 +54,7 @@ In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl
 
 The examples which follow have not **all** been written with the goal of performance but rather simplicity (except maybe [Complex Ginzburg-Landau 2d](@ref)). One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.
 
-For example, in the first tutorial on [Temperature model](@ref), one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.
+For example, in the first tutorial on [Temperature model (simplest example for equilibria)](@ref), one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.
 
 ## Main features
 

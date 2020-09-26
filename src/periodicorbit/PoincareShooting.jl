@@ -469,7 +469,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
 end
 
 ####################################################################################################
-# functions needed Branch switching from Hopf bifurcation point
+# functions needed for Branch switching from Hopf bifurcation point
 
 function update(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, period)
 	# make the section
