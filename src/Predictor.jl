@@ -206,6 +206,12 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::
 	copyto!(algo.τ, τ)
 end
 
+function getPredictor!(z_pred::M, z_old::M, τ::M, ds, algo::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
+	# we do nothing!
+	# emptypredictor!(algo)
+	return nothing
+end
+
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		algo::MultiplePred, linearalgo = MatrixFreeBLS(); normC = norm,
 		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
@@ -232,38 +238,36 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 end
 
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
-	if converged == false || mpd.indconverged == 0
+	@warn "stepSizeControl"
+	if converged == false
 		dsnew = ds
-		if abs(ds) >= (1 + mpd.nb) * contparams.dsmin
-			dsnew = ds / (1 + mpd.nb)
-		end
-		if  abs(ds) < contparams.dsmin * (1 + mpd.nb)
+		if abs(ds) < (1 + mpd.nb) * contparams.dsmin
+			if mpd.pmimax < mpd.imax
+				@error "--> Increase pmimax"
+				mpd.pmimax += 1
+			else
 				(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
 				# we stop the continuation
-			mpd.pmimax = min(mpd.imax, mpd.pmimax+1)
 				return ds, θ, true
 			end
-		# dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
+		else
+			@error "--> Decrease ds"
+			dsnew = ds / (1 + mpd.nb)
 			(verbosity > 0) && printstyled("Halving continuation step, ds = $(dsnew)\n", color=:red)
+		end
 	else # the newton correction has converged
-		# control to have the same number of Newton iterations
-		Nmax = contparams.newtonOptions.maxIter
-		factor = (Nmax - it_newton_number) / Nmax
-		# dsnew = ds * (1 + contparams.a * factor^2)
-		dsfact =  (1 + contparams.a * factor^2)
 		dsnew = ds
-		if mpd.indconverged == mpd.nb && abs(ds)*dsfact <= contparams.dsmax
-			(verbosity > 0) && @show 1 + contparams.a * factor^2
-			dsnew = ds * dsfact
+		if mpd.currentind == mpd.nb && abs(ds) * mpd.dsfact <= contparams.dsmax
+			(verbosity > 0) && @show dsnew
+			println("--> Increase ds")
+			dsnew = ds *  mpd.dsfact
 		end
 	end
 
 	# control step to stay between bounds
 	dsnew = clampDs(dsnew, contparams)
 
-	thetanew = contparams.doArcLengthScaling ? arcLengthScaling(θ, contparams, tau, verbosity) : θ
-
-	return dsnew, thetanew, false
+	return dsnew, θ, false
 end
 ####################################################################################################
 """
