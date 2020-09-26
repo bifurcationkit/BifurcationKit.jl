@@ -86,7 +86,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		optn = optionsCont.newtonOptions
 		bifpt = br.bifpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
-		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), optn; kwargs...)[1]
+		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
 		copyto!(pred.x, solbif)
 	end
 
@@ -139,7 +139,7 @@ end
 
 function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar ; δp = nothing, perturb = identity, kwargs...)
 
-	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
+	verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
