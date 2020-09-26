@@ -87,13 +87,13 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	printSolution = (x,p)->x[1],
-	tangentAlgo = BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0))
+	tangentAlgo = BK.MultiplePred(0.01,13,copy(x0))
 	)
-	BK.emptypredictor!(BK.MultiplePred(0.01,13,BorderedArray(copy(x0),0.0)))
+	BK.emptypredictor!(BK.MultiplePred(0.01,13,copy(x0)))
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 
 # tangent prediction with Polynomial predictor
-polpred = BK.PolynomialPred(2,6,x0, BorderedPred())
+polpred = BK.PolynomialPred(BorderedPred(),2,6,x0)
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
 	br10, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
