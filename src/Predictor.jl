@@ -360,14 +360,7 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 end
 ####################################################################################################
 function clampDs(dsnew, contparams::ContinuationPar)
-	if abs(dsnew) < contparams.dsmin
-		dsnew = sign(dsnew) * contparams.dsmin
-	end
-
-	if abs(dsnew) > contparams.dsmax
-		dsnew = sign(dsnew) * contparams.dsmax
-	end
-	return dsnew
+	return sign(dsnew) * clamp(abs(dsnew), contparams.dsmin, contparams.dsmax)
 end
 
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}

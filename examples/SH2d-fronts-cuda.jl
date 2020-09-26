@@ -27,7 +27,8 @@ TY = Float64
 AF = CuArray{TY}
 #################################################################
 # to simplify plotting of the solution
-heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
+plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 norminf(x) = maximum(abs.(x))
 
 Nx = 2^10
@@ -104,7 +105,7 @@ function (sheig::SHEigOp)(J, nev::Int; σ = 0.3, kwargs...)
 	A = du -> sh(J, du; shift = σ, tol = 1e-5)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
-	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 40, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))
+	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))
 	@show 1 ./vals .+ σ
 	return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -131,7 +132,7 @@ opt_new = BK.NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Le
 				opt_new, normN = norminf)
 	println("--> norm(sol) = ", norminf(sol_hexa))
 
-heatmapsol(sol_hexa)
+plotsol(sol_hexa)
 ####################################################################################################
 # trial using IterativeSolvers
 
@@ -150,12 +151,12 @@ outdef, _, flag, _ = @time newton(F_shfft, J_shfft,
 			par,
 			opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 		println("--> norm(sol) = ", norm(outdef))
-		heatmapsol(outdef) |> display
+		plotsol(outdef) |> display
 		flag && push!(deflationOp, outdef)
 
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
-	detectBifurcation = 3,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.005, pMin = -1.0, theta = 0.5, plotEveryStep = 10, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
+	detectBifurcation = 0,
 	precisionStability = 1e-5,
 	saveEigenvectors = false,
 	nev = 11 )
@@ -163,7 +164,8 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.2
 	br, u1 = @time continuation(
 		F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l),
-		opts_cont, plot = true, verbosity = 3,
-		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...),
-		printSolution = (x, p) -> norm(x), normC = norminf
+		opts_cont;
+		plot = true, verbosity = 3,
+		plotSolution = (x, p;kwargs...)->plotsol!(x; color=:viridis, kwargs...),
+		printSolution = (x, p) -> norm(x), normC = norminf,
 		)

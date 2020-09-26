@@ -5,7 +5,7 @@ Pages = ["tutorials2b.md"]
 Depth = 3
 ```
 
-Here we give an example where the continuation can be done **entirely** on the GPU, *e.g.* on a single Tesla K80.
+Here we give an example where the continuation can be done **entirely** on the GPU, *e.g.* on a single V100 NIVDIA.
 
 We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See [Snaking in the 2d Swift-Hohenberg equation](@ref) for more details. Solving the sparse linear problem in $v$
 
@@ -131,7 +131,9 @@ We can now define our operator `L` and an initial guess `sol0`.
 using LinearAlgebra, Plots
 
 # to simplify plotting of the solution
-heatmapsol(x) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
+plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
+norminf(x) = maximum(abs.(x))
 
 # norm compatible with CUDA
 norminf(x) = maximum(abs.(x))
@@ -168,31 +170,31 @@ opt_new = NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 		opt_new, normN = norminf)
 				
 	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
-	heatmapsol(sol_hexa)
+	plotsol(sol_hexa)
 ```
 
 You should see this:
 
 ```julia
- Newton Iterations
+Newton Iterations
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     2.7383e-01         0
-        1                2     1.2891e+02        14
-        2                3     3.8139e+01        70
-        3                4     1.0740e+01        37
-        4                5     2.8787e+00        22
-        5                6     7.7522e-01        17
-        6                7     1.9542e-01        13
-        7                8     3.0292e-02        13
-        8                9     1.1594e-03        12
-        9               10     1.8842e-06        11
-       10               11     4.2642e-08        10
-  2.261527 seconds (555.45 k allocations: 44.849 MiB, 1.61% gc time)
+        1                2     1.2891e+02        13
+        2                3     3.8139e+01        33
+        3                4     1.0740e+01        23
+        4                5     2.8787e+00        17
+        5                6     7.7522e-01        14
+        6                7     1.9542e-01        12
+        7                8     3.0292e-02        11
+        8                9     1.1594e-03        10
+        9               10     1.8788e-06        10
+       10               11     5.9168e-08         8
+  0.365674 seconds (65.03 k allocations: 1.498 MiB)
 --> norm(sol) = 1.26017611779702
 ```
 
-**Note that this is about the same computation time as in Example 2 but for a problem almost 100x larger!**
+**Note that this is about the 10x faster than Example 2 but for a problem almost 100x larger! (On a V100 GPU)**
 
 The solution is:
 
@@ -209,7 +211,7 @@ outdef, _, flag, _ = @time newton(
 		0.4 .* sol_hexa .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y]),
 		par, opt_new, deflationOp, normN = x-> maximum(abs.(x)))
 	println("--> norm(sol) = ", norm(outdef))
-	heatmapsol(outdef) |> display
+	plotsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
 ```
 
@@ -227,12 +229,43 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005,
 	pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
-	br, _ = @time continuation(F_shfft, J_shfft,
+	br, = @time continuation(F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l), opts_cont;
 		plot = true,
-		plotSolution = (x, p;kwargs...)->heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
+		plotSolution = (x, p; kwargs...)->plotsol!(x; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
 ```
 
 We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at `examples/SH2d-fronts-cuda.jl`.
 
 ![](GPU-branch.png)
+
+We have the following information about the branch of hexagons
+
+```julia
+julia> br
+Branch number of points: 67
+Branch of Equilibrium
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,    nd at p ≈ -0.21522461 ∈ (-0.21528614, -0.21522461), |δp|=6e-05, [converged], δ = ( 3,  0), step =  24, eigenelements in eig[ 25], ind_ev =   3
+- #  2,    nd at p ≈ -0.21469007 ∈ (-0.21479652, -0.21469007), |δp|=1e-04, [converged], δ = ( 2,  0), step =  25, eigenelements in eig[ 26], ind_ev =   5
+- #  3,    nd at p ≈ -0.21216919 ∈ (-0.21264341, -0.21216919), |δp|=5e-04, [converged], δ = ( 2,  0), step =  27, eigenelements in eig[ 28], ind_ev =   7
+- #  4,    nd at p ≈ -0.21052576 ∈ (-0.21110899, -0.21052576), |δp|=6e-04, [converged], δ = ( 2,  0), step =  28, eigenelements in eig[ 29], ind_ev =   9
+- #  5,    nd at p ≈ -0.20630678 ∈ (-0.21052576, -0.20630678), |δp|=4e-03, [converged], δ = ( 8,  0), step =  29, eigenelements in eig[ 30], ind_ev =  17
+- #  6,    nd at p ≈ -0.19896508 ∈ (-0.19897308, -0.19896508), |δp|=8e-06, [converged], δ = ( 6,  0), step =  30, eigenelements in eig[ 31], ind_ev =  23
+- #  7,    nd at p ≈ -0.18621673 ∈ (-0.18748234, -0.18621673), |δp|=1e-03, [converged], δ = ( 2,  0), step =  33, eigenelements in eig[ 34], ind_ev =  25
+- #  8,    nd at p ≈ -0.17258147 ∈ (-0.18096574, -0.17258147), |δp|=8e-03, [converged], δ = ( 4,  0), step =  35, eigenelements in eig[ 36], ind_ev =  29
+- #  9,    nd at p ≈ -0.14951737 ∈ (-0.15113148, -0.14951737), |δp|=2e-03, [converged], δ = (-4,  0), step =  39, eigenelements in eig[ 40], ind_ev =  29
+- # 10,    nd at p ≈ -0.14047758 ∈ (-0.14130979, -0.14047758), |δp|=8e-04, [converged], δ = (-2,  0), step =  41, eigenelements in eig[ 42], ind_ev =  25
+- # 11,    nd at p ≈ -0.11304882 ∈ (-0.11315916, -0.11304882), |δp|=1e-04, [converged], δ = (-4,  0), step =  45, eigenelements in eig[ 46], ind_ev =  23
+- # 12,    nd at p ≈ -0.09074623 ∈ (-0.09085968, -0.09074623), |δp|=1e-04, [converged], δ = (-6,  0), step =  49, eigenelements in eig[ 50], ind_ev =  19
+- # 13,    nd at p ≈ -0.07062574 ∈ (-0.07246519, -0.07062574), |δp|=2e-03, [converged], δ = (-4,  0), step =  52, eigenelements in eig[ 53], ind_ev =  13
+- # 14,    nd at p ≈ -0.06235903 ∈ (-0.06238787, -0.06235903), |δp|=3e-05, [converged], δ = (-2,  0), step =  54, eigenelements in eig[ 55], ind_ev =   9
+- # 15,    nd at p ≈ -0.05358077 ∈ (-0.05404312, -0.05358077), |δp|=5e-04, [converged], δ = (-2,  0), step =  56, eigenelements in eig[ 57], ind_ev =   7
+- # 16,    nd at p ≈ -0.02494422 ∈ (-0.02586444, -0.02494422), |δp|=9e-04, [converged], δ = (-2,  0), step =  60, eigenelements in eig[ 61], ind_ev =   5
+- # 17,    nd at p ≈ -0.00484022 ∈ (-0.00665356, -0.00484022), |δp|=2e-03, [converged], δ = (-2,  0), step =  63, eigenelements in eig[ 64], ind_ev =   3
+- # 18,    nd at p ≈ +0.00057801 ∈ (-0.00122418, +0.00057801), |δp|=2e-03, [converged], δ = ( 5,  0), step =  64, eigenelements in eig[ 65], ind_ev =   6
+- # 19,    nd at p ≈ +0.00320921 ∈ (+0.00141327, +0.00320921), |δp|=2e-03, [converged], δ = (10,  0), step =  65, eigenelements in eig[ 66], ind_ev =  16
+Fold points:
+- #  1, fold at p ≈ -0.21528694 ∈ (-0.21528694, -0.21528694), |δp|=-1e+00, [    guess], δ = ( 0,  0), step =  24, eigenelements in eig[ 24], ind_ev =   0
+```
