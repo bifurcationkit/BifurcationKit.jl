@@ -1,10 +1,12 @@
 abstract type BranchResult end
 
 ####################################################################################################
-mergefromuser(x, a::NamedTuple) = merge((x = x,), a)
-mergefromuser(x::NamedTuple, a::NamedTuple) = merge(x, a)
-mergefromuser(x::Tuple, a::NamedTuple) = merge((;zip((Symbol("x$i") for i in 1:length(x)), x)...), a)
-mergefromuser(x::Number, a::NamedTuple) = merge((x = x,), a)
+namedprintsol(x) = (x = x,)
+namedprintsol(x::Real) = (x = x,)
+namedprintsol(x::NamedTuple) = x
+namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in 1:length(x)), x)...)
+
+mergefromuser(x, a::NamedTuple) = merge(namedprintsol(x), a)
 
 ####################################################################################################
 # Structure to hold continuation result
@@ -95,8 +97,8 @@ end
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
- function ContResult(pt, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = pt, x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
+ function ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
 	n_unstable = 0
 	n_imag = 0

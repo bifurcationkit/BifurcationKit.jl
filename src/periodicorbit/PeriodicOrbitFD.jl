@@ -829,7 +829,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::Newt
 # continuation wrapper
 
 """
-	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u, p) -> u[end], kwargs...)
+	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), kwargs...)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -849,7 +849,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], kwargs...)
+function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
 	@assert linearPO in [:FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace]
 
 	N = probPO.N
@@ -932,7 +932,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuation(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+function continuation(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
 	return continuationPOTrap(probPO, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
 end
@@ -972,7 +972,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 """
-function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> u[end], linearAlgo = BorderingBLS(), kwargs...)
+function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	@assert br.functional isa PeriodicOrbitTrapProblem

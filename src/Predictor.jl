@@ -191,11 +191,11 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
 	_range = algo.nb:-1:0
 	for ii in _range
-		# record the largest converged guess
+		# record the current index
 		algo.indconverged = ii
 		zpred = _copy(z_pred)
 		axpy!(ii*ds, algo.τ, zpred)
-		# we restore the original callback if it reaches the usual case ii=0
+		# we restore the original callback if it reaches the usual case ii == 0
 		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
 				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
 		if flag || ii == _range[end]
@@ -219,7 +219,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		end
 		# dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
 		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
-	else
+	else # the newton correction has converged
 		# control to have the same number of Newton iterations
 		Nmax = contparams.newtonOptions.maxIter
 		factor = (Nmax - it_newton_number) / Nmax
@@ -248,7 +248,7 @@ $(TYPEDFIELDS)
 mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
 	"order of the polynomial"
 	n::Int64
-	"last solutions vector"
+	"length of the last solutions vector used for the polynomial fit"
 	k::Int64
 	"matrix for the interpolation"
 	A::Matrix{T}

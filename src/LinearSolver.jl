@@ -60,7 +60,7 @@ end
 The struct `DefaultLS` is used to  provide the backslash operator
 """
 @with_kw struct DefaultLS <: AbstractLinearSolver
-	# some operators may not support LU (like ApproxFun.jl), QR factorization so it is best to let the user decides
+	# some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides
 	useFactorization::Bool = true
 end
 

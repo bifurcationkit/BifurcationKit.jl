@@ -570,7 +570,6 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 			else
 				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)),jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
 			end
-			flag && @show hist[end]
 			flag && push!(deflationOp, outdef1)
 			~flag && (failures += 1)
 		end

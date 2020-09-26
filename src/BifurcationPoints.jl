@@ -25,7 +25,7 @@ $(TYPEDFIELDS)
 	norm::T  = T(0)
 
 	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
-	printsol::Tp
+	printsol::Tp = T(0)
 
 	"Equilibrium at the bifurcation point"
 	x::Tv = Vector{T}(undef, 0)

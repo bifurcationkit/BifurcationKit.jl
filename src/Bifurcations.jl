@@ -42,12 +42,13 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
 		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in $(interval(branch[end-1].param, branch[end].param)) \n")
+		npar = length( branch[1]) - 5
 		push!(contres.foldpoint, GenericBifPoint(
 			type = :fold,
 			idx = length(branch)-1,
 			param = branch[end-1].param,
 			norm = normC(z.u),
-			printsol = branch[end-1][1],
+			printsol = NamedTuple{keys(branch[end-1])[1:npar]}(values(branch[end-1])[1:npar]),
 			x = _copy(z.u), tau = copy(tau),
 			ind_ev = 0,
 			# it means the fold occurs between step-2 and step:
@@ -128,7 +129,7 @@ function getBifurcationType(contparams::ContinuationPar, state::ContState, normC
 			idx = state.step + 1,
 			param = getp(state),
 			norm = normC(getx(state)),
-			printsol = printsolution(getx(state), getp(state)),
+			printsol = namedprintsol(printsolution(getx(state), getp(state))),
 			x = _copy(getx(state)),
 			tau = copy(state.tau),
 			ind_ev = ind_ev,

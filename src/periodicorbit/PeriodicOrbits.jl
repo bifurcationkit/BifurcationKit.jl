@@ -102,7 +102,7 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 	if (prob isa PoincareShootingProblem)
 
 		if printPeriod
-			printSolutionPS = (x, p) -> getPeriod(prob, x, set(par, lens, p))
+			printSolutionPS = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),)
 			return continuation(
 				prob,
 				(x, p) -> ShootingJacobian(prob, x, p),
