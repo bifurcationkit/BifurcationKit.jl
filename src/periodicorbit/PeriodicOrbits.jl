@@ -86,12 +86,10 @@ This is the continuation method for computing a periodic orbit using a (Standard
 
 # Arguments
 
-Similar as [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
-
-- `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
+Similar as [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 """
 
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; printPeriod = true, kwargs...)
+function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...)
 
 	options = contParams.newtonOptions
 
@@ -99,25 +97,12 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDShooting(contParams.newtonOptions.eigsolver)
 	end
 
-	if (prob isa PoincareShootingProblem)
-
-		if printPeriod
-			printSolutionPS = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),)
-			return continuation(
-				prob,
-				(x, p) -> ShootingJacobian(prob, x, p),
-				orbitguess, par, lens,
-				contParams, linearAlgo;
-				printSolution = printSolutionPS,
-				kwargs...)
-		end
-	end
-
 	return continuation(
 		prob,
 		(x, p) -> ShootingJacobian(prob, x, p),
 		orbitguess, par, lens,
 		contParams, linearAlgo;
+		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
 		kwargs...)
 end
 
