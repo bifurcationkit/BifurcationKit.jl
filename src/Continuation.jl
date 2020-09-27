@@ -32,6 +32,7 @@ abstract type ContinuationState end
 end
 
 Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = set(it.par, it.param_lens, p0)
 
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
@@ -175,10 +176,10 @@ function ContResult(it::ContIterable, state::ContState)
 		eiginfo = computeEigenvalues(it, x0, set(it.par, it.param_lens, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return ContResult(initStateSummary(it, state)..., x0, it.par, it.param_lens, eiginfo, contParams)
+		return ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
-		return ContResult(initStateSummary(it, state)..., x0, it.par, it.param_lens, eiginfo, contParams)
+		return ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	end
 end
 

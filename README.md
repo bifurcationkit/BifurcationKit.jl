@@ -38,6 +38,10 @@ To install it, please run
 
 `] add BifurcationKit`
 
+To install the bleeding edge version, please run
+
+`] add BifurcationKit#master`
+
 ## Website
 
 The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
