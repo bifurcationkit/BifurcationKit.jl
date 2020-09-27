@@ -78,11 +78,17 @@ eigenvals(br::BranchResult, ind::Int) = br.eig[ind].eigenvals
 """
 $(SIGNATURES)
 
+Return the eigenvalues of the ind-th bifurcation point.
+"""
+eigenvalsfrombif(br::BranchResult, ind::Int) = br.eig[br.bifpoint[ind].idx].eigenvals
+
+"""
+$(SIGNATURES)
+
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
 eigenvec(br::BranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
-
 
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
