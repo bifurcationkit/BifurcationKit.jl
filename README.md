@@ -65,7 +65,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Deflated continuation
 - Bifurcation points are located using a bisection algorithm
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
-- Automatic branch switching at simple branch points
+- Automatic branch switching at branch points (whatever the dimension of the kernel)
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic bifurcation diagram computation**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.

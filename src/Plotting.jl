@@ -55,15 +55,16 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpoints) >= 1
-			bp = unique([pt.type for pt in bifpt if pt.type != :none])
-			(length(bp) == 0) && return
-			for pt in bp
+			bps = unique(x->x.type, [pt for pt in bifpt if pt.type != :none])
+			(length(bps) == 0) && return
+			for pt in bps
 				@series begin
 					seriestype := :scatter
-					seriescolor --> colorbif[pt]
-					label --> "$pt"
+					seriescolor --> colorbif[pt.type]
+					label --> "$(pt.type)"
+					markersize --> 2
 					markerstrokewidth --> 0
-					[], []
+					[pt.param], [pt.printsol[1]]
 				end
 			end
 		end
