@@ -80,7 +80,7 @@ br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax 
 BK.from(br2) |> BK.type
 BK.from(br2) |> BK.istranscritical
 BK.type(nothing)
-BK.show(stdout,br2)
+BK.show(stdout, br2)
 BK.propertynames(br2)
 ####################################################################################################
 function Fbp2d(x, p)
