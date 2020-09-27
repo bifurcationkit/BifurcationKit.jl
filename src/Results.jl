@@ -67,8 +67,20 @@ Base.length(br::ContResult) = length(br.branch)
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
 @inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
-eigenvals(br::BranchResult, ind) = br.eig[ind].eigenvals
-eigenvec(br::BranchResult, ind, indev) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
+
+"""
+$(SIGNATURES)
+
+Return the eigenvalues of the ind-th continuation step.
+"""
+eigenvals(br::BranchResult, ind::Int) = br.eig[ind].eigenvals
+
+"""
+$(SIGNATURES)
+
+Return the indev-th eigenvectors of the ind-th continuation step.
+"""
+eigenvec(br::BranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
 
@@ -90,9 +102,7 @@ function Base.show(io::IO, br::ContResult, comment = "")
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
-function getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}
-	br.eig[bp.idx]
-end
+getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} = br.eig[bp.idx]
 
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
