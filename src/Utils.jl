@@ -21,7 +21,7 @@ function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 	# we compute the eigen-elements
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
-	eiginfo = computeEigenvalues(iter, getx(state), set(iter.par, iter.param_lens, getp(state)), nev_; kwargs...)
+	eiginfo = computeEigenvalues(iter, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
 	_isstable, n_unstable, n_imag = isstable(iter.contParams, eiginfo[1])
 	return eiginfo, _isstable, n_unstable, n_imag
 end

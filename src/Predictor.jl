@@ -90,7 +90,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			algo::NaturalPred, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(it.F, it.J, z_pred.u, set(it.par, it.param_lens, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
+	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
 end
 
@@ -127,15 +127,15 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
 	# dFdl = (F(z_new.u, z_new.p + ϵ) - F(z_new.u, z_new.p)) / ϵ
-	dFdl = it.F(z_new.u, set(it.par, it.param_lens, z_new.p + ϵ))
-	minus!(dFdl, it.F(z_new.u, set(it.par, it.param_lens, z_new.p)))
+	dFdl = it.F(z_new.u, setParam(it, z_new.p + ϵ))
+	minus!(dFdl, it.F(z_new.u, setParam(it, z_new.p)))
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
 	tau_normed = copy(τ)#copyto!(similar(tau), tau) #copy(tau_old)
 	rmul!(tau_normed, θ / length(τ.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_new.u)
-	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, set(it.par, it.param_lens, z_new.p)), dFdl,
+	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, setParam(it, z_new.p)), dFdl,
 			tau_normed, 0*z_new.u, T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve

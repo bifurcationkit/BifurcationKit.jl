@@ -191,7 +191,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	end
 
 	# perform continuation
-	branch, u, tau = continuation(probPO, orbitguess, set(br.params, br.param_lens, pred.p), br.param_lens, _contParams; kwargs...)
+	branch, u, tau = continuation(probPO, orbitguess, setParam(br, pred.p), br.param_lens, _contParams; kwargs...)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = probPO), hopfpt), u, tau
 

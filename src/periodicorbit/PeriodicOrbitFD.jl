@@ -990,7 +990,7 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 
 	pb = br.functional
 
-	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, set(br.params, br.param_lens, bifpt.param), real.(ζ0))
+	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ0))
 	ζ = reduce(vcat, ζ_a)
 
 	orbitguess = copy(bifpt.x)
@@ -998,18 +998,18 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 
 	newp = bifpt.param + δp
 
-	pb(orbitguess, set(br.params, br.param_lens, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
+	pb(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
 
 	if usedeflation
 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
 		optn = _contParams.newtonOptions
 		# find point on the first branch
-		sol0, _, flag, _ = newton(pb, bifpt.x, set(br.params, br.param_lens, newp), optn; linearPO = linearPO, kwargs...)
+		sol0, _, flag, _ = newton(pb, bifpt.x, setParam(br, newp), optn; linearPO = linearPO, kwargs...)
 
 		# find the bifurcated branch using deflation
 		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 		verbose && println("\n--> Compute point on bifurcated branch...")
-		solbif, _, flag, _ = newton(pb, orbitguess, set(br.params, br.param_lens, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
+		solbif, _, flag, _ = newton(pb, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
 		@assert flag "Deflated newton did not converge"
 		orbitguess .= solbif
 	end
@@ -1019,10 +1019,10 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 	# Right now, it can be quite large.
 
 	# perform continuation
-	branch, u, tau = continuation(br.functional, orbitguess, set(br.params, br.param_lens, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
+	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
 
 	#create a branch
-	bppo = Pitchfork(bifpt.x, bifpt.param, set(br.params, br.param_lens, bifpt.param), br.param_lens, ζ, ζ, nothing, :nothing)
+	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.param_lens, ζ, ζ, nothing, :nothing)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
 end

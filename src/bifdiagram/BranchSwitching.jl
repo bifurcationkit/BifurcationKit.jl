@@ -86,7 +86,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		optn = optionsCont.newtonOptions
 		bifpt = br.bifpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
-		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, set(br.params, br.param_lens, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
+		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
 		copyto!(pred.x, solbif)
 	end
 
@@ -167,14 +167,14 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 	println("--> Looking for solutions after the bifurcation point...")
 	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFp
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
+		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
 
 	println("--> Looking for solutions before the bifurcation point...")
 	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFm
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), set(par, br.param_lens, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
+		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
 		flag && push!(defOpm, solbif)
 	end
 	printstyled(color=:green, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
@@ -188,7 +188,7 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 			bpnf.x0, par,		# first point on the branch
 			_sol, bpnf.p + _dp, # second point on the branch
 			br.param_lens, (@set optionsCont.ds = _ds); kwargs...)
-		# continuation(F, dF, _sol, set(par, br.param_lens, bpnf.p + _dp), br.param_lens, (@set optionsCont.ds = _ds); kwargs...)
+		# continuation(F, dF, _sol, setParam(br, bpnf.p + _dp), br.param_lens, (@set optionsCont.ds = _ds); kwargs...)
 	end
 
 	branches = Branch[]

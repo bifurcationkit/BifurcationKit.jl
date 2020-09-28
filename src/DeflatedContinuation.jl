@@ -28,7 +28,7 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 	state.z_pred.p = current_param
 
 	getPredictor!(state, it)
-	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), set(it.par,it.param_lens,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
+	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), setParam(it,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
 	if converged
 		# record previous parameter (cheap) and update current solution
 		copyto!(state.z_old.u, sol1); state.z_old.p = current_param

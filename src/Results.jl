@@ -67,6 +67,7 @@ Base.length(br::ContResult) = length(br.branch)
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
 @inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
+setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
 
 """
 $(SIGNATURES)

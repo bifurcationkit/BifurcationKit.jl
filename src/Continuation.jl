@@ -173,7 +173,7 @@ function ContResult(it::ContIterable, state::ContState)
 	contParams = it.contParams
 
 	if computeEigenElements(contParams)
-		eiginfo = computeEigenvalues(it, x0, set(it.par, it.param_lens, p0))
+		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
 		return ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
@@ -208,7 +208,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	verbose && println("--> parameter = $(p0), initial step")
 	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
 	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
-			u0, set(it.par, it.param_lens, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
+			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = $(p0 + ds/η), initial step (bis)")
