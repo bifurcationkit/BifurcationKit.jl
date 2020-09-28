@@ -74,10 +74,6 @@ computeNormalForm
 newton
 ```
 
-```@docs
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :BorderedLU, kwargs...)
-```
-
 ## Continuation
 
 ```@docs

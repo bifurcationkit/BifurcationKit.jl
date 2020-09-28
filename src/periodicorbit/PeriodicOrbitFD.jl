@@ -814,7 +814,6 @@ This is the Newton-Krylov Solver for computing a periodic orbit using a function
 - flag of convergence
 - number of iterations
 """
-
 newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :FullLU, kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
 
 """
@@ -822,7 +821,6 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; li
 
 This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-
 newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; linearPO::Symbol = :FullLU, kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
 
 ####################################################################################################
