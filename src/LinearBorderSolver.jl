@@ -4,9 +4,18 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 (lbs::AbstractBorderedLinearSolver)(J, dR::vec1, dz::vec2, R, n::T, theta::T; shift::Ts = nothing) where {vec1, vec2, T, Ts} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
 
 ####################################################################################################
+"""
+$(TYPEDEF)
+
+This struct is used to  provide the bordered linear solver based on the Bordering Method. It works
+$(TYPEDFIELDS)
+"""
 @with_kw struct BorderingBLS{S <: AbstractLinearSolver, Ttol} <: AbstractBorderedLinearSolver
+	"Linear solver used for the Bordering method."
 	solver::S = DefaultLS()
+	"Tolerance for checking precision"
 	tol::Ttol = 1e-12
+	"Check precision of the linear solve?"
 	checkPrecision::Bool = false
 end
 
@@ -51,7 +60,13 @@ function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 end
 ####################################################################################################
 # this interface should work for Sparse Matrices as well as for Matrices
+"""
+$(TYPEDEF)
+This struct is used to  provide the bordered linear solver based on inverting the full matrix.
+$(TYPEDFIELDS)
+"""
 struct MatrixBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
+	"Linear solver used to invert the full matrix."
 	solver::S
 end
 
@@ -136,6 +151,11 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::AbstractArray) where {Tj, 
 	return out
 end
 
+"""
+$(TYPEDEF)
+This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x,p)`.
+$(TYPEDFIELDS)
+"""
 struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
 	solver::S
 end

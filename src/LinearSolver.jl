@@ -57,7 +57,10 @@ end
 # Solvers for default \ operator (backslash)
 ####################################################################################################
 """
-The struct `DefaultLS` is used to  provide the backslash operator
+$(TYPEDEF)
+
+This struct is used to  provide the backslash operator.
+$(TYPEDFIELDS)
 """
 @with_kw struct DefaultLS <: AbstractLinearSolver
 	# some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides
@@ -88,6 +91,7 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
+Create a linear solver based on GMRES from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
@@ -132,6 +136,7 @@ end
 
 """
 $(TYPEDEF)
+Create a linear solver based on GMRES from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers!{T, Tl, Tr} <: AbstractLinearSolver
@@ -175,6 +180,7 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
+Create a linear solver based on GMRES from `KrylovKit.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
