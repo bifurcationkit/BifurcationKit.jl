@@ -740,7 +740,7 @@ end
 
 ####################################################################################################
 # newton wrappers
-function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :BorderedLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
+function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert linearPO in [:FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]
 	N = probPO.N
 	M = probPO.M
@@ -815,7 +815,7 @@ This is the Newton-Krylov Solver for computing a periodic orbit using a function
 - number of iterations
 """
 
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :BorderedLU, kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :FullLU, kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
 
 """
 	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
@@ -823,7 +823,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; li
 This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
 
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; linearPO::Symbol = :BorderedLU, kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; linearPO::Symbol = :FullLU, kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
 
 ####################################################################################################
 # continuation wrapper
@@ -849,7 +849,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
+function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
 	@assert linearPO in [:FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace]
 
 	N = probPO.N
