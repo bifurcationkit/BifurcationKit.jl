@@ -361,18 +361,17 @@ function biorthogonalise(ζs, ζstars, verbose)
 	if norm(G - LinearAlgebra.I, Inf) >= 1e-5
 		G = [ dot(ζ, ζstar) for ζ in _ζs, ζstar in _ζstars]
 		@warn "Gram matrix not equal to idendity. Switching to LU algorithm."
-		display(G)
-		@show det(G)
-		_F = lu(G)
-		display(inv(_F.L) * G * inv(_F.U)')
-		ζs = inv(_F.L) * _ζs
+		println("G (det = $(det(G))) = "); display(G)
+		_F = lu(G; check = true)
+		display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
+		ζs = inv(_F.L) * inv(_F.P) * _ζs
 		ζstars = inv(_F.U)' * _ζstars
 	end
 
 	# test the bi-orthogonalization
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
 	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
-	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`."
+	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
 	return ζs, ζstars
 end
 
@@ -455,7 +454,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	# extract eigen-elements for transpose(L), needed to build spectral projector
 	# it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
 	# only adjust ζstars
-	for ζ in ζs;ζ ./= scaleζ(ζ);end
+	for ζ in ζs; ζ ./= scaleζ(ζ); end
 	if issymmetric
 		λstars = copy(λs)
 		ζstars = copy.(ζs)
