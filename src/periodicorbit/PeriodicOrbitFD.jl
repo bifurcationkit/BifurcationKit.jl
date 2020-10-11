@@ -124,6 +124,7 @@ function applyJ(pb::PeriodicOrbitTrapProblem, dest, x, p, dx)
 	dest
 end
 
+
 # dummy constructor, useful for specifying the "algorithm" to look for periodic orbits
 # just call PeriodicOrbitTrapProblem()
 

@@ -4,10 +4,10 @@ update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy
 
 ####################################################################################################
 @views function sectionShooting(x::AbstractVector, normal::AbstractVector, center::AbstractVector)
-	N = length(center)	
+	N = length(center)
 	# we only constrain the first point to lie on a specific hyperplane
 	# this avoids the temporary xc - centers
-	return dot(x[1:N], normal) - dot(center, normal)
+	return (dot(x, normal) - dot(center, normal)) * x[end]
 end
 
 # section for Standard Shooting

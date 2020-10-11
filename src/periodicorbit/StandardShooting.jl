@@ -25,24 +25,24 @@ end
 """
 	pb = ShootingProblem(flow::Flow, ds, section; isparallel = false)
 
-This composite type implements the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
+This composite type creates a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for type of section defined as a hyperplane.
-- `isparallel` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
-
-You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
+- `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
+- `isparallel` whether the shooting are computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem`.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
 
+You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
+
 ## Simplified constructors
-- A simpler way to build a functional is to use
+- A simpler way to build the functional is to use
 	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
 where `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `isparallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 
-- Another way with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase
+- Another way to create a Shooting problem with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase
 	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; isparallel = false, kwargs...)
 or
 
@@ -101,6 +101,15 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers:
 extractPeriodShooting(x::AbstractVector) = x[end]
 extractPeriodShooting(x::BorderedArray)  = x.p
 
+# this function updates the section during the continuation run
+function updateSection!(prob::ShootingProblem, x, par)
+	# return true
+	xt = extractTimeSlices(x, prob.M)
+	@views update!(prob.section, prob.flow.F(xt[:, 1], par), xt[:, 1])
+	prob.section.normal ./= norm(prob.section.normal)
+	return true
+end
+
 """
 $(SIGNATURES)
 
@@ -117,12 +126,8 @@ extractTimeSlices(x::BorderedArray, M::Int) = x.u
 @inline extractTimeSlice(x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline extractTimeSlice(x::AbstractVector, ii::Int) = xc[ii]
 
-# putSection(x::AbstractVector, s) = x[end] = s
-# putSection(x::BorderedArray, s) = x.p = s
-
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
-	# period of the cycle
 	# Sundials does not like @views :(
 	T = extractPeriodShooting(x)
 	M = getM(sh)
@@ -229,7 +234,6 @@ end
 
 # jacobian of the shooting functional, this allows for Array state space
 function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e-9)
-	# period of the cycle
 	dT = extractPeriodShooting(dx)
 	T  = extractPeriodShooting(x)
 	M = getM(sh)
@@ -242,10 +246,10 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
 			tmp = sh.flow(x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
-			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] * dT .- dx.u[ip1]
+			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
 		end
 	else
-		@assert 1==0 "Not implemented yet. Try to use AbstractVectors instead"
+		@assert 1==0 "Not implemented yet. Try using AbstractVectors instead"
 	end
 
 	# add constraint

@@ -134,9 +134,7 @@ $(SIGNATURES)
 Compute the period of the periodic orbit associated to `x_bar`.
 """
 function getPeriod(psh::PoincareShootingProblem, x_bar, par)
-
-	M = getM(psh)
-	Nm1 = div(length(x_bar), M)
+	M = getM(psh); Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
 	x_barc = reshape(x_bar, Nm1, M)
@@ -259,7 +257,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 		for ii in 1:M
 			im1 = (ii == 1 ? M : ii - 1)
 			# We need the callback to be active here!!!
-			@views outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
+			outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
 		end
 	else
 		solOde = psh.flow(xc, par, repeat([Inf64],M))
