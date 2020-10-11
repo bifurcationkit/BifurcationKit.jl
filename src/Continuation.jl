@@ -296,7 +296,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 	while ~isnothing(next)
 		# we get the current state
-		(i, state) = next
+		_, state = next
 		########################################################################################
 		# the new solution has been successfully computed
 		# we perform saving, plotting, computation of eigenvalues...

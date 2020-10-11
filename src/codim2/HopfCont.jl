@@ -294,7 +294,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 		hopfpointguess, par, lens2,
 		opt_hopf_cont;
 		printSolution = (u, p) -> u.p[1],
-		plotSolution = (x, p; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)), kwargs...)
+		plotSolution = (x, p; kwargs...) -> (xlabel!(String(getLensParam(lens2)), subplot=1); ylabel!(String(getLensParam(lens1)), subplot=1)), kwargs...)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end

@@ -42,7 +42,7 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, par) where {vecty
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
-	v, _, _ = fp.linsolver(fp.J(x, set(par, fp.lens, p)), a)
+	v, = fp.linsolver(fp.J(x, set(par, fp.lens, p)), a)
 	bv = dot(b, v)
 	bv == T(0) && @error "Error when using Minimally Augmented formulation for Fold bifurcation. The dot product should non-zero."
 
@@ -281,7 +281,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 		foldpointguess, par, lens2,
 		opt_fold_cont,
 		printSolution = (u, p) -> u.p,
-		plotSolution = (x, p; kwargs...) -> (xlabel!("p2", subplot=1); ylabel!("p1", subplot=1)  ); kwargs...)
+		plotSolution = (x, p; kwargs...) -> (xlabel!(String(getLensParam(lens2)), subplot=1); ylabel!(String(getLensParam(lens1)), subplot=1)  ); kwargs...)
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 

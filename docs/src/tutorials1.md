@@ -79,12 +79,13 @@ We can perform numerical continuation w.r.t. the parameter $\alpha$. This time, 
 optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newtonOptions = NewtonPar(tol = 1e-8))
 ```
 
-Next, we call the continuation routine as follows. 
+Next, we call the continuation routine as follows.
 
 ```julia
 br, = @time continuation(F_chan, out, par, (@lens _.α),
 		optcont; plot = true, verbosity = 0,
-		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
+		# function to plot the solution
+		plotSolution = (x, p; k...) -> plot!(x; ylabel="solution", label="", k...))
 ```
 
 The parameter axis `lens = @lens _.α` can be used to extract the component of `par` corresponding to `α`. Internally, it is used as `get(par, lens)` which returns `3.3`.

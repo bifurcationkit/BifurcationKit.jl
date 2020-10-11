@@ -37,6 +37,9 @@ plot(br1)
 plot!(br2)
 ```
 
+!!! warn "Plot of bifurcation points"
+    The bifurcation points for which the bisection was successful are indicated with circles and with squares otherwise.
+
 ### Choosing Variables
 
 You can select which variables to plot using the keyword argument `vars`:

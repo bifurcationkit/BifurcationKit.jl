@@ -82,7 +82,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution,
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners or affect the newton iterations. In the deflation part of the algorithm, when seeking for new branches, the callback is passed the keyword argument `fromDeflatedNewton = true` to tell the user can it is not in the continuation part (regular newton) of the algorithm,
 - `tangentAlgo = NaturalPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`,
-- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3,4,5}`,
+- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,⋯,5}`,
 - `normN = norm` norm used in the different Newton solves,
 - `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
 - `perturbSolution = (x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...)),` perturbation applied to the solution when trying to fimnd new solutions using Deflated Newton.
@@ -97,7 +97,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			maxBranches::Int = 100,
 			seekEveryStep::Int = 1,
 			showplot::Bool = true,
-			tangentAlgo = NaturalPred(),
+			tangentAlgo = SecantPred(),
 			linearAlgo = BorderingBLS(),
 			dotPALC = (x,y) -> dot(x,y) / length(x),
 			printSolution = (x, p) -> norm(x),

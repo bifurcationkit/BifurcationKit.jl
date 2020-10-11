@@ -55,7 +55,9 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) | 
 | [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) | 
-| [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |  
+| [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | | 
+| [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1)  |    |
 
 
 ## Main features
