@@ -283,7 +283,7 @@ $(TYPEDFIELDS)
 
 - `n` order of the polynomial
 - `k` length of the last solutions vector used for the polynomial fit
-- `v0` example of solution to be stored
+- `v0` example of solution to be stored. It is only used to get the `eltype` of the tangent!!
 """
 mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredictor
 	"Order of the polynomial"

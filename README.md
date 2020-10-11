@@ -82,18 +82,18 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |
 |---|---|---|---|---|
-| (Deflated) Newton| Y | Y | 4, 5| :heavy_check_mark:|
-| Continuation (Natural, Secant, Tangent) | Y | Y | All |:heavy_check_mark:  |
-| Deflated Continuation | Y | Y | |:heavy_check_mark:  |
-| Branching / Fold / Hopf point detection | Y | Y | All / All / 6 - 9 | :heavy_check_mark: |
-| Fold Point continuation | Y | Y | 1, 8 | |
-| Hopf continuation | Y | `AbstractArray` | 5 | |
-| Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
-| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Y | `AbstractArray` |  Yes | |
-| Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
-| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | |
-| Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |
-| Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 | |
+| (Deflated) Krylov-Newton| Yes| Yes| All| :heavy_check_mark:|
+| Continuation (Natural, Secant, Tangent) | Yes| Yes| All |:heavy_check_mark:  |
+| Deflated Continuation | Yes| Yes| [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1) |:heavy_check_mark:  |
+| Branching / Fold / Hopf point detection | Yes| Yes| All / All / [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
+| Fold Point continuation | Yes| Yes| [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | |
+| Hopf continuation | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Continuation-of-Hopf-points-1) | |
+| Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
+| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
+| Periodic Orbit (FD) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark:|
+| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
+| Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
+| Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | |
 
 ## To do or grab
 Without a priority order:

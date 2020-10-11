@@ -2,7 +2,6 @@ abstract type AbstractPeriodicOrbitProblem end
 
 # Periodic orbit computations by finite differences
 abstract type AbstractPOTrapProblem <: AbstractPeriodicOrbitProblem end
-
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
 # get the number of time slices / sections
@@ -19,16 +18,16 @@ Define a type to interface the Jacobian of the Shooting Problem with the Floquet
 
 $(TYPEDFIELDS)
 """
-struct ShootingJacobian{Tpb, Tjacpb, Torbitguess, Tp}
+struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
 	pb::Tpb
 	jacpb::Tjacpb
 	x::Torbitguess
 	par::Tp
 end
-ShootingJacobian(pb, x, par) = ShootingJacobian(pb, dx -> pb(x, par, dx), x, par)
+FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 
 # evaluation of the jacobian
-(shjac::ShootingJacobian)(dx) = shjac.jacpb(dx)
+(shjac::FloquetWrapper)(dx) = shjac.jacpb(dx)
 
 ####################################################################################################
 # newton wrapper
@@ -99,7 +98,7 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 
 	return continuation(
 		prob,
-		(x, p) -> ShootingJacobian(prob, x, p),
+		(x, p) -> FloquetWrapper(prob, x, p),
 		orbitguess, par, lens,
 		contParams, linearAlgo;
 		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
@@ -157,6 +156,8 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
+
 	cb = get(kwargs, :callbackN, cbDefault)
 
 	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
@@ -184,7 +185,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi ,M+1)[1:M]]
 
 	# build the variable to hold the functional for computing PO based on finite differences
-	probPO, orbitguess = update(prob, F, dF, hopfpt, ζr, M, orbitguess_a, abs(2pi/pred.ω))
+	probPO, orbitguess = updateForBS(prob, F, dF, hopfpt, ζr, M, orbitguess_a, abs(2pi/pred.ω))
 
 	if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
 		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)

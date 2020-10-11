@@ -470,8 +470,7 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-
-function update(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, period)
+function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, period)
 	# make the section
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end

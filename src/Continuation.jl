@@ -3,7 +3,6 @@ abstract type ContinuationState end
 
 ####################################################################################################
 # Iterator interface
-
 @with_kw struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
 	F::TF
 	J::TJ

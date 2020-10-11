@@ -112,7 +112,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 				end
 
 			catch ex
-				@error ex
+				# @error ex
 			# 	return node
 			end
 		end

@@ -136,7 +136,7 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p) for c in centers], centers); isparallel = isparallel,
 kwargs...)
 
-isSimple(sh::ShootingProblem) = sh.M == 1
+@inline isSimple(sh::ShootingProblem) = sh.M == 1
 @inline isParallel(sh::ShootingProblem) = sh.isparallel
 
 # this function extracts the last component of the periodic orbit
@@ -353,8 +353,7 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-
-function update(prob::ShootingProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period)
+function updateForBS(prob::ShootingProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period)
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec

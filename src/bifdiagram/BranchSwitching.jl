@@ -59,11 +59,12 @@ Automatic branch switching at branch points based on a computation of the normal
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
+	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
+	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
+
 	if kerneldim(br, ind_bif) > 1
 		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, kwargs...)
 	end
-
-	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
 	@assert br.bifpoint[ind_bif].type == :bp "Error! This bifurcation type is not handled.\n Branch point from $(br.bifpoint[ind_bif].type)"

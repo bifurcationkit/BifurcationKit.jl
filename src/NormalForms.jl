@@ -337,7 +337,7 @@ function biorthogonalise(ζs, ζstars, verbose)
 	# we use Gram-Schmidt algorithm instead
 
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G))"
+	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n $(display(G))"
 
 	# save those in case the first algo fails
 	_ζs = copy.(ζs)
@@ -444,9 +444,8 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
-			verbose && (println("--> λs = ");Base.display(rightEv))
-			verbose && (println("--> λs (recomputed) = ");Base.display(_λ))
-			@assert _λ[1:length(rightEv)] ≈ rightEv "We did not find the correct eigenvalues $(rightEv). We found $(_λ)"
+			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ)))
+			@assert _λ[1:length(rightEv)] ≈ rightEv "We did not find the correct eigenvalues (1st col) but the second column in\n $(display(hcat(rightEv, _λ)))."
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
 			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in indev-N+1:indev]
