@@ -44,7 +44,7 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 @with_kw struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
 	M::Int64 = 0								# number of Poincaré sections
 	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
-	section::Tsection = SectionPS(M)	# Poincaré sections
+	section::Tsection = SectionPS(M)			# Poincaré sections
 	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
@@ -116,9 +116,12 @@ end
 
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
-function update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
-	centers = [E(pb.section, centers_bar[ii], ii) for ii in eachindex(centers_bar)]
-	normals = [pb.flow.F(c) for c in centers]
+@views function updateSection!(pb::PoincareShootingProblem, centers_bar, par; _norm = norm)
+	M = getM(pb); Nm1 = div(length(centers_bar), M)
+	centers_barc = reshape(centers_bar, Nm1, M)
+	centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
+	normals = [pb.flow.F(c, par) for c in centers]
+
 	for ii in eachindex(normals)
 		normals[ii] ./= _norm(normals[ii])
 	end
@@ -171,8 +174,7 @@ Compute the full trajectory associated to `x`. Mainly for plotting purposes.
 """
 function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 	# this function extracts the amplitude of the cycle
-	M = getM(prob)
-	Nm1 = div(length(x_bar), M)
+	M = getM(prob); Nm1 = length(x_bar) ÷ M
 
 	# reshape the period orbit guess
 	x_barc = reshape(x_bar, Nm1, M)
@@ -196,8 +198,6 @@ function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 		return sol[1]
 	end
 end
-
-
 
 function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle

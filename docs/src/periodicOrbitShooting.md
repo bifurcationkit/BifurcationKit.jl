@@ -1,6 +1,6 @@
 # Periodic orbits based on the shooting method
 
-A set of shooting algorithms is provided which is called either *Simple Shooting (SS)* if a single shooting is used and *Multiple Shooting (MS)* otherwise. 
+A set of shooting algorithms is provided which are called either *Simple Shooting (SS)* if a single shooting is used and *Multiple Shooting (MS)* otherwise. 
 
 !!! unknown "References"
     For the exposition, we follow the PhD thesis **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations**, *Lust, Kurt*, 1997. 
@@ -12,7 +12,7 @@ $$\tag{1} \frac{d x}{d t}=f(x)$$
 and we write $\phi^t(x_0)$ the associated flow (or semigroup of solutions).
 
 !!! tip "Tip about convenience functions"
-    For convenience, we provide some functions `plotPeriodicShooting` for plotting, `getAmplitude` (resp. `getMaximum`) for getting the amplitude (resp. maximum) of the solution encoded by a shooting problem. See the tutorials for example of use.
+    For convenience, we provide some functions `plotPeriodicShooting` for plotting, `getAmplitude` (resp. `getMaximum`) for getting the amplitude (resp. maximum) of the solution encoded by a shooting problem. See the tutorials for examples of use.
 
 ## Standard Shooting
 ### Simple shooting
@@ -58,12 +58,16 @@ The functional is encoded in the composite type [`ShootingProblem`](@ref). In pa
 > The algorithm is based on the one described in **Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.**, Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó (2004) and **Matrix-Free Continuation of Limit Cycles for Bifurcation Analysis of Large Thermoacoustic Systems.** Waugh, Iain, Simon Illingworth, and Matthew Juniper (2013). 
 
 
-We look for periodic orbits solutions of (1) using hyperplanes $\Sigma_i=\{x\ / \ n_i\cdot(x-x^c_{i})=0\}$ for $i=1,\cdots,M$, centered on $x^c_i$, which intersect transversally an initial periodic orbit guess. We write $\Pi_i:\Sigma_i\to\Sigma_{mod(i+1,M)}$, the Poincaré return map to $\Sigma_{mod(i+1,M)}$. The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ constrained to live in $\Sigma_i$. Hence, one has to constrain the unknowns to these hyperplanes otherwise the Newton algorithm does not converge well.
+We look for periodic orbits solutions of (1) using the hyperplanes $\Sigma_i=\{x\ / \ n_i\cdot(x-x^c_{i})=0\}$ for $i=1,\cdots,M$, centered on $x^c_i$, which intersect transversally an initial periodic orbit guess. We write $\Pi_i:\Sigma_i\to\Sigma_{mod(i+1,M)}$, the Poincaré return map to $\Sigma_{mod(i+1,M)}$. The main idea of the algorithm is to use the fact that the problem is $(N-1)\cdot M$ dimensional if $x_i\in\mathbb R^N$ because each $x_i$ lives in $\Sigma_i$. Hence, one has to constrain the unknowns to these hyperplanes otherwise the Newton algorithm does not converge well.
 
-To this end, we introduce the projection operator $R_i:\mathbb R^N\to \mathbb R^{N-1}$ such that $R_{i}\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k}, x_{k+1}, \ldots, x_{N}\right)=\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k+1}, \ldots, x_{N}\right)$ where $k=argmax |n_{i,p}|$ (which depends on $i$). The inverse operator is defined as (where $\bar x:=R_i(x)$)
+To this end, we introduce the projection operator $R_i:\mathbb R^N\to \mathbb R^{N-1}$ such that 
 
-$$E_{i}(\bar x) := E_{i}\left(x_{1}, x_{2}, \ldots, x_{k-1}, x_{k+1}, \ldots, x_{N}\right)=
-\left(x_{1}, x_{2}, \ldots, x_{k-1}, x^c_{i,k}-\frac{\bar{n}_i \cdot\left(\overline{x}-\overline{x}^c_{i}\right)}{n_{i,k}}, x_{k+1}, \ldots, x_{N}\right).$$ 
+$$R_{i}\left(x_{1}, x_{2}, \ldots, x_{k_i-1}, x_{k_i}, x_{k_i+1}, \ldots, x_{N}\right)=\left(x_{1}, x_{2}, \ldots, x_{k_i-1}, x_{k_i+1}, \ldots, x_{N}\right)$$
+
+where $k_i=argmax_p |n_{i,p}|$. The inverse operator is defined as (where $\bar x:=R_i(x)$)
+
+$$E_{i}(\bar x) := E_{i}\left(x_{1}, x_{2}, \ldots, x_{k_i-1}, x_{k_i+1}, \ldots, x_{N}\right)=
+\left(x_{1}, x_{2}, \ldots, x_{k_i-1}, x^c_{i,k_i}-\frac{\bar{n}_i \cdot\left(\overline{x}-\overline{x}^c_{i}\right)}{n_{i,k_i}}, x_{k_i+1}, \ldots, x_{N}\right).$$ 
 
 We note that $R_i\circ E_i = I_{\mathbb R^{N-1}}$ and $E_i\circ R_i = I_{\mathbb R^{N}}$.
 

@@ -27,7 +27,7 @@ end
 FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 
 # evaluation of the jacobian
-(shjac::FloquetWrapper)(dx) = shjac.jacpb(dx)
+(shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
 
 ####################################################################################################
 # newton wrapper
@@ -68,7 +68,7 @@ Similar as [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton(prob::AbstractShootingProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator; kwargs...)
+function newton(prob::AbstractShootingProblem, orbitguess::vectype, par, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}; linearPO = :MatrixFree, kwargs...) where {T, Tf, vectype, S, E}
 	return newton(prob,
 			(x, p) -> (dx -> prob(x, p, dx)),
 			orbitguess, par,
