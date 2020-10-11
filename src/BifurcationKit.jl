@@ -1,5 +1,5 @@
 module BifurcationKit
-	using Plots, JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays
+	using JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
 	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
 	using RecursiveArrayTools: VectorOfArray
@@ -44,7 +44,17 @@ module BifurcationKit
 	include("periodicorbit/PeriodicOrbitFD.jl")
 	include("periodicorbit/FloquetQaD.jl")
 
-	include("Plotting.jl")
+	include("plotting/Recipes.jl")
+	
+	using Requires
+	
+	function __init__()
+		@require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
+			using .Plots
+			include("plotting/PlotCont.jl")
+		end
+	end	
+			
 
 	# linear solvers
 	export DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,

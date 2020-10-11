@@ -46,7 +46,7 @@ end
 			label --> ""
 			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
 		end
-			# add legend for bifurcation points
+		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
 			bps = unique(x -> x.type, [pt for pt in bifpt if pt.type != :none])
 			(length(bps) == 0) && return
@@ -102,33 +102,6 @@ end
 	end
 end
 ####################################################################################################
-"""
-Plot the branch of solutions during the continuation
-"""
-function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-
-	l = computeEigenElements(contparms) ? (Plots.@layout [a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout [a{0.5w} [b; c]]
-	Plots.plot(layout = l)
-
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false,
-		xlabel = getLensParam(contres.param_lens),
-		ylabel = getfirstusertype(contres),
-		label = "", plotfold = false, subplot = 1)
-
-	# put arrow to indicate the order of computation
-	length(contres) > 1 &&	plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
-
-	plot!(contres;	vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2)
-
-	if computeEigenElements(contparms)
-		eigvals = contres.eig[end].eigenvals
-		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
-	end
-
-	plotuserfunction(sol.u, sol.p; subplot = 3)
-	display(title!(""))
-end
 
 function filterBifurcations(bifpt)
 	# this function filters Fold points and Branch points which are located at the same/previous/next point
