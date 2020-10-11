@@ -759,7 +759,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 			_J =  probPO(Val(:JacFullSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
-			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
+			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p, _indx)
 		else
 		 	jac = (x, p) -> ( dx -> probPO(x, p, dx))
 		end
