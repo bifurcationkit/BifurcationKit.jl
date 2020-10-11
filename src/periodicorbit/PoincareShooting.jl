@@ -5,7 +5,7 @@ using DiffEqBase
 
 """
 
-`pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, isparallel = false)`
+`pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, parallel = false)`
 
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
@@ -13,7 +13,7 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 - `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
 - `δ = 1e-8` used to compute the jacobian of the fonctional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
 - `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplan section)
-- `isparallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
+- `parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
 
 ## Simplified constructors
 - A simpler way is to create a functional is
@@ -46,69 +46,69 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
 	section::Tsection = SectionPS(M)			# Poincaré sections
 	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
-	isparallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
+	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
-@inline isParallel(psh::PoincareShootingProblem) = psh.isparallel
+@inline isParallel(psh::PoincareShootingProblem) = psh.parallel
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
 			hyp::SectionPS;
-			δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
+			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
 	# change the ODEProblem -> EnsembleProblem for the parallel case
 	_M = hyp.M
-	isparallel = _M==1 ? false : isparallel
-	_pb = isparallel ? EnsembleProblem(prob) : prob
-	return PoincareShootingProblem(flow = Flow(F, p, _pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, isparallel = isparallel)
+	parallel = _M==1 ? false : parallel
+	_pb = parallel ? EnsembleProblem(prob) : prob
+	return PoincareShootingProblem(flow = Flow(F, p, _pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
 end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), isparallel = isparallel)
+PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), parallel = parallel)
 
-PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; isparallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), isparallel = isparallel)
+PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), parallel = parallel)
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
 			normals::AbstractVector, centers::AbstractVector;
-			δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
+			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
 	return PoincareShootingProblem(F, p,
 					prob, alg,
 					SectionPS(normals, centers);
-					δ = δ, interp_points = interp_points, isparallel = isparallel, kwargs...)
+					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
 
 function PoincareShootingProblem(F, p,
 				prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
 				hyp::SectionPS;
-				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
+				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
 	# change the ODEProblem -> EnsembleProblem for the parallel case
 	_M = hyp.M
-	isparallel = _M==1 ? false : isparallel
-	_pb1 = isparallel ? EnsembleProblem(prob1) : prob1
-	_pb2 = isparallel ? EnsembleProblem(prob2) : prob2
-	return PoincareShootingProblem(flow = Flow(F, p, _pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, isparallel = isparallel)
+	parallel = _M==1 ? false : parallel
+	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
+	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
+	return PoincareShootingProblem(flow = Flow(F, p, _pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
 end
 
 function PoincareShootingProblem(F, p,
 				prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
 				normals::AbstractVector, centers::AbstractVector;
-				δ = 1e-8, interp_points = 50, isparallel = false, kwargs...)
+				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
 	return PoincareShootingProblem(F, p,
 					prob1, alg2, prob2, alg2,
 					SectionPS(normals, centers);
-					δ = δ, interp_points = interp_points, isparallel = isparallel, kwargs...)
+					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
 
 """

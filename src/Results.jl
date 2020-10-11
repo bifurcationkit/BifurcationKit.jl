@@ -15,6 +15,10 @@ $(TYPEDEF)
 
 Structure which holds the results after a call to [`continuation`](@ref).
 
+You can see the propertynames of a result by using `propertynames(::ContResult)` or by typing `br.` + TAB where `br::ContResult`.
+
+# Fields
+
 $(TYPEDFIELDS)
 
 # Associated methods
@@ -68,6 +72,15 @@ haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl
 getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
 @inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
 setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
+
+function Base.getproperty(br::ContResult, s::Symbol)
+	if s in (:bifpoint, :contparams, :foldpoint, :n_imag, :param_lens, :sol, :type, :branch, :eig, :functional, :n_unstable, :params, :stability)
+		getfield(br, s)
+	else
+		getproperty(br.branch, s)
+	end
+end
+Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :n_imag, :param_lens, :sol, :type, :branch, :eig, :functional, :n_unstable, :params, :stability)
 
 """
 $(SIGNATURES)

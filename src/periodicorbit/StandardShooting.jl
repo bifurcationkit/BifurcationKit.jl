@@ -23,13 +23,13 @@ end
 ####################################################################################################
 # Standard Shooting functional
 """
-	pb = ShootingProblem(flow::Flow, ds, section; isparallel = false)
+	pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
 
 This composite type creates a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
-- `isparallel` whether the shooting are computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem`.
+- `parallel` whether the shooting are computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem`.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
@@ -40,18 +40,18 @@ You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note
 ## Simplified constructors
 - A simpler way to build the functional is to use
 	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
-where `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `isparallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
+where `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `parallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 
 - Another way to create a Shooting problem with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase
-	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; isparallel = false, kwargs...)
+	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; parallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; isparallel = false, kwargs...)
+	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; parallel = false, kwargs...)
 - The next way is an elaboration of the previous one
-	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; isparallel = false, kwargs...)
+	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; parallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; isparallel = false, kwargs...)
+	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
@@ -59,43 +59,43 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	flow::Tf = Flow()						# should be a Flow{TF, Tf, Td}
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
 	section::Tsection = nothing				# sections for phase condition
-	isparallel::Bool = false			# whether we use DE in Ensemble mode for multiple shooting
+	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
 end
 
 # this constructor takes into accound a parameter passed to the vector field
 # if M = 1, we disable parallel processing
-function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; isparallel = false, kwargs...)
+function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
-	isparallel = _M == 1 ? false : isparallel
-	_pb = isparallel ? EnsembleProblem(prob) : prob
+	parallel = _M == 1 ? false : parallel
+	_pb = parallel ? EnsembleProblem(prob) : prob
 	return ShootingProblem(M = _M, flow = Flow(F, p, _pb, alg; kwargs...),
-			ds = ds, section = section, isparallel = isparallel)
+			ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
-ShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; isparallel = isparallel, kwargs...)
+ShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; parallel = parallel, kwargs...)
 
-ShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; isparallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; isparallel = isparallel, kwargs...)
+ShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
 
 # idem but with an ODEproblem to define the derivative of the flow
-function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; isparallel = false, kwargs...)
+function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
-	isparallel = _M == 1 ? false : isparallel
-	_pb1 = isparallel ? EnsembleProblem(prob1) : prob1
-	_pb2 = isparallel ? EnsembleProblem(prob2) : prob2
-	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, isparallel = isparallel)
+	parallel = _M == 1 ? false : parallel
+	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
+	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
+	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 
 @inline isSimple(sh::ShootingProblem) = sh.M == 1
-@inline isParallel(sh::ShootingProblem) = sh.isparallel
+@inline isParallel(sh::ShootingProblem) = sh.parallel
 
 # this function extracts the last component of the periodic orbit
 extractPeriodShooting(x::AbstractVector) = x[end]
