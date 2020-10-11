@@ -27,7 +27,7 @@ The available arguments specific to our plotting methods are
 If you have severals branches `br1, br2`, you can plot them in the same figure by doing 
 
 ```
-plot([br1, br2])
+plot(br1, br2)
 ```
 
 in place of 

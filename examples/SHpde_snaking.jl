@@ -85,7 +85,7 @@ diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (2,)),  (current = 
 ####################################################################################################
 deflationOp = DeflationOperator(2.0, dot, 1.0, [sol1])
 
-br, _ = @time continuation(
+br, = @time continuation(
 	R_SH, Jac_sp,
 	(@set parSH.p = 1.), (@lens _.p),
 	setproperties(opts; ds = -0.001, maxSteps = 20000, pMax = 2.7, pMin = -2.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 2),

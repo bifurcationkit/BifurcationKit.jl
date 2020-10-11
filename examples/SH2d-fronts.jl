@@ -94,7 +94,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		# tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
-		printSolution = (x, p) -> norm(x),
+		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 		finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
@@ -122,11 +122,11 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	fromNewton = get(kwargs, :fromNewton, false)
 	if ~fromNewton
 
-		@show norm(_x.u - x)   abs(_x.p - kwargs[:p]) res
+		# @show norm(_x.u - x)   abs(_x.p - kwargs[:p]) res
 		return norm(_x.u - x) < 1e4 && abs(_x.p - kwargs[:p])<0.05 && res < 1e5
 	else
-		@show res
-		return res < 1e5
+		# @show res
+		return res < 1e2
 	end
 	true
 end

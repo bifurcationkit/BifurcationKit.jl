@@ -112,7 +112,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-84)
 
-	br, _ = @time continuation(
+	br, = @time continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
@@ -196,9 +196,10 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 	outpo_f, _, flag = @time BK.newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
-			opt_po,
+			opt_po;
 			# deflationOp,
-			# :FullLU;
+			linearPO = :BorderedLU,
+			# linearPO = :FullSparseInplace,
 			normN = norminf,
 			callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
 			)
@@ -209,15 +210,15 @@ opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 2, newtonOptions = opt_po, saveSolEveryStep = 2,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 5,
 	nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15)
-	br_po, _ , _= @time BK.continuation(poTrap,
+	br_po, = @time BK.continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont;
-			linearPO = :FullLU,
-			# linearPO = :BorderedLU,
+			# linearPO = :FullLU,
+			linearPO = :BorderedLU,
 			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
@@ -230,6 +231,11 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0
 ####################################################################################################
 using IncompleteLU
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
+
+@time poTrap(Val(:JacFullSparseInplace), Jpo, orbitguess_f, @set par_bru.l = l_hopf + 0.01)
+_indx = BK.getBlocks(Jpo, 2n, M)
+@time poTrap(Val(:JacFullSparseInplace), Jpo, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), _indx)
+
 @time lu(Jpo)
 Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
 @time lu(Jpo)
@@ -281,7 +287,7 @@ br_po, _ = continuation(
 
 # branches = [br_po]
 push!(branches, br_po)
-plot(branches, legend = :bottomright, plotfold = false)
+plot(branches..., legend = :bottomright, plotfold = false)
 
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO

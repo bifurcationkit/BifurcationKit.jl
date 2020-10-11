@@ -38,7 +38,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 		if plotfold
 			bifpt = bifpoints[id:end]
 		else
-			bifpt = filter(x->x.type != :fold, bifpoints[id:end])
+			bifpt = filter(x -> x.type != :fold, bifpoints[id:end])
 		end
 		if filterbifpoints == true
 			bifpt = filterBifurcations(bifpt)
@@ -50,12 +50,11 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 			markersize --> 2
 			markerstrokewidth --> 0
 			label --> ""
-			map(x -> x.param, bifpt), map(x -> x.printsol[1], bifpt)
+			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
 		end
-
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpoints) >= 1
-			bps = unique(x->x.type, [pt for pt in bifpt if pt.type != :none])
+			bps = unique(x -> x.type, [pt for pt in bifpt if pt.type != :none])
 			(length(bps) == 0) && return
 			for pt in bps
 				@series begin
@@ -64,7 +63,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 					label --> "$(pt.type)"
 					markersize --> 2
 					markerstrokewidth --> 0
-					[pt.param], [pt.printsol[1]]
+					[getproperty(pt,ind1)], [getproperty(pt.printsol, ind2)]
 				end
 			end
 		end
@@ -72,10 +71,11 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 	end
 end
 
-@recipe function Plots(brs::AbstractVector{<:BranchResult}; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
+@recipe function Plots(brs::BranchResult...; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	if length(brs) == 0; return; end
-	bp = Set(unique([pt.type for pt in brs[1].bifpoint]))
+	# bp = unique([pt.type for pt in brs[1].bifpoint])
+	bp = unique(x -> x.type, [(type = pt.type, param = pt.param, x = pt.printsol[1]) for pt in brs[1].bifpoint if pt.type != :none])
 	for (id,res) in enumerate(brs)
 		@series begin
 			putbifptlegend --> false
@@ -83,22 +83,23 @@ end
 			plotbifpoints --> plotbifpoints
 			plotstability --> plotstability
 			branchlabel --> branchlabel[id]
+			xguide --> getLensParam(res.param_lens)
 			for pt in res.bifpoint
-				push!(bp, pt.type)
+				pt.type!=:none && push!(bp, (type = pt.type, param = pt.param, x = pt.printsol[1]))
 			end
 			res
 		end
 	end
 	# add legend for bifurcation points
 	if putbifptlegend && length(bp) > 0
-		for pt in bp
+		for pt in unique(x -> x.type, bp)
 			@series begin
 				seriestype := :scatter
-				seriescolor --> colorbif[pt]
-				label --> "$pt"
+				seriescolor --> colorbif[pt.type]
+				label --> "$(pt.type)"
+				markersize --> 2
 				markerstrokewidth --> 0
-			# scatter!([], [], color = colorbif[pt], label = "$pt", markerstrokewidth = 0)
-				[], []
+				[pt.param], [pt.x]
 			end
 		end
 	end
@@ -112,18 +113,16 @@ Plot the branch of solutions during the continuation
 function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 
-	if computeEigenElements(contparms) == false
-		l =  Plots.@layout [a{0.5w} [b; c]]
-	else
-		l =  Plots.@layout [a{0.5w} [b; c]; e{0.2h}]
-	end
+	l = computeEigenElements(contparms) ? (Plots.@layout [a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout [a{0.5w} [b; c]]
 	Plots.plot(layout = l)
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false, xlabel = getLensParam(contres.param_lens),  ylabel = getfirstusertype(contres), label = "", plotfold = false, subplot = 1)
-	if length(contres) > 1
+	plot!(contres ; filterbifpoints = true, putbifptlegend = false,
+		xlabel = getLensParam(contres.param_lens),
+		ylabel = getfirstusertype(contres),
+		label = "", plotfold = false, subplot = 1)
+
 		# put arrow to indicate the order of computation
-		plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
-	end
+	length(contres) > 1 &&	plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 
 	plot!(contres;	vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2)
 
@@ -133,33 +132,30 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 
 	plotuserfunction(sol.u, sol.p; subplot = 3)
-
 	display(title!(""))
 end
 
 function filterBifurcations(bifpt)
 	# this function filters Fold points and Branch points which are located at the same/previous/next point
-	res = [(type = :none, idx = 1, param = 1., printsol = 1., status = :guess)]
+	length(bifpt) == 0 && return bifpt
+	res = [(type = :none, idx = 1, param = 1., printsol = bifpt[1].printsol, status = :guess)]
 	ii = 1
 	while ii <= length(bifpt) - 1
 		if (abs(bifpt[ii].idx - bifpt[ii+1].idx) <= 1) && bifpt[ii].type ∈ [:fold, :bp]
 			if (bifpt[ii].type == :fold && bifpt[ii].type == :bp) ||
 				(bifpt[ii].type == :bp && bifpt[ii].type == :fold)
-				push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol[1], status = bifpt[ii].status) )
+				push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
 			else
-				push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol[1], status = bifpt[ii].status) )
-				push!(res, (type = bifpt[ii+1].type, idx = bifpt[ii+1].idx, param = bifpt[ii+1].param, printsol = bifpt[ii+1].printsol[1],status = bifpt[ii].status) )
+				push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
+				push!(res, (type = bifpt[ii+1].type, idx = bifpt[ii+1].idx, param = bifpt[ii+1].param, printsol = bifpt[ii+1].printsol,status = bifpt[ii].status) )
 			end
 			ii += 2
 		else
-			push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol[1], status = bifpt[ii].status) )
+			push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
 			ii += 1
 		end
 	end
-	0<ii<=length(bifpt) &&	push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol[1], status = bifpt[ii].status) )
+	0 < ii <= length(bifpt) &&	push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
 
-	# for p in (res[2:end])
-	# 	println(p)
-	# end
-	res[2:end]
+	return res[2:end]
 end

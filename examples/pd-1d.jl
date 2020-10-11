@@ -75,13 +75,13 @@ N = 100
 eigls = EigArpack(0.5, :LM)
 optnewton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9)
 
-out, _, _ = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
+out, = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
 	plot();plot!(X,out[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 
 optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370)
 
-	br, _ = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
+	br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
 		plot = true, verbosity = 3,
 		printSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
@@ -109,7 +109,7 @@ phase = []
 	for ii=1:M
 		t = (ii-1)/(M-1)
 		orbitguess[:, ii] .= real.(hopfpoint.u .+
-				2.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .2750)))
+				2.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .2755)))
 		push!(phase, dot(orbitguess[:, ii] - hopfpoint.u,real.(vec_hopf)))
 	end
 plot(phase)
@@ -140,7 +140,7 @@ eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)}
 # eig = EigArpack()
 eig = DefaultEig()
 optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
-	br_po, _ , _ = @time continuationPOTrap(poTrap,
+	br_po, = @time continuationPOTrap(poTrap,
 		outpo_f, -0.87,
 		optcontpo; verbosity = 3,
 		plot = true,
@@ -151,9 +151,9 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8,
 
 # branches = [br_po]
 push!(branches, br_po)
-plot(vcat(branches, br), label = "")
+plot(vcat(branches, br)..., label = "")
 
-plot(vcat(br_po, br), label = "")
+plot(vcat(br_po, br)..., label = "")
 ####################################################################################################
 # Period doubling
 ind_pd = 1
@@ -215,9 +215,9 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
-# plot(branches)
+# plot(branches...)
 
-plot(vcat(br_po_sh, br), label = "")
+plot(br_po_sh, br, label = "")
 
 ####################################################################################################
 # shooting Period Doubling
@@ -261,4 +261,4 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 
-plot(vcat(br_po_sh_pd, br,), label = "");title!("")
+plot(br_po_sh_pd, br, label = "");title!("")

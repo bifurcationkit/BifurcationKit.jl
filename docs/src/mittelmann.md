@@ -179,7 +179,7 @@ and you should see:
 
 ![](mittlemann2.png)
 
-You can also plot the two branches together `plot([br,br1],plotfold=false)` and get
+You can also plot the two branches together `plot(br,br1,plotfold=false)` and get
 
 ![](mittlemann3.png)
 
@@ -203,7 +203,7 @@ The second bifurcation point on the branch `br` of homogenous solutions has a 2d
 We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)
 
 ```julia
-bp2d = BK.computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)
+bp2d = computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)
 ```
 
 You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple branch point](@ref).
@@ -272,7 +272,6 @@ We could use the solutions saved in `resp, resx` as initial guesses for a call t
 At this stage, we know what happens at the 2d bifurcation point of the curve of homogenous solutions. We chose another method based on [Deflated problems](@ref). We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:
 
 ```julia
-
 out = zeros(Nx*Ny)
 # deflation operator to 
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zeros(Nx*Ny)])
@@ -285,14 +284,14 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
 vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
 for ii=1:length(ve)
-		outdef1, _, flag, _ = @time newton(
-			Fmit, JFmit,
-			# initial guess for newton
-			br.bifpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
-			(@set par_mit.λ = br.bifpoint[2].param + 0.005),
-			optdef, deflationOp)
-			flag && push!(deflationOp, outdef1)
-	end
+	outdef1, _, flag, _ = @time newton(
+		Fmit, JFmit,
+		# initial guess for newton
+		br.bifpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
+		(@set par_mit.λ = br.bifpoint[2].param + 0.005),
+		optdef, deflationOp)
+		flag && push!(deflationOp, outdef1)
+end
 ```
 
 This provides `length(deflationOp) = 5` solutions as there are some symmetries in the problem. For example `plotsol(deflationOp[5])` gives
@@ -302,7 +301,7 @@ This provides `length(deflationOp) = 5` solutions as there are some symmetries i
 We can continue this solution as follows in one direction
 
 ```julia
-brdef1, _ = @time BK.continuation(
+brdef1, = @time continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
@@ -314,7 +313,7 @@ brdef1, _ = @time BK.continuation(
 If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.bifpoint[2].param + 0.005`, we get 3 new solutions that we can continue
 
 ```julia
-brdef2, _ = @time BK.continuation(
+brdef2, = @time continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
@@ -323,7 +322,7 @@ brdef2, _ = @time BK.continuation(
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```	
 
-thereby providing the following bifurcation diagram with `plot([br,br1,br2,brdef1, brdef2],plotfold=false, putbifptlegend = false)`
+thereby providing the following bifurcation diagram with `plot(br,br1,br2,brdef1, brdef2,plotfold=false, putbifptlegend = false)`
 
 ![](mittlemann6.png)
 

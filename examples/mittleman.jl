@@ -104,6 +104,8 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, 
 		finaliseSolution = finSol,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		plot = true, verbosity = 0, normC = norminf)
+
+plot(br)
 ####################################################################################################
 # branch switching
 function cb(x,f,J,res,it,itl,optN; kwargs...)
@@ -136,7 +138,7 @@ br1, = continuation(jet...,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		normC = norminf)
 
-plot([br,br1],plotfold=false)
+plot(br,br1,plotfold=false)
 
 
 br2, = continuation(jet...,
@@ -148,7 +150,7 @@ br2, = continuation(jet...,
 		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1, br2],plotfold=false)
+plot(br,br1, br2,plotfold=false)
 ####################################################################################################
 # bifurcation diagram
 function optionsCont(x,p,l; opt = opts_br)
@@ -252,8 +254,8 @@ res, = BK.continuation(jet..., br, 2,
 	)
 
 
-plot(res;plotfold= false)
-	plot!([br];plotfold= false)
+plot(res..., br ;plotfold= false)
+
 
 δp = 0.005
 	deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(2)])
@@ -266,17 +268,17 @@ while sum(success) < 10
 end
 	println("--> found $(length(deflationOp)) solutions")
 
-plotsol(bp2d(deflationOp[3], δp))
+plotsol(bp(deflationOp[3], δp))
 solbif, flag, _ = newton(Fmit, JFmit, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2d.p + δp), opts_br.newtonOptions)[1]
 
 plotsol(solbif-0*bp2d(deflationOp[2], δp))
 
-brnf1, _, _ = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
+brnf1, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 
-branches2 = [br,br1,br2,brnf1]
+branches2 = (br,br1,br2,brnf1)
 push!(branches2, brnf1)
 # plot([br,br1,br2])
 # plot!(brnf1)
@@ -287,7 +289,7 @@ brnf2, _, _ = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp)
 	plot = true, verbosity = 3, normC = norminf)
 
 # plot([br,br1,br2]);plot!(brnf1);plot!(brnf2)
-plot(branches2)
+plot(branches2...)
 plot!(brnf2)
 ####################################################################################################
 # find isolated branch, see Farrell et al.
@@ -298,11 +300,11 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 # of homogenous solutions
 vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
 
-for ii=1:size(ve, 2)
+for ii=1:size(ve, 1)
 		outdef1, _, flag, _ = @time newton(
 			Fmit, JFmit,
 			# initial guess for newton
-			br.bifpoint[2].x .+ 0.01 .* ve[:,ii] .* (1 .+ 0.01 .* rand(Nx*Ny)),
+			real.(br.bifpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))),
 			(@set par_mit.λ = br.bifpoint[2].param + 0.005),
 			optdef, deflationOp)
 			flag && push!(deflationOp, outdef1)
@@ -324,10 +326,10 @@ brdef1, _ = @time BK.continuation(
 	# bp2d([0.6,0.6], -0.01), br.bifpoint[2].param - 0.005,
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
+	printSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1,br2, brdef1],plotfold=false)
+plot(br,br1,br2, brdef1,plotfold=false)
 
 
 brdef2, _ = @time BK.continuation(
@@ -335,9 +337,9 @@ brdef2, _ = @time BK.continuation(
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
+	printSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot([br,br1,br2, brdef1, brdef2],plotfold=false, putbifptlegend = false)
+plot(br,br1,br2, brdef1, brdef2,plotfold=false, putbifptlegend = false)
 
-plot([brdef1, brdef2],plotfold = false, putbifptlegend = false)
+plot(brdef1, brdef2,plotfold = false, putbifptlegend = false)

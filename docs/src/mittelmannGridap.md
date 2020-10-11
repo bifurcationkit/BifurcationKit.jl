@@ -137,7 +137,7 @@ br2, = continuation(prob, br1, 3,
 	usedeflation = true,
 	plotSolution = (x, p; k...) -> plotgridap!(x;  k...))
 
-plot([br,br1,br2])
+plot(br,br1,br2)
 ```
 
 We get:
@@ -153,7 +153,7 @@ br3, = continuation(prob, br, 2,
 	usedeflation = true,
 	plotSolution = (x, p; k...) -> plotgridap!(x;  k...))
 
-plot([br,br1,br2,br3...])
+plot(br,br1,br2,br3...)
 ```
 
 ![](fig3gridap.png)

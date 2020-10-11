@@ -127,7 +127,7 @@ eigls = EigArpack(1.0, :LM)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 2, nev = 5, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
 
-	br, u1 = @time BK.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+	br, = @time BK.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
 using ForwardDiff
@@ -222,7 +222,7 @@ opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbo
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, precisionStability = 1e-5, detectBifurcation = 0 , dsminBisection =1e-7)
 
-br_po, _ , _= @time continuation(
+br_po, = @time continuation(
 		poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
 		opts_po_cont; linearPO = :FullMatrixFree,
 		verbosity = 3,	plot = true,
@@ -231,7 +231,7 @@ br_po, _ , _= @time continuation(
 
 branches = Any[br_pok2]
 # push!(branches, br_po)
-plot([branches[1]]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
+plot(branches[1]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
 ###################################################################################################
 # automatic branch switching from Hopf point
 br_po, _ = continuation(

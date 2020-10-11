@@ -185,7 +185,7 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true)
 opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 3e-3, detectBifurcation = 0, maxSteps = 10, ds = 0.03, dsmax = 0.03, pMax = 2.0, tolBisectionEigenvalue = 0.)
 
-br_po, _ , _ = @time continuation(probSh,
+br_po, = @time continuation(probSh,
 		outpo, par_hopf, (@lens _.l),
 		opts_po_cont_floquet; verbosity = 3,
 		plot = true,
@@ -215,7 +215,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, e
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
 
 Mt = 4
-br_po, _ = continuation(
+br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
 	opts_po_cont, ShootingProblem(Mt, par_bru, probsundials, Rodas4P());
@@ -268,7 +268,7 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
 	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.00051, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 1, plotEveryStep = 1)
 	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true, maxIter = 15)
 
-br_po, _ , _ = @time BK.continuation(
+br_po, = @time BK.continuation(
 	probHPsh,
 	outpo_psh, par_hopf, (@lens _.l),
 	opts_po_cont_floquet; verbosity = 3,
@@ -288,7 +288,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0051, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
 
-br_po, u = continuation(
+br_po, = continuation(
 	jet...,	br, 3,
 	# arguments for continuation
 	opts_po_cont, PoincareShootingProblem(2, par_bru, probsundials, Rodas4P());

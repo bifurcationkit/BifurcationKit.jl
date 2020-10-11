@@ -159,7 +159,7 @@ br_po_sh, = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts
 	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 ```
 
-We plot the result using `plot(vcat(br_po_sh, br), label = "")`:
+We plot the result using `plot(br_po_sh, br, label = "")`:
 
 ![](br_pd2.png)
 
@@ -218,6 +218,6 @@ br_po_sh_pd, = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
 	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 ```
 
-and plot it using `plot([br_po_sh, br, br_po_sh_pd], label = "")`:
+and plot it using `plot(br_po_sh, br, br_po_sh_pd, label = "")`:
 
 ![](br_pd3.png)

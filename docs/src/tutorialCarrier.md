@@ -123,7 +123,7 @@ br, = @time continuation(
 	normN = x -> norm(x, Inf64),
 	)
 
-plot(br) 
+plot(br...) 
 ```
 
 We obtain the following result which is remarkable because it contains many more disconnected branches which we did not find in the first try.
