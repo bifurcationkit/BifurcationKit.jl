@@ -85,6 +85,8 @@ $(TYPEDFIELDS)
 
 	"Verbosity ∈ {0,1,2}"
 	verbose::Int = 0
+
+	"Which eigenvalues are looked for :LR (largest real), :LM, ..."
 	which::Symbol = :LR
 
 	"If the linear map is symmetric, only meaningful if T<:Real"

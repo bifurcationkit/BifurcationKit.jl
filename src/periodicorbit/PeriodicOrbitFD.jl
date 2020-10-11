@@ -891,7 +891,7 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
-		else
+		else #this is BorderedMatrixFree
 			Aγ = AγOperator(is_matrix_free = true, prob = probPO, N = N,
 					orbitguess = zeros(N * M + 1),
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
@@ -920,9 +920,9 @@ This is the continuation routine for computing a periodic orbit using a function
 - `p0` set of parameters passed to the vector field
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
-- `linearPO = :BorderedLU`. Same as `newton` when applied to `PeriodicOrbitTrapProblem`. More precisely:
+- `linearPO = :BorderedLU`. Same as `newton` when applied to a `PeriodicOrbitTrapProblem`. More precisely:
     - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
-    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+    - For `:FullSparseInplace`, this is the same as `:FullLU` but the sparse matrix `dG` is updated inplace. This method thus allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
     - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
     - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.

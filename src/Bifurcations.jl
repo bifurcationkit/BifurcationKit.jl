@@ -236,7 +236,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			indinterval = (indinterval == 2) ? 1 : 2
 		end
 
-		state.step > 0 &&( interval = @set interval[indinterval] = getp(state))
+		state.step > 0 && (interval = @set interval[indinterval] = getp(state))
 
 		verbose &&	printstyled(color=:blue,
 			"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),

@@ -88,10 +88,11 @@ which gives
 In the same vein, we can continue this solution as function of $\lambda$:
 
 ```julia
-opts = ContinuationPar(pMax = 40., pMin = 0.01, ds = 0.01, maxSteps = 1000, detectBifurcation = 3, newtonOptions = optn, nev = 20)
+opts = ContinuationPar(pMax = 40., pMin = 0.01, ds = 0.01, 
+	maxSteps = 1000, detectBifurcation = 3, newtonOptions = optn, nev = 20)
 br, = continuation(prob, uh, par_bratu, (@lens _.λ), opts;
 	plot = true, verbosity = 2,
-	plotSolution = (x,p;k...) -> plotgridap!(x;  k...))
+	plotSolution = (x, p; k...) -> plotgridap!(x;  k...))
 ```
 
 We obtain:
@@ -102,13 +103,15 @@ julia> br
 Branch of Equilibrium
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈  0.36782970 ± 5e-05, step =  12, eigenelements in eig[ 13], ind_ev =   1 [converged], δ = ( 1,  0)
-- #  2,      nd at p ≈  0.27168226 ± 1e-03, step =  19, eigenelements in eig[ 20], ind_ev =   3 [converged], δ = ( 2,  0)
-- #  3,      bp at p ≈  0.15185425 ± 3e-06, step =  26, eigenelements in eig[ 27], ind_ev =   4 [converged], δ = ( 1,  0)
-- #  4,      nd at p ≈  0.03484591 ± 6e-05, step =  41, eigenelements in eig[ 42], ind_ev =   6 [converged], δ = ( 2,  0)
-- #  5,      nd at p ≈  0.01556521 ± 3e-05, step =  48, eigenelements in eig[ 49], ind_ev =   8 [converged], δ = ( 2,  0)
+- #  1,    bp at p ≈ +0.36782970 ∈ (+0.36782970, +0.36787920), |δp|=5e-05, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
+- #  2,    nd at p ≈ +0.27168226 ∈ (+0.27168226, +0.27286757), |δp|=1e-03, [converged], δ = ( 2,  0), step =  19, eigenelements in eig[ 20], ind_ev =   3
+- #  3,    bp at p ≈ +0.15186464 ∈ (+0.15186464, +0.15187849), |δp|=1e-05, [converged], δ = ( 1,  0), step =  26, eigenelements in eig[ 27], ind_ev =   4
+- #  4,    nd at p ≈ +0.03484879 ∈ (+0.03484879, +0.03491029), |δp|=6e-05, [converged], δ = ( 2,  0), step =  41, eigenelements in eig[ 42], ind_ev =   6
+- #  5,    nd at p ≈ +0.01556655 ∈ (+0.01556655, +0.01559518), |δp|=3e-05, [converged], δ = ( 2,  0), step =  48, eigenelements in eig[ 49], ind_ev =   8
 Fold points:
-- #  1,    fold at p ≈  0.36782970, step =  13, eigenelements in eig[ 13], ind_ev =   0 [    guess], δ = ( 0,  0)
+- #  1, fold at p ≈ 0.36782970 ∈ (0.36782970, 0.36782970), |δp|=-1e+00, [    guess], δ = ( 0,  0), step =  13, eigenelements in eig[ 13], ind_ev =   0
+
+
 ```
 
 ![](fig1gridap.png)
@@ -130,14 +133,14 @@ br1, = continuation(prob, br, 3,
 We also compute the branch from the first bifurcation point on this branch `br1`:
 
 ```julia
-br2, = continuation(prob, br1, 3,
+br2, = continuation(prob, br1, 1,
 	setproperties(opts;ds = 0.005, dsmax = 0.05, maxSteps = 140, detectBifurcation = 0);
 	verbosity = 0, plot = true, nev = 10,
 	tangentAlgo = BorderedPred(),
 	usedeflation = true,
 	plotSolution = (x, p; k...) -> plotgridap!(x;  k...))
 
-plot(br,br1,br2)
+plot(br, br1, br2)
 ```
 
 We get:
@@ -153,7 +156,7 @@ br3, = continuation(prob, br, 2,
 	usedeflation = true,
 	plotSolution = (x, p; k...) -> plotgridap!(x;  k...))
 
-plot(br,br1,br2,br3...)
+plot(br, br1, br2, br3...)
 ```
 
 ![](fig3gridap.png)

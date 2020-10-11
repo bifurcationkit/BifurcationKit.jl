@@ -100,7 +100,7 @@ br, _ = @time continuation(
 	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)
 
-plot(br, label="")
+plot(br..., branchlabel = 1:length(br), legend=true)#, marker=:d)
 
 
 BifurcationKit.mergeBranches(br)
