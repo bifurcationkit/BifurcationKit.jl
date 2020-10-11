@@ -286,3 +286,5 @@ nf = hp.nf
 
 @test abs(nf.a - 1) < 1e-9
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+
+show(hp)

@@ -30,24 +30,19 @@ const BK = BifurcationKit
 
 norminf = x -> norm(x, Inf)
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
-	hx = 2lx/Nx
-	hy = 2ly/Ny
+function Laplacian2D(Nx, Ny, lx, ly)
+	hx = 2lx/Nx; hy = 2ly/Ny
 	D2x = CenteredDifference(2, 2, hx, Nx)
 	D2y = CenteredDifference(2, 2, hy, Ny)
-	if bc == :Neumann
-		Qx = Neumann0BC(hx)
-		Qy = Neumann0BC(hy)
-	elseif  bc == :Dirichlet
-		Qx = Dirichlet0BC(typeof(hx))
-		Qy = Dirichlet0BC(typeof(hy))
-	end
+
+	Qx = Dirichlet0BC(typeof(hx))
+	Qy = Dirichlet0BC(typeof(hy))
 	
 	D2xsp = sparse(D2x * Qx)[1]
 	D2ysp = sparse(D2y * Qy)[1]
 	
 	A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
-	return A, D2x
+	return A
 end
 ```
 
@@ -117,7 +112,7 @@ n = Nx * Ny
 lx = pi
 ly = pi/2
 
-Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+Δ = Laplacian2D(Nx, Ny, lx, ly)
 par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ))
 sol0 = zeros(2Nx, Ny)
 ```
@@ -126,25 +121,34 @@ and we continue it to find the Hopf bifurcation points. We use a Shift-Invert ei
 
 ```julia
 # Shift-Invert eigensolver
-eigls = EigArpack(1.0, :LM)
+eigls = EigArpack(1.0, :LM) # shift = 1.0
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
 br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
+which gives
+
+```julia
+Branch number of points: 216
+Branch of Equilibrium
+Bifurcation points:
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+- #  1,  hopf at p ≈ +1.14777610 ∈ (+1.14766562, +1.14777610), |δp|=1e-04, [converged], δ = ( 2,  2), step =  94, eigenelements in eig[ 95], ind_ev =   2
+- #  2,  hopf at p ≈ +1.86107007 ∈ (+1.86018618, +1.86107007), |δp|=9e-04, [converged], δ = ( 2,  2), step = 195, eigenelements in eig[196], ind_ev =   4
+```
+
 ![](cgl2d-bif.png)
 
 ## Normal form computation
 
-We compute the Hopf normal of the first bifurcation point.
+We compute the Hopf normal form of the first bifurcation point.
 
 ```julia
 using ForwardDiff
 
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
+D(f, x, p, dx)= ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
 
 d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
 d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
@@ -158,7 +162,8 @@ We can look at the coefficients of the normal form
 
 ```julia
 julia> hopfpt.nf
-(a = 1.0000007875087948 - 3.195135475271046e-8im, b = 0.004870129870129871 + 0.00048701298701298696im)
+SubCritical - Hopf bifurcation point at p ≈ 1.1477761028276166.
+Normal form : (a = 0.9999993820432533 - 8.207477617340401e-9im, b = 0.004870129870129869 + 0.0004870129870129865im)
 ```
 
 So the Hopf branch is subcritical.
@@ -208,7 +213,7 @@ We can use this (family) problem `poTrap` with `newton` on our periodic orbit gu
     
     ```julia
     opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, 	 maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()))
-    br_po, upo , _= @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_po_cont)
+    br_po, upo, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_po_cont)
     ```	
 
 

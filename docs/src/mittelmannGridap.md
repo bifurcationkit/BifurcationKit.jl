@@ -4,14 +4,14 @@
 Pages = ["mittelmannGridap.md"]
 Depth = 3
 ```
-        
-We re-consider the problem of Mittelmann treated in the previous [tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) but using a finite elements method (FEM) implemented in the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
+
+We re-consider the problem of Mittelmann treated in the previous [tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) but using a finite elements method (FEM) implemented in the package [Gridap.jl](https://github.com/gridap/Gridap.jl). 
 
 Recall that the problem is defined by solving
 
 $$\Delta u +NL(\lambda,u) = 0$$
 
-with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. 
+with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$.
 
 We start by installing the package [GridapBifurcationKit.jl](https://rveltz.github.io/GridapBifurcationKit.jl). Then, we can import the different packages:
 
@@ -30,7 +30,7 @@ We are now ready to specify the problem using the setting of **Gridap.jl**: it a
 ```julia
 @law NL(u) = exp(u)
 
-# residual 
+# residual
 res(u,p,v) = -∇(v)⋅∇(u) -  v ⋅ (u - p.λ * NL(u)) * 10
 
 # jacobian of the residual
@@ -72,12 +72,12 @@ We can call then the newton solver:
 ```julia
 optn = NewtonPar(eigsolver = EigArpack())
 sol, = newton(prob, uh, par_bratu, NewtonPar(optn; verbose = true))
-```	
+```
 
 which gives
 
 ```julia
- Newton Iterations 
+ Newton Iterations
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     2.4687e-03         0
@@ -88,7 +88,7 @@ which gives
 In the same vein, we can continue this solution as function of $\lambda$:
 
 ```julia
-opts = ContinuationPar(pMax = 40., pMin = 0.01, ds = 0.01, 
+opts = ContinuationPar(pMax = 40., pMin = 0.01, ds = 0.01,
 	maxSteps = 1000, detectBifurcation = 3, newtonOptions = optn, nev = 20)
 br, = continuation(prob, uh, par_bratu, (@lens _.λ), opts;
 	plot = true, verbosity = 2,

@@ -4,23 +4,21 @@ getLensParam(lens::Setfield.PropertyLens{F}) where F = F
 getLensParam(::Setfield.IdentityLens) = :p
 getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
-@recipe function f(contres::BranchResult; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
-	axisDict = Dict(:p => 1, :sol => 2, :itnewton => 3, :ds => 4, :theta => 5, :step => 6)
-	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
-	if typeof(vars) <: Tuple && (typeof(vars[1]) == Symbol && typeof(vars[2]) == Symbol)
-		ind1 = vars[1]
-		ind2 = vars[2]
-	elseif typeof(vars) <: Tuple && (typeof(vars[1]) <: Int && typeof(vars[2]) <: Int)
-		ind1 = vars[1]
-		ind2 = vars[2]
+function getPlotVars(contres, vars)
+	if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}
+		return vars
 	else
-		ind1 = :param
-		ind2 = getfirstusertype(contres)
+		return :param, getfirstusertype(contres)
 	end
+end
 
+# allow to plot a single branch
+@recipe function Plots(contres::BranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
+	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
+	ind1, ind2 = getPlotVars(contres, vars)
 	@series begin
-		if length(contres.stability) > 2 && plotstability
+		if length(contres.stability) == length(contres) && plotstability
 			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
 		end
 		if ind1 == 1
@@ -31,15 +29,11 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 	end
 
 	# display bifurcation points
-	bifpoints = vcat(contres.bifpoint, filter(x->x.type != :none, contres.foldpoint))
-	if length(bifpoints) >= 1 && plotbifpoints
-		id = 1
-		bifpoints[1].type == :none ? id = 2 : id = 1
-		if plotfold
-			bifpt = bifpoints[id:end]
-		else
-			bifpt = filter(x -> x.type != :fold, bifpoints[id:end])
-		end
+	bifpt = filter(x -> x.type != :none, contres.bifpoint)
+	if plotfold
+		bifpt = vcat(bifpt, filter(x -> x.type != :none, contres.foldpoint))
+	end
+	if length(bifpt) >= 1 && plotbifpoints && (ind1 == :param)
 		if filterbifpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
@@ -52,8 +46,8 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 			label --> ""
 			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
 		end
-		# add legend for bifurcation points
-		if putbifptlegend && length(bifpoints) >= 1
+			# add legend for bifurcation points
+		if putbifptlegend && length(bifpt) >= 1
 			bps = unique(x -> x.type, [pt for pt in bifpt if pt.type != :none])
 			(length(bps) == 0) && return
 			for pt in bps
@@ -63,29 +57,30 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 					label --> "$(pt.type)"
 					markersize --> 2
 					markerstrokewidth --> 0
-					[getproperty(pt,ind1)], [getproperty(pt.printsol, ind2)]
+					[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
 				end
 			end
 		end
-
 	end
 end
 
-@recipe function Plots(brs::BranchResult...; plotfold = true, putbifptlegend = true, filterbifpoints = false, vars = nothing, pspan=nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
+# allow to plot branches specified by splatting
+@recipe function Plots(brs::BranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
-	# bp = unique([pt.type for pt in brs[1].bifpoint])
-	bp = unique(x -> x.type, [(type = pt.type, param = pt.param, x = pt.printsol[1]) for pt in brs[1].bifpoint if pt.type != :none])
-	for (id,res) in enumerate(brs)
+	bp = unique(x -> x.type, [(type = pt.type, param = pt.param, printsol = pt.printsol) for pt in brs[1].bifpoint if pt.type != :none])
+	for (id, res) in pairs(brs)
 		@series begin
 			putbifptlegend --> false
 			plotfold --> plotfold
 			plotbifpoints --> plotbifpoints
 			plotstability --> plotstability
 			branchlabel --> branchlabel[id]
+			vars --> vars
 			xguide --> getLensParam(res.param_lens)
 			for pt in res.bifpoint
-				pt.type!=:none && push!(bp, (type = pt.type, param = pt.param, x = pt.printsol[1]))
+				pt.type!=:none && push!(bp, (type = pt.type, param = pt.param, printsol = pt.printsol))
 			end
 			res
 		end
@@ -99,13 +94,11 @@ end
 				label --> "$(pt.type)"
 				markersize --> 2
 				markerstrokewidth --> 0
-				[pt.param], [pt.x]
+				[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
 			end
 		end
 	end
 end
-
-
 ####################################################################################################
 """
 Plot the branch of solutions during the continuation
@@ -121,7 +114,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 		ylabel = getfirstusertype(contres),
 		label = "", plotfold = false, subplot = 1)
 
-		# put arrow to indicate the order of computation
+	# put arrow to indicate the order of computation
 	length(contres) > 1 &&	plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 
 	plot!(contres;	vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2)

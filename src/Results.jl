@@ -154,6 +154,7 @@ struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
 	bp::Tbp
 end
 
+Base.length(br::Branch) = length(br.γ)
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)

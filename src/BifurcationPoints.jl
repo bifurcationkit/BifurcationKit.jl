@@ -71,7 +71,9 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 		$(TYPEDEF)
 		$(TYPEDFIELDS)
 
-		# Associated methods
+		## Associated methods
+
+		You can call `istranscritical(bp::SimpleBranchPoint), type(bp::SimpleBranchPoint)`
 
 		## Predictor
 
@@ -112,7 +114,6 @@ type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
 type(::Nothing) = nothing
-
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
 
@@ -122,7 +123,9 @@ This is a type which holds information for the bifurcation points of equilibria.
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
-# Associated methods
+## Associated methods
+
+You can call `type(bp::NdBranchPoint), length(bp::NdBranchPoint)`.
 
 ## Predictor
 
@@ -177,7 +180,7 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find the guess for the periodic orbit.
 """
-mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: BifurcationPoint
+mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: SimpleBranchPoint
 	"Hopf point"
 	x0::Tv
 
@@ -208,3 +211,11 @@ end
 
 type(bp::HopfBifPoint) = :Hopf
 HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf) = HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
+
+function Base.show(io::IO, bp::BifurcationPoint)
+	if bp isa Pitchfork || bp isa HopfBifPoint
+		print(io, bp.type, " - ")
+	end
+	println(io, type(bp), " bifurcation point at p ≈ $(bp.p).")
+	println(io, "Normal form : ", bp.nf)
+end

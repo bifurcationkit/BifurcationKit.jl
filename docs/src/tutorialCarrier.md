@@ -61,9 +61,9 @@ sol = -(1 .- par_car.X.^2)
 
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	out, _, flag = @time newton(
-		F_carr, Jac_carr, sol, (@set par_car.ϵ = 0.6), optnew, normN = x -> norm(x, Inf64))
-	Plots.plot(out, label="Solution")
+	out, = @time newton(F_carr, Jac_carr, sol, 
+		(@set par_car.ϵ = 0.6), optnew, normN = x -> norm(x, Inf64))
+	plot(out, label="Solution")
 ```
 
 ## First try with automatic bifurcation diagram
@@ -73,7 +73,7 @@ We can start by using our Automatic bifurcation method.
 ```julia
 using ForwardDiff
 D(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0.)
-dF_carr(x,p)         =  ForwardDiff.jacobian( z-> F_carr(z,p), x)
+dF_carr(x,p)         	   =  ForwardDiff.jacobian( z-> F_carr(z,p), x)
 d1F_carr(x,p,dx1)         = D((z, p0) -> F_carr(z, p0), x, p, dx1)
 d2F_carr(x,p,dx1,dx2)     = D((z, p0) -> d1F_carr(z, p0, dx1), x, p, dx2)
 d3F_carr(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F_carr(z, p0, dx1, dx2), x, p, dx3)
@@ -81,12 +81,11 @@ jet = (F_carr, Jac_carr, d2F_carr, d3F_carr)
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 3, nev = 40)
 
-diagram = bifurcationdiagram(jet...,
-		0*out, par_car,
-		(@lens _.ϵ), 2,
-		(arg...) -> @set optcont.newtonOptions.verbose=false;
-		printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
-		plot = true)
+diagram = bifurcationdiagram(jet..., 0*out, par_car,
+	(@lens _.ϵ), 2,
+	(arg...) -> @set optcont.newtonOptions.verbose = false;
+	printSolution = (x, p) -> (x[2] - x[1]) * sum(x.^2),
+	plot = true)
 ```
 
 However, this is a bit disappointing as we only find two branches.
@@ -116,7 +115,9 @@ end
 br, = @time continuation(
 	F_carr, Jac_carr,
 	par_def, (@lens _.ϵ),
-	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, pMax = 0.7, pMin = 0.05, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 40),
+	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, 
+		pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
+		newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
 	deflationOp;
 	perturbSolution = perturbsol,
 	printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),

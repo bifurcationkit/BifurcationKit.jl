@@ -24,7 +24,10 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], 
 	pb = PeriodicOrbitTrapProblem(F, J, ϕ, xπ, M::Int)
 This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. The arguments are as follows
 - `F(x,p)` vector field
-- `J` jacobian of `F`. Can be matrix based `J(x,p)` or Matrix-Free
+- `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
+    1. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
+    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
+    3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
 - `Jt = nothing` jacobian tranpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
 - `d2F = nothing` second derivative of F (optional), useful for continuation of Fold of periodic orbits. It has the definition `d2F(x,p,dx1,dx2)`.`
 - `ϕ` used to set a section for the phase constraint equation

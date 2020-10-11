@@ -5,7 +5,7 @@
 | [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/BifurcationKit.jl/dev) | ![Build Status](https://travis-ci.com/rveltz/BifurcationKit.jl.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/github/rveltz/BifurcationKit.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/BifurcationKit.jl?branch=master) |
 
 
-This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.  
+This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ.
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) which provide a *predictor* (u1,λ1) from a known solution (u0,λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
@@ -30,7 +30,7 @@ The current package focuses on large scale nonlinear problems and multiple hardw
 }
 ```
 
-## Installation 
+## Installation
 
 This package requires Julia >= v1.3.0
 
@@ -49,14 +49,14 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 ## Examples of bifurcation diagrams
 
 
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/mittlemannBD-1.png) | 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/mittlemannBD-1.png) |
 |:-------------:|:-------------:|
 | [Automatic Bif. Diagram in 1D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/Swift-Hohenberg1d/#Swift-Hohenberg-equation-1d-1) |  [Automatic Bif. Diagram in 2d Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) |
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) | 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) |
 | [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) | 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) |
 | [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Ginzburg-Landau 2d](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | | 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | |
 | [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1)  |    |
 
 
@@ -75,7 +75,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
 - Computation and Continuation of Fold of periodic orbits
 
-Custom state means, we can use something else than `AbstractArray`, for example your own `struct`. 
+Custom state means, we can use something else than `AbstractArray`, for example your own `struct`.
 
 **Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
@@ -91,7 +91,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Branch switching at Branch / Hopf points | Y | `AbstractArray` | 3 | |
 | <span style="color:red">**Automatic bifurcation diagram computation**</span> | Y | `AbstractArray` |  Yes | |
 | Periodic Orbit (FD) Newton / continuation | Y | `AbstractVector` | 6, 8 | :heavy_check_mark:|
-| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | | 
+| Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Y | `AbstractArray` |  6, 7, 9 | |
 | Fold, Neimark-Sacker, Period doubling detection | Y | `AbstractVector` | 6 - 9  | |
 | Continuation of Fold of periodic orbits | Y | `AbstractVector` | 8 | |
 

@@ -49,25 +49,25 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
-# @btime pb($orbitguess_f) 					# 13.535 ms (188 allocations: 34.34 MiB)
-# @btime pbi($orbitguess_f) 					# 7.869 ms (128 allocations: 17.17 MiB)
-# @btime pb($orbitguess_f, $orbitguess_f) 	# 25.500 ms (373 allocations: 51.51 MiB)
-# @btime pbi($orbitguess_f, $orbitguess_f)  	# 12.595 ms (253 allocations: 17.18 MiB)
-# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f) # 7.104 ms (126 allocations: 5.88 KiB)
+# @btime pb($orbitguess_f, $par) 					# 13.535 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par) 				# 7.869 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $orbitguess_f) 	# 15.038 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $orbitguess_f)  	# 7.960 ms (2 allocations: 17.17 MiB)
+# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
 # @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $orbitguess_f) # 10.528 ms (251 allocations: 11.69 KiB)
 #
 #
 # using IterativeSolvers, LinearMaps
 #
-# Jmap = LinearMap{Float64}(dv -> pbi(orbitguess_f, dv), 2n*M+1 ; ismutating = false)
+# Jmap = LinearMap{Float64}(dv -> pbi(orbitguess_f, par, dv), 2n*M+1 ; ismutating = false)
 # gmres(Jmap, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap, orbitguess_f; verbose = false, maxiter = 10)
 #
-# Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pbi, o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
+# Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pbi, o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 10)
 #
-# # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
+# @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f, par)
 # # @profiler BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, orbitguess_f)
 #
 # Jmap2! = LinearMap{Float64}((o, dv) -> pbi(o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
@@ -161,9 +161,14 @@ pbsp = PeriodicOrbitTrapProblem(
 			10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
-Jfd = sparse( ForwardDiff.jacobian(x->pbsp(x, par), orbitguess_f) )
+Jfd = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
 Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
+pbsp(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
+@test norm(Jfd - Jan, Inf) < 1e-6
+Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+@test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
+
 ####################################################################################################
 # test whether the inplace version of computation of the Jacobian is right
 n = 1000
