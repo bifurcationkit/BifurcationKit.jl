@@ -47,13 +47,13 @@ sol = @time solve(probMono, Tsit5(), abstol =1e-9, reltol=1e-6)
 sol = @time solve(prob, Tsit5(), abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 ####################################################################################################
-section(x) = x[1] * x[end]
+section(x) = x[1] #* x[end]
 # standard simple shooting
 M = 1
 dM = 1
 _pb = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), 1, section; rtol = 1e-9)
 
-initpo = [0.3, 0., 6.]
+initpo = [0.13, 0., 6.]
 res = @time _pb(initpo, par_hopf)
 
 # test of the differential of thew shooting method
@@ -79,7 +79,7 @@ BK.isSimple(_pb2)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo))
 optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20, linsolver = ls)
 deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zeros(3)])
-outpo, _ = @time BK.newton(_pb,
+outpo, = @time BK.newton(_pb,
 	initpo, par_hopf,
 	optn,
 	normN = norminf)
