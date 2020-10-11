@@ -336,7 +336,7 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, centers, period)
+function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers, period)
 	# make the section
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
@@ -352,6 +352,7 @@ function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, M, cente
 
 	# create initial guess. We have to pass it through the projection R
 	hyper = probPSh.section
+	M = getM(probPSh)
 	orbitguess_bar = zeros(length(centers[1])-1, M)
 	for ii=1:length(normals)
 		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)

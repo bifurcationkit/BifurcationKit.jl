@@ -315,13 +315,13 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function updateForBS(prob::ShootingProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period)
+function updateForBS(prob::ShootingProblem, F, dF, hopfpt, ζr, orbitguess_a, period)
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
-	# update the problem
-	probSh = setproperties(prob, M = M, section = SectionSS(F(orbitguess_a[1], hopfpt.params), orbitguess_a[1]))
+	# update the problem but not the section if the user passed one
+	probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(F(orbitguess_a[1], hopfpt.params), orbitguess_a[1]) : prob.section)
 	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure

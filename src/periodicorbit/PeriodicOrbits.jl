@@ -188,7 +188,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi ,M+1)[1:M]]
 
 	# build the variable to hold the functional for computing PO based on finite differences
-	probPO, orbitguess = updateForBS(prob, F, dF, hopfpt, ζr, M, orbitguess_a, abs(2pi/pred.ω))
+	probPO, orbitguess = updateForBS(prob, F, dF, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω))
 
 	if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
 		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
