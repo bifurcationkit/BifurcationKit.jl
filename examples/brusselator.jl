@@ -110,7 +110,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 	plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-84)
+opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-84)
 
 	br, = @time continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),

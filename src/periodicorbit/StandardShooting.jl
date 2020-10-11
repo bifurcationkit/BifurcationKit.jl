@@ -20,47 +20,6 @@ function getMaximum(prob::AbstractShootingProblem, x::AbstractVector, p; ratio =
 	mx = _getExtremum(prob, x, p; ratio = ratio)
 	return maximum(mx)
 end
-
-####################################################################################################
-@views function sectionShooting(x::AbstractVector, normals::AbstractVector, centers::AbstractVector)
-	res = eltype(x)(1)
-	M = length(centers)
-	N = div(length(x)-1, M)
-	xv = x[1:end-1]
-	xc = reshape(xv, N, M)
-
-	for ii in 1:M
-		# this avoids the temporary xc - centers
-		res *= dot(xc[:, ii], normals[ii]) - dot(centers[ii], normals[ii])
-	end
-	res
-end
-
-# section for Standard Shooting
-"""
-$(TYPEDEF)
-
-This composite type (named for SectionStandardShooting) encodes a type of sections implemented by hyperplanes. It can be used in conjunction with [`ShootingProblem`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
-
-$(TYPEDFIELDS)
-
-"""
-struct SectionSS{Tn, Tc}
-	"Normals to define hyperplanes"
-	normals::Tn
-
-	"Representative point on each hyperplane"
-	centers::Tc
-end
-
-(sect::SectionSS)(u) = sectionShooting(u, sect.normals, sect.centers)
-
-# we update the field of Section, useful during continuation procedure for updating the section
-function update!(sect::SectionSS, normals, centers)
-	copyto!(sect.normals, normals)
-	copyto!(sect.centers, centers)
-	sect
-end
 ####################################################################################################
 # Standard Shooting functional
 """
@@ -133,7 +92,7 @@ end
 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p) for c in centers], centers); isparallel = isparallel,
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p)./ norm(F(c, p)) for c in centers], centers); isparallel = isparallel,
 kwargs...)
 
 @inline isSimple(sh::ShootingProblem) = sh.M == 1

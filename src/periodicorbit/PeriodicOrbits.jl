@@ -8,7 +8,7 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 @inline getM(pb::AbstractPeriodicOrbitProblem) = pb.M
 
 # update a problem with arguments
-function update(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
+function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
 
 ####################################################################################################
 """

@@ -35,6 +35,7 @@ module BifurcationKit
 
 	include("DeflatedContinuation.jl")
 
+	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
