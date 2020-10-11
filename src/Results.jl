@@ -94,6 +94,7 @@ eigenvec(br::BranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
 	println(io, "Branch of ", br.type, comment)
+	println(io, "Parameters from ", br.branch[1].param, " to ", br.branch[end].param,)
 	if length(br.bifpoint) > 0
 		println(io, "Bifurcation points:\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)")
 		for ii in eachindex(br.bifpoint)

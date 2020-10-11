@@ -3,38 +3,38 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.0] - 2020-9-18
+## [0.0.1] - 2020-9-18
 - new way to use the argument `printSolution` in `continuation`. You can return (Named) tuple now.
 
-## [0.1.0] - 2020-9-17
+## [0.0.1] - 2020-9-17
 - add new type GenericBifPoint to record bifurcation points and also an interval which contains the bifurcation point
 - add `kwargs` to arguments `finaliseSolution`
 - add `kwargs` to callback from `newton`. In particular, newton passes `fromNewton=true`, newtonPALC passes `fromNewton = false`
 - save intervals for the location of bifurcation points in the correct way, (min, max)
 
-## [0.1.0] - 2020-9-16
+## [0.0.1] - 2020-9-16
 - better estimation of d2f/dpdx in normal form computation
 - change of name `HyperplaneSections` -> `SectionPS` for Poincare Shooting
 
-## [0.1.0] - 2020-9-12
+## [0.0.1] - 2020-9-12
 - clamp values in [pMin, pMax] for continuation
 - put arrow at the end of the branch (plotting)
 
-## [0.1.0] - 2020-9-6
+## [0.0.1] - 2020-9-6
 - add eta parameter in ContinuationPar 
 - change name `PALCStateVariables` into `ContState` and `PALCIterable` into `ContIterable`
 - add Deflated Continuation
 
-## [0.1.0] - 2020-8-21
+## [0.0.1] - 2020-8-21
 - add Multiple predictor (this is needed to implement the `pmcont` algorithm from `pde2path` (Matlab)
 
-## [0.1.0] - 2020-7-26
+## [0.0.1] - 2020-7-26
 - add Polynomial predictor
 
-## [0.1.0] - 2020-7-19
+## [0.0.1] - 2020-7-19
 - add Branch switching for non-simple branch points
 
-## [0.1.0] - 2020-7-9
+## [0.0.1] - 2020-7-9
 The package is registered.
 
 ## [0.0.1] - 2020-6-20

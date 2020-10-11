@@ -23,7 +23,7 @@ function newton(F, J, br::ContResult, ind_bif::Int64, par, lens::Lens; Jt = noth
 	elseif br.foldpoint[ind_bif].type == :fold
 		return newtonFold(F, J, br, ind_bif, par, lens; Jt = Jt, d2F = d2F, normN = normN, options = options, kwargs...)
 	end
-	@error "Bifurcation type $(br[ind_bif].type) not yet handle for codim2 newton / continuation"
+	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end
 
 
@@ -63,5 +63,5 @@ function continuation(F, J, br::ContResult, ind_bif::Int64, par, lens1::Lens, le
 	elseif br.foldpoint[ind_bif].type == :fold
 		return continuationFold(F, J, br, ind_bif, par, lens1, lens2, options_cont; Jt = Jt, d2F = d2F, kwargs...)
 	end
-	@error "Bifurcation type $(br[ind_bif].type) not yet handle for codim2 newton / continuation"
+	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end
