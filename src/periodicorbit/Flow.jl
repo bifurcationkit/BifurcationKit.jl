@@ -78,7 +78,7 @@ flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
-# Simplified constructor(s) 
+# Simplified constructor(s)
 We provide a simple constructor where you only pass the vector fiels `F`, the flow `ϕ` and its differential `dϕ`:
 
 	fl = Flow(F, ϕ, dϕ)
@@ -123,11 +123,11 @@ Flow() = Flow(nothing, nothing, nothing, nothing, nothing, nothing)
 Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df)
 
 # callable struct
-(fl::Flow)(x, p, t)     			  = fl.flow(x, p, t)
-(fl::Flow)(x, p, dx, t; kw2...) 	  = fl.dflow(x, p, dx, t; kw2...)
-(fl::Flow)(::Val{:Full}, x, p, t) 	  = fl.flowFull(x, p, t)
-(fl::Flow)(::Val{:TimeSol}, x, p, t)  = fl.flowTimeSol(x, p, t)
-(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t) = fl.dfserial(x, p, dx, t)
+(fl::Flow)(x, p, t; k...)     			  			= fl.flow(x, p, t; k...)
+(fl::Flow)(x, p, dx, t; k...) 	  					= fl.dflow(x, p, dx, t; k...)
+(fl::Flow)(::Val{:Full}, x, p, t; k...) 	  		= fl.flowFull(x, p, t; k...)
+(fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
+(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.dfserial(x, p, dx, t; k...)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
@@ -136,9 +136,9 @@ Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The 
 function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 	probserial = prob isa EnsembleProblem ? prob.prob : prob
 	return Flow(F,
-		(x, p, t) ->		   flow(x, p, t, prob; alg = alg, kwargs...),
-		(x, p, t) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs...),
-		(x, p, t) ->       flowFull(x, p, t, prob; alg = alg, kwargs...),
+		(x, p, t; kw2...) ->		   flow(x, p, t, prob; alg = alg, kwargs..., kw2...),
+		(x, p, t; kw2...) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs..., kw2...),
+		(x, p, t; kw2...) ->       flowFull(x, p, t, prob; alg = alg, kwargs..., kw2...),
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
 		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
@@ -150,9 +150,9 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
 	return Flow(F,
-		(x, p, t) ->			  flow(x, p, t, prob1, alg = alg1; kwargs...),
-		(x, p, t) ->	   flowTimeSol(x, p, t, prob1; alg = alg1, kwargs...),
-		(x, p, t) -> 		  flowFull(x, p, t, prob1, alg = alg1; kwargs...),
+		(x, p, t; kw2...) ->			  flow(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
+		(x, p, t; kw2...) ->	   flowTimeSol(x, p, t, prob1; alg = alg1, kwargs..., kw2...),
+		(x, p, t; kw2...) -> 		  flowFull(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),

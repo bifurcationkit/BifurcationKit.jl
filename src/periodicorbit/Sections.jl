@@ -3,41 +3,36 @@ abstract type AbstractSection end
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
 ####################################################################################################
-@views function sectionShooting(x::AbstractVector, normals::AbstractVector, centers::AbstractVector)
-	res = eltype(x)(1)
-	M = length(centers); N = div(length(x) - 1, M)
-	xv = x[1:end-1]
-	xc = reshape(xv, N, M)
-	for ii in 1:M
-		# this avoids the temporary xc - centers
-		res *= dot(xc[:, ii], normals[ii]) - dot(centers[ii], normals[ii])
-	end
-	res
+@views function sectionShooting(x::AbstractVector, normal::AbstractVector, center::AbstractVector)
+	N = length(center)	
+	# we only constrain the first point to lie on a specific hyperplane
+	# this avoids the temporary xc - centers
+	return dot(x[1:N], normal) - dot(center, normal)
 end
 
 # section for Standard Shooting
 """
 $(TYPEDEF)
 
-This composite type (named for Section Standard Shooting) encodes a type of sections implemented by hyperplanes. It can be used in conjunction with [`ShootingProblem`](@ref). Each hyperplane is defined by a point (one example in `centers`) and a normal (one example in `normals`).
+This composite type (named for Section Standard Shooting) encodes a type of section implemented by a hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point in `centers` and a `normal`.
 
 $(TYPEDFIELDS)
 
 """
 struct SectionSS{Tn, Tc}  <: AbstractSection
-	"Normals to define hyperplanes"
-	normals::Tn
+	"Normal to define hyperplane"
+	normal::Tn
 
-	"Representative point on each hyperplane"
-	centers::Tc
+	"Representative point on hyperplane"
+	center::Tc
 end
 
-(sect::SectionSS)(u) = sectionShooting(u, sect.normals, sect.centers)
+(sect::SectionSS)(u) = sectionShooting(u, sect.normal, sect.center)
 
 # we update the field of Section, useful during continuation procedure for updating the section
-function update!(sect::SectionSS, normals, centers)
-	copyto!(sect.normals, normals)
-	copyto!(sect.centers, centers)
+function update!(sect::SectionSS, normal, center)
+	copyto!(sect.normal, normal)
+	copyto!(sect.center, center)
 	sect
 end
 

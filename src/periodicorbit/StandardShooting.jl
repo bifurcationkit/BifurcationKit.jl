@@ -74,7 +74,7 @@ end
 
 ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
-ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p) for c in centers], centers); isparallel = isparallel, kwargs...)
+ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); isparallel = isparallel, kwargs...)
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
 ShootingProblem(M::Int, par, prob::ODEProblem, alg; isparallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; isparallel = isparallel, kwargs...)
@@ -92,8 +92,7 @@ end
 
 ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; isparallel = isparallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS([F(c, p)./ norm(F(c, p)) for c in centers], centers); isparallel = isparallel,
-kwargs...)
+ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; isparallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); isparallel = isparallel, kwargs...)
 
 @inline isSimple(sh::ShootingProblem) = sh.M == 1
 @inline isParallel(sh::ShootingProblem) = sh.isparallel
@@ -318,7 +317,8 @@ function updateForBS(prob::ShootingProblem, F, dF, hopfpt, ζr, M, orbitguess_a,
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
 	# update the problem
-	probSh = setproperties(prob, M = M, section = SectionSS([F(c, hopfpt.params) for c in orbitguess_a], orbitguess_a))
+	probSh = setproperties(prob, M = M, section = SectionSS(F(orbitguess_a[1], hopfpt.params), orbitguess_a[1]))
+	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure
 	probSh = @set probSh.flow.F = F
