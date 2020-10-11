@@ -1,5 +1,5 @@
 module BifurcationKit
-	using JLD2, Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
+	using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
 	using Setfield: setproperties, @set, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
 	using RecursiveArrayTools: VectorOfArray
@@ -45,16 +45,38 @@ module BifurcationKit
 	include("periodicorbit/FloquetQaD.jl")
 
 	include("plotting/Recipes.jl")
-	
+
 	using Requires
-	
+
 	function __init__()
 		@require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
 			using .Plots
 			include("plotting/PlotCont.jl")
 		end
-	end	
-			
+
+		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
+			using .JLD2
+			function saveToFile(filename, sol, p, i::Int64, br::ContResult)
+				try
+					# create a group in the JLD format
+					jldopen(filename*".jld2", "a+") do file
+						mygroup = JLD2.Group(file, "sol-$i")
+						mygroup["sol"] = sol
+						mygroup["param"] = p
+					end
+
+					jldopen(filename*"-branch.jld2", "w") do file
+						file["branch"] = br
+						file["contParam"] = br.contparams
+					end
+				catch
+					@error "Could not save branch in the jld2 file"
+				end
+			end
+		end
+
+	end
+
 
 	# linear solvers
 	export DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
