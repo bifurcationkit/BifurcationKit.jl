@@ -11,7 +11,7 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
 
 # update a section with a problem, we do nothing by default
-updateSection!(prob::AbstractPeriodicOrbitProblem, x, par) = throw("Not yet implemented!")
+updateSection!(prob::AbstractPeriodicOrbitProblem, x, par) = @warn "Not yet implemented!"
 
 ####################################################################################################
 """

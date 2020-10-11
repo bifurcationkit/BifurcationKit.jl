@@ -156,7 +156,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	end
 
 	# add constraint
-	out[end] = sh.section(x)
+	out[end] = @views sh.section(xc[:, 1])
 
 	return out
 end
@@ -184,7 +184,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 	end
 
 	# add constraint
-	out.p = sh.section(x)
+	out.p = sh.section(xc[1])
 
 	return out
 end
@@ -215,19 +215,19 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
 			tmp = sh.flow(xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
-			outc[:, ii] .= @views tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] * dT .- dxc[:, ip1]
+			outc[:, ii] .= @views tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	else
 		# call jacobian of the flow
 		solOde = sh.flow(xc, par, dxc, sh.ds .* T)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
-			outc[:, ii] .= solOde[ii].du .+ sh.flow.F(solOde[ii].u, par) .* sh.ds[ii] * dT .- dxc[:, ip1]
+			outc[:, ii] .= solOde[ii].du .+ sh.flow.F(solOde[ii].u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	end
 
 	# add constraint
-	out[end] = (sh.section(x .+ δ .* dx) - sh.section(x)) / δ
+	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N]) - sh.section(x[1:N])) / δ
 
 	return out
 end

@@ -69,7 +69,7 @@ end
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
-	bp = unique(x -> x.type, [(type = pt.type, param = pt.param, printsol = pt.printsol) for pt in brs[1].bifpoint if pt.type != :none])
+	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
 	for (id, res) in pairs(brs)
 		@series begin
 			putbifptlegend --> false
@@ -79,8 +79,10 @@ end
 			branchlabel --> branchlabel[id]
 			vars --> vars
 			xguide --> getLensParam(res.param_lens)
+			# collect the values of the bifurcation points to be added in the legend
+			ind1, ind2 = getPlotVars(brs[id], vars)
 			for pt in res.bifpoint
-				pt.type!=:none && push!(bp, (type = pt.type, param = pt.param, printsol = pt.printsol))
+				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)))
 			end
 			res
 		end
@@ -94,7 +96,7 @@ end
 				label --> "$(pt.type)"
 				markersize --> 2
 				markerstrokewidth --> 0
-				[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
+				[pt.param], [pt.printsol]
 			end
 		end
 	end
