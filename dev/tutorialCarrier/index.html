@@ -36,11 +36,11 @@ sol = -(1 .- par_car.X.^2)
 
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	out, _, flag = @time newton(
-		F_carr, Jac_carr, sol, (@set par_car.ϵ = 0.6), optnew, normN = x -&gt; norm(x, Inf64))
-	Plots.plot(out, label=&quot;Solution&quot;)</code></pre><h2 id="First-try-with-automatic-bifurcation-diagram-1"><a class="docs-heading-anchor" href="#First-try-with-automatic-bifurcation-diagram-1">First try with automatic bifurcation diagram</a><a class="docs-heading-anchor-permalink" href="#First-try-with-automatic-bifurcation-diagram-1" title="Permalink"></a></h2><p>We can start by using our Automatic bifurcation method.</p><pre><code class="language-julia">using ForwardDiff
+	out, = @time newton(F_carr, Jac_carr, sol, 
+		(@set par_car.ϵ = 0.6), optnew, normN = x -&gt; norm(x, Inf64))
+	plot(out, label=&quot;Solution&quot;)</code></pre><h2 id="First-try-with-automatic-bifurcation-diagram-1"><a class="docs-heading-anchor" href="#First-try-with-automatic-bifurcation-diagram-1">First try with automatic bifurcation diagram</a><a class="docs-heading-anchor-permalink" href="#First-try-with-automatic-bifurcation-diagram-1" title="Permalink"></a></h2><p>We can start by using our Automatic bifurcation method.</p><pre><code class="language-julia">using ForwardDiff
 D(f, x, p, dx) = ForwardDiff.derivative(t -&gt; f(x .+ t .* dx, p), 0.)
-dF_carr(x,p)         =  ForwardDiff.jacobian( z-&gt; F_carr(z,p), x)
+dF_carr(x,p)         	   =  ForwardDiff.jacobian( z-&gt; F_carr(z,p), x)
 d1F_carr(x,p,dx1)         = D((z, p0) -&gt; F_carr(z, p0), x, p, dx1)
 d2F_carr(x,p,dx1,dx2)     = D((z, p0) -&gt; d1F_carr(z, p0, dx1), x, p, dx2)
 d3F_carr(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2F_carr(z, p0, dx1, dx2), x, p, dx3)
@@ -48,12 +48,11 @@ jet = (F_carr, Jac_carr, d2F_carr, d3F_carr)
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 3, nev = 40)
 
-diagram = bifurcationdiagram(jet...,
-		0*out, par_car,
-		(@lens _.ϵ), 2,
-		(arg...) -&gt; @set optcont.newtonOptions.verbose=false;
-		printSolution = (x, p) -&gt; (x[2]-x[1]) * sum(x.^2),
-		plot = true)</code></pre><p>However, this is a bit disappointing as we only find two branches. <img src="../carrier1.png" alt/></p><h2 id="Second-try-with-deflated-continuation-1"><a class="docs-heading-anchor" href="#Second-try-with-deflated-continuation-1">Second try with deflated continuation</a><a class="docs-heading-anchor-permalink" href="#Second-try-with-deflated-continuation-1" title="Permalink"></a></h2><pre><code class="language-julia"># deflation operator to hold solutions
+diagram = bifurcationdiagram(jet..., 0*out, par_car,
+	(@lens _.ϵ), 2,
+	(arg...) -&gt; @set optcont.newtonOptions.verbose = false;
+	printSolution = (x, p) -&gt; (x[2] - x[1]) * sum(x.^2),
+	plot = true)</code></pre><p>However, this is a bit disappointing as we only find two branches. <img src="../carrier1.png" alt/></p><h2 id="Second-try-with-deflated-continuation-1"><a class="docs-heading-anchor" href="#Second-try-with-deflated-continuation-1">Second try with deflated continuation</a><a class="docs-heading-anchor-permalink" href="#Second-try-with-deflated-continuation-1" title="Permalink"></a></h2><pre><code class="language-julia"># deflation operator to hold solutions
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 
 # parameter values for the problem
@@ -74,11 +73,13 @@ end
 br, = @time continuation(
 	F_carr, Jac_carr,
 	par_def, (@lens _.ϵ),
-	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, pMax = 0.7, pMin = 0.05, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 40),
+	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, 
+		pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
+		newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
 	deflationOp;
 	perturbSolution = perturbsol,
 	printSolution = (x, p) -&gt; (x[2]-x[1]) * sum(x.^2),
 	normN = x -&gt; norm(x, Inf64),
 	)
 
-plot(br) </code></pre><p>We obtain the following result which is remarkable because it contains many more disconnected branches which we did not find in the first try.</p><p><img src="../carrier.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 21:29">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot(br...) </code></pre><p>We obtain the following result which is remarkable because it contains many more disconnected branches which we did not find in the first try.</p><p><img src="../carrier.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 11 October 2020 19:01">Sunday 11 October 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

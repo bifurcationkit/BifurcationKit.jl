@@ -92,12 +92,11 @@ opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
 
 br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)</code></pre><p>We then compute the differentials of the vector field, this is needed by the branch switching method because it first computes the Hopf normal form. Thankfully, this is little work using Automatic Differentiation:</p><pre><code class="language-julia">using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t-&gt;f(x .+ t .* dx, p), 0.)
-end
+
+D(f, x, p, dx) = ForwardDiff.derivative(t -&gt; f(x .+ t .* dx, p), 0.)
 d1Fcgl(x,p,dx1) = D((z, p0) -&gt; Fcgl(z, p0), x, p, dx1)
-	d2Fcgl(x,p,dx1,dx2) = D((z, p0) -&gt; d1Fcgl(z, p0, dx1), x, p, dx2)
-	d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
+d2Fcgl(x,p,dx1,dx2) = D((z, p0) -&gt; d1Fcgl(z, p0, dx1), x, p, dx2)
+d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)</code></pre><p>We define the linear solvers to be use by the (Matrix-Free) shooting method</p><pre><code class="language-julia">ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
@@ -144,4 +143,4 @@ br_po, = @time continuation(probSh,
 	verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-	printSolution = (u, p) -&gt; BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 21:29">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	printSolution = (u, p) -&gt; BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 11 October 2020 19:01">Sunday 11 October 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
