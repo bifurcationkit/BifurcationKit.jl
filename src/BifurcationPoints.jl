@@ -53,6 +53,7 @@ $(TYPEDFIELDS)
 end
 
 function _show(io::IO, bp::GenericBifPoint, ii)
+	if bp.type == :none; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else

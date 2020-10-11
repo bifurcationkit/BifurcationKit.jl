@@ -1,7 +1,7 @@
 abstract type AbstractPeriodicOrbitProblem end
 
 # Periodic orbit computations by finite differences
-abstract type AbstractPOFDProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPOTrapProblem <: AbstractPeriodicOrbitProblem end
 
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
@@ -15,7 +15,7 @@ function update(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbit
 """
 $(TYPEDEF)
 
-If we use the same code as for newton (see below) in continuation, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix. So we have to use a dedicated composite type for the jacobian to handle this case.
+Define a type to interface the Jacobian of the Shooting Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) in `continuation`, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix.
 
 $(TYPEDFIELDS)
 """

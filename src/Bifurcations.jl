@@ -67,7 +67,7 @@ locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateF
 """
 Function for coarse detection of bifurcation points.
 """
-function getBifurcationType(contparams::ContinuationPar, state::ContState, normC, printsolution, verbosity, status::Symbol, interval::Tuple{T, T}) where T
+function getBifurcationType(contparams::ContinuationPar, state, normC, printsolution, verbosity, status::Symbol, interval::Tuple{T, T}) where T
 	# this boolean ensures that edge cases are handled
 	detected = false
 

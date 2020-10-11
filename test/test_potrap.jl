@@ -164,8 +164,10 @@ dorbit = rand(2n*10+1)
 Jfd = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
 Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
-pbsp(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
+
+@time pbsp(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
+
 Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
 
