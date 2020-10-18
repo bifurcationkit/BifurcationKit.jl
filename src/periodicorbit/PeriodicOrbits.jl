@@ -119,8 +119,8 @@ Similar as [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 - `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
 """
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...)
-	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
+	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(contParams.newtonOptions.linsolver) : linearAlgo
 	return continuation(prob, orbitguess, par, lens, contParams, _linearAlgo; kwargs...)
 end
 
@@ -173,7 +173,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 
 	verbose && printstyled(color = :green, "#"^61*
 			"\n--> Start branching from Hopf bif. point to periodic orbits.
-			\n--> Bifurcation type = ", hopfpt.type,
+			 \n--> Bifurcation type: ", hopfpt.type,
 			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,
 			"\n----> period = ", abs(2pi/pred.ω), "\n")

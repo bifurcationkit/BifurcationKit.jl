@@ -98,7 +98,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	fl = Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-struct Flow{TF, Tf, Tts, Tff, Td, Tse}
+struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono}
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem,"
 	F::TF
 
@@ -116,18 +116,24 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse}
 
 	"Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
 	dfserial::Tse
+
+	"[Internal] store the ODEProblem associated with the flow of the Cauchy problem"
+	prob::Tprob
+
+	"[Internal] store the ODEProblem associated with the flow of the variational problem"
+	probMono::TprobMono
 end
 
 # constructors
 Flow() = Flow(nothing, nothing, nothing, nothing, nothing, nothing)
-Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df)
+Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df, nothing, nothing)
 
 # callable struct
 (fl::Flow)(x, p, t; k...)     			  			= fl.flow(x, p, t; k...)
 (fl::Flow)(x, p, dx, t; k...) 	  					= fl.dflow(x, p, dx, t; k...)
 (fl::Flow)(::Val{:Full}, x, p, t; k...) 	  		= fl.flowFull(x, p, t; k...)
 (fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
-(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.dfserial(x, p, dx, t; k...)
+(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfserial(x, p, dx, t; k...)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
@@ -142,7 +148,8 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 		# we remove the callback in order to use this for the Jacobian in Poincare Shooting
 		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
-		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, probserial; alg = alg, kwargs..., kw2...)
+		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, probserial; alg = alg, kwargs..., kw2...),
+		prob, nothing
 		)
 end
 
@@ -156,5 +163,6 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),
+		prob1, prob2
 		)
 end

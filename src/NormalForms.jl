@@ -340,8 +340,8 @@ function biorthogonalise(ζs, ζstars, verbose)
 	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n $(display(G))"
 
 	# save those in case the first algo fails
-	_ζs = copy.(ζs)
-	_ζstars = copy.(ζstars)
+	_ζs = deepcopy(ζs)
+	_ζstars = deepcopy(ζstars)
 
 	# first algo
 	tmp = copy(ζstars[1])
@@ -359,9 +359,9 @@ function biorthogonalise(ζs, ζstars, verbose)
 
 	# we switch to another algo if the above fails
 	if norm(G - LinearAlgebra.I, Inf) >= 1e-5
-		G = [ dot(ζ, ζstar) for ζ in _ζs, ζstar in _ζstars]
 		@warn "Gram matrix not equal to idendity. Switching to LU algorithm."
 		println("G (det = $(det(G))) = "); display(G)
+		G = [ dot(ζ, ζstar) for ζ in _ζs, ζstar in _ζstars]
 		_F = lu(G; check = true)
 		display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
 		ζs = inv(_F.L) * inv(_F.P) * _ζs
@@ -443,8 +443,10 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
-			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ)))
-			@assert _λ[1:length(rightEv)] ≈ rightEv "We did not find the correct eigenvalues (1st col) but the second column in\n $(display(hcat(rightEv, _λ)))."
+			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[1:length(rightEv)])))
+			if norm(_λ[1:length(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
+			@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
+			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
 			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in indev-N+1:indev]
@@ -481,8 +483,11 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		out
 	end
 
+	# vector eltype
+	Tvec = elype(ζ[1])
+
 	# coefficients of p
-	dgidp = Vector{Float64}(undef, N)
+	dgidp = Vector{Tvec}(undef, N)
 	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
@@ -490,7 +495,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp, "\n")
 
 	# coefficients of x*p
-	d2gidxjdpk = zeros(Float64, N, N)
+	d2gidxjdpk = zeros(Tvec, N, N)
 	for ii in 1:N, jj in 1:N
 		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(dF(x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
 		Ψ01, flag = ls(Linv, E(R01))
@@ -500,7 +505,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
 
 	# coefficients of x^2
-	d2gidxjdxk = zeros(Float64, N, N, N)
+	d2gidxjdxk = zeros(Tvec, N, N, N)
 	for ii in 1:N, jj in 1:N, kk in 1:N
 		b2v = R2(ζs[jj], ζs[kk])
 		d2gidxjdxk[ii,jj,kk] = dot(b2v, ζstars[ii])
@@ -515,7 +520,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	end
 
 	# coefficient of x^3
-	d3gidxjdxkdxl = zeros(Float64, N, N, N, N)
+	d3gidxjdxkdxl = zeros(Tvec, N, N, N, N)
 	for jj in 1:N, kk in 1:N, ll in 1:N
 		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
