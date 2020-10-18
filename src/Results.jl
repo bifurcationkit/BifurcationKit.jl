@@ -70,7 +70,8 @@ end
 Base.length(br::ContResult) = length(br.branch)
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
-@inline vectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
+@inline getvectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
+@inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
 setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
 
 function Base.getproperty(br::ContResult, s::Symbol)
@@ -128,7 +129,7 @@ getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, 
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
- function ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
+ function _ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
 	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
 	n_unstable = 0

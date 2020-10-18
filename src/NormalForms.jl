@@ -397,7 +397,7 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), scaleζ = norm)
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = getvectortype(br), scaleζ = norm)
 	bifpt = br.bifpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
@@ -484,7 +484,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	end
 
 	# vector eltype
-	Tvec = elype(ζ[1])
+	Tvec = eltype(ζs[1])
 
 	# coefficients of p
 	dgidp = Vector{Tvec}(undef, N)
@@ -650,7 +650,7 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.param_lens, Teigvec = vectortype(br), scaleζ = norm)
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.param_lens, Teigvec = getvectortype(br), scaleζ = norm)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	println("#"^53*"\n--> Hopf Normal form computation")
 

@@ -55,7 +55,7 @@ nf = bp.nf
 br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
 # plot([br,br2], marker = :d)
 
-br3, _ = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
+br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
 # plot([br,br3])
 ####################################################################################################
 # Case of the pitchfork
@@ -136,9 +136,7 @@ bp2d = @time BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 
 @test norm(bp2d.nf.a, Inf) < 1e-15
 ####################################################################################################
 # vector field to test nearby secondary bifurcations
-function FbpSecBif(u, p)
-	return @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
-end
+FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
 
 dFbpSecBif(x,p)         =  ForwardDiff.jacobian( z-> FbpSecBif(z,p), x)
 d1FbpSecBif(x,p,dx1)         = D((z, p0) -> FbpSecBif(z, p0), x, p, dx1)

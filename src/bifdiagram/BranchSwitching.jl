@@ -56,7 +56,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -129,7 +129,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
@@ -151,7 +151,7 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, options
 	return multicontinuation(F, dF, br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, kwargs...)
 end
 
-function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = vectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs

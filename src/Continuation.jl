@@ -175,10 +175,10 @@ function ContResult(it::ContIterable, state::ContState)
 		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
+		return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
-		return ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
+		return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	end
 end
 

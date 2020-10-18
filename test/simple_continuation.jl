@@ -52,6 +52,8 @@ length(br1)
 BK.eigenvals(br1,20)
 BK.eigenvec(br1,20,1)
 BK.haseigenvector(br1)
+BK.getvectortype(br1)
+BK.getvectoreltype(br1)
 br1.param
 br1.params
 

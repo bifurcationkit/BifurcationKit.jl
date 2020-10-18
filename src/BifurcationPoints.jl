@@ -19,13 +19,13 @@ $(TYPEDFIELDS)
 	idx::Int64 = 0
 
 	"Parameter value at the bifurcation point, this is an estimate."
-	param::T = T(0)
+	param::T = 0.
 
 	"Norm of the equilibrium at the bifurcation point"
-	norm::T  = T(0)
+	norm::T  = 0.
 
 	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
-	printsol::Tp = T(0)
+	printsol::Tp = 0.
 
 	"Equilibrium at the bifurcation point"
 	x::Tv = Vector{T}(undef, 0)
@@ -46,14 +46,14 @@ $(TYPEDFIELDS)
 	δ::Tuple{Int64,Int64} = (0,0)
 
 	"Precision in the location of the bifurcation point"
-	precision::T = T(-1)
+	precision::T = -1
 
 	"Interval containing the bifurcation point"
-	interval::Tuple{T,T} = (T(0), T(0))
+	interval::Tuple{T,T} = (0, 0)
 end
 
 function _show(io::IO, bp::GenericBifPoint, ii)
-	if bp.type == :none; return; end
+	if bp.type == :none || bp.precision <= 0; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else
