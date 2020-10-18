@@ -63,7 +63,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
 
 	if kerneldim(br, ind_bif) > 1
-		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, kwargs...)
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
 	end
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
@@ -87,7 +87,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 		optn = optionsCont.newtonOptions
 		bifpt = br.bifpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
-		solbif, _, flag, _ = newton(F, dF, bifpt.x, pred.x, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
+		solbif, _, flag, _ = newton(F, dF, convert(Teigvec, bifpt.x), pred.x, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
 		copyto!(pred.x, solbif)
 	end
 
