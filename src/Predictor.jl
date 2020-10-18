@@ -440,7 +440,7 @@ end
 This is the classical Newton-Krylov solver used to solve `F(x, p) = 0` together
 with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1-θ) ⋅ (p - p0) * τp - n0 = 0`. This makes a problem of dimension N + 1.
 
-Here, we specify the p as a subfield of `par` with the `paramLens::Lens`
+Here, we specify `p` as a subfield of `par` with the `paramLens::Lens`
 
 # Arguments
 - `(x, par) -> F(x, par)` where `par` is a set of parameters like `(a=1.0, b=1)`

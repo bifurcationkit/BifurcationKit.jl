@@ -13,8 +13,8 @@ geteigenvector(eigsolve::ES, vecs, n::Union{Int, Array{Int64,1}}) where {ES <: A
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-@with_kw struct DefaultEig{Twh} <: AbstractEigenSolver
-	which::Twh = real		# how do we sort the computed eigenvalues
+@with_kw struct DefaultEig{T} <: AbstractEigenSolver
+	which::T = real		# how do we sort the computed eigenvalues
 end
 
 function (l::DefaultEig)(J, nev; kwargs...)

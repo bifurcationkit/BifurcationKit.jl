@@ -7,7 +7,6 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 	elseif eigls isa EigArnoldiMethod
 		return setproperties(eigls; which = ArnoldiMethod.LM(), by = abs)
 	end
-
 	if eigls isa EigKrylovKit
 		return @set eigls.which = :LM
 	end
@@ -186,14 +185,14 @@ function (fl::FloquetQaDShooting)(J, nev; kwargs...)
 end
 
 """
-Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Shooting computed at the space-time guess: `x`. The dimension of `u0` is N * M + 1 and the one of `du` is N.
+Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Standard Shooting computed at the space-time guess: `x`. The dimension of `u0` is N * M + 1 and the one of `du` is N.
 """
 function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p, du::AbstractVector)
 	# period of the cycle
 	T = extractPeriodShooting(x)
 
 	# extract parameters
-	M = length(sh.ds)
+	M = getM(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the time slices
@@ -215,7 +214,7 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 	T = extractPeriodShooting(x)
 
 	# extract parameters
-	M = length(sh.ds)
+	M = getM(sh)
 	M > 1 && @error "This is not yet a practical approach for multiple shooting"
 
 	N = div(length(x) - 1, M)

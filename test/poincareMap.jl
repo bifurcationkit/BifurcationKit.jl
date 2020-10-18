@@ -38,8 +38,8 @@ sol = @time solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 function flowTS(x, t, pb = prob; alg = algsl, kwargs...)
-	_pb = remake(pb; u0 = x, tspan = (zero(t), t) )
-	sol = DiffEqBase.concrete_solve(_pb, alg; abstol =1e-9, reltol=1e-6, save_everystep = false, kwargs...)
+	_pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
+	sol = DiffEqBase.solve(_pb, alg; abstol =1e-9, reltol=1e-6, save_everystep = false, kwargs...)
 	return sol.t, sol
 end
 flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb = pb; alg = alg, kwargs...)[2][end]

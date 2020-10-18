@@ -204,7 +204,7 @@ end
 """
 $(TYPEDEF)
 
-This specific Newton-Kyrlov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge to the guess `x1` while avoiding the previous solution `sol0`. This is very handy for branch switching. The mnethod is based on a deflated Newton-Krylov solver.
+This specific Newton-Kyrlov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge to the guess `x1` while avoiding the previous solution `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
 function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator = DeflationOperator(2.0, dot, 1.0, Vector{vectype}()); kwargs...) where {T, Tf, vectype, S, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)

@@ -56,14 +56,14 @@ _pb = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), 1, section; rtol = 1e-9)
 initpo = [0.13, 0., 6.]
 res = @time _pb(initpo, par_hopf)
 
-# test of the differential of thew shooting method
+# test of the differential of the shooting method
 
 _dx = rand(3)
 resAD = ForwardDiff.derivative(z -> _pb(initpo .+ z .* _dx, par_hopf), 0.)
 resFD = (_pb(initpo .+ 1e-8 .* _dx, par_hopf) - _pb(initpo, par_hopf)) * 1e8
 resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
-@test norm(resAN - resFD, Inf) < 1e-1
-@test norm(resAN - resAD, Inf) < 1e-1
+@test norm(resAN - resFD, Inf) < 1e-2
+@test norm(resAN - resAD, Inf) < 1e-2
 ####################################################################################################
 # test shooting interface
 _pb = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), [initpo[1:end-1]]; rtol = 1e-9)
@@ -109,7 +109,7 @@ d2Fsl(x, p, dx1, dx2) = ForwardDiff.derivative(t -> d1Fsl(x .+ t .* dx2, p, dx1)
 d3Fsl(x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2Fsl(x .+ t .* dx3, p, dx1, dx2), 0.)
 jet = (Fsl, JFsl, d2Fsl, d3Fsl)
 
-br_pok2, _ = continuation(jet...,br,1, opts_po_cont, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf)
+br_pok2, _ = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf)
 
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))

@@ -103,7 +103,6 @@ extractPeriodShooting(x::BorderedArray)  = x.p
 
 # this function updates the section during the continuation run
 function updateSection!(prob::ShootingProblem, x, par)
-	# return true
 	xt = extractTimeSlices(x, getM(prob))
 	@views update!(prob.section, prob.flow.F(xt[:, 1], par), xt[:, 1])
 	prob.section.normal ./= norm(prob.section.normal)
