@@ -101,7 +101,7 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 polpred = BK.PolynomialPred(BorderedPred(),2,6,x0)
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
-	br10, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
+	br10, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts9,
 	tangentAlgo = polpred, plot=false,
 	printSolution = (x,p)->x[1],
 	)

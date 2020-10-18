@@ -2,13 +2,9 @@
 function checkFloquetOptions(eigls::AbstractEigenSolver)
 	if eigls isa DefaultEig
 		return @set eigls.which = abs
-	end
-
-	if eigls isa EigArpack
+	elseif eigls isa EigArpack
 		return setproperties(eigls; which = :LM, by = abs)
-	end
-
-	if eigls isa EigArnoldiMethod
+	elseif eigls isa EigArnoldiMethod
 		return setproperties(eigls; which = ArnoldiMethod.LM(), by = abs)
 	end
 
@@ -18,7 +14,6 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 end
 ####################################################################################################
 # Computation of Floquet Coefficients for periodic orbits problems based on Finite Differences
-
 """
 	floquet = FloquetQaDTrap(eigsolver::AbstractEigenSolver)
 
@@ -36,6 +31,22 @@ struct FloquetQaDTrap{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 		eigls2 = checkFloquetOptions(eigls)
 		return new{typeof(eigls2)}(eigls2)
 	end
+end
+
+function (fl::FloquetQaDTrap)(J, nev; kwargs...)
+	if fl.eigsolver isa DefaultEig
+		# we build the monodromy matrix and compute the spectrum
+		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0, J.par)
+	else
+		# we use a Matrix Free version
+		monodromy = dx -> MonodromyQaDFD(J.pb, J.orbitguess0, J.par, dx)
+	end
+	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
+	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
+	logvals = log.(complex.(vals))
+	I = sortperm(logvals, by = x-> real(x), rev = true)
+	# Base.display(logvals)
+	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
 
 """
@@ -72,7 +83,6 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par,
 
 	return out
 end
-
 
 function MonodromyQaDFD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
 	# extraction of various constants
@@ -136,26 +146,8 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
 	end
 	return mono
 end
-
-function (fl::FloquetQaDTrap)(J, nev; kwargs...)
-	if fl.eigsolver isa DefaultEig
-		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0, J.par)
-	else
-		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDFD(J.pb, J.orbitguess0, J.par, dx)
-	end
-	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
-	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
-	logvals = log.(complex.(vals))
-	I = sortperm(logvals, by = x-> real(x), rev = true)
-	# Base.display(logvals)
-	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
-end
-
 ####################################################################################################
 # Computation of Floquet Coefficients for periodic orbit problems based on Shooting
-
 """
 	floquet = FloquetQaDShooting(eigsolver::AbstractEigenSolver)
 

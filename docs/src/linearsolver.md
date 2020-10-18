@@ -33,7 +33,7 @@ ls(rand(2,2), rand(2))
 
 ## Preconditioner
 
- Preconditioners should be considered when using Matrix Free methods such as GMRES. `GMRESIterativeSolvers` provides a very simple interface for using them. For `GMRESKrylovKit`, we implemented a left preconditioner. Note that, for `GMRESKrylovKit`, you are not restricted to use `Vector`s anymore. Finally, here are some packages to use preconditioner
+ Preconditioners should be considered when using Matrix Free methods such as GMRES. `GMRESIterativeSolvers` provides a very simple interface for using them. For `GMRESKrylovKit`, we implemented a left preconditioner. Note that, for `GMRESKrylovKit`, you are not restricted to use `Vector`s anymore. Finally, here are some packages to use preconditioners
 
 - [IncompleteLU.jl](https://github.com/haampie/IncompleteLU.jl) an ILU like preconditioner
 - [AlgebraicMultigrid.jl](https://github.com/JuliaLinearAlgebra/AlgebraicMultigrid.jl) Algebraic Multigrid (AMG) preconditioners. This works especially well for symmetric positive definite matrices.

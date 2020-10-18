@@ -3,7 +3,8 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 	λstar, evstar = eigsolver(Lstar, nev)
 	verbose && Base.display(λstar)
 	# vectors to hold eigen-elements for the adjoint of L
-	λstars = Vector{ComplexF64}()
+	λstars = Vector{eltype(λs)}()
+	# TODO This is a horrible hack to get  the type of the left eigenvectors
 	ζstars = Vector{typeof(geteigenvector(eigsolver, evstar, 1))}()
 
 	for (idvp, λ) in enumerate(λs)
@@ -16,7 +17,6 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 		# we change λstar so that it is not used twice
 		λstar[I] = 1e9
 	end
-
 	return ζstars, λstars
 end
 
@@ -28,9 +28,9 @@ Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how m
 function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	λstar, evstar = eigsolver(Lstar, nev)
 	I = argmin(abs.(λstar .- λ))
-	verbose && (println("--> left eigenvalues = ");Base.display(λstar))
+	verbose && (println("--> left eigenvalues = "); display(λstar))
 	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
-	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re=0. We found $(real(λstar[I])) !≈ 0.  You can perhaps increase the argument `nev`."
+	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λstar[I])) !≈ 0.  You can perhaps increase the argument `nev`."
 	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return copy(ζstar), λstar[I]
 end
@@ -85,7 +85,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	options = br.contparams.newtonOptions
 
 	# bifurcation point
-	# we need this conversion for when running on GPU and loading the branch from the disk
+	# we need this conversion when running on GPU and loading the branch from the disk
 	x0 = convert(Teigvec, bifpt.x)
 	p = bifpt.param
 
@@ -125,7 +125,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 
 	ζstar = real.(ζstar); λstar = real.(λstar)
 
-	@assert abs(dot(ζ, ζstar)) > 1e-10 "We got ζ⋅ζstar = $((dot(ζ, ζstar))). This dot product should not be zero. Perhaps, you can increase nev which is currently $nev."
+	@assert abs(dot(ζ, ζstar)) > 1e-10 "We got ζ⋅ζstar = $((dot(ζ, ζstar))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
 	ζstar ./= dot(ζ, ζstar)
 
 	# differentials and projector on Range(L), there are real valued

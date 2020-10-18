@@ -238,7 +238,6 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 end
 
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
-	@warn "stepSizeControl"
 	if converged == false
 		dsnew = ds
 		if abs(ds) < (1 + mpd.nb) * contparams.dsmin
@@ -460,7 +459,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	# Extract parameters
 	newtonOpts = contparams.newtonOptions
 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
-	@unpack finDiffEps = contparams
+	@unpack finDiffEps, pMin, pMax = contparams
 
 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))

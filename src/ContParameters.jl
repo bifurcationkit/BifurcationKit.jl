@@ -42,9 +42,10 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	# parameters for arclength continuation
 	dsmin::T	= 1e-3
-	dsmax::T	= 1e-1;		@assert dsmax >= dsmin
+	dsmax::T	= 1e-1
+	@assert dsmax >= dsmin "You must provide a valid interval (ordered) for ds"
 	ds::T		= 1e-2;		@assert dsmax >= abs(ds);	@assert abs(ds) >= dsmin
-	@assert dsmin > 0
+	@assert dsmin > 0 "The interval for ds must be positive"
 	@assert dsmax > 0
 
 	# parameters for scaling arclength step size

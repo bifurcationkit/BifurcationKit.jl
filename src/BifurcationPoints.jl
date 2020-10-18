@@ -61,7 +61,10 @@ function _show(io::IO, bp::GenericBifPoint, ii)
 	end
 end
 
-_showFold(io, bp::GenericBifPoint, ii) = @printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;34m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+function _showFold(io, bp::GenericBifPoint, ii)
+	if bp.precision <= 0 return nothing; end
+	@printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;34m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+end
 @inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
 # types for bifurcation point 1d kernel for the jacobian
@@ -167,7 +170,16 @@ mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: Bra
 end
 
 type(bp::NdBranchPoint) = :NonSimpleBranchPoint
-Base.length(bp::NdBranchPoint) = bp.ζ
+Base.length(bp::NdBranchPoint) = length(bp.ζ)
+
+function Base.show(io::IO, bp::NdBranchPoint)
+	if bp isa Pitchfork || bp isa HopfBifPoint
+		print(io, bp.type, " - ")
+	end
+	println(io, "Non simple bifurcation point at p ≈ $(bp.p). \nKernel dimension = ", length(bp))
+	println(io, "Normal form :")
+	println(io, mapreduce(x->x*"\n",*, nf(bp)) )
+end
 ####################################################################################################
 # type for Hopf bifurcation point
 

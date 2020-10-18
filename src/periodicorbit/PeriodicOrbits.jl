@@ -29,7 +29,7 @@ struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
 end
 FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 
-# evaluation of the jacobian
+# jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
 
 ####################################################################################################
@@ -38,11 +38,23 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 $(SIGNATURES)
 
 This is the Newton-Krylov Solver for computing a periodic orbit using (Standard / Poincaré) Shooting method.
-Note that the linear solver has to be apropriately set up.
+Note that the linear solver has to be apropriately set up in `options`.
 
 # Arguments
 
 Similar as [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
+
+- `prob` a problem of type `<: AbstractShootingProblem` encoding the shooting functional G.
+- `orbitguess` a guess for the periodic orbit. See [`ShootingProblem`](@ref) and See [`PoincareShootingProblem`](@ref) for information regarding the shape of `orbitguess`.
+- `par` parameters to be passed to the functional
+- `options` same as for the regular [`newton`](@ref) method.
+
+# Optional argument
+- `linearPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
+    - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
+    - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x->prob(x)`.
+    - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
+    - For `:autodiffDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 
 # Output:
 - solution

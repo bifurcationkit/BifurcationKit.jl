@@ -782,6 +782,7 @@ This is the Newton-Krylov Solver for computing a periodic orbit using a function
 # Arguments:
 - `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N,M` in `prob`.
+- `par` parameters to be passed to the functional
 - `options` same as for the regular `newton` method
 - `linearPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
     - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
@@ -831,11 +832,11 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
-	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedInplaceLU, :BorderedMatrixFree, :FullSparseInplace]
+function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
+	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedInplaceLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 
-	N = probPO.N
-	M = probPO.M
+	N = prob.N
+	M = prob.M
 	options = contParams.newtonOptions
 
 	if computeEigenElements(contParams)
@@ -846,25 +847,25 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 		@assert length(orbitguess) == N * M + 1 "Error with size of the orbitguess"
 
 		if linearPO == :FullLU
-			jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
+			jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
 		elseif linearPO == :FullSparseInplace
 			# sparse matrix to hold the jacobian
-			_J =  probPO(Val(:JacFullSparse), orbitguess, par)
+			_J =  prob(Val(:JacFullSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
-			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p, _indx)
+			jac = (x, p) -> prob(Val(:JacFullSparseInplace), _J, x, p, _indx)
 		elseif linearPO == :Dense
-			_J =  probPO(Val(:JacFullSparse), orbitguess, par) |> Array
-			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
+			_J =  prob(Val(:JacFullSparse), orbitguess, par) |> Array
+			jac = (x, p) -> prob(Val(:JacFullSparseInplace), _J, x, p)
 		else
-		 	jac = (x, p) ->   ( dx -> probPO(x, p, dx))
+		 	jac = (x, p) ->   ( dx -> prob(x, p, dx))
 		end
 
 		lspo = POTrapLinsolver(options.linsolver)
 
 			return continuation(
-				probPO,
-				(x, p) -> POTrapJacobianFull(probPO, jac(x, p), x, p),
+				prob,
+				(x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p),
 				orbitguess, par, lens,
 				(@set contParams.newtonOptions.linsolver = lspo);
 				printSolution = printSolution,
@@ -879,7 +880,7 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
 		else #this is BorderedMatrixFree
-			Aγ = AγOperator(is_matrix_free = true, prob = probPO, N = N,
+			Aγ = AγOperator(is_matrix_free = true, prob = prob, N = N,
 					orbitguess = zeros(N * M + 1),
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
 			# linear solver
@@ -889,7 +890,7 @@ function continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, l
 		# create the jacobian
 		jacPO = POTrapJacobianBLS(probPO, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
 
-		return continuation(probPO, jacPO, orbitguess, par, lens,
+		return continuation(prob, jacPO, orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = lspo);
 			printSolution = printSolution,
 			kwargs...)
@@ -918,9 +919,9 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuation(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
-	return continuationPOTrap(probPO, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
+	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
 end
 
 ####################################################################################################
