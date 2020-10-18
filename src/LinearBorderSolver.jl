@@ -93,29 +93,6 @@ function (lbs::MatrixBLS)(J, dR,
 	return res[1:end-1], res[end], true, 1
 end
 
-# # case of a scalar additional linear equation
-# function (lbs::MatrixBLS)(J, dR,
-# 						dzu, dzp, R::vectype, n::Tv,
-# 						xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {Tv, T <: Number, vectype <: AbstractVector, S, Ts}
-# 	@warn "Experimental!! Solving bordered linear system with non scalar bordered equation"
-# 	N = size(J, 1)
-# 	n1, n2 = size(dzp)
-#
-# 	rhs = vcat(R, n)
-# 	A = similar(J, N + n1, N + n2)
-#
-# 	if shift == nothing
-# 		A[1:N, 1:N] .= J
-# 	else
-# 		A[1:N, 1:N] .= J + shift * I
-# 	end
-#
-# 	A[1:N, end-n1+1:end] .= dR
-# 	A[end-n1+1:end, 1:N] .= (dzu) .* xiu
-# 	A[end-n1+1:end, end-n1+1:end]  .= dzp .* xip
-# 	res = A \ rhs
-# 	return res[1:end-n1], res[end-n1+1:end], true, 1
-# end
 ####################################################################################################
 # composite type to save the bordered linear system with expression
 # [ J	a]

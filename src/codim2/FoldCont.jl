@@ -80,17 +80,14 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	# parameter axis
 	lens = pbMA.lens
 
-	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
+	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
 	J_at_xp = J(x, set(par, lens, p))
 
 	# we do the following in order to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	if hasAdjoint(pbMA)
-		JAd_at_xp = pbMA.Jadjoint(x, set(par, lens, p))
-	else
-		JAd_at_xp = transpose(J_at_xp)
-	end
+	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jadjoint(x, set(par, lens, p)) : transpose(J_at_xp)
 
 	n = T(1)
+	
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
 	v = pbMA.linsolver(J_at_xp, a)[1]

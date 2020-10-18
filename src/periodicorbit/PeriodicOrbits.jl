@@ -4,7 +4,7 @@ abstract type AbstractPeriodicOrbitProblem end
 abstract type AbstractPOTrapProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
-# get the number of time slices / sections
+# get the number of time slices
 @inline getM(pb::AbstractPeriodicOrbitProblem) = pb.M
 
 # update a problem with arguments
@@ -146,6 +146,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `updateSectionEveryStep = 1` update the section every `updateSectionEveryStep` during continuation
 
 !!! note "Linear solver"
     You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
@@ -156,7 +157,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not `nothing`, is computed with Finite differences.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 1, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
@@ -171,7 +172,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	pred = predictor(hopfpt, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 
 	verbose && printstyled(color = :green, "#"^61*
-			"\n--> Start branching from Hopf branch to periodic orbits.
+			"\n--> Start branching from Hopf bif. point to periodic orbits.
 			\n--> Bifurcation type = ", hopfpt.type,
 			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,

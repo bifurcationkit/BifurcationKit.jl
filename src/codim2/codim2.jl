@@ -2,7 +2,7 @@
 $(SIGNATURES)
 
 This function turns an initial guess for a Fold/Hopf point into a solution to the Fold/Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
-- `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
+- `F  = (x, p) -> F(x, p)` where `p` is a set of parameters.
 - `J  = (x, p) -> d_xF(x, p)` associated jacobian
 - `br` results returned after a call to [`continuation`](@ref)
 - `ind_bif` bifurcation index in `br`

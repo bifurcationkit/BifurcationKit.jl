@@ -104,7 +104,7 @@ extractPeriodShooting(x::BorderedArray)  = x.p
 # this function updates the section during the continuation run
 function updateSection!(prob::ShootingProblem, x, par)
 	# return true
-	xt = extractTimeSlices(x, prob.M)
+	xt = extractTimeSlices(x, getM(prob))
 	@views update!(prob.section, prob.flow.F(xt[:, 1], par), xt[:, 1])
 	prob.section.normal ./= norm(prob.section.normal)
 	return true
@@ -263,7 +263,7 @@ end
 function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
 	T = extractPeriodShooting(x)
-	M = length(prob.ds)
+	M = getM(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
@@ -291,7 +291,7 @@ Compute the full trajectory associated to `x`. Mainly for plotting purposes.
 """
 function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
 	T = extractPeriodShooting(x)
-	M = length(prob.ds)
+	M = getM(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)

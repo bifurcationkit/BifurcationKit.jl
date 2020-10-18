@@ -71,32 +71,6 @@ function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 	end
 	return J
 end
-
-####################################################################################################
-"""
-Save solution / data in JLD2 file
-- `filename` is for example "example.jld2"
-- `sol` is the solution
-- `p` is the parameter
-- `i` is the index of the solution to be saved
-"""
-function saveToFile(filename, sol, p, i::Int64, br::ContResult)
-	try
-		# create a group in the JLD format
-		jldopen(filename*".jld2", "a+") do file
-			mygroup = JLD2.Group(file, "sol-$i")
-			mygroup["sol"] = sol
-			mygroup["param"] = p
-		end
-
-		jldopen(filename*"-branch.jld2", "w") do file
-			file["branch"] = br
-			file["contParam"] = br.contparams
-		end
-	catch
-		@error "Could not save branch in the jld2 file"
-	end
-end
 ####################################################################################################
 using BlockArrays, SparseArrays
 """

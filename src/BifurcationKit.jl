@@ -56,6 +56,13 @@ module BifurcationKit
 
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
 			using .JLD2
+			"""
+			Save solution / data in JLD2 file
+			- `filename` is for example "example.jld2"
+			- `sol` is the solution
+			- `p` is the parameter
+			- `i` is the index of the solution to be saved
+			"""
 			function saveToFile(filename, sol, p, i::Int64, br::ContResult)
 				try
 					# create a group in the JLD format

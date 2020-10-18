@@ -52,7 +52,7 @@ Once a branch point has been computed `bp = computeNormalForm(...)`, you can do 
 - For example, quoted from the file `test/testNF.jl`, you can print the 2d reduced equation as follows:
 
 ```julia
-julia> PALC.nf(bp2d)
+julia> BifurcationKit.nf(bp2d)
 2-element Array{String,1}:
  " + (3.23 + 0.0im) * x1 * p + (-0.123 + 0.0im) * x1^3 + (-0.234 + 0.0im) * x1 * x2^2"
  " + (-0.456 + 0.0im) * x1^2 * x2 + (3.23 + 0.0im) * x2 * p + (-0.123 + 0.0im) * x2^3"
