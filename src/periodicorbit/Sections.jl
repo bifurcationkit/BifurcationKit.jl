@@ -3,18 +3,18 @@ abstract type AbstractSection end
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
 ####################################################################################################
-@views function sectionShooting(x::AbstractVector, normal::AbstractVector, center::AbstractVector)
+@views function sectionShooting(x::AbstractVector, T, normal::AbstractVector, center::AbstractVector)
 	N = length(center)
 	# we only constrain the first point to lie on a specific hyperplane
 	# this avoids the temporary xc - centers
-	return (dot(x, normal) - dot(center, normal)) * x[end]
+	return (dot(x, normal) - dot(center, normal)) * T
 end
 
 # section for Standard Shooting
 """
 $(TYPEDEF)
 
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point in `centers` and a `normal`.
+This composite type (named for Section Standard Shooting) encodes a type of section implemented by a hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point `center` and a `normal`.
 
 $(TYPEDFIELDS)
 
@@ -27,7 +27,7 @@ struct SectionSS{Tn, Tc}  <: AbstractSection
 	center::Tc
 end
 
-(sect::SectionSS)(u) = sectionShooting(u, sect.normal, sect.center)
+(sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
 
 # we update the field of Section, useful during continuation procedure for updating the section
 function update!(sect::SectionSS, normal, center)
@@ -83,6 +83,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 end
 
 (hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
+isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = Tn == Nothing
 
 """
 	update!(hyp::SectionPS, normals, centers)

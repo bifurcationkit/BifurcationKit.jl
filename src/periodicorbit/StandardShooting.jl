@@ -155,7 +155,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	end
 
 	# add constraint
-	out[end] = @views sh.section(xc[:, 1])
+	out[end] = @views sh.section(xc[:, 1], T)
 
 	return out
 end
@@ -183,7 +183,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 	end
 
 	# add constraint
-	out.p = sh.section(xc[1])
+	out.p = sh.section(xc[1], T)
 
 	return out
 end
@@ -226,7 +226,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	end
 
 	# add constraint
-	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N]) - sh.section(x[1:N])) / δ
+	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N], T) - sh.section(x[1:N], T)) / δ
 
 	return out
 end
