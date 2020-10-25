@@ -46,7 +46,7 @@ function ContIterable(Fhandle, Jhandle,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = (z, tau, step, contResult; kwargs...) -> true,
 					callbackN = cbDefault,
-					verbosity = 0
+					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
 	return ContIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)

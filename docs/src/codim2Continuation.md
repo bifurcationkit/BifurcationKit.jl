@@ -10,7 +10,7 @@ Let us say that `ind_bif` is the index in `br.bifpoint` of a Fold/Hopf point. Th
 
 ```julia
 outfold, hist, flag = newton(F, J, br::ContResult, ind_bif::Int64, 
-	par, lens::Lens; Jt = nothing, d2F = nothing, normN = norm, 
+	par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, 
 	options = br.contparams.newtonOptions, kwargs...)
 ```
 
@@ -25,7 +25,7 @@ To compute the codim 2 curve of Fold/Hopf points, one can call [`continuation`](
 ```julia
 br_codim2, _ = continuation(F, J, br, ind_bif, 
 	par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;
-	Jt = nothing, d2F = nothing, kwargs...)
+	Jᵗ = nothing, d2F = nothing, kwargs...)
 ```
 
 where the options are as above except with have two parameter axis `lens1, lens2` which are used to locate the bifurcation points. See [Temperature model (simplest example for equilibria)](@ref) for an example of use. 

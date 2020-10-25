@@ -12,10 +12,10 @@ end
 @with_kw struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
 	F::TF								# Function F(x, p) = 0
 	J::TJ								# Jacobian of F wrt x
-	Jadjoint::TJa						# Adjoint of the Jacobian of F
+	Jᵗ::TJa								# Adjoint of the Jacobian of F
 	d2F::Td2f = nothing					# Hessian of F
 	lens::Tl							# parameter axis for the Fold point
-	a::vectype							# close to null vector of J^T
+	a::vectype							# close to null vector of Jᵗ
 	b::vectype							# close to null vector of J
 	linsolver::S						# linear solver
 	linsolverAdjoint::Sa = linsolver	# linear solver for the jacobian adjoint
@@ -84,10 +84,10 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	J_at_xp = J(x, set(par, lens, p))
 
 	# we do the following in order to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jadjoint(x, set(par, lens, p)) : transpose(J_at_xp)
+	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
 
 	n = T(1)
-	
+
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
 	v = pbMA.linsolver(J_at_xp, a)[1]
@@ -168,7 +168,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-	newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm, kwargs...)
+	newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -180,7 +180,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
-- `Jt = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`
+- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -188,19 +188,19 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	newtonFold(F, J, br::ContResult, ind_fold::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+	newtonFold(F, J, br::ContResult, ind_fold::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
 
-where the optional argument `Jt` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
+where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
+function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
 	foldproblem = FoldProblemMinimallyAugmented(
-		F, J, Jt, d2F, lens,
+		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec), #copy(eigenvec),
 		_copy(eigenvec), #copy(eigenvec),
 		options.linsolver)
@@ -214,13 +214,13 @@ function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::Ne
 	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)
 end
 
-function newtonFold(F, J, br::ContResult, ind_fold::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+function newtonFold(F, J, br::ContResult, ind_fold::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, par, lens, eigenvec, options; Jt = Jt, d2F = d2F, kwargs...)
+	return newtonFold(F, J, foldpointguess, par, lens, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 """
@@ -238,30 +238,30 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 # Optional arguments:
 
-- `Jt = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
+- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
 - `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call
 The call is as follows
 
-	continuationFold(F, J, br::ContResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jt = nothing, d2F = nothing, kwargs...)
+	continuationFold(F, J, br::ContResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` you want to continue.
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, options_cont::ContinuationPar ; Jt = nothing, d2F = nothing, kwargs...) where {T,vectype}
+function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...) where {T,vectype}
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
 
 	foldPb = FoldProblemMinimallyAugmented(
-			F, J, Jt, d2F,
+			F, J, Jᵗ, d2F,
 			lens1,
 			_copy(eigenvec), #copy(eigenvec),
 			_copy(eigenvec), #copy(eigenvec),
@@ -282,9 +282,9 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
-function continuationFold(F, J, br::ContResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jt = nothing, d2F = nothing, kwargs...)
+function continuationFold(F, J, br::ContResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
-	return continuationFold(F, J, foldpointguess, par, lens1, lens2, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
+	return continuationFold(F, J, foldpointguess, par, lens1, lens2, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end

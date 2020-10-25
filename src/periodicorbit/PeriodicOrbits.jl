@@ -153,7 +153,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 # Optional arguments
 
 - `linearPO` linear algorithm used for the computation of periodic orbits when `prob` is [`PeriodicOrbitTrapProblem`](@ref))
-- `Jt` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector for the Hopf normal form!!!!!! COMME NEWTON FOLD
+- `Jᵗ` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector for the Hopf normal form. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of Matrix / Sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `δ = 1e-8` used for finite differences
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
@@ -164,19 +164,19 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
     You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not `nothing`, is computed with Finite differences.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 1, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 1, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
 
 	cb = get(kwargs, :callbackN, cbDefault)
 
-	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jt = Jt, δ = δ, nev = nev, verbose = verbose)
+	hopfpt = hopfNormalForm(F, dF, d2F, d3F, br, ind_bif ; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose)
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? _contParams.ds : δp

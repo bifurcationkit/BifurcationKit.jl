@@ -9,8 +9,8 @@ M = 5
 vf(x, p) = x
 flow(x, p, t) = exp(t) .* x
 dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = exp(t) .* dx)
-section(x) = dot(x[1:N], ones(N))
-section(x::BorderedArray) = section(vec(x.u[:,:]))
+section(x, T) = dot(x[1:N], ones(N))
+section(x::BorderedArray, T) = section(vec(x.u[:,:]))
 par = nothing
 
 fl = BK.Flow(vf, flow, dflow)

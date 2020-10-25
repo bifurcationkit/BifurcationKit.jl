@@ -2,7 +2,7 @@ using DiffEqBase
 
 ####################################################################################################
 # this function takes into accound a parameter passed to the vector field
-# Putting the options `save_start=false` seems to give bugs with Sundials
+# Putting the options `save_start = false` seems to give bugs with Sundials
 function flowTimeSol(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 	_prob = DiffEqBase.remake(pb; u0 = x, tspan = (zero(eltype(tm)), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
@@ -24,7 +24,7 @@ end
 flow(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...) = flowTimeSol(x, p, tm, pb; alg = alg, kwargs...).u
 flow(x, p, tm, pb::EnsembleProblem; alg = Euler(), kwargs...) = flowTimeSol(x, p, tm, pb; alg = alg, kwargs...)
 flow(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) =  flow(x, nothing, tm, pb; alg = alg, kwargs...)
-################
+####################################################################################################
 # function used to compute the derivative of the flow, so pb encodes the variational equation
 function dflow(x::AbstractVector, p, dx, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 	n = length(x)
@@ -44,7 +44,7 @@ function dflow(x::AbstractMatrix, p, dx, tm, epb::EnsembleProblem; alg = Euler()
 end
 
 dflow(x, dx, tspan, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = dflow(x, nothing, dx, tspan, pb; alg = alg, kwargs...)
-################
+####################################################################################################
 # this function takes into accound a parameter passed to the vector field
 function dflow_fd(x, p, dx, tm, pb::ODEProblem; alg = Euler(), δ = 1e-9, kwargs...)
 	sol1 = flow(x .+ δ .* dx, p, tm, pb; alg = alg, kwargs...)
@@ -58,7 +58,7 @@ function dflow_fd(x, p, dx, tm, pb::EnsembleProblem; alg = Euler(), δ = 1e-9, k
 	return [(t = sol1[ii][1], u = sol2[ii][2], du = (sol1[ii][2] .- sol2[ii][2]) ./ δ) for ii = 1:size(x,2) ]
 end
 dflow_fd(x, dx, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), δ = 1e-9, kwargs...) = dflow_fd(x, nothing, dx, tm, pb; alg = alg, δ = δ, kwargs...)
-################
+####################################################################################################
 # this gives access to the full solution, convenient for Poincaré shooting
 # this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function flowFull(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
@@ -79,7 +79,7 @@ $(TYPEDEF)
 $(TYPEDFIELDS)
 
 # Simplified constructor(s)
-We provide a simple constructor where you only pass the vector fiels `F`, the flow `ϕ` and its differential `dϕ`:
+We provide a simple constructor where you only pass the vector field `F`, the flow `ϕ` and its differential `dϕ`:
 
 	fl = Flow(F, ϕ, dϕ)
 
@@ -117,10 +117,10 @@ struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono}
 	"Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
 	dfserial::Tse
 
-	"[Internal] store the ODEProblem associated with the flow of the Cauchy problem"
+	"[Internal] store the ODEProblem associated to the flow of the Cauchy problem"
 	prob::Tprob
 
-	"[Internal] store the ODEProblem associated with the flow of the variational problem"
+	"[Internal] store the ODEProblem associated to the flow of the variational problem"
 	probMono::TprobMono
 end
 

@@ -28,7 +28,7 @@ This composite type implements Finite Differences based on a Trapezoidal rule to
     1. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
     2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
     3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
-- `Jt = nothing` jacobian tranpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
+- `Jᵗ = nothing` jacobian tranpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
 - `d2F = nothing` second derivative of F (optional), useful for continuation of Fold of periodic orbits. It has the definition `d2F(x,p,dx1,dx2)`.`
 - `ϕ` used to set a section for the phase constraint equation
 - `xπ` used in the section for the phase constraint equation
@@ -69,7 +69,7 @@ where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constra
 	J::TJ = nothing
 
 	# Jacobian transpose of F wrt x. This is mainly used for matrix-free computation of Folds of limit cycles
-	Jt::TJt = nothing
+	Jᵗ::TJt = nothing
 
 	# Hessian of F wrt x, useful for continuation of Fold of periodic orbits
 	d2F::Td2F = nothing
@@ -949,7 +949,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `_contParams` parameters to be used by a regular [`continuation`](@ref)
 
 # Optional arguments
-- `Jt = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`
+- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
@@ -959,7 +959,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 """
-function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
+function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	@assert br.functional isa PeriodicOrbitTrapProblem

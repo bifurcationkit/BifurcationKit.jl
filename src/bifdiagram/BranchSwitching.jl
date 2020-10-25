@@ -44,7 +44,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `optionsCont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
-- `Jt` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
+- `Jᵗ` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
@@ -56,14 +56,14 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
 
 	if kerneldim(br, ind_bif) > 1
-		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jᵗ = Jᵗ, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
 	end
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
@@ -74,7 +74,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	Ty = typeof(ds)
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
+	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 
 	# compute predictor for a point on new branch
 	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
@@ -114,7 +114,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `optionsCont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
-- `Jt` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
+- `Jᵗ` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
@@ -129,11 +129,11 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-	bpnf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, ζs = ζs, scaleζ = scaleζ)
+	bpnf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, ζs = ζs, scaleζ = scaleζ)
 
 	return multicontinuation(F, dF, br, bpnf, optionsCont; Teigvec = Teigvec, δp = δp, ampfactor = ampfactor, verbosedeflation = verbosedeflation, kwargs...)
 end
@@ -180,6 +180,7 @@ function getFirstPointsOnBranch(F, dF, br::BranchResult, bpnf::NdBranchPoint, so
 	return (before = defOpm, after = defOpp)
 end
 
+# In this function, I keep usedeflation although it is not used to simplify the calls
 function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 
 	defOpm, defOpp = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)

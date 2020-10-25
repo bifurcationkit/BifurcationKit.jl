@@ -13,7 +13,7 @@ end
 @with_kw struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
 	F::TF 								# Function F(x, p) = 0
 	J::TJ 								# Jacobian of F wrt x
-	Jadjoint::TJa						# Adjoint of the Jacobian of F
+	Jᵗ::TJa						# Adjoint of the Jacobian of F
 	d2F::Td2f = nothing					# Hessian of F
 	lens::Tl							# parameter axis for the Hopf point
 	a::vectype							# close to null vector of (J - iω I)^*
@@ -99,11 +99,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	J_at_xp = J(x, set(par, lens, p))
 
 	# we do the following to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	if hasAdjoint(pbMA)
-		JAd_at_xp = pbMA.Jadjoint(x, set(par, lens, p))
-	else
-		JAd_at_xp = transpose(J_at_xp)
-	end
+	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
 
 	δ = T(1e-9)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -175,7 +171,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-	newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
+	newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
 
 This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -188,7 +184,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
-- `Jt = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`
+- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -196,19 +192,19 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 # Simplified call:
 Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
 
-	newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
+	newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 
-where the optional argument `Jt` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
+where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jt = nothing, d2F = nothing, normN = norm, kwargs...) where {vectypeR, T}
+function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {vectypeR, T}
 	hopfproblem = HopfProblemMinimallyAugmented(
-		F, J, Jt, d2F, lens,
+		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec),
 		_copy(eigenvec_ad),
 		options.linsolver)
@@ -223,7 +219,7 @@ function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens:
 	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN, kwargs...)
 end
 
-function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jt = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
+function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -232,7 +228,7 @@ function newtonHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens::Lens; Jt =
 	eigenvec_ad = conj.(eigenvec)
 
 	# solve the hopf equations
-	return newtonHopf(F, J, hopfpointguess, par, lens, eigenvec_ad, eigenvec, options; Jt = Jt, d2F = d2F, normN = normN, kwargs...)
+	return newtonHopf(F, J, hopfpointguess, par, lens, eigenvec_ad, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
 end
 
 """
@@ -251,14 +247,14 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 
 # Optional arguments:
 
-- `Jt = (x, p) -> adjoint(d_xF(x, p))` associated jacobian adjoint
+- `Jᵗ = (x, p) -> adjoint(d_xF(x, p))` associated jacobian adjoint
 - `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
 The call is as follows
 
-	continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jt = nothing, d2F = nothing, kwargs...)
+	continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
@@ -266,18 +262,18 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jt = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jt = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jt = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
+function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
 
 	hopfPb = HopfProblemMinimallyAugmented(
-		F, J, Jt, d2F,
+		F, J, Jᵗ, d2F,
 		lens1,
 		_copy(eigenvec), #copy(eigenvec),
 		_copy(eigenvec_ad),
@@ -299,10 +295,10 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
-function continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jt = nothing, d2F = nothing, kwargs...)
+function continuationHopf(F, J, br::ContResult, ind_hopf::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	eigenvec_ad = conj.(eigenvec)
-	return continuationHopf(F, J, hopfpointguess, par, lens1, lens2, eigenvec_ad, eigenvec, options_cont ; Jt = Jt, d2F = d2F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, par, lens1, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end

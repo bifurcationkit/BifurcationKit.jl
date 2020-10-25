@@ -203,7 +203,7 @@ println("--> test jacobian expression for Hopf Minimally Augmented")
 # println("--> dp, dom = ",(C - sigma' * X2m) \ (rhs[end-1:end] - sigma' * X1))
 # println("--> dp, dom FD = ",sol_fd[end-1:end])
 outhopf, hist, flag = @time newton(
-		Fbru, Jbru_sp, br, 1, par_bru, (@lens _.l); Jt = (x, p) -> transpose(Jbru_sp(x, p)))
+		Fbru, Jbru_sp, br, 1, par_bru, (@lens _.l); Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 outhopf, _, flag, _ = @time newton((u, p) -> hopfvariable(u, p),
@@ -225,7 +225,7 @@ function d2F(x, p1, du1, du2)
 end
 
 outhopf, hist, flag = @time BK.newton(Fbru, Jbru_sp, br, 1, par_bru, (@lens _.l);
-		Jt = (x, p) -> transpose(Jbru_sp(x, p)),
+		Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)),
 		d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
@@ -233,13 +233,13 @@ br_hopf, u1_hopf = @time BK.continuation(
 			Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 1, plot = false)
 
-br_hopf, u1_hopf = @time BK.continuation(Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jt = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
+br_hopf, u1_hopf = @time BK.continuation(Fbru, Jbru_sp, br, ind_hopf, par_bru, (@lens _.l), (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 
-l_hopf  = hopfpt.p[1]
-ωH		= hopfpt.p[2] |> abs
+l_hopf = hopfpt.p[1]
+ωH	   = hopfpt.p[2] |> abs
 M = 20
 
 

@@ -47,7 +47,7 @@ sol = @time solve(probMono, Tsit5(), abstol =1e-9, reltol=1e-6)
 sol = @time solve(prob, Tsit5(), abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 ####################################################################################################
-section(x) = x[1] #* x[end]
+section(x, T) = x[1] #* x[end]
 # standard simple shooting
 M = 1
 dM = 1

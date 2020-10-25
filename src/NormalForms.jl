@@ -73,7 +73,7 @@ $(SIGNATURES)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = length(eigenvalsfrombif(br, ind_bif)), Jt = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3, scaleζ = norm)
+function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = length(eigenvalsfrombif(br, ind_bif)), Jᵗ = nothing, verbose = false, lens = br.param_lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3, scaleζ = norm)
 	bifpt = br.bifpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
@@ -119,7 +119,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
 		ζstar = copy(ζ)
 	else
-		_Jt = isnothing(Jt) ? adjoint(L) : Jt(x0, parbif)
+		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x0, parbif)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
@@ -335,9 +335,9 @@ function biorthogonalise(ζs, ζstars, verbose)
 	# change only the ζstars to have bi-orthogonal left/right eigenvectors
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
-
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n $(display(G))"
+	plot(ζs[1]);plot!(ζs[2]) |> display
+	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
 	# save those in case the first algo fails
 	_ζs = deepcopy(ζs)
@@ -388,7 +388,7 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 # Optional arguments
 - `δ` used to compute ∂pF with finite differences
 - `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
-- `Jt = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
+- `Jᵗ = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `verbose` whether to display information
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
@@ -397,12 +397,12 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jt = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = getvectortype(br), scaleζ = norm)
+function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jᵗ = nothing, verbose = false, ζs = nothing, lens = br.param_lens, issymmetric = false, Teigvec = getvectortype(br), scaleζ = norm)
 	bifpt = br.bifpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
-		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jt = Jt, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
+		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 	end
 	# kernel dimension:
 	N = abs(bifpt.δ[1])
@@ -461,7 +461,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		λstars = copy(λs)
 		ζstars = copy.(ζs)
 	else
-		_Jt = isnothing(Jt) ? transpose(L) : Jt(x0, parbif)
+		_Jt = isnothing(Jᵗ) ? transpose(L) : Jᵗ(x0, parbif)
 		ζstars, λstars = getAdjointBasis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 	end
 	ζstars = real.(ζstars); λstars = real.(λstars)
@@ -645,12 +645,12 @@ Compute the Hopf normal form.
 - `options` options for the Newton solver
 
 # Optional argument
-- `Jt` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector
+- `Jᵗ` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector
 - `δ = 1e-8` used for finite differences
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.param_lens, Teigvec = getvectortype(br), scaleζ = norm)
+function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.param_lens, Teigvec = getvectortype(br), scaleζ = norm)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	println("#"^53*"\n--> Hopf Normal form computation")
 
@@ -684,7 +684,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jt = not
 	ζ ./= scaleζ(ζ)
 
 	# left eigen-elements
-	_Jt = isnothing(Jt) ? adjoint(L) : Jt(x, p)
+	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x, p)
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
 	# check that λstar ≈ conj(λ)
