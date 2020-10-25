@@ -170,10 +170,10 @@ function (fl::FloquetQaDShooting)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDShooting(J.pb, J.x, J.par)
+		monodromy = @time MonodromyQaDShooting(J)
 	else
 		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDShooting(J.pb, J.x, J.par, dx)
+		monodromy = dx -> MonodromyQaDShooting(J, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 
@@ -187,7 +187,11 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Standard Shooting computed at the space-time guess: `x`. The dimension of `u0` is N * M + 1 and the one of `du` is N.
 """
-function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p, du::AbstractVector)
+function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
+	sh = JacSH.pb
+	x = JacSH.x
+	p = JacSH.par
+
 	# period of the cycle
 	T = extractPeriodShooting(x)
 
@@ -209,7 +213,11 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p, du::Abs
 end
 
 # Compute the monodromy matrix at `x` explicitely, not suitable for large systems
-function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
+function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
+	sh = JacSH.pb
+	x = JacSH.x
+	p = JacSH.par
+
 	# period of the cycle
 	T = extractPeriodShooting(x)
 
@@ -236,12 +244,32 @@ function MonodromyQaDShooting(sh::ShootingProblem, x::AbstractVector, p)
 	return Mono
 end
 
-"""
-	MonodromyQaDShooting(hpsh::PoincareShootingProblem, x_bar, p, dx_bar::AbstractVector)
+function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+	J = JacSH.jacpb
+	sh = JacSH.pb
+	M = getM(sh)
+	N = div(length(JacSH.x) - 1, M)
 
+	mono = J[1:N, 1:N]
+	tmp = similar(mono)
+	r = N
+	for ii = 1:M-1
+		# mono .= J[r+1:r+N, r+1:r+N] * mono
+		@views mul!(tmp, J[r+1:r+N, r+1:r+N], mono)
+		mono .= tmp
+		r += N
+	end
+	return mono
+end
+
+"""
 Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """
-function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, p, dx_bar::AbstractVector)
+function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_bar::AbstractVector) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
+	psh = JacSH.pb
+	x_bar = JacSH.x
+	p = JacSH.par
+
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
 
@@ -265,6 +293,6 @@ function MonodromyQaDShooting(psh::PoincareShootingProblem, x_bar, p, dx_bar::Ab
 
 end
 
-function MonodromyQaDShooting(psh::PoincareShootingProblem, x)
+function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
 	@assert 1==0 "WIP, no done yet!"
 end
