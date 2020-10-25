@@ -3,6 +3,10 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+
+## [0.0.1] - 2020-10-25
+- the keyword argument `Jt` for the jacobian transpose is written `Jᵗ`
+
 ## [0.0.1] - 2020-9-18
 - new way to use the argument `printSolution` in `continuation`. You can return (Named) tuple now.
 

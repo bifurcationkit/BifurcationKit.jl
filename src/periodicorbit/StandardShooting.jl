@@ -226,7 +226,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	end
 
 	# add constraint
-	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N], T) - sh.section(x[1:N], T)) / δ
+	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N], T + δ * dT ) - sh.section(x[1:N], T)) / δ
 
 	return out
 end
@@ -254,7 +254,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e
 	# add constraint
 	x_tmp = similar(x.u); copyto!(x_tmp, x.u)
 	axpy!(δ , dx.u, x_tmp)
-	out.p = (sh.section(BorderedArray(x_tmp, T + δ * dT)) - sh.section(x)) / δ
+	out.p = (sh.section(BorderedArray(x_tmp, T + δ * dT), T + δ * dT ) - sh.section(x, T)) / δ
 
 	return out
 end
