@@ -69,9 +69,9 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), parallel = parallel)
+PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M)) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), parallel = parallel, section = section)
 
-PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), parallel = parallel)
+PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M)) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), parallel = parallel, section = section)
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
@@ -94,7 +94,7 @@ function PoincareShootingProblem(F, p,
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
 	# change the ODEProblem -> EnsembleProblem for the parallel case
 	_M = hyp.M
-	parallel = _M==1 ? false : parallel
+	parallel = _M == 1 ? false : parallel
 	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
 	return PoincareShootingProblem(flow = Flow(F, p, _pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
@@ -158,9 +158,7 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
 		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf64], M))
-		for ii in 1:M
-			period += solOde[ii].t
-		end
+		period = sum(x->x.t, solOde)
 	end
 	return period
 end
@@ -321,7 +319,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
 			@views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(psh, xc[:, im1], par, dxc[:, im1], im1)
 		end
 	else
-		@assert 1==0 "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0."
+		@assert 1==0 "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences."
 	end
 
 	# build the array to be returned
