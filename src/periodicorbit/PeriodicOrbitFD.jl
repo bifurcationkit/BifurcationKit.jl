@@ -926,7 +926,7 @@ end
 
 ####################################################################################################
 # functions needed Branch switching from Hopf bifurcation point
-function updateForBS(prob::PeriodicOrbitTrapProblem, F, dF, hopfpt, ζr::AbstractVector, orbitguess_a, period)
+function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, hopfpt, ζr::AbstractVector, orbitguess_a, period)
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec

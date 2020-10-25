@@ -149,7 +149,7 @@ br2, = continuation(jet...,
 		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot(br,br1, br2,plotfold=false)
+plot(br, br1, br2, plotfold=false)
 ####################################################################################################
 # bifurcation diagram
 function optionsCont(x,p,l; opt = opts_br)
@@ -240,14 +240,13 @@ plot(
 
 ####################################################################################################
 bp = @time computeNormalForm(jet..., br, 2, nev = 30; issymmetric = true)
-BK.nf(bp; digits = 5)
 
 res, = BK.continuation(jet..., br, 2,
 	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
 	nev = 30, verbosity = 3,
 	# callbackN = cb,
 	plot = true,
-	plotSolution = (x, p; k...) ->(plotsol!(x; k...); plot!(br,subplot=1)),
+	plotSolution = (x, p; k...) -> (plotsol!(x; k...); plot!(br,subplot=1)),
 	printSolution = (x, p) -> normbratu(x),
 	tangentAlgo = BorderedPred()
 	)

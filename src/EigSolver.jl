@@ -107,7 +107,7 @@ function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
 		nev = min(_nev, length(l.x₀))
 		vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
 	end
-	(length(vals) != _nev) && (@warn "EigKrylovKit returned $(length(vals)) eigenvalues instead of the $_nev requested")
+	# (length(vals) != _nev) && (@warn "EigKrylovKit returned $(length(vals)) eigenvalues instead of the $_nev requested")
 	info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
 	return vals, vec, true, info.numops
 end

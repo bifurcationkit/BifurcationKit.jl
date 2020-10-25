@@ -251,14 +251,14 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 
 	if ~isParallel(psh)
 		for ii in 1:M
-			im1 = (ii == 1 ? M : ii - 1)
+			im1 = ii == 1 ? M : ii - 1
 			# We need the callback to be active here!!!
 			outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
 		end
 	else
-		solOde = psh.flow(xc, par, repeat([Inf64],M))
+		solOde = psh.flow(xc, par, repeat([Inf64], M))
 		for ii in 1:M
-			im1 = (ii == 1 ? M : ii - 1)
+			im1 = ii == 1 ? M : ii - 1
 			# We need the callback to be active here!!!
 			@views outc[:, ii] .= xc[:, ii] .- solOde[im1][2]
 		end
@@ -273,6 +273,9 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 	return out_bar
 end
 
+"""
+This function compute the derivative of the Poincare return map Π(x) = ϕ(t(x),x)
+"""
 function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 	normal = psh.section.normals[ii]
 	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
@@ -332,12 +335,14 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers, period)
-	# make the section
+function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers, period)
+	# create the section
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
 
-	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. prob.flow should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
+	@assert isEmpty(prob.section) "Specifying its own section for aBS from a Hopf point is not allowed yet."
+
+	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. `prob.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
 
 	# update the problem
 	if length(prob.flow) == 3

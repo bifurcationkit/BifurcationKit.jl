@@ -63,7 +63,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
 
 	if kerneldim(br, ind_bif) > 1
-		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
+		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jt = Jt, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
 	end
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
@@ -117,7 +117,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `Jt` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jt` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jt = (x, p) -> transpose(dF(x, p))`.
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
-- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
 - `verbosedeflation = true` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
@@ -129,30 +129,29 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
 	bpnf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jt = Jt, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, ζs = ζs, scaleζ = scaleζ)
 
-	return multicontinuation(F, dF, br, bpnf, optionsCont; nev = nev, issymmetric = issymmetric, usedeflation = usedeflation, Teigvec = Teigvec, ζs = ζs, δp = δp, verbosedeflation = verbosedeflation, scaleζ = scaleζ, kwargs...)
+	return multicontinuation(F, dF, br, bpnf, optionsCont; Teigvec = Teigvec, δp = δp, ampfactor = ampfactor, verbosedeflation = verbosedeflation, kwargs...)
 end
 
-function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar ; δp = nothing, perturb = identity, kwargs...)
+function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
 
 	# compute predictor for point on new branch
-	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
+	ds = abs(isnothing(δp) ? optionsCont.ds : δp)
 
 	# get prediction from solving the reduced equation
-	rootsNFm, rootsNFp = predictor(bpnf, ds;  verbose = verbose, perturb = perturb)
+	rootsNFm, rootsNFp = predictor(bpnf, ds;  verbose = verbose, perturb = perturb, ampfactor = ampfactor)
 
 	return multicontinuation(F, dF, br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, kwargs...)
 end
 
-function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; Jt = nothing, δ = 1e-8, δp = nothing, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
-
+function getFirstPointsOnBranch(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -161,24 +160,33 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 	rootsNFp = solfromRE.after
 
 	# attempting now to convert the guesses from the normal form into true zeros of F
-	par = bpnf.params
 	optn = optionsCont.newtonOptions
-	cbnewton = get(kwargs, :callbackN, (x, f, J, res, iteration, itlinear, optionsN; kwgs...) -> true)
+	cbnewton = get(kwargs, :callbackN, cbDefault)
 
-	println("--> Looking for solutions after the bifurcation point...")
+	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
 	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFp
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
 
-	println("--> Looking for solutions before the bifurcation point...")
+	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
 	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
 	for xsol in rootsNFm
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
 		flag && push!(defOpm, solbif)
 	end
-	printstyled(color=:green, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
+	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
+	return (before = defOpm, after = defOpp)
+end
+
+function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+
+	defOpm, defOpp = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
+
+	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
+	dscont = abs(optionsCont.ds)
+	par = bpnf.params
 
 	# compute the different branches
 	function _continue(_sol, _dp, _ds)
@@ -203,7 +211,7 @@ function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfrom
 		# br, = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
 	end
 
-	return branches, (before = defOpm, after = defOpp), (before = rootsNFm, after = rootsNFp)
+	return branches, (before = defOpm, after = defOpp), (before = solfromRE.before, after = solfromRE.after)
 end
 
 # same but for a Branch
