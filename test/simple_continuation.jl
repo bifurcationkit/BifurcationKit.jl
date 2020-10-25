@@ -49,6 +49,7 @@ opts = ContinuationPar(opts;detectBifurcation = 1,saveEigenvectors=true)
 br1, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
+br1[1]
 BK.eigenvals(br1,20)
 BK.eigenvec(br1,20,1)
 BK.haseigenvector(br1)

@@ -5,7 +5,6 @@ namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
 namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in 1:length(x)), x)...)
-
 mergefromuser(x, a::NamedTuple) = merge(namedprintsol(x), a)
 
 ####################################################################################################
@@ -25,6 +24,7 @@ $(TYPEDFIELDS)
 - `length(br)` number of the continuation steps
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
+- `br[k+1]` gives information about the k-th step
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, Newton iterations, ds, theta, i)` for each continuation step `i`."
@@ -73,6 +73,7 @@ getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tf
 @inline getvectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
 @inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
 setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
+Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)
 
 function Base.getproperty(br::ContResult, s::Symbol)
 	if s in (:bifpoint, :contparams, :foldpoint, :n_imag, :param_lens, :sol, :type, :branch, :eig, :functional, :n_unstable, :params, :stability)
