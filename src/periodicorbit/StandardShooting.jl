@@ -275,9 +275,9 @@ function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op
 		mx = @views op[2](sol[1:n, :], dims = 1)
 	else # threaded version
 		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
-		mx = op[2](sol[1].u[1:n, :] , dims = 2)
+		mx = op[2](sol[1][1:n, :] , dims = 2)
 		for ii = 2:M
-			mx = op[1].(mx, op[2](sol[ii].u[1:n, :], dims = 2))
+			mx = op[1].(mx, op[2](sol[ii][1:n, :], dims = 2))
 		end
 	end
 	return mx
@@ -300,13 +300,7 @@ function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
 	if ~isParallel(prob)
 		return prob.flow(Val(:Full), xc[:, 1], p, T)
 	else # threaded version
-		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
-		# return sol
-		# we put all the simulations in the first one and return it
-		for ii =2:M
-			append!(sol[1].t, sol[1].t[end] .+ sol[ii].t)
-			append!(sol[1].u.u, sol[ii].u.u)
-		end
+		sol = prob.flow(Val(:Full), xc[:, 1:1], p, [T])
 		return sol[1]
 	end
 end

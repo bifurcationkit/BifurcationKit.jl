@@ -186,13 +186,9 @@ function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 		sol1 =  @views prob.flow(Val(:Full), xc[:, 1], p, T; callback = nothing)
 		return sol1
 	else # threaded version
-		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
-		# return sol
-		# we put all the simulations in the first one and return it
-		for ii =2:M
-			append!(sol[1].t, sol[1].t[end] .+ sol[ii].t)
-			append!(sol[1].u.u, sol[ii].u.u)
-		end
+		T = getPeriod(prob, x_bar, p)
+		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
+		sol = @views prob.flow(Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
 		return sol[1]
 	end
 end
@@ -225,9 +221,9 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
 		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf64], M) )
-		mx = op[2](solOde[1].u[1:n, :])
+		mx = op[2](solOde[1][1:n, :])
 		for ii in 1:M
-			mx = op[1](mx, op[2](solOde[ii].u[1:n, :]))
+			mx = op[1](mx, op[2](solOde[ii][1:n, :]))
 		end
 	end
 	return mx
@@ -345,9 +341,9 @@ function updateForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers,
 
 	# update the problem
 	if length(prob.flow) == 3
-	probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers)
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers; parallel = prob.parallel)
 	else
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers)
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers; parallel = prob.parallel)
 	end
 
 	# create initial guess. We have to pass it through the projection R
