@@ -138,7 +138,7 @@ function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
 
 	for ii in 2:M-1
 		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
-		# also I - h/2 .* J seems to hurt (a little) performances
+		# also I - h/2 .* J seems to hurt (a little) the performances
 		h =  T * getTimeStep(poPb, ii)
 		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
 		mono .= temp * mono
@@ -235,10 +235,10 @@ function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp
 	du = zeros(N)
 
 	for ii in 1:N
-		du[ii] = 1.0
+		du[ii] = 1
 		# call jacobian of the flow
 		@views Mono[:, ii] .= sh.flow(xc[:, 1], p, du, T).du
-		du[ii] = 0.0
+		du[ii] = 0
 	end
 
 	return Mono

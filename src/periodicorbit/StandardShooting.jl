@@ -59,7 +59,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	flow::Tf = Flow()						# should be a Flow{TF, Tf, Td}
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
 	section::Tsection = nothing				# sections for phase condition
-	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
+	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
 # this constructor takes into accound a parameter passed to the vector field

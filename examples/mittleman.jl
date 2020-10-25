@@ -97,7 +97,7 @@ end
 
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-17, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
 
-	br, _ = @time BK.continuation(
+	br, = @time BK.continuation(
 		Fmit, JFmit,
 		sol0, par_mit, (@lens _.λ), opts_br;
 		printSolution = (x, p) -> normbratu(x),
@@ -139,7 +139,6 @@ br1, = continuation(jet...,
 		normC = norminf)
 
 plot(br,br1,plotfold=false)
-
 
 br2, = continuation(jet...,
 		br1, 1, setproperties(opts_br;ds = 0.0025, maxSteps = 140, detectBifurcation = 0);
