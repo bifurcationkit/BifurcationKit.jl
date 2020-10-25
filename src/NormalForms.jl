@@ -336,7 +336,6 @@ function biorthogonalise(ζs, ζstars, verbose)
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	plot(ζs[1]);plot!(ζs[2]) |> display
 	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
 	# save those in case the first algo fails
