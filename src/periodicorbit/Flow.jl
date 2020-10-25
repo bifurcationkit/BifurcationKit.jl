@@ -67,8 +67,8 @@ function flowFull(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 end
 
 function flowFull(x, p, tm, epb::EnsembleProblem; alg = Euler(), kwargs...)
-	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(tm[ii]), tm[ii]), p = p)
-	_epb = setproperties(epb, output_func = (sol,i) -> ((t = sol.t, u = sol), false), prob_func = _prob_func)
+	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
+	_epb = setproperties(epb, prob_func = _prob_func)
 	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), kwargs...)
 end
 flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = flowFull(x, nothing, tm, pb; alg = alg, kwargs...)
