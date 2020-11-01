@@ -155,7 +155,7 @@ function save!(contres::ContResult, it::ContIterable, state::ContState)
 	if state.n_imag[1] >= 0; push!(contres.n_imag, state.n_imag[1]); end
 
 	# save solution
-	if it.contParams.saveSolEveryStep > 0 && mod(state.step, it.contParams.saveSolEveryStep) == 0
+	if it.contParams.saveSolEveryStep > 0 && (mod(state.step, it.contParams.saveSolEveryStep) == 0 || ~done(it, state))
 		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
