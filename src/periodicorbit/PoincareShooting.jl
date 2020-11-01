@@ -69,9 +69,9 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg, kwargs...), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg, kwargs = kwargs), parallel = parallel, section = section)
 
-PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs...), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargs), parallel = parallel, section = section)
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
@@ -343,10 +343,10 @@ function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers
 	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. `prob.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
 
 	# update the problem
-	if length(prob.flow) == 3
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers; parallel = prob.parallel)
+	if length(prob.flow) == 4
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers; parallel = prob.parallel, prob.flow.kwargs...)
 	else
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers; parallel = prob.parallel)
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers; parallel = prob.parallel, prob.flow.kwargs...)
 	end
 
 	# create initial guess. We have to pass it through the projection R
