@@ -5,6 +5,8 @@ module BifurcationKit
 	using RecursiveArrayTools: VectorOfArray
 	using DocStringExtensions
 	using DataStructures: CircularBuffer
+	using ForwardDiff
+
 
 	include("BorderedArrays.jl")
 	include("LinearSolver.jl")
