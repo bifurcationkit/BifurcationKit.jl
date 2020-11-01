@@ -10,8 +10,6 @@ The current package focuses on large scale nonlinear problems and multiple hardw
 
 One design choice is that we try not to require `u` to be a subtype of an `AbstractArray` as this would forbid the use of spectral methods like the one from `ApproxFun.jl`. For now, our implementation does not allow this for Hopf continuation and computation of periodic orbits. 
 
-Finally, we leave it to the user to take advantage of automatic differentiation as this field is moving too fast for now, albeit there are several well established packages like `ForwardDiff.jl` and `Zygote.jl` to name just a few.
-
 ## Installation 
 
 This package requires Julia >= v1.3.0 because of the use of methods added to abstract types (see [#31916](https://github.com/JuliaLang/julia/pull/31916)).

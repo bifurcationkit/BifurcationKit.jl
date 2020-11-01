@@ -43,19 +43,19 @@ $(TYPEDFIELDS)
 	status::Symbol = :guess
 
 	"`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point."
-	δ::Tuple{Int64,Int64} = (0,0)
+	δ::Tuple{Int64, Int64} = (0,0)
 
 	"Precision in the location of the bifurcation point"
 	precision::T = -1
 
 	"Interval containing the bifurcation point"
-	interval::Tuple{T,T} = (0, 0)
+	interval::Tuple{T, T} = (0, 0)
 end
 
 getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 
 function _show(io::IO, bp::GenericBifPoint, ii)
-	if bp.type == :none || bp.precision <= 0; return; end
+	if bp.type == :none || bp.precision < 0; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else

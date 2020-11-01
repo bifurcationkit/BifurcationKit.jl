@@ -107,7 +107,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 2, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
 
-	br, _ = @time BK.continuation(
+	br, = @time BK.continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = false,
@@ -160,7 +160,7 @@ BK.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 probSh = ShootingProblem(Fbru, par_hopf,
 	probsundials, Rodas4P(),
-	[orbitguess_f2[:,ii] for ii=1:dM:M])
+	[orbitguess_f2[:,ii] for ii=1:dM:M]; abstol = 1e-10, retol = 1e-8)
 
 res = @time probSh(initpo, par_hopf)
 norminf(res)
@@ -170,7 +170,7 @@ norminf(res)
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
 	optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-	outpo ,_ = @time BK.newton(probSh,
+	outpo, = @time newton(probSh,
 			initpo, par_hopf, optn_po;
 			normN = norminf)
 	plot(initpo[1:end-1], label = "Initial guess")
@@ -189,7 +189,7 @@ br_po, = @time continuation(probSh,
 		outpo, par_hopf, (@lens _.l),
 		opts_po_cont_floquet; verbosity = 3,
 		plot = true,
-		finaliseSolution = (z, tau, step, contResult) ->
+		finaliseSolution = (z, tau, step, contResult; k...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 		printSolution = (u, p) -> u[end], normC = norminf)
@@ -239,7 +239,7 @@ dM = 5
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 	centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
-probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), normals, centers)
+probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), normals, centers; abstol = 1e-10, retol = 1e-8)
 
 hyper = probHPsh.section
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
@@ -253,7 +253,7 @@ P = @time BK.PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, 
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
-	outpo_psh, _ = @time BK.newton(
+	outpo_psh, = @time BK.newton(
 		probHPsh,
 		vec(initpo_bar), par_hopf, optn;
 		normN = norminf)

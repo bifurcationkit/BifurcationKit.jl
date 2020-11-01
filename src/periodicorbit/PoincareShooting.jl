@@ -334,7 +334,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
 	return out_bar
 end
 
-# inplace computation of the matrix of the jacobian of the shooting problem
+# inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x_bar::AbstractVector, par)
 	M = getM(psh)
 	Nm1 = div(length(x_bar), M)
