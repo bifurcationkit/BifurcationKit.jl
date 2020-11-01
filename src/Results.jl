@@ -67,10 +67,15 @@ $(TYPEDFIELDS)
 	bifpoint::Vector{Biftype}
 end
 
+# returns the number of steps in a branch
 Base.length(br::ContResult) = length(br.branch)
+
+# check whether the eigenvectors are saved in the branch
 haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-getfirstusertype(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Ta.parameters[1][1]
-@inline getvectortype(br::BranchResult) = (eltype(br.bifpoint)).parameters[3]
+
+#
+getfirstusertype(br::ContResult) = keys(br.branch[1])[1]
+@inline getvectortype(br::BranchResult) = getvectortype(eltype(br.bifpoint))
 @inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
 setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)

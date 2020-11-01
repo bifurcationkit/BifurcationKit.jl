@@ -52,6 +52,8 @@ $(TYPEDFIELDS)
 	interval::Tuple{T,T} = (0, 0)
 end
 
+getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
+
 function _show(io::IO, bp::GenericBifPoint, ii)
 	if bp.type == :none || bp.precision <= 0; return; end
 	if bp.status == :converged
