@@ -37,16 +37,19 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
+- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
+- `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
+
 
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
 @with_kw struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
-	M::Int64 = 0								# number of Poincaré sections
-	flow::Tf = Flow()							# should be a Flow{TF, Tf, Td}
-	section::Tsection = SectionPS(M)			# Poincaré sections
-	δ::Float64 = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
-	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
+	M::Int64 = 0						# number of Poincaré sections
+	flow::Tf = Flow()					# should be a Flow
+	section::Tsection = SectionPS(M)	# Poincaré sections
+	δ::Float64 = 0e-8					# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
+	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
 end
 
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
@@ -331,6 +334,58 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
 	return out_bar
 end
 
+# inplace computation of the matrix of the jacobian of the shooting problem
+function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x_bar::AbstractVector, par)
+	M = getM(psh)
+	Nm1 = div(length(x_bar), M)
+	N = Nm1 + 1
+
+	x_barc = reshape(x_bar, Nm1, M)
+
+	# TODO the following declaration of xc allocates. It would be better to make it inplace
+	xc = similar(x_bar, N, M)
+
+	# we extend the state space to be able to call the flow, so we fill xc
+	#TODO create the projections on the fly
+	for ii in 1:M
+		E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+	end
+
+	# jacobian of the flow
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> psh.flow(Val(:SerialFlow), z, par, _T; callback = nothing), _x)
+
+	# initialize some temporaries
+	Jtmp = zeros(N, N)
+	normal = copy(psh.section.normals[1])
+	F = zeros(N)
+	Rm = zeros(Nm1, N)
+	Em = zeros(N, Nm1)
+
+	# put the matrices by blocks
+	for ii=1:M
+		im1 = ii == 1 ? M : ii - 1
+		# we find the point on the next section
+		tΣ, solΣ = psh.flow(Val(:TimeSol), xc[:, im1], par, Inf64)
+		# computation of the derivative of the return map
+		F .= psh.flow.F(solΣ, par)
+		normal .= psh.section.normals[ii]
+		dflow(Jtmp, xc[:, im1], tΣ)
+		Jtmp .= Jtmp .- F * normal' * Jtmp ./ dot(F, normal)
+		# projection with Rm, Em
+		ForwardDiff.jacobian!(Rm, x->R(psh.section, x, ii), zeros(N))
+		ForwardDiff.jacobian!(Em, x->E(psh.section, x, im1), zeros(Nm1))
+		J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (im1-1)*Nm1+1:(im1-1)*Nm1+Nm1] .= -Rm * Jtmp * Em
+		if M == 1
+			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .+= I(Nm1)
+		else
+			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .= I(Nm1)
+		end
+	end
+	return J
+end
+
+# out of place version
+(psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
 function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers, period)

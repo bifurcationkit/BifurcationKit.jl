@@ -35,6 +35,8 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
+- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
+- `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
@@ -57,7 +59,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 """
 @with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
 	M::Int64 = 0							# number of sections
-	flow::Tf = Flow()						# should be a Flow{TF, Tf, Td}
+	flow::Tf = Flow()						# should be a Flow
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
 	section::Tsection = nothing				# sections for phase condition
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
@@ -259,6 +261,44 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e
 
 	return out
 end
+
+# inplace computation of the matrix of the jacobian of the shooting problem
+function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
+	T = extractPeriodShooting(x)
+	M = getM(sh)
+	N = div(length(x) - 1, M)
+
+	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
+	xc = extractTimeSlices(x, M)
+
+	# jacobian of the flow
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialFlow), z, par, _T), _x)
+
+	# put the matrices by blocks
+	for ii=1:M
+		@views dflow(J[(ii-1)*N+1:(ii-1)*N+N, (ii-1)*N+1:(ii-1)*N+N], xc[:, ii], sh.ds[ii] * T)
+		# we put the identity matrices
+		ip1 = (ii == M) ? 1 : ii+1
+		if M == 1
+			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= -I(N)
+		else
+			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .= -I(N)
+		end
+		# we fill the last column
+		tmp = @views sh.flow(Val(:SerialFlow), xc[:, ii], par, sh.ds[ii] * T)
+		J[(ii-1)*N+1:(ii-1)*N+N, end] .= sh.flow.F(tmp, par) .* sh.ds[ii]
+	end
+
+	# we fill the last row
+	@views ForwardDiff.gradient!(J[end, 1:N], z -> sh.section(z, T), x[1:N])
+	J[end, end] = @views ForwardDiff.derivative(z -> sh.section(x[1:N], z), T)
+
+	return J
+end
+
+# out of place version
+(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(length(x), length(x)), x, par)
+####################################################################################################
 
 function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle

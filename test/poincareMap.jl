@@ -6,14 +6,14 @@ using OrdinaryDiffEq, ForwardDiff
 norminf = x -> norm(x, Inf)
 
 function Fsl!(f, u, p, t)
-	@unpack r, μ, ν, c3, c5 = p
+	@unpack r, μ, ω, c3 = p
 	u1 = u[1]
 	u2 = u[2]
 
 	ua = u1^2 + u2^2
 
-	f[1] = r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
-	f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
+	f[1] = r * u1 - ω * u2 - ua * (c3 * u1 - μ * u2)
+	f[2] = r * u2 + ω * u1 - ua * (c3 * u2 + μ * u1)
 
 	return f
 end
@@ -28,18 +28,18 @@ function diffAD(f, x, dx)
 end
 
 ####################################################################################################
-par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
+par_sl = (r = 0.1, μ = 0., ω = 1.0, c3 = 1.0,)
 u0 = [.001, .001]
 δ = 1e-8
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_sl)
-algsl = Rodas4P()
+algsl = KenCarp4()#Rodas4P()
 ####################################################################################################
 sol = @time solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 function flowTS(x, t, pb = prob; alg = algsl, kwargs...)
 	_pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
-	sol = DiffEqBase.solve(_pb, alg; abstol =1e-9, reltol=1e-6, save_everystep = false, kwargs...)
+	sol = DiffEqBase.solve(_pb, alg; abstol =1e-10, reltol=1e-9, save_everystep = false, kwargs...)
 	return sol.t, sol
 end
 flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb = pb; alg = alg, kwargs...)[2][end]
@@ -59,7 +59,8 @@ pSection(u, t, integrator) = sectionH(u, centers, normals) * (integrator.iter > 
 affect!(integrator) = terminate!(integrator)
 cb = ContinuousCallback(pSection, affect!; affect_neg! = nothing)
 
-Π(x) = flowDE(x, Inf; callback = cb, save_everystep = false)
+Π(x) = flowDE(x, Inf; callback = cb, save_everystep = false) # Poincaré return map
+T(x) = flowTS(x, Inf64; callback = cb)[1][end] # time to section
 dΠ(x, dx) = diffAD(Π, x, dx)
 dΠFD(x, dx) = (Π(x .+ δ .* dx) .- Π(x)) ./ δ
 
@@ -84,7 +85,7 @@ u0 = [0, 1.]
 du0 = [0, -1.]
 
 # check that we cross the sections the way we want
-ts,ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, save_at = LinRange(0,1,20))
+ts, ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, save_at = LinRange(0,1,20))
 # plot(ts,ss[:,:]')
 # plot(ss[1,:], ss[2,:], label="flow");scatter!(ss[1,[1]], ss[2,[1]]);plot!(sol[1,:], sol[2,:], label="sol")
 
@@ -104,7 +105,24 @@ resFD = dΠFD(u0, du0);show(resFD)
 
 println("--> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1000δ
+####################################################################################################
+# matrix of the Poincare map, analytical formula
+const FD = ForwardDiff
+const BK = BifurcationKit
 
+dTfd = BK.finiteDifferences(T, u0; δ = 1e-8)
+dT = -normal' * dϕ ./ dot(normal, F)
+@test norm(dTfd - dT, Inf) < 1e-5
+
+tΣ, solΣ = flowTS(u0, Inf64; callback = cb)
+	tΣ = tΣ[end]; solΣ = solΣ[end]
+dϕ = FD.jacobian( x -> flowTS(x, tΣ)[2][end], (u0))
+F = Fsl(Π(u0), par_sl)
+normal = normals[1]
+Jtmp = dϕ .- F * normal' * dϕ #./ dot(F, normal)
+dΠfd = BK.finiteDifferences(Π, u0; δ = 1e-8)
+Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
+@test norm(dΠfd - Jtmp, Inf) < 2e-5
 ####################################################################################################
 # comparison with BK
 using BifurcationKit
