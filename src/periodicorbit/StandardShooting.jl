@@ -25,15 +25,16 @@ end
 """
 	pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
 
-This composite type creates a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
+Create a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `section`: implements a phase condition. The evaluation `section(x)` must return a scalar number where `x` is a guess for the periodic orbit. Note that the period `T` of the guess `x` is always included either as the last component of `T = x[end]` or as `T = x.p`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
+- `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** the periodic orbit and `T` is the period of the guess. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
 - `parallel` whether the shooting are computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem`.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
+
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
+- `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
@@ -125,6 +126,7 @@ extractTimeSlices(x::BorderedArray, M::Int) = x.u
 @inline extractTimeSlice(x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline extractTimeSlice(x::AbstractVector, ii::Int) = xc[ii]
 
+####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
 	# Sundials does not like @views :(
@@ -160,7 +162,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	return out
 end
 
-# shooting functional, this allows for Array state space
+# shooting functional, this allows for AbstractArray state space
 function (sh::ShootingProblem)(x::BorderedArray, par)
 	# period of the cycle
 	T = extractPeriodShooting(x)
@@ -187,7 +189,6 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 
 	return out
 end
-
 
 # jacobian of the shooting functional
 function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 1e-9)

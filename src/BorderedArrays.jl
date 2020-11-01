@@ -91,10 +91,6 @@ function axpby!(a::T, X::BorderedArray{vectype, Tv1}, b::T, Y::BorderedArray{vec
 	return Y
 end
 ################################################################################
-# this function is actually axpy!(-1, y, x)
-#
-# 	`minus!(x, y)`
-#
 # computes x-y into x and returns x
 minus!(x, y) = axpy!(-1, y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)

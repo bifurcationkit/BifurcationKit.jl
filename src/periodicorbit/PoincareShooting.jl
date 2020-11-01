@@ -69,9 +69,9 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M)) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg, kwargs...), parallel = parallel, section = section)
 
-PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M)) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs...), parallel = parallel, section = section)
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
@@ -110,7 +110,7 @@ function PoincareShootingProblem(F, p,
 					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
-
+####################################################################################################
 """
 	update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
 
@@ -226,7 +226,7 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
 	end
 	return mx
 end
-
+####################################################################################################
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = false)
 	M = getM(psh)

@@ -111,7 +111,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	while (res > tol) & (it < maxIter) & compute
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
-
+		
 		# Update solution: x .= x .- d
 		minus!(x, d)
 

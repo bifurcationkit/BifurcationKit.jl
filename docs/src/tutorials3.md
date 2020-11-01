@@ -350,7 +350,9 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10,
+	newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8,
+	detectBifurcation = 3, plotEveryStep = 2)
 
 Mt = 4 # number of shooting sections
 br_po, = continuation(

@@ -98,42 +98,45 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	fl = Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono}
+@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs}
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem,"
-	F::TF
+	F::TF = nothing
 
 	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned."
-	flow::Tf
+	flow::Tf = nothing
 
 	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side. Please use `nothing` as default."
-	flowTimeSol::Tts
+	flowTimeSol::Tts = nothing
 
 	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, mainly used for plotting on the user side. Please use `nothing` as default."
-	flowFull::Tff
+	flowFull::Tff = nothing
 
 	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last composant being the value of the derivative of the flow."
-	dflow::Td
+	dflow::Td = nothing
 
 	"Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
-	dfserial::Tse
+	dfSerial::Tse = nothing
 
 	"[Internal] store the ODEProblem associated to the flow of the Cauchy problem"
-	prob::Tprob
+	prob::Tprob = nothing
 
 	"[Internal] store the ODEProblem associated to the flow of the variational problem"
-	probMono::TprobMono
+	probMono::TprobMono = nothing
+
+	"[Internal] Serial version of the flow"
+	flowSerial::Tfs = nothing
 end
 
 # constructors
-Flow() = Flow(nothing, nothing, nothing, nothing, nothing, nothing)
-Flow(F, fl, df) = Flow(F, fl, nothing, nothing, df, df, nothing, nothing)
+Flow(F, fl, df) = Flow(F = F, flow = fl, dflow = df, dfserial = df)
 
 # callable struct
 (fl::Flow)(x, p, t; k...)     			  			= fl.flow(x, p, t; k...)
 (fl::Flow)(x, p, dx, t; k...) 	  					= fl.dflow(x, p, dx, t; k...)
 (fl::Flow)(::Val{:Full}, x, p, t; k...) 	  		= fl.flowFull(x, p, t; k...)
 (fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
-(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfserial(x, p, dx, t; k...)
+(fl::Flow)(::Val{:SerialFlow}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
+(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfSerial(x, p, dx, t; k...)
 
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
@@ -149,7 +152,8 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, probserial; alg = alg, kwargs..., kw2...),
-		prob, nothing
+		prob, nothing,
+		(x, p, t; kw2...) ->		   flow(x, p, t, probserial; alg = alg, kwargs..., kw2...),
 		)
 end
 
@@ -163,6 +167,7 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		(x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),
-		prob1, prob2
+		prob1, prob2,
+		(x, p, t; kw2...) ->		   flow(x, p, t, probserial1; alg = alg1, kwargs..., kw2...),
 		)
 end

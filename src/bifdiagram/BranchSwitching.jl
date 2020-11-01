@@ -177,13 +177,13 @@ function getFirstPointsOnBranch(F, dF, br::BranchResult, bpnf::NdBranchPoint, so
 		flag && push!(defOpm, solbif)
 	end
 	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
-	return (before = defOpm, after = defOpp)
+	return (before = defOpm, after = defOpp, bpm = bpnf.p - ds, bpp = bpnf.p + ds)
 end
 
 # In this function, I keep usedeflation although it is not used to simplify the calls
 function multicontinuation(F, dF, br::BranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 
-	defOpm, defOpp = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
+	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
 
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)

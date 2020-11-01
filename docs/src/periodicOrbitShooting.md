@@ -31,7 +31,7 @@ $$\begin{aligned}
 \phi^{\delta s_1T}(x_{1})-x_{2} &=0 \\ 
 \phi^{\delta s_2T}(x_{2})-x_{3} &=0 \\ & \vdots \\ 
 \phi^{\delta s_{m-1}T}(x_{m-1})-x_{m} &=0 \\ 
-\phi^{\delta s_mT}(x_{m})-x_{1} &=0 \\ s(x_{1}, x_{2}, \cdots, x_{m}, T) &=0. \end{aligned}$$
+\phi^{\delta s_mT}(x_{m})-x_{1} &=0 \\ s(x_{1}, T) &=0. \end{aligned}$$
 
 where $\delta s_i:=s_{i+1}-s_i$. The Jacobian of the system of equations *w.r.t.* $(x,T)$ is given by 
 
