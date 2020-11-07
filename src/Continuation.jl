@@ -143,7 +143,7 @@ function save!(br::ContResult, it::ContIterable, state::ContState)
 	push!(br.branch, getStateSummary(it, state))
 
 	# save solution
-	if it.contParams.saveSolEveryStep > 0 && (mod(state.step, it.contParams.saveSolEveryStep) == 0 || ~done(it, state))
+	if it.contParams.saveSolEveryStep > 0 && (modCounter(state.step, it.contParams.saveSolEveryStep) || ~done(it, state))
 		push!(br.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
@@ -351,7 +351,7 @@ function continuation(it::ContIterable)
 	# The result type of this method
 	# is not known at compile time so we
 	# need a function barrier to resolve it
-	#############################################
+	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent

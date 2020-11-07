@@ -457,8 +457,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					normN = norm,
 					callback = cbDefault, kwargs...) where {T, S, E, vectype}
 	# Extract parameters
-	newtonOpts = contparams.newtonOptions
-	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
+	@unpack tol, maxIter, verbose, alpha, almin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
 
 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)

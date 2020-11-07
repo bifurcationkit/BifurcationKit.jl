@@ -106,6 +106,18 @@ function getBlocks(A::SparseMatrixCSC, N, M)
 	out
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+This function implements a counter. If `everyN == 0`, it returns false. Otherwise, it returns `true` when `step` is a multiple of `everyN`
+"""
+function modCounter(step, everyN)
+	if step == 0; return false; end 
+	if everyN == 0; return false; end
+	if everyN == 1; return true; end
+	return mod(step, everyN) == 0
+end
+####################################################################################################
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
