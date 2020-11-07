@@ -19,7 +19,7 @@ BK.mergefromuser((1,2), (a=1,))
 
 normInf = x -> norm(x, Inf)
 
-opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false)
+opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false, detectBifurcation = 0)
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
@@ -28,11 +28,11 @@ BK.getfirstusertype(br0)
 BK.propertynames(br0)
 
 # test with callbacks
-br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show "";true))
+br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show nothing;true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-iter = BK.ContIterable(F,Jac_m,x0,-1.5, (@lens _), opts)
+iter = ContIterable(F,Jac_m,x0,-1.5, (@lens _), opts)
 state = iterate(iter)[1]
 contRes = ContResult(iter, state)
 @time continuation!(iter, state, contRes)

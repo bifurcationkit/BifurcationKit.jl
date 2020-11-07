@@ -27,25 +27,22 @@ $(TYPEDFIELDS)
 - `br[k+1]` gives information about the k-th step
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, Newton iterations, ds, theta, i)` for each continuation step `i`."
+	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.
+
+	- `itnewton` number of Newton iterations
+	- `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
+	- `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
+	- `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
+	- `step` continuation step (here equal `i`)"
 	branch::StructArray{Ta}
 
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
-	"A vector holding the set of fold points detected during the computation of the branch. See [`GenericBifPoint`](@ref) for a description of the fields."
+	"A vector holding the set of detected fold points. See [`GenericBifPoint`](@ref) for a description of the fields."
 	foldpoint::Vector{Foldtype}
 
-	"A `Vector{Bool}` holding the stability of the computed solution for each continuation step. Hence, the stability `stability[k]` should match `eig[k]` which corresponds to `branch[k]` for a given `k`"
-	stability::Vector{Bool}
-
-	"A `Vector{Int64}` holding the number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation)"
-	n_imag::Vector{Int64}
-
-	"A `Vector{Int64}` holding the number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)"
-	n_unstable::Vector{Int64}
-
-	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)"
+	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Ts
 
 	"The parameters used for the call to `continuation` which produced this branch."
@@ -57,13 +54,13 @@ $(TYPEDFIELDS)
 	"Structure associated to the functional, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
 	functional::Tfunc = nothing
 
-	"Parameters passed to continuation and used in the equation F(x, par) = 0"
+	"Parameters passed to continuation and used in the equation `F(x, par) = 0`."
 	params::Tpar = nothing
 
 	"Parameter axis used for computing the branch"
 	param_lens::Tl
 
-	"A vector holding the set of bifurcation points (other than fold) detected during the computation of the branch. See [`GenericBifPoint`](@ref) for a description of the fields."
+	"A vector holding the set of detectedxbifurcation points (other than fold points). See [`GenericBifPoint`](@ref) for a description of the fields."
 	bifpoint::Vector{Biftype}
 end
 
@@ -71,9 +68,8 @@ end
 Base.length(br::ContResult) = length(br.branch)
 
 # check whether the eigenvectors are saved in the branch
-haseigenvector(br::ContResult{T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-
-#
+haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
+hasstability(br::ContResult) = computeEigenElements(br.contparams)
 getfirstusertype(br::ContResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::BranchResult) = getvectortype(eltype(br.bifpoint))
 @inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
@@ -81,13 +77,13 @@ setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:bifpoint, :contparams, :foldpoint, :n_imag, :param_lens, :sol, :type, :branch, :eig, :functional, :n_unstable, :params, :stability)
+	if s in (:bifpoint, :contparams, :foldpoint, :param_lens, :sol, :type, :branch, :eig, :functional, :params)
 		getfield(br, s)
 	else
 		getproperty(br.branch, s)
 	end
 end
-Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :n_imag, :param_lens, :sol, :type, :branch, :eig, :functional, :n_unstable, :params, :stability)
+Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :param_lens, :sol, :type, :branch, :eig, :functional, :params)
 
 """
 $(SIGNATURES)
@@ -144,18 +140,14 @@ This function is used to initialize the composite type `ContResult` according to
 
 	if computeEigenElements(contParams)
 		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
-		stability, n_unstable, n_imag = isstable(contParams, evsol[1])
 		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
 	else
 		_evvectors = (eigenvals = evsol[1], eigenvec = nothing, step = 0)
 	end
 	return ContResult(
 		branch = StructArray([br]),
-		bifpoint = [bif0],
-		foldpoint = [bif0],
-		n_imag = [n_imag],
-		n_unstable = [n_unstable],
-		stability = [stability],
+		bifpoint = Vector{typeof(bif0)}(undef, 0),
+		foldpoint = Vector{typeof(bif0)}(undef, 0),
 		eig = [_evvectors],
 		sol = sol,
 		contparams =  contParams,

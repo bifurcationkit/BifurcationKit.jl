@@ -7,10 +7,10 @@ function displayBr(contRes)
 	println("#"^50)
 	for ii in 1:length(contRes.branch)
 		println("- $ii --------------")
-		println("step = ", contRes.branch[ii][end])
-		println("eiv = ");Base.display(contRes.eig[ii].eigenvals)
-		println("stab = ", contRes.stability[ii])
-		println("n_uns = ", contRes.n_unstable[ii])
+		println("step = ", contRes[ii][end])
+		println("eiv = "); display(contRes.eig[ii].eigenvals)
+		println("stab = ", contRes[ii].stable)
+		println("n_uns = ", contRes[ii].n_unstable)
 	end
 end
 
@@ -21,9 +21,9 @@ function teststab(br)
 	for ii in eachindex(br.branch)
 		n_u = BK.isstable(br.contparams, br.eig[ii].eigenvals)
 		# test that the stability matches the one in eig
-		br.n_unstable[ii] != n_u[2] && println( "$ii did not work!!",br.n_unstable[ii] ,", ", n_u[2])
-		out = out && br.n_unstable[ii] == n_u[2]
-		out = out && br.stability[ii]  == n_u[1]
+		br[ii].n_unstable != n_u[2] && (println( "$ii did not work!!",br[i].n_unstable ,", ", n_u[2]); @assert 1==0)
+		out = out && br[ii].n_unstable == n_u[2]
+		out = out && br[ii].stable  == n_u[1]
 		# we test that step = ii-1
 		out = out && br.branch[ii][end] == ii-1
 		# test that the field `step` match in the structure
@@ -35,7 +35,7 @@ function teststab(br)
 		id = bp.idx
 		# @show id, br.n_unstable[id], br.n_unstable[id-1]
 		# test that the states marked as bifurcation points are always after true bifurcation points
-		out = out && abs(br.n_unstable[id] - br.n_unstable[id-1]) > 0
+		out = out && abs(br[id].n_unstable - br[id-1].n_unstable) > 0
 	end
 	out
 end

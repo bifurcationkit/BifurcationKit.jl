@@ -3,6 +3,8 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.1] - ??
+- remove fields `n_unstable`, `n_imag` and `stability` from `ContResult` and put it in the field `branch`.
 
 ## [0.0.1] - 2020-10-25
 - the keyword argument `Jt` for the jacobian transpose is written `Jᵗ`

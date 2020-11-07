@@ -129,13 +129,15 @@ getx(state::ContState) = state.z_old.u
 function initStateSummary(it, state)
 	x = getx(state); p = getp(state)
 	pt = it.printSolution(x, p)
-	return pt, mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, step = state.step))
+	stable = computeEigenElements(it.contParams) ? isstable(state) : nothing
+	return pt, mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
 function getStateSummary(it, state)
 	x = getx(state); p = getp(state)
 	pt = it.printSolution(x, p)
-	return mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, step = state.step))
+	stable = computeEigenElements(it.contParams) ? isstable(state) : nothing
+	return mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
 function updatestability!(state::ContState, n_unstable, n_imag)
@@ -143,43 +145,33 @@ function updatestability!(state::ContState, n_unstable, n_imag)
 	state.n_imag = (n_imag, state.n_imag[1])
 end
 
-function save!(contres::ContResult, it::ContIterable, state::ContState)
-	push!(contres.branch, getStateSummary(it, state))
-
-	if state.n_unstable[1] >= 0 # to deal with case n_unstable = -1
-		push!(contres.n_unstable, state.n_unstable[1])
-		push!(contres.stability, isstable(state))
-	end
-
-	# condition to deal with n_imag = -1
-	if state.n_imag[1] >= 0; push!(contres.n_imag, state.n_imag[1]); end
+function save!(br::ContResult, it::ContIterable, state::ContState)
+	push!(br.branch, getStateSummary(it, state))
 
 	# save solution
 	if it.contParams.saveSolEveryStep > 0 && (mod(state.step, it.contParams.saveSolEveryStep) == 0 || ~done(it, state))
-		push!(contres.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
+		push!(br.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryStep) == 0
-			push!(contres.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
+			push!(br.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
 		end
 	end
 end
 
 function ContResult(it::ContIterable, state::ContState)
-	x0 = getx(state)
-	p0 = getp(state)
+	x0 = getx(state); p0 = getp(state)
 	contParams = it.contParams
 
 	if computeEigenElements(contParams)
 		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
-		return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
-		return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 	end
+	return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 end
 
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
@@ -352,10 +344,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		# body
 		next = iterate(it, state)
 	end
-
-	# We remove the initial guesses which are meaningless
-	popfirst!(contRes.bifpoint)
-	popfirst!(contRes.foldpoint)
 
 	it.plot && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
 

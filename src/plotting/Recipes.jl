@@ -18,8 +18,8 @@ end
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	@series begin
-		if length(contres.stability) == length(contres) && plotstability
-			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stability)
+		if computeEigenElements(contres.contparams) && plotstability
+			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stable)
 		end
 		if ind1 == 1
 			xguide --> getLensParam(contres.param_lens)
