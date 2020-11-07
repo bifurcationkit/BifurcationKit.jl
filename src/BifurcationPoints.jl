@@ -232,5 +232,5 @@ function Base.show(io::IO, bp::BifurcationPoint)
 		print(io, bp.type, " - ")
 	end
 	println(io, type(bp), " bifurcation point at p ≈ $(bp.p).")
-	println(io, "Normal form : ", bp.nf)
+	println(io, "Normal form: ", bp.nf)
 end

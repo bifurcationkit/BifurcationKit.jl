@@ -23,7 +23,7 @@ To install the bleeding edge version, please run
 `] add BifurcationKit#master`
 
 ## Citing this work
-If you use this package for your work, please **cite** it!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:
+**If you use this package for your work, we ask that you **cite** the following paper!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:
 
 ```
 @misc{veltz:hal-02902346,

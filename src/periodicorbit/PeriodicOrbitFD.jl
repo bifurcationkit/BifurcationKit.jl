@@ -757,6 +757,13 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 			Aγ = AγOperator(is_matrix_free = false, N = probPO.N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
+		elseif linearPO == :BorderedSparseInplace
+			_J =  probPO(Val(:JacFullSparse), orbitguess, par)
+			_indx = getBlocks(_J, N, M)
+			# inplace modification of the jacobian _J
+			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p, _indx)
+			lspo = PeriodicOrbitTrapSparseBLS(BorderingBLS(DefaultLS()))
+
 		else	# :BorderedMatrixFree
 			Aγ = AγOperator(is_matrix_free = true, prob = probPO, N = probPO.N, orbitguess = zeros(N * M + 1), Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
 			# linear solver
@@ -764,7 +771,11 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 		end
 
 		# create the jacobian
+		if linearPO != :BorderedSparseInplace
 		jacPO = POTrapJacobianBLS(probPO, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
+		else
+			jacPO = jac
+		end
 
 		if isnothing(defOp)
 			return newton(probPO, jacPO, orbitguess, par, (@set options.linsolver = lspo); kwargs...)
@@ -879,6 +890,13 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
+		elseif linearPO == :BorderedSparseInplace
+			_J =  prob(Val(:JacFullSparse), orbitguess, par)
+			_indx = getBlocks(_J, N, M)
+			# inplace modification of the jacobian _J
+			jac = (x, p) -> prob(Val(:JacFullSparseInplace), _J, x, p, _indx)
+			lspo = PeriodicOrbitTrapSparseBLS(BorderingBLS(DefaultLS()))
+
 		else #this is BorderedMatrixFree
 			Aγ = AγOperator(is_matrix_free = true, prob = prob, N = N,
 					orbitguess = zeros(N * M + 1),
@@ -888,7 +906,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		end
 
 		# create the jacobian
-		jacPO = POTrapJacobianBLS(prob, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
+		jacPO = (linearPO != :BorderedSparseInplace) ? POTrapJacobianBLS(prob, zeros(N * M + 1), Aγ, zeros(N * M + 1), par) : ((x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p))
 
 
 		return continuation(prob, jacPO, orbitguess, par, lens,
