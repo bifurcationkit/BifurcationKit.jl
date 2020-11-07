@@ -146,9 +146,10 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
     - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 """
 
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :MatrixFree, kwargs...)
+function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :MatrixFree, updateSectionEveryStep = 0, kwargs...)
 	@assert linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
 
 	options = contParams.newtonOptions
@@ -171,13 +172,26 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		jac = (x, p) -> FloquetWrapper(prob, x, p)
 	end
 
-	return continuation(
-		prob,
-		jac,
+	_finsol = get(kwargs, :finaliseSolution, nothing)
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
+		begin
+			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			true
+		end :
+		(z, tau, step, contResult; prob = prob, kwargs...) ->
+			begin
+				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+				_finsol(z, tau, step, contResult; prob = prob, kwargs...)
+			end
+
+	branch, u, τ = continuation(
+		prob, jac,
 		orbitguess, par, lens,
 		contParams, linearAlgo;
 		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
+		finaliseSolution = _finsol2,
 		kwargs...)
+	return setproperties(branch; type = :PeriodicOrbit, functional = prob), u, τ
 end
 
 """
@@ -218,7 +232,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
+- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 - `linearPO` specify the way the jacobian is computed.
 
 !!! note "Linear solver"
@@ -230,7 +244,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not `nothing`, is computed with Finite differences.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 1, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 0, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 	verbose && (println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif))

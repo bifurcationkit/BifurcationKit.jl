@@ -145,11 +145,9 @@ probPsh = PoincareShootingProblem(Fsl, par_hopf,
 		probMono, Rodas4(),
 		normals, centers; rtol = abstol =1e-10, reltol=1e-9)
 
-hyper = probPsh.section
+initpo_bar = BK.R(probPsh, [0, 0.4], 1)
 
-initpo_bar = BK.R(hyper, [0, 0.4], 1)
-
-BK.E(hyper, [1.0,], 1)
+BK.E(probPsh, [1.0,], 1)
 initpo_bar = [0.4]
 
 probPsh(initpo_bar, par_hopf)
@@ -196,11 +194,9 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probPsh = BK.PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
+probPsh = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
 # version with analytical jacobian
-probPsh2 = BK.PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0)
-
-hyper = probPsh.section
+probPsh2 = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0)
 
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
@@ -211,7 +207,7 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls, eigsolver = eil)
-	deflationOp = BK.DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
+	deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
 	outpo, = newton(probPsh2, initpo_bar, par_hopf, optn; normN = norminf)
 	outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
 
@@ -232,8 +228,12 @@ initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
 
 probPsh = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
 
-hyper = probPsh.section
-initpo_bar = reduce(vcat, [BK.R(hyper, initpo[ii], ii) for ii in eachindex(centers)])
+initpo_bar = reduce(vcat, [BK.R(probPsh, initpo[ii], ii) for ii in eachindex(centers)])
+# same with projection function
+initpo_bar = reduce(vcat, BK.projection(probPsh, initpo))
+
+# test of the other projection function
+BK.projection(probPsh, reduce(hcat, initpo)')
 
 probPsh(initpo_bar, par_hopf; verbose = true)
 

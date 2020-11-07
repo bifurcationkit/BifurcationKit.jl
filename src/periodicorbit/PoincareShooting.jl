@@ -114,6 +114,10 @@ function PoincareShootingProblem(F, p,
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
 ####################################################################################################
+R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
+E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xbar, k)
+
+
 """
 	update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
 
@@ -228,6 +232,39 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
 		end
 	end
 	return mx
+end
+
+"""
+$(SIGNATURES)
+
+Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré section.
+"""
+function projection(psh::PoincareShootingProblem, x::AbstractVector)
+	# create initial guess. We have to pass it through the projection R
+	M = getM(psh)
+	orbitguess_bar = Vector{eltype(x)}(undef, 0)
+	@assert M == length(psh.section.normals)
+	for ii=1:M
+		push!(orbitguess_bar, R(psh, x[ii], ii))
+	end
+	return orbitguess_bar
+end
+
+"""
+$(SIGNATURES)
+
+Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré section.
+"""
+function projection(psh::PoincareShootingProblem, x::AbstractMatrix)
+	# create initial guess. We have to pass it through the projection R
+	M = getM(psh)
+	m, n = size(x)
+	orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
+	@assert M == length(psh.section.normals)
+	for ii=1:M
+		orbitguess_bar[ii, :] .= @views R(psh, x[ii, :], ii)
+	end
+	return orbitguess_bar
 end
 ####################################################################################################
 # Poincaré (multiple) shooting with hyperplanes parametrization
@@ -408,6 +445,7 @@ function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers
 	# create initial guess. We have to pass it through the projection R
 	hyper = probPSh.section
 	M = getM(probPSh)
+	@assert length(normals) == M
 	orbitguess_bar = zeros(length(centers[1])-1, M)
 	for ii=1:length(normals)
 		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)

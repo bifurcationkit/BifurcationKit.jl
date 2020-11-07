@@ -839,11 +839,11 @@ This is the continuation routine for computing a periodic orbit using a function
     - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
     - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
-
+- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u,p) -> (period = u[end],), kwargs...)
+function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
 	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedInplaceLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 
 	N = prob.N
@@ -874,13 +874,14 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 
 		lspo = POTrapLinsolver(options.linsolver)
 
-			return continuation(
+			br, z, τ = continuation(
 				prob,
 				(x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p),
 				orbitguess, par, lens,
 				(@set contParams.newtonOptions.linsolver = lspo);
 				printSolution = printSolution,
 				kwargs...)
+			return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
 	else
 		@assert orbitguess isa AbstractVector
 		@assert length(orbitguess) == N * M + 1 "Error with size of the orbitguess"
@@ -909,10 +910,11 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		jacPO = (linearPO != :BorderedSparseInplace) ? POTrapJacobianBLS(prob, zeros(N * M + 1), Aγ, zeros(N * M + 1), par) : ((x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p))
 
 
-		return continuation(prob, jacPO, orbitguess, par, lens,
+		br, z, τ = continuation(prob, jacPO, orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = lspo);
 			printSolution = printSolution,
 			kwargs...)
+		return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
 	end
 end
 
@@ -934,11 +936,11 @@ This is the continuation routine for computing a periodic orbit using a function
     - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
     - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
-
+- `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), linearAlgo = BorderingBLS(), updateSectionEveryStep = 1, kwargs...)
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
 	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
 end
@@ -977,8 +979,9 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `printSolution = (u,p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
+- `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 """
-function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), kwargs...)
+function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), updateSectionEveryStep = 1, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	@assert br.functional isa PeriodicOrbitTrapProblem
