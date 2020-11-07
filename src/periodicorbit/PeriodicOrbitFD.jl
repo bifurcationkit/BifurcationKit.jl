@@ -443,8 +443,8 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
 		J0[:, end] .=  ∂TGpo
 
-		# this following does not depend on u0, so it does not change
-		# J0[N*M+1, 1:N] .=  pb.ϕ
+		# this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
+		J0[N*M+1, 1:N] .=  pb.ϕ
 
 		return J0
 end
@@ -495,8 +495,8 @@ end
 	∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
 	J0[:, end] .=  ∂TGpo
 
-	# this following does not depend on u0, so it does not change
-	# J0[N*M+1, 1:N] .=  pb.ϕ
+	# this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
+	J0[N*M+1, 1:N] .=  pb.ϕ
 
 	return J0
 end
@@ -587,6 +587,15 @@ function getTrajectory(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
 	return (t = cumsum(T .* collect(prob.mesh)), u = xc)
+end
+
+# this function updates the section during the continuation run
+@views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par)
+	_, N = size(prob)
+	prob.xπ .= x[1:N]
+	prob.ϕ .= prob.F(x[1:N], par)
+	prob.ϕ ./= norm(prob.ϕ)
+	return true
 end
 ####################################################################################################
 # The following struct encodes the jacobian of a PeriodicOrbitTrapProblem which is a convenient composite type for the computation of Floquet multipliers. Therefore, it is only used in the method continuationPOTrap
@@ -876,8 +885,9 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 				(x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p),
 				orbitguess, par, lens,
 				(@set contParams.newtonOptions.linsolver = lspo);
+				kwargs...,
 				printSolution = printSolution,
-				kwargs...)
+				finaliseSolution = _finsol2,)
 			return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
 	else
 		@assert orbitguess isa AbstractVector
@@ -906,11 +916,11 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		# create the jacobian
 		jacPO = (linearPO != :BorderedSparseInplace) ? POTrapJacobianBLS(prob, zeros(N * M + 1), Aγ, zeros(N * M + 1), par) : ((x, p) -> POTrapJacobianFull(prob, jac(x, p), x, p))
 
-
 		br, z, τ = continuation(prob, jacPO, orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = lspo);
+			kwargs...,
 			printSolution = printSolution,
-			kwargs...)
+			finaliseSolution = _finsol2,)
 		return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
 	end
 end

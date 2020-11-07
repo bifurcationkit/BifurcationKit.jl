@@ -47,7 +47,7 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 @test res == resi
 
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
-
+#
 # using BenchmarkTools
 # @btime pb($orbitguess_f, $par) 					# 13.535 ms (62 allocations: 34.33 MiB)
 # @btime pbi($orbitguess_f, $par) 				# 7.869 ms (2 allocations: 17.17 MiB)
@@ -170,6 +170,17 @@ Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 
 Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
+
+# we update the section
+BK.updateSection!(pbsp, rand(2n), par)
+Jfd2 = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
+Jan2 = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+@test Jan2 != Jan
+@test norm(Jfd2 - Jan2, Inf) < 1e-6
+@time pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par)
+@test norm(Jfd2 - Jan2, Inf) < 1e-6
+Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+@test norm(Jfd2[1:size(Jan2,1),1:size(Jan2,1)] - Jan2, Inf) < 1e-6
 
 ####################################################################################################
 # test whether the inplace version of computation of the Jacobian is right

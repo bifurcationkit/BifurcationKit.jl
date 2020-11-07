@@ -247,7 +247,7 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 10, ver
 	outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
 
 for ii=1:length(normals)
-	@show BK.E(hyper, [outpo[ii]], ii)
+	@show BK.E(probPsh	, [outpo[ii]], ii)
 end
 
 getPeriod(probPsh, outpo, par_hopf)

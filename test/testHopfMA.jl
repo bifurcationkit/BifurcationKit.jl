@@ -76,13 +76,13 @@ opt_newton = BK.NewtonPar(tol = 1e-11, verbose = true)
 	out, hist, flag = @time BK.newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
 eigls = EigArpack(1.1, :LM)
-	opt_newton = BK.NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(tol=1e-4, N = 2n), eigsolver = eigls)
+	opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(tol=1e-4, N = 2n), eigsolver = eigls)
 	out, hist, flag = @time BK.newton(Fbru, Jbru_sp,
 		sol0 .* (1 .+ 0.01rand(2n)), par_bru,
 		opt_newton)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.0051, pMax = 1.8, theta = 0.01, detectBifurcation = 2, nev = 16)
-	br, u1 = @time BK.continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, plot = false, printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.0051, pMax = 1.8, theta = 0.01, detectBifurcation = 3, nev = 16)
+	br, = @time continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, plot = false, printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
 #################################################################################################### Continuation of the Hopf Point using Dense method
 ind_hopf = 1
 # av = randn(Complex{Float64},2n); av = av./norm(av)
@@ -304,13 +304,13 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	# with deflation
-	outpo_f, hist, flag = @time BK.newton(poTrap,
+	outpo_f, hist, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linalgo = linalgo, normN = norminf)
 	# classic Newton-Krylov
-	outpo_f, hist, flag = @time BK.newton(poTrap,
+	outpo_f, hist, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linalgo= linalgo, normN = norminf)
 	# continuation
-	br_pok2, upo , _= @time BK.continuation(poTrap,
+	br_pok2, upo , _= @time continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; linearPO = linalgo, verbosity = 0,
 			plot = false, normC = norminf)
