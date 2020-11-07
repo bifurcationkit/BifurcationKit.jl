@@ -352,7 +352,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 	end
 
 	# jacobian of the flow
-	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> psh.flow(Val(:SerialFlow), z, par, _T; callback = nothing), _x)
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> psh.flow(Val(:SerialTimeSol), z, par, _T; callback = nothing).u, _x)
 
 	# initialize some temporaries
 	Jtmp = zeros(N, N)
@@ -362,10 +362,11 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 	Em = zeros(N, Nm1)
 
 	# put the matrices by blocks
+	In = I(Nm1)
 	for ii=1:M
 		im1 = ii == 1 ? M : ii - 1
 		# we find the point on the next section
-		tΣ, solΣ = psh.flow(Val(:TimeSol), xc[:, im1], par, Inf64)
+		tΣ, solΣ = psh.flow(Val(:SerialTimeSol), view(xc,:,im1), par, Inf64)
 		# computation of the derivative of the return map
 		F .= psh.flow.F(solΣ, par)
 		normal .= psh.section.normals[ii]
@@ -376,9 +377,9 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 		ForwardDiff.jacobian!(Em, x->E(psh.section, x, im1), zeros(Nm1))
 		J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (im1-1)*Nm1+1:(im1-1)*Nm1+Nm1] .= -Rm * Jtmp * Em
 		if M == 1
-			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .+= I(Nm1)
+			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .+= In
 		else
-			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .= I(Nm1)
+			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .= In
 		end
 	end
 	return J

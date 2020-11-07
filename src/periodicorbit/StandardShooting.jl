@@ -154,7 +154,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# we can use views but Sundials will complain
-			outc[:, ii] .= solOde[ii][2] .- xc[:, ip1]
+			outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]
 		end
 	end
 
@@ -262,7 +262,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e
 	return out
 end
 
-# inplace computation of the matrix of the jacobian of the shooting problem
+# inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
 	T = extractPeriodShooting(x)
 	M = getM(sh)
@@ -272,20 +272,21 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 	xc = extractTimeSlices(x, M)
 
 	# jacobian of the flow
-	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialFlow), z, par, _T), _x)
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialTimeSol), z, par, _T).u, _x)
 
 	# put the matrices by blocks
+	In = I(N)
 	for ii=1:M
 		@views dflow(J[(ii-1)*N+1:(ii-1)*N+N, (ii-1)*N+1:(ii-1)*N+N], xc[:, ii], sh.ds[ii] * T)
 		# we put the identity matrices
 		ip1 = (ii == M) ? 1 : ii+1
 		if M == 1
-			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= -I(N)
+			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= -In
 		else
-			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .= -I(N)
+			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .= -In
 		end
 		# we fill the last column
-		tmp = @views sh.flow(Val(:SerialFlow), xc[:, ii], par, sh.ds[ii] * T)
+		tmp = @views sh.flow(Val(:SerialTimeSol), xc[:, ii], par, sh.ds[ii] * T).u
 		J[(ii-1)*N+1:(ii-1)*N+N, end] .= sh.flow.F(tmp, par) .* sh.ds[ii]
 	end
 

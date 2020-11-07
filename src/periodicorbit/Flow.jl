@@ -135,7 +135,7 @@ Flow(F, fl, df) = Flow(F = F, flow = fl, dflow = df, dfserial = df)
 (fl::Flow)(x, p, dx, t; k...) 	  					= fl.dflow(x, p, dx, t; k...)
 (fl::Flow)(::Val{:Full}, x, p, t; k...) 	  		= fl.flowFull(x, p, t; k...)
 (fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
-(fl::Flow)(::Val{:SerialFlow}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
+(fl::Flow)(::Val{:SerialTimeSol}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
 (fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfSerial(x, p, dx, t; k...)
 
 """
