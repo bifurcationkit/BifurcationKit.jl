@@ -1,3 +1,4 @@
+# using Revise
 using Test
 
 # test linear, newton
@@ -13,7 +14,7 @@ include("test-bordered-problem.jl")
 include("testNF.jl")
 
 # test periodic orbits
-include("test_SH.jl")
+include("test_SS.jl")
 include("poincareMap.jl")
 include("stuartLandauSH.jl")
 include("stuartLandauTrap.jl")

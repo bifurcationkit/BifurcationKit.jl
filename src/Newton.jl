@@ -100,6 +100,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	res = normN(f)
 	resHist = [res]
 	it = 0
+	itlineartot = 0
 
 	# Displaying results
 	verbose && displayIteration(it, neval, res)
@@ -111,7 +112,8 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	while (res > tol) & (it < maxIter) & compute
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
-		
+		itlineartot += sum(itlinear)
+
 		# Update solution: x .= x .- d
 		minus!(x, d)
 
@@ -128,7 +130,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	end
 	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
-	return x, resHist, flag, it
+	return x, resHist, flag, it, itlineartot
 end
 
 # simplified call to newton when no Jacobian is passed in which case we estimate it using finiteDifferences

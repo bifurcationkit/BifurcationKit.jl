@@ -91,7 +91,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
-	return BorderedArray(res[1], z_pred.p), res[2], res[3], res[4]
+	return BorderedArray(res[1], z_pred.p), res[2:end]...
 end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::ContIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
@@ -227,14 +227,14 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		zpred = _copy(z_pred)
 		axpy!(ii * ds, algo.τ, zpred)
 		# we restore the original callback if it reaches the usual case ii == 0
-		zold, res, flag, itnewton = corrector(it, z_old, tau, zpred, ds, θ,
+		zold, res, flag, itnewton, itlinear = corrector(it, z_old, tau, zpred, ds, θ,
 				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
 		if flag || ii == 1 # for i==1, we return the result anyway
 			@show ii, algo.nb, algo.pmimax, flag, ds
-			return zold, res, flag, itnewton
+			return zold, res, flag, itnewton, itlinear
 		end
 	end
-	return zold, res, flag, itnewton
+	return zold, res, flag, itnewton, itlinear
 end
 
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
@@ -483,6 +483,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	res     = normAC(res_f, res_n)
 	resHist = [res]
 	it = 0
+	itlineartot = 0
 
 	# Displaying results
 	verbose && displayIteration(it, 1, res)
@@ -498,7 +499,8 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
 		J = Jh(x, set(par, paramlens, p))
-		u, up, flag, liniter = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
+		u, up, flag, itlinear = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
+		itlineartot += sum(itlinear)
 
 		if linesearch
 			step_ok = false
@@ -537,13 +539,13 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		push!(resHist, res)
 		it += 1
 
-		verbose && displayIteration(it, 1, res, liniter)
+		verbose && displayIteration(it, 1, res, itlinear)
 
 		# shall we break the loop?
-		compute = callback(x, res_f, J, res, it, liniter, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
+		compute = callback(x, res_f, J, res, it, itlinear, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	end
 	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, -1, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
-	return BorderedArray(x, p), resHist, flag, it
+	return BorderedArray(x, p), resHist, flag, it, itlineartot
 end
 
 # conveniency for use in continuation

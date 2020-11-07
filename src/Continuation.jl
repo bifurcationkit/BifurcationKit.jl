@@ -83,6 +83,7 @@ Returns a variable containing the state of the continuation procedure. The field
 
 	isconverged::Bool						# Boolean for newton correction
 	itnewton::Int64							# Number of newton iteration (in corrector)
+	itlinear::Int64 = 0						# Number of linear iteration (in newton corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
@@ -126,18 +127,11 @@ getx(state::ContState) = state.z_old.u
 			((it.contParams.pMin < state.z_old.p < it.contParams.pMax) || state.step == 0) &&
 			(state.stopcontinuation == false)
 
-function initStateSummary(it, state)
-	x = getx(state); p = getp(state)
-	pt = it.printSolution(x, p)
-	stable = computeEigenElements(it.contParams) ? isstable(state) : nothing
-	return pt, mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
-end
-
 function getStateSummary(it, state)
 	x = getx(state); p = getp(state)
 	pt = it.printSolution(x, p)
 	stable = computeEigenElements(it.contParams) ? isstable(state) : nothing
-	return mergefromuser(pt, (param = p, itnewton = state.itnewton, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
+	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
 function updatestability!(state::ContState, n_unstable, n_imag)
@@ -162,6 +156,7 @@ end
 
 function ContResult(it::ContIterable, state::ContState)
 	x0 = getx(state); p0 = getp(state)
+	pt = it.printSolution(x0, p0)
 	contParams = it.contParams
 
 	if computeEigenElements(contParams)
@@ -171,7 +166,7 @@ function ContResult(it::ContIterable, state::ContState)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
 	end
-	return _ContResult(initStateSummary(it, state)..., x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
+	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
 end
 
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
@@ -193,12 +188,12 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# Converge initial guess
 	verbose && printstyled("*********** CONVERGE INITIAL GUESS *************", bold = true, color = :magenta)
 	# we pass additional kwargs to newton so that it is sent to the newton callback
-	u0, fval, isconverged, itnewton = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
+	u0, fval, isconverged, itnewton, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess on the branch."
 	verbose && println("\n--> convergence of initial guess = OK")
 	verbose && println("--> parameter = $(p0), initial step")
 	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
-	u_pred, fval, isconverged, itnewton = newton(it.F, it.J,
+	u_pred, fval, isconverged, itnewton, _ = newton(it.F, it.J,
 			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
@@ -248,7 +243,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	verbose && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
-	z_newton, fval, state.isconverged, state.itnewton  = corrector(it,
+	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
 			state.z_old, state.tau, state.z_pred,
 			ds, theta,
 			it.tangentAlgo, it.linearAlgo;

@@ -27,9 +27,9 @@ $(TYPEDFIELDS)
 - `br[k+1]` gives information about the k-th step
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.
-
+	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
 	- `itnewton` number of Newton iterations
+        - `itlinear` total number of linear iterations during corrector
 	- `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
 	- `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
 	- `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
