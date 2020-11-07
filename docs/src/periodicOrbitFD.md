@@ -35,7 +35,7 @@ $$A_{\gamma}:=\left(\begin{array}{ccccccc}
 {-\gamma I} & {0} & {\cdots} & {\cdots} & {\cdots} & {0} & {I}
 \end{array}\right)$$
 
-with $M_i := I-	\frac h2\partial_uF(x_i)$ and $H_i := I+\frac h2\partial_uF(x_{i-1})$.
+with $M_i := I-	\frac h2duF(x_i)$ and $H_i := I+\frac h2dF(x_{i-1})$.
 
 We solve the linear equation $\mathcal J\cdot sol = rhs$ with a bordering strategy (*i.e.* the linear solver is a subtype of `<: AbstractBorderedLinearSolver`) which in turn requires to solve $A_\gamma z=b$ where $z=(x,x_m)$. We also solve this equation with a bordering strategy but this time, it can be simplified as follows. If we write $b=(f,g)$, one gets $J_c x=f$ and $x_m=g+\gamma x_1$ where $x_1$ is the first time slice of $x$ and $J_c$ is the following **cyclic matrix**:
 

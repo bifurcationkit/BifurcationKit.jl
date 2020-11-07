@@ -283,8 +283,8 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 	end
 
 	# perform continuation
-	branch, u, tau = continuation(probPO, orbitguess, setParam(br, pred.p), br.param_lens, _contParams; kwargs...)
+	branch, u, τ = continuation(probPO, orbitguess, setParam(br, pred.p), br.param_lens, _contParams; kwargs..., plotSolution = _plotsol2, updateSectionEveryStep = updateSectionEveryStep)
 
-	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = probPO), hopfpt), u, tau
+	return Branch(branch, hopfpt), u, τ
 
 end

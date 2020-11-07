@@ -105,6 +105,7 @@ isInplace(pb::PeriodicOrbitTrapProblem) = pb.isinplace
 onGpu(pb::PeriodicOrbitTrapProblem) = pb.ongpu
 hasHessian(pb::PeriodicOrbitTrapProblem) = pb.d2F == nothing
 @inline getTimeStep(pb::PeriodicOrbitTrapProblem, i::Int) = getTimeStep(pb.mesh, i)
+Base.size(pb::PeriodicOrbitTrapProblem) = (pb.M, pb.N)
 
 function applyF(pb::PeriodicOrbitTrapProblem, dest, x, p)
 	if isInplace(pb)
@@ -176,7 +177,7 @@ end
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 function POTrapFunctional!(pb::PeriodicOrbitTrapProblem, out, u0, par)
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	u0c  = extractTimeSlices(u0, N, M)
@@ -210,8 +211,7 @@ end
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
 function POTrapFunctionalJac!(pb::PeriodicOrbitTrapProblem, out, u0, par, du)
-	M = pb.M
-	N = pb.N
+	M, N = size(pb)
 	T  = extractPeriodFDTrap(u0)
 	dT = extractPeriodFDTrap(du)
 
@@ -257,10 +257,10 @@ end
 """
 Function to compute the Matrix-Free version of Aγ, see docs for its expression.
 """
-function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::AbstractVector)
+function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
 	# u0 of size N * M + 1
 	# du of size N * M
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 	u0c = extractTimeSlices(u0, N, M)
 
@@ -269,7 +269,7 @@ function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du
 
 	# closure condition ensuring a periodic orbit
 	duc = reshape(du, N, M)
-	outc[:, M] .= @views duc[:, M] .- duc[:, 1]
+	outc[:, M] .= @views duc[:, M] .- γ .* duc[:, 1]
 	return nothing
 end
 
@@ -281,7 +281,7 @@ function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVect
 	# u0 of size N * (M - 1)
 	# du of size N * (M - 1)
 	# outc of size N * M
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 
 	u0c = reshape(u0, N, M-1)
 	duc = reshape(du, N, M-1)
@@ -303,8 +303,7 @@ function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVect
 end
 
 function Jc(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
-	M = pb.M; N = pb.N
-
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	out  = similar(du)
@@ -316,9 +315,9 @@ end
 """
 Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
 """
-function jacobianPOTrapBlock(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par; γ = 1.0)
+function jacobianPOTrapBlock(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par; γ = 1)
 	# extraction of various constants
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 
 	Aγ = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 	cylicPOTrapBlock!(pb, u0, par, Aγ)
@@ -334,7 +333,7 @@ This function populates Jc with the cyclic matrix using the different Jacobians
 """
 function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, Jc::BlockArray)
 	# extraction of various constants
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	In = spdiagm( 0 => ones(N))
@@ -348,7 +347,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	Jn = In - h/2 .* tmpJ
 	setblock!(Jc, Jn, 1, 1)
 
-	# we could do a Jn ,= -I .- ... but we want to allow the sparsity pattern to vary
+	# we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
 	Jn = @views -In - h/2 .* pb.J(u0c[:, M-1], par)
 	setblock!(Jc, Jn, 1, M-1)
 
@@ -367,7 +366,7 @@ end
 
 function cylicPOTrapBlock(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
 	# extraction of various constants
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	Jc = BlockArray(spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
 	cylicPOTrapBlock!(pb, u0, par, Jc)
 end
@@ -379,7 +378,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 """
 function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1.0, δ = 1e-9)
 	# extraction of various constants
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 	AγBlock = jacobianPOTrapBlock(pb, u0, par; γ = γ)
 
@@ -400,7 +399,7 @@ end
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
 @views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1.0, δ = 1e-9) where Tj
-		M = pb.M; N = pb.N
+		M, N = size(pb)
 		T = extractPeriodFDTrap(u0)
 
 		In = Tj isa SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
@@ -452,7 +451,7 @@ end
 
 
 @views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1.0, δ = 1e-9)
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	In = spdiagm( 0 => ones(N))
@@ -514,7 +513,7 @@ end
 
 function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVector, par)
 	# extraction of various constants
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	A_diagBlock = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
@@ -542,7 +541,7 @@ end
 # Utils
 
 function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
-	M = pb.M; N = pb.N
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 	u0c = @views reshape(u0[1:end-1], N, M)
 	return [norm(u0c[:,ii+1].-u0c[:,ii]) * T/M for ii in 1:M-1]
@@ -721,8 +720,7 @@ end
 # newton wrappers
 function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert linearPO in [:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
-	N = probPO.N
-	M = probPO.M
+	M, N = size(probPO)
 
 	if linearPO in [:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace]
 		@assert orbitguess isa AbstractVector
@@ -846,8 +844,7 @@ Note that by default, the method prints the period of the periodic orbit as func
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
 	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedInplaceLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 
-	N = prob.N
-	M = prob.M
+	M, N = size(prob)
 	options = contParams.newtonOptions
 
 	if computeEigenElements(contParams)
