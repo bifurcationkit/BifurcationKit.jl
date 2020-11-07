@@ -583,7 +583,7 @@ Compute the full trajectory associated to `x`. Mainly for plotting purposes.
 """
 function getTrajectory(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p)
 	T = getPeriod(prob, x, p)
-	M = getM(prob);	N = (length(x) - 1) ÷ M
+	M, N = size(prob)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
 	return (t = cumsum(T .* collect(prob.mesh)), u = xc)
@@ -939,7 +939,7 @@ Note that by default, the method prints the period of the periodic orbit as func
 """
 function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), linearAlgo = BorderingBLS(), updateSectionEveryStep = 1, kwargs...)
 	_linearAlgo = @set linearAlgo.solver = _contParams.newtonOptions.linsolver
-	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, kwargs...)
+	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
 end
 
 ####################################################################################################
@@ -950,7 +950,7 @@ function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, hopfpt, ζr::Abstra
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
 	# update the problem
-	probPO = setproperties(prob, N = length(ζr), F = F, J = dF, ϕ = ζr, xπ = hopfpt.x0)
+	probPO = setproperties(prob, N = length(ζr), F = F, J = dF, ϕ = copy(ζr), xπ = copy(hopfpt.x0))
 	return probPO, orbitguess
 end
 

@@ -437,9 +437,9 @@ function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers
 
 	# update the problem
 	if length(prob.flow) == 4
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, normals, centers; parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
 	else
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, normals, centers; parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
 	end
 
 	# create initial guess. We have to pass it through the projection R

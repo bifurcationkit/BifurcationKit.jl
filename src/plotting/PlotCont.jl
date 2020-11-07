@@ -12,16 +12,16 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 		ylabel = getfirstusertype(contres),
 		label = "", plotfold = false, subplot = 1)
 
+	plotuserfunction(sol.u, sol.p; subplot = 3)
+
 	# put arrow to indicate the order of computation
 	length(contres) > 1 &&	plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
-
-	plot!(contres; vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2)
 
 	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals
 		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
 	end
 
-	plotuserfunction(sol.u, sol.p; subplot = 3)
-	display(title!(""))
+	plot!(contres; vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.param_lens), label = "", subplot = 2) |> display
+
 end

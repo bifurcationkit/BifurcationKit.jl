@@ -356,7 +356,7 @@ function problemForBS(prob::ShootingProblem, F, dF, hopfpt, ζr, orbitguess_a, p
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
 	# update the problem but not the section if the user passed one
-	probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(F(orbitguess_a[1], hopfpt.params), orbitguess_a[1]) : prob.section)
+	probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(F(orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section)
 	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure

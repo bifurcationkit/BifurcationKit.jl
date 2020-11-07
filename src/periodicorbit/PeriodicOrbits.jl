@@ -190,7 +190,7 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		contParams, linearAlgo;
 		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
 		finaliseSolution = _finsol2,
-		kwargs...)
+		kwargs...,)
 	return setproperties(branch; type = :PeriodicOrbit, functional = prob), u, τ
 end
 
