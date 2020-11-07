@@ -145,18 +145,18 @@ Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The 
 function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 	probserial = prob isa EnsembleProblem ? prob.prob : prob
 	return Flow(F = F,
-		flow = (x, p, t; kw2...) ->		   flow(x, p, t, prob; alg = alg, kwargs..., kw2...),
+		flow = (x, p, t; kw2...) -> flow(x, p, t, prob; alg = alg, kwargs..., kw2...),
 
-		flowTimeSol = (x, p, t; kw2...) ->	flowTimeSol(x, p, t, prob; alg = alg, kwargs..., kw2...),
+		flowTimeSol = (x, p, t; kw2...) -> flowTimeSol(x, p, t, prob; alg = alg, kwargs..., kw2...),
 
-		flowFull = (x, p, t; kw2...) ->       flowFull(x, p, t, prob; alg = alg, kwargs..., kw2...),
+		flowFull = (x, p, t; kw2...) -> flowFull(x, p, t, prob; alg = alg, kwargs..., kw2...),
 
 		dflow = (x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, prob; alg = alg, kwargs..., kw2...),
 
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		dfSerial = (x, p, dx, t; kw2...) -> dflow_fd(x, p, dx, t, probserial; alg = alg, kwargs..., kw2...),
 
-		flowSerial = (x, p, t; kw2...) ->	flowTimeSol(x, p, t, probserial; alg = alg, kwargs..., kw2...),
+		flowSerial = (x, p, t; kw2...) -> flowTimeSol(x, p, t, probserial; alg = alg, kwargs..., kw2...),
 
 		prob = prob, probMono = nothing,
 		)
@@ -166,18 +166,18 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
 	return Flow(F = F,
-		flow = (x, p, t; kw2...) ->			  flow(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
+		flow = (x, p, t; kw2...) -> flow(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
 
-		flowTimeSol = (x, p, t; kw2...) ->	   flowTimeSol(x, p, t, prob1; alg = alg1, kwargs..., kw2...),
+		flowTimeSol = (x, p, t; kw2...) -> flowTimeSol(x, p, t, prob1; alg = alg1, kwargs..., kw2...),
 
-		flowFull = (x, p, t; kw2...) -> 		  flowFull(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
+		flowFull = (x, p, t; kw2...) -> flowFull(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
 
 		dflow = (x, p, dx, t; kw2...) -> dflow(x, p, dx, t, prob2; alg = alg2, kwargs..., kw2...),
 
 		# serial version of dflow. Used for the computation of Floquet coefficients
 		dfSerial = (x, p, dx, t; kw2...) -> dflow(x, p, dx, t, probserial2; alg = alg2, kwargs..., kw2...),
 
-		flowSerial = (x, p, t; kw2...) ->		 flowTimeSol(x, p, t, probserial1; alg = alg1, kwargs..., kw2...),
+		flowSerial = (x, p, t; kw2...) -> flowTimeSol(x, p, t, probserial1; alg = alg1, kwargs..., kw2...),
 
 		prob = prob1, probMono = prob2,
 		)

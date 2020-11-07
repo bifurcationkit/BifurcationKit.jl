@@ -7,7 +7,7 @@ using DiffEqBase
 
 `pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, parallel = false)`
 
-This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. The arguments are as follows
+This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `M`: the number of Poincaré sections. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.

@@ -121,7 +121,7 @@ br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detectBifurcation=0
-br_pok2, _ = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
+br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
 ####################################################################################################
 # test shooting interface M > 1
 _pb = ShootingProblem(Fsl, par_hopf, prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
@@ -179,7 +179,7 @@ probPsh = PoincareShootingProblem(Fsl, par_hopf,
 		normals, centers; rtol = 1e-8)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn;tol = 1e-9, eigsolver = eil), detectBifurcation = 1)
-	br_pok2, upo , _= continuation(
+	br_pok2, = continuation(
 		probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
@@ -218,7 +218,7 @@ ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, ve
 getPeriod(probPsh, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 1, nev = 2)
-	br_pok2, upo , _= continuation(probPsh, outpo, par_hopf, (@lens _.r),
+	br_pok2, = continuation(probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
 		plot = false,
@@ -252,21 +252,25 @@ end
 
 getPeriod(probPsh, outpo, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn; tol = 1e-8), detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 10, newtonOptions = setproperties(optn; tol = 1e-8), detectBifurcation = 1)
 	br_hpsh, upo , _= continuation(probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; normC = norminf)
 # plot(br_hpsh)
 ####################################################################################################
-# test automatic branch switching
-# calls with jacobian computed with finite differences
-br_hpsh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(1, par_hopf, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf)
-
-br_hpsh, = continuation(jet..., br,1, opts_po_cont, PoincareShootingProblem(2, par_hopf, prob, Rodas4(); abstol=1e-10, reltol=1e-9); normC = norminf)
-
+# test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_hpsh, = continuation(jet..., br,1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(1, par_hopf, prob, KenCarp4(), probMono, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf)
+br_psh, = continuation(jet..., br,1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(1, par_hopf, prob, KenCarp4(), probMono, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf)
 
-br_hpsh, = continuation(jet..., br,1, (@set opts_po_cont.detectBifurcation = 0), PoincareShootingProblem(2, par_hopf, prob, KenCarp4(), probMono, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf)
+
+opts_po_cont = @set opts_po_cont.detectBifurcation = 0
+for M in [1,2], linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
+	@show M, linearPO
+	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, par_hopf, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO == :autodiffMF ? :FiniteDifferencesDense : linearPO, verbosity = 0)
+
+	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, par_hopf, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO, verbosity = 0)
+end
+
+br_psh, = continuation(jet..., br,1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, par_hopf, prob, KenCarp4(), probMono, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf)
 
 # plot(br_hpsh, vars = (:step, :p))
 # plot(br_hpsh)

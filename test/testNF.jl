@@ -105,6 +105,7 @@ for α in [-1,1]
 		setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
 	# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 	bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+	show(bp2d)
 
 	BK.nf(bp2d)
 	length(bp2d)

@@ -25,7 +25,7 @@ end
 """
 	pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
 
-Create a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. The arguments are as follows
+Create a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** the periodic orbit and `T` is the period of the guess. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.

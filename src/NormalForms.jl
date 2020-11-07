@@ -628,7 +628,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbos
 	verbose && println((a = a, b = b))
 	pt.nf = (a = a, b = b)
 	pt.type = real(a) * real(b) < 0 ? :SuperCritical : :SubCritical
-	printstyled(color = :red,"--> Hopf bifurcation point is: ", pt.type, "\n")
+	verbose && printstyled(color = :red,"--> Hopf bifurcation point is: ", pt.type, "\n")
 	return pt
 end
 
@@ -651,7 +651,7 @@ Compute the Hopf normal form.
 """
 function hopfNormalForm(F, dF, d2F, d3F, br::ContResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.param_lens, Teigvec = getvectortype(br), scaleζ = norm)
 	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	println("#"^53*"\n--> Hopf Normal form computation")
+	verbose && println("#"^53*"\n--> Hopf Normal form computation")
 
 	# Newton parameters
 	options = br.contparams.newtonOptions
