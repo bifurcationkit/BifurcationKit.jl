@@ -110,15 +110,16 @@ println("--> Norm of the difference = ", resAna - resFD |> norminf)
 const FD = ForwardDiff
 const BK = BifurcationKit
 
-dTfd = BK.finiteDifferences(T, u0; δ = 1e-8)
-dT = -normal' * dϕ ./ dot(normal, F)
-@test norm(dTfd - dT, Inf) < 1e-5
-
 tΣ, solΣ = flowTS(u0, Inf64; callback = cb)
 	tΣ = tΣ[end]; solΣ = solΣ[end]
 dϕ = FD.jacobian( x -> flowTS(x, tΣ)[2][end], (u0))
 F = Fsl(Π(u0), par_sl)
 normal = normals[1]
+
+dTfd = BK.finiteDifferences(T, u0; δ = 1e-8)
+dT = -normal' * dϕ ./ dot(normal, F)
+@test norm(dTfd - dT, Inf) < 1e-5
+
 Jtmp = dϕ .- F * normal' * dϕ #./ dot(F, normal)
 dΠfd = BK.finiteDifferences(Π, u0; δ = 1e-8)
 Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
