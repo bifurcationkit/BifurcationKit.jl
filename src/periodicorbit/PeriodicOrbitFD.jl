@@ -860,6 +860,18 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDTrap(contParams.newtonOptions.eigsolver)
 	end
 
+	_finsol = get(kwargs, :finaliseSolution, nothing)
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
+		begin
+			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			true
+		end :
+		(z, tau, step, contResult; prob = prob, kwargs...) ->
+			begin
+				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+				_finsol(z, tau, step, contResult; prob = prob, kwargs...)
+			end
+
 	if linearPO in [:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace]
 		@assert length(orbitguess) == N * M + 1 "Error with size of the orbitguess"
 

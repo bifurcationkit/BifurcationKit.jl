@@ -282,6 +282,14 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams
 		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
 	end
 
+	# pass the problem to the plotting and printSolution functions
+	_plotsol = get(kwargs, :plotSolution, nothing)
+	_plotsol2 = isnothing(_plotsol) ? (x,p; k...) -> nothing : (x,p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
+
+	if :printSolution in keys(kwargs)
+		_printsol = get(kwargs, :printSolution, nothing)
+ 		kwargs = @set kwargs[:printSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
+	end
 	# perform continuation
 	branch, u, τ = continuation(probPO, orbitguess, setParam(br, pred.p), br.param_lens, _contParams; kwargs..., plotSolution = _plotsol2, updateSectionEveryStep = updateSectionEveryStep)
 

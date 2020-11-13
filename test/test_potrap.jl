@@ -49,8 +49,8 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 #
 # using BenchmarkTools
-# @btime pb($orbitguess_f, $par) 					# 13.535 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $par) 				# 7.869 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $par) 				# 13.535 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par) 			# 7.869 ms (2 allocations: 17.17 MiB)
 # @btime pb($orbitguess_f, $orbitguess_f) 	# 15.038 ms (62 allocations: 34.33 MiB)
 # @btime pbi($orbitguess_f, $orbitguess_f)  	# 7.960 ms (2 allocations: 17.17 MiB)
 # @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
