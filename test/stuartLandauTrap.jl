@@ -45,9 +45,9 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
-for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree])
+for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :FullMatrixFree, :BorderedMatrixFree])
 	@show linearPO, ind
-	_ls = ind > 5 ? lsit : lsdef
+	_ls = ind > 4 ? lsit : lsdef
 	outpo_f, _, flag = newton(poTrap,
 		orbitguess_f, par_hopf, (@set optn_po.linsolver = _ls);
 		linearPO = linearPO,
