@@ -222,7 +222,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0
 			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
-			finaliseSolution = (z, tau, step, contResult) ->
+			finaliseSolution = (z, tau, step, contResult; k...) ->
 				(Base.display(contResult.eig[end].eigenvals) ;true),
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 			# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
