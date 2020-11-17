@@ -36,6 +36,9 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 # this is useful for small ODE problems
 (l::DefaultLS)(J::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, rhs...; a₀ = 0, a₁ = 1, kwargs...) where {Tpb, Tjacpb <: AbstractMatrix, Torbitguess, Tp} = l(J.jacpb, rhs...; a₀ = 0, a₁ = 1, kwargs...)
 
+# this is for the use of MatrixBLS
+LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
+
 ####################################################################################################
 # newton wrapper
 """
