@@ -83,7 +83,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 end
 
 (hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
-isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = Tn == Nothing
+isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tn == Nothing)
 
 """
 	update!(hyp::SectionPS, normals, centers)
@@ -94,9 +94,9 @@ function update!(hyp::SectionPS, normals, centers)
 	M = hyp.M
 	@assert length(normals) == M "Wrong number of normals"
 	@assert length(centers) == M "Wrong number of centers"
-	hyp.normals .= normals
-	hyp.centers .= centers
 	for ii in 1:M
+		hyp.normals[ii] .= normals[ii]
+		hyp.centers[ii] .= centers[ii]
 		hyp.indices[ii] = argmax(abs.(normals[ii]))
 		R!(hyp.normals_bar[ii], normals[ii], hyp.indices[ii])
 		R!(hyp.centers_bar[ii], centers[ii], hyp.indices[ii])
