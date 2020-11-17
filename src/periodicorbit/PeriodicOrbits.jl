@@ -72,20 +72,17 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 function newton(prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar; linearPO = :MatrixFree, δ = 1e-8, kwargs...)
 	@assert linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
 	if linearPO == :autodiffDense
-		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
-	elseif linearPO == :autodiffMF
-		# jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
+		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
 		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J);
+	elseif linearPO == :autodiffMF
+		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
 	elseif linearPO == :FiniteDifferencesDense
 		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = 1e-8)
 	else
 		jac = (x, p) -> (dx -> prob(x, p, dx))
 	end
-
-	return newton(prob,
-			jac,
-			orbitguess, par, options; kwargs...)
+	return newton(prob, jac, orbitguess, par, options; kwargs...)
 end
 
 """
@@ -124,11 +121,7 @@ function newton(prob::AbstractShootingProblem, orbitguess::vectype, par, options
 	else
 		jac = (x, p) -> (dx -> prob(x, p, dx))
 	end
-
-	return newton(prob,
-			jac,
-			orbitguess, par,
-			options, defOp; kwargs...)
+	return newton(prob, jac, orbitguess, par, options, defOp; kwargs...)
 end
 
 ####################################################################################################

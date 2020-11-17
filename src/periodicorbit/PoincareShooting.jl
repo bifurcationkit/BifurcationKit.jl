@@ -426,7 +426,8 @@ end
 (psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function problemForBS(prob::PoincareShootingProblem, F, dF, hopfpt, ζr, centers, period)
+function problemForBS(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers, period)
+
 	# create the section
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
