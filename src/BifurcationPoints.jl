@@ -232,5 +232,6 @@ function Base.show(io::IO, bp::BifurcationPoint)
 		print(io, bp.type, " - ")
 	end
 	println(io, type(bp), " bifurcation point at p ≈ $(bp.p).")
+	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ $(2pi/bp.ω).")
 	println(io, "Normal form: ", bp.nf)
 end
