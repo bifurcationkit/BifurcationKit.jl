@@ -31,7 +31,7 @@ $(TYPEDFIELDS)
 	x::Tv = Vector{T}(undef, 0)
 
 	"Tangent along the branch at the bifurcation point"
-	tau::BorderedArray{Tv, T} = BorderedArray(x0, T(0))
+	tau::BorderedArray{Tv, T} = BorderedArray(x, T(0))
 
 	"Eigenvalue index responsible for the bifurcation (if applicable)"
 	ind_ev::Int64 = 0
