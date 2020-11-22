@@ -10,9 +10,9 @@ $(TYPEDEF)
 This struct is used to  provide the bordered linear solver based on the Bordering Method. It works
 $(TYPEDFIELDS)
 """
-@with_kw struct BorderingBLS{S <: AbstractLinearSolver, Ttol} <: AbstractBorderedLinearSolver
+@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
 	"Linear solver used for the Bordering method."
-	solver::S = DefaultLS()
+	solver::S = nothing
 	"Tolerance for checking precision"
 	tol::Ttol = 1e-12
 	"Check precision of the linear solve?"
@@ -65,13 +65,13 @@ $(TYPEDEF)
 This struct is used to  provide the bordered linear solver based on inverting the full matrix.
 $(TYPEDFIELDS)
 """
-struct MatrixBLS{S <: AbstractLinearSolver} <: AbstractBorderedLinearSolver
+struct MatrixBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
 	"Linear solver used to invert the full matrix."
 	solver::S
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixBLS() = MatrixBLS(DefaultLS())
+MatrixBLS() = MatrixBLS(nothing)
 
 # case of a scalar additional linear equation
 function (lbs::MatrixBLS)(J, dR,
@@ -133,21 +133,21 @@ $(TYPEDEF)
 This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x,p)`.
 $(TYPEDFIELDS)
 """
-struct MatrixFreeBLS{S} <: AbstractBorderedLinearSolver
+struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
 	solver::S
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixFreeBLS() = MatrixFreeBLS(DefaultLS())
+MatrixFreeBLS() = MatrixFreeBLS(nothing)
 
 extractVector(x::AbstractVector) = @view x[1:end-1]
-extractVector(x::BorderedArray) = x.u
+extractVector(x::BorderedArray)  = x.u
 
 extractParameter(x::AbstractVector) = x[end]
-extractParameter(x::BorderedArray) = x.p
+extractParameter(x::BorderedArray)  = x.p
 
 # We restrict to bordered systems where the added component is scalar
-function (lbs::MatrixFreeBLS{S})(J, 		dR,
+function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)

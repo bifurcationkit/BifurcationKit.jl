@@ -451,7 +451,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					ds::T, θ::T,
 					contparams::ContinuationPar{T, S, E},
 					dottheta::DotTheta;
-					linearbdalgo = BorderingBLS(),
+					linearbdalgo = BorderingBLS(DefaultLS()),
 					normN = norm,
 					callback = cbDefault, kwargs...) where {T, S, E, vectype}
 	# Extract parameters

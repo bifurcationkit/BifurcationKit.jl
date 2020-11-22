@@ -36,7 +36,7 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
-					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS();
+					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS(DefaultLS());
 					filename = "branch-" * string(Dates.now()),
 					tangentAlgo = SecantPred(),
 					plot = false,
@@ -455,10 +455,18 @@ Let us discuss here more about the norm and dot product. First, the option `norm
 As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disavantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`. Further tuning is performed by using `doArcLengthScaling=true` in `ContinuationPar`. This adjusts internally ``\\theta`` so that the relative contributions of ``x`` and ``p`` are balanced in the constraint ``N``.
 """
 function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar;
-					linearAlgo = BorderingBLS(), kwargs...)
-
+					linearAlgo = nothing, kwargs...)
 	# Create a bordered linear solver using the newton linear solver provided by the user
-	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+	if isnothing(linearAlgo)
+		_linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver)
+	else
+		# no linear solver has been specified
+		if isnothing(linearAlgo.solver)
+			_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+		else
+			_linearAlgo = linearAlgo
+		end
+	end
 
 	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; kwargs...)
 end
