@@ -125,8 +125,8 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 @time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-opt_new = BK.NewtonPar(verbose = true, tol = 1e-7, linsolver = L, eigsolver = Leig)
-	sol_hexa, hist, flag = @time BK.newton(
+opt_new = NewtonPar(verbose = true, tol = 1e-7, linsolver = L, eigsolver = Leig)
+	sol_hexa, hist, flag = @time newton(
 				F_shfft, J_shfft,
 				AF(sol0), par,
 				opt_new, normN = norminf)

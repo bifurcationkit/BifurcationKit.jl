@@ -32,7 +32,7 @@ optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInv
 br, = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 poTrap = PeriodicOrbitTrapProblem(
-	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z->Fsl(z,p),x)), # we put sparse to try the different options
+	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)), # we put sparse to try the different options
 	[1., 0.],
 	zeros(2),
 	20)
@@ -55,7 +55,7 @@ for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInpla
 	@test flag
 
 	br_po, = continuation(poTrap, outpo_f,
-		par_hopf, (@lens _.r),	(@set opts_po_cont.newtonOptions.linsolver = _ls), linearPO = :BorderedLU;
+		par_hopf, (@lens _.r),	(@set opts_po_cont.newtonOptions.linsolver = _ls), linearPO = linearPO;
 		verbosity = 0,	plot = false,
 		# plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
 		printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)

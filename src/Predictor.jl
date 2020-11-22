@@ -219,7 +219,6 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in algo.nb:-1:1
-		@show ii, algo.pmimax, ds
 		printstyled(color=:magenta, "--> ii = $ii
 	\n")
 		# record the current index
@@ -230,7 +229,6 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		zold, res, flag, itnewton, itlinear = corrector(it, z_old, tau, zpred, ds, θ,
 				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
 		if flag || ii == 1 # for i==1, we return the result anyway
-			@show ii, algo.nb, algo.pmimax, flag, ds
 			return zold, res, flag, itnewton, itlinear
 		end
 	end
