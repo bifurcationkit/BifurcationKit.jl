@@ -53,10 +53,10 @@ nf = bp.nf
 ####################################################################################################
 # Automatic branch switching
 br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
-# plot([br,br2], marker = :d)
+# plot(br,br2)
 
 br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
-# plot([br,br3])
+# plot(br,br3)
 ####################################################################################################
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0

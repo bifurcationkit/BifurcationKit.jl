@@ -35,11 +35,7 @@ function Fbru!(f, x, p)
 	return f
 end
 
-function Fbru(x, p)
-	f = similar(x)
-	Fbru!(f, x, p)
-	f
-end
+Fbru(x, p) = Fbru!(similar(x), x, p)
 
 function Jbru_sp(x, p)
 	@unpack α, β, D1, D2, l = p
@@ -163,11 +159,11 @@ d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
 
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
-hopfpt = BK.computeNormalForm(jet..., br, 1; verbose = true)
+hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 ####################################################################################################Continuation of Periodic Orbit
 # number of time slices
 M = 51
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2.7; phase = 0.25)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2.7; phase = 0.25)
 #
 # orbitguess_f2 = orbitguess2[1]; for ii=2:M; global orbitguess_f2 = hcat(orbitguess_f2, orbitguess2[ii]);end
 orbitguess_f2 = reduce(vcat, orbitguess2)
@@ -244,8 +240,8 @@ Precilu = @time ilu(Jpo, τ = 0.005)
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu)
 	@time ls(Jpo, rand(ls.N))
 
-opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-	outpo_f, = @time BK.newton(poTrap,
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
+	outpo_f, = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 			(@set opt_po.linsolver = ls); linearPO = :BorderedMatrixFree,
 			normN = norminf,
@@ -255,7 +251,7 @@ opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 	BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
-	br_pok, _ , _= @time BK.continuation(poTrap,
+	br_pok, = @time continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; linearPO = :BorderedMatrixFree,
 			verbosity = 2,

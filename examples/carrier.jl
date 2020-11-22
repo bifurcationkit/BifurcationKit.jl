@@ -17,10 +17,9 @@ function F_carr(x, p)
 	return f
 end
 
-function Jac_carr(x, p)
+function Jac_carr!(J, x, p)
 	@unpack ϵ, X, dx = p
 	n = length(x)
-	J = BandedMatrix{Float64}(undef, (n,n), (1,1))
 	J[band(-1)] .= ϵ^2/dx^2    									# set the diagonal band
 	J[band(1)]  .= ϵ^2/dx^2										# set the super-diagonal band
 	J[band(0)]  .= (-2ϵ^2 /dx^2) .+ 2 * (1 .- X.^2) .+ 2 .* x   # set the second super-diagonal band
@@ -30,8 +29,8 @@ function Jac_carr(x, p)
 	J[n, n-1] = 0.0
 	J
 end
-	# @time Jac_carr(sol, par_car)
-
+	@time Jac_carr(sol, par_car)
+Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
 N = 200
 X = LinRange(-1,1,N)

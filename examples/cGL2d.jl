@@ -116,8 +116,8 @@ Nx = 41*1
 
 eigls = EigArpack(1.0, :LM)
 	# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
-	opt_newton = BK.NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time BK.newton(Fcgl, Jcgl, vec(sol0), par_cgl, opt_newton, normN = norminf)
+	opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+	out, hist, flag = @time newton(Fcgl, Jcgl, vec(sol0), par_cgl, opt_newton, normN = norminf)
 ####################################################################################################
 # test for the Jacobian expression
 # sol0 = rand(2Nx*Ny)
@@ -127,7 +127,7 @@ eigls = EigArpack(1.0, :LM)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 2, nev = 5, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
 
-	br, = @time BK.continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
 using ForwardDiff
@@ -186,7 +186,7 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [
 ####################################################################################################
 # opt_po = (@set opt_po.eigsolver = eig_MF_KrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), computeEigenValues = true, nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 	@assert 1==0 "Too much memory used!"
 	br_pok2, upo , _= @time BK.continuation(
 			poTrap, orbitguess_f, (@set par_cgl.r = p), (@lens _.r),

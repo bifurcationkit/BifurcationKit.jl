@@ -32,9 +32,13 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 # jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
 
-# modification of DefaultLS linearsolver for the case of Matrix jacobian
-# this is useful for small ODE problems
-(l::DefaultLS)(J::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, rhs...; a₀ = 0, a₁ = 1, kwargs...) where {Tpb, Tjacpb <: AbstractMatrix, Torbitguess, Tp} = l(J.jacpb, rhs...; a₀ = 0, a₁ = 1, kwargs...)
+# specific linear solver to dispatch
+struct FloquetWrapperLS{T} <: AbstractLinearSolver
+	solver::T
+end
+
+(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.solver(J.jacpb, rhs; kwargs...)
+(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.solver(J.jacpb, rhs1, rhs2)
 
 # this is for the use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
@@ -154,6 +158,18 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDShooting(contParams.newtonOptions.eigsolver)
 	end
 
+	_finsol = get(kwargs, :finaliseSolution, nothing)
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
+		begin
+			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			true
+		end :
+		(z, tau, step, contResult; prob = prob, kwargs...) ->
+			begin
+				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+				_finsol(z, tau, step, contResult; prob = prob, kwargs...)
+			end
+
 	if linearPO == :autodiffDense
 		# jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -168,22 +184,13 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		jac = (x, p) -> FloquetWrapper(prob, x, p)
 	end
 
-	_finsol = get(kwargs, :finaliseSolution, nothing)
-	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
-		begin
-			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-			true
-		end :
-		(z, tau, step, contResult; prob = prob, kwargs...) ->
-			begin
-				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-				_finsol(z, tau, step, contResult; prob = prob, kwargs...)
-			end
+	# we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+	linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
 
 	branch, u, τ = continuation(
 		prob, jac,
 		orbitguess, par, lens,
-		contParams, linearAlgo;
+		(@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)), linearAlgo;
 		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
 		finaliseSolution = _finsol2,
 		kwargs...,)
@@ -201,9 +208,9 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 - `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
 """
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
-	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(contParams.newtonOptions.linsolver) : linearAlgo
-	return continuation(prob, orbitguess, par, lens, contParams, _linearAlgo; kwargs...)
+function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
+	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
+	return continuation(prob, orbitguess, par, lens, _contParams, _linearAlgo; kwargs...)
 end
 
 ####################################################################################################
