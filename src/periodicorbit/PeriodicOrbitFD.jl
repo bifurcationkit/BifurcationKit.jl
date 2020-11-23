@@ -817,7 +817,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 	options = contParams.newtonOptions
 
 	if computeEigenElements(contParams)
-		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDTrap(contParams.newtonOptions.eigsolver)
+		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
 	end
 
 	_finsol = get(kwargs, :finaliseSolution, nothing)

@@ -97,7 +97,7 @@ These are the eigenvalues of $M_M\cdots M_1$.
 
 > Unlike the case with Finite differences, the matrices $M_i$ are not sparse.
 
-A **not very precise** algorithm for computing the Floquet multipliers is provided. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations of periodic orbits. It seems to work reasonably well for the tutorials considered here. For more information, have a look at [`FloquetQaDShooting`](@ref).
+A **not very precise** algorithm for computing the Floquet multipliers is provided. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations of periodic orbits. It seems to work reasonably well for the tutorials considered here. For more information, have a look at [`FloquetQaD`](@ref).
 
 !!! note "Algorithm"
     A more precise algorithm, based on the periodic Schur decomposition will be implemented in the future.

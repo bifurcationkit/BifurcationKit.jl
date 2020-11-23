@@ -155,7 +155,7 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 	options = contParams.newtonOptions
 
 	if computeEigenElements(contParams)
-		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaDShooting(contParams.newtonOptions.eigsolver)
+		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
 	end
 
 	_finsol = get(kwargs, :finaliseSolution, nothing)
