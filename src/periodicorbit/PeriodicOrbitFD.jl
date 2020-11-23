@@ -913,7 +913,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
-function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
 end

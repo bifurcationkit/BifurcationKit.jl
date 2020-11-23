@@ -189,13 +189,14 @@ poTrapMF = PeriodicOrbitTrapProblem(
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
-opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
-	outpo_f, _, flag = @time BK.newton(poTrap,
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
+# opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.PeriodicOrbitTrapSparseBLS())
+	outpo_f, _, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 			opt_po;
 			# deflationOp,
-			linearPO = :BorderedLU,
-			# linearPO = :FullSparseInplace,
+			# linearPO = :BorderedLU,
+			linearPO = :FullSparseInplace,
 			normN = norminf,
 			callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
 			)
@@ -206,15 +207,16 @@ opt_po = BK.NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 5,
 	nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 2, dsminBisection = 1e-6, maxBisectionSteps = 15)
-	br_po, = @time BK.continuation(poTrap,
+	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15)
+	br_po, = @time continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont;
 			# linearPO = :FullLU,
-			linearPO = :BorderedLU,
+			updateSectionEveryStep = 1,
+			linearPO = :FullSparseInplace,
 			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
@@ -257,7 +259,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 			verbosity = 2,
 			plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
-			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+			# plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...)
+			normC = norminf)
 ####################################################################################################
 # automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)

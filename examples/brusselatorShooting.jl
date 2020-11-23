@@ -105,7 +105,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 # 		plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 2, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
 
 	br, = @time BK.continuation(
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -137,18 +137,22 @@ JacOde(J, x, p, t) = copyto!(J, Jbru_sp(x, p))
 
 u0 = vec(sol0) .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = l_hopf + 0.01)
+# probsundials = ODEProblem(FOde, u0, (0., 520.), par_hopf) # gives 0.68s
 
 jac_prototype = Jbru_sp(ones(sol0 |> length), @set par_bru.β = 0)
 	jac_prototype.nzval .= ones(length(jac_prototype.nzval))
 
-ff = ODEFunction(FOde, jac_prototype = JacVecOperator{Float64}(FOde, u0, par_hopf))
-probsundials = ODEProblem(FOde, u0, (0., 5200.), par_hopf; atol = 1e-10, rtol = 1e-8)
+# vf = ODEFunction(FOde; jac = (J,u,p,t) -> J .= Jbru_sp(u,p), jac_prototype = jac_prototype)
+	# probsundials = ODEProblem(vf,  u0, (0.0, 520.), par_hopf) # gives .37s
 
-# vf = ODEFunction((u,p,t)->Fbru(u,p); jac = (u,p,t) -> Jbru_sp(u,p))
-	# prob = ODEProblem(vf,  u0, (0.0, .1), par_hopf)
+using SparseDiffTools, SparseArrays, DiffEqDiffTools
+_colors = matrix_colors(jac_prototype)
+# JlgvfColorsAD(J, u, p, colors = _colors) =  SparseDiffTools.forwarddiff_color_jacobian!(J, (out, x) -> Fbru!(out,x,p), u, colorvec = colors)
+vf = ODEFunction(FOde; jac_prototype = jac_prototype, colorvec = _colors)
+probsundials = ODEProblem(vf,  u0, (0.0, 520.), par_hopf) # gives 0.22s
 
 
-# heatmap(sol[:,:], color = :viridis)
+sol = @time solve(probsundials, Rodas4P(); abstol = 1e-10, retol = 1e-8, tspan = (0., 520.), save_everystep = false)
 ####################################################################################################
 M = 10
 dM = 10
@@ -183,7 +187,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # eig = DefaultEig()
 opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true)
-opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 3e-3, detectBifurcation = 0, maxSteps = 10, ds = 0.03, dsmax = 0.03, pMax = 2.0, tolBisectionEigenvalue = 0.)
+opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionStability = 3e-3, detectBifurcation = 0, maxSteps = 40, ds = 0.03, dsmax = 0.03, pMax = 2.0, tolBisectionEigenvalue = 0.)
 
 br_po, = @time continuation(probSh,
 		outpo, par_hopf, (@lens _.l),
@@ -218,9 +222,11 @@ Mt = 4
 br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
-	opts_po_cont, ShootingProblem(Mt, par_bru, probsundials, Rodas4P());
+	opts_po_cont, ShootingProblem(Mt, par_bru, probsundials, Rodas4P(); abstol = 1e-10, retol = 1e-8);
 	ampfactor = 1., δp = 0.01,
 	verbosity = 3,	plot = true,
+	# updateSectionEveryStep = 1,
+	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	# finaliseSolution = (z, tau, step, contResult) -> (plot(z.u[1:end-1]) |> display;true),
 		# (Base.display(contResult.eig[end].eigenvals) ;true),
 	printSolution = (x, p) -> x[end],
@@ -229,22 +235,15 @@ br_po, = continuation(
 
 ####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
-using ForwardDiff
-
-function dprobHPsh(pb,x,dx)
-	ForwardDiff.derivative(t -> pb(x .+ t .* dx), 0.)
-end
-
 dM = 5
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 	centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
 probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), normals, centers; abstol = 1e-10, retol = 1e-8)
 
-hyper = probHPsh.section
 initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 	for ii=1:length(normals)
-		initpo_bar[:, ii] .= BK.R(hyper, centers[ii], ii)
+		initpo_bar[:, ii] .= BK.R(probHPsh, centers[ii], ii)
 	end
 
 P = @time BK.PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
@@ -271,10 +270,12 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
 br_po, = @time BK.continuation(
 	probHPsh,
 	outpo_psh, par_hopf, (@lens _.l),
-	opts_po_cont_floquet; verbosity = 3,
+	opts_po_cont_floquet,
+	MatrixFreeBLS(@set ls.N = ls.N+1);
+	verbosity = 3,
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label="", kwargs...),
-	# printSolution = (x, p) -> norminf(x),
+	updateSectionEveryStep = 2,
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = norminf)
