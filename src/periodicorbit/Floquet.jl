@@ -12,7 +12,25 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 	end
 end
 
+####################################################################################################
+# Computation of Floquet Coefficients for periodic orbits problems based on Finite Differences
+"""
+bla
+"""
+struct FloquetTrap <: AbstractFloquetSolver; end
 
+function (fl::FloquetTrap)(J::AbstractMatrix, nev; kwargs...)
+	# we build the monodromy matrix and compute the spectrum
+	Aγ = J[1:end-1,1:end-1]
+
+	# we extract the eigenvalues
+	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
+	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
+	logvals = log.(complex.(vals))
+	I = sortperm(logvals, by = x-> real(x), rev = true)
+	# Base.display(logvals)
+	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
+end
 ####################################################################################################
 # Computation of Floquet Coefficients for periodic orbit problems
 
