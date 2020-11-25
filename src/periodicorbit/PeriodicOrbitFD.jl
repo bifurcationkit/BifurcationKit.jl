@@ -888,7 +888,8 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		end
 
 		# create the jacobian
-		jacPO = POTrapJacobianBLS(probPO, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
+		jacPO = POTrapJacobianBLS(prob, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
+
 
 		return continuation(prob, jacPO, orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = lspo);
