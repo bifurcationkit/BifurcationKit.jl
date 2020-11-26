@@ -63,6 +63,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 		monodromy = dx -> MonodromyQaD(J, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
+	Inf in vals && @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients"
 
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))

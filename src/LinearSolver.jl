@@ -59,7 +59,7 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to  provide the backslash operator.
+This struct is used to provide the backslash operator.
 
 $(TYPEDFIELDS)
 """
