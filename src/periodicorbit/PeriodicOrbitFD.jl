@@ -772,7 +772,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 
 		# create the jacobian
 		if linearPO != :BorderedSparseInplace
-			jacPO = POTrapJacobianBLS(probPO, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
+			jacPO = POTrapJacobianBordered(probPO, zeros(N * M + 1), Aγ, zeros(N * M + 1), par)
 		else
 			jacPO = jac
 		end
