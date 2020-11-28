@@ -238,8 +238,8 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
-	verbose && println("#"^35)
-	verbose && @printf("Start of Continuation Step %d:\nParameter = %2.4e ⟶  %2.4e [guess]\n", step, state.z_old.p, state.z_pred.p)
+	verbose && print("#"^35*"\nStart of Continuation Step $step:\nParameter $(getLensParam(it.param_lens))");
+	verbose && @printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
 	verbose && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
