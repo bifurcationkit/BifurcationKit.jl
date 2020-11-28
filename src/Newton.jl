@@ -96,14 +96,13 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	f = Fhandle(x, p0)
 	d = _copy(f)
 
-	neval = 1
 	res = normN(f)
 	resHist = [res]
 	it = 0
 	itlineartot = 0
 
 	# Displaying results
-	verbose && displayIteration(it, neval, res)
+	verbose && displayIteration(it, res)
 
 	# invoke callback before algo really starts
 	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
@@ -120,11 +119,10 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 		f = Fhandle(x, p0)
 		res = normN(f)
 
-		neval += 1
 		push!(resHist, res)
 		it += 1
 
-		verbose && displayIteration(it, neval, res, itlinear)
+		verbose && displayIteration(it, res, itlinear)
 
 		compute = callback(x, f, J, res, it, itlinear, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 	end

@@ -483,7 +483,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	itlineartot = 0
 
 	# Displaying results
-	verbose && displayIteration(it, 1, res)
+	verbose && displayIteration(it, res)
 	step_ok = true
 
 	# invoke callback before algo really starts
@@ -536,7 +536,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		push!(resHist, res)
 		it += 1
 
-		verbose && displayIteration(it, 1, res, itlinear)
+		verbose && displayIteration(it, res, itlinear)
 
 		# shall we break the loop?
 		compute = callback(x, res_f, J, res, it, itlinear, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)

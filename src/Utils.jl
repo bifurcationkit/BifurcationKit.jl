@@ -1,14 +1,14 @@
 ####################################################################################################
-function displayIteration(i, funceval, residual, itlinear = 0)
-	(i == 0) && println("\n Newton Iterations \n   Iterations      Func-count      f(x)      Linear-Iterations\n")
+function displayIteration(i, residual, itlinear = 0)
+	(i == 0) && println("\n Newton Iterations      f(x)      Linear-Iterations\n")
 	if length(itlinear)==1
-		@printf("%9d %16d %14.4e %9d\n", i, funceval, residual, itlinear);
+		@printf("%13d %14.4e %13d\n", i, residual, itlinear);
 	else
-		if itlinear isa Tuple{Int64,Int64}
-			@printf("%9d %16d %14.4e (%6d, %6d)\n", i, funceval, residual, itlinear[1], itlinear[2]);
+		if itlinear isa Tuple{Int64, Int64}
+			@printf("%13d %14.4e      (%4d, %4d)\n", i, residual, itlinear[1], itlinear[2]);
 		else
 			# used for nested linear solves
-			@printf("%9d %16d %14.4e  ", i, funceval, residual); println(itlinear);
+			@printf("%13d %14.4e  ", i, residual); println(itlinear);
 		end
 	end
 end
@@ -112,7 +112,7 @@ $(SIGNATURES)
 This function implements a counter. If `everyN == 0`, it returns false. Otherwise, it returns `true` when `step` is a multiple of `everyN`
 """
 function modCounter(step, everyN)
-	if step == 0; return false; end 
+	if step == 0; return false; end
 	if everyN == 0; return false; end
 	if everyN == 1; return true; end
 	return mod(step, everyN) == 0
