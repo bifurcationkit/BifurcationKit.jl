@@ -984,8 +984,9 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 """
-function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = BorderingBLS(), updateSectionEveryStep = 1, kwargs...)
+function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
+	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 
 	@assert br.functional isa PeriodicOrbitTrapProblem
 	@assert abs(br.bifpoint[ind_bif].δ[1]) == 1
@@ -1002,7 +1003,7 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 
 	pb = br.functional
 
-	ζ_a = MonodromyQaDFD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ0))
+	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ0))
 	ζ = reduce(vcat, ζ_a)
 
 	orbitguess = copy(bifpt.x)
@@ -1031,7 +1032,7 @@ function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams:
 	# Right now, it can be quite large.
 
 	# perform continuation
-	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = linearAlgo, kwargs...)
+	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = _linearAlgo, kwargs...)
 
 	#create a branch
 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.param_lens, ζ, ζ, nothing, :nothing)
