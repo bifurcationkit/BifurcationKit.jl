@@ -29,6 +29,8 @@ end
 
 (sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
 
+isEmpty(sect::SectionSS{Tn, Tc}) where {Tn, Tc} = (Tn == Nothing) || (Tn == Nothing)
+
 # we update the field of Section, useful during continuation procedure for updating the section
 function update!(sect::SectionSS, normal, center)
 	copyto!(sect.normal, normal)
