@@ -253,7 +253,7 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M)
+poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2n	)
 
 jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -283,10 +283,10 @@ newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO 
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
 # calcul des exposants de Floquet, extract full vector
-BK.MonodromyQaDFD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
+BK.MonodromyQaD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # calcul des exposants de Floquet
-floquetES = FloquetQaDTrap(DefaultEig())
+floquetES = FloquetQaD(DefaultEig())
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)

@@ -137,7 +137,7 @@ module BifurcationKit
 	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem, SectionPS, SectionSS
 
 	# Floquet multipliers computation
-	export FloquetQaDTrap, FloquetQaDShooting
+	export FloquetQaD
 
 	# guess for periodic orbit from Hopf bifurcation point
 	export guessFromHopf

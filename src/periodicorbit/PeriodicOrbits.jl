@@ -238,6 +238,9 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 - `linearPO` specify the way the jacobian is computed.
+- all `kwargs` from [`continuation`](@ref)
+
+A modified version of `prob` is passed to `plotSolution` and `finaliseSolution`.
 
 !!! note "Linear solver"
     You have to be carefull about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.

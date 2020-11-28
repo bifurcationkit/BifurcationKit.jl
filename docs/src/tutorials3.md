@@ -151,14 +151,10 @@ hopfpt = BK.computeNormalForm(jet..., br, 1)
 and you should get
 
 ```julia
-julia> hopfpt.nf
-(a = 0.8793481836104302 + 0.5685578928001935im, b = -0.000937645904575657 + 0.0009393897255040567im)
-```
-You also have access to the criticality:
-
-```julia
-julia> hopfpt.type
-:Supercritical
+julia> hopfpt
+SuperCritical - Hopf bifurcation point at p ≈ 0.5113310149554013.
+Period of the periodic orbit ≈ 2.9367552006841753.
+Normal form: (a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)
 ```
 
 ## Continuation of Hopf points
@@ -360,7 +356,7 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Standart Shooting
-	ShootingProblem(Mt, par_bru, probsundials, Rodas4P());
+	ShootingProblem(Mt, par_bru, probsundials, Rodas4P(), parallel = true);
 	ampfactor = 1.2, δp = 0.01,
 	verbosity = 3,	plot = true,
 	printSolution = (x, p) -> x[end],
