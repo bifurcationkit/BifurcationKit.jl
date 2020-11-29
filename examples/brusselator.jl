@@ -163,7 +163,7 @@ hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 ####################################################################################################Continuation of Periodic Orbit
 # number of time slices
 M = 51
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2.7; phase = 0.25)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2*2.7; phase = 0.25)
 #
 # orbitguess_f2 = orbitguess2[1]; for ii=2:M; global orbitguess_f2 = hcat(orbitguess_f2, orbitguess2[ii]);end
 orbitguess_f2 = reduce(vcat, orbitguess2)
@@ -173,7 +173,6 @@ poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2
 
 poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
-
 
 using ForwardDiff
 d1Fbru(x, p, dx) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
@@ -207,15 +206,13 @@ opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2,
-	plotEveryStep = 5,
-	nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, precisionStability = 1e-6, nInversion = 4,
+	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15)
 	br_po, = @time continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont;
 			# linearPO = :FullLU,
-			updateSectionEveryStep = 1,
+			# updateSectionEveryStep = 1,
 			linearPO = :FullSparseInplace,
 			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
@@ -266,7 +263,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0., nInversion = 4)
+	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 3., nInversion = 4)
 
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
@@ -276,12 +273,10 @@ br_po, _ = continuation(
 	# arguments for continuation
 	opts_po_cont, probFD;
 	δp = 0.01,
-	verbosity = 3,	plot = true, linearPO = :FullLU,
-	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
+	verbosity = 3,	plot = true, linearPO = :FullSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
-	# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 
 # branches = [br_po]
@@ -296,15 +291,16 @@ br_po2, _ = BK.continuationPOTrapBPFromPO(
 	# arguments for continuation
 	opts_po_cont;
 	δp = 0.01,
-	verbosity = 3,	plot = true, linearPO = :FullLU,
-	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
-	finaliseSolution = (z, tau, step, contResult) ->
+	verbosity = 3,	plot = true, linearPO = :FullSparseInplace,
+	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> (heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...);plot!(branches,legend = :bottomright, subplot=1)),
-	# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
+	plotSolution = (x, p; kwargs...) -> (plot!(br_po,legend = :bottomright, subplot=1)),
 	normC = norminf)
 push!(branches, br_po2)
 
 plot();for _b in branches; plot!(_b; label = ""); end; title!("")
 
 plot(branches[2])
+
+
+br_po.functional
