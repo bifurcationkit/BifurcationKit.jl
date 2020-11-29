@@ -11,153 +11,15 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 		return @set eigls.which = :LM
 	end
 end
+
+
 ####################################################################################################
-# Computation of Floquet Coefficients for periodic orbits problems based on Finite Differences
-"""
-	floquet = FloquetQaDTrap(eigsolver::AbstractEigenSolver)
-
-This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems based on Finite Differences (Trapeze method), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
-- `eigsolver::AbstractEigenSolver` solver used to compute the eigenvalues.
-
-If `eigsolver isa DefaultEig`, then the monodromy matrix is formed and its eigenvalues are computed. Otherwise, a Matrix-Free version of the monodromy is used.
-
-!!! danger "Floquet multipliers computation"
-    The computation of Floquet multipliers is necessary for the detection of bifurcations of periodic orbits (which is done by analyzing the Floquet exponents obtained from the Floquet multipliers). Hence, the eigensolver `eigsolver` needs to compute the eigenvalues with largest modulus (and not with largest real part which is their default behavior). This can be done by changing the option `which = :LM` of `eigsolver`. Nevertheless, note that for most implemented eigensolvers in the current Package, the proper option is set.
-"""
-struct FloquetQaDTrap{E <: AbstractEigenSolver } <: AbstractFloquetSolver
-	eigsolver::E
-	function FloquetQaDTrap(eigls::AbstractEigenSolver)
-		eigls2 = checkFloquetOptions(eigls)
-		return new{typeof(eigls2)}(eigls2)
-	end
-end
-
-function (fl::FloquetQaDTrap)(J, nev; kwargs...)
-	if fl.eigsolver isa DefaultEig
-		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDFD(J)
-	else
-		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDFD(J, dx)
-	end
-	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
-	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
-	logvals = log.(complex.(vals))
-	I = sortperm(logvals, by = real, rev = true)
-	# Base.display(logvals)
-	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
-end
+# Computation of Floquet Coefficients for periodic orbit problems
 
 """
-Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
-"""
-function MonodromyQaDFD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
-	poPb = JacFW.pb
-	u0 = JacFW.x
-	par = JacFW.par
+	floquet = FloquetQaD(eigsolver::AbstractEigenSolver)
 
-	# extraction of various constants
-	M, N = size(poPb)
-
-	# period of the cycle
-	T = extractPeriodFDTrap(u0)
-
-	# time step
-	h =  T * getTimeStep(poPb, 1)
-	Typeh = typeof(h)
-
-	out = copy(du)
-
-	u0c = extractTimeSlices(u0, N, M)
-
-	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
-	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
-	out .= res
-
-	for ii in 2:M-1
-		h =  T * getTimeStep(poPb, ii)
-		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
-		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
-		out .= res
-	end
-
-	return out
-end
-
-function MonodromyQaDFD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
-	# extraction of various constants
-	M = poPb.M
-	N = poPb.N
-
-	# period of the cycle
-	T = extractPeriodFDTrap(u0)
-
-	# time step
-	h =  T * getTimeStep(poPb, 1)
-	Typeh = typeof(h)
-
-	out = copy(du)
-
-	u0c = extractTimeSlices(u0, N, M)
-
-	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
-	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
-	out .= res
-	out_a = [copy(out)]
-	# push!(out_a, copy(out))
-
-	for ii in 2:M-1
-		h =  T * getTimeStep(poPb, ii)
-		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
-		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
-		out .= res
-		push!(out_a, copy(out))
-	end
-	push!(out_a, copy(du))
-
-	return out_a
-end
-
-# Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
-function MonodromyQaDFD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
-
-	poPb = JacFW.pb
-	u0 = JacFW.x
-	par = JacFW.par
-
-	# extraction of various constants
-	M, N = size(poPb)
-
-	# period of the cycle
-	T = extractPeriodFDTrap(u0)
-
-	# time step
-	h =  T * getTimeStep(poPb, 1)
-
-	u0c = extractTimeSlices(u0, N, M)
-
-	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
-	temp = similar(mono)
-
-	for ii in 2:M-1
-		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
-		# also I - h/2 .* J seems to hurt (a little) the performances
-		h =  T * getTimeStep(poPb, ii)
-		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
-		mono .= temp * mono
-	end
-	return mono
-end
-####################################################################################################
-# Computation of Floquet Coefficients for periodic orbit problems based on Shooting
-"""
-	floquet = FloquetQaDShooting(eigsolver::AbstractEigenSolver)
-
-This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems based on the Shooting method, also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
+This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems (based on the Shooting method or Finite Differences (Trapeze method)), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
 - `eigsolver::AbstractEigenSolver` solver used to compute the eigenvalues.
 
 If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eigenvalues are computed. Otherwise, a Matrix-Free version of the monodromy is used.
@@ -165,22 +27,22 @@ If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eige
 !!! danger "Floquet multipliers computation"
     The computation of Floquet multipliers is necessary for the detection of bifurcations of periodic orbits (which is done by analyzing the Floquet exponents obtained from the Floquet multipliers). Hence, the eigensolver `eigsolver` needs to compute the eigenvalues with largest modulus (and not with largest real part which is their default behavior). This can be done by changing the option `which = :LM` of `eigsolver`. Nevertheless, note that for most implemented eigensolvers in the current Package, the proper option is set.
 """
-struct FloquetQaDShooting{E <: AbstractEigenSolver } <: AbstractFloquetSolver
+struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 	eigsolver::E
-	function FloquetQaDShooting(eigls::AbstractEigenSolver)
+	function FloquetQaD(eigls::AbstractEigenSolver)
 		eigls2 = checkFloquetOptions(eigls)
 		return new{typeof(eigls2)}(eigls2)
 	end
 end
 
-function (fl::FloquetQaDShooting)(J, nev; kwargs...)
+function (fl::FloquetQaD)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDShooting(J)
+		monodromy = MonodromyQaD(J)
 	else
 		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDShooting(J, dx)
+		monodromy = dx -> MonodromyQaD(J, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 
@@ -194,7 +56,7 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem based on Standard Shooting computed at the space-time guess: `x`. The dimension of `u0` is N * M + 1 and the one of `du` is N.
 """
-function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
+function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
 	sh = JacSH.pb
 	x = JacSH.x
 	p = JacSH.par
@@ -251,7 +113,7 @@ function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp
 	return Mono
 end
 
-function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
 	J = JacSH.jacpb
 	sh = JacSH.pb
 	M = getM(sh)
@@ -272,7 +134,7 @@ end
 """
 Matrix-Free expression of the Monodromy matrix for the periodic problem based on Poincaré Shooting computed at the space-time guess: `x`. The dimension of `x` is N * M and the one of `du` is N. If we denote by
 """
-function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_bar::AbstractVector) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
+function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_bar::AbstractVector) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
 	psh = JacSH.pb
 	x_bar = JacSH.x
 	p = JacSH.par
@@ -300,6 +162,111 @@ function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp
 
 end
 
-function MonodromyQaDShooting(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
+function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
 	@assert 1==0 "WIP, no done yet!"
+end
+
+"""
+Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
+"""
+function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
+	# extraction of various constants
+	M, N = size(poPb)
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+	end
+
+	return out
+end
+
+function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+	# extraction of various constants
+	M = poPb.M
+	N = poPb.N
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+	out_a = [copy(out)]
+	# push!(out_a, copy(out))
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+		push!(out_a, copy(out))
+	end
+	push!(out_a, copy(du))
+
+	return out_a
+end
+
+# Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
+function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
+	# extraction of various constants
+	M, N = size(poPb)
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
+	temp = similar(mono)
+
+	for ii in 2:M-1
+		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
+		# also I - h/2 .* J seems to hurt (a little) the performances
+		h =  T * getTimeStep(poPb, ii)
+		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
+		mono .= temp * mono
+	end
+	return mono
 end

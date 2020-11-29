@@ -53,11 +53,7 @@ Flow
 ```
 
 ```@docs
-FloquetQaDTrap
-```
-
-```@docs
-FloquetQaDShooting
+FloquetQaD
 ```
 
 ```@docs

@@ -315,7 +315,7 @@ outpo_f, hist, flag = @time newton(poTrap,
 
 ## Floquet coefficients
 
-A basic method for computing Floquet cofficients based on the eigenvalues of the monodromy operator is available (see [`FloquetQaDTrap`](@ref)). It is precise enough to locate bifurcations. Their computation is triggered like in the case of a regular call to `continuation`:
+A basic method for computing Floquet cofficients based on the eigenvalues of the monodromy operator is available (see [`FloquetQaD`](@ref)). It is precise enough to locate bifurcations. Their computation is triggered like in the case of a regular call to `continuation`:
 
 ```Julia
 opt_po = @set opt_po.eigsolver = DefaultEig()
