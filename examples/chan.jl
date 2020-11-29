@@ -52,7 +52,7 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 
 optdef = setproperties(optnewton; tol = 1e-10, maxIter = 1000)
 
-outdef1, _, _ = @time newton(
+outdef1, = @time newton(
 	F_chan, Jac_mat,
 	out .* (1 .+ 0.01*rand(n)), par,
 	optdef, deflationOp)
@@ -63,7 +63,7 @@ plot(out, label="newton")
 
 #save newly found point to look for new ones
 push!(deflationOp, outdef1)
-outdef2, _, _ = @time newton(
+outdef2, = @time newton(
 	F_chan, Jac_mat,
 	outdef1.*(1 .+ 0.01*rand(n)), par,
 	optdef, deflationOp)
@@ -98,7 +98,7 @@ outfold, _, flag = @time newton(
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 
-outfoldco, _, _ = @time continuation(
+outfoldco, = @time continuation(
 		F_chan, Jac_mat,
 		br, indfold, par, (@lens _.α), (@lens _.β), optcontfold;
 		# Jt = (x, p) -> transpose(Jac_mat(x, p)),
@@ -149,7 +149,7 @@ ls = GMRESIterativeSolvers(tol = 1e-5, N = length(sol), restart = 20, maxiter=10
 plot(brmf,color=:red)
 
 # matrix free with different tangent predictor
-brmf, _ = @time continuation(
+brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, par, (@lens _.α), (@set opts_cont_mf.newtonOptions = optnewton_mf),
@@ -158,7 +158,7 @@ brmf, _ = @time continuation(
 
 plot(brmf,color=:blue)
 
-brmf, _ = @time continuation(
+brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, par, (@lens _.α), opts_cont_mf,
@@ -168,7 +168,7 @@ brmf, _ = @time continuation(
 
 plot(brmf,color=:green)
 
-brmf, _ = @time continuation(
+brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out, par, (@lens _.α), opts_cont_mf,

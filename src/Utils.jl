@@ -1,14 +1,14 @@
 ####################################################################################################
 function displayIteration(i, residual, itlinear = 0)
-	(i == 0) && println("\n Newton Iterations      f(x)      Linear-Iterations\n")
+	(i == 0) && println("\n Newton Iterations      f(x)      Linear Iterations\n")
 	if length(itlinear)==1
-		@printf("%13d %14.4e %13d\n", i, residual, itlinear);
+		@printf("%11d %19.4e %13d\n", i, residual, itlinear);
 	else
 		if itlinear isa Tuple{Int64, Int64}
-			@printf("%13d %14.4e      (%4d, %4d)\n", i, residual, itlinear[1], itlinear[2]);
+			@printf("%11d %19.4e      (%4d, %4d)\n", i, residual, itlinear[1], itlinear[2]);
 		else
 			# used for nested linear solves
-			@printf("%13d %14.4e  ", i, residual); println(itlinear);
+			@printf("%11d %19.4e  ", i, residual); println(itlinear);
 		end
 	end
 end

@@ -191,7 +191,10 @@ opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, precisionSt
 
 br_po, = @time continuation(probSh,
 		outpo, par_hopf, (@lens _.l),
-		opts_po_cont_floquet; verbosity = 3,
+		opts_po_cont_floquet,
+		MatrixFreeBLS(@set ls.N = ls.N+1);
+		updateSectionEveryStep = 2,
+		verbosity = 3,
 		plot = true,
 		finaliseSolution = (z, tau, step, contResult; k...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
@@ -216,9 +219,9 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2, saveSolEveryStep = 2)
 
-Mt = 4
+Mt = 1
 br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
@@ -227,7 +230,7 @@ br_po, = continuation(
 	verbosity = 3,	plot = true,
 	# updateSectionEveryStep = 1,
 	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
-	# finaliseSolution = (z, tau, step, contResult) -> (plot(z.u[1:end-1]) |> display;true),
+	# finaliseSolution = (z, tau, step, contResult; k...) -> (plot(z.u[1:end-1]) |> display;true),
 		# (Base.display(contResult.eig[end].eigenvals) ;true),
 	printSolution = (x, p) -> x[end],
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; kwargs...),
@@ -235,7 +238,7 @@ br_po, = continuation(
 
 ####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
-dM = 5
+dM = 10
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 	centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
@@ -246,14 +249,13 @@ initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
 		initpo_bar[:, ii] .= BK.R(probHPsh, centers[ii], ii)
 	end
 
-P = @time BK.PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
+P = @time PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
 	scatter(real.(P.eigenvalues), imag.(P.eigenvalues))
 		plot!(1 .+ cos.(LinRange(0,2pi,100)), sin.(LinRange(0,2pi,100)))
 
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
-	outpo_psh, = @time BK.newton(
-		probHPsh,
+	outpo_psh, = @time newton(probHPsh,
 		vec(initpo_bar), par_hopf, optn;
 		normN = norminf)
 
@@ -264,7 +266,7 @@ BK.getPeriod(probHPsh, outpo_psh, par_hopf)
 
 # simplified call
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
-	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.00051, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 1, plotEveryStep = 1)
+	opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.15, ds= 0.001, pMax = 2.5, maxSteps = 500, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 1)
 	opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true, maxIter = 15)
 
 br_po, = @time BK.continuation(
@@ -289,13 +291,16 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0051, pMax = 2.5, maxSteps = 10, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 2)
 
-br_po, = continuation(
-	jet...,	br, 3,
+Mt = 2
+	br_po, = continuation(
+	jet...,	br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(2, par_bru, probsundials, Rodas4P());
-	ampfactor = 1.4, δp = 0.01,
+	opts_po_cont, PoincareShootingProblem(Mt, par_bru, probsundials, Rodas4P(); abstol = 1e-10, retol = 1e-8);
+	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
+	ampfactor = 1.0, δp = 0.01,
 	verbosity = 3,	plot = true, printPeriod = true,
-	# finaliseSolution = (z, tau, step, contResult) -> (plot(z.u[1:end-1]) |> display;true),
+	# finaliseSolution = (z, tau, step, contResult; k...) -> (plot(z.u[1:end-1]) |> display;true),
 		# (Base.display(contResult.eig[end].eigenvals) ;true)},
-	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
+	updateSectionEveryStep = 1,
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)

@@ -49,12 +49,12 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 #
 # using BenchmarkTools
-# @btime pb($orbitguess_f, $par) 				# 13.535 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $par) 			# 7.869 ms (2 allocations: 17.17 MiB)
-# @btime pb($orbitguess_f, $orbitguess_f) 	# 15.038 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $orbitguess_f)  	# 7.960 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $par); 			# 13.535 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par); 			# 7.869 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $par, $orbitguess_f) 	# 15.038 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par, $orbitguess_f)  	# 7.960 ms (2 allocations: 17.17 MiB)
 # @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
-# @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $orbitguess_f) # 10.528 ms (251 allocations: 11.69 KiB)
+# @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) # 10.528 ms (251 allocations: 11.69 KiB)
 #
 #
 # using IterativeSolvers, LinearMaps
@@ -62,15 +62,15 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # Jmap = LinearMap{Float64}(dv -> pbi(orbitguess_f, par, dv), 2n*M+1 ; ismutating = false)
 # gmres(Jmap, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap, orbitguess_f; verbose = false, maxiter = 10)
-#
+
 # Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pbi, o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 10)
 #
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f, par)
-# # @profiler BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, orbitguess_f)
+# @profiler BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, par, orbitguess_f)
 #
-# Jmap2! = LinearMap{Float64}((o, dv) -> pbi(o, orbitguess_f, dv), 2n*M+1 ; ismutating = true)
+# Jmap2! = LinearMap{Float64}((o, dv) -> pbi(o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap2!, orbitguess_f; verbose = false, maxiter = 1)
 # @time gmres(Jmap2!, orbitguess_f; verbose = false, maxiter = 10)
 #

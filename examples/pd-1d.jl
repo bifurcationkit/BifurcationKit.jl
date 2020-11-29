@@ -120,7 +120,7 @@ poTrap = PeriodicOrbitTrapProblem(
 	par_br,
 	real.(vec_hopf),
 	hopfpoint.u,
-	M)
+	M, n)
 
 poTrap(orbitguess_f, @set par_br.C = -0.9) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, N, M)
@@ -130,13 +130,13 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
 
-outpo_f, _, flag = @time BK.newton(
-		poTrap, orbitguess_f, par_br, opt_po; linearPO = :FullLU,
+outpo_f, _, flag = @time newton(
+		poTrap, orbitguess_f, par_br, opt_po; linearPO = :FullSparseInplace,
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f,2*N, M),"\n")
 	BK.plotPeriodicPOTrap(outpo_f, N, M)
 
-eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)}
+eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
 eig = DefaultEig()
 optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
@@ -187,7 +187,7 @@ BK.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 
 probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
-		[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
+		[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true)
 
 probSh(initpo, par_br_hopf)
 
@@ -196,7 +196,7 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh, _, flag = @time newton(probSh, initpo, par_br_hopf, optn;
-		callbackN = (x, f, J, res, iteration; kwargs...) -> (@show x[end];true),
+		callbackN = (x, f, J, res, iteration; kw...) -> (@show x[end];true),
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outposh[end], ", amplitude = ", BK.getAmplitude(probSh, outposh, par_br_hopf; ratio = 2),"\n")
 
@@ -205,10 +205,11 @@ plot(initpo[1:end-1], label = "Init guess")
 
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
-	br_po_sh, _ , _ = @time continuation(probSh, outposh, par_br_hopf, (@lens _.C), optcontpo;
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
+	br_po_sh, = @time continuation(probSh, outposh, par_br_hopf, (@lens _.C), optcontpo;
 		verbosity = 3,	plot = true,
-		finaliseSolution = (z, tau, step, contResult) ->
+		linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
+		finaliseSolution = (z, tau, step, contResult; kw...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
@@ -224,10 +225,10 @@ plot(br_po_sh, br, label = "")
 par_br_pd = @set par_br.C = -1.32
 f1 = DiffEqArrayOperator(par_br.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd)
+prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd; abstol=1e-14, reltol=1e-14, dt = 0.1)
 # solution close to the PD point.
 
-solpd = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+solpd = @time solve(prob_sp, ETDRK2(krylov=true))
 	# heatmap(sol.t, X, sol[1:N,:], color=:viridis, xlim=(20,280.0))
 
 plot(solpd.t, solpd[N÷2, :], xlim=(290,296.2))
@@ -243,22 +244,23 @@ ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_pd), maxiter = 50, verb
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-	outposh_pd, _, flag = @time newton(probSh, initpo, par_br_pd, optn;
-		callbackN = (x, f, J, res, iteration; kwargs...) -> (@show x[end];true),
+	outposh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd, optn;
+		callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (@show x[end];true),
 		normN = norminf)
-	flag && printstyled(color=:red, "--> T = ", outposh_pd[end], ", amplitude = ", BK.getAmplitude(probSh(@set par_br.C = -0.86), outposh_pd; ratio = 2),"\n")
+	flag && printstyled(color=:red, "--> T = ", outposh_pd[end], ", amplitude = ", BK.getAmplitude(probSh, outposh_pd, (@set par_br.C = -0.86); ratio = 2),"\n")
 
 	plot(initpo[1:end-1], label = "Init guess")
 	plot!(outposh_pd[1:end-1], label = "sol")
 
 optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1.8, maxSteps = 500, newtonOptions = (@set optn.eigsolver = eig), nev = 10, precisionStability = 1e-2, detectBifurcation = 0)
-	br_po_sh_pd, _ , _ = @time continuation(
+	br_po_sh_pd, = @time continuation(
 		probSh, outposh_pd, par_br_pd, (@lens _.C),
 		optcontpo; verbosity = 3,
 		plot = true,
-		finaliseSolution = (z, tau, step, contResult) ->
+		linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
+		finaliseSolution = (z, tau, step, contResult; k...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
-		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
+		plotSolution = (x, p; kwargs...) -> (BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...); plot!(br_po_sh; subplot=1, legend=false)),
+		printSolution = (u, p; k...) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 
 plot(br_po_sh_pd, br, label = "");title!("")

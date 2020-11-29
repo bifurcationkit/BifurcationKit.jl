@@ -126,7 +126,6 @@ eigls = EigArpack(1.0, :LM)
 # norm(J0 - J1, Inf)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
-
 	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
@@ -151,12 +150,10 @@ r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_n
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = PeriodicOrbitTrapProblem(Fcgl, Jcgl, real.(vec_hopf), hopfpt.u, M)
+poTrap = PeriodicOrbitTrapProblem(Fcgl, Jcgl, real.(vec_hopf), hopfpt.u, M, 2n)
 
-ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMF = PeriodicOrbitTrapProblem(
-	Fcgl,	(x, p) ->  (dx -> d1Fcgl(x, p, dx)),
-	real.(vec_hopf), hopfpt.u, M, ls0)
+ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+poTrapMF = setproperties(poTrap; J = (x, p) ->  (dx -> d1Fcgl(x, p, dx)), linsolver = ls0)
 
 poTrap(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
@@ -197,15 +194,17 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
+
 Precilu = @time ilu(Jpo, τ = 0.005) # 2 sec
 # P = @time lu(Jpo) # 97 sec
+
 # @time Jpo \ rand(ls.N) # 97 sec
 
 ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 # ls = GMRESKrylovKit(verbose = 0, Pl = Precilu, rtol = 1e-3)
-	ls(Jpo, rand(size(Jpo,1)))
+	# @time ls(Jpo, rand(size(Jpo,1)))
 
 opt_po = @set opt_newton.verbose = true
 	outpo_f, _, flag = @time newton(poTrapMF,
@@ -239,12 +238,12 @@ br_po, _ = continuation(
 	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont, poTrapMF;
-	ampfactor = 3, linearPO = :FullMatrixFree,
+	ampfactor = 3., linearPO = :FullMatrixFree,
 	verbosity = 3,	plot = true,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
-	finaliseSolution = (z, tau, step, contResult) ->
+	finaliseSolution = (z, tau, step, contResult; k...) ->
 	(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
@@ -394,10 +393,12 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 	Fcgl!,
 	dFcgl!,
 	real.(vec_hopf), hopfpt.u,
-	M, ls0; isinplace = true)
+	M, 2n, ls0; isinplace = true)
 
 
-# @time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
+@time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
+
+
 
 outpo_f, _, flag = @time newton(poTrapMFi,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls); normN = norminf, linearPO = :FullMatrixFree)
