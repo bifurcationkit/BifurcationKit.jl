@@ -148,6 +148,8 @@ end
 
 PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
 
+PeriodicOrbitTrapProblem(F, J, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(x::AbstractVector) = x[end]
 @inline extractPeriodFDTrap(x::BorderedArray)  = x.T
