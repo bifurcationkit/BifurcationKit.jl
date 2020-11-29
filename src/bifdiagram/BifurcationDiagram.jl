@@ -122,39 +122,3 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 	end
 	return node
 end
-
-
-####################################################################################################
-# plot recipes for the bifurcation diagram
-
-@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
-	for b in bd
-		@series begin
-			level --> level
-			code --> code
-			b
-		end
-	end
-end
-
-@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
-	if ~hasbranch(bd); return; end
-	_bd = getBranch(bd, code)
-	@series begin
-		level --> level
-		code --> ()
-		_bd.child
-	end
-	# !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
-	if level[1] <= _bd.level <= level[2]
-		@series begin
-			_bd.γ
-		end
-	end
-end
-
-# this might well be type piracy
-# TODO try to remove it
-@recipe function f(bd::Nothing)
-	nothing
-end
