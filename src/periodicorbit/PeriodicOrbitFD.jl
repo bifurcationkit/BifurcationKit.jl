@@ -629,7 +629,7 @@ end
 	Jc::Tjc	= lu(spdiagm(0 => ones(1)))	    # lu factorisation of the cyclic matrix
 	is_matrix_free::Bool = false	    	# whether we consider a sparse matrix representation or a Matrix Free one
 	prob::Tpb = nothing						# PO functional, used when is_matrix_free = true
-	par::Tpar = nothing						# PO functional, used when is_matrix_free = true
+	par::Tpar = nothing						# parameters,    used when is_matrix_free = true
 end
 
 ismatrixfree(A::AγOperator) = A.is_matrix_free
@@ -673,17 +673,13 @@ end
 
 ####################################################################################################
 # The following structure encodes the jacobian of a PeriodicOrbitTrapProblem which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuationPOTrap
-@with_kw mutable struct POTrapJacobianBordered{T∂, Tag <: AγOperator}
+@with_kw struct POTrapJacobianBordered{T∂, Tag <: AγOperator}
 	∂TGpo::T∂	   = nothing			# derivative of the PO functional G wrt T
 	Aγ::Tag = AγOperator()		# Aγ Operator involved in the Jacobian of the PO functional
 end
 
 # this function is called whenever the jacobian of G has to be updated
 function (J::POTrapJacobianBordered)(orbitguess0::AbstractVector, par; δ = 1e-9)
-	# u0 must be an orbit guess
-	# @views J.orbitguess0 .= orbitguess0[1:length(J.orbitguess0)]
-	# J.par = par
-
 	# we compute the derivative of the problem wrt the period TODO: remove this or improve!!
 	T = extractPeriodFDTrap(orbitguess0)
 	# TODO REMOVE CE vcat!
@@ -698,7 +694,7 @@ end
 
 ####################################################################################################
 # linear solver for the PO functional, akin to a bordered linear solver
-@with_kw mutable struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
+@with_kw struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
 	linsolverbls::Tl = BorderingBLS(AγLinearSolver())	# linear solver
 end
 
