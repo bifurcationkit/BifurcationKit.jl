@@ -169,7 +169,7 @@ l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_
 orbitguess_f2 = reduce(vcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M)
+poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2n)
 
 poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
@@ -278,9 +278,9 @@ br_po, _ = continuation(
 	δp = 0.01,
 	verbosity = 3,	plot = true, linearPO = :FullLU,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
-	finaliseSolution = (z, tau, step, contResult) ->
+	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
+	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
 	# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
 	normC = norminf)
 

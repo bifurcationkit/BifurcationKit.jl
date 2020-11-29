@@ -133,10 +133,20 @@ function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union
 	_length = ϕ isa AbstractVector ? length(ϕ) : 0
 	M = m isa Number ? m : length(m) + 1
 
-	return PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	return PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
 end
 
 PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+
+function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
+	M = m isa Number ? m : length(m) + 1
+	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = zeros(N*M), xπ = zeros(N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	prob.xπ[1:length(xπ)] .= xπ
+	prob.ϕ[1:length(ϕ)] .= ϕ
+	return prob
+end
+
+PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
 
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(x::AbstractVector) = x[end]
@@ -201,9 +211,9 @@ function POTrapFunctional!(pb::AbstractPOTrapProblem, out, u0, par)
 
 	# this is for CuArrays.jl to work in the mode allowscalar(false)
 	if onGpu(pb)
-		return @views vcat(out[1:end-1], dot(u0c[:, 1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
+		return @views vcat(out[1:end-1], dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
 	else
-		out[end] = @views dot(u0c[:, 1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
+		out[end] = @views dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
 		return out
 	end
 end
@@ -243,9 +253,9 @@ function POTrapFunctionalJac!(pb::AbstractPOTrapProblem, out, u0, par, du)
 
 	# this is for CuArrays.jl to work in the mode allowscalar(false)
 	if onGpu(pb)
-		return @views vcat(out[1:end-1], dot(duc[:, 1], pb.ϕ))
+		return @views vcat(out[1:end-1], dot(du[1:end-1], pb.ϕ))
 	else
-		out[end] = @views dot(duc[:, 1], pb.ϕ)
+		out[end] = @views dot(du[1:end-1], pb.ϕ)
 		return out
 	end
 end
@@ -591,11 +601,19 @@ function getTrajectory(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p)
 end
 
 # this function updates the section during the continuation run
-@views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par)
-	_, N = size(prob)
-	prob.xπ .= x[1:N]
-	prob.ϕ .= prob.F(x[1:N], par)
-	prob.ϕ ./= norm(prob.ϕ)
+@views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
+	M, N = size(prob)
+	xc = extractTimeSlices(prob, x)
+	T = extractPeriodFDTrap(x)
+
+	# update the reference
+	prob.xπ .= x[1:end-1]
+
+	# update the normals
+	for ii=0:M-1
+		ii2 = (ii+1)<= M ? ii+1 : ii+1-M
+		prob.ϕ[ii*N+1:ii*N+N] .= prob.F(xc[:, ii2], par) ./ M
+	end
 	return true
 end
 ####################################################################################################
@@ -687,7 +705,7 @@ function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
 
 	# TODO REMOVE THIS HACK
 	ϕ = zeros(length(rhs)-1)
-	ϕ[1:N] .= J.Aγ.prob.ϕ
+	ϕ[1:length(J.Aγ.prob.ϕ)] .= J.Aγ.prob.ϕ
 
 	# we solve the bordered linear system as follows
 	dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[1:end-1],
@@ -922,12 +940,23 @@ end
 ####################################################################################################
 # functions needed Branch switching from Hopf bifurcation point
 function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::AbstractVector, orbitguess_a, period)
+	M = length(orbitguess_a)
+	N = length(ζr)
+
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
 	# update the problem
-	probPO = setproperties(prob, N = length(ζr), F = F, J = dF, ϕ = copy(ζr), xπ = copy(hopfpt.x0))
+	probPO = setproperties(prob, N = N, F = F, J = dF, ϕ = zeros(N*M), xπ = zeros(N*M))
+	# updateSection!(probPO, orbitguess, par)
+
+	# probPO.ϕ .= 0
+	probPO.ϕ[1:N] .= ζr
+	# probPO.xπ .= 0
+	probPO.xπ[1:N] .= hopfpt.x0
+
+
 	return probPO, orbitguess
 end
 

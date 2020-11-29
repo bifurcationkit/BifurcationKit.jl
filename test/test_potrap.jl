@@ -10,8 +10,8 @@ orbitguess_f = rand(2n*M+1)	# 17.166MiB
 pb = PeriodicOrbitTrapProblem(
 			(x, p) -> x.^2,
 			(x, p) -> (dx -> 2 .* dx),
-			rand(2n),
-			rand(2n),
+			rand(2n*M),
+			rand(2n*M),
 			M)
 
 pbg = PeriodicOrbitTrapProblem(
@@ -86,39 +86,36 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 ####################################################################################################
 # test whether we did not make any mistake in the improved version of the PO functional
 function _functional(poPb, u0, p)
-	M = poPb.M
-	N = poPb.N
+	M, N = size(poPb)
 	T = u0[end]
 	h = T / M
 
-	u0c = reshape(u0[1:end-1], N, M)
+	u0c = BK.extractTimeSlices(poPb, u0)
 	outc = similar(u0c)
 	outc[:, 1] .= (u0c[:, 1] .- u0c[:, M-1]) .- h/2 .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
 
 	for ii = 2:M-1
 		outc[:, ii] .= (u0c[:, ii] .- u0c[:, ii-1]) .- h/2 .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
-
 	end
 
 	# closure condition ensuring a periodic orbit
 	outc[:, M] .= u0c[:, M] .- u0c[:, 1]
 
 	return vcat(vec(outc),
-			dot(u0c[:, 1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
+			dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
 end
 
 function _dfunctional(poPb, u0, p, du)
 	# jacobian of the functional
 
-	M = poPb.M
-	N = poPb.N
+	M, N = size(poPb)
 	T = u0[end]
 	dT = du[end]
 	h = T / M
 	dh = dT / M
 
-	u0c = reshape(u0[1:end-1], N, M)
-	duc = reshape(du[1:end-1], N, M)
+	u0c = BK.extractTimeSlices(poPb, u0)
+	duc = BK.extractTimeSlices(poPb, du)
 	outc = similar(u0c)
 
 	outc[:, 1] .= (duc[:, 1] .- duc[:, M-1]) .- h/2 .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))
@@ -136,7 +133,7 @@ function _dfunctional(poPb, u0, p, du)
 	outc[:, M] .= duc[:, M] .- duc[:, 1]
 
 	return vcat(vec(outc),
-			dot(duc[:, 1], poPb.ϕ)) # this is the phase condition
+			dot(du[1:end-1], poPb.ϕ)) # this is the phase condition
 
 end
 
@@ -156,8 +153,8 @@ n = 50
 pbsp = PeriodicOrbitTrapProblem(
 			(x, p) -> cos.(x),
 			(x, p) -> spdiagm(0 => -sin.(x)),
-			rand(2n),
-			rand(2n),
+			rand(2n*10),
+			rand(2n*10),
 			10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
@@ -172,7 +169,7 @@ Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
 
 # we update the section
-BK.updateSection!(pbsp, rand(2n), par)
+BK.updateSection!(pbsp, rand(2n*10+1), par)
 Jfd2 = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
 Jan2 = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @test Jan2 != Jan
@@ -188,8 +185,8 @@ n = 1000
 pbsp = PeriodicOrbitTrapProblem(
 			(x, p) -> x.^2,
 			(x, p) -> spdiagm(0 => 2 .* x),
-			rand(2n),
-			rand(2n),
+			rand(2n*M),
+			rand(2n*M),
 			M)
 
 sol0 = rand(2n)
@@ -200,12 +197,13 @@ pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
 # test of the version with inhomogenous time discretisation
+M = 10
 pbsp = PeriodicOrbitTrapProblem(
 			(x, p) -> cos.(x),
 			(x, p) -> spdiagm(0 => -sin.(x)),
-			rand(2n),
-			rand(2n),
-			10)
+			rand(2n*M),
+			rand(2n*M),
+			M)
 
 pbspti = PeriodicOrbitTrapProblem(
 			(x, p) -> cos.(x),
