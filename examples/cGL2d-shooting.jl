@@ -41,10 +41,7 @@ function NL!(f, u, p, t = 0.)
 	return f
 end
 
-function NL(u, p)
-	out = similar(u)
-	NL!(out, u, p)
-end
+NL(u, p) = NL!(similar(u), u, p)
 
 function Fcgl!(f, u, p, t = 0.)
 	mul!(f, p.Δ, u)
@@ -108,7 +105,7 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
 
-	br, u1 = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 
 plot(br)
 ####################################################################################################
@@ -116,7 +113,7 @@ plot(br)
 f1 = DiffEqArrayOperator(par_cgl.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; atol = 1e-14, rtol = 1e-14, dt = 0.1)
-prob = ODEProblem(Fcgl, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2)#; jac = Jbr, jac_prototype = Jbr(sol0_f, par_cgl))
+prob = ODEProblem(Fcgl, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
 ####################################################################################################
 # sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
 sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
@@ -144,12 +141,10 @@ probSh = ShootingProblem(
 initpo = vcat(sol(116.), 4.9) |> vec
 	probSh(initpo, @set par_cgl.r = 1.2) |> norminf
 
-ls = GMRESIterativeSolvers(tol = 1e-4, N = 2Nx * Ny + 1, maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(tol = 1e-4, N = 2n + 1, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
-outpo, = @time newton(
-		probSh, initpo, (@set par_cgl.r = 1.2), optn; normN = norminf)
+outpo, = @time newton(probSh, initpo, (@set par_cgl.r = 1.2), optn; normN = norminf)
 
-outpo[end]
 heatmap(reshape(outpo[1:Nx*Ny], Nx, Ny), color = :viridis)
 
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
@@ -181,15 +176,16 @@ ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
 
+Mt = 1 # number of time sections
 br_po, = continuation(
 	jet...,	br, 2,
 	# arguments for continuation
 	opts_po_cont,
 	# probSh;
-	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
+	ShootingProblem(Mt, par_cgl, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
-	linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
+	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	printSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),

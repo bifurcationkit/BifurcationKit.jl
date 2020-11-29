@@ -147,19 +147,15 @@ d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 # we group the differentials together
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
-hopfpt = BK.computeNormalForm(jet..., br, 1)
+hopfpt = computeNormalForm(jet..., br, 1)
 ```
 and you should get
 
 ```julia
-julia> hopfpt.nf
-(a = 0.8793481836104302 + 0.5685578928001935im, b = -0.000937645904575657 + 0.0009393897255040567im)
-```
-You also have access to the criticality:
-
-```julia
-julia> hopfpt.type
-:Supercritical
+julia> hopfpt
+SuperCritical - Hopf bifurcation point at p ≈ 0.512353005225085.
+Period of the periodic orbit ≈ 2.9370202332411925.
+Normal form: (a = 0.8770732861140638 + 0.5671547647542317im, b = -0.0009380187660555578 + 0.0009391565464102912im)
 ```
 
 ## Continuation of Hopf points
@@ -195,6 +191,9 @@ which gives using `plot(br_hopf, xlabel="beta", ylabel = "l")`
 
 ![](bru-hopf-cont.png)
 
+!!! tip "Performance"
+    You can really speed this up by passing the second differential. In this case, we have `d2Fbru` above from `ForwardDiff` but it does not like `Complex` arguments. You can then pass the following argument which circumvents the problem of using `ForwardDiff`: `d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2)`
+
 ## Continuation of periodic orbits (Finite differences)
 
 Here, we perform continuation of periodic orbits branching from the Hopf bifurcation points.We need an educated guess for the periodic orbit which is given by `guessFromHopf`:
@@ -219,7 +218,7 @@ The second remark concerns the phase `0.25` written above. To account for the ad
 
 $$< u(0) - u_{hopf}, \phi> = 0$$
 
-where `u_{hopf}` is the equilibrium at the Hopf bifurcation and $\phi$ is `real.(vec_hopf)` where `vec_hopf` is the eigenvector. This is akin to a Poincaré section.
+where `u_{hopf}` is the equilibrium at the Hopf bifurcation and $\phi$ is `real.(vec_hopf)` where `vec_hopf` is the eigenvector. This is akin to a Poincaré section. We do not put any constraint on $u(t)$ albeit this is possible (see [Periodic orbits based on finite differences](@ref).
 
 The phase of the periodic orbit is set so that the above constraint is satisfied. We shall now use Newton iterations to find a periodic orbit.
 
@@ -231,7 +230,7 @@ poTrap = PeriodicOrbitTrapProblem(
 	Jbru_sp, 				# pass the jacobian of the vector field
 	real.(vec_hopf),		# used to set ϕ, see the phase constraint
 	hopfpt.u,           # used to set uhopf, see the phase constraint
-	M)			          # number of time slices
+	M, 2n)			          # number of time slices
 ```
 
 To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)` for the parameter `par`. 
@@ -242,8 +241,10 @@ To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)`
 For convenience, we provide a simplified newton / continuation methods for periodic orbits. One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
 
 ```julia
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, normN = norminf,
+# we use the linear solver LSFromBLS to speed up the computations 
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
+	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), 		opt_po, normN = norminf,
+		linearPO = :FullSparseInplace,
 		callback = (x, f, J, res, itlin, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true))
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 # plot of the periodic orbit
@@ -253,26 +254,24 @@ BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 and obtain
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
+Newton Iterations      f(x)      Linear Iterations
 
-        0                1     1.5220e-03         0
---> amplitude = 0.2218979834134469
-        1                2     2.2683e-03         2
---> amplitude = 0.45718675563905475
-        2                3     2.5228e-04         2
---> amplitude = 0.3894818781702887
-        3                4     4.1762e-05         2
---> amplitude = 0.35703530908569103
-        4                5     1.1093e-06         2
---> amplitude = 0.35161438379634213
-        5                6     8.4754e-10         2
---> amplitude = 0.35146265668933174
-        6                7     8.0280e-14         2
---> amplitude = 0.3514625387168946
-
-  8.223328 seconds (886.68 k allocations: 8.825 GiB, 19.14% gc time)
---> T = 3.0094049008917816, amplitude = 0.35305974130245743
+          0          1.5184e-03             0
+--> amplitude = 0.22182446481949203
+          1          3.2748e-03             2
+--> amplitude = 0.5042141710317618
+          2          4.4409e-04             2
+--> amplitude = 0.41320367911246847
+          3          8.5523e-05             2
+--> amplitude = 0.36741372418160223
+          4          4.9208e-06             2
+--> amplitude = 0.3560261988596807
+          5          1.6632e-08             2
+--> amplitude = 0.35535508808242433
+          6          2.4921e-13             2
+--> amplitude = 0.3553527952167588
+--> amplitude = 0.3553527952167588
+  4.384568 seconds (868.10 k allocations: 2.456 GiB, 10.67% gc time)
 ```
 
 and
@@ -289,6 +288,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01,
 br_po, = @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont;
+	linearPO = :FullSparseInplace,
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), 
 	normC = norminf)
@@ -309,8 +309,8 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use 
 
 ```Julia
-outpo_f, hist, flag = @time newton(poTrap,
-			orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linearPO = :BorderedLU, normN = norminf)
+	outpo_f, hist, flag = @time newton(poTrap,
+				orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linearPO = :FullSparseInplace, normN = norminf)
 ```
 
 ## Floquet coefficients
@@ -323,6 +323,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds= -0.01, pMax = 3.
 br_po, = @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont; verbosity = 3, plot = true,
+	linearPO = :FullSparseInplace,
 	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
@@ -402,9 +403,9 @@ M = 10
 # index of the Hopf point in the branch br
 ind_hopf = 1
 
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, 
-	opts_br_eq.newtonOptions.eigsolver, M, 22*0.05)
-
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf,
+	opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
+#
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ```
@@ -413,17 +414,16 @@ Let us now initiate the Standard Shooting method. To this aim, we need to provid
 
 ```julia
 dM = 3
-orbitsection = reduce(vcat, orbitguess2[1:dM:M])
-# M_sh = size(orbitsection, 2)
+orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 # the last component is an estimate of the period of the cycle.
 initpo = vcat(vec(orbitsection), 3.0)
 ```
 
-Finally, we need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper:
+Finally, we need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper. For performance reasons, we rely on `SparseDiffTools `
 
 ```julia
-using DifferentialEquations, DiffEqOperators
+using DifferentialEquations, DiffEqOperators, SparseDiffTools, SparseArrays, DiffEqDiffTools
 
 FOde(f, x, p, t) = Fbru!(f, x, p)
 
@@ -432,23 +432,29 @@ u0 = sol0 .+ 0.01 .* rand(2n)
 # parameter close to the Hopf bifurcation point
 par_hopf = (@set par_bru.l = l_hopf + 0.01)
 
-# this is the ODE time stepper when used with `solve`
-probsundials = ODEProblem(FOde, u0, (0., 1000.), par_hopf)
+jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
+jac_prototype.nzval .= ones(length(jac_prototype.nzval))
+_colors = matrix_colors(jac_prototype)
+vf = ODEFunction(FOde; jac_prototype = jac_prototype, colorvec = _colors)
+probsundials = ODEProblem(vf,  sol0, (0.0, 520.), par_bru)
 ```
 
-We create the problem:
+We create the parallel standard shooting problem:
 
 ```julia
 # this encodes the functional for the Shooting problem
 probSh = ShootingProblem(
 	# pass the vector field and parameter (to be passed to the vector field)
-	Fbru, par_bru, 
+	Fbru, par_hopf, 
 	
 	# we pass the ODEProblem encoding the flow and the time stepper
 	probsundials, Rodas4P(),
 	
 	# this is for the phase condition, you can pass your own section as well
-	[orbitguess_f2[:,ii] for ii=1:dM:M]; 
+	[orbitguess_f2[:,ii] for ii=1:dM:M];
+	
+	# enable threading
+	parallel = true,
 	
 	# these are options passed to the ODE time stepper
 	atol = 1e-10, rtol = 1e-8)
@@ -469,18 +475,30 @@ plot!(outpo[1:end-1], label = "sol")
 which gives (note that we did not have a really nice guess...)
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
+ Newton Iterations      f(x)      Linear Iterations
 
-        0                1     1.2983e-01         0
-        1                2     3.2046e-01        49
-        2                3     5.4818e-02        49
-        3                4     1.6409e-02        49
-        4                5     8.1653e-03        49
-        5                6     3.9391e-04        49
-        6                7     2.2715e-07        49
-        7                8     8.7713e-11        53
- 26.499964 seconds (33.54 M allocations: 4.027 GiB, 3.38% gc time)
+          0          1.9613e-01             0
+          1          5.6114e-02            45
+          2          1.0101e-01            49
+          3          3.9835e-03            48
+          4          8.8083e-03            49
+          5          3.0397e-02            48
+          6          7.3855e-03            48
+          7          7.1680e-03            49
+          8          3.4199e+00            51
+          9          5.9940e+00            33
+         10          1.5735e+00            36
+         11          3.5452e-01            37
+         12          4.8096e-01            49
+         13          3.0777e-02            46
+         14          1.8156e-02            48
+         15          1.0454e-02            48
+         16          7.2261e-03            49
+         17          2.0891e-03            48
+         18          1.1960e-04            48
+         19          3.1224e-08            48
+         20          6.8543e-11            49
+ 47.032359 seconds (81.51 M allocations: 19.211 GiB, 4.79% gc time)
 ```
 
 and
@@ -526,6 +544,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5
 
 br_po, = @time continuation(probSh,	outpo, par_hopf, (@lens _.l),
 	opts_po_cont; verbosity = 2,
+	# specific bordered linear solver
+	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 	printSolution = (u, p) -> u[end], normC = norminf)
@@ -561,6 +581,9 @@ probHPsh = PoincareShootingProblem(
 	# parameters for the Poincaré sections
 	normals, centers; 
 	
+	# enable threading
+	parallel = true,
+	
 	# Parameters passed to the ODE solver
 	atol = 1e-10, rtol = 1e-8)
 ```
@@ -568,16 +591,9 @@ probHPsh = PoincareShootingProblem(
 Let us now compute an initial guess for the periodic orbit, it must live in the hyperplanes $\Sigma_i$. Fortunately, we provide projections on these hyperplanes.
 
 ```julia
-hyper = probHPsh.section
-
-# variable to hold the initial guess
-initpo_bar = zeros(size(orbitguess_f2,1)-1, length(normals))
-
 # projection of the initial guess on the hyperplanes. We assume that the centers[ii]
 # form the periodic orbit initial guess.
-for ii=1:length(normals)
-	initpo_bar[:, ii] .= BK.R(hyper, centers[ii], ii)
-end
+initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 ```
 
 We can now call `continuation` to get the first branch.
@@ -601,6 +617,7 @@ opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions =
 br_po, = @time BK.continuation(probHPsh,
 	vec(initpo_bar), par_hopf, (@lens _.l),
 	opts_po_cont_floquet; verbosity = 3,
+	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label="", kwargs...),
 	normC = norminf)		

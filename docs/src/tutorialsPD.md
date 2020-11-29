@@ -155,6 +155,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -
 	nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
 br_po_sh, = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
 	plot = true,
+	linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
 	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 ```

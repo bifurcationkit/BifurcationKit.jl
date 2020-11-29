@@ -5,7 +5,7 @@ Pages = ["tutorialsODE.md"]
 Depth = 3
 ```
 
-We present an example of the use of the package in the case of ODE. Although `BifurcationKit.jl` is not geared toward them, we provide some specific methods which allow to study the bifurcations of ODE in a relatively efficient way.
+We present an example of the use of the package in the case of ODE. Although `BifurcationKit.jl` is not geared towards them, we provide some specific methods which allow to study the bifurcations of ODE in a relatively efficient way.
 
 The following model is taken from [^Cortes]:
 
@@ -16,7 +16,7 @@ $$\left\{\begin{array}{l}
 \end{array}\right.$$
 
 
-The model is interesting because the branch of periodic solutions converges to an homoclinic orbit which is challenging to compute with our methods. We provide three different ways to compute this periodic orbits and highlight there pro / cons.
+The model is interesting because the branch of periodic solutions converges to an homoclinic orbit which is challenging to compute with our methods. We provide three different ways to compute this periodic orbits and highlight their pro / cons.
 
 It is easy to encode the ODE as follows
 
@@ -62,7 +62,7 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 z0 = [0.238616, 0.982747, 0.367876 ]
 ```
 
-We can compute the branch of equilibria 
+We first compute the branch of equilibria 
 
 ```julia
 # continuation options
@@ -100,7 +100,7 @@ Fold points:
 
 ## Branch of periodic orbits with finite differences
 
-We can (for example) compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite difference to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
+We then compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite differences to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
 
 ```julia
 # newton parameters
@@ -117,13 +117,15 @@ Mt = 200 # number of time sections
 	br, 4, opts_po_cont,
 	# we want to use the Trapeze method to locate PO
 	PeriodicOrbitTrapProblem(M = Mt);
-	# this linear solver is specific to ODEs
+	# this jacobian is specific to ODEs
 	# it is computed using AD of the flow and
 	# updated inplace
 	linearPO = :Dense,
+	# regular continuation options
 	verbosity = 2,	plot = true,
 	printSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	plotSolution = (x, p; k...) -> begin
+		# the problem prob is passed back in p:
 		xtt = BK.getTrajectory(p.prob, x, p.p)
 		plot!(xtt.t, xtt.u[1,:]; label = "E", k...)
 		plot!(xtt.t, xtt.u[2,:]; label = "x", k...)
@@ -142,7 +144,7 @@ We plot the maximum (resp. minimum) of the limit cycle. We can see that the min 
 
 ## Periodic orbits with Parallel Standard Shooting
 
-We use a different method to compute periodic orbits: we rely on a fixed points of the flow. To compute the flow, we rely on `DifferentialEquations.jl`. This way of computing should be more precise than the previous one. We use a particular instance called multiple shooting which is computed in parallel. This is an additional advantage compared to the previous method.
+We use a different method to compute periodic orbits: we rely on a fixed point of the flow. To compute the flow, we use `DifferentialEquations.jl`. This way of computing periodic orbits should be more precise than the previous one. We use a particular instance called multiple shooting which is computed in parallel. This is an additional advantage compared to the previous method.
 
 ```julia
 using DifferentialEquations
@@ -167,6 +169,7 @@ br_posh, = @time continuation(jet...,
 	linearPO = :autodiffDense,
 	# we update the section along the branches
 	updateSectionEveryStep = 2,
+	# regular continuation parameters
 	verbosity = 2,	plot = true,
 	printSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
 	plotSolution = (x, p; k...) ->

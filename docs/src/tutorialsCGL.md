@@ -125,7 +125,7 @@ eigls = EigArpack(1.0, :LM) # shift = 1.0
 opt_newton = NewtonPar(tol = 1e-10, verbose = true, eigsolver = eigls)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2., detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 1060)
 
-br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br, = continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ```
 
 which gives
@@ -155,15 +155,16 @@ d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
 d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 
-hopfpt = BK.computeNormalForm(jet..., br, 1)
+hopfpt = computeNormalForm(jet..., br, 1)
 ```
 
 We can look at the coefficients of the normal form
 
 ```julia
-julia> hopfpt.nf
+julia> hopfpt
 SubCritical - Hopf bifurcation point at p ≈ 1.1477761028276166.
-Normal form : (a = 0.9999993820432533 - 8.207477617340401e-9im, b = 0.004870129870129869 + 0.0004870129870129865im)
+Period of the periodic orbit ≈ 6.283185307179584.
+Normal form: (a = 0.9999993843742166 + 7.024438596095504e-9im, b = 0.004870129870129872 + 0.00048701298701298696im)
 ```
 
 So the Hopf branch is subcritical.
@@ -202,7 +203,9 @@ poTrap = PeriodicOrbitTrapProblem(
 	real.(eigvec),
 	hopfpt.u,
 # number of time slices	
-	M)
+	M,
+# space dimension	
+	2n)
 ```
 
 We can use this (family) problem `poTrap` with `newton` on our periodic orbit guess to find a periodic orbit. Hence, one can be tempted to use
@@ -254,18 +257,16 @@ BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 which gives 
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
+  Newton Iterations      f(x)      Linear Iterations
 
-        0                1     6.5412e-03         0
-        1                2     1.4399e-03         8
-        2                3     3.6404e-04         9
-        3                4     6.3013e-05        10
-        4                5     4.3207e-06        11
-        5                6     3.5334e-08        12
-        6                7     1.0874e-10        13
-        7                8     4.4353e-14        15
-  2.021483 seconds (136.39 k allocations: 1.329 GiB, 8.33% gc time)
+          0          6.5444e-03             0
+          1          1.4419e-03             8
+          2          3.6748e-04             9
+          3          6.3454e-05            10
+          4          4.3534e-06            11
+          5          3.5527e-08            12
+          6          9.7033e-11            13
+  1.705926 seconds (109.97 k allocations: 1.080 GiB, 13.87% gc time)
 --> T = 6.532023020978835, amplitude = 0.2684635643839235
 ```
 
@@ -287,7 +288,7 @@ poTrapMF = PeriodicOrbitTrapProblem(
 	Fcgl,	(x, p) ->  (dx -> d1Fcgl(x, p, dx)),
 	real.(eigvec),
 	hopfpt.u,
-	M, ls0)
+	M, 2n, ls0)
 ```
 
 We can now use newton
@@ -303,18 +304,16 @@ flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.g
 which gives 
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
+  Newton Iterations      f(x)      Linear Iterations
 
-        0                1     6.5412e-03         0
-        1                2     1.4399e-03         8
-        2                3     3.6404e-04         9
-        3                4     6.3013e-05        10
-        4                5     4.3207e-06        11
-        5                6     3.5334e-08        12
-        6                7     1.0874e-10        13
-        7                8     4.4471e-14        15
-  1.446924 seconds (28.68 k allocations: 486.953 MiB, 6.45% gc time)
+          0          6.5444e-03             0
+          1          1.4419e-03             8
+          2          3.6748e-04             9
+          3          6.3454e-05            10
+          4          4.3534e-06            11
+          5          3.5527e-08            12
+          6          9.7032e-11            13
+  1.189189 seconds (23.03 k allocations: 400.077 MiB, 5.04% gc time)
 ```
 
 The speedup will increase a lot for larger $N_x, N_y$. Also, for Floquet multipliers computation, the speedup will be substantial.
@@ -393,7 +392,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 	Fcgl!, dFcgl!,
 	real.(eigvec),
 	hopfpt.u,
-	M, ls0; isinplace = true)
+	M, 2n, ls0; isinplace = true)
 ```
 and run the `newton` method:
 
@@ -405,18 +404,16 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 It gives	
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
+ Newton Iterations      f(x)      Linear Iterations
 
-        0                1     6.5412e-03         0
-        1                2     1.4399e-03         8
-        2                3     3.6404e-04         9
-        3                4     6.3013e-05        10
-        4                5     4.3207e-06        11
-        5                6     3.5334e-08        12
-        6                7     1.0874e-10        13
-        7                8     4.4359e-14        15
-  1.354356 seconds (2.22 k allocations: 153.499 MiB)
+          0          6.5444e-03             0
+          1          1.4419e-03             8
+          2          3.6748e-04             9
+          3          6.3454e-05            10
+          4          4.3534e-06            11
+          5          3.5527e-08            12
+          6          9.7032e-11            13
+  1.096669 seconds (1.61 k allocations: 130.211 MiB)
 ```
 
 Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.

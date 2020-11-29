@@ -109,7 +109,7 @@ phase = []
 	for ii=1:M
 		t = (ii-1)/(M-1)
 		orbitguess[:, ii] .= real.(hopfpoint.u .+
-				2.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .2755)))
+				2.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .27)))
 		push!(phase, dot(orbitguess[:, ii] - hopfpoint.u,real.(vec_hopf)))
 	end
 plot(phase)
@@ -130,20 +130,19 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
 
-outpo_f, _, flag = @time newton(
-		poTrap, orbitguess_f, par_br, opt_po; linearPO = :FullSparseInplace,
+outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_br.C = -0.9), opt_po; linearPO = :FullSparseInplace,
 		normN = norminf)
-	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f,2*N, M),"\n")
+	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", 			BK.amplitude(outpo_f,2*N, M),"\n")
 	BK.plotPeriodicPOTrap(outpo_f, N, M)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
 eig = DefaultEig()
 optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
-	br_po, = @time continuationPOTrap(poTrap,
-		outpo_f, -0.87,
-		optcontpo; verbosity = 3,
+	br_po, = @time continuation(poTrap, outpo_f, (@set par_br.C = -0.9), (@lens _.C), optcontpo;
+		verbosity = 3,
 		plot = true,
+		linearPO = :FullSparseInplace,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
 		plotSolution = (x, p;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
 		printSolution = (u, p) -> BK.maximumPOTrap(u, N, M; ratio = 2),

@@ -114,6 +114,18 @@ opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, 
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
 		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
+####################################################################################################
+using ForwardDiff
+function D(f, x, p, dx)
+	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+end
+d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
+d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
+d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
+
+jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
+
+hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
 	# hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -121,6 +133,7 @@ ind_hopf = 1
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
 		br, ind_hopf, par_bru, (@lens _.l);
+		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
 		options = (@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
@@ -146,20 +159,9 @@ if 1==0
 		Fbru, Jbru_sp,
 		br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); plot = true,
-		d2F = d2Fbru, verbosity = 2, normC = norminf)
+		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
+		verbosity = 2, normC = norminf)
 end
-####################################################################################################
-using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-	d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-	d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
-
-hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 ####################################################################################################Continuation of Periodic Orbit
 # number of time slices
 M = 51
@@ -174,9 +176,6 @@ poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2
 poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
 
-using ForwardDiff
-d1Fbru(x, p, dx) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
-
 ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 
 poTrapMF = PeriodicOrbitTrapProblem(
@@ -189,8 +188,8 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
-# opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.PeriodicOrbitTrapSparseBLS())
-	outpo_f, _, flag = @time newton(poTrap,
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
+outpo_f, _, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 			opt_po;
 			# deflationOp,

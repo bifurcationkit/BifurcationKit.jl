@@ -160,6 +160,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.
 as
 
 ```julia
+Mt = 1 # number of time sections
 br_po, = continuation(
 	# we want to compute the bifurcated branch from 
 	# the first Hopf point
@@ -168,9 +169,15 @@ br_po, = continuation(
 	opts_po_cont,
 	# this is how to pass the method to compute the periodic
 	# orbits. We shall use 1 section and the ODE solver ETDRK2
-	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
+	ShootingProblem(Mt, par_cgl, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
+	# linear solver for bordered linear system
+	# we combine the 2 solves. It is here faster than BorderingBLS()
+	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
+	# to help branching from the Hopf point
+	ampfactor = 1.5, δp = 0.01,
 	# regular parameters for the continuation
-	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
+	verbosity = 3, plot = true,
+	# print the Floquet exponent
 	finaliseSolution = (z, tau, step, contResult) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = norminf)
@@ -217,8 +224,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 1.
 
 br_po, = @time continuation(probSh,
 	initpo, (@set par_cgl.r = 1.2), (@lens _.r), opts_po_cont;
-	verbosity = 3,
-	plot = true,
+	verbosity = 3, plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
 	printSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 ```
