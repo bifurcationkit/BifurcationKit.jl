@@ -108,24 +108,8 @@ function F_shfft(u, p)
 end
 ```
 
-## Linear Algebra on the GPU
 
-We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
-
-```julia
-using CUDA
-
-# this disable slow operations but errors if you use one of them
-CUDA.allowscalar(false)
-
-# type used for the arrays, can be Float32 is GPU requires it
-TY = Float64
-
-# put the AF = Array{TY} instead to make the code on the CPU
-AF = CuArray{TY}
-```
-
-We can now define our operator `L` and an initial guess `sol0`.
+Let us now show how to build our operator `L` and an initial guess `sol0` using the above defined structures.
 
 ```julia
 using LinearAlgebra, Plots
@@ -157,6 +141,24 @@ J_shfft(u, p) = (u, p.l, p.ν)
 # parameters of the PDE
 par = (l = -0.15, ν = 1.3, L = L)
 ```
+
+## Linear Algebra on the GPU
+
+We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
+
+```julia
+using CUDA
+
+# this disable slow operations but errors if you use one of them
+CUDA.allowscalar(false)
+
+# type used for the arrays, can be Float32 is GPU requires it
+TY = Float64
+
+# put the AF = Array{TY} instead to make the code on the CPU
+AF = CuArray{TY}
+```
+
 
 ## Newton iterations and deflation
 

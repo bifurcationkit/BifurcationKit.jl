@@ -135,29 +135,29 @@ $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
 	solver::S
+	useBorderedArray::Bool
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixFreeBLS() = MatrixFreeBLS(nothing)
+MatrixFreeBLS() = MatrixFreeBLS(nothing, true)
+MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
+MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 
-extractVector(x::AbstractVector) = @view x[1:end-1]
-extractVector(x::BorderedArray)  = x.u
+extractVecBLS(x::AbstractVector) = @view x[1:end-1]
+extractVecBLS(x::BorderedArray)  = x.u
 
-extractParameter(x::AbstractVector) = x[end]
-extractParameter(x::BorderedArray)  = x.p
+extractParBLS(x::AbstractVector) = x[end]
+extractParBLS(x::BorderedArray)  = x.p
 
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)
-	if S isa GMRESIterativeSolvers
-		rhs = vcat(R, n)
-	else
-		rhs = BorderedArray(copy(R), n)
-	end
+	# what is the vector type used?
+	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
-	return extractVector(sol), extractParameter(sol), cv, it
+	return extractVecBLS(sol), extractParBLS(sol), cv, it
 end
 ####################################################################################################
 # Linear Solvers based on a bordered solver

@@ -54,7 +54,7 @@ end
 
 getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 
-function _show(io::IO, bp::GenericBifPoint, ii)
+function _show(io::IO, bp::GenericBifPoint, ii::Int)
 	if bp.type == :none || bp.precision < 0; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
@@ -63,8 +63,8 @@ function _show(io::IO, bp::GenericBifPoint, ii)
 	end
 end
 
-function _showFold(io, bp::GenericBifPoint, ii)
-	if bp.precision <= 0 return nothing; end
+function _showFold(io::IO, bp::GenericBifPoint, ii::Int)
+	# if bp.precision <= 0 return nothing; end
 	@printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f ∈ (%4.8f, %4.8f), |δp|=%1.0e, [\e[1;34m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 end
 @inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
