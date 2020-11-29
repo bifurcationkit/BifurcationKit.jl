@@ -194,6 +194,18 @@ Jpo = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 Jpo2 = copy(Jpo)
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
+
+# version with indices in the full matrix
+_indx = BK.getBlocks(Jpo, 2n, M)
+pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
+@test nnz(Jpo2 - Jpo) == 0
+
+# version with indices in the cyclic matrix
+Jpo = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+_indx = BK.getBlocks(Jpo, 2n, M-1)
+Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
+pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
+@test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
 # test of the version with inhomogenous time discretisation
 M = 10
