@@ -318,11 +318,11 @@ function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 	normal = psh.section.normals[ii]
 	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
 	# compute the Poincare map from x
-	tΣ, solΣ = psh.flow(Val(:TimeSol), x, par, Inf64)
+	tΣ, solΣ = psh.flow(Val(:SerialTimeSol), x, par, Inf64)
 	z = psh.flow.F(solΣ, par)
 	# solution of the variational equation at time tΣ
 	# We need the callback to be INACTIVE here!!!
-	y = psh.flow(x, par, dx, tΣ; callback = nothing).du
+	y = psh.flow(Val(:SerialdFlow), x, par, dx, tΣ; callback = nothing).du
 	out = y .- (dot(normal, y) / dot(normal, z)) .* z
 end
 
