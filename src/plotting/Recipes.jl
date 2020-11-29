@@ -127,3 +127,77 @@ function filterBifurcations(bifpt)
 
 	return res[2:end]
 end
+
+####################################################################################################
+# plot recipes for the bifurcation diagram
+
+@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
+	for b in bd
+		@series begin
+			level --> level
+			code --> code
+			b
+		end
+	end
+end
+
+@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
+	if ~hasbranch(bd); return; end
+	_bd = getBranch(bd, code)
+	@series begin
+		level --> level
+		code --> ()
+		_bd.child
+	end
+	# !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
+	if level[1] <= _bd.level <= level[2]
+		@series begin
+			_bd.γ
+		end
+	end
+end
+
+# this might well be type piracy
+# TODO try to remove it
+@recipe function f(bd::Nothing)
+	nothing
+end
+
+####################################################################################################
+# plotting function of the periodic orbits
+function plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...)
+	@assert ratio > 0 "You need at least one component"
+	n = Nx*Ny
+	outpo = reshape(x[1:end-1], ratio * n, M)
+	po = reshape(x[1:n,1], Nx, Ny)
+	rg = 2:6:M
+	for ii in rg
+		po = hcat(po, reshape(outpo[1:n,ii], Nx, Ny))
+	end
+	heatmap!(po; color = :viridis, fill=true, xlabel = "space", ylabel = "space", kwargs...)
+	for ii in 1:length(rg)
+		plot!([ii*Ny, ii*Ny], [1, Nx]; color = :red, width = 3, label = "", kwargs...)
+	end
+end
+
+function plotPeriodicPOTrap(outpof, n, M; ratio = 2)
+	@assert ratio > 0 "You need at least one component"
+	outpo = reshape(outpof[1:end-1], ratio * n, M)
+	if ratio == 1
+		heatmap(outpo[1:n,:]', ylabel="Time", color=:viridis)
+	else
+		plot(heatmap(outpo[1:n,:]', ylabel="Time", color=:viridis),
+			heatmap(outpo[n+2:end,:]', color=:viridis))
+	end
+end
+####################################################################################################
+function plotPeriodicShooting!(x, M; kwargs...)
+	N = div(length(x), M);	plot!(x; label = "", kwargs...)
+	for ii in 1:M
+		plot!([ii*N, ii*N], [minimum(x), maximum(x)] ;color = :red, label = "", kwargs...)
+	end
+end
+
+function plotPeriodicShooting(x, M; kwargs...)
+	plot();plotPeriodicShooting!(x, M; kwargs...)
+end
