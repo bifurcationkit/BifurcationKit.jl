@@ -35,7 +35,7 @@ poTrap = PeriodicOrbitTrapProblem(
 	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)), # we put sparse to try the different options
 	[1., 0.],
 	zeros(2),
-	20)
+	20, 2)
 
 # guess for the periodic orbit
 orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
