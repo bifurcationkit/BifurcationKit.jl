@@ -35,15 +35,15 @@ end
 function (fl::FloquetQaDTrap)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDFD(J.pb, J.x, J.par)
+		monodromy = MonodromyQaDFD(J)
 	else
 		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDFD(J.pb, J.x, J.par, dx)
+		monodromy = dx -> MonodromyQaDFD(J, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
-	I = sortperm(logvals, by = x -> real(x), rev = true)
+	I = sortperm(logvals, by = real, rev = true)
 	# Base.display(logvals)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
@@ -51,10 +51,13 @@ end
 """
 Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
 """
-function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+function MonodromyQaDFD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
 	# extraction of various constants
-	M = poPb.M
-	N = poPb.N
+	M, N = size(poPb)
 
 	# period of the cycle
 	T = extractPeriodFDTrap(u0)
@@ -120,10 +123,14 @@ function MonodromyQaDFD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProbl
 end
 
 # Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
-function MonodromyQaDFD(poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
+function MonodromyQaDFD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
 	# extraction of various constants
-	M = poPb.M
-	N = poPb.N
+	M, N = size(poPb)
 
 	# period of the cycle
 	T = extractPeriodFDTrap(u0)
@@ -180,7 +187,7 @@ function (fl::FloquetQaDShooting)(J, nev; kwargs...)
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
 	# Base.display(logvals)
-	I = sortperm(logvals, by = x-> real(x), rev = true)
+	I = sortperm(logvals, by = real, rev = true)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
 
