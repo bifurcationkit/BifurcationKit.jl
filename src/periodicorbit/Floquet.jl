@@ -289,3 +289,108 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 	end
 	return mono
 end
+
+"""
+Matrix-Free expression expression of the Monodromy matrix for the periodic problem computed at the space-time guess: `u0`
+"""
+function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
+	# extraction of various constants
+	M, N = size(poPb)
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+	end
+
+	return out
+end
+
+function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+	# extraction of various constants
+	M = poPb.M
+	N = poPb.N
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+	Typeh = typeof(h)
+
+	out = copy(du)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
+	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= res
+	out_a = [copy(out)]
+	# push!(out_a, copy(out))
+
+	for ii in 2:M-1
+		h =  T * getTimeStep(poPb, ii)
+		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
+		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= res
+		push!(out_a, copy(out))
+	end
+	push!(out_a, copy(du))
+
+	return out_a
+end
+
+# Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
+function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+
+	poPb = JacFW.pb
+	u0 = JacFW.x
+	par = JacFW.par
+
+	# extraction of various constants
+	M, N = size(poPb)
+
+	# period of the cycle
+	T = extractPeriodFDTrap(u0)
+
+	# time step
+	h =  T * getTimeStep(poPb, 1)
+
+	u0c = extractTimeSlices(u0, N, M)
+
+	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
+	temp = similar(mono)
+
+	for ii in 2:M-1
+		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
+		# also I - h/2 .* J seems to hurt (a little) the performances
+		h =  T * getTimeStep(poPb, ii)
+		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
+		mono .= temp * mono
+	end
+	return mono
+end
