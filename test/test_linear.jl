@@ -44,7 +44,7 @@ J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
 sol_explicit = J0 \ rhs
 
-linBdsolver = BK.BorderingBLS(DefaultLS())
+linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
@@ -66,6 +66,7 @@ sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
+ BK.MatrixFreeBLS(nothing   )
 linBdsolver = BK.MatrixFreeBLS(ls)
 sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd3u

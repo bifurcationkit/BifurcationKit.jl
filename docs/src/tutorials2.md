@@ -114,7 +114,7 @@ J0 = dF_sh(sol_hexa, par)
 eig(J0, 10)
 ```
 
-The reason is that the jacobian operator is not very well conditioned unlike its inverse. We thus opt for the *shift-invert* method (see [Eigen solvers](@ref) for more information) with shift `0.1`:
+The reason is that the jacobian operator is not very well conditioned unlike its inverse. We thus opt for the *shift-invert* method (see [Eigen solvers (Eig)](@ref) for more information) with shift `0.1`:
 
 ```julia
 eig = EigArpack(0.1, :LM)

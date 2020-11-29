@@ -182,7 +182,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
 end
 
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
-	@assert 1==0 "WIP, no done yet!"
+	@assert 1==0 "WIP, no done yet! Please use an iterative eigensolver for the computation of Floquet coefficients using Poincaré shooting."
 end
 
 """

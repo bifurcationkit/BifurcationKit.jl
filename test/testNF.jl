@@ -175,6 +175,8 @@ bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 
 # test calls for aBD
 BK.hasbranch(bdiag)
+BK.from(bdiag.child[1].γ)
+BK.getBranchesFromBP(bdiag, 2)
 BK.getContResult(br)
 BK.getContResult(getBranch(bdiag,(1,)).γ)
 size(bdiag)

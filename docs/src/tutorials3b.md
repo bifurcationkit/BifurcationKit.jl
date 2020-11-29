@@ -107,7 +107,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 ```
 
-For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers](@ref))
+For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers (Eig)](@ref))
 
 ```julia
 eigls = EigArpack(1.1, :LM)

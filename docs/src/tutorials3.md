@@ -104,7 +104,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 ```
 
-For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers](@ref))
+For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers (Eig)](@ref))
 
 ```julia
 eigls = EigArpack(1.1, :LM)
@@ -220,10 +220,10 @@ br_po, = continuation(
 	δp = 0.01, ampfactor = 1,
 	# specific method for solving linear system
 	# of Periodic orbits with trapeze method
-	linearPO = :FullLU,
+	linearPO = :FullSparseInplace,
 	# regular options for continuation
 	verbosity = 3,	plot = true, 
-	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(probFD, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
+	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), normC = norminf)
 ```
 
 ![](bru-po-cont-br0.png)
