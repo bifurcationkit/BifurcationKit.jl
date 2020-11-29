@@ -2,8 +2,7 @@
 
 | **Documentation**                                                               | **Build Status**                                                                                |
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-| [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/BifurcationKit.jl/dev) | ![Build Status](https://travis-ci.com/rveltz/BifurcationKit.jl.svg?branch=master) [![Coverage Status](https://coveralls.io/repos/github/rveltz/BifurcationKit.jl/badge.svg?branch=master)](https://coveralls.io/github/rveltz/BifurcationKit.jl?branch=master) |
-
+| [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/BifurcationKit.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/rveltz/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rveltz/BifurcationKit.jl) |
 
 This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u,λ)=0 where λ∈ℝ by taking advantage of iterative methods, sparse formulation and specific hardwares (*e.g.* GPU).
 
