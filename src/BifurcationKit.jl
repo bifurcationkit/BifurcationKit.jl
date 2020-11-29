@@ -98,7 +98,7 @@ module BifurcationKit
 	export PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 
 	# bordered linear problems
-	export MatrixBLS, BorderingBLS, MatrixFreeBLS, BorderedArray
+	export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS, BorderedArray
 
 	# nonlinear deflation
 	export DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM

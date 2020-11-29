@@ -8,15 +8,15 @@ Depth = 3
 
 !!! unknown "References"
     This example is taken from [^Tzou].
-    
+
 !!! info "Acknowledgment"
     The example was done in collaboration with Navid C. Constantinou.    
 
 We look at the Brusselator in 1d. The equations are as follows
 
-$$\begin{aligned} \frac { \partial X } { \partial t } & = \frac { D _ { 1 } } { l ^ { 2 } } \frac { \partial ^ { 2 } X } { \partial z ^ { 2 } } + X ^ { 2 } Y - ( β + 1 ) X + α \\ \frac { \partial Y } { \partial t } & = \frac { D _ { 2 } } { l ^ { 2 } } \frac { \partial ^ { 2 } Y } { \partial z ^ { 2 } } + β X - X ^ { 2 } Y \end{aligned}$$
+$$\begin{aligned} \frac { \partial u } { \partial t } & = D \frac { \partial ^ { 2 } u } { \partial z ^ { 2 } } + u ^ { 2 } v - ( B + 1 ) u + E \\ \frac { \partial v } { \partial t } & = \frac { \partial ^ { 2 } v} { \partial z ^ { 2 } } + B u - u ^ { 2 } v \end{aligned}\tag{E}$$
 
-with periodic boundary conditions. These equations have been introduced to reproduce an oscillating chemical reaction. There is an obvious equilibrium $(α, β / α)$. Here, we consider bifurcations with respect to the parameter $l$.
+with periodic boundary conditions. These equations have been introduced to reproduce an oscillating chemical reaction.
 
 We focus on computing a snaking branch of periodic orbits using spectral methods implemented in [Brusselator.jl](https://github.com/FourierFlows/Brusselator.jl):
 
@@ -101,17 +101,19 @@ which gives
 
 ## Building the Shooting problem
 
-We now define a function to compute the flow and its differential
+We compute the periodic solution of (E) with a shooting algorithm.
+We thus define a function to compute the flow and its differential.
 
 ```julia
+# update the states
 function _update!(out, pb::FourierFlows.Problem, N)
 	out[1:N] .= pb.vars.u
 	out[N+1:end] .= pb.vars.v
 	out
 end
 
+# update the parameters in pb
 function _setD!(D, pb::FourierFlows.Problem)
-	# set parameter in prob
 	pb.eqn.L[:, 1] .*= D / prob.params.D
 	pb.params.D = D
 end
@@ -128,8 +130,6 @@ function ϕ(x, p, t)
 	dt = pb.clock.dt
 	nsteps = div(t, dt) |> Int
 	# compute flow
-	nsteps = div(t, dt) |> Int
-	# compute flow
 	stepforward!(pb, nsteps)
 
 	rest = t - nsteps * dt
@@ -143,7 +143,7 @@ function ϕ(x, p, t)
 	return out
 end
 
-# differential of the flow
+# differential of the flow by FD
 function dϕ(x, p, dx, t; δ = 1e-8)
 		phi = ϕ(x, p, t)
 		dphi = (ϕ(x .+ δ .* dx, p, t) .- phi) ./ δ
@@ -172,7 +172,7 @@ function vf(x, p)
 end
 ```
 
-We can now specify the shooting problem
+We then specify the shooting problem
 
 ```julia
 # parameters to be passed to ϕ
@@ -183,6 +183,8 @@ x0 = vcat(u0,v0)
 
 # here we define the problem which encodes the standard shooting
 flow = Flow(vf, ϕ, dϕ)
+
+# the first section is centered around a stationary state
 _center = vcat(E*ones(nx), B/E*ones(nx))
 
 # section for the flow
@@ -195,8 +197,12 @@ probSh = ShootingProblem(M = 1, flow = flow, ds = diff(LinRange(0, 1, 1 + 1)), s
 ```julia
 # linear solver for the Shooting problem
 ls = GMRESIterativeSolvers(N = 2nx+1)
+
+# parameters for Krylov-Newton
 optn = NewtonPar(tol = 1e-9, verbose = true,
+	# linear solver
 	linsolver = ls,
+	# eigen solver
 	eigsolver = EigKrylovKit(dim = 30, x₀ = rand(2nx), verbose = 1  )
 	)
 
@@ -238,7 +244,7 @@ optc = ContinuationPar(newtonOptions = optn, ds = -1e-3, dsmin = 1e-7, dsmax = 2
 		normC = x->norm(x,Inf))
 ```
 
-which leads to 
+which leads to
 
 ![](bruFFcont.png)
 

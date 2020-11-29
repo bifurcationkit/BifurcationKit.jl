@@ -7,7 +7,7 @@ In this example, we study the following singular perturbation problem:
 
 $$\epsilon^{2} y^{\prime \prime}+2\left(1-x^{2}\right) y+y^{2}=1, \quad y(-1)=y(1)=0\tag{E}.$$
 
-It is a remarkably difficult problem which present many disconnected branches which are not amenable to the continuation method. We thus use the recently develiopped deflated continuatoipn method which builds upon the Deflated Newton (see [Deflated problems](@ref)) technics to find solutions which are different from a set of already known solutions.
+It is a remarkably difficult problem which present many disconnected branches which are not amenable to the continuation method. We thus use the recently developed deflated continuation method which builds upon the Deflated Newton (see [Deflated problems](@ref)) technics to find solutions which are different from a set of already known solutions.
 
 We start with some import
 
@@ -50,7 +50,7 @@ function Jac_carr(x, p)
 end
 ```
 
-We can now use Krylov-Newton to find solutions:
+We can now use Newton to find solutions:
 
 ```julia
 N = 200
@@ -61,7 +61,7 @@ sol = -(1 .- par_car.X.^2)
 
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	out, = @time newton(F_carr, Jac_carr, sol, 
+	out, = @time newton(F_carr, Jac_carr, sol,
 		(@set par_car.ϵ = 0.6), optnew, normN = x -> norm(x, Inf64))
 	plot(out, label="Solution")
 ```
@@ -100,7 +100,7 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 # parameter values for the problem
 par_def = @set par_car.ϵ = 0.6
 
-# newton options 
+# newton options
 optdef = setproperties(optnew; tol = 1e-7, maxIter = 200)
 
 # function to encode a perturbation of the old solutions
@@ -115,7 +115,7 @@ end
 br, = @time continuation(
 	F_carr, Jac_carr,
 	par_def, (@lens _.ϵ),
-	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, 
+	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000,
 		pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
 		newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
 	deflationOp;
@@ -124,7 +124,7 @@ br, = @time continuation(
 	normN = x -> norm(x, Inf64),
 	)
 
-plot(br...) 
+plot(br...)
 ```
 
 We obtain the following result which is remarkable because it contains many more disconnected branches which we did not find in the first try.

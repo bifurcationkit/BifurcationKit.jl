@@ -5,11 +5,11 @@ Pages = ["tutorialsPD.md"]
 Depth = 3
 ```
 
-The purpose of this example is to show how to handle period doubling bifurcations of periodic orbits.
+The purpose of this example is to show how to handle period doubling bifurcations of periodic orbits. Note that we do not use automatic branch switching here although this is possible (but not yet for branching from period doubling points).
 
 !!! unknown "References"
     This example is taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (2012)
-    
+
 !!! info "Method and performance"
     We focus on the Shooting method but we could have based the computation of periodic orbits on finite differences instead. Performances of the current tutorial are directly linked to the ones of `DifferentialEquations.jl`.     
 
@@ -69,7 +69,7 @@ end
 
 # this is not very efficient but simple enough ;)
 Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
-```	
+```
 
 We can now perform bifurcation of the following Turing solution:
 
@@ -101,14 +101,14 @@ br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), o
 which yields
 
 ![](br_pd1.png)
-	
+
 ## Periodic orbits from the Hopf point (Shooting)
 
-We continue the periodic orbit form the first Hopf point around $C\approx -0.8598$ using a Standard Simple Shooting method (see [Periodic orbits based on the shooting method](@ref)). To this end, we define a `SplitODEProblem` from `DifferentialEquations.jl` which is convenient for solving semilinear problems of the form 
+We continue the periodic orbit form the first Hopf point around $C\approx -0.8598$ using a Standard Simple Shooting method (see [Periodic orbits based on the shooting method](@ref)). To this end, we define a `SplitODEProblem` from `DifferentialEquations.jl` which is convenient for solving semilinear problems of the form
 
-$$\dot x = Ax+g(x)$$ 
+$$\dot x = Ax+g(x)$$
 
-where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of (E) just after the Hopf point. 
+where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of (E) just after the Hopf point.
 
 ```julia
 # parameters close to the Hopf bifurcation
@@ -119,7 +119,7 @@ f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), @set par_br.C = -0.86)
 
 sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
-```	
+```
 
 We estimate the period of the limit cycle to be around $T\approx 3$. We then use this as a guess for the shooting method:
 
@@ -128,11 +128,11 @@ We estimate the period of the limit cycle to be around $T\approx 3$. We then use
 orbitsection = Array(sol[:, end])
 initpo = vcat(vec(orbitsection), 3.)
 
-# define the functional for the standard simple shooting based on the 
+# define the functional for the standard simple shooting based on the
 # ODE solver ETDRK2. SectionShooting implements an appropriate phase condition
 probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
 	[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
-		
+
 # parameters for the Newton-Krylov solver
 ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
@@ -193,7 +193,7 @@ flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ",
 which gives
 
 ```julia
- Newton Iterations 
+ Newton Iterations
    Iterations      Func-count      f(x)      Linear-Iterations
 
         0                1     5.2811e-01         0

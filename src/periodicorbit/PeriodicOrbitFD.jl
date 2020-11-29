@@ -415,7 +415,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		M, N = size(pb)
 		T = extractPeriodFDTrap(u0)
 
-		In = Tj isa SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
+		In = Tj == SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
 
 		u0c = extractTimeSlices(pb, u0)
 		outc = similar(u0c)
@@ -463,7 +463,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 end
 
 
-@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1.0, δ = 1e-9)
+@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1.0, δ = 1e-9, updateborder = true)
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
@@ -504,12 +504,14 @@ end
 	# useless to update:
 		# J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
 
+	if updateborder
 	# we now set up the last line / column
 	∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
 	J0[:, end] .=  ∂TGpo
 
 	# this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
 	J0[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
+	end
 
 	return J0
 end
@@ -623,7 +625,6 @@ end
 
 # composite type to encode the Aγ Operator and its associated cyclic matrix
 @with_kw mutable struct AγOperator{Tvec, Tjc, Tpb, Tpar}
-	N::Int64 = 0				    		# dimension of a time slice
 	orbitguess::Tvec = zeros(1)				# point at which Aγ is evaluated, of size N * M + 1
 	Jc::Tjc	= lu(spdiagm(0 => ones(1)))	    # lu factorisation of the cyclic matrix
 	is_matrix_free::Bool = false	    	# whether we consider a sparse matrix representation or a Matrix Free one
@@ -653,7 +654,8 @@ end
 
 # this function is called whenever one wants to invert Aγ
 @views function (ls::AγLinearSolver)(A::AγOperator, rhs)
-	N = A.N
+	# dimension of a time slice
+	N = A.prob.N
 	if ismatrixfree(A)
 		# we invert the cyclic part Jc of Aγ
 		xbar, flag, numiter = ls.linsolver(dx -> Jc(A.prob, A.orbitguess, A.par, dx), rhs[1:end - N])
@@ -695,7 +697,6 @@ function (J::POTrapJacobianBordered)(orbitguess0::AbstractVector, par; δ = 1e-9
 end
 
 ####################################################################################################
-
 # linear solver for the PO functional, akin to a bordered linear solver
 @with_kw mutable struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
 	linsolverbls::Tl = BorderingBLS(AγLinearSolver())	# linear solver
@@ -747,7 +748,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 		end
 	else
 		if linearPO == :BorderedLU
-			Aγ = AγOperator(is_matrix_free = false, prob = probPO, N = probPO.N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
+			Aγ = AγOperator(is_matrix_free = false, prob = probPO, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
 		# elseif linearPO == :BorderedSparseInplace
@@ -758,7 +759,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 		# 	lspo = PeriodicOrbitTrapSparseBLS(BorderingBLS(DefaultLS()))
 
 		else	# :BorderedMatrixFree
-			Aγ = AγOperator(is_matrix_free = true, prob = probPO, N = probPO.N, orbitguess = zeros(N * M + 1), Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
+			Aγ = AγOperator(is_matrix_free = true, prob = probPO, orbitguess = zeros(N * M + 1), Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS(BorderingBLS(AγLinearSolver(options.linsolver)))
 		end
@@ -881,13 +882,13 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 				finaliseSolution = _finsol2,)
 	else
 		if linearPO == :BorderedLU
-			Aγ = AγOperator(is_matrix_free = false, N = N, prob = prob,
+			Aγ = AγOperator(is_matrix_free = false, prob = prob,
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )) )
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
 
 		else #this is BorderedMatrixFree
-			Aγ = AγOperator(is_matrix_free = true, prob = prob, N = N,
+			Aγ = AγOperator(is_matrix_free = true, prob = prob,
 					orbitguess = zeros(N * M + 1),
 					Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), par = par)
 			# linear solver

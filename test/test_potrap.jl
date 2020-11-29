@@ -146,7 +146,6 @@ _du = rand(length(orbitguess_f))
 res = @time pb(orbitguess_f, par, _du)
 _res = _dfunctional(pb, orbitguess_f, par, _du)
 @test res ≈ _res
-
 ####################################################################################################
 # test whether the analytical version of the Jacobian is right
 n = 50
