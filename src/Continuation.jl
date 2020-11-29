@@ -306,7 +306,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
 				status::Symbol = :guess
 				_T = eltype(it)
-				interval::Tuple{_T, _T} = (zero(_T), zero(_T))# interval containing the bifurcation point
+				interval::Tuple{_T, _T} = getinterval(state.z_pred.p, getp(state))
 				if contParams.detectBifurcation > 2
 					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged

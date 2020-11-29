@@ -1,3 +1,5 @@
+closesttozero(ev) = ev[sortperm(abs.(real.(ev)))]
+getinterval(a,b) = (min(a,b), max(a,b))
 ####################################################################################################
 function displayIteration(i, residual, itlinear = 0)
 	(i == 0) && println("\n Newton Iterations      f(x)      Linear Iterations\n")

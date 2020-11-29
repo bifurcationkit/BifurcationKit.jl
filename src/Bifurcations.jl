@@ -31,7 +31,6 @@ function detectBifucation(state::ContState)
 	return n1 !== n2
 end
 ####################################################################################################
-interval(a, b) = (min(a, b), max(a, b))
 
 # Test function for Fold bifurcation
 @inline detectFold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
@@ -143,16 +142,12 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 	return detected, param_bif
 end
 
-closesttozero(ev) = ev[sortperm(abs.(real.(ev)))]
-
 """
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
 function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
 	@assert detectBifucation(_state) "No bifucation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
-
-	getinterval(a,b) = (min(a,b), max(a,b))
 
 	# type of scalars in iter
 	_T = eltype(iter)
