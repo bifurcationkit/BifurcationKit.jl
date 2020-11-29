@@ -704,15 +704,9 @@ end
 
 # Linear solver associated to POTrapJacobianBordered
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
-	N = J.Aγ.prob.N
-
-	# TODO REMOVE THIS HACK
-	ϕ = zeros(length(rhs)-1)
-	ϕ[1:length(J.Aγ.prob.ϕ)] .= J.Aγ.prob.ϕ
-
 	# we solve the bordered linear system as follows
 	dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[1:end-1],
-	 										 		  ϕ, J.∂TGpo[end],
+	 										 		  J.Aγ.prob.ϕ, J.∂TGpo[end],
 													  rhs[1:end-1], rhs[end])
 	return vcat(dX, dl), flag, sum(liniter)
 end
