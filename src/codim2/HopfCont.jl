@@ -137,9 +137,9 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 		σxx1 = dot(σx, x1)
 		σxx2 = dot(σx, x2)
 	else
-		d2Fv = d2F(x, p, v, x1)
+		d2Fv = d2F(x, set(par, lens, p), v, x1)
 		σxx1 = -dot(w, d2Fv) / n
-		d2Fv = d2F(x, p, v, x2)
+		d2Fv = d2F(x, set(par, lens, p), v, x2)
 		σxx2 = -dot(w, d2Fv) / n
 	end
 	# we need to be carefull here because the dot produce conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
