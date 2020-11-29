@@ -35,15 +35,15 @@ end
 function (fl::FloquetQaDTrap)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
 		# we build the monodromy matrix and compute the spectrum
-		monodromy = MonodromyQaDFD(J.pb, J.orbitguess0, J.par)
+		monodromy = MonodromyQaDFD(J.pb, J.x, J.par)
 	else
 		# we use a Matrix Free version
-		monodromy = dx -> MonodromyQaDFD(J.pb, J.orbitguess0, J.par, dx)
+		monodromy = dx -> MonodromyQaDFD(J.pb, J.x, J.par, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
-	I = sortperm(logvals, by = x-> real(x), rev = true)
+	I = sortperm(logvals, by = x -> real(x), rev = true)
 	# Base.display(logvals)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end

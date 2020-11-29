@@ -2,16 +2,20 @@
 using Test
 
 # test linear, newton
-include("precond.jl")
-include("test_linear.jl")
-include("test_newton.jl")
+begin
+    include("precond.jl")
+    include("test_linear.jl")
+    include("test_newton.jl")
+end
 
 # basic tests of continuation
-include("test_bif_detection.jl")
-include("test-cont-non-vector.jl")
-include("simple_continuation.jl")
-include("test-bordered-problem.jl")
-include("testNF.jl")
+begin
+    include("test_bif_detection.jl")
+    include("test-cont-non-vector.jl")
+    include("simple_continuation.jl")
+    include("test-bordered-problem.jl")
+    include("testNF.jl")
+end
 
 # test periodic orbits
 include("test_SS.jl")
@@ -21,5 +25,11 @@ include("stuartLandauTrap.jl")
 
 
 include("testJacobianFoldDeflation.jl")
-include("testHopfMA.jl")
-include("test_potrap.jl")
+
+begin
+    include("testHopfMA.jl")
+end
+
+begin
+    include("test_potrap.jl")
+end
