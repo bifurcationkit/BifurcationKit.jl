@@ -110,7 +110,6 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 
 	# extract parameters
 	M = getM(sh)
-	M > 1 && @error "This is not yet a practical approach for multiple shooting"
 
 	N = div(length(x) - 1, M)
 
@@ -124,7 +123,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	for ii in 1:N
 		du[ii] = 1
 		# call jacobian of the flow
-		@views Mono[:, ii] .= sh.flow(xc[:, 1], p, du, T).du
+		@views Mono[:, ii] .= sh.flow(Val(:SerialdFlow), xc[:, 1], p, du, T).du
 		du[ii] = 0
 	end
 
