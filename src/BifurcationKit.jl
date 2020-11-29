@@ -44,7 +44,7 @@ module BifurcationKit
 	include("periodicorbit/StandardShooting.jl")
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/PeriodicOrbitFD.jl")
-	include("periodicorbit/FloquetQaD.jl")
+	include("periodicorbit/Floquet.jl")
 
 	include("plotting/Recipes.jl")
 
