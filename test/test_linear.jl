@@ -96,6 +96,14 @@ x0 = rand(100)
 ls = DefaultLS()
 out = ls(J0, x0)
 
+# speciric linear solver built from a bordered linear solver
+linSolver = BK.LSFromBLS()
+sol_lin0 = linSolver(J0, x0)
+@test sol_lin0[1] ≈ out[1]
+sol_lin0 = linSolver(J0, x0, 2x0)
+@test sol_lin0[1] ≈ out[1]
+@test sol_lin0[2] ≈ 2out[1]
+
 ls = GMRESKrylovKit(rtol = 1e-9, dim = 100)
 outkk = ls(J0, x0)
 @test out[1] ≈ outkk[1]

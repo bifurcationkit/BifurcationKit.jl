@@ -107,7 +107,7 @@ hasHessian(pb::PeriodicOrbitTrapProblem) = pb.d2F == nothing
 @inline getTimeStep(pb::PeriodicOrbitTrapProblem, i::Int) = getTimeStep(pb.mesh, i)
 Base.size(pb::PeriodicOrbitTrapProblem) = (pb.M, pb.N)
 
-function applyF(pb::PeriodicOrbitTrapProblem, dest, x, p)
+function applyF(pb::AbstractPOTrapProblem, dest, x, p)
 	if isInplace(pb)
 		pb.F(dest, x, p)
 	else
@@ -116,7 +116,7 @@ function applyF(pb::PeriodicOrbitTrapProblem, dest, x, p)
 	dest
 end
 
-function applyJ(pb::PeriodicOrbitTrapProblem, dest, x, p, dx)
+function applyJ(pb::AbstractPOTrapProblem, dest, x, p, dx)
 	if isInplace(pb)
 		pb.J(dest, x, p, dx)
 	else
@@ -145,8 +145,9 @@ PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}
 # these functions extract the time slices components
 extractTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
 extractTimeSlices(x::BorderedArray,  N, M) = x.u
+extractTimeSlices(pb::PeriodicOrbitTrapProblem, x) = extractTimeSlices(x, pb.N, pb.M)
 
-function POTrapScheme!(pb::PeriodicOrbitTrapProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
+function POTrapScheme!(pb::AbstractPOTrapProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
 	# this function implements the basic implicit scheme used for the time integration
 	# because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call
 	# basically tmp is F(u2)
@@ -163,7 +164,7 @@ function POTrapScheme!(pb::PeriodicOrbitTrapProblem, dest, u1, u2, par, h::Numbe
 	end
 end
 
-function POTrapSchemeJac!(pb::PeriodicOrbitTrapProblem, dest, u1, u2, du1, du2, par, h::Number, tmp)
+function POTrapSchemeJac!(pb::AbstractPOTrapProblem, dest, u1, u2, du1, du2, par, h::Number, tmp)
 	# this function implements the basic implicit scheme used for the time integration
 	# useful for the matrix-free jacobian
 	# basically tmp is dF(u2).du2 (see above for explanation)
@@ -176,12 +177,12 @@ end
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
-function POTrapFunctional!(pb::PeriodicOrbitTrapProblem, out, u0, par)
+function POTrapFunctional!(pb::AbstractPOTrapProblem, out, u0, par)
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
-	u0c  = extractTimeSlices(u0, N, M)
-	outc = extractTimeSlices(out, N, M)
+	u0c  = extractTimeSlices(pb, u0)
+	outc = extractTimeSlices(pb, out)
 
 	# outc[:, M] plays the role of tmp until it is used just after the for-loop
 	@views applyF(pb, outc[:, M], u0c[:, M-1], par)
@@ -210,14 +211,14 @@ end
 """
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
-function POTrapFunctionalJac!(pb::PeriodicOrbitTrapProblem, out, u0, par, du)
+function POTrapFunctionalJac!(pb::AbstractPOTrapProblem, out, u0, par, du)
 	M, N = size(pb)
 	T  = extractPeriodFDTrap(u0)
 	dT = extractPeriodFDTrap(du)
 
-	u0c = extractTimeSlices(u0, N, M)
-	outc = extractTimeSlices(out, N, M)
-	duc = extractTimeSlices(du, N, M)
+	u0c = extractTimeSlices(pb, u0)
+	outc = extractTimeSlices(pb, out)
+	duc = extractTimeSlices(pb, du)
 
 	# compute the cyclic part
 	@views Jc(pb, outc, u0[1:end-1-N], par, T, du[1:end-N-1], outc[:, M])
@@ -262,7 +263,7 @@ function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du
 	# du of size N * M
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = extractTimeSlices(pb, u0)
 
 	# compute the cyclic part
 	@views Jc(pb, outc, u0[1:end-1-N], par, T, du[1:end-N], outc[:, M])
@@ -338,7 +339,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 
 	In = spdiagm( 0 => ones(N))
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
 
 	tmpJ = @views pb.J(u0c[:, 1], par)
@@ -390,7 +391,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
 	@views Aγ = hcat(Aγ, ∂TGpo[1:end-1])
 	Aγ = vcat(Aγ, spzeros(1, N * M + 1))
 
-	Aγ[N*M+1, 1:N] .=  pb.ϕ
+	Aγ[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
 	Aγ[N*M+1, N*M+1] = ∂TGpo[end]
 	return Aγ
 end
@@ -404,7 +405,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 
 		In = Tj isa SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
 
-		u0c = extractTimeSlices(u0, N, M)
+		u0c = extractTimeSlices(pb, u0)
 		outc = similar(u0c)
 
 		tmpJ = pb.J(u0c[:, 1], par)
@@ -444,7 +445,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		J0[:, end] .=  ∂TGpo
 
 		# this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-		J0[N*M+1, 1:N] .=  pb.ϕ
+		J0[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
 
 		return J0
 end
@@ -456,7 +457,7 @@ end
 
 	In = spdiagm( 0 => ones(N))
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
 
 	tmpJ = pb.J(u0c[:, 1], par)
@@ -496,7 +497,7 @@ end
 	J0[:, end] .=  ∂TGpo
 
 	# this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-	J0[N*M+1, 1:N] .=  pb.ϕ
+	J0[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
 
 	return J0
 end

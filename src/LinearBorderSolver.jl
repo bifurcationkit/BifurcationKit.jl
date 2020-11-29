@@ -151,11 +151,46 @@ function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)
-	if S <: GMRESIterativeSolvers
+	if S isa GMRESIterativeSolvers
 		rhs = vcat(R, n)
 	else
 		rhs = BorderedArray(copy(R), n)
 	end
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return extractVector(sol), extractParameter(sol), cv, it
+end
+####################################################################################################
+# Linear Solvers based on a bordered solver
+# !!!! This one is used as a linear Solver, not as a Bordered one
+####################################################################################################
+"""
+$(TYPEDEF)
+
+This structure is used to provide the following linear solver. To solve (1) J⋅x = rhs, one decomposes J using Matrix by blocks and then use a bordering strategy to solve (1).
+
+$(TYPEDFIELDS)
+
+!!! warn "Warning"
+    The solver only works for `AbstractMatrix`
+"""
+struct LSFromBLS{Ts} <: AbstractLinearSolver
+	"Linear solver used to solve the smaller linear systems."
+	solver::Ts
+end
+
+LSFromBLS() = LSFromBLS(BorderingBLS(DefaultLS(useFactorization = false)))
+
+function (l::LSFromBLS)(J, rhs)
+	F = factorize(J[1:end-1, 1:end-1])
+	x1, x2, flag, it = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs[1:end-1]), rhs[end])
+	return vcat(x1,x2), flag, sum(it)
+end
+
+function  (l::LSFromBLS)(J, rhs1, rhs2)
+	F = factorize(J[1:end-1,1:end-1])
+	x1, x2, flag1, it1 = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs1[1:end-1]), rhs1[end])
+
+	y1, y2, flag2, it2 = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs2[1:end-1]), rhs2[end])
+
+	return vcat(x1,x2), vcat(y1,y2), flag1 & flag2, (1, 1)
 end
