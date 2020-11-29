@@ -65,7 +65,7 @@ end
 
 function _showFold(io::IO, bp::GenericBifPoint, ii::Int)
 	# if bp.precision <= 0 return nothing; end
-	@printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f, [\e[1;34m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+	@printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f, [\e[1;34m%9s\e[0m], step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.status, bp.step, bp.idx, bp.ind_ev)
 end
 @inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
