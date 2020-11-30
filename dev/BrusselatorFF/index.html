@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Brusselator 1d with periodic BC (experienced user) · Bifurcation Analysis in Julia</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">Bifurcation Analysis in Julia</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../guidelines/">Overview</a></li><li><a class="tocitem" href="../tutorials/">Tutorials</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Functionalities</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../Predictors/">Predictors / correctors</a></li><li><a class="tocitem" href="../detectionBifurcation/">Bifurcation detection</a></li><li><a class="tocitem" href="../codim2Continuation/">Fold / Hopf Continuation (codim 2)</a></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Normal form</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../simplebp/">Simple branch point</a></li><li><a class="tocitem" href="../nonsimplebp/">Non-simple branch point</a></li><li><a class="tocitem" href="../simplehopf/">Simple Hopf point</a></li></ul></li><li><a class="tocitem" href="../branchswitching/">Branch switching</a></li><li><a class="tocitem" href="../BifurcationDiagram/">Bifurcation diagram</a></li><li><a class="tocitem" href="../DeflatedContinuation/">Deflated Continuation</a></li><li><a class="tocitem" href="../deflatedproblem/">Deflated problem</a></li><li><a class="tocitem" href="../constrainedproblem/">Constrained problem</a></li><li><input class="collapse-toggle" id="menuitem-4-11" type="checkbox"/><label class="tocitem" for="menuitem-4-11"><span class="docs-label">Periodic Orbits</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../periodicOrbit/">Introduction</a></li><li><a class="tocitem" href="../periodicOrbitFD/">Finite Differences</a></li><li><a class="tocitem" href="../periodicOrbitShooting/">Shooting</a></li></ul></li><li><a class="tocitem" href="../diffeq/">DiffEq wrapper</a></li><li><a class="tocitem" href="../iterator/">Iterator Interface</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Options</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../linearsolver/">Linear Solvers</a></li><li><a class="tocitem" href="../borderedlinearsolver/">Bordered linear solvers</a></li><li><a class="tocitem" href="../eigensolver/">Eigen Solvers</a></li><li><a class="tocitem" href="../Borderedarrays/">Bordered arrays</a></li></ul></li><li><a class="tocitem" href="../faq/">Frequently Asked Questions</a></li><li><a class="tocitem" href="../library/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Brusselator 1d with periodic BC (experienced user)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Brusselator 1d with periodic BC (experienced user)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/BrusselatorFF.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Brusselator-1d-with-periodic-BC-(experienced-user)-1"><a class="docs-heading-anchor" href="#Brusselator-1d-with-periodic-BC-(experienced-user)-1">Brusselator 1d with periodic BC (experienced user)</a><a class="docs-heading-anchor-permalink" href="#Brusselator-1d-with-periodic-BC-(experienced-user)-1" title="Permalink"></a></h1><ul><li><a href="#Brusselator-1d-with-periodic-BC-(experienced-user)-1">Brusselator 1d with periodic BC (experienced user)</a></li><ul><li><a href="#Building-the-Shooting-problem-1">Building the Shooting problem</a></li><li><a href="#Finding-a-periodic-orbit-1">Finding a periodic orbit</a></li><li><a href="#Computation-of-the-snaking-branch-1">Computation of the snaking branch</a></li><li><a href="#Reference(s)-1">Reference(s)</a></li></ul></ul><div class="admonition is-category-unknown"><header class="admonition-header">References</header><div class="admonition-body"><p>This example is taken from <sup class="footnote-reference"><a id="citeref-Tzou" href="#footnote-Tzou">[Tzou]</a></sup>.</p></div></div><div class="admonition is-info"><header class="admonition-header">Acknowledgment</header><div class="admonition-body"><p>The example was done in collaboration with Navid C. Constantinou.    </p></div></div><p>We look at the Brusselator in 1d. The equations are as follows</p><div>\[\begin{aligned} \frac { \partial X } { \partial t } &amp; = \frac { D _ { 1 } } { l ^ { 2 } } \frac { \partial ^ { 2 } X } { \partial z ^ { 2 } } + X ^ { 2 } Y - ( β + 1 ) X + α \\ \frac { \partial Y } { \partial t } &amp; = \frac { D _ { 2 } } { l ^ { 2 } } \frac { \partial ^ { 2 } Y } { \partial z ^ { 2 } } + β X - X ^ { 2 } Y \end{aligned}\]</div><p>with periodic boundary conditions. These equations have been introduced to reproduce an oscillating chemical reaction. There is an obvious equilibrium <span>$(α, β / α)$</span>. Here, we consider bifurcations with respect to the parameter <span>$l$</span>.</p><p>We focus on computing a snaking branch of periodic orbits using spectral methods implemented in <a href="https://github.com/FourierFlows/Brusselator.jl">Brusselator.jl</a>:</p><pre><code class="language-julia">using Revise, BifurcationKit
+using Brusselator, Plots, Parameters, ForwardDiff, LinearAlgebra, Setfield, DiffEqBase
+using FFTW: irfft
+const BK = BifurcationKit
+
+dev = CPU()					# Device (CPU/GPU)
+
+nx      = 512					# grid resolution
+stepper = &quot;FilteredRK4&quot;		# timestepper
+dt  	= 0.01		# timestep
+nsteps  = 9000		# total number of time-steps
+nsubs	= 20		# number of time-steps for intermediate logging/plotting (nsteps must be multiple of nsubs)
+
+# parameters for the model
+E = 1.4
+L = 137.37				 # Domain length
+# Parameters used by Tzou et al. (2013)
+ε = 0.1
+μ = 25
+ρ = 0.178
+
+D_c = ((sqrt(1 + E^2) - 1) / E)^2
+B_H = (1 + E * sqrt(D_c))^2
+
+B = B_H + ε^2 * μ
+D = D_c + ε^2 * ρ
+
+kc = sqrt(E / sqrt(D))
+
+# building the model
+grid = OneDGrid(dev, nx, L)
+params = Brusselator.Params(B, D, E)
+vars = Brusselator.Vars(dev, grid)
+equation = Brusselator.Equation(dev, params, grid)
+prob = FourierFlows.Problem(equation, stepper, dt, grid, vars, params, dev)
+
+get_u(prob) = irfft(prob.sol[:, 1], prob.grid.nx)
+get_v(prob) = irfft(prob.sol[:, 2], prob.grid.nx)
+u_solution = Diagnostic(get_u, prob; nsteps=nsteps+1)
+diags = [u_solution]</code></pre><p>We now integrate the model to find a periodic orbit:</p><pre><code class="language-julia">l = 28;
+θ = @. (grid.x &gt; -l/2) &amp; (grid.x &lt; l/2)
+
+au, av = -(E^2 + kc^2) / B, -1
+cu, cv = -E * (E + im) / B, 1
+
+u0 = @.	  E + ε * real( au * exp(im * kc * grid.x) * θ + cu * (1 - θ) )
+v0 = @. B/E + ε * real( av * exp(im * kc * grid.x) * θ + cv * (1 - θ) )
+
+set_uv!(prob, u0, v0)
+
+plot_output(prob)
+
+for j=0:Int(nsteps/nsubs)
+	updatevars!(prob)
+	stepforward!(prob, diags, nsubs)
+end
+
+# estimate of the periodic orbit, will be used as initial condition for a Kyrlov-Newton
+initpo = copy(vcat(vcat(prob.vars.u, prob.vars.v), 4.9))
+
+using RecursiveArrayTools
+
+t = u_solution.t[1:10:nsteps]
+U_xt = VectorOfArray([ u_solution.data[j] for j=1:10:nsteps ])
+heatmap(grid.x, t, U_xt&#39;, c = :viridis, clims = (1, 3))</code></pre><p>which gives</p><p><img src="../bruFF1.png" alt/></p><h2 id="Building-the-Shooting-problem-1"><a class="docs-heading-anchor" href="#Building-the-Shooting-problem-1">Building the Shooting problem</a><a class="docs-heading-anchor-permalink" href="#Building-the-Shooting-problem-1" title="Permalink"></a></h2><p>We now define a function to compute the flow and its differential</p><pre><code class="language-julia">function _update!(out, pb::FourierFlows.Problem, N)
+	out[1:N] .= pb.vars.u
+	out[N+1:end] .= pb.vars.v
+	out
+end
+
+function _setD!(D, pb::FourierFlows.Problem)
+	# set parameter in prob
+	pb.eqn.L[:, 1] .*= D / prob.params.D
+	pb.params.D = D
+end
+
+# compute the flow from x up to time t
+function ϕ(x, p, t)
+	@unpack pb, D, N = p
+	_setD!(D, pb)
+
+	# set initial condition
+	@views set_uv!(pb, x[1:N], x[N+1:2N])
+	pb.clock.t=0.; pb.clock.step=0
+	# determine number of time steps
+	dt = pb.clock.dt
+	nsteps = div(t, dt) |&gt; Int
+	# compute flow
+	nsteps = div(t, dt) |&gt; Int
+	# compute flow
+	stepforward!(pb, nsteps)
+
+	rest = t - nsteps * dt
+	dt = pb.clock.dt
+	pb.clock.dt = rest
+	stepforward!(pb, 1)
+	pb.clock.dt = dt
+	updatevars!(pb)
+	out = similar(x)
+	_update!(out, pb, N)
+	return out
+end
+
+# differential of the flow
+function dϕ(x, p, dx, t; δ = 1e-8)
+		phi = ϕ(x, p, t)
+		dphi = (ϕ(x .+ δ .* dx, p, t) .- phi) ./ δ
+		return (t=t, u=phi, du=dphi)
+end</code></pre><p>We also need the vector field</p><pre><code class="language-julia">function vf(x, p)
+		@unpack pb, D, N = p
+		# set parameter in prob
+		pb.eqn.L[:, 1] .*= D / pb.params.D
+		pb.params.D = D
+		u = @view x[1:N]
+		v = @view x[N+1:end]
+		# set initial condition
+		set_uv!(pb, u, v)
+		rhs = Brusselator.get_righthandside(pb)
+		# rhs is in Fourier space, put back to real space
+		out = similar(x)
+		ldiv!((@view out[1:N]), pb.grid.rfftplan, rhs[:, 1])
+		ldiv!((@view out[N+1:end]), pb.grid.rfftplan, rhs[:, 2])
+		return out
+end</code></pre><p>We can now specify the shooting problem</p><pre><code class="language-julia"># parameters to be passed to ϕ
+par_bru = (pb = prob, N = nx, nsubs = nsubs, D = D)
+
+# example of vector passed to ϕ
+x0 = vcat(u0,v0)
+
+# here we define the problem which encodes the standard shooting
+flow = Flow(vf, ϕ, dϕ)
+_center = vcat(E*ones(nx), B/E*ones(nx))
+
+# section for the flow
+sectionBru = BK.SectionSS(vf(initpo[1:end-1], par_bru), _center)
+probSh = ShootingProblem(M = 1, flow = flow, ds = diff(LinRange(0, 1, 1 + 1)), section = sectionBru)</code></pre><h2 id="Finding-a-periodic-orbit-1"><a class="docs-heading-anchor" href="#Finding-a-periodic-orbit-1">Finding a periodic orbit</a><a class="docs-heading-anchor-permalink" href="#Finding-a-periodic-orbit-1" title="Permalink"></a></h2><pre><code class="language-julia"># linear solver for the Shooting problem
+ls = GMRESIterativeSolvers(N = 2nx+1)
+optn = NewtonPar(tol = 1e-9, verbose = true,
+	linsolver = ls,
+	eigsolver = EigKrylovKit(dim = 30, x₀ = rand(2nx), verbose = 1  )
+	)
+
+# Newton-Krylov method to check convergence and tune parameters
+solp, = @time newton(probSh, initpo, par_bru, optn,
+	normN = x-&gt;norm(x,Inf))</code></pre><p>and you should see (the guess was not that good)</p><pre><code class="language-julia">Newton Iterations      f(x)      Linear Iterations
+
+          0          1.6216e+03             0
+          1          4.4373e+01             6
+          2          9.0135e-01            15
+          3          4.9086e-02            32
+          4          4.1158e-03            27
+          5          6.0755e-03            33
+          6          2.4727e-04            33
+          7          3.7843e-05            34
+          8          1.9161e-07            31
+          9          4.3243e-09            40
+         10          2.3175e-13            27
+ 83.615047 seconds (284.31 M allocations: 24.250 GiB, 6.28% gc time)</code></pre><h2 id="Computation-of-the-snaking-branch-1"><a class="docs-heading-anchor" href="#Computation-of-the-snaking-branch-1">Computation of the snaking branch</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-snaking-branch-1" title="Permalink"></a></h2><pre><code class="language-julia"># you can detect bifurcations with the option detectBifurcation = 3
+optc = ContinuationPar(newtonOptions = optn, ds = -1e-3, dsmin = 1e-7, dsmax = 2e-3, pMax = 0.295, plotEveryStep = 2, maxSteps = 1000)
+	bd, = continuation(probSh,
+		solp, par_bru, (@lens _.D), optc;
+		linearAlgo = MatrixFreeBLS(@set ls.N = 2nx+2),
+		plot = true,
+		verbosity = 3,
+		plotSolution = (x,p ; kw...) -&gt; plot!(x[1:nx];kw...),
+		normC = x-&gt;norm(x,Inf))</code></pre><p>which leads to </p><p><img src="../bruFFcont.png" alt/></p><h2 id="Reference(s)-1"><a class="docs-heading-anchor" href="#Reference(s)-1">Reference(s)</a><a class="docs-heading-anchor-permalink" href="#Reference(s)-1" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-Tzou"><a class="tag is-link" href="#citeref-Tzou">Tzou</a><blockquote><p>Tzou, J. C., Y.-P. Ma, A. Bayliss, B. J. Matkowsky, and V. A. Volpert. <strong>Homoclinic Snaking near a Codimension-Two Turing-Hopf Bifurcation Point in the Brusselator Model.</strong>” Physical Review E 87, no. 2 (February 14, 2013): 022908. https://doi.org/10.1103/PhysRevE.87.022908.</p></blockquote></li></ul></section></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 30 November 2020 10:02">Monday 30 November 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
