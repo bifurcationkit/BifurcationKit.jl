@@ -101,7 +101,8 @@ d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)</code></pre><p>We define the linear solvers to be use by the (Matrix-Free) shooting method</p><pre><code class="language-julia">ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)</code></pre><p>as</p><pre><code class="language-julia">br_po, = continuation(
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)</code></pre><p>as</p><pre><code class="language-julia">Mt = 1 # number of time sections
+br_po, = continuation(
 	# we want to compute the bifurcated branch from 
 	# the first Hopf point
 	jet..., br, 1,
@@ -109,9 +110,15 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.
 	opts_po_cont,
 	# this is how to pass the method to compute the periodic
 	# orbits. We shall use 1 section and the ODE solver ETDRK2
-	ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;
+	ShootingProblem(Mt, par_cgl, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
+	# linear solver for bordered linear system
+	# we combine the 2 solves. It is here faster than BorderingBLS()
+	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
+	# to help branching from the Hopf point
+	ampfactor = 1.5, δp = 0.01,
 	# regular parameters for the continuation
-	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
+	verbosity = 3, plot = true,
+	# print the Floquet exponent
 	finaliseSolution = (z, tau, step, contResult) -&gt;
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = norminf)</code></pre><p><img src="../cgl-sh-br.png" alt/></p><h2 id="Manual-branch-switching-from-the-Hopf-points-1"><a class="docs-heading-anchor" href="#Manual-branch-switching-from-the-Hopf-points-1">Manual branch switching from the Hopf points</a><a class="docs-heading-anchor-permalink" href="#Manual-branch-switching-from-the-Hopf-points-1" title="Permalink"></a></h2><p>The goal of this section is to show how to use the package in case automatic branch switching fails. This can happen for tedious PDEs and &quot;one has to get his hands dirty&quot;.</p><p>We decide to use Standard Shooting and thus define a Shooting functional</p><pre><code class="language-julia">probSh = ShootingProblem(
@@ -140,7 +147,6 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 1.
 
 br_po, = @time continuation(probSh,
 	initpo, (@set par_cgl.r = 1.2), (@lens _.r), opts_po_cont;
-	verbosity = 3,
-	plot = true,
+	verbosity = 3, plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-	printSolution = (u, p) -&gt; BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 30 November 2020 14:23">Monday 30 November 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	printSolution = (u, p) -&gt; BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 1 December 2020 22:14">Tuesday 1 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
