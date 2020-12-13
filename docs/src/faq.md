@@ -9,7 +9,7 @@ function mySave(u, tau, step, contResult, personaldata)
 	push!(personaldata, u)
 end
 ```
-and pass it like `continuation(F, J, u, p0, finaliseSolution = (z, tau, step, contResult) -> mySave(z, tau, step, contResult, myData))`
+and pass it like `continuation(F, J, u, p0, finaliseSolution = (z, tau, step, contResult; k...) -> mySave(z, tau, step, contResult, myData))`
 
 ### The Fold / Hopf Continuation does not work, why?
 

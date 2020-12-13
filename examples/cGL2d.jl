@@ -247,13 +247,12 @@ br_po, _ = continuation(
 	printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
-# preconditioner taking into account the constraint
-# Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)[1:2n*M-2n,1:2n*M-2n]
-# 	Jpo = blockdiag(Jpo, spdiagm(0 => ones(2Nx*Ny+1)) )
-# Precilu = @time ilu(Jpo, τ = 0.004)
-# ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
-# 	ls(Jpo, rand(ls.N))
-####################################################################################################
+# preconditioner not taking into account the constraint
+# Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
+# Precilu = lu(blockdiag([par_cgl.Δ for  _=1:M-1]...))
+# ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
+# ls(Jpo, rand(ls.N))
+###################################################################################################
 # this preconditioner does not work very well here
 Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.003)
@@ -296,7 +295,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 # push!(branches, br_pok2)
 # plotBranch(branches,label="", xlabel="r",ylabel="Amplitude");title!("")
 ####################################################################################################
-# Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)
+# Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 # rhs = rand(size(Jpo,1))
 # @time Jpo \ rhs
 #

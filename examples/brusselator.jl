@@ -188,13 +188,14 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
+# opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
 outpo_f, _, flag = @time newton(poTrap,
 			orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 			opt_po;
 			# deflationOp,
+			linearPO = :BorderedSparseInplace, #  3.2 seconds (756.76 k allocations: 2.363 GiB, 6.67% gc time)
 			# linearPO = :BorderedLU,
-			linearPO = :FullSparseInplace,
+			# linearPO = :FullSparseInplace, # 3.634019 seconds (775.86 k allocations: 2.452 GiB, 6.40% gc time)
 			normN = norminf,
 			callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
 			)

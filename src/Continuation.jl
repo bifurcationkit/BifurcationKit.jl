@@ -33,6 +33,9 @@ end
 Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
 setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = set(it.par, it.param_lens, p0)
 
+# default finaliser
+finaliseDefault(z, tau, step, contResult; k...) = true
+
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
@@ -44,7 +47,7 @@ function ContIterable(Fhandle, Jhandle,
 					printSolution = (x, p) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
-					finaliseSolution = (z, tau, step, contResult; kwargs...) -> true,
+					finaliseSolution = finaliseDefault,
 					callbackN = cbDefault,
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
@@ -330,7 +333,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			end
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-			state.stopcontinuation = ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes)
+
+			state.stopcontinuation = ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes; state = state)
 
 			# Save solution
 			save!(contRes, it, state)
@@ -373,7 +377,7 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 

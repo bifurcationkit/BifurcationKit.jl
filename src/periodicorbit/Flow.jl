@@ -128,7 +128,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 end
 
 # constructors
-Flow(F, fl, df) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
+Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
 
 # callable struct
 (fl::Flow)(x, p, t; k...)     			  			= fl.flow(x, p, t; k...)
