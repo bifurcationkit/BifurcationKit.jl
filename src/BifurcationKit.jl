@@ -76,7 +76,6 @@ module BifurcationKit
 
 					jldopen(filename*"-branch.jld2", "w") do file
 						file["branch"] = br
-						file["contParam"] = br.contparams
 					end
 				catch
 					@error "Could not save branch in the jld2 file"

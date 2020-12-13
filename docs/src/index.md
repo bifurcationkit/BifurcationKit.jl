@@ -81,17 +81,17 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |
 |---|---|---|---|---|
 | (Deflated) Krylov-Newton| Yes| Yes| All| Y|
-| Continuation (Natural, Secant, Tangent) | Yes| Yes| All |Y  |
+| Continuation (Natural, Secant, Tangent, Polynomial) | Yes| Yes| All |Y  |
 | Deflated Continuation | Yes| Yes| [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1) |Y  |
 | Branching / Fold / Hopf point detection | Yes| Yes| All / All / [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | Y |
-| Fold Point continuation | Yes| Yes| [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | |
+| Fold Point continuation | Yes| Yes| [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | Y |
 | Hopf continuation | Yes| `AbstractArray` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Continuation-of-Hopf-points-1) | |
-| Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
-| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
+| Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | Y |
+| **Automatic bifurcation diagram computation** | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
 | Periodic Orbit (FD) Newton / continuation | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | Y|
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
-| Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | |
+| Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | Y |
 
 
 ## Requested methods for Custom State

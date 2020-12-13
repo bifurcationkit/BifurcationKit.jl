@@ -140,7 +140,7 @@ d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
 d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 
-hopfpt = BK.computeNormalForm(jet..., br, 2)
+hopfpt = computeNormalForm(jet..., br, 2)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -501,7 +501,7 @@ function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArrays.CuArray)
 	rhs
 end
 
-import PseudoArcLengthContinuation: extractPeriodFDTrap
+import BifurcationKit: extractPeriodFDTrap
 extractPeriodFDTrap(x::CuArray) = x[end:end]
 
 sol0_f = vec(sol0)

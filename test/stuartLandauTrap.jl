@@ -32,7 +32,7 @@ optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInv
 br, = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 poTrap = PeriodicOrbitTrapProblem(
-	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)), # we put sparse to try the different options
+	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)), # we put sparse to try the different linear solvers
 	[1., 0.],
 	zeros(2),
 	20, 2)

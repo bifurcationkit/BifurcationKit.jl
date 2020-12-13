@@ -92,7 +92,7 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
-Create a linear solver based on GMRES from `IterativeSolvers.jl`.
+Linear solver based on gmres from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
@@ -137,7 +137,7 @@ end
 
 """
 $(TYPEDEF)
-Create a linear solver based on GMRES from `IterativeSolvers.jl`.
+Linear solver based on gmres! from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers!{T, Tl, Tr} <: AbstractLinearSolver
