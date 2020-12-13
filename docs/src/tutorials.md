@@ -33,6 +33,8 @@ Depth = 1
 
 ## Bifurcation diagrams with periodic orbits
 ```@contents
-Pages = ["tutorials3.md","tutorials3b.md", "BrusselatorFF.md", "tutorialsPD.md", "tutorialsCGL.md", "tutorialsCGLShoot.md"]
+Pages = ["tutorials3.md","tutorials3b.md", "BrusselatorFF.md", "tutorialsPD.md", "tutorialsCGL.md", "tutorialsCGLShoot.md","Langmuir.md"]
 Depth = 1
 ```
+
+## Bifurcation diagrams with waves
