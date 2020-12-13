@@ -22,7 +22,7 @@ pbg = PeriodicOrbitTrapProblem(
 			M ; ongpu = true)
 
 pbi = PeriodicOrbitTrapProblem(
-			(o, x, p) -> o .= x.^2 ,
+			(o, x, p) -> o .= x.^2,
 			((o, x, p, dx) -> o .= 2 .* dx),
 			pb.ϕ,
 			pb.xπ,

@@ -75,7 +75,7 @@ br5, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, line
 br5, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = MatrixBLS())
 
 # test for stopping continuation based on user defined function
-finaliseSolution = (z, tau, step, contResult) -> (step < 20)
+finaliseSolution = (z, tau, step, contResult; k...) -> (step < 20)
 br5a, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, finaliseSolution = finaliseSolution)
 @test length(br5a.branch) == 21
 
