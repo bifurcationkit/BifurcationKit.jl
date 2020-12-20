@@ -604,8 +604,8 @@ end
 We first load `CuArrays`
 
 ```julia
-using CuArrays
-CuArrays.allowscalar(false)
+using CUDA
+CUDA.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
 mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)
@@ -615,7 +615,7 @@ axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+
 and update the parameters
 
 ```julia
-par_cgl_gpu = @set par_cgl.Δ = CuArrays.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
+par_cgl_gpu = @set par_cgl.Δ = CUDA.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
 ```
 
 Then, we precompute the preconditioner on the CPU:
@@ -634,10 +634,10 @@ struct LUperso
 end
 
 import Base: ldiv!
-function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArrays.CuArray)
+function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CUDA.CuArray)
 	_x = UpperTriangular(_lu.Ut) \ (LowerTriangular(_lu.L) \ rhs)
 	rhs .= vec(_x)
-	CuArrays.unsafe_free!(_x)
+	CUDA.unsafe_free!(_x)
 	rhs
 end
 ```
@@ -656,9 +656,9 @@ We can now define our functional:
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
 poTrapMFGPU = PeriodicOrbitTrapProblem(
 	Fcgl, (x, p) ->  (dx -> dFcgl(x, p, dx)),
-	CuArray(real.(vec_hopf)),
+	CuArray(real.(eigvec)),
 	CuArray(hopfpt.u),
-	M, ls0gpu;
+	M, 2n, ls0gpu;
 	ongpu = true) # this is required to alter the way the constraint is handled
 ```
 
@@ -669,9 +669,9 @@ ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
    # runs in 	2.990495 seconds (785 allocations: 31.564 MiB, 0.98% gc time)
 	outh, = @time ls((Jpo), orbitguess_f)
 
-Precilu_gpu = LUperso(LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
+Precilu_gpu = LUperso(LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
 lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
-	Jpo_gpu = CuArrays.CUSPARSE.CuSparseMatrixCSR(Jpo);
+	Jpo_gpu = CUDA.CUSPARSE.CuSparseMatrixCSR(Jpo);
 	orbitguess_cu = CuArray(orbitguess_f)
 	# runs in 1.751230 seconds (6.54 k allocations: 188.500 KiB, 0.43% gc time)
 	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)

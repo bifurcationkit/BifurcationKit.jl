@@ -48,7 +48,7 @@ xs = 10.0; ls = 2.0
 par = (N = N, Δx = Δx, c0 = -0.9, σ = 1.0, μ = 0.5, ν = 0.08, Δg = Δg)
 ```
 
-We call the Krylov-Newton to find a stationary solution. Note that for this to work, the guess has to satisfies the boundary conditions approximately.
+We call the Krylov-Newton to find a stationary solution. Note that for this to work, the guess has to satisfy the boundary conditions approximately.
 
 ```julia
 # newton iterations to refine the guess

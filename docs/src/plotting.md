@@ -23,6 +23,8 @@ The available arguments specific to our plotting methods are
 - `plotbifpoints = true`: plot the bifurcation points on the branch
 - `branchlabel = "fold branch"`: assign label to a branch which is printed in the legend
 - `vars = nothing`: see below
+- `linewidthstable`: set the linewidth for the stable part of the branch
+- `linewidthunstable`: set the linewidth for the unstable part of the branch
 
 If you have severals branches `br1, br2`, you can plot them in the same figure by doing 
 

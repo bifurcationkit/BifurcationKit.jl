@@ -164,17 +164,17 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [
 
 ####################################################################################################
 # circulant pre-conditioner
-# Jpo = poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)[1:2n*M-2n,1:2n*M-2n]
+# Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 # kΔ = spdiagm(0 => ones(M-1), -1 => ones(M-2), M-2 => [1])
 # 	kI = spdiagm(0 => ones(M-1), -1 => -ones(M-2), M-2 => [-1])
 #
 # 	#diagonal precond
-# 	# kΔ = spdiagm(0 => ones(M-1))
-# 	# kI = spdiagm(0 => ones(M-1))
+# 	kΔ = spdiagm(0 => ones(M-1))
+# 	kI = spdiagm(0 => ones(M-1))
 #
 # 	h = orbitguess_f[end] / M
 # 	Precs2 = kron(kI, spdiagm(0 => ones(2n))) ./1 -  h/2 * kron(kΔ, par_cgl.Δ)
-# 	ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
+# 	ls = GMRESIterativeSolvers(verbose = true, tol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
 # 	ls(Jpo, rand(ls.N))
 ####################################################################################################
 #
@@ -249,7 +249,8 @@ br_po, _ = continuation(
 ###################################################################################################
 # preconditioner not taking into account the constraint
 # Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
-# Precilu = lu(blockdiag([par_cgl.Δ for  _=1:M-1]...))
+# Precilu = poTrap(Val(:BlockDiagSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)[1:end-2n,1:end-2n] |> lu
+# Precilu = lu(blockdiag([par_cgl.Δ .+ par_cgl.r for  _=1:M-1]...))
 # ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 # ls(Jpo, rand(ls.N))
 ###################################################################################################
@@ -389,8 +390,7 @@ ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
-	Fcgl!,
-	dFcgl!,
+	Fcgl!, dFcgl!,
 	real.(vec_hopf), hopfpt.u,
 	M, 2n, ls0; isinplace = true)
 
@@ -467,14 +467,14 @@ plot(outfoldco, label="", xlabel="c5", ylabel="r")
 
 ####################################################################################################
 # Continuation of periodic orbits on the GPU
-using CuArrays
-CuArrays.allowscalar(false)
+using CUDA
+CUDA.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
 mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)
 axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
-par_cgl_gpu = @set par_cgl.Δ = CuArrays.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
+par_cgl_gpu = @set par_cgl.Δ = CUDA.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.01))
 Precilu = @time ilu(Jpo, τ = 0.003)
 
@@ -493,10 +493,10 @@ function LinearAlgebra.ldiv!(_lu::LUperso, rhs::Array)
 	rhs
 end
 
-function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArrays.CuArray)
+function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArray)
 	_x = UpperTriangular(_lu.Ut) \ (LowerTriangular(_lu.L) \ rhs)
 	rhs .= vec(_x)
-	CuArrays.unsafe_free!(_x)
+	CUDA.unsafe_free!(_x)
 	rhs
 end
 
@@ -521,7 +521,7 @@ orbitguess_cu = CuArray(orbitguess_f)
 norm(orbitguess_f - Array(orbitguess_cu), Inf)
 
 
-Precilu_gpu = LUperso(LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
+Precilu_gpu = LUperso(LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
 
 Precilu_host = LUperso((I+Precilu.L), (sparse(Precilu.U')));
 
@@ -533,11 +533,11 @@ rhs = rand(size(Jpo,1))
 	# norm(sol_2-sol_0, Inf64)
 
 sol_0 = (I+Precilu.L) \ rhs
-	sol_1 = LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)) \ CuArray(rhs)
+	sol_1 = LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)) \ CuArray(rhs)
 	@assert norm(sol_0-Array(sol_1), Inf64) < 1e-10
 
 sol_0 = (Precilu.U)' \ rhs
-	sol_1 = UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))) \ CuArray(rhs)
+	sol_1 = UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))) \ CuArray(rhs)
 	norm(sol_0-Array(sol_1), Inf64)
 	@assert norm(sol_0-Array(sol_1), Inf64) < 1e-10
 
@@ -558,7 +558,7 @@ poTrapMFGPU = PeriodicOrbitTrapProblem(
 	Fcgl, dFcgl,
 	CuArray(real.(vec_hopf)),
 	CuArray(hopfpt.u),
-	M, ls0gpu)
+	M, 2n, ls0gpu)
 
 pb = poTrapMF(@set par_cgl.r = r_hopf - 0.1);
 pbgpu = poTrapMFGPU(@set par_cgl_gpu.r = r_hopf - 0.1);
@@ -567,11 +567,11 @@ pbgpu(orbitguess_cu);
 pbgpu(orbitguess_cu, orbitguess_cu);
 
 ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
-	outh, _, _ = @time ls((Jpo), orbitguess_f) #0.4s
+	outh, = @time ls((Jpo), orbitguess_f) #0.4s
 
 lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
-	Jpo_gpu = CuArrays.CUSPARSE.CuSparseMatrixCSR(Jpo);
-	outd, _, _ = @time lsgpu(Jpo_gpu, orbitguess_cu)
+	Jpo_gpu = CUDA.CUSPARSE.CuSparseMatrixCSR(Jpo);
+	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)
 
 @assert norm(outh-Array(outd), Inf) < 1e-12
 
@@ -598,7 +598,7 @@ flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", ampl
 
 
 opt_po = @set opt_newton.verbose = true
-	outpo_f, hist, flag = @time BK.newton(
+	outpo_f, hist, flag = @time newton(
 			poTrapMFGPU(@set par_cgl_gpu.r = r_hopf - 0.01),
 			orbitguess_cu,
 			(@set opt_po.linsolver = lsgpu), :FullMatrixFree;

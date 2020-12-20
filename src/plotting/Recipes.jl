@@ -13,13 +13,13 @@ function getPlotVars(contres, vars)
 end
 
 # allow to plot a single branch
-@recipe function Plots(contres::BranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "")
+@recipe function Plots(contres::BranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	@series begin
 		if computeEigenElements(contres.contparams) && plotstability
-			linewidth --> map(x -> isodd(x) ? 2.0 : 1.0, contres.stable)
+			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
 		if ind1 == 1
 			xguide --> getLensParam(contres.param_lens)
@@ -65,7 +65,7 @@ end
 end
 
 # allow to plot branches specified by splatting
-@recipe function Plots(brs::BranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)))
+@recipe function Plots(brs::BranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
@@ -77,6 +77,8 @@ end
 			plotbifpoints --> plotbifpoints
 			plotstability --> plotstability
 			branchlabel --> branchlabel[id]
+			linewidthunstable --> linewidthunstable
+			linewidthstable --> linewidthstable
 			vars --> vars
 			xguide --> getLensParam(res.param_lens)
 			# collect the values of the bifurcation points to be added in the legend
