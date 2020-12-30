@@ -85,6 +85,7 @@ eigls = EigKrylovKit(dim = 70)
 
 plotsol(out)
 
+
 ####################################################################################################
 function finSol(z, tau, step, br)
 	if ~isnothing(br.bifpoint)
@@ -107,6 +108,7 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, 
 
 plot(br)
 ####################################################################################################
+
 # branch switching
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
