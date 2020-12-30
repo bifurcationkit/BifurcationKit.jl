@@ -2,6 +2,7 @@ abstract type AbstractPeriodicOrbitProblem end
 
 # Periodic orbit computations by finite differences
 abstract type AbstractPOTrapProblem <: AbstractPeriodicOrbitProblem end
+# Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
 # get the number of time slices

@@ -104,7 +104,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 	adaptmesh::Bool = false
 end
 
-isInplace(pb::PeriodicOrbitTrapProblem) = pb.isinplace
+isInplace(pb::AbstractPOTrapProblem) = pb.isinplace
 onGpu(pb::PeriodicOrbitTrapProblem) = pb.ongpu
 hasHessian(pb::PeriodicOrbitTrapProblem) = pb.d2F == nothing
 @inline getTimeStep(pb::PeriodicOrbitTrapProblem, i::Int) = getTimeStep(pb.mesh, i)
@@ -143,7 +143,8 @@ PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}
 
 function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
 	M = m isa Number ? m : length(m) + 1
-	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = zeros(N*M), xπ = zeros(N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	# we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
+	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ * 0, xπ = xπ * 0, M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
 	prob.xπ[1:length(xπ)] .= xπ
 	prob.ϕ[1:length(ϕ)] .= ϕ
 	return prob
