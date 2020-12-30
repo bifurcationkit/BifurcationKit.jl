@@ -337,38 +337,38 @@ function dFcgl(x, p, dx)
 	mul!(f, p.Δ, dx)
 	nl = d1NL(x, p, dx)
 	f .= f .+ nl
-end</code></pre><p>We first load <code>CuArrays</code></p><pre><code class="language-julia">using CuArrays
-CuArrays.allowscalar(false)
+end</code></pre><p>We first load <code>CuArrays</code></p><pre><code class="language-julia">using CUDA
+CUDA.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T &lt;: Number} = (x .= α .* y)
 mul!(x::CuArray, α::T, y::CuArray) where {T &lt;: Number} = (x .= α .* y)
-axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)</code></pre><p>and update the parameters</p><pre><code class="language-julia">par_cgl_gpu = @set par_cgl.Δ = CuArrays.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);</code></pre><p>Then, we precompute the preconditioner on the CPU:</p><pre><code class="language-julia">Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
+axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T &lt;: Number} = (Y .= a .* X .+ b .* Y)</code></pre><p>and update the parameters</p><pre><code class="language-julia">par_cgl_gpu = @set par_cgl.Δ = CUDA.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);</code></pre><p>Then, we precompute the preconditioner on the CPU:</p><pre><code class="language-julia">Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 Precilu = @time ilu(Jpo, τ = 0.003)</code></pre><p>To invert <code>Precilu</code> on the GPU, we need to define a few functions which are not in <code>CuArrays</code> and which are related to LU decomposition:</p><pre><code class="language-julia">struct LUperso
 	L
 	Ut	# transpose of U in LU decomposition
 end
 
 import Base: ldiv!
-function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArrays.CuArray)
+function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CUDA.CuArray)
 	_x = UpperTriangular(_lu.Ut) \ (LowerTriangular(_lu.L) \ rhs)
 	rhs .= vec(_x)
-	CuArrays.unsafe_free!(_x)
+	CUDA.unsafe_free!(_x)
 	rhs
 end</code></pre><p>Finally, for the methods in <code>PeriodicOrbitTrapProblem</code> to work, we need to redefine the following method. Indeed, we disable the use of scalar on the GPU to increase the speed.</p><pre><code class="language-julia">import BifurcationKit: extractPeriodFDTrap
 extractPeriodFDTrap(x::CuArray) = x[end:end]</code></pre><p>We can now define our functional:</p><pre><code class="language-julia"># matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
 poTrapMFGPU = PeriodicOrbitTrapProblem(
 	Fcgl, (x, p) -&gt;  (dx -&gt; dFcgl(x, p, dx)),
-	CuArray(real.(vec_hopf)),
+	CuArray(real.(eigvec)),
 	CuArray(hopfpt.u),
-	M, ls0gpu;
+	M, 2n, ls0gpu;
 	ongpu = true) # this is required to alter the way the constraint is handled</code></pre><p>Let us have a look at the linear solvers and compare the speed on CPU and GPU:</p><pre><code class="language-julia">ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
    # runs in 	2.990495 seconds (785 allocations: 31.564 MiB, 0.98% gc time)
 	outh, = @time ls((Jpo), orbitguess_f)
 
-Precilu_gpu = LUperso(LowerTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CuArrays.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U&#39;))));
+Precilu_gpu = LUperso(LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U&#39;))));
 lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
-	Jpo_gpu = CuArrays.CUSPARSE.CuSparseMatrixCSR(Jpo);
+	Jpo_gpu = CUDA.CUSPARSE.CuSparseMatrixCSR(Jpo);
 	orbitguess_cu = CuArray(orbitguess_f)
 	# runs in 1.751230 seconds (6.54 k allocations: 188.500 KiB, 0.43% gc time)
 	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)</code></pre><p>So we can expect a pretty descent x2 speed up in computing the periodic orbits. We can thus call newton:</p><pre><code class="language-julia">opt_po = @set opt_newton.verbose = true
@@ -380,4 +380,4 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 December 2020 13:23">Friday 18 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 30 December 2020 22:07">Wednesday 30 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
