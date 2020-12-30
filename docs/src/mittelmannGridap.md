@@ -28,18 +28,6 @@ plotgridap(x; k...) =( plot();plotgridap!(x; k...))
 We are now ready to specify the problem using the setting of **Gridap.jl**: it allows to write the equations very closely to the mathematical formulation:
 
 ```julia
-@law NL(u) = exp(u)
-
-# residual
-res(u,p,v) = -∇(v)⋅∇(u) -  v ⋅ (u - p.λ * NL(u)) * 10
-
-# jacobian of the residual
-jac(u,p,du,v) = -∇(v)⋅∇(du) - v ⋅ du ⋅ (1 - p.λ * NL(u)) * 10
-
-# 3rd and 4th derivatives, used for aBS
-d2res(u,p,du1,du2,v) = v ⋅ du1 ⋅ du2 ⋅ NL(u) * 10 * p.λ
-d3res(u,p,du1,du2,du3,v) = v ⋅ du1 ⋅ du2 ⋅ du3 ⋅ NL(u) * 10 * p.λ
-
 # discretisation
 n = 40
 domain = (0,1,0,1)
@@ -48,14 +36,26 @@ model = CartesianDiscreteModel(domain,cells)
 
 # function spaces
 order = 1
-V = TestFESpace(
-	model=model,reffe=:Lagrangian,valuetype=Float64,
-	order=order,conformity=:H1,)#dirichlet_tags="boundary")
+reffe = ReferenceFE(lagrangian,Float64,order)
+V = TestFESpace(model,reffe,conformity=:H1,)#dirichlet_tags="boundary")
 U = TrialFESpace(V)
 
-trian = Triangulation(model)
+Ω = Triangulation(model)
 degree = 2*order
-quad = CellQuadrature(trian,degree)
+dΩ = Measure(Ω,degree)
+
+# nonlinearity
+NL(u) = exp(u)
+
+# residual
+res(u,p,v) = ∫( -∇(v)⋅∇(u) -  v ⋅ (u - p.λ ⋅ (NL ∘ u)) * 10 )*dΩ
+
+# jacobian of the residual
+jac(u,p,du,v) = ∫( -∇(v)⋅∇(du) - v ⋅ du ⋅ (1 - p.λ * ( NL ∘ u)) * 10 )*dΩ
+
+# 3rd and 4th derivatives, used for aBS
+d2res(u,p,du1,du2,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
+d3res(u,p,du1,du2,du3,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ du3 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
 
 # example of initial guess
 uh = zero(U)
@@ -64,7 +64,7 @@ uh = zero(U)
 par_bratu = (λ = 0.01,)
 
 # problem definition
-prob = GridapProblem(res, jac, d2res, d3res, trian, quad, V, U)
+prob = GridapProblem(res, jac, d2res, d3res, V, U)
 ```
 
 We can call then the newton solver:
