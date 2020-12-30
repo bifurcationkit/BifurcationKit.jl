@@ -171,7 +171,7 @@ norminf(res)
 res = probSh(initpo, par_hopf, initpo)
 norminf(res)
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
 	optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outpo, = @time newton(probSh,
@@ -214,7 +214,7 @@ d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 
 # linear solvers
-ls = GMRESIterativeSolvers(tol = 1e-7, maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
@@ -249,7 +249,7 @@ initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 # 	scatter(real.(P.eigenvalues), imag.(P.eigenvalues))
 # 		plot!(1 .+ cos.(LinRange(0,2pi,100)), sin.(LinRange(0,2pi,100)))
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)#, Pr = P)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
 	outpo_psh, = @time newton(probHPsh,
 		vec(initpo_bar), par_hopf, optn;
@@ -281,7 +281,7 @@ br_po, = @time continuation(
 ####################################################################################################
 # automatic branch switching from Hopf point with Poincare Shooting
 # linear solver
-ls = GMRESIterativeSolvers(tol = 1e-7, maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50))
 # continuation parameters

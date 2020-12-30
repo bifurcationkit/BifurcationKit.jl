@@ -139,7 +139,7 @@ using SparseArrays
 P = spdiagm(0 => -2 * (n-1)^2 * ones(n), -1 => (n-1)^2 * ones(n-1), 1 => (n-1)^2 * ones(n-1))
 P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 
-ls = GMRESIterativeSolvers(tol = 1e-5, N = length(sol), restart = 20, maxiter=10, Pl = lu(P))
+ls = GMRESIterativeSolvers(reltol = 1e-5, N = length(sol), restart = 20, maxiter=10, Pl = lu(P))
 	optnewton_mf = NewtonPar(tol = 1e-9, verbose = true, linsolver = ls)
 	out_mf, _, flag = @time newton(
 		F_chan,

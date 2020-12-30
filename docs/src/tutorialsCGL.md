@@ -234,7 +234,7 @@ Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 Precilu = @time ilu(Jpo, τ = 0.005)
 
 # we define the linear solver with left preconditioner Precilu
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 
 # we try the linear solver
 ls(Jpo, rand(ls.N))
@@ -281,7 +281,7 @@ At this point, we are still wasting a lot of resources, because the matrix-free 
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
 
 # linear solver for solving Jcgl*x = rhs. Needed for Floquet multipliers computation
-ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9, Pl = lu(I + par_cgl.Δ))
 
 # matrix-free problem
 poTrapMF = PeriodicOrbitTrapProblem(
@@ -387,7 +387,7 @@ end
 We can now define an inplace functional
 
 ```julia
-ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
 	Fcgl!, dFcgl!,
 	real.(eigvec),
@@ -426,7 +426,7 @@ We could use another way to "invert" jacobian of the functional based on bordere
 ```julia
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
 Precilu = @time ilu(Jpo2, τ = 0.005)
-ls2 = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
+ls2 = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 
 opt_po = @set opt_newton.verbose = true
 outpo_f, hist, flag = @time newton(
@@ -524,7 +524,7 @@ foldpt = FoldPoint(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)
 ```
 
 We can then use our functional to call `newtonFold` unlike for a regular function (see Tutorial 1). Indeed, we specify the change the parameters too much to rely on a generic algorithm.

@@ -152,7 +152,7 @@ orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
 poTrap = PeriodicOrbitTrapProblem(Fcgl, Jcgl, real.(vec_hopf), hopfpt.u, M, 2n)
 
-ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; J = (x, p) ->  (dx -> d1Fcgl(x, p, dx)), linsolver = ls0)
 
 poTrap(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
@@ -174,7 +174,7 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [
 #
 # 	h = orbitguess_f[end] / M
 # 	Precs2 = kron(kI, spdiagm(0 => ones(2n))) ./1 -  h/2 * kron(kΔ, par_cgl.Δ)
-# 	ls = GMRESIterativeSolvers(verbose = true, tol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
+# 	ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
 # 	ls(Jpo, rand(ls.N))
 ####################################################################################################
 #
@@ -200,7 +200,7 @@ Precilu = @time ilu(Jpo, τ = 0.005) # 2 sec
 
 # @time Jpo \ rand(ls.N) # 97 sec
 
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 # ls = GMRESKrylovKit(verbose = 0, Pl = Precilu, rtol = 1e-3)
@@ -251,13 +251,13 @@ br_po, _ = continuation(
 # Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
 # Precilu = poTrap(Val(:BlockDiagSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)[1:end-2n,1:end-2n] |> lu
 # Precilu = lu(blockdiag([par_cgl.Δ .+ par_cgl.r for  _=1:M-1]...))
-# ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
+# ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 # ls(Jpo, rand(ls.N))
 ###################################################################################################
 # this preconditioner does not work very well here
 Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.003)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 opt_po = @set opt_newton.verbose = true
@@ -385,10 +385,10 @@ out_ = similar(sol0f)
 @time dFcgl!(out_, sol0f, par_cgl, sol0f)
 
 
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
-ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
 	Fcgl!, dFcgl!,
 	real.(vec_hopf), hopfpt.u,
@@ -405,7 +405,7 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
 @assert 1==0 "tester code_warntype dans POTrapFunctionalJac! st POTrapFunctional!"
 
-lsi = GMRESIterativeSolvers!(verbose = false, N = length(orbitguess_f), tol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true)
+lsi = GMRESIterativeSolvers!(verbose = false, N = length(orbitguess_f), reltol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi); normN = norminf, linearPO = :FullMatrixFree)
@@ -438,7 +438,7 @@ foldpt = BK.FoldPoint(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log=true)
 	ls(Jpo, rand(ls.N))
 
 outfold, hist, flag = @time BK.newtonFold(

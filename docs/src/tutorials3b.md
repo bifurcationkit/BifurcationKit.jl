@@ -463,7 +463,7 @@ probSh = ShootingProblem(
 We are now ready to call `newton` 
 
 ```julia
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 outpo, = @time newton(probSh,
 	initpo, par_hopf, optn_po;
@@ -588,7 +588,7 @@ We can now call `continuation` to get the first branch.
 ```julia
 # eigen / linear solver
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
-ls = GMRESIterativeSolvers(tol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
 
 # newton options	
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)

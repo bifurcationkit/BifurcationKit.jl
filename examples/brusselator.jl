@@ -176,7 +176,7 @@ poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2
 poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
 BK.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
 
-ls0 = GMRESIterativeSolvers(N = 2n, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 
 poTrapMF = PeriodicOrbitTrapProblem(
 			Fbru, (x, p) -> (dx -> d1Fbru(x, p, dx)),
@@ -235,8 +235,9 @@ _indx = BK.getBlocks(Jpo, 2n, M)
 Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
 @time lu(Jpo)
 
-Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu)
+Precilu = @time ilu(Jpo, τ = 0.01)
+Precilu = @time lu(Jpo)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu)
 	@time ls(Jpo, rand(ls.N))
 
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)

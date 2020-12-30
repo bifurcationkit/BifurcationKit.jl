@@ -190,7 +190,7 @@ probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
 
 probSh(initpo, par_br_hopf)
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
@@ -239,7 +239,7 @@ orbitsectionpd = Array(solpd[:,end-100])
 initpo_pd = vcat(vec(orbitsectionpd), 6.2)
 BK.plotPeriodicShooting(initpo_pd[1:end-1], 1);title!("")
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
 	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])

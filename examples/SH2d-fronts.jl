@@ -102,7 +102,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 using IncompleteLU
 prec = ilu(L1 + I,τ = 0.15)
 prec = lu(L1 + I)
-ls = GMRESIterativeSolvers(tol = 1e-5, N = Nx*Ny, Pl = prec)
+ls = GMRESIterativeSolvers(reltol = 1e-5, N = Nx*Ny, Pl = prec)
 
 function dF_sh2(du, u, p)
 	@unpack l, ν, L1 = p

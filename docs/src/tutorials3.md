@@ -351,7 +351,7 @@ We are now ready to call the automatic branch switching. Note how similar it is 
 
 ```julia
 # linear solvers
-ls = GMRESIterativeSolvers(tol = 1e-7, maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
@@ -389,7 +389,7 @@ We show how to use this method, the code is very similar to the case of the Para
 
 ```julia
 # linear solvers
-ls = GMRESIterativeSolvers(tol = 1e-8, maxiter = 100)
+ls = GMRESIterativeSolvers(reltol = 1e-8, maxiter = 100)
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)

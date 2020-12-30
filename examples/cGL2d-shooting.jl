@@ -141,7 +141,7 @@ probSh = ShootingProblem(
 initpo = vcat(sol(116.), 4.9) |> vec
 	probSh(initpo, @set par_cgl.r = 1.2) |> norminf
 
-ls = GMRESIterativeSolvers(tol = 1e-4, N = 2n + 1, maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-4, N = 2n + 1, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 outpo, = @time newton(probSh, initpo, (@set par_cgl.r = 1.2), optn; normN = norminf)
 
@@ -171,7 +171,7 @@ d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
 
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 
-ls = GMRESIterativeSolvers(tol = 1e-4, maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
