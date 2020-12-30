@@ -413,7 +413,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
     In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, par, lens, contParams, linearAlgo; kwargs...)`.
 
 !!! tip "Continuing the branch in the opposite direction"
-    Just change the sign of `ds` in `ContinuationPar`.	
+    Just change the sign of `ds` in `ContinuationPar`.
 
 # Simplified call:
 You can also use the following call for which the jacobian **matrix** (beware of large systems of equations!) is computed internally using Finite Differences

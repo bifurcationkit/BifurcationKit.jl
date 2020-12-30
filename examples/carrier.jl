@@ -29,7 +29,7 @@ function Jac_carr!(J, x, p)
 	J[n, n-1] = 0.0
 	J
 end
-	@time Jac_carr(sol, par_car)
+	# @time Jac_carr(sol, par_car)
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
 N = 200

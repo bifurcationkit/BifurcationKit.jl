@@ -98,7 +98,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			seekEveryStep::Int = 1,
 			showplot::Bool = true,
 			tangentAlgo = SecantPred(),
-			linearAlgo = BorderingBLS(),
+			linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver),
 			dotPALC = (x,y) -> dot(x,y) / length(x),
 			printSolution = (x, p) -> norm(x),
 			plotSolution = (x, p ;kwargs...) -> plot!(x; kwargs...),
@@ -121,7 +121,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 	verbosity > 0 && printstyled(color=:magenta, "--> There are $(length(deflationOp)) branches\n")
 
 	# we "hack" the saveSolEveryStep option because we always want to record the first point on each branch
-	iter = DefContIterable(ContIterable(F=F, J=J, x0 = defOp[1], par=par,param_lens=lens, contParams = ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep), tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot=showplot, plotSolution = plotSolution, printSolution=printSolution, normC=normN,dottheta=DotTheta(dotPALC),finaliseSolution=(z, tau, step, contResult) -> true,callbackN=callbackN,verbosity=verbosity-2, filename=nothing), maxBranches, seekEveryStep, perturbSolution, acceptSolution)
+	iter = DefContIterable(ContIterable(F=F, J=J, x0 = defOp[1], par=par,param_lens=lens, contParams = ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep), tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot=showplot, plotSolution = plotSolution, printSolution=printSolution, normC=normN,dottheta=DotTheta(dotPALC),finaliseSolution=finaliseDefault,callbackN=callbackN,verbosity=verbosity-2, filename=nothing), maxBranches, seekEveryStep, perturbSolution, acceptSolution)
 
 	# underlying continuation iterator
 	contIt = iter.it
@@ -208,8 +208,9 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 		ii += 1
 	end
 	if showplot
-		plot(branches..., label = "", title = "$(length(states)) branches, actives = $(mapreduce(x -> x.isactive, +, states))") |> display
+		display(plot(branches..., label = ""))
 	end
 
-	return branches, [getx(c.contState) for c in states if isactive(c)], current_param
+	return branches, contIt, [getx(c.contState) for c in states if isactive(c)], current_param
+end
 end
