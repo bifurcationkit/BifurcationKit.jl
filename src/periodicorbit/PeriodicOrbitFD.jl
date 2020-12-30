@@ -144,7 +144,11 @@ PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}
 function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
 	M = m isa Number ? m : length(m) + 1
 	# we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ * 0, xπ = xπ * 0, M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = similar(ϕ, N*M), xπ = similar(xπ, N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+
+	prob.xπ .= 0
+	prob.ϕ .= 0
+
 	prob.xπ[1:length(xπ)] .= xπ
 	prob.ϕ[1:length(ϕ)] .= ϕ
 	return prob
