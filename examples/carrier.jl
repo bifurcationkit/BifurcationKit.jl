@@ -40,7 +40,7 @@ sol = -(1 .- par_car.X.^2)
 
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	out, _, flag = @time newton(
+	out, = @time newton(
 		F_carr, Jac_carr, sol, par_car, optnew, normN = x -> norm(x, Inf64))
 	Plots.plot(out, label="Solution")
 
@@ -73,7 +73,7 @@ end
 outdef1, _, flag = @time newton(
 	F_carr, Jac_carr,
 	# perturbsol(deflationOp[1],0,0), par_def,
-	perturbsol(-out ,0,0), par_def,
+	perturbsol(-out, 0, 0), par_def,
 	optdef, deflationOp;
 	# callback = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(res < 1e8)
 	)

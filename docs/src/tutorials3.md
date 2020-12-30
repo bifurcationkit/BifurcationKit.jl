@@ -367,7 +367,7 @@ br_po, = continuation(
 	opts_po_cont,
 	# this is where we tell that we want Parallel Standard Shooting
 	ShootingProblem(Mt, par_bru, probsundials, Rodas4P(), abstol = 1e-10, retol = 1e-8, parallel = true);
-	ampfactor = 1.0, δp = 0.01,
+	ampfactor = 1.0, δp = 0.0075,
 	# the next option is not necessary
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
@@ -389,7 +389,7 @@ We show how to use this method, the code is very similar to the case of the Para
 
 ```julia
 # linear solvers
-ls = GMRESIterativeSolvers(tol = 1e-7, maxiter = 100)
+ls = GMRESIterativeSolvers(tol = 1e-8, maxiter = 100)
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
@@ -397,7 +397,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, e
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 2)
 
 # number of time slices
-Mt = 2
+Mt = 1
 br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
@@ -406,7 +406,7 @@ br_po, = continuation(
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
-	ampfactor = 1.0, δp = 0.01,
+	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true,
 	updateSectionEveryStep = 1,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),

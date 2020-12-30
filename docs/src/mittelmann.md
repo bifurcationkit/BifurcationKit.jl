@@ -209,10 +209,12 @@ bp2d = computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)
 You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see [Non-simple branch point](@ref).
 
 ```julia
-julia> BK.nf(bp2d)
-2-element Array{String,1}:
- " + (-73.897) * x1 ⋅ p + (-0.0012) ⋅ x1³ + (0.003) ⋅ x1 ⋅ x2²"
- " + (0.003) ⋅ x1² ⋅ x2 + (-73.897) * x2 ⋅ p + (-0.0012) ⋅ x2³"
+julia> bp2d
+Non simple bifurcation point at p ≈ 0.27255473583423123. 
+Kernel dimension = 2
+Normal form :
+ + -73.8978 * x1 ⋅ p + 0.0071 ⋅ x1³ + 0.0231 ⋅ x1² ⋅ x2 + -0.0273 ⋅ x1 ⋅ x2² + -0.0076 ⋅ x2³
+ + -73.8978 * x2 ⋅ p + 0.0079 ⋅ x1³ + -0.027 ⋅ x1² ⋅ x2 + -0.0231 ⋅ x1 ⋅ x2² + 0.0072 ⋅ x2³
 ```
 
 You can evaluate this polynomial as follows `bp2d(Val(:reducedForm),[0.1,0.2], 0.01)` which returns a 2d vector or `bp2d([0.1,0.2], 0.01)`. This last expression actually returns a vector corresponding to the PDE problem.
@@ -342,7 +344,7 @@ branches, = continuation(jet..., br, 2,
 	)
 ```
 
-You can plot the branches using `plot(branches)`. The branches are as follows
+You can plot the branches using `plot(branches...)`. The branches are as follows
 
 
 ```julia

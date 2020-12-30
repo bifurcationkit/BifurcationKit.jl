@@ -178,7 +178,7 @@ br_po, = continuation(
 	# regular parameters for the continuation
 	verbosity = 3, plot = true,
 	# print the Floquet exponent
-	finaliseSolution = (z, tau, step, contResult) ->
+	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = norminf)
 ```

@@ -87,8 +87,8 @@ plotsol(out)
 
 
 ####################################################################################################
-function finSol(z, tau, step, br)
-	if ~isnothing(br.bifpoint)
+function finSol(z, tau, step, br; k...)
+	if length(br.bifpoint)>0
 		if br.bifpoint[end].step == step
 			BK._show(stdout, br.bifpoint[end], step)
 		end
@@ -108,7 +108,6 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, 
 
 plot(br)
 ####################################################################################################
-
 # branch switching
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
@@ -283,7 +282,7 @@ push!(branches2, brnf1)
 # plot([br,br1,br2])
 # plot!(brnf1)
 
-brnf2, _, _ = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
+brnf2, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)

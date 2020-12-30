@@ -217,7 +217,7 @@ Again, repeating this from random guesses, we find several more solutions, like 
 We can now continue the solutions located in `deflationOp.roots`
 
 ```julia
-br, _ = @time continuation(F_sh, dF_sh,
+br, = @time continuation(F_sh, dF_sh,
 	deflationOp[2], par, (@lens _.l), optcont;
 	plot = true, 
 	plotSolution = (x, p; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))

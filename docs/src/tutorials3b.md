@@ -309,8 +309,8 @@ deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [
 which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use 
 
 ```Julia
-	outpo_f, hist, flag = @time newton(poTrap,
-				orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linearPO = :FullSparseInplace, normN = norminf)
+outpo_f, hist, flag = @time newton(poTrap,
+	orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linearPO = :FullSparseInplace, normN = norminf)
 ```
 
 ## Floquet coefficients
@@ -475,30 +475,17 @@ plot!(outpo[1:end-1], label = "sol")
 which gives (note that we did not have a really nice guess...)
 
 ```julia
- Newton Iterations      f(x)      Linear Iterations
+  Newton Iterations      f(x)      Linear Iterations
 
-          0          1.9613e-01             0
-          1          5.6114e-02            45
-          2          1.0101e-01            49
-          3          3.9835e-03            48
-          4          8.8083e-03            49
-          5          3.0397e-02            48
-          6          7.3855e-03            48
-          7          7.1680e-03            49
-          8          3.4199e+00            51
-          9          5.9940e+00            33
-         10          1.5735e+00            36
-         11          3.5452e-01            37
-         12          4.8096e-01            49
-         13          3.0777e-02            46
-         14          1.8156e-02            48
-         15          1.0454e-02            48
-         16          7.2261e-03            49
-         17          2.0891e-03            48
-         18          1.1960e-04            48
-         19          3.1224e-08            48
-         20          6.8543e-11            49
- 47.032359 seconds (81.51 M allocations: 19.211 GiB, 4.79% gc time)
+          0          1.8260e-01             0
+          1          1.1913e-01            49
+          2          7.4174e-03            43
+          3          3.0445e-04            49
+          4          1.5705e-04            47
+          5          1.0346e-06            49
+          6          2.4545e-08            50
+          7          7.2087e-11            50
+  5.336648 seconds (2.73 M allocations: 4.784 GiB, 3.55% gc time)
 ```
 
 and
@@ -508,25 +495,25 @@ and
 Note that using Simple Shooting, the convergence is much faster. Indeed, running the code above with `dM = 10` gives:
 
 ```julia
-Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
 
-        0                1     3.1251e-03         0
-        1                2     4.7046e-03         6
-        2                3     1.4468e-03         7
-        3                4     2.7600e-03         8
-        4                5     2.2756e-03         8
-        5                6     7.0376e-03         8
-        6                7     5.0430e-03         8
-        7                8     1.7595e-02         8
-        8                9     2.2254e-03         7
-        9               10     2.6376e-04         7
-       10               11     1.0260e-05         7
-       11               12     1.0955e-06         8
-       12               13     6.9387e-08         7
-       13               14     4.7182e-09         7
-       14               15     2.7187e-11         7
-  3.398485 seconds (2.78 M allocations: 342.794 MiB, 1.40% gc time)
+ Newton Iterations      f(x)      Linear Iterations
+
+          0          8.1464e-03             0
+          1          2.9785e-03             6
+          2          4.7400e-03             6
+          3          2.7021e-03             7
+          4          1.6648e+00             8
+          5          3.1953e-01             5
+          6          1.8953e-01             5
+          7          4.0122e-02             6
+          8          1.0293e-02             7
+          9          2.7078e-03             7
+         10          4.6741e-04             7
+         11          1.9485e-05             7
+         12          1.2012e-07             7
+         13          4.2622e-09             8
+         14          7.3854e-12             8
+  0.901249 seconds (314.81 k allocations: 796.430 MiB, 2.70% gc time)
 ```
 
 !!! info "Convergence and speedup"

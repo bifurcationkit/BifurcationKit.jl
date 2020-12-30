@@ -66,7 +66,7 @@ and you should see
         3                4     2.4521e-06         1
         4                5     5.9356e-11         1
         5                6     5.8117e-12         1
-  0.015303 seconds (3.00 k allocations: 2.557 MiB)
+  0.014715 seconds (2.90 k allocations: 2.555 MiB)
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -147,7 +147,7 @@ We can finally continue this fold point in the plane $(a,b)$ by performing a Fol
 
 ```julia
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0.)
-	outfoldco, _, _ = @time continuation(
+	outfoldco, = @time continuation(
 		F_chan, Jac_mat,
 		br, indfold, 
 		# set of parameters and 2 parameter axis to trace to codim 2 curve
@@ -190,7 +190,7 @@ ls = GMRESKrylovKit(dim = 100)
 optnewton_mf = NewtonPar(verbose = true, linsolver = ls)
 
 # we can then call the newton solver
-out_mf, _, _ = @time newton(
+out_mf, = @time newton(
 	F_chan,
 	# we pass the differential a x, 
 	# which is a linear operator in dx
@@ -225,7 +225,7 @@ P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 # define gmres solver with left preconditioner
 ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter = 10, Pl = lu(P))
 	optnewton_mf = NewtonPar(verbose = true, linsolver = ls)
-	out_mf, _, _ = @time newton(F_chan,
+	out_mf, = @time newton(F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	sol, par, optnewton_mf)
 ```

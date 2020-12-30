@@ -120,8 +120,8 @@ Note that we put the option `detectBifurcation = 3` to detect bifurcations preci
 In order to have an output like Auto07p, we provide the finaliser (see arguments of [`continuation`](@ref))
 
 ```julia
-function finSol(z, tau, step, br)
-	if ~isnothing(br.bifpoint)
+function finSol(z, tau, step, br; k...)
+	if length(br.bifpoint)>0
 		if br.bifpoint[end].step == step
 			BK._show(stdout, br.bifpoint[end], step)
 		end

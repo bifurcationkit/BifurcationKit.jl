@@ -81,7 +81,7 @@ optnewton = NewtonPar(tol = 1e-12, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
+out, = @time newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
 ```
 and you should see
 
@@ -106,7 +106,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.005, pMax = 4.1, p
 We provide a callback function to check how the `ApproxFun` solution vector grows during the continuation:
 
 ```julia
-function finalise_solution(z, tau, step, contResult)
+function finalise_solution(z, tau, step, contResult; k...)
 	printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
 	true
 end
