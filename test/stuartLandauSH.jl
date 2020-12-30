@@ -81,7 +81,7 @@ res = _pb2(initpo, par_hopf, initpo)
 BK.isSimple(_pb2)
 
 # we test this using Newton - Continuation
-ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo))
+ls = GMRESIterativeSolvers(reltol = 1e-5, N = length(initpo))
 optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20, linsolver = ls)
 deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zeros(3)])
 outpo, _, flag,_ = newton(_pb,
@@ -157,7 +157,7 @@ _Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-4
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
 	deflationOp = BK.DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
@@ -204,7 +204,7 @@ _Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
-ls = GMRESIterativeSolvers(tol = 1e-5, N = length(initpo_bar), maxiter = 500, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-5, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls, eigsolver = eil)
 	deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
@@ -242,7 +242,7 @@ _Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo_bar), maxiter = 10, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 10, verbose = false)
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 50, linsolver = ls, eigsolver = eil)
 	outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf)
 

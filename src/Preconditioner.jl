@@ -1,5 +1,4 @@
 using KrylovKit, ArnoldiMethod, LinearMaps, LinearAlgebra, RecursiveArrayTools
-import LinearAlgebra: ldiv!, \
 
 struct PrecPartialSchur{Ts, Tu, Tsm1, Teigen}
 	S::Ts
@@ -8,7 +7,7 @@ struct PrecPartialSchur{Ts, Tu, Tsm1, Teigen}
 	eigenvalues::Teigen
 end
 
-function ldiv!(out, Pl::PrecPartialSchur, rhs::AbstractArray)
+function LinearAlgebra.ldiv!(out, Pl::PrecPartialSchur, rhs::AbstractArray)
 	########################################################
 	# U * Sm1 * Ut + (I - U Ut)
 	# U(Sm1 - I)Ut + I
@@ -19,7 +18,7 @@ function ldiv!(out, Pl::PrecPartialSchur, rhs::AbstractArray)
 	out .= rhs .+ Pl.U * y
 end
 
-function ldiv!(Pl::PrecPartialSchur, rhs::AbstractArray)
+function LinearAlgebra.ldiv!(Pl::PrecPartialSchur, rhs::AbstractArray)
 	########################################################
 	# U * Sm1 * Ut + (I - U Ut)
 	# U(Sm1 - I)Ut + I
@@ -30,7 +29,7 @@ function ldiv!(Pl::PrecPartialSchur, rhs::AbstractArray)
 	rhs .= rhs .+ Pl.U * y
 end
 
-function \(Pl::PrecPartialSchur, rhs::AbstractArray)
+function LinearAlgebra.:\(Pl::PrecPartialSchur, rhs::AbstractArray)
 	out = similar(rhs)
 	ldiv!(out, Pl, rhs)
 	return out

@@ -49,7 +49,7 @@ sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
 
-ls = GMRESIterativeSolvers(tol = 1e-9, N = length(rhs)-1)
+ls = GMRESIterativeSolvers(reltol = 1e-9, N = length(rhs)-1)
 linBdsolver = BK.BorderingBLS(ls)
 sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd2u
@@ -72,7 +72,7 @@ sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
-linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(tol = 1e-9, N = size(J0, 1)))
+linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
 sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
 @test sol_explicit[1:end-1] ≈ sol_bd4u
 @test sol_explicit[end] ≈ sol_bd4p
@@ -125,7 +125,7 @@ outkk = ls(Jmf, x0)
 @test out[1] ≈ outkk[1]
 outkk = ls(Jmf, x0; a₀ = 0.5, a₁ = 1.5)
 
-ls = GMRESIterativeSolvers(N = 100, tol = 1e-9)
+ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9)
 outit = ls(J0, x0)
 @test out[1] ≈ outit[1]
 outkk = ls(J0, x0; a₀ = 0., a₁ = 1.)
@@ -134,7 +134,7 @@ outit = ls(J0, x0; a₀ = 1., a₁ = 1.)
 outit = ls(J0, x0; a₀ = 1., a₁ = 1.5)
 outit = ls(J0, x0; a₀ = 0.5, a₁ = 1.5)
 
-ls = GMRESIterativeSolvers!(N = 100, tol = 1e-9)
+ls = GMRESIterativeSolvers!(N = 100, reltol = 1e-9)
 Jom = (o,x) -> mul!(o,J0,x)
 outit = ls(Jom, x0)
 @test out[1] ≈ outit[1]
@@ -143,7 +143,7 @@ outit = ls(Jom, x0)
 rhs = rand(size(J0, 1))
 sol0 = J0\rhs;
 
-ls0 = GMRESIterativeSolvers(N = size(J0,1), tol = 1e-10)
+ls0 = GMRESIterativeSolvers(N = size(J0,1), reltol = 1e-10)
 sol1, _ = @time ls0(J0, rhs)
 @test norm(sol0 .- sol1, Inf) < 1e-8
 

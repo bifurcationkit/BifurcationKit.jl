@@ -12,21 +12,21 @@ pb = PeriodicOrbitTrapProblem(
 			(x, p) -> (dx -> 2 .* dx),
 			rand(2n*M),
 			rand(2n*M),
-			M)
+			rand(M-1))
 
 pbg = PeriodicOrbitTrapProblem(
 			(x, p) -> x.^2,
 			(x, p) -> (dx -> 2 .* dx),
 			pb.ϕ,
 			pb.xπ,
-			M ; ongpu = true)
+			pb.mesh.ds ; ongpu = true)
 
 pbi = PeriodicOrbitTrapProblem(
 			(o, x, p) -> o .= x.^2,
 			((o, x, p, dx) -> o .= 2 .* dx),
 			pb.ϕ,
 			pb.xπ,
-			M ; isinplace = true)
+			pb.mesh.ds ; isinplace = true)
 @test BK.isInplace(pb) == false
 # @time BK.POTrapFunctional(pb, res, orbitguess_f)
 # @time BK.POTrapFunctional(pbi, res, orbitguess_f)
@@ -88,13 +88,14 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 function _functional(poPb, u0, p)
 	M, N = size(poPb)
 	T = u0[end]
-	h = T / M
+	h = T * BK.getTimeStep(poPb, 1)
 
 	u0c = BK.extractTimeSlices(poPb, u0)
 	outc = similar(u0c)
 	outc[:, 1] .= (u0c[:, 1] .- u0c[:, M-1]) .- h/2 .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
 
 	for ii = 2:M-1
+		h = T * BK.getTimeStep(poPb, ii)
 		outc[:, ii] .= (u0c[:, ii] .- u0c[:, ii-1]) .- h/2 .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
 	end
 
@@ -111,8 +112,8 @@ function _dfunctional(poPb, u0, p, du)
 	M, N = size(poPb)
 	T = u0[end]
 	dT = du[end]
-	h = T / M
-	dh = dT / M
+	h = T * BK.getTimeStep(poPb, 1)
+	dh = dT * BK.getTimeStep(poPb, 1)
 
 	u0c = BK.extractTimeSlices(poPb, u0)
 	duc = BK.extractTimeSlices(poPb, du)
@@ -121,11 +122,15 @@ function _dfunctional(poPb, u0, p, du)
 	outc[:, 1] .= (duc[:, 1] .- duc[:, M-1]) .- h/2 .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))
 
 	for ii = 2:M-1
+		h = T * BK.getTimeStep(poPb, ii)
+		dh = dT * BK.getTimeStep(poPb, ii)
 		outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .* (poPb.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.J(u0c[:, ii-1], p)(duc[:, ii-1]))
 	end
 
+	dh = dT * BK.getTimeStep(poPb, 1)
 	outc[:, 1] .-=  dh/2 .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
 	for ii = 2:M-1
+		dh = dT * BK.getTimeStep(poPb, ii)
 		outc[:, ii] .-= dh/2 .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
 	end
 

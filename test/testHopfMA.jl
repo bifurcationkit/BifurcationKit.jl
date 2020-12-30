@@ -73,7 +73,7 @@ opt_newton = NewtonPar(tol = 1e-11, verbose = true)
 	out, hist, flag = @time newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
 eigls = EigArpack(1.1, :LM)
-	opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(tol=1e-4, N = 2n), eigsolver = eigls)
+	opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(reltol=1e-4, N = 2n), eigsolver = eigls)
 	out, hist, flag = @time newton(Fbru, Jbru_sp,
 		sol0 .* (1 .+ 0.01rand(2n)), par_bru,
 		opt_newton)

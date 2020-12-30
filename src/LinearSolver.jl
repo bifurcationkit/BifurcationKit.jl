@@ -96,8 +96,11 @@ Linear solver based on gmres from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
-	"Tolerance for solver"
-	tol::T = 1e-4
+	"Absolute tolerance for solver"
+	abstol::T = 0.0
+
+	"Relative tolerance for solver"
+	reltol::T = 1e-8
 
 	"Number of restarts"
 	restart::Int64 = 200
@@ -130,7 +133,7 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwarg
 	# no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
 	J_map = v -> _axpy_op(J, v, a₀, a₁)
 	Jmap = LinearMap{T}(J_map, l.N, l.N ; ismutating = false)
-	res = IterativeSolvers.gmres(Jmap, rhs; tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
+	res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
 	(res[2].iters >= l.maxiter) && (@warn "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
 	return res[1], length(res) > 1, res[2].iters
 end
@@ -141,8 +144,11 @@ Linear solver based on gmres! from `IterativeSolvers.jl`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers!{T, Tl, Tr} <: AbstractLinearSolver
-	"Tolerance for solver"
-	tol::T = 1e-4
+	"Absolute tolerance for solver"
+	abstol::T = 0.0
+
+	"Relative tolerance for solver"
+	reltol::T = 1e-8
 
 	"Number of restarts"
 	restart::Int64 = 200
@@ -172,7 +178,7 @@ end
 function (l::GMRESIterativeSolvers!{T, Tl, Tr})(J, rhs; kwargs...) where {T, Ts, Tl, Tr}
 	# no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
 	Jmap = LinearMap{T}((o, v) -> J(o, v), l.N, l.N ; ismutating = true)
-	res = IterativeSolvers.gmres(Jmap, rhs; tol = l.tol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
+	res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
 	(res[2].iters >= l.maxiter) && (@warn "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
 	return res[1], length(res) > 1, res[2].iters
 end
