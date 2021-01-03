@@ -1,4 +1,4 @@
-# Periodic orbits based on finite differences
+# Periodic orbits based on trapezoidal rule
 
 We have implemented a method where we compute `M` slices of a periodic orbit. This is done by the structure `PeriodicOrbitTrapProblem` for which the problem of finding periodic orbits is discretized using Finite Differences based on a trapezoidal rule. 
 

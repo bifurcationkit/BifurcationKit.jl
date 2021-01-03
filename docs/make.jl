@@ -26,7 +26,7 @@ makedocs(doctest = false,
 			"Constrained problem" => "constrainedproblem.md",
 			"Periodic Orbits" => [
 				"Introduction" => "periodicOrbit.md",
-				"Finite Differences" => "periodicOrbitFD.md",
+				"Finite Differences" => "periodicOrbitTrapeze.md",
 				"Shooting" => "periodicOrbitShooting.md",
 				],
 			"DiffEq wrapper" => "diffeq.md",
