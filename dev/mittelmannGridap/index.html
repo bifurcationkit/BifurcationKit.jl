@@ -6,19 +6,7 @@ using GridapBifurcationKit, BifurcationKit
 
 # custom plot function to deal with Gridap
 plotgridap!(x; k...) = (n=Int(sqrt(length(x)));heatmap!(reshape(x,n,n); color=:viridis, k...))
-plotgridap(x; k...) =( plot();plotgridap!(x; k...))</code></pre><p>We are now ready to specify the problem using the setting of <strong>Gridap.jl</strong>: it allows to write the equations very closely to the mathematical formulation:</p><pre><code class="language-julia">@law NL(u) = exp(u)
-
-# residual
-res(u,p,v) = -∇(v)⋅∇(u) -  v ⋅ (u - p.λ * NL(u)) * 10
-
-# jacobian of the residual
-jac(u,p,du,v) = -∇(v)⋅∇(du) - v ⋅ du ⋅ (1 - p.λ * NL(u)) * 10
-
-# 3rd and 4th derivatives, used for aBS
-d2res(u,p,du1,du2,v) = v ⋅ du1 ⋅ du2 ⋅ NL(u) * 10 * p.λ
-d3res(u,p,du1,du2,du3,v) = v ⋅ du1 ⋅ du2 ⋅ du3 ⋅ NL(u) * 10 * p.λ
-
-# discretisation
+plotgridap(x; k...) =( plot();plotgridap!(x; k...))</code></pre><p>We are now ready to specify the problem using the setting of <strong>Gridap.jl</strong>: it allows to write the equations very closely to the mathematical formulation:</p><pre><code class="language-julia"># discretisation
 n = 40
 domain = (0,1,0,1)
 cells = (n,n)
@@ -26,14 +14,26 @@ model = CartesianDiscreteModel(domain,cells)
 
 # function spaces
 order = 1
-V = TestFESpace(
-	model=model,reffe=:Lagrangian,valuetype=Float64,
-	order=order,conformity=:H1,)#dirichlet_tags=&quot;boundary&quot;)
+reffe = ReferenceFE(lagrangian,Float64,order)
+V = TestFESpace(model,reffe,conformity=:H1,)#dirichlet_tags=&quot;boundary&quot;)
 U = TrialFESpace(V)
 
-trian = Triangulation(model)
+Ω = Triangulation(model)
 degree = 2*order
-quad = CellQuadrature(trian,degree)
+dΩ = Measure(Ω,degree)
+
+# nonlinearity
+NL(u) = exp(u)
+
+# residual
+res(u,p,v) = ∫( -∇(v)⋅∇(u) -  v ⋅ (u - p.λ ⋅ (NL ∘ u)) * 10 )*dΩ
+
+# jacobian of the residual
+jac(u,p,du,v) = ∫( -∇(v)⋅∇(du) - v ⋅ du ⋅ (1 - p.λ * ( NL ∘ u)) * 10 )*dΩ
+
+# 3rd and 4th derivatives, used for aBS
+d2res(u,p,du1,du2,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
+d3res(u,p,du1,du2,du3,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ du3 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
 
 # example of initial guess
 uh = zero(U)
@@ -42,7 +42,7 @@ uh = zero(U)
 par_bratu = (λ = 0.01,)
 
 # problem definition
-prob = GridapProblem(res, jac, d2res, d3res, trian, quad, V, U)</code></pre><p>We can call then the newton solver:</p><pre><code class="language-julia">optn = NewtonPar(eigsolver = EigArpack())
+prob = GridapProblem(res, jac, d2res, d3res, V, U)</code></pre><p>We can call then the newton solver:</p><pre><code class="language-julia">optn = NewtonPar(eigsolver = EigArpack())
 sol, = newton(prob, uh, par_bratu, NewtonPar(optn; verbose = true))</code></pre><p>which gives</p><pre><code class="language-julia"> Newton Iterations
    Iterations      Func-count      f(x)      Linear-Iterations
 
@@ -83,4 +83,4 @@ plot(br, br1, br2)</code></pre><p>We get:</p><p><img src="../fig2gridap.png" alt
 	usedeflation = true,
 	plotSolution = (x, p; k...) -&gt; plotgridap!(x;  k...))
 
-plot(br, br1, br2, br3...)</code></pre><p><img src="../fig3gridap.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 30 December 2020 23:00">Wednesday 30 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot(br, br1, br2, br3...)</code></pre><p><img src="../fig3gridap.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 5 January 2021 19:33">Tuesday 5 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

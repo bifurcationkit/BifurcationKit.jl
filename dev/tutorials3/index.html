@@ -202,7 +202,7 @@ br_po, = continuation(
 	opts_po_cont,
 	# this is where we tell that we want Parallel Standard Shooting
 	ShootingProblem(Mt, par_bru, probsundials, Rodas4P(), abstol = 1e-10, retol = 1e-8, parallel = true);
-	ampfactor = 1.0, δp = 0.01,
+	ampfactor = 1.0, δp = 0.0075,
 	# the next option is not necessary
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
@@ -210,7 +210,7 @@ br_po, = continuation(
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)</code></pre><p>and you should see </p><p><img src="../brus-sh-cont.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)-1"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)-1">Computation of the branch of periodic orbits (Poincaré Shooting)</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)-1" title="Permalink"></a></h2><p>We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of <code>DifferentialEquations.jl</code>. More information is provided at <a href="../library/#BifurcationKit.PoincareShootingProblem"><code>PoincareShootingProblem</code></a> and <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method-1">Periodic orbits based on the shooting method</a> but basically, it is a shooting method between Poincaré sections <span>$\Sigma_i$</span> (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is <span>$M_{sh}\cdot(N-1)$</span> where <span>$N$</span> is the dimension of the phase space. Indeed, each time slice lives in an hyperplane <span>$\Sigma_i$</span>. Additionally, the period <span>$T$</span> is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane <span>$\Sigma_i$</span>, something called <strong>event detection</strong>.</p><p>We show how to use this method, the code is very similar to the case of the Parallel Standard Shooting:</p><pre><code class="language-julia"># linear solvers
-ls = GMRESIterativeSolvers(tol = 1e-7, maxiter = 100)
+ls = GMRESIterativeSolvers(tol = 1e-8, maxiter = 100)
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
@@ -218,7 +218,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, e
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 2)
 
 # number of time slices
-Mt = 2
+Mt = 1
 br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
@@ -227,8 +227,8 @@ br_po, = continuation(
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
-	ampfactor = 1.0, δp = 0.01,
+	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true,
 	updateSectionEveryStep = 1,
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
-	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 30 December 2020 23:00">Wednesday 30 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 5 January 2021 19:33">Tuesday 5 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
