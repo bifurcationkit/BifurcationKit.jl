@@ -126,7 +126,7 @@ Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 Precilu = @time ilu(Jpo, τ = 0.005)
 
 # we define the linear solver with left preconditioner Precilu
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 
 # we try the linear solver
 ls(Jpo, rand(ls.N))</code></pre><p>This converges in <code>7</code> iterations whereas, without the preconditioner, it does not converge after <code>100</code> iterations. </p><p>We set the parameters for the <code>newton</code> solve.</p><pre><code class="language-julia">opt_po = @set opt_newton.verbose = true
@@ -149,7 +149,7 @@ BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);</code></pre><p>which gives
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -&gt; Fcgl(x .+ t .* dx, p), 0.)
 
 # linear solver for solving Jcgl*x = rhs. Needed for Floquet multipliers computation
-ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9, Pl = lu(I + par_cgl.Δ))
+ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9, Pl = lu(I + par_cgl.Δ))
 
 # matrix-free problem
 poTrapMF = PeriodicOrbitTrapProblem(
@@ -227,7 +227,7 @@ end
 function dFcgl!(f, x, p, dx)
 	dNL!(f, x, p, dx)
 	mul!(f, p.Δ, dx, 1., 1.)
-end</code></pre><p>We can now define an inplace functional</p><pre><code class="language-julia">ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, tol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
+end</code></pre><p>We can now define an inplace functional</p><pre><code class="language-julia">ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
 	Fcgl!, dFcgl!,
 	real.(eigvec),
@@ -245,7 +245,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
           6          9.7032e-11            13
   1.096669 seconds (1.61 k allocations: 130.211 MiB)</code></pre><p>Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of <code>BlockBandedMatrices.jl</code> for the Laplacian operator, etc.</p><h3 id="Other-linear-formulation-1"><a class="docs-heading-anchor" href="#Other-linear-formulation-1">Other linear formulation</a><a class="docs-heading-anchor-permalink" href="#Other-linear-formulation-1" title="Permalink"></a></h3><p>We could use another way to &quot;invert&quot; jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix <span>$J_c$</span> (see <a href="../periodicOrbitFD/#Periodic-orbits-based-on-finite-differences-1">Periodic orbits based on finite differences</a>) which has a smaller memory footprint:</p><pre><code class="language-julia">Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
 Precilu = @time ilu(Jpo2, τ = 0.005)
-ls2 = GMRESIterativeSolvers(verbose = false, tol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
+ls2 = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 
 opt_po = @set opt_newton.verbose = true
 outpo_f, hist, flag = @time newton(
@@ -300,7 +300,7 @@ foldpt = FoldPoint(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, tol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)</code></pre><p>We can then use our functional to call <code>newtonFold</code> unlike for a regular function (see Tutorial 1). Indeed, we specify the change the parameters too much to rely on a generic algorithm.</p><pre><code class="language-julia">outfold, hist, flag = @time BK.newtonFold(
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-4, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu)</code></pre><p>We can then use our functional to call <code>newtonFold</code> unlike for a regular function (see Tutorial 1). Indeed, we specify the change the parameters too much to rely on a generic algorithm.</p><pre><code class="language-julia">outfold, hist, flag = @time BK.newtonFold(
 	(x, p) -&gt; poTrap(x, p),
 	(x, p) -&gt; poTrap(Val(:JacFullSparse), x, p),
 	br_po , indfold, #index of the fold point
@@ -380,4 +380,4 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 5 January 2021 21:14">Tuesday 5 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 6 January 2021 09:52">Wednesday 6 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
