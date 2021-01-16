@@ -17,7 +17,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 """
-function newton(F, J, br::ContResult, ind_bif::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
+function newton(F, J, br::AbstractBranchResult, ind_bif::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
 		return newtonHopf(F, J, br, ind_bif, par, lens; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
 	elseif br.foldpoint[ind_bif].type == :fold
@@ -57,7 +57,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 
-function continuation(F, J, br::ContResult, ind_bif::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
 		return continuationHopf(F, J, br, ind_bif, par, lens1, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 	elseif br.foldpoint[ind_bif].type == :fold
