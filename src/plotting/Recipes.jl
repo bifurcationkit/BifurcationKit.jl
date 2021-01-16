@@ -12,9 +12,10 @@ function getPlotVars(contres, vars)
 	end
 end
 
+const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :green1, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray)
+
 # allow to plot a single branch
-@recipe function Plots(contres::BranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	@series begin
@@ -44,7 +45,7 @@ end
 			seriestype := :scatter
 			seriescolor --> map(x -> colorbif[x.type], bifpt)
 			markershape --> map(x -> x.status == :guess ? :square : :circle, bifpt)
-			markersize --> 2
+			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""
 			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
@@ -58,7 +59,7 @@ end
 					seriestype := :scatter
 					seriescolor --> colorbif[pt.type]
 					label --> "$(pt.type)"
-					markersize --> 2
+					markersize --> 3
 					markerstrokewidth --> 0
 					[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
 				end
@@ -68,8 +69,7 @@ end
 end
 
 # allow to plot branches specified by splatting
-@recipe function Plots(brs::BranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
-	colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green)
+@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])

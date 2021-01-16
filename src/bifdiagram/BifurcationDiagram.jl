@@ -6,8 +6,8 @@ end
 
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
 from(tree::BifDiagNode) = from(tree.γ)
-add!(tree::BifDiagNode, γ::BranchResult, l::Int) = push!(tree.child, BifDiagNode(l, γ, BifDiagNode[]))
-add!(tree::BifDiagNode, γ::Vector{ <: BranchResult}, l::Int) = map(x->add!(tree,x,l),γ)
+add!(tree::BifDiagNode, γ::AbstractBranchResult, l::Int) = push!(tree.child, BifDiagNode(l, γ, BifDiagNode[]))
+add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, l::Int) = map(x->add!(tree,x,l),γ)
 add!(tree::BifDiagNode, γ::Nothing, l::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
@@ -71,7 +71,7 @@ function bifurcationdiagram(F, dF, d2F, d3F, x0, par0, lens::Lens, level::Int, o
 	bifurcationdiagram(F, dF, d2F, d3F, γ, level, options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
-function bifurcationdiagram(F, dF, d2F, d3F, br::BranchResult, level::Int, options; usedeflation = false, kwargs...)
+function bifurcationdiagram(F, dF, d2F, d3F, br::AbstractBranchResult, level::Int, options; usedeflation = false, kwargs...)
 	printstyled(color = :magenta, "#"^50 * "\n---> Automatic computation of bifurcation diagram\n\n")
 	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
 end

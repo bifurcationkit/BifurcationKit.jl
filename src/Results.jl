@@ -1,4 +1,4 @@
-abstract type BranchResult end
+abstract type AbstractBranchResult end
 
 ####################################################################################################
 namedprintsol(x) = (x = x,)
@@ -26,7 +26,7 @@ $(TYPEDFIELDS)
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 - `br[k+1]` gives information about the k-th step
 """
-@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: BranchResult
+@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
         - `itnewton` number of Newton iterations
         - `itlinear` total number of linear iterations during corrector
@@ -65,16 +65,16 @@ $(TYPEDFIELDS)
 end
 
 # returns the number of steps in a branch
-Base.length(br::BranchResult) = length(br.branch)
+Base.length(br::AbstractBranchResult) = length(br.branch)
 
 # check whether the eigenvectors are saved in the branch
 haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-haseigenvector(br::BranchResult) = haseigenvector(br.γ)
-hasstability(br::BranchResult) = computeEigenElements(br.contparams)
-getfirstusertype(br::BranchResult) = keys(br.branch[1])[1]
-@inline getvectortype(br::BranchResult) = getvectortype(eltype(br.bifpoint))
-@inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
-setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
+haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
+hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
+getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
+@inline getvectortype(br::AbstractBranchResult) = getvectortype(eltype(br.bifpoint))
+@inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
+setParam(br::AbstractBranchResult, p0) = set(br.params, br.param_lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)
 
 function Base.getproperty(br::ContResult, s::Symbol)
@@ -91,21 +91,21 @@ $(SIGNATURES)
 
 Return the eigenvalues of the ind-th continuation step.
 """
-eigenvals(br::BranchResult, ind::Int) = br.eig[ind].eigenvals
+eigenvals(br::AbstractBranchResult, ind::Int) = br.eig[ind].eigenvals
 
 """
 $(SIGNATURES)
 
 Return the eigenvalues of the ind-th bifurcation point.
 """
-eigenvalsfrombif(br::BranchResult, ind::Int) = br.eig[br.bifpoint[ind].idx].eigenvals
+eigenvalsfrombif(br::AbstractBranchResult, ind::Int) = br.eig[br.bifpoint[ind].idx].eigenvals
 
 """
 $(SIGNATURES)
 
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
-eigenvec(br::BranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
+eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
 @inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
 
 function Base.show(io::IO, br::ContResult, comment = "")
@@ -163,7 +163,7 @@ A Branch is a structure which encapsulates the result of the computation of a br
 
 $(TYPEDFIELDS)
 """
-struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: BranchResult
+struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractBranchResult
 	γ::T
 	bp::Tbp
 end
