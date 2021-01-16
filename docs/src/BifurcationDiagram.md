@@ -68,7 +68,7 @@ Bifurcation points:
 - #  2,      bp point around p ≈ 0.15000005, step =  53, eigenelements in eig[ 54], ind_ev =   1 [converged], δ = (-1,  0)
 ```
 
-You can plot the diagram like `plot(bdiag; putbifptlegend=false, markersize=2, plotfold=false, title = "#branches = $(size(bdiag))")` and it gives:
+You can plot the diagram like `plot(diagram; putbifptlegend=false, markersize=2, plotfold=false, title = "#branches = $(size(diagram))")` and it gives:
 
 ![](diagram1d.png)
 

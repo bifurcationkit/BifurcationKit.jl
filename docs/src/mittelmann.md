@@ -188,7 +188,7 @@ We continue our journey and compute the branch bifurcating of the first bifurcat
 ```julia
 br2, = continuation(jet..., br1, 1, 
 	setproperties(opts_br;ds = 0.001, maxSteps = 40); 	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
+	printSolution = (x, p) -> normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```
 
