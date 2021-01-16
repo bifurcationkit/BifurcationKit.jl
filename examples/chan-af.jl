@@ -70,7 +70,7 @@ optnew = NewtonPar(tol = 1e-12, verbose = true)
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
 
-	br, _ = @time continuation(
+	br, = @time continuation(
 		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),

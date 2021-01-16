@@ -188,7 +188,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
 
 where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -214,13 +214,13 @@ function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::Ne
 	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)
 end
 
-function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, par, lens, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return newtonFold(F, J, foldpointguess, br.params, lens, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 """
@@ -245,7 +245,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 # Simplified call
 The call is as follows
 
-	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` you want to continue.
 
@@ -282,9 +282,9 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
-function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
-	return continuationFold(F, J, foldpointguess, par, lens1, lens2, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return continuationFold(F, J, foldpointguess, br.params, lens1, lens2, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end

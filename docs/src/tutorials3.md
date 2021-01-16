@@ -114,8 +114,8 @@ We continue the trivial equilibrium to find the Hopf points
 
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060,
 	# specific options for precise localization of Hopf points
 	nInversion = 6)
@@ -165,7 +165,7 @@ We use the bifurcation points guesses located in `br.bifpoint` to turn them into
 # index of the Hopf point in br.bifpoint
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
-	br, ind_hopf, par_bru, (@lens _.l); normN = norminf)
+	br, ind_hopf, (@lens _.l); normN = norminf)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ```
 
@@ -182,11 +182,11 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 
 ```julia
 br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+	br, ind_hopf, (@lens _.l), (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
 
-which gives using `plot(br_hopf, xlabel="beta", ylabel = "l")`
+which gives using `plot(br_hopf)`
 
 ![](bru-hopf-cont.png)
 
@@ -209,7 +209,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
 br_po, = continuation(
-	# arguments for branch switching from the first 
+	# arguments for branch switching from the first
 	# Hopf bifurcation point
 	jet..., br, 1,
 	# arguments for continuation
@@ -223,8 +223,8 @@ br_po, = continuation(
 	# You could use the default one :FullLU (slower here)
 	linearPO = :FullSparseInplace,
 	# regular options for continuation
-	verbosity = 3,	plot = true, 
-	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), 
+	verbosity = 3,	plot = true,
+	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 ```
 
@@ -244,7 +244,7 @@ br_po2, = BK.continuationPOTrapBPFromPO(
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont; linearPO = :FullSparseInplace,
-	ampfactor = 1., δp = 0.01,	
+	ampfactor = 1., δp = 0.01,
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
@@ -267,17 +267,17 @@ function Fbru!(f, x, p)
 	h = 1.0 / n; h2 = h*h
 	c1 = D1 / l^2 / h2
 	c2 = D2 / l^2 / h2
-	
+
 	u = @view x[1:n]
 	v = @view x[n+1:2n]
-	
+
 	# Dirichlet boundary conditions
 	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
 	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
-	
+
 	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
 	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
-	
+
 	for i=2:n-1
 		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
 		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
@@ -298,8 +298,8 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9,
+	detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200)
 
 br, = @time continuation(Fbru, Jbru_sp,
@@ -377,7 +377,7 @@ br_po, = continuation(
 	normC = norminf)
 ```
 
-and you should see 
+and you should see
 
 ![](brus-sh-cont.png)
 
@@ -411,7 +411,7 @@ br_po, = continuation(
 	updateSectionEveryStep = 1,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)
-```	
+```
 
 and you should see:
 

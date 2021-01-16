@@ -174,7 +174,7 @@ outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldp
 
 # continuation of the fold point
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 5)
-	outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (a, 0.01), (@lens _[1]), (@lens _[2]), optcontfold, plot = false)
+	outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (@lens _[1]), (@lens _[2]), optcontfold, plot = false)
 
 # user defined Fold Problem
 indfold = 1

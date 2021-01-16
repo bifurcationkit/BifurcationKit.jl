@@ -445,7 +445,7 @@ outfold, hist, flag = @time BK.newtonFold(
 		(x, p) -> poTrap(x, p),
 		(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 		br_po , indfold, #index of the fold point
-		par_cgl, (@lens _.r);
+		(@lens _.r);
 		options = (@set opt_po.linsolver = ls),
 		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
@@ -457,7 +457,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1
 outfoldco, hist, flag = @time BK.continuationFold(
 	(x, p) -> poTrap(x, p),
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
-	br_po, indfold, par_cgl, (@lens _.r), (@lens _.c5),
+	br_po, indfold, (@lens _.r), (@lens _.c5),
 	optcontfold;
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)

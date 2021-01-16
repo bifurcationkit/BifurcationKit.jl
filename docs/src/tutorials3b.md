@@ -7,7 +7,7 @@ Depth = 3
 
 !!! unknown "References"
     This example is taken from **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations,** Lust, 1997.
-    
+
 !!! info "Goal"
     The goal of this tutorial is to show similar computations as in the previous tutorial but without using the automatic branch switching tools. This is for the experienced used who wants to dive more in the internals of the package.    
 
@@ -117,8 +117,8 @@ We continue the trivial equilibrium to find the Hopf points
 
 ```julia
 opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001, 
-	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
+	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
@@ -166,7 +166,7 @@ We use the bifurcation points guesses located in `br.bifpoint` to turn them into
 # index of the Hopf point in br.bifpoint
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
-	br, ind_hopf, par_bru, (@lens _.l); normN = norminf)
+	br, ind_hopf, (@lens _.l); normN = norminf)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ```
 
@@ -183,11 +183,11 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 
 ```julia
 br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, par_bru, (@lens _.l), (@lens _.β),
+	br, ind_hopf, (@lens _.l), (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
 
-which gives using `plot(br_hopf, xlabel="beta", ylabel = "l")`
+which gives using `plot(br_hopf)`
 
 ![](bru-hopf-cont.png)
 
@@ -233,7 +233,7 @@ poTrap = PeriodicOrbitTrapProblem(
 	M, 2n)			          # number of time slices
 ```
 
-To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)` for the parameter `par`. 
+To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)` for the parameter `par`.
 
 !!! note "Using the functional for deflation, Fold of limit cycles..."
     The functional `poTrap` gives you access to the underlying methods to call a regular `newton`. For example the functional is `x -> poTrap(x, par)` at parameter `par`. The (sparse) Jacobian at `(x,p)` is computed like this `poTrap(Val(:JacFullSparse), x, p)` while the Matrix Free version is `dx -> poTrap((x, p, dx)`. This also allows you to call the newton deflated method (see [Deflated problems](@ref)) or to locate Fold point of limit cycles see [`PeriodicOrbitTrapProblem`](@ref). You can also use preconditioners. In the case of more computationally intense problems (like the 2d Brusselator), this might be mandatory as using LU decomposition for the linear solve will use too much memory. See also the example [Complex Ginzburg-Landau 2d](@ref)
@@ -241,7 +241,7 @@ To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)`
 For convenience, we provide a simplified newton / continuation methods for periodic orbits. One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
 
 ```julia
-# we use the linear solver LSFromBLS to speed up the computations 
+# we use the linear solver LSFromBLS to speed up the computations
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
 	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), 		opt_po, normN = norminf,
 		linearPO = :FullSparseInplace,
@@ -282,15 +282,15 @@ Finally, we can perform continuation of this periodic orbit using the specialize
 
 ```julia
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, 
-	pMax = 3.0, maxSteps = 30, 
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01,
+	pMax = 3.0, maxSteps = 30,
 	newtonOptions = opt_po, nev = 5, precisionStability = 1e-8, detectBifurcation = 0)
 br_po, = @time continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont;
 	linearPO = :FullSparseInplace,
 	verbosity = 2,	plot = true,
-	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...), 
+	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 ```
 
@@ -306,7 +306,7 @@ Looking for periodic orbits branching of bifurcation points, it is very useful t
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 ```
 
-which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use 
+which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use
 
 ```Julia
 outpo_f, hist, flag = @time newton(poTrap,
@@ -350,17 +350,17 @@ function Fbru!(f, x, p)
 	h = 1.0 / n; h2 = h*h
 	c1 = D1 / l^2 / h2
 	c2 = D2 / l^2 / h2
-	
+
 	u = @view x[1:n]
 	v = @view x[n+1:2n]
-	
+
 	# Dirichlet boundary conditions
 	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
 	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
-	
+
 	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
 	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
-	
+
 	for i=2:n-1
 		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
 		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
@@ -384,8 +384,8 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9, 
-	detectBifurcation = 3, nev = 21, plotEveryStep = 50, 
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax = 1.9,
+	detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 br, = @time continuation(Fbru, Jbru_sp,
@@ -445,22 +445,22 @@ We create the parallel standard shooting problem:
 # this encodes the functional for the Shooting problem
 probSh = ShootingProblem(
 	# pass the vector field and parameter (to be passed to the vector field)
-	Fbru, par_hopf, 
-	
+	Fbru, par_hopf,
+
 	# we pass the ODEProblem encoding the flow and the time stepper
 	probsundials, Rodas4P(),
-	
+
 	# this is for the phase condition, you can pass your own section as well
 	[orbitguess_f2[:,ii] for ii=1:dM:M];
-	
+
 	# enable threading
 	parallel = true,
-	
+
 	# these are options passed to the ODE time stepper
 	atol = 1e-10, rtol = 1e-8)
 ```
 
-We are now ready to call `newton` 
+We are now ready to call `newton`
 
 ```julia
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
@@ -525,7 +525,7 @@ Finally, we can perform continuation of this periodic orbit using a specialized 
 ```julia
 # note the eigensolver computes the eigenvalues of the monodromy matrix. Hence
 # the dimension of the state space for the eigensolver is 2n
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5, 
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 1.5,
 	maxSteps = 500, newtonOptions = (@set optn_po.tol = 1e-7), nev = 25,
 	precisionStability = 1e-8, detectBifurcation = 0)
 
@@ -560,17 +560,17 @@ centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 # functional to hold the Poincare Shooting Problem
 probHPsh = PoincareShootingProblem(
 	# vector field and parameter
-	Fbru, par_hopf, 
-	
+	Fbru, par_hopf,
+
 	# ODEProblem, ODE solver used to compute the flow
-	probsundials, Rodas4P(), 
-	
+	probsundials, Rodas4P(),
+
 	# parameters for the Poincaré sections
-	normals, centers; 
-	
+	normals, centers;
+
 	# enable threading
 	parallel = true,
-	
+
 	# Parameters passed to the ODE solver
 	atol = 1e-10, rtol = 1e-8)
 ```
@@ -590,14 +590,14 @@ We can now call `continuation` to get the first branch.
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
 ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
 
-# newton options	
+# newton options
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
 
 # continuation options
-opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, 
-	pMax = 2.5, maxSteps = 500, nev = 10, 
+opts_po_cont_floquet = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001,
+	pMax = 2.5, maxSteps = 500, nev = 10,
 	precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 3)
-opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions = 
+opts_po_cont_floquet = @set opts_po_cont_floquet.newtonOptions =
 	NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-9, verbose = true)
 
 # continuation run
@@ -624,4 +624,3 @@ Bifurcation points:
 - #  4,    ns at p ≈ 1.87667870 ∈ (1.86813520, 1.87667870), |δp|=9e-03, [converged], δ = ( 2,  2), step =  32, eigenelements in eig[ 33], ind_ev =   6
 
 ```
-

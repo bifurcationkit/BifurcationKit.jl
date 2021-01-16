@@ -6,7 +6,6 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `J  = (x, p) -> d_xF(x, p)` associated jacobian
 - `br` results returned after a call to [`continuation`](@ref)
 - `ind_bif` bifurcation index in `br`
-- `par` parameters used for the vector field
 - `lens` parameter axis used to locate the Fold/Hopf point.
 - `options::NewtonPar`
 
@@ -17,11 +16,11 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 """
-function newton(F, J, br::AbstractBranchResult, ind_bif::Int64, par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
+function newton(F, J, br::AbstractBranchResult, ind_bif::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
-		return newtonHopf(F, J, br, ind_bif, par, lens; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
+		return newtonHopf(F, J, br, ind_bif, lens; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
 	elseif br.foldpoint[ind_bif].type == :fold
-		return newtonFold(F, J, br, ind_bif, par, lens; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
+		return newtonFold(F, J, br, ind_bif, lens; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
 	end
 	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end
@@ -35,7 +34,6 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
 - `br` results returned after a call to [`continuation`](@ref)
 - `ind_bif` bifurcation index in `br`
-- `par` set of parameters
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
@@ -57,11 +55,11 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 
-function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
-		return continuationHopf(F, J, br, ind_bif, par, lens1, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+		return continuationHopf(F, J, br, ind_bif, lens1, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 	elseif br.foldpoint[ind_bif].type == :fold
-		return continuationFold(F, J, br, ind_bif, par, lens1, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+		return continuationFold(F, J, br, ind_bif, lens1, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 	end
 	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end

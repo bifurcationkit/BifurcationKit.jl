@@ -130,7 +130,7 @@ outfold, _, flag = newton(F_chan, Jac_mat,
 	#index of the fold point
 	br, indfold, 
 	# set of parameters and parameter axis to locate the fold
-	par, (@lens _.α))
+	(@lens _.α))
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
 ```
 
@@ -150,10 +150,10 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, 
 	outfoldco, = @time continuation(
 		F_chan, Jac_mat,
 		br, indfold, 
-		# set of parameters and 2 parameter axis to trace to codim 2 curve
-		par, (@lens _.α), (@lens _.β),
+		# 2 parameter axis to trace to codim 2 curve
+		(@lens _.α), (@lens _.β),
 		plot = true, verbosity = 2, optcontfold)
-plot(outfoldco; xlabel="beta", ylabel="alpha")
+plot(outfoldco)
 ```
 
 This produces:
