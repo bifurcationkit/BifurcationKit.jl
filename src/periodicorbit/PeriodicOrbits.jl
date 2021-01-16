@@ -1,7 +1,7 @@
 abstract type AbstractPeriodicOrbitProblem end
 
 # Periodic orbit computations by finite differences
-abstract type AbstractPOTrapProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPOFDProblem <: AbstractPeriodicOrbitProblem end
 # Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
@@ -14,6 +14,28 @@ function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, 
 # update a section with a problem, we do nothing by default
 updateSection!(prob::AbstractPeriodicOrbitProblem, x, par) = @warn "Not yet implemented!"
 
+Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
+onGpu(pb::AbstractPOFDProblem) = pb.ongpu
+hasHessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
+isInplace(pb::AbstractPOFDProblem) = pb.isinplace
+
+function applyF(pb::AbstractPOFDProblem, dest, x, p)
+	if isInplace(pb)
+		pb.F(dest, x, p)
+	else
+		dest .= pb.F(x, p)
+	end
+	dest
+end
+
+function applyJ(pb::AbstractPOFDProblem, dest, x, p, dx)
+	if isInplace(pb)
+		pb.J(dest, x, p, dx)
+	else
+		dest .= apply(pb.J(x, p), dx)
+	end
+	dest
+end
 ####################################################################################################
 """
 $(TYPEDEF)

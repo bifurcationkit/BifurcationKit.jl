@@ -39,11 +39,11 @@ module BifurcationKit
 
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
+	include("periodicorbit/PeriodicOrbitTrapeze.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/StandardShooting.jl")
 	include("periodicorbit/PoincareShooting.jl")
-	include("periodicorbit/PeriodicOrbitFD.jl")
 	include("periodicorbit/Floquet.jl")
 
 	include("plotting/Recipes.jl")

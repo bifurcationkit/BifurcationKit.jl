@@ -64,7 +64,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extractPeriodFDTrap` won't be well defined because it is a scalar operation. One may have to redefine it like `extractPeriodFDTrap(x::CuArray) = x[end:end]` or something else. Also, note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tm} <: AbstractPOTrapProblem
+@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tm} <: AbstractPOFDProblem
 	# Function F(x, par)
 	F::TF = nothing
 
@@ -104,30 +104,8 @@ You will see below that you can evaluate the residual of the functional (and oth
 	adaptmesh::Bool = false
 end
 
-isInplace(pb::AbstractPOTrapProblem) = pb.isinplace
-onGpu(pb::PeriodicOrbitTrapProblem) = pb.ongpu
-hasHessian(pb::PeriodicOrbitTrapProblem) = pb.d2F == nothing
-@inline getTimeStep(pb::PeriodicOrbitTrapProblem, i::Int) = getTimeStep(pb.mesh, i)
-Base.size(pb::PeriodicOrbitTrapProblem) = (pb.M, pb.N)
-
-function applyF(pb::AbstractPOTrapProblem, dest, x, p)
-	if isInplace(pb)
-		pb.F(dest, x, p)
-	else
-		dest .= pb.F(x, p)
-	end
-	dest
-end
-
-function applyJ(pb::AbstractPOTrapProblem, dest, x, p, dx)
-	if isInplace(pb)
-		pb.J(dest, x, p, dx)
-	else
-		dest .= apply(pb.J(x, p), dx)
-	end
-	dest
-end
-
+@inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
+getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 
 # dummy constructor, useful for specifying the "algorithm" to look for periodic orbits
 # just call PeriodicOrbitTrapProblem()
@@ -167,7 +145,7 @@ extractTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
 extractTimeSlices(x::BorderedArray,  N, M) = x.u
 extractTimeSlices(pb::PeriodicOrbitTrapProblem, x) = extractTimeSlices(x, pb.N, pb.M)
 
-function POTrapScheme!(pb::AbstractPOTrapProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
+function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
 	# this function implements the basic implicit scheme used for the time integration
 	# because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call
 	# basically tmp is F(u2)
@@ -184,7 +162,7 @@ function POTrapScheme!(pb::AbstractPOTrapProblem, dest, u1, u2, par, h::Number, 
 	end
 end
 
-function POTrapSchemeJac!(pb::AbstractPOTrapProblem, dest, u1, u2, du1, du2, par, h::Number, tmp)
+function POTrapSchemeJac!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h::Number, tmp)
 	# this function implements the basic implicit scheme used for the time integration
 	# useful for the matrix-free jacobian
 	# basically tmp is dF(u2).du2 (see above for explanation)
@@ -197,7 +175,7 @@ end
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
-function POTrapFunctional!(pb::AbstractPOTrapProblem, out, u0, par)
+function POTrapFunctional!(pb::AbstractPOFDProblem, out, u0, par)
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
@@ -231,7 +209,7 @@ end
 """
 Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
 """
-function POTrapFunctionalJac!(pb::AbstractPOTrapProblem, out, u0, par, du)
+function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u0, par, du)
 	M, N = size(pb)
 	T  = extractPeriodFDTrap(u0)
 	dT = extractPeriodFDTrap(du)
@@ -604,7 +582,7 @@ $(SIGNATURES)
 
 Compute the full trajectory associated to `x`. Mainly for plotting purposes.
 """
-function getTrajectory(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p)
+function getTrajectory(prob::AbstractPOFDProblem, x::AbstractVector, p)
 	T = getPeriod(prob, x, p)
 	M, N = size(prob)
 	xv = @view x[1:end-1]
@@ -614,6 +592,7 @@ end
 
 # this function updates the section during the continuation run
 @views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
+	@error "Updating section"
 	M, N = size(prob)
 	xc = extractTimeSlices(prob, x)
 	T = extractPeriodFDTrap(x)
@@ -623,9 +602,10 @@ end
 
 	# update the normals
 	for ii=0:M-1
-		ii2 = (ii+1)<= M ? ii+1 : ii+1-M
-		prob.ϕ[ii*N+1:ii*N+N] .= prob.F(xc[:, ii2], par) ./ M
+		# ii2 = (ii+1)<= M ? ii+1 : ii+1-M
+		prob.ϕ[ii*N+1:ii*N+N] .= prob.F(xc[:, ii+1], par) ./ M
 	end
+
 	return true
 end
 ####################################################################################################
@@ -1029,7 +1009,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 """
-function continuationPOTrapBPFromPO(br::BranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
+function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 
