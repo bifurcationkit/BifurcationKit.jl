@@ -61,15 +61,18 @@ end
 """
 	finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 
-Compute a Jacobian by Finite Differences, update J
+Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(x+δ)-f(x-δ))/2δ
 """
 function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 	f = F(x)
 	x1 = copy(x)
 	for i ∈ eachindex(x)
 		x1[i] += δ
-		J[:, i] .= (F(x1) .- F(x)) / δ
-		x1[i] -= δ
+		J[:, i] .= F(x1)
+		x1[i] -= 2δ
+		J[:, i] .-= F(x1)
+		J[:, i] ./= 2δ
+		x1[i] += δ
 	end
 	return J
 end

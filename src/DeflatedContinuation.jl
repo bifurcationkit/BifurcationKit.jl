@@ -1,10 +1,10 @@
 # iterable which contains the options associated with Deflated Continuation
 @with_kw struct DefContIterable{Tit, TperturbSolution, TacceptSolution}
-	it::Tit						# replicate PALC iterator
-	maxBranches::Int64
-	seekEveryStep::Int64 = 1
-	perturbSolution::TperturbSolution
-	acceptSolution::TacceptSolution
+	it::Tit							# replicate PALC iterator
+	maxBranches::Int64				# maximum number of (active) branches to be computed
+	seekEveryStep::Int64 = 1		# whether to seek new (deflated) solution at every step
+	perturbSolution::TperturbSolution # perturb function
+	acceptSolution::TacceptSolution	  # accept (solution) function
 end
 
 # state specific to Deflated Continuation

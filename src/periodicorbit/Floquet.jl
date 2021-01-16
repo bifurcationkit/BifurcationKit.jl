@@ -55,7 +55,6 @@ end
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
-		@warn "Not implemented yet in a fast way! Need to form the full monodromy matrix, not practical for large scale problems"
 		# we build the monodromy matrix and compute the spectrum
 		monodromy = MonodromyQaD(J)
 	else
@@ -184,6 +183,7 @@ end
 
 ##############################################
 # PeriodicOrbitTrapProblem
+# Matrix-Free version
 function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
 	poPb = JacFW.pb
 	u0 = JacFW.x

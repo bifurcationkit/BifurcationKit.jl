@@ -507,7 +507,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	d2gidxjdxk = zeros(Tvec, N, N, N)
 	for ii in 1:N, jj in 1:N, kk in 1:N
 		b2v = R2(ζs[jj], ζs[kk])
-		d2gidxjdxk[ii,jj,kk] = dot(b2v, ζstars[ii])
+		d2gidxjdxk[ii, jj, kk] = dot(b2v, ζstars[ii])
 	end
 
 	if verbose
@@ -539,7 +539,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 		b3v .-= R2(ζs[ll], wst)
 		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
 		for ii in 1:N
-			d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
+			d3gidxjdxkdxl[ii, jj, kk, ll] = dot(b3v, ζstars[ii])
 		end
 	end
 	if verbose

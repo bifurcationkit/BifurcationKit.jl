@@ -1,4 +1,4 @@
-# Temperature model with `ApproxFun` (intermediate)
+# Temperature model with `ApproxFun`, Spectral collocation (intermediate)
 
 ```@contents
 Pages = ["tutorials1b.md"]

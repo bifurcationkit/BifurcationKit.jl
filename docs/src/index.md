@@ -101,3 +101,6 @@ We make the same requirements than `KrylovKit.jl`. Hence, we refer to its [docs]
 
 - `Base.length(x)`: it is used in the constraint equation of the pseudo arclength continuation method (see [`continuation`](@ref) for more details). If `length` is not available for your "vector", define it `length(x) = 1` and adjust tuning the parameter `theta` in `ContinuationPar`.
 - `Base.copyto!(dest, in)` this is required to reduce the allocations by avoiding too many copies
+
+## Citations
+- Grant, Paul K., et al. "Interpretation of morphogen gradients by a synthetic bistable circuit." Nature communications 11.1 (2020): 1-8.
