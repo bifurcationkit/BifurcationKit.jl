@@ -284,13 +284,16 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 
 	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 
+	# this functions allows to tackle the case where the two parameters have the same name
+	lenses = getLensParam(lens1, lens2)
+
 	# solve the hopf equations
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
 		opt_hopf_cont;
-		printSolution = (u, p) -> u.p[1],
-		plotSolution = (x, p; kwargs...) -> (xlabel!(String(getLensParam(lens2)), subplot=1); ylabel!(String(getLensParam(lens1)), subplot=1)), kwargs...)
+		printSolution = (u, p) -> (;zip(lenses, (u.p[1],p))...),
+		kwargs...)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end

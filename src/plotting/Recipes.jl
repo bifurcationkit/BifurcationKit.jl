@@ -4,6 +4,16 @@ getLensParam(lens::Setfield.PropertyLens{F}) where F = F
 getLensParam(::Setfield.IdentityLens) = :p
 getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
+function getLensParam(lens1::Lens, lens2::Lens)
+	p1 = getLensParam(lens1)
+	p2 = getLensParam(lens2)
+	if p1==p2
+		return Symbol(String(p1)*"1"), Symbol(String(p2)*"2") 
+	else
+		return p1, p2
+	end
+end
+
 function getPlotVars(contres, vars)
 	if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}
 		return vars

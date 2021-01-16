@@ -272,13 +272,15 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
 
+	# this functions allows to tackle the case where the two parameters have the same name
+	lenses = getLensParam(lens1, lens2)
+
 	# solve the Fold equations
 	branch, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
 		opt_fold_cont,
-		printSolution = (u, p) -> u.p,
-		plotSolution = (x, p; kwargs...) -> (xlabel!(String(getLensParam(lens2)), subplot=1); ylabel!(String(getLensParam(lens1)), subplot=1)  ); kwargs...)
+		printSolution = (u, p) -> (;zip(lenses, (u.p,p))...); kwargs...)
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
