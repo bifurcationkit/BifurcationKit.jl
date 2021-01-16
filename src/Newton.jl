@@ -85,7 +85,7 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,
     If you don't have parameters, you can still use `newton` as follows `newton((x,p) -> F(x), (x,p)-> J(x), x0, nothing, options)`
 
 !!! warning "Linear solver"
-    Make sure that the linear solver (Matrix-Free...) corresponds to you jacobian (Matrix-Free vs. Matrix based).
+    Make sure that the linear solver (Matrix-Free...) corresponds to your jacobian (Matrix-Free vs. Matrix based).
 """
 function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
 	# Extract parameters

@@ -65,12 +65,13 @@ $(TYPEDFIELDS)
 end
 
 # returns the number of steps in a branch
-Base.length(br::ContResult) = length(br.branch)
+Base.length(br::BranchResult) = length(br.branch)
 
 # check whether the eigenvectors are saved in the branch
 haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-hasstability(br::ContResult) = computeEigenElements(br.contparams)
-getfirstusertype(br::ContResult) = keys(br.branch[1])[1]
+haseigenvector(br::BranchResult) = haseigenvector(br.γ)
+hasstability(br::BranchResult) = computeEigenElements(br.contparams)
+getfirstusertype(br::BranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::BranchResult) = getvectortype(eltype(br.bifpoint))
 @inline getvectoreltype(br::BranchResult) = eltype(getvectortype(br))
 setParam(br::BranchResult, p0) = set(br.params, br.param_lens, p0)
