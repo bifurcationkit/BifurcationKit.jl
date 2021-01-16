@@ -546,5 +546,5 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 end
 
 # conveniency for use in continuation
-newtonPALC(it::ContIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.param_lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
+newtonPALC(it::ContIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
 ####################################################################################################

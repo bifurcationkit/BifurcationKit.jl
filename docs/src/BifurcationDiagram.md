@@ -116,3 +116,18 @@ plot(bdiag; putbifptlegend=false, markersize=2,plotfold=false);title!("#branch =
 ```
 
  ![](diagramD6.png)
+ 
+ We can access the different branches with `BK.getBranch(bdiag, (1,))`. Alternatively, you can plot a specific branch:
+ 
+ ![](diagramD6b.png)
+ 
+ Finally, you can resume the computation of the bifurcation diagram if not complete by using the syntax
+ 
+```julia
+ bifurcationdiagram!(jet...,
+	# this resume the computation of the diagram from the 2nd node
+	# bdiag is written inplace
+	getBranch(bdiag, (2,)), (current = 3, maxlevel = 6), 
+	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false)))
+```
+ 

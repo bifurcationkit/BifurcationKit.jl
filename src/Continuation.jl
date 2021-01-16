@@ -9,7 +9,7 @@ abstract type ContinuationState end
 
 	x0::Tv							# initial guess
 	par::Tp							# reference to parameter, so no worry if this one is big
-	param_lens::Tlens				# param axis to be considered specified by a ::Lens
+	lens::Tlens						# param axis to be considered specified by a ::Lens
 
 	contParams::ContinuationPar{T, S, E}
 
@@ -31,7 +31,7 @@ abstract type ContinuationState end
 end
 
 Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = set(it.par, it.param_lens, p0)
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = set(it.par, it.lens, p0)
 
 # default finaliser
 finaliseDefault(z, tau, step, contResult; k...) = true
@@ -52,7 +52,7 @@ function ContIterable(Fhandle, Jhandle,
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
-	return ContIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, param_lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+	return ContIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
 end
 
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams)
@@ -169,13 +169,13 @@ function ContResult(it::ContIterable, state::ContState)
 	else
 		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
 	end
-	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.param_lens, eiginfo, contParams)
+	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, contParams)
 end
 
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# the keyword arguemnt is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
-	p0 = get(it.par, it.param_lens)
+	p0 = get(it.par, it.lens)
 	ds = it.contParams.ds
 	T = eltype(it)
 
@@ -241,7 +241,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
-	verbose && print("#"^35*"\nStart of Continuation Step $step:\nParameter $(getLensParam(it.param_lens))");
+	verbose && print("#"^35*"\nStart of Continuation Step $step:\nParameter $(getLensParam(it.lens))");
 	verbose && @printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
 	verbose && @printf("Step size = %2.4e\n", ds)
 

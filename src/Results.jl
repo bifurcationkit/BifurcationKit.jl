@@ -58,7 +58,7 @@ $(TYPEDFIELDS)
 	params::Tpar = nothing
 
 	"Parameter axis used for computing the branch"
-	param_lens::Tl
+	lens::Tl
 
 	"A vector holding the set of detectedxbifurcation points (other than fold points). See [`GenericBifPoint`](@ref) for a description of the fields."
 	bifpoint::Vector{Biftype}
@@ -74,17 +74,17 @@ hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getvectortype(eltype(br.bifpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
-setParam(br::AbstractBranchResult, p0) = set(br.params, br.param_lens, p0)
+setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:bifpoint, :contparams, :foldpoint, :param_lens, :sol, :type, :branch, :eig, :functional, :params)
+	if s in (:bifpoint, :contparams, :foldpoint, :lens, :sol, :type, :branch, :eig, :functional, :params)
 		getfield(br, s)
 	else
 		getproperty(br.branch, s)
 	end
 end
-Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :param_lens, :sol, :type, :branch, :eig, :functional, :params)
+Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :lens, :sol, :type, :branch, :eig, :functional, :params)
 
 """
 $(SIGNATURES)
@@ -153,7 +153,7 @@ This function is used to initialize the composite type `ContResult` according to
 		sol = sol,
 		contparams =  contParams,
 		params = par,
-		param_lens = lens)
+		lens = lens)
 end
 ####################################################################################################
 """

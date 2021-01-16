@@ -1057,10 +1057,10 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 	# Right now, it can be quite large.
 
 	# perform continuation
-	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.param_lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = _linearAlgo, kwargs...)
+	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = _linearAlgo, kwargs...)
 
 	#create a branch
-	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.param_lens, ζ, ζ, nothing, :nothing)
+	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
 end

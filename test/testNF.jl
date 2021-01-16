@@ -212,7 +212,7 @@ BK.nf(bp2d)
 	@test abs(bp2d.nf.b2[1,2,3] - pard6.a)   < 1e-10
 
 # test the evaluation of the normal form
-x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.param_lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
+x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.lens, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
 br1, = BK.continuation(
 	jet..., br, 1,

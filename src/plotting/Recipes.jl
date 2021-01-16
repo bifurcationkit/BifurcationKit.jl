@@ -23,7 +23,7 @@ const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :mage
 			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
 		if ind1 == 1 || ind1 == :param
-			xguide --> String(getLensParam(contres.param_lens))
+			xguide --> String(getLensParam(contres.lens))
 		end
 		if ind2 isa Symbol
 			yguide --> String(ind2)
@@ -83,7 +83,7 @@ end
 			linewidthunstable --> linewidthunstable
 			linewidthstable --> linewidthstable
 			vars --> vars
-			xguide --> getLensParam(res.param_lens)
+			xguide --> getLensParam(res.lens)
 			# collect the values of the bifurcation points to be added in the legend
 			ind1, ind2 = getPlotVars(brs[id], vars)
 			for pt in res.bifpoint

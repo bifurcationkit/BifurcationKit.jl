@@ -42,6 +42,14 @@ while λ < λmax do
 return S
 ```
 
+## Tips
+
+The following piece of information is valuable in order to get the algorithm working in various conditions (see also [here](https://github.com/rveltz/BifurcationKit.jl/issues/33)) especially for small systems (e.g. dim<20):
+
+- `newton` is quite good and it is convenient to limit it otherwise it will be able to bypass the deflation. For example, you can use `maxIter=10` in `NewtonPar` 
+- try to limit the newton residual by using the argument `callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e7`. This will likely remove the occurence of `┌ Error: Same solution found for identical parameter value!!`
+- finally, you can try some agressive shift (here `0.01` in the deflation operator, like `DeflationOperator(2.0, dot, 0.01, [sol])` but use it wisely.
+
 ## Basic example
 
 We show a quick and simple example of use. Note in particular that the algoritm is able to find the disconnected branch. The starting points are marked with crosses

@@ -1,10 +1,4 @@
 ####################################################################################################
-function normalize(x)
-	out = _copy(x)
-	rmul!(out, norm(x))
-	return out
-end
-####################################################################################################
 """
 This function checks whether the solution with eigenvalues `eigvalues` is stable and also compute the number of unstable eigenvalues with nonzero imaginary part
 """

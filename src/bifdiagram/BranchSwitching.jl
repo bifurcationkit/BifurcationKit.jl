@@ -95,12 +95,12 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	branch, u, tau =  continuation(F, dF,
 			bifpoint.x0, bifpoint.params,	# first point on the branch
 			pred.x, pred.p,					# second point on the branch
-			br.param_lens, optionsCont; kwargs...)
+			br.lens, optionsCont; kwargs...)
 	return Branch(branch, bifpoint), u, tau
 end
 
 # same but for a Branch
-continuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
+continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
 
 """
 $(SIGNATURES)
@@ -129,7 +129,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
@@ -197,8 +197,8 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 		continuation(F, dF,
 			bpnf.x0, par,		# first point on the branch
 			_sol, bpnf.p + _dp, # second point on the branch
-			br.param_lens, (@set optionsCont.ds = _ds); kwargs...)
-		# continuation(F, dF, _sol, setParam(br, bpnf.p + _dp), br.param_lens, (@set optionsCont.ds = _ds); kwargs...)
+			br.lens, (@set optionsCont.ds = _ds); kwargs...)
+		# continuation(F, dF, _sol, setParam(br, bpnf.p + _dp), br.lens, (@set optionsCont.ds = _ds); kwargs...)
 	end
 
 	branches = Branch[]
