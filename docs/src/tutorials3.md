@@ -192,7 +192,7 @@ which gives using `plot(br_hopf, xlabel="beta", ylabel = "l")`
 
 ## Computation of the branch of periodic orbits (Finite differences)
 
-We now compute the bifurcated branches of periodic solutions from the Hopf points using [Periodic orbits based on finite differences](@ref). One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
+We now compute the bifurcated branches of periodic solutions from the Hopf points using [Periodic orbits based on trapezoidal rule](@ref). One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
 
 We start by providing a linear solver and some options for the continuation to work
 

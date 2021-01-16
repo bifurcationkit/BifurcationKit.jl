@@ -81,7 +81,7 @@ The docs for this specific `newton` are located at [`newton`](@ref).
 We also provide a simplified call to `newton` to locate the periodic orbit with a deflation operator. 
 
 ```@docs
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par0, options::NewtonPar, defOp::DeflationOperator, linearalgo::Symbol; kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator, linearPO = :BorderedLU; kwargs...)
 ```
 
 

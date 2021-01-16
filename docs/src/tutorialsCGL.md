@@ -193,7 +193,7 @@ orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ```
 
-We create a problem to hold the functional and compute periodic orbits based on Finite Differences
+We create a problem to hold the functional and compute Periodic orbits based on trapezoidal rule
 
 ```julia
 poTrap = PeriodicOrbitTrapProblem(
@@ -421,7 +421,7 @@ Notice the small speed boost but the reduced allocations. At this stage, further
 
 ### Other linear formulation
 
-We could use another way to "invert" jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix $J_c$ (see [Periodic orbits based on finite differences](@ref)) which has a smaller memory footprint:
+We could use another way to "invert" jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix $J_c$ (see [Periodic orbits based on trapezoidal rule](@ref)) which has a smaller memory footprint:
 
 ```julia
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)

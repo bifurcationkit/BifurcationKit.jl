@@ -214,15 +214,15 @@ orbitguess_f2 = reduce(vcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ```
 
-The second remark concerns the phase `0.25` written above. To account for the additional unknown (*i.e.* the period), periodic orbit localisation using Finite Differences requires an additional constraint (see [Periodic orbits based on finite differences](@ref) for more details). In the present case, this constraint is
+The second remark concerns the phase `0.25` written above. To account for the additional unknown (*i.e.* the period), periodic orbit localisation using Finite Differences requires an additional constraint (see [Periodic orbits based on trapezoidal rule](@ref) for more details). In the present case, this constraint is
 
 $$< u(0) - u_{hopf}, \phi> = 0$$
 
-where `u_{hopf}` is the equilibrium at the Hopf bifurcation and $\phi$ is `real.(vec_hopf)` where `vec_hopf` is the eigenvector. This is akin to a Poincaré section. We do not put any constraint on $u(t)$ albeit this is possible (see [Periodic orbits based on finite differences](@ref).
+where `u_{hopf}` is the equilibrium at the Hopf bifurcation and $\phi$ is `real.(vec_hopf)` where `vec_hopf` is the eigenvector. This is akin to a Poincaré section. We do not put any constraint on $u(t)$ albeit this is possible (see [Periodic orbits based on trapezoidal rule](@ref).
 
 The phase of the periodic orbit is set so that the above constraint is satisfied. We shall now use Newton iterations to find a periodic orbit.
 
-Given our initial guess, we create a (family of) problem which encodes the functional associated to finding periodic orbits based on finite differences (see [Periodic orbits based on finite differences](@ref) for more information):
+Given our initial guess, we create a (family of) problem which encodes the functional associated to finding Periodic orbits based on trapezoidal rule (see [Periodic orbits based on trapezoidal rule](@ref) for more information):
 
 ```julia
 poTrap = PeriodicOrbitTrapProblem(

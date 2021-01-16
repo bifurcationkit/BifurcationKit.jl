@@ -25,7 +25,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 
 In order to compute the bifurcated branch of periodic solutions at a Hopf bifurcation point, you need to choose a method. Indeed, we provide two methods to compute periodic orbits:
 
-- [Periodic orbits based on finite differences](@ref)
+- [Periodic orbits based on trapezoidal rule](@ref)
 - [Periodic orbits based on the shooting method](@ref)
 
 Once you have decided which method you want, you can call the following method.
@@ -35,7 +35,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::Continu
 	Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, kwargs...)
 ```
 
-We refer to [`continuation`](@ref) for more information about the arguments. Here, we just say a few words about how we can specify `prob::AbstractPeriodicOrbitProblem`. For [Periodic orbits based on finite differences](@ref), you can pass `prob = PeriodicOrbitTrapProblem(M = 51)` where `M` is the number of times slices in the periodic orbit. For [Periodic orbits based on the shooting method](@ref), you need more parameters. For example, you can pass `prob = ShootingProblem(2, par, prob, Euler())` or `prob = PoincareShootingProblem(2, par, prob, Euler())` where `prob::ODEProblem` is an ODE problem to specify the Cauchy problem and `par` is the set of parameters passed to the vector field and which must be the same as `br.params`.
+We refer to [`continuation`](@ref) for more information about the arguments. Here, we just say a few words about how we can specify `prob::AbstractPeriodicOrbitProblem`. For [Periodic orbits based on trapezoidal rule](@ref), you can pass `prob = PeriodicOrbitTrapProblem(M = 51)` where `M` is the number of times slices in the periodic orbit. For [Periodic orbits based on the shooting method](@ref), you need more parameters. For example, you can pass `prob = ShootingProblem(2, par, prob, Euler())` or `prob = PoincareShootingProblem(2, par, prob, Euler())` where `prob::ODEProblem` is an ODE problem to specify the Cauchy problem and `par` is the set of parameters passed to the vector field and which must be the same as `br.params`.
 
 Several examples are provided like [Brusselator 1d (automatic)](@ref) or [Complex Ginzburg-Landau 2d](@ref).
 
