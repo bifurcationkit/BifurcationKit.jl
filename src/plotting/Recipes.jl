@@ -21,8 +21,11 @@ end
 		if computeEigenElements(contres.contparams) && plotstability
 			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
-		if ind1 == 1
-			xguide --> getLensParam(contres.param_lens)
+		if ind1 == 1 || ind1 == :param
+			xguide --> String(getLensParam(contres.param_lens))
+		end
+		if ind2 isa Symbol
+			yguide --> String(ind2)
 		end
 		label --> branchlabel
 		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)

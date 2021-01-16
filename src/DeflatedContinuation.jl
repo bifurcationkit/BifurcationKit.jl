@@ -186,7 +186,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 					if isactive(state) && (n_active < maxBranches)
 						n_active += 1
 						_success = true
-						verbosity>=2 && println("----> Deflation for branch $idb")
+						verbosity >= 2 && println("----> Deflation for branch $idb")
 						while _success
 							sol1, hist, _success, itnewton = getNewSolution(state, current_param, idb)
 							if _success && normN(sol1 - getx(state)) < optnewton.tol
