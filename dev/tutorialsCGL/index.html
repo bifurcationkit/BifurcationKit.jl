@@ -107,7 +107,7 @@ r_hopf, Th, orbitguess2, hopfpt, eigvec = guessFromHopf(br, ind_hopf, opt_newton
 
 # flatten the initial guess
 orbitguess_f2 = reduce(hcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |&gt; vec</code></pre><p>We create a problem to hold the functional and compute periodic orbits based on Finite Differences</p><pre><code class="language-julia">poTrap = PeriodicOrbitTrapProblem(
+orbitguess_f = vcat(vec(orbitguess_f2), Th) |&gt; vec</code></pre><p>We create a problem to hold the functional and compute Periodic orbits based on trapezoidal rule</p><pre><code class="language-julia">poTrap = PeriodicOrbitTrapProblem(
 # vector field and sparse Jacobian	
 	Fcgl, Jcgl,
 # parameters for the phase condition
@@ -243,7 +243,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
           4          4.3534e-06            11
           5          3.5527e-08            12
           6          9.7032e-11            13
-  1.096669 seconds (1.61 k allocations: 130.211 MiB)</code></pre><p>Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of <code>BlockBandedMatrices.jl</code> for the Laplacian operator, etc.</p><h3 id="Other-linear-formulation-1"><a class="docs-heading-anchor" href="#Other-linear-formulation-1">Other linear formulation</a><a class="docs-heading-anchor-permalink" href="#Other-linear-formulation-1" title="Permalink"></a></h3><p>We could use another way to &quot;invert&quot; jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix <span>$J_c$</span> (see <a href="@ref">Periodic orbits based on finite differences</a>) which has a smaller memory footprint:</p><pre><code class="language-julia">Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
+  1.096669 seconds (1.61 k allocations: 130.211 MiB)</code></pre><p>Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of <code>BlockBandedMatrices.jl</code> for the Laplacian operator, etc.</p><h3 id="Other-linear-formulation-1"><a class="docs-heading-anchor" href="#Other-linear-formulation-1">Other linear formulation</a><a class="docs-heading-anchor-permalink" href="#Other-linear-formulation-1" title="Permalink"></a></h3><p>We could use another way to &quot;invert&quot; jacobian of the functional based on bordered technics. We try to use an ILU preconditioner on the cyclic matrix <span>$J_c$</span> (see <a href="../periodicOrbitTrapeze/#Periodic-orbits-based-on-trapezoidal-rule-1">Periodic orbits based on trapezoidal rule</a>) which has a smaller memory footprint:</p><pre><code class="language-julia">Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.1)
 Precilu = @time ilu(Jpo2, τ = 0.005)
 ls2 = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo2,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
 
@@ -304,7 +304,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-4, N = size(Jpo, 1), res
 	(x, p) -&gt; poTrap(x, p),
 	(x, p) -&gt; poTrap(Val(:JacFullSparse), x, p),
 	br_po , indfold, #index of the fold point
-	par_cgl, (@lens _.r);
+	(@lens _.r);
 	# we change the linear solver for the one we 
 	# defined above
 	options = (@set opt_po.linsolver = ls),
@@ -325,7 +325,7 @@ flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Fold Point at α
 outfoldco, hist, flag = @time BK.continuationFold(
 	(x, p) -&gt; poTrap(x, p),
 	(x, p) -&gt; poTrap(Val(:JacFullSparse), x, p),
-	br_po, indfold, par_cgl, (@lens _.r), (@lens _.c5), optcontfold;
+	br_po, indfold, (@lens _.r), (@lens _.c5), optcontfold;
 	d2F = (x, p, dx1, dx2) -&gt; d2Fcglpb(z-&gt;poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)</code></pre><p>which yields:</p><p><img src="../cgl2d-po-foldcont.png" alt/></p><p>There is still room for a lot of improvements here. Basically, the idea would be to use full Matrix-Free the jacobian functional and its transpose.</p><h2 id="Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1"><a class="docs-heading-anchor" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1">Continuation of periodic orbits on the GPU (Advanced)</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1" title="Permalink"></a></h2><div class="admonition is-success"><header class="admonition-header"></header><div class="admonition-body"><p>This is a very neat example <strong>all done</strong> on the GPU using the following ingredients: Matrix-Free computation of periodic orbits using preconditioners.</p></div></div><p>We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the <strong>big</strong> preconditioner. </p><blockquote><p>Note that we use the parameters <code>Nx = 82; Ny = 42; M=30</code>.</p></blockquote><pre><code class="language-julia"># computation of the first derivative
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -&gt; Fcgl(x .+ t .* dx, p), 0.)
@@ -380,4 +380,4 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 8 January 2021 22:35">Friday 8 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+   printSolution = (u,p) -&gt; getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x-&gt;maximum(abs.(x)))</code></pre><div class="admonition is-info"><header class="admonition-header">Preconditioner update</header><div class="admonition-body"><p>For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using <code>ilu0!</code> and friends in <code>CuArrays</code>.</p></div></div></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 20 January 2021 20:52">Wednesday 20 January 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
