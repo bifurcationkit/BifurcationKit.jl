@@ -67,15 +67,21 @@ end
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
 
+# check whether the eigenvalues are saved in the branch
+# this is a good test bifucause we always fill br.eig with a dummy vector :(
+@inline haseigenvalues(br::ContResult) = hasstability(br)
+@inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
+
 # check whether the eigenvectors are saved in the branch
-haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
-haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
+@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
+@inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
+
 hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getvectortype(eltype(br.bifpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
-Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = br.eig[k].eigenvals, eigenvec = eigenvals = br.eig[k].eigenvec)
+Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
 
 function Base.getproperty(br::ContResult, s::Symbol)
 	if s in (:bifpoint, :contparams, :foldpoint, :lens, :sol, :type, :branch, :eig, :functional, :params)
