@@ -346,7 +346,6 @@ function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
-	λ = zero(getvectoreltype(br))
 	p = bifpt.param
 	parbif = setParam(br, p)
 	if startWithEigen
@@ -357,7 +356,7 @@ function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? transpose(L) : Jᵗ(bifpt.x, parbif)
 
-		ζstar, λstar = getAdjointBasis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
+		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
 		eigenvec_ad = real.(ζstar)
 		eigenvec_ad ./= norm(eigenvec_ad)
 	end
