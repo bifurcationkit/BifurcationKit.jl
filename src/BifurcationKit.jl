@@ -26,8 +26,8 @@ module BifurcationKit
 	include("Utils.jl")
 
 	include("codim2/codim2.jl")
-	include("codim2/FoldCont.jl")
-	include("codim2/HopfCont.jl")
+	include("codim2/MinAugFold.jl")
+	include("codim2/MinAugHopf.jl")
 
 	include("BifurcationPoints.jl")
 
@@ -40,6 +40,8 @@ module BifurcationKit
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitTrapeze.jl")
+	include("periodicorbit/PeriodicOrbitMIRK.jl")
+	include("periodicorbit/PeriodicOrbitFDAdapt.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/StandardShooting.jl")
@@ -47,6 +49,7 @@ module BifurcationKit
 	include("periodicorbit/Floquet.jl")
 
 	include("plotting/Recipes.jl")
+	include("Diffeqwrap.jl")
 
 	using Requires
 

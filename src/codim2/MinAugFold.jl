@@ -168,7 +168,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-	newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...)
+	newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -177,6 +177,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `par` parameters used for the vector field
 - `lens` parameter axis used to locate the Fold point.
 - `eigenvec` guess for the 0 eigenvector
+- `eigenvec_ad` guess for the 0 adjoint eigenvector
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
@@ -198,11 +199,11 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
+function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
 	foldproblem = FoldProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec), #copy(eigenvec),
-		_copy(eigenvec), #copy(eigenvec),
+		_copy(eigenvec_ad), #copy(eigenvec_ad),
 		options.linsolver)
 
 	# Jacobian for the Fold problem
@@ -218,9 +219,10 @@ function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens;
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
+	eigenvec_ad = copy(eigenvec)
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, br.params, lens, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return newtonFold(F, J, foldpointguess, br.params, lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 """
@@ -234,6 +236,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2
 - `eigenvec` guess for the 0 eigenvector at p1_0
+- `eigenvec_ad` guess for the 0 adjoint eigenvector
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
@@ -255,7 +258,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...) where {T,vectype}
+function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...) where {T,vectype}
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
@@ -264,7 +267,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 			F, J, Jᵗ, d2F,
 			lens1,
 			_copy(eigenvec), #copy(eigenvec),
-			_copy(eigenvec), #copy(eigenvec),
+			_copy(eigenvec_ad), #copy(eigenvec_ad),
 			options_newton.linsolver)
 
 	# Jacobian for the Fold problem
@@ -279,7 +282,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	branch, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
-		opt_fold_cont,
+		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver)),
 		printSolution = (u, p) -> (;zip(lenses, (u.p,p))...); kwargs...)
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
@@ -288,5 +291,16 @@ function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens1
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.foldpoint[ind_fold]
 	eigenvec = bifpt.tau.u
-	return continuationFold(F, J, foldpointguess, br.params, lens1, lens2, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return continuationFold(F, J, foldpointguess, br.params, lens1, lens2, eigenvec, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+end
+
+struct FoldEig{S} <: AbstractEigenSolver
+	eigsolver::S
+end
+
+function (eig::FoldEig)(Jma, n; kwargs...)
+	J = Jma.fldpb.J(Jma.x.u, set(Jma.params,Jma.fldpb.lens,Jma.x.p))
+	eigenelts = eig.eigsolver(J, n; kwargs...)
+	@show eigenelts[1]
+	return eigenelts
 end
