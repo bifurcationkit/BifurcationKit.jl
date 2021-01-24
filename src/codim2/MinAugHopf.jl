@@ -39,12 +39,13 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, par) where {T}
 	# The jacobian of the MA problem is solved with a bordering method
 	a = hp.a
 	b = hp.b
+	# update parameter
+	par = set(_par, hp.lens, p)
+
 
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, flag, it = hp.linbdsolver(hp.J(x, set(par, hp.lens, p)),
-							a, b,
-							T(0), zero(x), n; shift = Complex{T}(0, ω))
+	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, ω))[2]
 
 	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
 	# we find sigma2 = conj(sigma1)
@@ -54,7 +55,7 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, par) where {T}
 	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v)) / n
 	# we should have σ = σ1
 
-	return hp.F(x, set(par, hp.lens, p)), real(σ1), imag(σ1)
+	return hp.F(x, par), real(σ1), imag(σ1)
 end
 
 function (hopfpb::HopfProblemMinimallyAugmented)(x::BorderedArray, params)
@@ -68,7 +69,7 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 """
 The function solve the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debug_` is used to debug the routine by returning several key quantities.
 """
-function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented, par,
+function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, par,
 	 						duu, dup, duω;
 							debug_ = false) where T
 	# N = length(du) - 2
@@ -85,29 +86,29 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	#   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
 	# This 2x2 system is then solved to get (dp, dω)
 	############### Extraction of function names #################
-	Fhandle = pbMA.F
-	J = pbMA.J
+	Fhandle = pb.F
+	J = pb.J
 
-	d2F = pbMA.d2F
-	a = pbMA.a
-	b = pbMA.b
+	d2F = pb.d2F
+	a = pb.a
+	b = pb.b
 
 	# parameter axis
-	lens = pbMA.lens
+	lens = pb.lens
 
 	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
 	J_at_xp = J(x, set(par, lens, p))
 
-	# we do the following to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
+	# we do the following to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
+	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
 
 	δ = T(1e-9)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, = pbMA.linbdsolver(J_at_xp, a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
-	w, σ2, = pbMA.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
+	v, σ1, _, _ = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, ω))
+	w, σ2, _, _ = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = -Complex{T}(0, ω))
 
 	################### computation of σx σp ####################
 	dpF   = (Fhandle(x, set(par, lens, p + ϵ1))	 - Fhandle(x, set(par, lens, p - ϵ1))) / T(2ϵ1)
@@ -117,14 +118,14 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 	# case of sigma_omega
 	σω = -dot(w, Complex{T}(0, 1) * v) / n
 
-	x1, x2, _, (it1, it2) = pbMA.linsolver(J_at_xp, duu, dpF)
+	x1, x2, _, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
 
 	# the case of ∂_xσ is a bit more involved
 	# we first need to compute the value of ∂_xσ written σx
 	# σx = zeros(Complex{T}, length(x))
 	σx = similar(x, Complex{T})
 
-	if hasHessian(pbMA) == false
+	if hasHessian(pb) == false
 		# We invert the jacobian of the Hopf problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
 		prod(size(x)) > 1e4 && @warn "You might want to pass the Hessian, finite differences with $(prod(size(x))) unknowns"
 		e = zero(x)
@@ -219,7 +220,7 @@ function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens:
 	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN, kwargs...)
 end
 
-function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, verbose = true, nev = br.contparams.nev, kwargs...)
+function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, verbose = true, nev = br.contparams.nev, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -227,18 +228,18 @@ function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens::Lens;
 	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 
 	# computation of adjoint eigenvalue
-	λ = Complex(0,hopfpointguess.p[2])
+	λ = Complex(0, hopfpointguess.p[2])
 	p = bifpt.param
-	parbif = set(br.params, lens, p)
+	parbif = set(br.params, br.lens, p)
 
 	# jacobian at bifurcation point
 	L = J(bifpt.x, parbif)
-	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x0, parbif)
+	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = options.verbose)
-	eigenvec_ad = ζstar#conj.(eigenvec)
+	eigenvec_ad = ζstar #conj.(eigenvec)
 
 	# solve the hopf equations
-	return newtonHopf(F, J, hopfpointguess, br.params, lens, eigenvec_ad, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
+	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, eigenvec_ad, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
 end
 
 """

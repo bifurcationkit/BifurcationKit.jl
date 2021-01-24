@@ -39,6 +39,7 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vect
 	# The jacobian of the MA problem is solved with a bordering method
 	a = fp.a
 	b = fp.b
+	# update parameter
 	par = set(_par, fp.lens, p)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
@@ -59,7 +60,7 @@ end
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
-function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
+function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 							rhsu, rhsp;
 							debug_::Bool = false) where T
 	# The jacobian should be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
@@ -70,39 +71,33 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	############### Extraction of function names #################
 	# N = length(du) - 1
 
-	F = pbMA.F
-	J = pbMA.J
+	F = pb.F
+	J = pb.J
 
-	d2F = pbMA.d2F
-	a = pbMA.a
-	b = pbMA.b
+	d2F = pb.d2F
+	a = pb.a
+	b = pb.b
 
 	# parameter axis
-	lens = pbMA.lens
+	lens = pb.lens
+	# update parameter
 	par0 = set(par, lens, p)
 
 	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
 	J_at_xp = J(x, par0)
 
-	# we do the following in order to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, par0) : transpose(J_at_xp)
+	# we do the following in order to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
+	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, par0) : transpose(J_at_xp)
 
 	n = T(1)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	# v = pbMA.linsolver(J_at_xp, a)[1]
-	# σ1 = -n / dot(b, v)
-	# rmul!(v, -σ1)
-	v, σ1, _, _ = pbMA.linbdsolver(J_at_xp, a, b, T(0), pbMA.zero, n)
-
+	v, σ1, _, _ = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-	# w = pbMA.linsolverAdjoint(JAd_at_xp, b)[1]
-	# σ2 = -n / dot(a, w)
-	# rmul!(w, -σ2)
-	w, σ2, _, _ = pbMA.linbdsolver(JAd_at_xp, b, a, T(0), pbMA.zero, n)
+	w, σ2, _, _ = pb.linbdsolver(JAd_at_xp, b, a, T(0), pb.zero, n)
 
 	δ = T(1e-8)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -111,7 +106,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	dJvdp = minus(apply(J(x, set(par, lens, p + ϵ3)), v), apply(J(x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1) / T(2ϵ3))
 	σp = -dot(w, dJvdp) / n
 
-	if hasHessian(pbMA) == false
+	if hasHessian(pb) == false
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
 		prod(size(x)) > 1e4 && @warn "You might want to pass the Hessian, you are using finite differences with $(prod(size(x))) unknowns to compute a gradient"
 		# we first need to compute the value of ∂_xσ written σx
@@ -128,13 +123,13 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 		end
 
 		########## Resolution of the bordered linear system ########
-		dX, dsig, flag, it = pbMA.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
+		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
 
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically. Much faster than the previous case
 
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
-		x1, x2, _, it = pbMA.linsolver(J_at_xp, rhsu, dpF)
+		x1, x2, _, it = pb.linsolver(J_at_xp, rhsu, dpF)
 
 		d2Fv = d2F(x, par0, x1, v)
 		σx1 = -dot(w, d2Fv ) / n

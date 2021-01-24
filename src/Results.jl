@@ -28,12 +28,12 @@ $(TYPEDFIELDS)
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
-        - `itnewton` number of Newton iterations
-        - `itlinear` total number of linear iterations during corrector
-        - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
-        - `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
-        - `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
-        - `step` continuation step (here equal `i`)"
+  - `itnewton` number of Newton iterations
+  - `itlinear` total number of linear iterations during corrector
+  - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
+  - `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
+  - `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
+  - `step` continuation step (here equal `i`)"
 	branch::StructArray{Ta}
 
 	"A vector with eigen-elements at each continuation step."
@@ -60,7 +60,7 @@ $(TYPEDFIELDS)
 	"Parameter axis used for computing the branch"
 	lens::Tl
 
-	"A vector holding the set of detectedxbifurcation points (other than fold points). See [`GenericBifPoint`](@ref) for a description of the fields."
+	"A vector holding the set of detected bifurcation points (other than fold points). See [`GenericBifPoint`](@ref) for a description of the fields."
 	bifpoint::Vector{Biftype}
 end
 
@@ -185,3 +185,124 @@ Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br
 Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
 Base.propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 ####################################################################################################
+_reverse!(x) = reverse!(x)
+_reverse!(::Nothing) = nothing
+function _reverse(br0::ContResult)
+	br = deepcopy(br0)
+	nb = length(br.branch)
+	if ~isnothing(br.branch)
+		br = @set br.branch =
+			StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
+	end
+
+	if ~isnothing(br.bifpoint)
+		br = @set br.bifpoint =
+			[setproperties(pt;
+				step = nb - pt.step - 1,
+				idx = nb - pt.idx + 1,
+				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.bifpoint)]
+	end
+
+	if ~isnothing(br.foldpoint)
+		br = @set br.foldpoint =
+			[setproperties(pt;
+				step = nb - pt.step - 1,
+				idx = nb - pt.idx + 1,
+				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.foldpoint)]
+	end
+
+	if ~isnothing(br.eig)
+		br = @set br.eig =
+			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
+	end
+
+	if ~isnothing(br.sol)
+		br = @set br.sol =
+			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
+	end
+	return br
+end
+
+_append!(x,y) = append!(x,y)
+_append!(x,::Nothing) = nothing
+"""
+$(SIGNATURES)
+
+Merge two `ContResult`s and put the result in `br`.
+"""
+function _cat!(br::ContResult, br2::ContResult)
+	# br = deepcopy(br1)
+	nb = length(br.branch)
+	if ~isnothing(br.branch)
+		append!(br.branch,
+			[setproperties(pt; step = nb + pt.step) for pt in br2.branch])
+	end
+	if ~isnothing(br.bifpoint)
+		append!(br.bifpoint,
+			[setproperties(pt;
+				step = nb + pt.step,
+				idx = nb + pt.idx) for pt in br2.bifpoint])
+	end
+
+	if ~isnothing(br.foldpoint)
+		append!(br.foldpoint,
+			[setproperties(pt;
+				step = nb + pt.step,
+				idx = nb + pt.idx) for pt in br2.foldpoint])
+	end
+
+	if ~isnothing(br.eig)
+		append!(br.eig,
+			[setproperties(pt; step = nb + pt.step) for pt in br2.eig])
+	end
+
+	if ~isnothing(br.sol)
+		append!(br.sol,
+			[setproperties(pt; step = nb + pt.step) for pt in br2.sol])
+	end
+	return br
+end
+
+# _catrev(br1::ContResult, br2::ContResult) = _merge!(_reverse(br1), br2)
+# _cat(br1::ContResult, br2::ContResult) = _merge!(deepcopy(br1), br2)
+
+"""
+Same as _cat! but determine the ordering so that the branches merge properly
+"""
+function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
+	# find the intersection point
+	dst(x1,p1,x2,p2) = max(abs(x1-x2),abs(p1-p2))
+	dst(i,j) = dst(br1.branch[i][1],br1.branch[i].param,br2.branch[j][1],br2.branch[j].param)
+	ind = (1,1)
+	for i in [1,length(br1)], j in [1,length(br2)]
+		if dst(i,j) < tol
+			ind = (i,j)
+			break
+		end
+	end
+
+	if ind[1] == 1
+		if ind[2] == 1
+			return _cat!(_reverse(br2),br1)
+		else
+			return _cat!((br2),br1)
+		end
+	else
+		if ind[2] == 1
+			return _cat!(br1,br2)
+		else
+			return _cat!(br1,_reverse(br2))
+		end
+
+	end
+
+	if minimum(br1.branch.param) < minimum(br2.branch.param)
+		@info "b1-b2"
+		# br1 is the first branch and then br2
+		# we need to look at the indexing
+		return _cat!(_reverse(br1), br2)
+	else
+		@info "b2-b1"
+		return _cat!(_reverse(br1), br2)
+	end
+end
