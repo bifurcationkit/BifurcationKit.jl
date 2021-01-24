@@ -18,6 +18,7 @@ struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	lens::Tl					# parameter axis for the Hopf point
 	a::vectype					# close to null vector of (J - iω I)^*
 	b::vectype					# close to null vector of J - iω I
+	zero::vectype				# vector zero, to avoid allocating it
 	linsolver::S				# linear solver
 	linbdsolver::Sbd			# linear bordered solver
 	linbdsolverAdjoint::Sbda	# linear bordered solver for the jacobian adjoint
@@ -27,11 +28,11 @@ end
 
 @inline hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
 
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linbdsolve, linbdsolve)
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linbdsolve, linbdsolve)
 
-HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
-function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, par) where {T}
+function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian has a purely imaginary eigenvalue
@@ -278,7 +279,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
+function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), d2F = p2 -> nothing, kwargs...) where {Tb,vectype}
 	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
@@ -289,7 +290,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 		lens1,
 		_copy(eigenvec), #copy(eigenvec),
 		_copy(eigenvec_ad),
-		options_newton.linsolver)
+		options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
@@ -322,7 +323,6 @@ function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-	eigenvec_ad = conj.(eigenvec)
 
 	# computation of adjoint eigenvalue
 	λ = Complex(0,hopfpointguess.p[2])

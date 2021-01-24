@@ -28,9 +28,9 @@ end
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, bdlinsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, bdlinsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver)
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, bdlinsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, bdlinsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver)
 
 function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vectype, T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
@@ -184,6 +184,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
+- `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
@@ -199,12 +200,12 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
+function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver), kwargs...) where {T, vectype}
 	foldproblem = FoldProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
-		_copy(eigenvec), 	#copy(eigenvec),
-		_copy(eigenvec_ad), #copy(eigenvec_ad),
-		options.linsolver)
+		_copy(eigenvec),
+		_copy(eigenvec_ad),
+		options.linsolver, @set bdlinsolver.solver = options.linsolver)
 
 	# Jacobian for the Fold problem
 	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldproblem)
@@ -215,9 +216,9 @@ function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad
 	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)
 end
 
-function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, nev = br.contparams.nev, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.foldpoint[ind_fold]
+	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = copy(eigenvec)
 
@@ -233,8 +234,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
 - `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as returned by the function `FoldPoint`
 - `par` set of parameters
-- `lens1` parameter axis for parameter 1
-- `lens2` parameter axis for parameter 2
+- `lens` parameter axis for parameter 2
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `eigenvec_ad` guess for the 0 adjoint eigenvector
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
@@ -243,6 +243,8 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
 - `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `bdlinsolver` bordered linear solver for the constraint equation
+- `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call
@@ -289,11 +291,12 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
-function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.foldpoint[ind_fold]
+	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt.tau.u
-	return continuationFold(F, J, foldpointguess, br.params, lens1, lens2, eigenvec, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+
+	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 struct FoldEig{S} <: AbstractEigenSolver
