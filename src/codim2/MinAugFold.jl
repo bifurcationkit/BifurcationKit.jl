@@ -17,6 +17,7 @@ struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	lens::Tl				# parameter axis for the Fold point
 	a::vectype				# close to null vector of Jᵗ
 	b::vectype				# close to null vector of J
+	zero::vectype			# vector zero, to avoid allocating it
 	linsolver::S			# linear solver
 	linsolverAdjoint::Sa	# linear solver for the jacobian adjoint
 	linbdsolver::Sbd		# bordered linear solver
@@ -26,11 +27,11 @@ end
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linsolve, MatrixBLS(linsolve))
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, bdlinsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, bdlinsolver)
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, bdlinsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, bdlinsolver)
 
-function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, par) where {vectype, T}
+function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vectype, T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
@@ -38,16 +39,15 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, par) where {vecty
 	# The jacobian of the MA problem is solved with a bordering method
 	a = fp.a
 	b = fp.b
+	par = set(_par, fp.lens, p)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
-	v, = fp.linsolver(fp.J(x, set(par, fp.lens, p)), a)
-	bv = dot(b, v)
-	bv == T(0) && @error "Error when using Minimally Augmented formulation for Fold bifurcation. The dot product should non-zero."
+	J = fp.J(x, par)
+	σ1 = fp.linbdsolver(J, a, b, T(0), fp.zero, n)[2]
 
-	σ1 = -n / bv
-	return fp.F(x, set(par, fp.lens, p)), σ1
+	return fp.F(x, par), σ1
 end
 
 # this function is for the functional
@@ -79,26 +79,30 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 
 	# parameter axis
 	lens = pbMA.lens
+	par0 = set(par, lens, p)
 
 	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
-	J_at_xp = J(x, set(par, lens, p))
+	J_at_xp = J(x, par0)
 
 	# we do the following in order to avoid computing J_at_xp twice in case pbMA.Jadjoint is not provided
-	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
+	JAd_at_xp = hasAdjoint(pbMA) ? pbMA.Jᵗ(x, par0) : transpose(J_at_xp)
 
 	n = T(1)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	v = pbMA.linsolver(J_at_xp, a)[1]
-	σ1 = -n / dot(b, v)
-	rmul!(v, -σ1)
+	# v = pbMA.linsolver(J_at_xp, a)[1]
+	# σ1 = -n / dot(b, v)
+	# rmul!(v, -σ1)
+	v, σ1, _, _ = pbMA.linbdsolver(J_at_xp, a, b, T(0), pbMA.zero, n)
+
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-	w = pbMA.linsolverAdjoint(JAd_at_xp, b)[1]
-	σ2 = -n / dot(a, w)
-	rmul!(w, -σ2)
+	# w = pbMA.linsolverAdjoint(JAd_at_xp, b)[1]
+	# σ2 = -n / dot(a, w)
+	# rmul!(w, -σ2)
+	w, σ2, _, _ = pbMA.linbdsolver(JAd_at_xp, b, a, T(0), pbMA.zero, n)
 
 	δ = T(1e-8)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -118,7 +122,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 		for ii in CartesianIndices(x)
 			e[ii] = T(1)
 			# d2Fve := d2F(x,p)[v,e]
-			d2Fve = (apply(J(x + ϵ2 * e, set(par, lens, p)), v) - apply(J(x - ϵ2 * e, set(par, lens, p)), v)) / T(2ϵ2)
+			d2Fve = (apply(J(x + ϵ2 * e, par0), v) - apply(J(x - ϵ2 * e, par0), v)) / T(2ϵ2)
 			σx[ii] = -dot(w, d2Fve) / n
 			e[ii] = T(0)
 		end
@@ -132,10 +136,10 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
 		x1, x2, _, it = pbMA.linsolver(J_at_xp, rhsu, dpF)
 
-		d2Fv = d2F(x, set(par, lens, p), x1, v)
+		d2Fv = d2F(x, par0, x1, v)
 		σx1 = -dot(w, d2Fv ) / n
 
-		copyto!(d2Fv, d2F(x, set(par, lens, p), x2, v))
+		copyto!(d2Fv, d2F(x, par0, x2, v))
 		σx2 = -dot(w, d2Fv ) / n
 
 		dsig = (rhsp - σx1) / (σp - σx2)
@@ -145,7 +149,7 @@ function foldMALinearSolver(x, p::T, pbMA::FoldProblemMinimallyAugmented, par,
 	end
 
 	if debug_
-		return dX, dsig, true, sum(it), 0., [J(x, set(par, lens, p)) dpF ; σx' σp]
+		return dX, dsig, true, sum(it), 0., [J(x, par0) dpF ; σx' σp]
 	else
 		return dX, dsig, true, sum(it), 0.
 	end
@@ -202,7 +206,7 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {T, vectype}
 	foldproblem = FoldProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
-		_copy(eigenvec), #copy(eigenvec),
+		_copy(eigenvec), 	#copy(eigenvec),
 		_copy(eigenvec_ad), #copy(eigenvec_ad),
 		options.linsolver)
 
@@ -222,7 +226,7 @@ function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens;
 	eigenvec_ad = copy(eigenvec)
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, br.params, lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 """
@@ -258,7 +262,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...) where {T,vectype}
+function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), kwargs...) where {T,vectype}
 	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
@@ -267,9 +271,9 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	foldPb = FoldProblemMinimallyAugmented(
 			F, J, Jᵗ, d2F,
 			lens1,
-			_copy(eigenvec), #copy(eigenvec),
+			_copy(eigenvec), 	#copy(eigenvec),
 			_copy(eigenvec_ad), #copy(eigenvec_ad),
-			options_newton.linsolver)
+			options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
 	# Jacobian for the Fold problem
 	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldPb)
@@ -283,8 +287,9 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	branch, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
-		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver)),
-		printSolution = (u, p) -> (;zip(lenses, (u.p,p))...); kwargs...)
+		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
+		printSolution = (u, p) -> (;zip(lenses, (u.p, p))...),
+		kwargs...)
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 

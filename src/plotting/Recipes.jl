@@ -77,7 +77,7 @@ const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :mage
 end
 
 # allow to plot branches specified by splatting
-@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = repeat([""],length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
@@ -105,10 +105,19 @@ end
 			linewidthunstable --> linewidthunstable
 			linewidthstable --> linewidthstable
 			vars --> vars
+			if ind1 == 1 || ind1 == :param
+				xguide --> String(getLensParam(brs[id].lens))
+			elseif ind1 isa Symbol
+				xguide --> String(ind1)
+			end
+			if ind2 isa Symbol
+				yguide --> String(ind2)
+			end
 			# collect the values of the bifurcation points to be added in the legend
 			ind1, ind2 = getPlotVars(brs[id], vars)
 			for pt in res.bifpoint
-				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)))
+				# this does not work very well when changing optional argument vars
+				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, ind2)))
 			end
 			res
 		end
