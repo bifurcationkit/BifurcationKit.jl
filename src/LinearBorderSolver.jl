@@ -1,5 +1,9 @@
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
+# the following stuctures, say struct BDLS...;end rely on the hypotheses:
+# - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
+# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, xiu, xip; shift = nothing) must be provided
+
 # call for using BorderedArray input, specific to Arclength Continuation
 (lbs::AbstractBorderedLinearSolver)(J, dR::vec1, dz::vec2, R, n::T, theta::T; shift::Ts = nothing) where {vec1, vec2, T, Ts} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
 

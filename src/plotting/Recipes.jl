@@ -7,11 +7,7 @@ getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 function getLensParam(lens1::Lens, lens2::Lens)
 	p1 = getLensParam(lens1)
 	p2 = getLensParam(lens2)
-	if p1==p2
-		return Symbol(String(p1)*"1"), Symbol(String(p2)*"2") 
-	else
-		return p1, p2
-	end
+	out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
 end
 
 function getPlotVars(contres, vars)
@@ -34,6 +30,8 @@ const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :mage
 		end
 		if ind1 == 1 || ind1 == :param
 			xguide --> String(getLensParam(contres.lens))
+		elseif ind1 isa Symbol
+			xguide --> String(ind1)
 		end
 		if ind2 isa Symbol
 			yguide --> String(ind2)
@@ -83,6 +81,20 @@ end
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
+	# add legend for bifurcation points
+	if putbifptlegend && length(bp) > 0
+		for pt in unique(x -> x.type, bp)
+			@series begin
+				seriestype := :scatter
+				seriescolor --> colorbif[pt.type]
+				label --> "$(pt.type)"
+				markersize --> 3
+				markerstrokewidth --> 0
+				[pt.param], [pt.printsol]
+			end
+		end
+	end
+
 	for (id, res) in pairs(brs)
 		@series begin
 			putbifptlegend --> false
@@ -93,26 +105,12 @@ end
 			linewidthunstable --> linewidthunstable
 			linewidthstable --> linewidthstable
 			vars --> vars
-			xguide --> getLensParam(res.lens)
 			# collect the values of the bifurcation points to be added in the legend
 			ind1, ind2 = getPlotVars(brs[id], vars)
 			for pt in res.bifpoint
 				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)))
 			end
 			res
-		end
-	end
-	# add legend for bifurcation points
-	if putbifptlegend && length(bp) > 0
-		for pt in unique(x -> x.type, bp)
-			@series begin
-				seriestype := :scatter
-				seriescolor --> colorbif[pt.type]
-				label --> "$(pt.type)"
-				markersize --> 2
-				markerstrokewidth --> 0
-				[pt.param], [pt.printsol]
-			end
 		end
 	end
 end

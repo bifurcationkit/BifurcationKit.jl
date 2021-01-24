@@ -259,6 +259,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...) where {T,vectype}
+	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions

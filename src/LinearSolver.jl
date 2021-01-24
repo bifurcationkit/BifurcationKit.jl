@@ -4,7 +4,7 @@ using IterativeSolvers, KrylovKit, LinearAlgebra
 
 abstract type AbstractLinearSolver end
 
-# The function linsolve(J, x) must return whether the solve was successfull and how many steps were required for the solve.
+# The function linsolve(J, x; kwargs...) must return whether the solve was successfull and how many steps were required for the solve.
 
 # the following function can be used to cache some factorization, see DefaultLS() case for example
 function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)

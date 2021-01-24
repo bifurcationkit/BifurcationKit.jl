@@ -278,6 +278,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = p2 -> nothing, kwargs...) where {T,Tb,vectype}
+	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
