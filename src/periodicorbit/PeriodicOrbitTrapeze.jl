@@ -864,12 +864,12 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 	_finsol = get(kwargs, :finaliseSolution, nothing)
 	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; k2...) ->
 		begin
-			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			modCounter(step, updateSectionEveryStep) && updateSection!(prob, z.u, setParam(contResult, z.p))
 			true
 		end :
 		(z, tau, step, contResult; prob = prob, k2...) ->
 			begin
-				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+				modCounter(step, updateSectionEveryStep) && updateSection!(prob, z.u, setParam(contResult, z.p))
 				_finsol(z, tau, step, contResult; prob = prob, k2...)
 			end
 

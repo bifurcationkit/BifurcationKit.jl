@@ -158,7 +158,7 @@ if 1==0
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
 		br, ind_hopf, (@lens _.l), (@lens _.β),
-		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); plot = true,
+		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, detectBifurcation = 0, newtonOptions = optnew); plot = true,
 		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
 		verbosity = 2, normC = norminf)
 end

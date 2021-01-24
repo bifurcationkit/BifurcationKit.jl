@@ -166,7 +166,7 @@ We use the bifurcation points guesses located in `br.bifpoint` to turn them into
 # index of the Hopf point in br.bifpoint
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.l); normN = norminf)
+	br, ind_hopf; normN = norminf)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ```
 
@@ -183,7 +183,7 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 
 ```julia
 br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.l), (@lens _.β),
+	br, ind_hopf, (@lens _.β),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
 ```
 

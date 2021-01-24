@@ -77,7 +77,6 @@ end
 # computation of the second derivative
 d2Fcgl(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fcgl(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 
-
 # remark: I checked this against finite differences
 function Jcgl(u, p)
 	@unpack r, μ, ν, c3, c5, Δ = p
@@ -111,7 +110,7 @@ Nx = 41*1
 	ly = pi/2
 
 	Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
-	par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ))
+	par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), γ = 0.)
 	sol0 = zeros(2Nx, Ny)
 
 eigls = EigArpack(1.0, :LM)
@@ -125,8 +124,8 @@ eigls = EigArpack(1.0, :LM)
 # J1 = Jcgl(sol0, par_cgl)
 # norm(J0 - J1, Inf)
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.005, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 5, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060)
-	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 4)
+	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
 using ForwardDiff
@@ -444,8 +443,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), res
 outfold, hist, flag = @time BK.newtonFold(
 		(x, p) -> poTrap(x, p),
 		(x, p) -> poTrap(Val(:JacFullSparse), x, p),
-		br_po , indfold, #index of the fold point
-		(@lens _.r);
+		br_po , indfold; #index of the fold point
 		options = (@set opt_po.linsolver = ls),
 		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
@@ -457,7 +455,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1
 outfoldco, hist, flag = @time BK.continuationFold(
 	(x, p) -> poTrap(x, p),
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
-	br_po, indfold, (@lens _.r), (@lens _.c5),
+	br_po, indfold, (@lens _.c5),
 	optcontfold;
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)

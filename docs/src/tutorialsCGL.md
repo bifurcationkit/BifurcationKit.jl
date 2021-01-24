@@ -532,9 +532,8 @@ We can then use our functional to call `newtonFold` unlike for a regular functio
 ```julia
 outfold, hist, flag = @time BK.newtonFold(
 	(x, p) -> poTrap(x, p),
-	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
+	(x, p) -> poTrap(Val(:JacFullSparse), x, p);
 	br_po , indfold, #index of the fold point
-	(@lens _.r);
 	# we change the linear solver for the one we 
 	# defined above
 	options = (@set opt_po.linsolver = ls),
@@ -567,7 +566,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1
 outfoldco, hist, flag = @time BK.continuationFold(
 	(x, p) -> poTrap(x, p),
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
-	br_po, indfold, (@lens _.r), (@lens _.c5), optcontfold;
+	br_po, indfold, (@lens _.c5), optcontfold;
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)
 ```

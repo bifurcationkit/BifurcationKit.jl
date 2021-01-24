@@ -337,7 +337,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
 		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
-		printSolution = (u, p) -> (;zip(lenses, (u.p[1],p))...),
+		printSolution = (u, p) -> (;zip(lenses, (u.p[1], p))...),
 		finaliseSolution = updateMinAugHopf,
 		kwargs...)
 

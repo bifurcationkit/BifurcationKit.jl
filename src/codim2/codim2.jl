@@ -26,7 +26,6 @@ function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, 
 	end
 end
 
-
 """
 $(SIGNATURES)
 
