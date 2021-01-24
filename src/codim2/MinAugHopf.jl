@@ -260,7 +260,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 # Optional arguments:
 
 - `Jᵗ = (x, p) -> adjoint(d_xF(x, p))` associated jacobian adjoint
-- `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
@@ -336,8 +336,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
-		opt_hopf_cont;
-		# (@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
+		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
 		printSolution = (u, p) -> (;zip(lenses, (u.p[1],p))...),
 		finaliseSolution = updateMinAugHopf,
 		kwargs...)

@@ -14,15 +14,16 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
+- `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 """
 function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
-	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
+	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
+	if br.bifpoint[ind_bif].type == :hopf
 		return newtonHopf(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
 	else
 		return newtonFold(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
 	end
-	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end
 
 
@@ -41,7 +42,10 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 # Optional arguments:
 
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
-- `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `bdlinsolver` bordered linear solver for the constraint equation
+- `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
+- `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
@@ -56,10 +60,10 @@ where the parameters are as above except that you have to pass the branch `br` f
 """
 
 function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
-	if length(br.bifpoint) > 0 && br.bifpoint[ind_bif].type == :hopf
+	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
+	if br.bifpoint[ind_bif].type == :hopf
 		return continuationHopf(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 	else
 		return continuationFold(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 	end
-	@error "Bifurcation type $(br[ind_bif].type) not yet handled for codim2 newton / continuation"
 end

@@ -242,7 +242,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 # Optional arguments:
 
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
-- `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
@@ -312,8 +312,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	branch, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
-		opt_fold_cont;
-		# (@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
+		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
 		printSolution = (u, p) -> (;zip(lenses, (u.p, p))...),
 		finaliseSolution = updateMinAugFold,
 		kwargs...)
