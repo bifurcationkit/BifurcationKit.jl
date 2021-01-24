@@ -143,6 +143,7 @@ function updatestability!(state::ContState, n_unstable, n_imag)
 end
 
 function save!(br::ContResult, it::ContIterable, state::ContState)
+	# update branch field
 	push!(br.branch, getStateSummary(it, state))
 
 	# save solution
@@ -173,8 +174,10 @@ function ContResult(it::ContIterable, state::ContState)
 	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, contParams)
 end
 
+# function called at the beginning of the continuation
+# used to determine first point on branch and tangent at this point
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
-	# the keyword arguemnt is to overwrite verbosity behaviour, like when locating bifurcations
+	# the keyword argument is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.lens)
 	ds = it.contParams.ds
@@ -205,6 +208,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	return iterate(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
 end
 
+# same as the previous function but when two (initial guesses) points  are provided
 function iterate(it::ContIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
 	theta = it.contParams.theta
 	ds = it.contParams.ds
@@ -269,6 +273,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 		verbose && (println("--> Newton Residuals history = ");display(fval))
 	end
 
+	# Step size control
 	if ~state.stopcontinuation && state.stepsizecontrol
 		# we update the PALC paramters ds and theta, they are in the state variable
 		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)

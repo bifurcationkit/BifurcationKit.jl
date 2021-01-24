@@ -9,9 +9,9 @@ Once a Fold/Hopf point has been detected after a call to `br, _ = continuation(.
 Let us say that `ind_bif` is the index in `br.bifpoint` of a Fold/Hopf point. This guess can be refined by newton iterations by doing 
 
 ```julia
-outfold, hist, flag = newton(F, J, br::ContResult, ind_bif::Int64, 
-	par, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, 
-	options = br.contparams.newtonOptions, kwargs...)
+outfold, hist, flag =  newton(F, J, br::AbstractBranchResult, ind_bif::Int64; 
+	Jᵗ = nothing, d2F = nothing, normN = norm, 
+	options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
 ```
 
 where `par` is the set of parameters used in the call to [`continuation`](@ref) to get `br` and `lens` is the parameter axis which is used to find the Fold/Hopf point. For the options parameters, we refer to [Newton](@ref).
@@ -23,8 +23,10 @@ It is important to note that for improved performances, a function implementing 
 To compute the codim 2 curve of Fold/Hopf points, one can call [`continuation`](@ref) with the following options
 
 ```julia
-br_codim2, _ = continuation(F, J, br, ind_bif, 
-	par, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;
+br_codim2, = continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens2::Lens, options_cont::ContinuationPar ; 
+	startWithEigen = false, 
+	updateMinAugEveryStep = 1,
+	bdlinsolver = BorderingBLS(),
 	Jᵗ = nothing, d2F = nothing, kwargs...)
 ```
 

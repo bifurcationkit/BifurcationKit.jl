@@ -216,11 +216,30 @@ function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad
 	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)
 end
 
-function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, nev = br.contparams.nev, kwargs...)
+function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, nev = br.contparams.nev, startWithEigen = false, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
+
+	if startWithEigen
+		λ = zero(getvectoreltype(br))
+		p = bifpt.param
+		parbif = setParam(br, p)
+
+		# jacobian at bifurcation point
+		L = J(bifpt.x, parbif)
+
+		# computation of zero eigenvector
+		ζstar, = getAdjointBasis(L, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = false)
+		eigenvec .= real.(ζstar)
+
+		# computation of adjoint eigenvector
+		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
+		ζstar, = getAdjointBasis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
+		eigenvec_ad .= real.(ζstar)
+		eigenvec_ad ./= norm(eigenvec_ad)
+	end
 
 	# solve the Fold equations
 	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
@@ -319,7 +338,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
-function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, kwargs...)
+function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, startWithEigen = false, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	# bifpt = br.bifpoint[ind_fold]
@@ -327,10 +346,21 @@ function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
-
+	λ = zero(getvectoreltype(br))
 	p = bifpt.param
 	parbif = setParam(br, p)
+	if startWithEigen
+		eigenvec .= real.(geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+		eigenvec ./= norm(eigenvec)
 
+		# jacobian at bifurcation point
+		L = J(bifpt.x, parbif)
+		_Jt = isnothing(Jᵗ) ? transpose(L) : Jᵗ(bifpt.x, parbif)
+
+		ζstar, λstar = getAdjointBasis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
+		eigenvec_ad = real.(ζstar)
+		eigenvec_ad ./= norm(eigenvec_ad)
+	end
 
 	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end

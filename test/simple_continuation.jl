@@ -179,6 +179,9 @@ br1, = continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opt
 
 br2, = continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts; tangentAlgo = BorderedPred())
 ####################################################################################################
+# test for computing both sides
+br3, = continuation(F,Jac_m,x0, -1.5, (@lens _), opts; tangentAlgo = BorderedPred(), bothside = true)
+####################################################################################################
 # test for deflated continuation
 brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),

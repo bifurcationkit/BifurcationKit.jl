@@ -221,23 +221,26 @@ function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens:
 	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN, kwargs...)
 end
 
-function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, verbose = true, nev = br.contparams.nev, kwargs...)
+function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, verbose = true, nev = br.contparams.nev, startWithEigen = false, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
 	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	eigenvec_ad = conj.(eigenvec)
 
-	# computation of adjoint eigenvalue
-	λ = Complex(0, hopfpointguess.p[2])
-	p = bifpt.param
-	parbif = setParam(br, p)
+	if startWithEigen
+		# computation of adjoint eigenvalue
+		λ = Complex(0, hopfpointguess.p[2])
+		p = bifpt.param
+		parbif = setParam(br, p)
 
-	# jacobian at bifurcation point
-	L = J(bifpt.x, parbif)
-	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
-	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = options.verbose)
-	eigenvec_ad = ζstar #conj.(eigenvec)
+		# jacobian at bifurcation point
+		L = J(bifpt.x, parbif)
+		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
+		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = options.verbose)
+		eigenvec_ad .= ζstar
+	end
 
 	# solve the hopf equations
 	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, eigenvec_ad, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
@@ -344,13 +347,24 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
-function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, startWithEigen = false, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	eigenvec_ad = conj.(eigenvec)
 
+	if startWithEigen
+		# computation of adjoint eigenvalue
+		λ = Complex(0,hopfpointguess.p[2])
+		p = bifpt.param
+		parbif = setParam(br, p)
 
+		# jacobian at bifurcation point
+		L = J(bifpt.x, parbif)
+		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
+		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = true)
+		eigenvec_ad .= ζstar
+	end
 
 	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
