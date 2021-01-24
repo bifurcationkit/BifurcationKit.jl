@@ -3,6 +3,7 @@ using Setfield
 getLensParam(lens::Setfield.PropertyLens{F}) where F = F
 getLensParam(::Setfield.IdentityLens) = :p
 getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
+getLensParam(br::AbstractBranchResult) = getLensParam(br.lens)
 
 function getLensParam(lens1::Lens, lens2::Lens)
 	p1 = getLensParam(lens1)
@@ -20,40 +21,51 @@ end
 
 const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :green1, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray)
 
+function getAxisLabels(ind1, ind2, br)
+	xguide = ""
+	yguide = ""
+	if ind1 == 1 || ind1 == :param
+		xguide = String(getLensParam(br))
+	elseif ind1 isa Symbol
+		xguide = String(ind1)
+	end
+	if ind2 isa Symbol
+		yguide = String(ind2)
+	end
+	return xguide, yguide
+end
+
 # allow to plot a single branch
 @recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
+	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 	@series begin
 		if computeEigenElements(contres.contparams) && plotstability
 			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
-		if ind1 == 1 || ind1 == :param
-			xguide --> String(getLensParam(contres.lens))
-		elseif ind1 isa Symbol
-			xguide --> String(ind1)
-		end
-		if ind2 isa Symbol
-			yguide --> String(ind2)
-		end
+		xguide --> xlab
+		yguide --> ylab
 		label --> branchlabel
 		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) || (~plotfold && x.type != :fold), contres.bifpoint)
+	bifpt = filter(x -> (x.type != :none) || (~plotfold && x.type == :fold), contres.bifpoint)
 
-	if length(bifpt) >= 1 && plotbifpoints && (ind1 == :param)
+	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
 		if filterbifpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
 		@series begin
 			seriestype := :scatter
 			seriescolor --> map(x -> colorbif[x.type], bifpt)
-			markershape --> map(x -> x.status == :guess ? :square : :circle, bifpt)
+			markershape --> map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :square : :circle, bifpt)
 			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""
+			xguide --> xlab
+			yguide --> ylab
 			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
 		end
 		# add legend for bifurcation points
@@ -67,6 +79,8 @@ const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :mage
 					label --> "$(pt.type)"
 					markersize --> 3
 					markerstrokewidth --> 0
+					xguide --> xlab
+					yguide --> ylab
 					[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
 				end
 			end
