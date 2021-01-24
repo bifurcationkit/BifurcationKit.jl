@@ -370,9 +370,18 @@ function continuation(it::ContIterable)
 	return continuation!(it, states[1], contRes)
 end
 
-function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...)
+function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; bothside = false, kwargs...)
 	it = ContIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
-	return continuation(it)
+	if bothside
+		res1 = continuation(it)
+		it = @set it.contParams.ds = -contParams.ds
+		res2 = continuation(it)
+		contresult = _merge(res1[1],res2[1])
+		return contresult, res1[2], res1[3]
+
+	else
+		return continuation(it)
+	end
 end
 
 ####################################################################################################
@@ -405,6 +414,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `normC = norm` norm used in the different Newton solves
 - `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
+- `bothside=true` compute the branches on the two sides of `p0`, merge them and return it.
 
 # Outputs:
 - `contres::ContResult` composite type which contains the computed branch. See [`ContResult`](@ref) for more information.
