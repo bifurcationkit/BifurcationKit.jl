@@ -2,8 +2,9 @@
 For an initial guess from the index of a Fold bifurcation point located in ContResult.bifpoint, returns a point which will be refined using `newtonFold`.
 """
 function FoldPoint(br::AbstractBranchResult, index::Int64)
-	@assert br.foldpoint[index].type == :fold "The provided index does not refer to a Fold point"
-	bifpoint = br.foldpoint[index]
+	bptype = br.bifpoint[index].type
+	@assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point"
+	bifpoint = br.bifpoint[index]
 	return BorderedArray(_copy(bifpoint.x), bifpoint.param)
 end
 

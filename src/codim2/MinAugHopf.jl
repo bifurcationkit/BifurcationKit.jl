@@ -318,7 +318,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
-function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
+function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
@@ -331,11 +331,11 @@ function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens1
 
 	# jacobian at bifurcation point
 	L = J(bifpt.x, parbif)
-	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x0, parbif)
+	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = true)
 	eigenvec_ad = ζstar#conj.(eigenvec)
 
-	return continuationHopf(F, J, hopfpointguess, br.params, lens1, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 struct HopfEig{S} <: AbstractEigenSolver

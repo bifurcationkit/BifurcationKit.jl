@@ -41,10 +41,8 @@ const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :mage
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> x.type != :none, contres.bifpoint)
-	if plotfold
-		bifpt = vcat(bifpt, filter(x -> x.type != :none, contres.foldpoint))
-	end
+	bifpt = filter(x -> (x.type != :none) || (~plotfold && x.type != :fold), contres.bifpoint)
+
 	if length(bifpt) >= 1 && plotbifpoints && (ind1 == :param)
 		if filterbifpoints == true
 			bifpt = filterBifurcations(bifpt)

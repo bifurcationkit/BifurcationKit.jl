@@ -12,7 +12,7 @@ Structure to record a generic bifurcation point which was only detected by a cha
 $(TYPEDFIELDS)
 """
 @with_kw struct GenericBifPoint{T, Tp, Tv} <: BifurcationPoint
-	"Bifurcation type, `:hopf, :bp...`,"
+	"Bifurcation type, `:hopf, :bp...`."
 	type::Symbol = :none
 
 	"Index in `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
@@ -55,7 +55,7 @@ end
 getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 
 function _show(io::IO, bp::GenericBifPoint, ii::Int)
-	if bp.type == :none || bp.precision < 0; return; end
+	if bp.type == :none ; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else
@@ -63,10 +63,6 @@ function _show(io::IO, bp::GenericBifPoint, ii::Int)
 	end
 end
 
-function _showFold(io::IO, bp::GenericBifPoint, ii::Int)
-	# if bp.precision <= 0 return nothing; end
-	@printf(io, "- #%3i,\e[1;34m fold\e[0m at p ≈ %4.8f, [\e[1;34m%9s\e[0m], step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.param, bp.status, bp.step, bp.idx, bp.ind_ev)
-end
 @inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
 # types for bifurcation point 1d kernel for the jacobian

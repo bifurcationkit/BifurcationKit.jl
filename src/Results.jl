@@ -26,7 +26,7 @@ $(TYPEDFIELDS)
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 - `br[k+1]` gives information about the k-th step
 """
-@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
+@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
@@ -38,9 +38,6 @@ $(TYPEDFIELDS)
 
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
-
-	"A vector holding the set of detected fold points. See [`GenericBifPoint`](@ref) for a description of the fields."
-	foldpoint::Vector{Foldtype}
 
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Ts
@@ -60,7 +57,7 @@ $(TYPEDFIELDS)
 	"Parameter axis used for computing the branch"
 	lens::Tl
 
-	"A vector holding the set of detected bifurcation points (other than fold points). See [`GenericBifPoint`](@ref) for a description of the fields."
+	"A vector holding the set of detected bifurcation points. See [`GenericBifPoint`](@ref) for a description of the fields."
 	bifpoint::Vector{Biftype}
 end
 
@@ -73,7 +70,7 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the eigenvectors are saved in the branch
-@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
+@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
@@ -84,13 +81,13 @@ setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:bifpoint, :contparams, :foldpoint, :lens, :sol, :type, :branch, :eig, :functional, :params)
+	if s in (:bifpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
 		getfield(br, s)
 	else
 		getproperty(br.branch, s)
 	end
 end
-Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :foldpoint, :lens, :sol, :type, :branch, :eig, :functional, :params)
+Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
 
 """
 $(SIGNATURES)
@@ -124,16 +121,10 @@ function Base.show(io::IO, br::ContResult, comment = "")
 			_show(io, br.bifpoint[ii], ii)
 		end
 	end
-	if length(br.foldpoint) > 0
-		println(io, "Fold points:")
-		for ii in eachindex(br.foldpoint)
-			_showFold(io, br.foldpoint[ii], ii)
-		end
-	end
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
-getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Foldtype, Ts, Tfunc, Tpar, Tl} = br.eig[bp.idx]
+getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} = br.eig[bp.idx]
 
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
@@ -154,7 +145,6 @@ This function is used to initialize the composite type `ContResult` according to
 	return ContResult(
 		branch = StructArray([br]),
 		bifpoint = Vector{typeof(bif0)}(undef, 0),
-		foldpoint = Vector{typeof(bif0)}(undef, 0),
 		eig = computeEigenElements(contParams) ? [_evvectors] : empty([_evvectors]),
 		sol = sol,
 		contparams =  contParams,
@@ -203,14 +193,6 @@ function _reverse(br0::ContResult)
 				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.bifpoint)]
 	end
 
-	if ~isnothing(br.foldpoint)
-		br = @set br.foldpoint =
-			[setproperties(pt;
-				step = nb - pt.step - 1,
-				idx = nb - pt.idx + 1,
-				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.foldpoint)]
-	end
-
 	if ~isnothing(br.eig)
 		br = @set br.eig =
 			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
@@ -242,13 +224,6 @@ function _cat!(br::ContResult, br2::ContResult)
 			[setproperties(pt;
 				step = nb + pt.step,
 				idx = nb + pt.idx) for pt in br2.bifpoint])
-	end
-
-	if ~isnothing(br.foldpoint)
-		append!(br.foldpoint,
-			[setproperties(pt;
-				step = nb + pt.step,
-				idx = nb + pt.idx) for pt in br2.foldpoint])
 	end
 
 	if ~isnothing(br.eig)

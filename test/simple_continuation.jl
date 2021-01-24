@@ -23,7 +23,7 @@ opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pM
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, = @time continuation(F,Jac_m,x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
+br0, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 

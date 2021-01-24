@@ -35,7 +35,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
 		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in $(getinterval(branch[end-1].param, branch[end].param)) \n")
 		npar = length( branch[1]) - 9
-		push!(contres.foldpoint, GenericBifPoint(
+		push!(contres.bifpoint, GenericBifPoint(
 			type = :fold,
 			idx = length(branch)-1,
 			param = branch[end-1].param,

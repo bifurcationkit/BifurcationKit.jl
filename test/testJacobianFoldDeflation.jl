@@ -158,23 +158,23 @@ foldpb = FoldProblemMinimallyAugmented(
 		(x, p) -> (Jac_mat(x, p)),
 		(x, p) -> transpose(Jac_mat(x, p)), nothing,
 		(@lens _[1]),
-		br.foldpoint[indfold].x,
-		br.foldpoint[indfold].x,
+		br.bifpoint[indfold].x,
+		br.bifpoint[indfold].x,
 		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, (a, 0.01)) |> norm
 
-outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold].x,	NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold].param)
+outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x, br.bifpoint[indfold].x, NewtonPar(verbose=true) )
+	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
 
 # example with KrylovKit
 P = Jac_mat(sol.*0,(0,0))
 optils = NewtonPar(verbose=true, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
-outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.foldpoint[indfold].x, optils )
-	println("--> Fold found at α = ", outfold.p, " from ", br.foldpoint[indfold].param)
+outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x,br.bifpoint[indfold].x, optils )
+	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
 
 # continuation of the fold point
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 5)
-	outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (@lens _[1]), (@lens _[2]), optcontfold, plot = false)
+	outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (@lens _[2]), optcontfold, plot = false)
 
 # user defined Fold Problem
 indfold = 1
@@ -187,14 +187,14 @@ foldpbVec(x,p) = Bd2Vec(foldpb(Vec2Bd(x),p))
 outfold, = newton((x, p) -> foldpbVec(x, p),
 			Bd2Vec(foldpt), (a, 0.01),
 			NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold[end], " from ", br.foldpoint[indfold].param)
+	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold].param)
 
 rhs = rand(n+1)
 Jac_fold_fdMA(u0) = BK.finiteDifferences( u-> foldpbVec(u, (a, 0.01)), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
-Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, param=p, fldpb = pb))
+Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, (a, 0.01), foldpb), Vec2Bd(rhs), true)
 

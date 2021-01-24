@@ -299,8 +299,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
-			# Detection of fold points based on parameter monotony, mutates contRes.foldpoint
-			if contParams.detectFold;
+			# Detection of fold points based on parameter monotony, mutates contRes.bifpoint
+			# if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
+			if contParams.detectFold && contParams.detectBifurcation < 2
 				foldetected = locateFold!(contRes, it, state)
 				# if foldetected && contParams.detectLoop
 				# 	state.stopcontinuation = detectLoop(contRes, nothing)
