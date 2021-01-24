@@ -9,26 +9,26 @@ end
 
 ####################################################################################################
 # Method using Minimally Augmented formulation
-@with_kw struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
-	F::TF								# Function F(x, p) = 0
-	J::TJ								# Jacobian of F wrt x
-	Jᵗ::TJa								# Adjoint of the Jacobian of F
-	d2F::Td2f = nothing					# Hessian of F
-	lens::Tl							# parameter axis for the Fold point
-	a::vectype							# close to null vector of Jᵗ
-	b::vectype							# close to null vector of J
-	linsolver::S						# linear solver
-	linsolverAdjoint::Sa = linsolver	# linear solver for the jacobian adjoint
-	linbdsolver::Sbd					# bordered linear solver
+struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
+	F::TF					# Function F(x, p) = 0
+	J::TJ					# Jacobian of F wrt x
+	Jᵗ::TJa					# Adjoint of the Jacobian of F
+	d2F::Td2f				# Hessian of F
+	lens::Tl				# parameter axis for the Fold point
+	a::vectype				# close to null vector of Jᵗ
+	b::vectype				# close to null vector of J
+	linsolver::S			# linear solver
+	linsolverAdjoint::Sa	# linear solver for the jacobian adjoint
+	linbdsolver::Sbd		# bordered linear solver
 end
 
-hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
+@inline hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
 
-hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
+@inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linsolve, BorderingBLS(linsolve))
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linsolve, MatrixBLS(linsolve))
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
 function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, par) where {vectype, T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point

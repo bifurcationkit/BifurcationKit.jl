@@ -10,11 +10,11 @@ function HopfPoint(br::AbstractBranchResult, index::Int64)
 	return BorderedArray(bifpoint.x, [p, ω] )
 end
 
-@with_kw struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
+struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
 	F::TF 						# Function F(x, p) = 0
 	J::TJ 						# Jacobian of F wrt x
 	Jᵗ::TJa						# Adjoint of the Jacobian of F
-	d2F::Td2f = nothing			# Hessian of F
+	d2F::Td2f					# Hessian of F
 	lens::Tl					# parameter axis for the Hopf point
 	a::vectype					# close to null vector of (J - iω I)^*
 	b::vectype					# close to null vector of J - iω I
@@ -23,13 +23,13 @@ end
 	linbdsolverAdjoint::Sbda	# linear bordered solver for the jacobian adjoint
 end
 
-hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = Td2f != Nothing
+@inline hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = Td2f != Nothing
 
-hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
+@inline hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
 
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linbdsolve, linbdsolve)
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, linsolve, linbdsolve, linbdsolve)
 
-HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
