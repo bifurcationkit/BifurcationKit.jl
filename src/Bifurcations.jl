@@ -233,7 +233,10 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			"\n----> bifurcation ∈ ", getinterval(interval...),
 			", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
 			"\n----> 5 Eigenvalues closest to ℜ=0:\n")
-		verbose && Base.display(closesttozero(eiginfo[1])[1:min(5, length(getx(state)))])
+		if verbose
+			ct0 = closesttozero(eiginfo[1])
+			verbose && Base.display(ct0[1:min(5, length(ct0))])
+		end
 
 		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
 

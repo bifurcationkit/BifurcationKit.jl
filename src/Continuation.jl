@@ -149,6 +149,7 @@ function save!(br::ContResult, it::ContIterable, state::ContState)
 	if it.contParams.saveSolEveryStep > 0 && (modCounter(state.step, it.contParams.saveSolEveryStep) || ~done(it, state))
 		push!(br.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
+
 	# save eigen elements
 	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryStep) == 0
@@ -167,7 +168,7 @@ function ContResult(it::ContIterable, state::ContState)
 		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
 		updatestability!(state, n_unstable, n_imag)
 	else
-		eiginfo = (Complex{eltype(it)}(0), nothing, false, 0)
+		eiginfo = nothing
 	end
 	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, contParams)
 end

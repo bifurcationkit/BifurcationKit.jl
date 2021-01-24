@@ -149,13 +149,13 @@ This function is used to initialize the composite type `ContResult` according to
 		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
 		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
 	else
-		_evvectors = (eigenvals = evsol[1], eigenvec = nothing, step = 0)
+		_evvectors = (eigenvals = nothing, eigenvec = nothing, step = 0)
 	end
 	return ContResult(
 		branch = StructArray([br]),
 		bifpoint = Vector{typeof(bif0)}(undef, 0),
 		foldpoint = Vector{typeof(bif0)}(undef, 0),
-		eig = [_evvectors],
+		eig = computeEigenElements(contParams) ? [_evvectors] : empty([_evvectors]),
 		sol = sol,
 		contparams =  contParams,
 		params = par,

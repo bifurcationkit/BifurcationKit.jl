@@ -22,7 +22,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 ## Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
 - `detectFold = true` detect Fold bifurcations? It is a useful option although the detection of Fold is cheap. Indeed, it may happen that there is a lot of Fold points and this can saturate the memory in memory limited devices (e.g. on GPU)
-- `detectBifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 0, the eigen-elements are computed. If set to 2, bifurcation are detected along the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
+- `detectBifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 1, the eigen-elements are computed. If set to 2, the bifurcations points are detected during the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations points (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
 - `dsminBisection` dsmin for the bisection algorithm for locating bifurcation points
 - `nInversion` number of sign inversions in bisection algorithm
 - `maxBisectionSteps` maximum number of bisection steps
@@ -94,3 +94,5 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
+@inline computeEigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
+@inline computeEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * cp.saveEigenvectors

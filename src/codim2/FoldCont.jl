@@ -155,7 +155,7 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}, d
 	out =  foldMALinearSolver((Jfold.x).u,
 				 (Jfold.x).p,
 				 Jfold.fldpb,
-				 Jfold.param,
+				 Jfold.params,
 				 du.u, du.p;
 				 debug_ = debug_)
 
@@ -206,7 +206,7 @@ function newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, options::Ne
 		options.linsolver)
 
 	# Jacobian for the Fold problem
-	Jac_fold_MA = (x, param) -> (x = x, param = param, fldpb = foldproblem)
+	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldproblem)
 
 	opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
 
@@ -268,7 +268,7 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 			options_newton.linsolver)
 
 	# Jacobian for the Fold problem
-	Jac_fold_MA = (x, param) -> (x = x, param = param, fldpb = foldPb)
+	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldPb)
 
 	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
 

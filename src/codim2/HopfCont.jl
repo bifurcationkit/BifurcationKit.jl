@@ -106,8 +106,8 @@ function hopfMALinearSolver(x, p::T, ω::T, pbMA::HopfProblemMinimallyAugmented,
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	n = T(1)
-	v, σ1, _, _ = pbMA.linbdsolver(J_at_xp, a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
-	w, σ2, _, _ = pbMA.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
+	v, σ1, = pbMA.linbdsolver(J_at_xp, a, b, T(0), zero(x), n; shift = Complex{T}(0, ω))
+	w, σ2, = pbMA.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), zero(x), n; shift = -Complex{T}(0, ω))
 
 	################### computation of σx σp ####################
 	dpF   = (Fhandle(x, set(par, lens, p + ϵ1))	 - Fhandle(x, set(par, lens, p - ϵ1))) / T(2ϵ1)
@@ -159,7 +159,7 @@ function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; d
 				(Jhopf.x).p[1],
 				(Jhopf.x).p[2],
 				Jhopf.hopfpb,
-				Jhopf.param,
+				Jhopf.params,
 				du.u, du.p[1], du.p[2];
 				debug_ = debug_)
 	if debug_ == false
@@ -210,7 +210,7 @@ function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens:
 		options.linsolver)
 
 	# Jacobian for the Hopf problem
-	Jac_hopf_MA = (x, param) -> (x = x, param = param, hopfpb = hopfproblem)
+	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfproblem)
 
 	# options for the Newton Solver
 	opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
@@ -280,7 +280,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 		options_newton.linsolver)
 
 	# Jacobian for the Hopf problem
-	Jac_hopf_MA = (x, param) -> (x = x, param = param, hopfpb = hopfPb)
+	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
 
 	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 
