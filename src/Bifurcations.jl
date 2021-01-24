@@ -198,7 +198,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# emulate a do-while
 	while true
 		if ~state.isconverged
-			@error "----> Newton failed when locating bifurcation using bisection method!"
+			@error "----> Newton failed when locating bifurcation point using bisection method!"
 			break
 		 end
 
@@ -227,14 +227,17 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 		state.step > 0 && (interval = @set interval[indinterval] = getp(state))
 
-		verbose &&	printstyled(color=:blue,
-			"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
-			", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
-			"\n----> bifurcation ∈ ", getinterval(interval...),
-			", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
-			"\n----> 5 Eigenvalues closest to ℜ=0:\n")
+		# we call the finalizer
+		# iter.finaliseSolution(state.z_old, state.tau, state.step, nothing; bisection = true)
+
 		if verbose
 			ct0 = closesttozero(eiginfo[1])
+			printstyled(color=:blue,
+				"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
+				", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
+				"\n----> bifurcation ∈ ", getinterval(interval...),
+				", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
+				"\n----> ", length(ct0)," Eigenvalues closest to ℜ=0:\n")
 			verbose && Base.display(ct0[1:min(5, length(ct0))])
 		end
 
