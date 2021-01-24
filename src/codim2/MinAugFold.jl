@@ -220,7 +220,7 @@ function newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64; Jᵗ = noth
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
 	eigenvec = bifpt.tau.u
-	eigenvec_ad = copy(eigenvec)
+	eigenvec_ad = _copy(eigenvec)
 
 	# solve the Fold equations
 	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
@@ -260,7 +260,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), kwargs...) where {T,vectype}
+function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), updateMinAugEveryStep = 0, kwargs...) where {T, vectype}
 	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
@@ -269,8 +269,8 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	foldPb = FoldProblemMinimallyAugmented(
 			F, J, Jᵗ, d2F,
 			lens1,
-			_copy(eigenvec), 	#copy(eigenvec),
-			_copy(eigenvec_ad), #copy(eigenvec_ad),
+			_copy(eigenvec),
+			_copy(eigenvec_ad),
 			options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
 	# Jacobian for the Fold problem
@@ -281,12 +281,41 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensParam(lens1, lens2)
 
+	function updateMinAugFold(z, tau, step, contResult; kwargs...)
+		~modCounter(step, updateMinAugEveryStep) && return true
+		x = z.u.u	# fold point
+		p1 = z.u.p	# first parameter
+		p2 = z.p	# second parameter
+		newpar = set(par, lens1, p1)
+		newpar = set(newpar, lens2, p2)
+
+		a = foldPb.a
+		b = foldPb.b
+
+		# expression of the jacobian
+		J_at_xp = foldPb.J(x, newpar)
+
+		# compute new b
+		newb = foldPb.linbdsolver(J_at_xp, a, b, T(0), foldPb.zero, T(1))[1]
+
+		# compute new a
+		JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
+
+		foldPb.a .= newa ./ norm(newa)
+		foldPb.b .= newb ./ norm(newb)
+
+		return true
+	end
+
 	# solve the Fold equations
 	branch, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
-		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
+		opt_fold_cont;
+		# (@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
 		printSolution = (u, p) -> (;zip(lenses, (u.p, p))...),
+		finaliseSolution = updateMinAugFold,
 		kwargs...)
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
@@ -294,7 +323,15 @@ end
 function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
+	# bifpt = br.bifpoint[ind_fold]
+	# TODO USE FoldPoint!!!! A CHANGER
 	eigenvec = bifpt.tau.u
+	eigenvec_ad = _copy(eigenvec)
+
+
+	p = bifpt.param
+	parbif = setParam(br, p)
+
 
 	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end

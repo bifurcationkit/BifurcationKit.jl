@@ -231,7 +231,7 @@ function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = noth
 	# computation of adjoint eigenvalue
 	λ = Complex(0, hopfpointguess.p[2])
 	p = bifpt.param
-	parbif = set(br.params, br.lens, p)
+	parbif = setParam(br, p)
 
 	# jacobian at bifurcation point
 	L = J(bifpt.x, parbif)
@@ -261,6 +261,8 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 
 - `Jᵗ = (x, p) -> adjoint(d_xF(x, p))` associated jacobian adjoint
 - `d2F = p -> ((x, p, v1, v2) -> d2F(x, p, v1, v2))` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `bdlinsolver` bordered linear solver for the constraint equation
+- `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
@@ -279,7 +281,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), d2F = p2 -> nothing, kwargs...) where {Tb,vectype}
+function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), d2F = p2 -> nothing, updateMinAugEveryStep=0, kwargs...) where {Tb,vectype}
 	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
@@ -288,7 +290,7 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	hopfPb = HopfProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F,
 		lens1,
-		_copy(eigenvec), #copy(eigenvec),
+		_copy(eigenvec),
 		_copy(eigenvec_ad),
 		options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
@@ -300,10 +302,33 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensParam(lens1, lens2)
 
-	function finalizer(z, tau, step, contResult; k...)
-		λ = Complex(0,z.u.p[2])
-		p = z.u.p[1]
-		parbif = set(par, lens1, p)
+	function updateMinAugHopf(z, tau, step, contResult; k...)
+		~modCounter(step, updateMinAugEveryStep) && return true
+		x = z.u.u		# fold point
+		p1 = z.u.p[1]	# first parameter
+		ω = z.u.p[2]	# Hopf frequency
+		p2 = z.p		# second parameter
+		newpar = set(par, lens1, p1)
+		newpar = set(newpar, lens2, p2)
+
+		a = hopfPb.a
+		b = hopfPb.b
+
+		# expression of the jacobian
+		J_at_xp = hopfPb.J(x, newpar)
+
+		# compute new b
+		T = typeof(p1)
+		n = T(1)
+		newb = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
+
+		# compute new a
+		JAd_at_xp = hasAdjoint(hopfPb) ? hopfPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+		newa = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = -Complex(0, ω))[1]
+
+		hopfPb.a .= newa ./ norm(newa)
+		hopfPb.b .= newb ./ norm(newb)
+
 		return true
 	end
 
@@ -311,9 +336,10 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
-		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
+		opt_hopf_cont;
+		# (@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
 		printSolution = (u, p) -> (;zip(lenses, (u.p[1],p))...),
-		finaliseSolution = finalizer,
+		finaliseSolution = updateMinAugHopf,
 		kwargs...)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
@@ -323,17 +349,9 @@ function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	eigenvec_ad = conj.(eigenvec)
 
-	# computation of adjoint eigenvalue
-	λ = Complex(0,hopfpointguess.p[2])
-	p = bifpt.param
-	parbif = set(br.params, br.lens, p)
 
-	# jacobian at bifurcation point
-	L = J(bifpt.x, parbif)
-	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
-	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = true)
-	eigenvec_ad = ζstar#conj.(eigenvec)
 
 	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
