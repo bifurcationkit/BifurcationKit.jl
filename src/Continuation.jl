@@ -164,7 +164,7 @@ function ContResult(it::ContIterable, state::ContState)
 	pt = it.printSolution(x0, p0)
 	contParams = it.contParams
 
-	if computeEigenElements(contParams)
+	if computeEigenElements(it)
 		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
 		_, n_unstable, n_imag = isStable(contParams, eiginfo[1])
 		updateStability!(state, n_unstable, n_imag)
@@ -299,7 +299,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
 
 			# Eigen-elements computation, they are stored in state
-			if computeEigenElements(contParams)
+			if computeEigenElements(it)
 				iteigen = computeEigenvalues!(it, state)
 				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
