@@ -19,7 +19,7 @@ function teststab(br)
 	# test that stability corresponds
 	out = true
 	for ii in eachindex(br.branch)
-		n_u = BK.isstable(br.contparams, br.eig[ii].eigenvals)
+		n_u = BK.isStable(br.contparams, br.eig[ii].eigenvals)
 		# test that the stability matches the one in eig
 		br[ii].n_unstable != n_u[2] && (println( "$ii did not work!!",br[i].n_unstable ,", ", n_u[2]); @assert 1==0)
 		out = out && br[ii].n_unstable == n_u[2]
