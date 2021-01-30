@@ -2,7 +2,7 @@
 """
 This function checks whether the solution with eigenvalues `eigvalues` is stable and also compute the number of unstable eigenvalues with nonzero imaginary part
 """
-function isstable(contparams::ContinuationPar, eigvalues)::Tuple{Bool, Int64, Int64}
+function isStable(contparams::ContinuationPar, eigvalues)::Tuple{Bool, Int64, Int64}
 	# the return type definition above is to remove type instability in continuation
 	# numerical precision for deciding if an eigenvalue is above a threshold
 	precision = contparams.precisionStability
@@ -14,7 +14,7 @@ function isstable(contparams::ContinuationPar, eigvalues)::Tuple{Bool, Int64, In
 	n_imag = mapreduce(x -> (abs(imag(x)) > precision) * (real(x) > precision), +, eigvalues)
 	return n_unstable == 0, n_unstable, n_imag
 end
-isstable(contparams::ContinuationPar, ::Nothing) = (true, 0, 0)
+isStable(contparams::ContinuationPar, ::Nothing) = (true, 0, 0)
 
 # we detect a bifurcation by a change in the number of unstable eigenvalues
 function detectBifucation(state::ContState)
@@ -116,7 +116,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 
 	if detected
 		# record information about the bifurcation point
-		param_bif = GenericBifPoint(
+		bifpoint = GenericBifPoint(
 			type = tp,
 			# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
 			idx = state.step + 1,
@@ -133,7 +133,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 			interval = interval)
 		(verbosity>0) && printstyled(color=:red, "!! $(tp) Bifurcation point at p ≈ $(getp(state)), δn_unstable = $δn_unstable, δn_imag = $δn_imag \n")
 	end
-	return detected, param_bif
+	return detected, bifpoint
 end
 
 """
@@ -211,7 +211,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		(_, state) = next
 
 		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state; bisection = true)
-		updatestability!(state, n_unstable, n_imag)
+		updateStability!(state, n_unstable, n_imag)
 		push!(nunstbls, n_unstable)
 		push!(nimags, n_imag)
 

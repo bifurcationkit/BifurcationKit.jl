@@ -1,6 +1,6 @@
 # Fold / Hopf Continuation
 
-For this to work, it is important to have an analytical expression for the jacobian. See the tutorial [Temperature model (simplest example for equilibria)](@ref) for more details.
+For this to work best, it is necessary to have an analytical expression for the jacobian. See the tutorial [Temperature model (simplest example for equilibria)](@ref) for more details.
 
 ## Fold continuation
 

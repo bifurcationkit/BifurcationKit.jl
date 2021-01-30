@@ -19,7 +19,8 @@ function getPlotVars(contres, vars)
 	end
 end
 
-const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :green1, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray)
+# https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
+const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :green1, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray, :user => :darkgoldenrod)
 
 function getAxisLabels(ind1, ind2, br)
 	xguide = ""
@@ -51,7 +52,7 @@ end
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) || (~plotfold && x.type == :fold), contres.bifpoint)
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
 
 	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
 		if filterbifpoints == true
@@ -70,7 +71,8 @@ end
 		end
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
-			bps = unique(x -> x.type, [pt for pt in bifpt if pt.type != :none])
+			bps = unique(x -> x.type, [pt for pt in bifpt if (pt.type != :none && (plotfold || pt.type != :fold))])
+			@show plotfold
 			(length(bps) == 0) && return
 			for pt in bps
 				@series begin

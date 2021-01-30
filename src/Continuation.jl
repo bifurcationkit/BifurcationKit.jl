@@ -122,7 +122,7 @@ end
 solution(state::ContState) = state.z_old
 getx(state::ContState) = state.z_old.u
 @inline getp(state::ContState) = state.z_old.p
-@inline isstable(state::ContState) = state.n_unstable[1] == 0
+@inline isStable(state::ContState) = state.n_unstable[1] == 0
 
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -133,11 +133,11 @@ getx(state::ContState) = state.z_old.u
 function getStateSummary(it, state)
 	x = getx(state); p = getp(state)
 	pt = it.printSolution(x, p)
-	stable = computeEigenElements(it.contParams) ? isstable(state) : nothing
+	stable = computeEigenElements(it.contParams) ? isStable(state) : nothing
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
-function updatestability!(state::ContState, n_unstable, n_imag)
+function updateStability!(state::ContState, n_unstable, n_imag)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
 	state.n_imag = (n_imag, state.n_imag[1])
 end
@@ -166,8 +166,8 @@ function ContResult(it::ContIterable, state::ContState)
 
 	if computeEigenElements(contParams)
 		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
-		_, n_unstable, n_imag = isstable(contParams, eiginfo[1])
-		updatestability!(state, n_unstable, n_imag)
+		_, n_unstable, n_imag = isStable(contParams, eiginfo[1])
+		updateStability!(state, n_unstable, n_imag)
 	else
 		eiginfo = nothing
 	end
@@ -209,7 +209,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 end
 
 # same as the previous function but when two (initial guesses) points  are provided
-function iterate(it::ContIterable, u0, p0, u1, p1; _verbosity = it.verbosity)
+function iterate(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity = it.verbosity) where T
 	theta = it.contParams.theta
 	ds = it.contParams.ds
 	# this is the last (first) point on the branch
@@ -300,8 +300,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 			# Eigen-elements computation, they are stored in state
 			if computeEigenElements(contParams)
-				itnewton = computeEigenvalues!(it, state)
-				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", itnewton, " iterations, #unstable = ", state.n_unstable[1],"\n")
+				iteigen = computeEigenvalues!(it, state)
+				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
 			end
 
 			# Detection of fold points based on parameter monotony, mutates contRes.bifpoint
