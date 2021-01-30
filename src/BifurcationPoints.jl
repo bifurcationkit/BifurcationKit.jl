@@ -54,12 +54,12 @@ end
 
 getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 
-function _show(io::IO, bp::GenericBifPoint, ii::Int)
+function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
 	if bp.type == :none ; return; end
 	if bp.status == :converged
-		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else
-		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at p ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	end
 end
 
@@ -174,7 +174,7 @@ function Base.show(io::IO, bp::NdBranchPoint)
 	if bp isa Pitchfork || bp isa HopfBifPoint
 		print(io, bp.type, " - ")
 	end
-	println(io, "Non simple bifurcation point at p ≈ $(bp.p). \nKernel dimension = ", length(bp))
+	println(io, "Non simple bifurcation point at ",getLensParam(bp.lens)," ≈ $(bp.p). \nKernel dimension = ", length(bp))
 	println(io, "Normal form :")
 	println(io, mapreduce(x->x*"\n",*, nf(bp)) )
 end
@@ -227,7 +227,7 @@ function Base.show(io::IO, bp::BifurcationPoint)
 	if bp isa Pitchfork || bp isa HopfBifPoint
 		print(io, bp.type, " - ")
 	end
-	println(io, type(bp), " bifurcation point at p ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ",getLensParam(bp.lens)," ≈ $(bp.p).")
 	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ $(2pi/bp.ω).")
 	println(io, "Normal form: ", bp.nf)
 end

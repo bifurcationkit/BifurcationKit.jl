@@ -280,9 +280,6 @@ where the parameters are as above except that you have to pass the branch `br` f
 
 !!! tip "Jacobian tranpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
-
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
 function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), d2F = p2 -> nothing, updateMinAugEveryStep=0, kwargs...) where {Tb,vectype}
 	@assert lens1 != lens2
