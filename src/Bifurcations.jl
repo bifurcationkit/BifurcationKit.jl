@@ -155,7 +155,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	# iter = @set iter.contParams.newtonOptions.verbose = false
 
-	verbose && println("----> [Loc-Bif] initial ds = ", _state.ds)
+	verbose && println("----> [Bisection] initial ds = ", _state.ds)
 
 	# the bifurcation point is before the current state
 	# so we want to first iterate backward with half step size
@@ -177,7 +177,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	interval = getinterval(getp(state), state.z_pred.p)
 	indinterval = 2 # index of active bound in the bisection, allows to track interval
 
-	verbose && println("----> [Loc-Bif] state.ds = ", state.ds)
+	verbose && println("----> [Bisection] state.ds = ", state.ds)
 
 	# we put this to be able to reference it at the end of this function
 	# we don't know its type yet
@@ -233,7 +233,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		if verbose
 			ct0 = closesttozero(eiginfo[1])
 			printstyled(color=:blue,
-				"----> $(state.step) - [Loc-Bif] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
+				"----> $(state.step) - [Bisection] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
 				", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
 				"\n----> bifurcation ∈ ", getinterval(interval...),
 				", precision = ", @sprintf("%.3E", interval[2] - interval[1]),

@@ -1,4 +1,4 @@
-closesttozero(ev) = ev[sortperm(abs.(real.(ev)))]
+closesttozero(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a,b) = (min(a,b), max(a,b))
 ####################################################################################################
 function displayIteration(i, residual, itlinear = 0)
@@ -29,14 +29,14 @@ function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 end
 
 # same as previous but we save the eigen-elements in state
-function computeEigenvalues!(iter::ContIterable, state::ContState)
-	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state)
+function computeEigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
+	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state; kwargs...)
 	# we update the state
 	updateStability!(state, n_unstable, n_imag)
 	if isnothing(state.eigvals) == false
 		state.eigvals = eiginfo[1]
 	end
-	if iter.contParams.saveEigenvectors
+	if saveEigenVec && iter.contParams.saveEigenvectors
 		state.eigvecs = eiginfo[2]
 	end
 	# iteration number in eigen-solver
