@@ -4,9 +4,9 @@ using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads
 # this function takes into accound a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
 function flowTimeSol(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
-	_prob = DiffEqBase.remake(pb; u0 = x, tspan = (zero(eltype(tm)), tm), p = p)
+	_prob = remake(pb; u0 = x, tspan = (zero(eltype(tm)), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
-	sol = DiffEqBase.solve(_prob, alg; save_everystep = false, kwargs...)
+	sol = solve(_prob, alg; save_everystep = false, kwargs...)
 	return (t = sol.t[end], u = sol[end])
 end
 
@@ -16,7 +16,7 @@ function flowTimeSol(x::AbstractMatrix, p, tm, epb::EnsembleProblem; alg = Euler
 	# see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
 	_epb = setproperties(epb, output_func = (sol, i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
-	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
+	sol = solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
 	# sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
 	return sol.u
 end
@@ -28,9 +28,9 @@ flow(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = 
 # function used to compute the derivative of the flow, so pb encodes the variational equation
 function dflow(x::AbstractVector, p, dx, tm, pb::ODEProblem; alg = Euler(), kwargs...)
 	n = length(x)
-	_prob = DiffEqBase.remake(pb; u0 = vcat(x, dx), tspan = (zero(eltype(tm)), tm), p = p)
+	_prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(eltype(tm)), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
-	sol = DiffEqBase.solve(_prob, alg, save_everystep = false; kwargs...)[end]
+	sol = solve(_prob, alg, save_everystep = false; kwargs...)[end]
 	return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
@@ -39,7 +39,7 @@ function dflow(x::AbstractMatrix, p, dx, tm, epb::EnsembleProblem; alg = Euler()
 	N = size(x,1)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
 	_epb = setproperties(epb, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
-	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
+	sol = solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
 	return sol.u
 end
 
