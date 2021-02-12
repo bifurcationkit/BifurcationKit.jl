@@ -6,9 +6,9 @@ abstract type ContinuationState end
 	F::TF
 	J::TJ
 
-	x0::Tv							# initial guess
-	par::Tp							# reference to parameter, so no worry if this one is big
-	lens::Tlens						# param axis to be considered specified by a ::Lens
+	x0::Tv			# initial guess
+	par::Tp			# reference to parameter, so no worry if this one is big like sparse matrix
+	lens::Tlens		# param axis to be considered specified by a ::Lens
 
 	contParams::ContinuationPar{T, S, E}
 
@@ -122,6 +122,8 @@ solution(state::ContState) = state.z_old
 getx(state::ContState) = state.z_old.u
 @inline getp(state::ContState) = state.z_old.p
 @inline isStable(state::ContState) = state.n_unstable[1] == 0
+@inline stepsizecontrol(state::ContState) = state.stepsizecontrol
+####################################################################################################
 
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -132,7 +134,7 @@ getx(state::ContState) = state.z_old.u
 function getStateSummary(it, state)
 	x = getx(state); p = getp(state)
 	pt = it.printSolution(x, p)
-	stable = computeEigenElements(it.contParams) ? isStable(state) : nothing
+	stable = computeEigenElements(it) ? isStable(state) : nothing
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
@@ -204,11 +206,11 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = ", p0 + ds/η, ", initial step (bis)")
-	return iterate(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
+	return iterateFromTwoPoints(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
 end
 
 # same as the previous function but when two (initial guesses) points  are provided
-function iterate(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity = it.verbosity) where T
+function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity = it.verbosity) where T
 	theta = it.contParams.theta
 	ds = it.contParams.ds
 	# this is the last (first) point on the branch
@@ -273,7 +275,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	end
 
 	# Step size control
-	if ~state.stopcontinuation && state.stepsizecontrol
+	if ~state.stopcontinuation && stepsizecontrol(state)
 		# we update the PALC paramters ds and theta, they are in the state variable
 		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
 	end

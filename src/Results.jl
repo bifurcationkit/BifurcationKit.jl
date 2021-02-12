@@ -75,7 +75,7 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 
 hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
-@inline getvectortype(br::AbstractBranchResult) = getvectortype(eltype(br.bifpoint))
+@inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.bifpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
@@ -109,7 +109,7 @@ $(SIGNATURES)
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
 eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
-@inline kerneldim(br::ContResult, ind) = kerneldim(br.bifpoint[ind])
+@inline kernelDim(br::ContResult, ind) = kernelDim(br.bifpoint[ind])
 
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))

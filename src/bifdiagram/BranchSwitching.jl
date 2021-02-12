@@ -23,7 +23,7 @@ function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
 
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
-	state, _ = iterate(it, x0, p0, x1, p1)
+	state, _ = iterateFromTwoPoints(it, x0, p0, x1, p1)
 
 	# variable to hold the result from continuation, i.e. a branch
 	contRes = ContResult(it, state)
@@ -62,7 +62,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
 
-	if kerneldim(br, ind_bif) > 1
+	if kernelDim(br, ind_bif) > 1
 		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jᵗ = Jᵗ, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
 	end
 

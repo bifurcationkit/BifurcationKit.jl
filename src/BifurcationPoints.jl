@@ -7,7 +7,7 @@ istranscritical(bp::BranchPoint) = false
 """
 $(TYPEDEF)
 
-Structure to record a generic bifurcation point which was only detected by a change in the number of stable eigenvalues.
+Structure to record a generic bifurcation point.
 
 $(TYPEDFIELDS)
 """
@@ -52,7 +52,7 @@ $(TYPEDFIELDS)
 	interval::Tuple{T, T} = (0, 0)
 end
 
-getvectortype(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
+getVectorType(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 
 function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
 	if bp.type == :none ; return; end
@@ -63,9 +63,9 @@ function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
 	end
 end
 
-@inline kerneldim(bp::GenericBifPoint) = abs(bp.δ[1])
+@inline kernelDim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
-# types for bifurcation point 1d kernel for the jacobian
+# types for bifurcation point with 1d kernel for the jacobian
 
 for op in (:Pitchfork, :Fold, :Transcritical)
 	@eval begin
@@ -79,7 +79,8 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 
 		## Predictor
 
-		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp` to get to find zeros of the normal form polynomials.
+		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
+		to find the zeros of the normal form polynomials.
 		"""
 		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: SimpleBranchPoint
 			"bifurcation point."
@@ -91,7 +92,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 			"Parameters used by the vector field."
 			params::Tpar
 
-			"Parameter axis used to compute the branch on which this Branch point was detected."
+			"Parameter axis used to compute the branch on which this bifurcation point was detected."
 			lens::Tlens
 
 			"Right eigenvector(s)."
@@ -111,7 +112,7 @@ end
 
 Pitchfork(x0, p, params, lens, ζ, ζstar, nf) = Pitchfork(x0, p, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
-istranscritical(bp::SimpleBranchPoint) = bp isa Transcritical
+isTranscritical(bp::SimpleBranchPoint) = bp isa Transcritical
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
@@ -120,7 +121,7 @@ type(::Nothing) = nothing
 # type for bifurcation point Nd kernel for the jacobian
 
 """
-This is a type which holds information for the bifurcation points of equilibria.
+This is a type which holds information for the bifurcation points of equilibria with dim(Ker)>1.
 
 $(TYPEDEF)
 $(TYPEDFIELDS)
@@ -131,15 +132,15 @@ You can call `type(bp::NdBranchPoint), length(bp::NdBranchPoint)`.
 
 ## Predictor
 
-You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find zeros of the normal form polynomials.
+You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zeros of the normal form polynomials.
 
 ## Manipulating the normal form
 
-- You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on thw vector `x` for (scalar) parameter `p`.
+- You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on the vector `x` for (scalar) parameter `p`.
 
 - You can use `bp(x, δp::Real)` to get the (large dimensional guess) associated to the low dimensional vector `x`. Note that we must have `length(x) == length(bp)`.
 
-- You can use `BifurcationKit.nf(bp; kwargs...)` to print the normal form with a nice string.
+- You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
 """
 mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
 	"bifurcation point"
@@ -151,7 +152,7 @@ mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: Bra
 	"Parameters used by the vector field."
 	params::Tpar
 
-	"Parameter axis used to compute the branch on which this Branch point was detected."
+	"Parameter axis used to compute the branch on which this bifurcation point was detected."
 	lens::Tlens
 
 	"Right eigenvectors"
@@ -204,7 +205,7 @@ mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <:
 	"Parameters used by the vector field."
 	params::Tpar
 
-	"Parameter axis used to compute the branch on which this Branch point was detected."
+	"Parameter axis used to compute the branch on which this Hopf point was detected."
 	lens::Tlens
 
 	"Right eigenvector"
@@ -213,7 +214,7 @@ mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <:
 	"Left eigenvector"
 	ζstar::Tevl
 
-	"Normal form coefficient (a = 0., b = 1 + 1im)"
+	"Normal form coefficient ex: (a = 0., b = 1 + 1im)"
 	nf::Tnf
 
 	"Type of Hopf bifurcation"

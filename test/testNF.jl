@@ -74,7 +74,7 @@ nf = bpp.nf
 
 # test automatic branch switching
 br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax = 0.01, ds = 0.001, detectBifurcation = 2, newtonOptions = (@set opt_newton.verbose=false)); printSolution = (x, p) -> x[1], verbosity = 0, ampfactor = 1)
-	# plot([brp,br2], marker=:d)
+	# plot(brp,br2, marker=:d)
 
 # test methods for aBS
 BK.from(br2) |> BK.type
@@ -163,7 +163,7 @@ br_snd2, = @time BK.continuation(
 	)
 
 	# plot(plot(br_snd2.branch[1,:] |> diff, marker = :d),
-	# plot([br_snd1,br_snd2], putbifptlegend=false))
+	# plot(br_snd1,br_snd2, putbifptlegend=false))
 
 bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3,dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
@@ -217,7 +217,7 @@ x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.lens, 0.001))  - bp2d(Val(:redu
 br1, = BK.continuation(
 	jet..., br, 1,
 	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 300, pMax = 1.); plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> norminf(x))
-	# plot([br1..., br], plotfold=false, putbifptlegend=false)
+	# plot(br1..., br, plotfold=false, putbifptlegend=false)
 
 bdiag = bifurcationdiagram(jet..., zeros(3), pard6, (@lens _.μ), 3,
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
