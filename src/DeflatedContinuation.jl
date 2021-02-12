@@ -213,5 +213,5 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 		display(plot(branches..., label = ""))
 	end
 
-	return branches, contIt, [getx(c.contState) for c in states if isactive(c)], current_param
+	return branches, contIt, [getx(c.contState) for c in states if isActive(c)], current_param
 end
