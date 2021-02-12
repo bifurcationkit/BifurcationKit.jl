@@ -134,14 +134,14 @@ getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, 
 """
 This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 """
- function _ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}) where {T, S, E}
-	bif0 = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0,0), precision = T(-1), interval = (T(0), T(0)))
+ function _ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool) where {T, S, E}
+	# example of bifurcation point
+	bif0 = GenericBifPoint(x0, T, namedprintsol(printsol))
+	# shall we save full solution?
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
-	n_unstable = 0
-	n_imag = 0
-	stability = true
+	n_unstable = 0; n_imag = 0; stability = true
 
-	if computeEigenElements(contParams)
+	if computeEigElements
 		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
 		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
 	else

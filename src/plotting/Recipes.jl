@@ -37,7 +37,7 @@ function getAxisLabels(ind1, ind2, br)
 end
 
 # allow to plot a single branch
-@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -91,7 +91,7 @@ end
 end
 
 # allow to plot branches specified by splatting
-@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
@@ -167,7 +167,7 @@ end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
 
-@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
+RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
 	for b in bd
 		@series begin
 			level --> level
@@ -177,7 +177,7 @@ end
 	end
 end
 
-@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
+RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
 	if ~hasbranch(bd); return; end
 	_bd = getBranch(bd, code)
 	@series begin
@@ -195,7 +195,7 @@ end
 
 # this might well be type piracy
 # TODO try to remove it
-@recipe function f(bd::Nothing)
+RecipesBase.@recipe function f(bd::Nothing)
 	nothing
 end
 

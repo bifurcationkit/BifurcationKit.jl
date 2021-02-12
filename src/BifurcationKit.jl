@@ -54,9 +54,11 @@ module BifurcationKit
 	using Requires
 
 	function __init__()
+		# if Plots.jl is available, then we allow plotting of solutions
 		@require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
 			using .Plots
 			include("plotting/PlotCont.jl")
+		end
 		end
 
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin

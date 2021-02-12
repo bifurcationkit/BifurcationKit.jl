@@ -12,7 +12,9 @@ By leveraging on the above method, it can also seek for periodic orbits of Cauch
 
 The current package focuses on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
 
-**If you use this package for your work, we ask that you cite the following paper!! Open source development strongly depends on this. It is referenced on HAL-Inria as follows:**
+
+## Support and citation
+If you use this package for your work, we ask that you cite the following paper. Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future. It is referenced on HAL-Inria as follows:
 
 ```
 @misc{veltz:hal-02902346,
@@ -55,8 +57,8 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 | [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in 1D Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) |
 | [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Periodic orbits in 2D Ginzburg-Landau](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | |
-| [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1)  |    |
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | ![](https://rveltz.github.io/BifurcationKit.jl/dev/GPU-branch.png) |
+| [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1)  |  [2D Swift Hohenberg on GPU](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2b/#The-Swift-Hohenberg-equation-(non-local)-on-the-GPU-(Advanced)-1)  |
 
 
 ## Main features

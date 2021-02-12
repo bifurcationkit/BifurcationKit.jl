@@ -45,7 +45,7 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
-- `startWithEigen = false` whether to start thr Minimally Augmented problem with information from eigen elements
+- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
@@ -59,7 +59,6 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-
 function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens2::Lens, options_cont::ContinuationPar ; startWithEigen = false, Jᵗ = nothing, d2F = nothing, kwargs...)
 	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
 	if br.bifpoint[ind_bif].type == :hopf

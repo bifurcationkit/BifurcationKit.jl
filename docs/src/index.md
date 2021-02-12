@@ -48,7 +48,7 @@ There are many good softwares already available.
 
 - For large scale problems, there is the versatile and feature full [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/) but also [Trilinos](https://trilinos.org/), [CL_MATCONTL](https://github.com/careljonkhout/cl_matcontL) and the python libraries [pyNCT](https://pypi.org/project/PyNCT/) and [pacopy](https://github.com/nschloe/pacopy).
 
-- For *deflated continuation*, there is [defcont](https://bitbucket.org/pefarrell/defcon/src/master/).
+- For *deflated continuation*, there is [defcont](https://bitbucket.org/pefarrell/defcon/src/master/) and this [code](https://github.com/evstigneevnm/deflated_continuation) by N. M. Evstigneev.
 
 In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl) to PyDSTools, and also [Bifurcations.jl](https://github.com/tkf/Bifurcations.jl).
 

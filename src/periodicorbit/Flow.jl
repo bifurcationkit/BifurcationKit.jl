@@ -1,4 +1,4 @@
-using DiffEqBase
+using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads
 
 ####################################################################################################
 # this function takes into accound a parameter passed to the vector field

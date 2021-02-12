@@ -1,4 +1,4 @@
-using DiffEqBase
+using DiffEqBase: EnsembleProblem, ODEProblem
 
 """
 $(SIGNATURES)

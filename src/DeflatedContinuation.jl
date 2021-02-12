@@ -16,14 +16,14 @@ mutable struct DCState{T, Tstate}
 	DCState(sol::T, state::ContState) where {T} = new{T, typeof(state)}(copy(sol), state, true)
 end
 # whether the branch is active
-isactive(dc::DCState) = dc.isactive
+isActive(dc::DCState) = dc.isactive
 # getters
 getx(dc::DCState) = getx(dc.contState)
 getp(dc::DCState) = getp(dc.contState)
 
 #
 function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::ContResult, defOp::DeflationOperator; current_param, step)
-	isactive(dcstate) == false &&  return false, 0
+	isActive(dcstate) == false &&  return false, 0
 	state = dcstate.contState 	# continuation state
 	it = iter.it 				# continuation iterator
 	@unpack step, ds, theta = state
@@ -159,7 +159,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			# it also updates deflationOp
 			flag, itnewton = updatebranch!(iter, state, branches[idb], deflationOp;
 					current_param = current_param, step = ii)
-			(verbosity >= 2 && isactive(state)) && println("----> Continuation for branch $idb in $itnewton iterations")
+			(verbosity >= 2 && isActive(state)) && println("----> Continuation for branch $idb in $itnewton iterations")
 			verbosity >= 1 && ~flag && itnewton>0 && printstyled(color=:red, "--> Fold for branch $idb ?\n")
 		end
 
@@ -185,7 +185,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 				# we restrict to 1:nc because we don't want to update the newly found branches
 				for (idb, state) in enumerate(states[1:nc])
 					# TODO this could be done in parallel
-					if isactive(state) && (n_active < maxBranches)
+					if isActive(state) && (n_active < maxBranches)
 						n_active += 1
 						_success = true
 						verbosity >= 2 && println("----> Deflation for branch $idb")

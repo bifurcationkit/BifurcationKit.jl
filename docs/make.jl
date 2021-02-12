@@ -1,4 +1,4 @@
-using Documenter, BifurcationKit
+using Documenter, BifurcationKit, Setfield
 
 makedocs(doctest = false,
 	sitename = "Bifurcation Analysis in Julia",

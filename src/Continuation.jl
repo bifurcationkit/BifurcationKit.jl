@@ -136,11 +136,11 @@ function Base.copy(state::ContState)
 	)
 end
 
-solution(state::ContState) = state.z_old
-getx(state::ContState) = state.z_old.u
-@inline getp(state::ContState) = state.z_old.p
-@inline isStable(state::ContState) = state.n_unstable[1] == 0
-@inline stepsizecontrol(state::ContState) = state.stepsizecontrol
+solution(state::AbstractContinuationState) = state.z_old
+getx(state::AbstractContinuationState) = state.z_old.u
+@inline getp(state::AbstractContinuationState) = state.z_old.p
+@inline isStable(state::AbstractContinuationState) = state.n_unstable[1] == 0
+@inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 ####################################################################################################
 # getters
 finaliseDefault(z, tau, step, contResult; k...) = true
@@ -178,13 +178,13 @@ function save!(br::ContResult, it::ContIterable, state::ContState)
 	end
 end
 
-function plotBranchCont(contres::ContResult, state::ContState, iter::ContIterable)
+function plotBranchCont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
 	if iter.plot && mod(state.step, getParams(iter).plotEveryStep) == 0
 		return plotBranchCont(contres, state.z_old, getParams(iter), iter.plotSolution)
 	end
 end
 
-function ContResult(it::AbstractContinuationIterable, state::ContState)
+function ContResult(it::AbstractContinuationIterable, state::AbstractContinuationState)
 	x0 = getx(state); p0 = getp(state)
 	pt = it.printSolution(x0, p0)
 	if computeEigenElements(it)
@@ -194,7 +194,7 @@ function ContResult(it::AbstractContinuationIterable, state::ContState)
 	else
 		eiginfo = nothing
 	end
-	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it))
+	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it), computeEigenElements(it))
 end
 ####################################################################################################
 # Continuation Iterator

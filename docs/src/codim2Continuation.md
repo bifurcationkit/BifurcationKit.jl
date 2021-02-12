@@ -52,15 +52,14 @@ It is important to note that for improved performances, a function implementing 
 
 To compute the codim 2 curve of Fold/Hopf points, one can call [`continuation`](@ref) with the following options
 
-```julia
-br_codim2, = continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens2::Lens, options_cont::ContinuationPar ; 
-	startWithEigen = false, 
-	updateMinAugEveryStep = 1,
-	bdlinsolver = BorderingBLS(),
-	Jᵗ = nothing, d2F = nothing, kwargs...)
+```@docs
+ continuation(F, J, br::BifurcationKit.AbstractBranchResult, ind_bif::Int64, lens2::Setfield.Lens, options_cont::BifurcationKit.ContinuationPar ; startWithEigen = false, Jᵗ = nothing, d2F = nothing, kwargs...)
 ```
 
-where the options are as above except with have an additional parameter axis `lens2` which is used to locate the bifurcation points. See [Temperature model (simplest example for equilibria)](@ref) for an example of use. 
+where the options are as above except with have an additional parameter axis `lens2` which is used to locate the bifurcation points. 
+
+
+See [Temperature model (simplest example for equilibria)](@ref) for an example of use. 
 
 ## Advanced use
 

@@ -38,32 +38,6 @@ ShootingProblem
 PoincareShootingProblem
 ```
 
-## Misc.
-
-```@docs
-PrecPartialSchurKrylovKit
-```
-
-```@docs
-PrecPartialSchurArnoldiMethod
-```
-
-```@docs
-Flow
-```
-
-```@docs
-FloquetQaD
-```
-
-```@docs
-guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
-```
-
-```@docs
-computeNormalForm
-```
-
 ## Newton
 
 ```@docs
@@ -74,6 +48,20 @@ newton
 
 ```@docs
 continuation
+```
+
+## Event
+
+```@docs
+BifurcationKit.DiscreteEvent
+```
+
+```@docs
+BifurcationKit.ContinuousEvent
+```
+
+```@docs
+BifurcationKit.CompositeEvent
 ```
 ## Branch switching (branch point)
 
@@ -128,4 +116,30 @@ SectionSS
 
 ```@docs
 SectionPS
+```
+
+## Misc.
+
+```@docs
+PrecPartialSchurKrylovKit
+```
+
+```@docs
+PrecPartialSchurArnoldiMethod
+```
+
+```@docs
+Flow
+```
+
+```@docs
+FloquetQaD
+```
+
+```@docs
+guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
+```
+
+```@docs
+computeNormalForm
 ```
