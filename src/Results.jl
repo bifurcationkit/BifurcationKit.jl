@@ -94,7 +94,12 @@ $(SIGNATURES)
 
 Return the eigenvalues of the ind-th continuation step.
 """
-eigenvals(br::AbstractBranchResult, ind::Int) = br.eig[ind].eigenvals
+function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
+	if verbose
+		println("--> There are ", br[ind].n_unstable, " unstable eigenvalues")
+	end
+	br.eig[ind].eigenvals
+end
 
 """
 $(SIGNATURES)

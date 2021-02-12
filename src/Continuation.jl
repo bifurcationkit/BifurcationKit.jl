@@ -1,8 +1,9 @@
 import Base: iterate
-abstract type ContinuationState end
+abstract type AbstractContinuationIterable end
+abstract type AbstractContinuationState end
 ####################################################################################################
 # Iterator interface
-@with_kw struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
+@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} <: AbstractContinuationIterable
 	F::TF
 	J::TJ
 
@@ -22,19 +23,14 @@ abstract type ContinuationState end
 	normC::TnormC
 	dottheta::Tdot
 	finaliseSolution::Tfinalisesolution
-	callbackN::Tcallback
+	callbackN::TcallbackN
 
 	verbosity::Int64 = 2
 
 	filename::Tfilename
 end
 
-Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = T
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename} = set(it.par, it.lens, p0)
-
-# default finaliser
-finaliseDefault(z, tau, step, contResult; k...) = true
-
+# constructor
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
 					contParams::ContinuationPar{T, S, E},
@@ -51,11 +47,32 @@ function ContIterable(Fhandle, Jhandle,
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
-	return ContIterable(F = Fhandle, J = Jhandle, x0 = x0, par = par, lens = lens, contParams = contParams, tangentAlgo = tangentAlgo, linearAlgo = linearAlgo, plot = plot, plotSolution = plotSolution, printSolution = printSolution, normC = normC, dottheta = DotTheta(dotPALC), finaliseSolution = finaliseSolution, callbackN = callbackN, verbosity = verbosity, filename = filename)
+	return ContIterable(F = Fhandle, J = Jhandle,
+				x0 = x0, par = par, lens = lens,
+				contParams = contParams,
+				tangentAlgo = tangentAlgo,
+				linearAlgo = linearAlgo,
+				plot = plot,
+				plotSolution = plotSolution,
+				printSolution = printSolution,
+				normC = normC,
+				dottheta = DotTheta(dotPALC),
+				finaliseSolution = finaliseSolution,
+				callbackN = callbackN,
+				verbosity = verbosity,
+				filename = filename)
 end
 
-@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams)
+Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = T
 
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = set(it.par, it.lens, p0)
+
+hasEvent(it::ContIterable) = hasEvent(it.event) && it.contParams.detectEvent > 0
+@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (hasEvent(it) && it.event isa BifEvent)
+
+@inline getParams(it::ContIterable) = it.contParams
+
+####################################################################################################
 """
 	state = ContState(ds = 1e-4,...)
 
@@ -78,13 +95,13 @@ Returns a variable containing the state of the continuation procedure. The field
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
 """
-@with_kw mutable struct ContState{Tv, T, Teigvals, Teigvec} <: ContinuationState
+@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec} <: AbstractContinuationState
 	z_pred::Tv								# predictor solution
 	tau::Tv									# tangent predictor
 	z_old::Tv								# current solution
 
 	isconverged::Bool						# Boolean for newton correction
-	itnewton::Int64							# Number of newton iteration (in corrector)
+	itnewton::Int64 = 0						# Number of newton iteration (in corrector)
 	itlinear::Int64 = 0						# Number of linear iteration (in newton corrector)
 
 	step::Int64 = 0							# current continuation step
@@ -124,6 +141,8 @@ getx(state::ContState) = state.z_old.u
 @inline isStable(state::ContState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::ContState) = state.stepsizecontrol
 ####################################################################################################
+# getters
+finaliseDefault(z, tau, step, contResult; k...) = true
 
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -146,12 +165,10 @@ end
 function save!(br::ContResult, it::ContIterable, state::ContState)
 	# update branch field
 	push!(br.branch, getStateSummary(it, state))
-
 	# save solution
 	if it.contParams.saveSolEveryStep > 0 && (modCounter(state.step, it.contParams.saveSolEveryStep) || ~done(it, state))
 		push!(br.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
-
 	# save eigen elements
 	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryStep) == 0
@@ -160,21 +177,27 @@ function save!(br::ContResult, it::ContIterable, state::ContState)
 	end
 end
 
-function ContResult(it::ContIterable, state::ContState)
+function plotBranchCont(contres::ContResult, state::ContState, iter::ContIterable)
+	if iter.plot && mod(state.step, getParams(iter).plotEveryStep) == 0
+		return plotBranchCont(contres, state.z_old, getParams(iter), iter.plotSolution)
+	end
+end
+
+function ContResult(it::AbstractContinuationIterable, state::ContState)
 	x0 = getx(state); p0 = getp(state)
 	pt = it.printSolution(x0, p0)
-	contParams = it.contParams
-
 	if computeEigenElements(it)
 		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
-		_, n_unstable, n_imag = isStable(contParams, eiginfo[1])
+		_, n_unstable, n_imag = isStable(getParams(it), eiginfo[1])
 		updateStability!(state, n_unstable, n_imag)
 	else
 		eiginfo = nothing
 	end
-	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, contParams)
+	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it))
 end
-
+####################################################################################################
+# Continuation Iterator
+#
 # function called at the beginning of the continuation
 # used to determine first point on branch and tangent at this point
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
@@ -285,7 +308,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 end
 
 function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
-	contParams = it.contParams
+	contParams = getParams(it)
 	verbose = it.verbosity > 0
 
 	next = (state, state)
@@ -333,7 +356,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			end
 
 			# Plotting
-			(it.plot && mod(state.step, contParams.plotEveryStep) == 0 ) && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
+			plotBranchCont(contRes, state, it)
 
 			# Saving Solution to File
 			if contParams.saveToFile
@@ -359,11 +382,11 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 end
 
 function continuation(it::ContIterable)
-	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	# The result type of this method
+	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	# The return type of this method, e.g. ContResult
 	# is not known at compile time so we
 	# need a function barrier to resolve it
-	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent

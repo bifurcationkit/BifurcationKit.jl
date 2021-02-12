@@ -30,6 +30,10 @@ end
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
+
+# Constructor
+
+`EigArpack(sigma = nothing, which = :LR; kwargs...)`
 """
 struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
 	"Shift for Shift-Invert method"
@@ -120,6 +124,10 @@ geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, Array{Int
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
+
+# Constructor
+
+`EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...)`
 """
 struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractEigenSolver
 	"Shift for Shift-Invert method"
