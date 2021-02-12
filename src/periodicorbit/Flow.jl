@@ -62,14 +62,14 @@ dflow_fd(x, dx, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), δ = 
 # this gives access to the full solution, convenient for Poincaré shooting
 # this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function flowFull(x, p, tm, pb::ODEProblem; alg = Euler(), kwargs...)
-	_prob = DiffEqBase.remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
-	sol = DiffEqBase.solve(_prob, alg; kwargs...)
+	_prob = remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
+	sol = solve(_prob, alg; kwargs...)
 end
 
 function flowFull(x, p, tm, epb::EnsembleProblem; alg = Euler(), kwargs...)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
 	_epb = setproperties(epb, prob_func = _prob_func)
-	sol = DiffEqBase.solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), kwargs...)
+	sol = solve(_epb, alg, EnsembleThreads(); trajectories = size(x, 2), kwargs...)
 end
 flowFull(x, tm, pb::Union{ODEProblem, EnsembleProblem}; alg = Euler(), kwargs...) = flowFull(x, nothing, tm, pb; alg = alg, kwargs...)
 ####################################################################################################
