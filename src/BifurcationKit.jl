@@ -59,7 +59,6 @@ module BifurcationKit
 			using .Plots
 			include("plotting/PlotCont.jl")
 		end
-		end
 
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
 			using .JLD2
