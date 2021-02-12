@@ -16,8 +16,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
-- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited ressource, *e.g.* GPU.
-- `saveEigenvectors	= true`	**Important** for memory limited ressource, *e.g.* GPU.
+- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
+- `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
 
 ## Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits

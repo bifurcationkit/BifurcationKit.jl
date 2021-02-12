@@ -15,7 +15,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `startWithEigen = false` whether to start thr Minimally Augmented probblem with information from eigen elements
+- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 """
 function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
@@ -45,7 +45,7 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
-- `startWithEigen = false` whether to start thr Minimally Augmented probblem with information from eigen elements
+- `startWithEigen = false` whether to start thr Minimally Augmented problem with information from eigen elements
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
@@ -54,7 +54,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 
 !!! tip "Jacobian tranpose"
-    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `tranpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6

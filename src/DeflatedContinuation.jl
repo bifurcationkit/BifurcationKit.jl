@@ -68,7 +68,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 # Arguments:
 - `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` that represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
 - `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
-    1. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
+    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
     2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
     3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
 - `par` initial set of parameters,
@@ -87,7 +87,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 - `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,⋯,5}`,
 - `normN = norm` norm used in the different Newton solves,
 - `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This arguement can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
-- `perturbSolution = (x, p, id) -> x` perturbation applied to the solution when trying to fimnd new solutions using Deflated Newton. You can use for example `(x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...))`
+- `perturbSolution = (x, p, id) -> x` perturbation applied to the solution when trying to find new solutions using Deflated Newton. You can use for example `(x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...))`
 
 # Outputs:
 - `contres::Vector{ContResult}` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,

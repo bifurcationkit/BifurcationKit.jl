@@ -21,10 +21,10 @@
 # end
 #
 # # callable function to compute the Jacobian J(x) = dF(x)
-# function (Jac::JacWrap)(x)
+# function (Jac::JacWrap)(x, p)
 # 	if Jac.J isa DiffEqBase.AbstractDiffEqLinearOperator
 # 		Jac.x .= x
-# 		update_coefficients(Jac.J, x, Jac.p, zero(eltype(x)))
+# 		update_coefficients(Jac.J, x, p, zero(eltype(x)))
 # 		# this is a Hack because update_coefficients does not do it
 # 		Jac.J.u .= x
 # 		norm(Jac.J.u - x) ≈ 0 ? printstyled(color=:green,"--> Jac Updated\n") : printstyled(color=:red,"--> Jac Not updated!!, $(norm(Jac.J.u - x))\n")

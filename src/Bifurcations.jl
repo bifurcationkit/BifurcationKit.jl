@@ -140,7 +140,7 @@ end
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
 function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
-	@assert detectBifucation(_state) "No bifucation detected for the state"
+	@assert detectBifucation(_state) "No bifurcation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
 	# type of scalars in iter

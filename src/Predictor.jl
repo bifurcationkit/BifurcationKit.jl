@@ -9,7 +9,7 @@ computes, the weigthed dot product ``\\langle (u_1,p_1), (u_2,p_2)\\rangle_\\the
 
 	normtheta(u, p::T, theta::T)
 
-Compute, the norm associated to weigthed dot product ``\\langle (u_1,p_1), (u_2,p_2)\\rangle_\\theta``.
+Compute, the norm associated to weighted dot product ``\\langle (u_1,p_1), (u_2,p_2)\\rangle_\\theta``.
 
 !!! info "Info"
     This is used in the pseudo-arclength constraint with the dot product ``\\frac{1}{N} \\langle u_1,u_2\\rangle,\\quad u_i\\in\\mathbb R^N``
@@ -183,7 +183,7 @@ $(TYPEDFIELDS)
 	"Maximum index for lookup in residual history"
 	imax::Int64 = 4
 
-	"Factor to increase ds upon successfull step"
+	"Factor to increase ds upon successful step"
 	dsfact::T = 1.5
 end
 MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo= algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)

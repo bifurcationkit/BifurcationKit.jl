@@ -25,10 +25,10 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], 
 This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitFD/). The arguments are as follows
 - `F(x,p)` vector field
 - `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
-    1. Either `J` is a function and `J(x,p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
+    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
     2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
     3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
-- `Jᵗ = nothing` jacobian tranpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
+- `Jᵗ = nothing` jacobian transpose of `F` (optional), useful for continuation of Fold of periodic orbits. it should not be passed in case the jacobian is a (sparse) matrix as it is computed internally, and it would be computed twice in that case.
 - `d2F = nothing` second derivative of F (optional), useful for continuation of Fold of periodic orbits. It has the definition `d2F(x,p,dx1,dx2)`.`
 - `ϕ` used to set a section for the phase constraint equation
 - `xπ` used in the section for the phase constraint equation
@@ -1004,7 +1004,7 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
-- `printSolution = (u,p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
+- `printSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation

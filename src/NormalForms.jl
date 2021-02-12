@@ -9,7 +9,7 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 
 	for (idvp, λ) in enumerate(λs)
 		I = argmin(abs.(λstar .- λ))
-		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might lead to unprecise normal form computation. You can perhaps increase the argument `nev`."
+		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
 		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
 		ζstar = geteigenvector(eigsolver, evstar, I)
 		push!(ζstars, copy(ζstar))
@@ -359,7 +359,7 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
-- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coeffocient being super small.
+- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """

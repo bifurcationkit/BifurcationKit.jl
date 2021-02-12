@@ -34,7 +34,7 @@ function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 end
 
 function NL(u, p)
-	@unpack r, μ, ν, c3, c5 = p
+	@unpack r, μ, ν, c3, c5, γ = p
 	n = div(length(u), 2)
 	u1 = @view u[1:n]
 	u2 = @view u[n+1:2n]
@@ -46,7 +46,7 @@ function NL(u, p)
 	f2 = @view f[n+1:2n]
 
 	@. f1 .= r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
-	@. f2 .= r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
+	@. f2 .= r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2 + γ
 
 	return f
 end
