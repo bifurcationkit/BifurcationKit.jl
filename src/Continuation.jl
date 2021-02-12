@@ -63,12 +63,12 @@ function ContIterable(Fhandle, Jhandle,
 				filename = filename)
 end
 
-Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = T
+Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} = T
 
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = set(it.par, it.lens, p0)
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} = set(it.par, it.lens, p0)
 
-hasEvent(it::ContIterable) = hasEvent(it.event) && it.contParams.detectEvent > 0
-@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (hasEvent(it) && it.event isa BifEvent)
+# hasEvent(it::ContIterable) = hasEvent(it.event) && it.contParams.detectEvent > 0
+@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) #|| (hasEvent(it) && it.event isa BifEvent)
 
 @inline getParams(it::ContIterable) = it.contParams
 
