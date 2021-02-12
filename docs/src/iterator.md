@@ -13,7 +13,7 @@ The general method `continuation` is built upon this iterator interface and we r
 The interface is set by defining an iterator, pretty much in the same way one calls [`continuation`](@ref):
 
 ```julia
-iter = PALCIterable(F, J, x0, p0, lens::Lens, opts; kwargs...)
+iter = ContIterable(F, J, x0, p0, lens::Lens, opts; kwargs...)
 ```
 
 ## Stepping

@@ -1,6 +1,5 @@
 import Base: iterate
 abstract type ContinuationState end
-
 ####################################################################################################
 # Iterator interface
 @with_kw struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, Tcallback, Tfilename}
@@ -198,13 +197,13 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	u0, fval, isconverged, itnewton, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess on the branch."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = $(p0), initial step")
+	verbose && println("--> parameter = ", p0, ", initial step")
 	verbose && printstyled("\n******* COMPUTING INITIAL TANGENT *************", bold = true, color = :magenta)
 	u_pred, fval, isconverged, itnewton, _ = newton(it.F, it.J,
 			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = $(p0 + ds/η), initial step (bis)")
+	verbose && println("--> parameter = ", p0 + ds/η, ", initial step (bis)")
 	return iterate(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
 end
 

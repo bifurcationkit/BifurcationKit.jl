@@ -75,6 +75,16 @@ newton
 ```@docs
 continuation
 ```
+## Branch switching (branch point)
+
+```@docs
+continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
+```
+
+## Branch switching (Hopf point)
+```@docs
+continuation(F, dF, d2F, d3F, br::BifurcationKit.AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar, prob::BifurcationKit.AbstractPeriodicOrbitProblem ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 0, kwargs...)
+```
 
 ## Bifurcation diagram
 

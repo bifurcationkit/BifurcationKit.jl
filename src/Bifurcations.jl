@@ -33,7 +33,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	branch = contres.branch
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
-		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in $(getinterval(branch[end-1].param, branch[end].param)) \n")
+		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in", getinterval(branch[end-1].param, branch[end].param), "\n")
 		npar = length( branch[1]) - 9
 		push!(contres.bifpoint, GenericBifPoint(
 			type = :fold,
@@ -131,7 +131,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
 			precision = abs(interval[2] - interval[1]),
 			interval = interval)
-		(verbosity>0) && printstyled(color=:red, "!! $(tp) Bifurcation point at p ≈ $(getp(state)), δn_unstable = $δn_unstable, δn_imag = $δn_imag \n")
+		(verbosity>0) && printstyled(color=:red, "!! ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
 	end
 	return detected, bifpoint
 end
@@ -233,8 +233,8 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		if verbose
 			ct0 = closesttozero(eiginfo[1])
 			printstyled(color=:blue,
-				"----> $(state.step) - [Bisection] (n1, nc, n2) = ",(n1, nunstbls[end], n2),
-				", ds = $(state.ds), p = ", getp(state), ", #reverse = ", n_inversion,
+				"----> $(state.step) - [Bisection] (n1, nc, n2) = ", (n1, nunstbls[end], n2),
+				", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
 				"\n----> bifurcation ∈ ", getinterval(interval...),
 				", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
 				"\n----> ", length(ct0)," Eigenvalues closest to ℜ=0:\n")

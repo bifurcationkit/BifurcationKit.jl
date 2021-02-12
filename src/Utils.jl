@@ -147,7 +147,6 @@ function (R2::BilinearMap)(dx1, dx2)
 	dx1i = imag.(dx1); dx2i = imag.(dx2)
 	return R2(dx1r, dx2r) .- R2(dx1i, dx2i) .+ im .* (R2(dx1r, dx2i) .+ R2(dx1i, dx2r))
 end
-
 (b::BilinearMap)(dx1::T, dx2::T) where {T <: AbstractArray{<: Real}} = b.bl(dx1, dx2)
 
 # struct for trilinear map

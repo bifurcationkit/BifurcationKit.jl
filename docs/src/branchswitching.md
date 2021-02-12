@@ -1,5 +1,7 @@
 # Branch switching
 
+The precise definition of the methods are given [Branch switching (branch point)](@ref) and [Branch switching (Hopf point)](@ref).
+
 ## Branch switching from simple branch point to equilibria
 
 You can perform automatic branch switching by calling `continuation` with the following options:
@@ -11,6 +13,8 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 
 where `br` is a branch computed after a call to `continuation` with detection of bifurcation points enabled. This call computes the branch bifurcating from the `ind_bif `th bifurcation point in `br`. An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
 
+> See [Branch switching (branch point)](@ref) precise method definition
+
 ## Branch switching from non simple branch point to equilibria
 
 We provide an *experimental* automatic branch switching method in this case. The method is to first compute the reduced equation (see [Non-simple branch point](@ref)) and use it to compute the nearby solutions. These solutions are seeded as initial guess for [`continuation`](@ref). Hence, you can perform automatic branch switching by calling `continuation` with the following options:
@@ -20,6 +24,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 	Jᵗ = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
 ```
 
+> See [Branch switching (branch point)](@ref) for precise method definition
 
 ## Branch switching from Hopf point to periodic orbits
 
@@ -38,6 +43,8 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::Continu
 We refer to [`continuation`](@ref) for more information about the arguments. Here, we just say a few words about how we can specify `prob::AbstractPeriodicOrbitProblem`. For [Periodic orbits based on trapezoidal rule](@ref), you can pass `prob = PeriodicOrbitTrapProblem(M = 51)` where `M` is the number of times slices in the periodic orbit. For [Periodic orbits based on the shooting method](@ref), you need more parameters. For example, you can pass `prob = ShootingProblem(2, par, prob, Euler())` or `prob = PoincareShootingProblem(2, par, prob, Euler())` where `prob::ODEProblem` is an ODE problem to specify the Cauchy problem and `par` is the set of parameters passed to the vector field and which must be the same as `br.params`.
 
 Several examples are provided like [Brusselator 1d (automatic)](@ref) or [Complex Ginzburg-Landau 2d](@ref).
+
+> See [Branch switching (Hopf point)](@ref) precise method definition
 
 !!! tip "Precise options"
     Although very convenient, the automatic branch switching does not allow the very fine tuning of parameters. It must be used as a first attempt before recurring to manual branch switching

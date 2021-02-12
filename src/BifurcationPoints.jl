@@ -174,9 +174,9 @@ function Base.show(io::IO, bp::NdBranchPoint)
 	if bp isa Pitchfork || bp isa HopfBifPoint
 		print(io, bp.type, " - ")
 	end
-	println(io, "Non simple bifurcation point at ",getLensParam(bp.lens)," ≈ $(bp.p). \nKernel dimension = ", length(bp))
+	println(io, "Non simple bifurcation point at ", getLensParam(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
 	println(io, "Normal form :")
-	println(io, mapreduce(x->x*"\n",*, nf(bp)) )
+	println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
 end
 ####################################################################################################
 # type for Hopf bifurcation point
@@ -228,6 +228,6 @@ function Base.show(io::IO, bp::BifurcationPoint)
 		print(io, bp.type, " - ")
 	end
 	println(io, type(bp), " bifurcation point at ",getLensParam(bp.lens)," ≈ $(bp.p).")
-	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ $(2pi/bp.ω).")
+	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
 	println(io, "Normal form: ", bp.nf)
 end
