@@ -283,6 +283,13 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		_state.n_imag = (state.n_imag[1], _state.n_imag[2])
 	else
 		@warn "Bisection failed to locate bifurcation point precisely around p = $(getp(_state)). Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
+		# we update the interval. We could do much better if we saved the last state
+		# with iseven(n_inversion) = true
+		if getp(_state) < interval[1]
+			interval = @set interval[1] = getp(_state)
+		elseif getp(_state) >= interval[2]
+			interval = @set interval[2] = getp(_state)
+		end
 	end
 	verbose && println("----> Leaving [Loc-Bif]")
 	return status, getinterval(interval...)

@@ -54,8 +54,9 @@ end
 
 getVectorType(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 type(bp::GenericBifPoint) = bp.type
+@inline kernelDim(bp::GenericBifPoint) = abs(bp.δ[1])
 
-# constructor
+# constructors
 GenericBifPoint(x0, T, printsol) = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
 
 function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
@@ -67,7 +68,6 @@ function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
 	end
 end
 
-@inline kernelDim(bp::GenericBifPoint) = abs(bp.δ[1])
 ####################################################################################################
 # types for bifurcation point with 1d kernel for the jacobian
 
@@ -239,7 +239,7 @@ type(bp::HopfBifPoint) = :Hopf
 HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf) = HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::HopfBifPoint)
-		print(io, bp.type, " - ")
+	print(io, bp.type, " - ")
 	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
 	println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
 	println(io, "Normal form z⋅(a⋅δp + b⋅|z|²): \n", bp.nf)
