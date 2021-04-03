@@ -42,7 +42,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 	@series begin
-		if computeEigenElements(contres.contparams) && plotstability
+		if hasstability(contres)
 			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
 		xguide --> xlab
@@ -72,7 +72,6 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
 			bps = unique(x -> x.type, [pt for pt in bifpt if (pt.type != :none && (plotfold || pt.type != :fold))])
-			@show plotfold
 			(length(bps) == 0) && return
 			for pt in bps
 				@series begin

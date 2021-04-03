@@ -121,6 +121,19 @@ type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
 type(::Nothing) = nothing
+
+
+function Base.show(io::IO, bp::AbstractBifurcationPoint)
+	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, "Normal form: ", bp.nf)
+end
+
+function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+	print(io, bp.type, " - ")
+	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, "Normal form x⋅(b1⋅δp + b3⋅x²/6): \n", bp.nf)
+end
+
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
 
@@ -176,9 +189,6 @@ type(bp::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint)
-	if bp isa Pitchfork || bp isa HopfBifPoint
-		print(io, bp.type, " - ")
-	end
 	println(io, "Non simple bifurcation point at ", getLensParam(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
 	println(io, "Normal form :")
 	println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
@@ -228,11 +238,9 @@ end
 type(bp::HopfBifPoint) = :Hopf
 HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf) = HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
-function Base.show(io::IO, bp::AbstractBifurcationPoint)
-	if bp isa Pitchfork || bp isa HopfBifPoint
+function Base.show(io::IO, bp::HopfBifPoint)
 		print(io, bp.type, " - ")
-	end
 	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
-	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
-	println(io, "Normal form: ", bp.nf)
+	println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
+	println(io, "Normal form z⋅(a⋅δp + b⋅|z|²): \n", bp.nf)
 end

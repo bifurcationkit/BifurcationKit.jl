@@ -73,7 +73,9 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
-hasstability(br::AbstractBranchResult) = computeEigenElements(br.contparams)
+@inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
+
+
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.bifpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))

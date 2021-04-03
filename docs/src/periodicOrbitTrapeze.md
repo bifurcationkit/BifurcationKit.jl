@@ -15,7 +15,7 @@ In order to have a unique solution, we need to remove the phase freedom. This is
 By discretizing the above problem, we obtain
 
 $$\begin{array}{l}
-0= \left(x_{j}-x_{j-1}\right)-\frac{h}{2} \left(F\left(x_{j}\right)+F\left(x_{j-1}\right)\right)\equiv G_j(x),\quad j=1,\cdots,m-1 \\ 
+		0= \left(x_{j}-x_{j-1}\right)-\frac{h}{2} \left(F\left(x_{j}\right)+F\left(x_{j-1}\right)\right)\equiv G_j(x),\quad j=1,\cdots,m-1 \\ 
 0= x_m-x_1 \equiv G_m(x) \\
 0= \sum_i\langle x_{i} - x_{\pi,i}, \phi_{i}\rangle=0
 \end{array}$$

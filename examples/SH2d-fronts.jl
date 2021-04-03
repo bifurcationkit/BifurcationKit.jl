@@ -202,3 +202,19 @@ plot(diagram; code = (), legend = false, plotfold = false)
 	plot!(br)
 
 # BK.add!(diagram, br2, 2)
+
+###################################################################################################
+# deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+
+optcontdf = @set optcont.newtonOptions.verbose = false
+brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
+	deflationOp;
+	showplot = true, verbosity = 1,
+	tangentAlgo = BorderedPred(),
+	# linearAlgo = MatrixBLS(),
+	# plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
+	printSolution = (x, p) -> norm(x),
+	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
+	# finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+	# callbackN = cb,
+	normN = x -> norm(x, Inf))
