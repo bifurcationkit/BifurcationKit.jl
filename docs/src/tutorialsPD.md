@@ -134,7 +134,7 @@ probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
 	[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
 
 # parameters for the Newton-Krylov solver
-ls = GMRESIterativeSolvers(tol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 # Newton-Krylov solver
 out_po_sh, _, flag = @time newton(probSh , initpo, par_br_hopf, optn; normN = norminf)

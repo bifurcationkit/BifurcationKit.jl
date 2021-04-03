@@ -27,6 +27,10 @@ using Revise
 	using Parameters, Setfield, SparseArrays
 	using BifurcationKit, LinearAlgebra, Plots, ForwardDiff, BandedMatrices
 	const BK = BifurcationKit
+	
+# norms
+norminf(x) = norm(x, Inf)
+normL2(x; r = sqrt(par.Δx / L)) = norm(x, 2) * r
 ```
 
 Let us define the parameters of the model
@@ -48,12 +52,75 @@ xs = 10.0; ls = 2.0
 par = (N = N, Δx = Δx, c0 = -0.9, σ = 1.0, μ = 0.5, ν = 0.08, Δg = Δg)
 ```
 
+## Encoding the PDE
+
+```julia
+function putBC!(c, c0, N)
+	# we put boundary conditions using ghost points
+	# this boundary condition u''(0) = 0 = c1 -2c0 + c-1 gives c-1:
+	c[1] = 2c0-c[3]
+	# c(0) = c0, we would like to write x[0]
+	c[2] = c0
+	# the boundary conditions u'(L) = u''(L) = 0 imply the ghost points values.
+	# c'(L) = 0 = cN+2 - cN  and c''(L) = 0 = cN+2 -2cN+1 + cN
+	c[N+3] = c[N+2]
+	c[N+4] = c[N+2]
+	return c
+end
+
+# implementation of the right hand side of the PDE
+function Flgvf!(out, x, p, t = 0.)
+	@unpack c0, N, Δx, σ, μ, Δg, ν = p
+	dx4 = Δx^4
+	dx2 = Δx^2
+	# we declare the residual
+	# we enforce the BC
+	c = similar(x, length(x) + 4)
+	c[3:N+2] .= x
+	putBC!(c, c0, N)
+
+	for i=3:N+2
+		out[i-2] = -(σ * (c[i-2] - 4c[i-1] + 6c[i] - 4c[i+1] + c[i+2]) / dx4 +
+					(c[i-1]   - 2c[i]   + c[i+1])   / (dx2) -
+					(c[i-1]^3 - 2c[i]^3 + c[i+1]^3) / (dx2) -
+					Δg[i-2] * μ +
+					ν * (c[i+1] - c[i-1]) / (2Δx)
+					)
+	end
+	return out
+end
+Flgvf(x, p, t = 0) = Flgvf!(similar(x), x, p, t)
+
+# compute the jacobian of the vector field at position x
+@views function JanaSP(x, p)
+	# 63.446 μs (61 allocations: 137.97 KiB) pour N = 400
+	# 62.807 μs (44 allocations: 168.58 KiB) pour sparse(Jana(x, p))
+	@unpack N, Δx, σ, ν = p
+	d0  = @. (-6σ/ Δx^4 + 2/ Δx^2*(1-3x^2))
+	d0[1] += σ/ Δx^4
+	d0[end] = -(3σ/ Δx^4 - 1/ Δx^2*(1-3x[N]^2)     + ν/ (2Δx))
+	d1   = @.  (4σ/ Δx^4 - 1/ Δx^2*(1-3x[2:N]^2)   - ν/ (2Δx))
+	dm1  = @.  (4σ/ Δx^4 - 1/ Δx^2*(1-3x[1:N-1]^2) + ν/ (2Δx))
+	d1[end] -= σ/ Δx^4
+	d2  = @.  (-σ/ Δx^4) * ones(N-2)
+	J = spdiagm(  0 => d0,
+				  1 => d1,
+				 -1 => dm1,
+				  2 => d2,
+				 -2 => d2)
+	return J
+end
+```
+ 
+
+## Continuation of stationary states
+
 We call the Krylov-Newton to find a stationary solution. Note that for this to work, the guess has to satisfy the boundary conditions approximately.
 
 ```julia
 # newton iterations to refine the guess
 opt_new = NewtonPar(tol = 1e-9, verbose = true, maxIter = 50)
-	out, = @time newton(Flgvf, Jana, 0X .-0.9, par, opt_new)
+	out, = @time newton(Flgvf, JanaSP, 0X .-0.9, par, opt_new)
 plot(X, out)
 ```
 
@@ -77,7 +144,7 @@ opts_cont = ContinuationPar(
 		Flgvf, JanaSP,
 		out, (@set par.ν = 0.06), (@lens _.ν ), opts_cont,
 		linearAlgo = MatrixBLS(),
-		plot = true,
+		plot = true, verbosity = 2,
 		printSolution = (x, p) -> normL2(x),
 		plotSolution = (x, p; kwargs...) -> plot!(X, x, subplot = 3, xlabel = "Nx = $(length(x))", label = ""),
 		normC = normL2)
