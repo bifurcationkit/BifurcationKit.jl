@@ -248,7 +248,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
-		eigvals, eigvecs, _, _ = computeEigenvalues(it, u0, it.par, it.contParams.nev)
+		eigvals, eigvecs, = computeEigenvalues(it, u0, it.par, it.contParams.nev)
 		if ~it.contParams.saveEigenvectors
 			eigvecs = nothing
 		end
@@ -271,9 +271,9 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
-	verbose && print("#"^35*"\nStart of Continuation Step $step:\nParameter $(getLensParam(it.lens))");
+	verbose && println("#"^35*"\nStart of Continuation Step $step");
+	verbose && @printf("Step size = %2.4e\n", ds);print("Parameter ",getLensParam(it.lens))
 	verbose && @printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
-	verbose && @printf("Step size = %2.4e\n", ds)
 
 	# Corrector, ie newton correction. This does not mutate the arguments
 	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
@@ -284,7 +284,8 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Successful step
 	if state.isconverged
-		verbose && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iterations\n", color=:green)
+		verbose && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
+		verbose && (print("Parameter ",getLensParam(it.lens));@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p))
 
 		# Get tangent, it only mutates tau
 		getTangent!(state.tau, z_newton, state.z_old, it,

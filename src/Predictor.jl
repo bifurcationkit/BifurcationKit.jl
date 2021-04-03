@@ -421,7 +421,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		Nmax = contparams.newtonOptions.maxIter
 		factor = (Nmax - it_newton_number) / Nmax
 		dsnew = ds * (1 + contparams.a * factor^2)
-		(verbosity > 0) && @show 1 + contparams.a * factor^2
+		# (verbosity > 0) && @show 1 + contparams.a * factor^2
 	end
 
 	# control step to stay between bounds

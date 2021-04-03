@@ -53,6 +53,7 @@ $(TYPEDFIELDS)
 end
 
 getVectorType(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
+type(bp::GenericBifPoint) = bp.type
 
 # constructor
 GenericBifPoint(x0, T, printsol) = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
