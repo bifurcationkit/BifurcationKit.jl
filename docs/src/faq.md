@@ -35,9 +35,11 @@ Sometimes, for example when implementing boundary conditions, you pass a jacobia
 
 You can print the eigenvalues using the following callback:
 
-```julia
-finaliseSolution = (z, tau, step, contResult; k...) -> 
-		(Base.display(contResult.eig[end].eigenvals) ;true)
+```juliaw
+finaliseSolution = (z, tau, step, contResult; k...) -> begin
+		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
+		return true
+	end,
 ```
 
 ### How can I reject a Newton Step?
