@@ -325,7 +325,7 @@ function emptypredictor!(ppd::PolynomialPred)
 	empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
 end
 
-function getStats(polypred)
+function getStats(polypred::PolynomialPred)
 	Sbar = sum(polypred.arclengths) / polypred.n
 	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / (polypred.n))
 	# return 0,1
@@ -389,7 +389,10 @@ function getPredictor!(z_pred::M, z_old::M, tau::M, ds, polypred::PolynomialPred
 end
 ####################################################################################################
 function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: BorderedArray}
-	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee, Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,” March 1, 2002. https://doi.org/10.2172/800778.
+	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee,
+	# Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D
+	# Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,
+	# ” March 1, 2002. https://doi.org/10.2172/800778.
 	thetanew = θ
 	g = abs(tau.p * θ)
 	(verbosity > 0) && print("Theta changes from $(θ) to ")

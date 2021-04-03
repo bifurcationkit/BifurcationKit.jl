@@ -1,6 +1,8 @@
 using RecipesBase
 using Setfield
+getLensParam(lens) = :p
 getLensParam(lens::Setfield.PropertyLens{F}) where F = F
+getLensParam(lens::Setfield.ComposedLens) = getLensParam(lens.inner)
 getLensParam(::Setfield.IdentityLens) = :p
 getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
 getLensParam(br::AbstractBranchResult) = getLensParam(br.lens)
