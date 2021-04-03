@@ -13,7 +13,7 @@ You can find an example of use in the [Deflated Continuation in the Carrier Prob
 
 ## Algorithm
 
-```
+```julia
 Input: Initial parameter value λmin.
 Input: Final parameter value λmax > λmin. Input: Step size ∆λ > 0.
 Input: Nonlinear residual f(u,λ).
@@ -21,21 +21,21 @@ Input: Deflation operator M(u; u∗).
 Input: Initial solutions S(λmin) to f(·,λmin).
 λ ← λmin
 while λ < λmax do
-	F(·) ← f(·,λ+∆λ) ◃ Fix the value of λ to solve for.
+	F(·) ← f(·,λ+∆λ) 						# Fix the value of λ to solve for.
 	S(λ+∆λ) ← ∅
-	for u0 ∈ S(λ) do ◃ Continue known branches.
-	apply Newton’s method to F from initial guess u0.
-	if solution u∗ found then
-		S(λ + ∆λ) ← S(λ + ∆λ) ∪ {u∗} ◃ Record success
-		F(·) ← M(·;u∗)F(·)		◃ Deflate solution
-		
-	for u0 ∈ S(λ) do 	◃ Seek new branches.
+	for u0 ∈ S(λ) do 						# Continue known branches.
+		apply Newton’s method to F from initial guess u0.
+		if solution u∗ found then
+			S(λ + ∆λ) ← S(λ + ∆λ) ∪ {u∗}  # Record success
+			F(·) ← M(·;u∗)F(·)			  # Deflate solution
+			
+	for u0 ∈ S(λ) do 					  # Seek new branches.
 		success ← true 
 		while success do
 			apply Newton’s method to F from initial guess u0.
-			if solution u∗ found then
-				S(λ + ∆λ) ← S(λ + ∆λ) ∪ {u∗} ◃ Record success
-				F(·) ← M(·;u∗)F(·)		◃ Deflate solution
+			if solution u∗ found then		 # New branch found
+				S(λ + ∆λ) ← S(λ + ∆λ) ∪ {u∗} # Record success
+				F(·) ← M(·;u∗)F(·)		     # Deflate solution
 		else
 			success ← false 
 	λ←λ+∆λ

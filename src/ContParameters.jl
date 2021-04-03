@@ -54,7 +54,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	gGoal::T					= 0.5
 	gMax::T						= 0.8
 	thetaMin::T					= 1.0e-3
-	a::T						= 0.5  	# aggressiveness factor
+	a::T						= 0.5  		# aggressiveness factor
 	tangentFactorExponent::T 	= 1.5
 
 	# parameters bound
@@ -65,17 +65,17 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	maxSteps::Int64  = 100
 
 	# Newton solver parameters
-	finDiffEps::T  = 1e-9 				# constant for finite differences
+	finDiffEps::T  = 1e-9 					# constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
-	η::T = 150.							# parameter to estimate tangent at first point
+	η::T = 150.								# parameter to estimate tangent at first point
 
-	saveToFile::Bool = false 			# save to file?
-	saveSolEveryStep::Int64 = 0			# what steps do we save the current solution
+	saveToFile::Bool = false 				# save to file?
+	saveSolEveryStep::Int64 = 0				# what steps do we save the current solution
 
 	# parameters for eigenvalues
-	nev::Int64 = 3 						# number of eigenvalues
-	saveEigEveryStep::Int64 = 1			# what steps do we keep the eigenvectors
-	saveEigenvectors::Bool	= true		# useful options because if puts a high memory pressure
+	nev::Int64 = 3 							# number of eigenvalues
+	saveEigEveryStep::Int64 = 1				# what steps do we keep the eigenvectors
+	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
 	plotEveryStep::Int64 = 10
 

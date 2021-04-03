@@ -71,6 +71,7 @@ function bifurcationdiagram(F, dF, d2F, d3F, x0, par0, lens::Lens, level::Int, o
 	bifurcationdiagram(F, dF, d2F, d3F, γ, level, options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
+# TODO, BifDiagNode[] makes it type unstable it seems
 function bifurcationdiagram(F, dF, d2F, d3F, br::AbstractBranchResult, level::Int, options; usedeflation = false, kwargs...)
 	printstyled(color = :magenta, "#"^50 * "\n---> Automatic computation of bifurcation diagram\n\n")
 	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
@@ -93,7 +94,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
 			usedeflation = usedeflation,
-			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kerneldim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize = 2)))
+			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize = 2)))
 	end
 
 	for (id, pt) in enumerate(node.γ.bifpoint)
@@ -112,7 +113,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 				end
 
 			catch ex
-				# @error ex
+			#	@error ex
 			# 	return node
 			end
 		end

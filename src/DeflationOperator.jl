@@ -27,9 +27,7 @@ length(df::DeflationOperator) = length(df.roots)
 deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 empty!(df::DeflationOperator) = empty!(df.roots)
 
-function show(io::IO, df::DeflationOperator)
-	println(io, "Deflation operator with ", length(df.roots)," roots")
-end
+show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
 
 # Compute M(u)
 function (df::DeflationOperator{T, Tdot, vectype})(u::vectype) where {T, Tdot, vectype}

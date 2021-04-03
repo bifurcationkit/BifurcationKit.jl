@@ -138,6 +138,10 @@ function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::I
 	return multicontinuation(F, dF, br, bpnf, optionsCont; Teigvec = Teigvec, δp = δp, ampfactor = ampfactor, verbosedeflation = verbosedeflation, kwargs...)
 end
 
+# for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing
+multicontinuation(F, dF, br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...) = nothing
+
+# general function for branching from Nd bifurcation points
 function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false

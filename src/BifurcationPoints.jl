@@ -1,8 +1,8 @@
-abstract type BifurcationPoint end
-abstract type BranchPoint <: BifurcationPoint end
-abstract type SimpleBranchPoint <: BranchPoint end
+abstract type AbstractBifurcationPoint end
+abstract type AbstractBranchPoint <: AbstractBifurcationPoint end
+abstract type AbstractSimpleBranchPoint <: AbstractBranchPoint end
 
-istranscritical(bp::BranchPoint) = false
+istranscritical(bp::AbstractBranchPoint) = false
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -11,7 +11,7 @@ Structure to record a generic bifurcation point.
 
 $(TYPEDFIELDS)
 """
-@with_kw struct GenericBifPoint{T, Tp, Tv} <: BifurcationPoint
+@with_kw struct GenericBifPoint{T, Tp, Tv} <: AbstractBifurcationPoint
 	"Bifurcation type, `:hopf, :bp...`."
 	type::Symbol = :none
 
@@ -78,14 +78,14 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 
 		## Associated methods
 
-		You can call `istranscritical(bp::SimpleBranchPoint), type(bp::SimpleBranchPoint)`
+		You can call `istranscritical(bp::AbstractSimpleBranchPoint), type(bp::AbstractSimpleBranchPoint)`
 
 		## Predictor
 
 		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
 		to find the zeros of the normal form polynomials.
 		"""
-		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: SimpleBranchPoint
+		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractSimpleBranchPoint
 			"bifurcation point."
 			x0::Tv
 
@@ -115,7 +115,7 @@ end
 
 Pitchfork(x0, p, params, lens, ζ, ζstar, nf) = Pitchfork(x0, p, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
-isTranscritical(bp::SimpleBranchPoint) = bp isa Transcritical
+isTranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
@@ -145,7 +145,7 @@ You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zero
 
 - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
 """
-mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: BranchPoint
+mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractBranchPoint
 	"bifurcation point"
 	x0::Tv
 
@@ -195,7 +195,7 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find the guess for the periodic orbit.
 """
-mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: SimpleBranchPoint
+mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
 	"Hopf point"
 	x0::Tv
 
@@ -227,11 +227,11 @@ end
 type(bp::HopfBifPoint) = :Hopf
 HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf) = HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
-function Base.show(io::IO, bp::BifurcationPoint)
+function Base.show(io::IO, bp::AbstractBifurcationPoint)
 	if bp isa Pitchfork || bp isa HopfBifPoint
 		print(io, bp.type, " - ")
 	end
-	println(io, type(bp), " bifurcation point at ",getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
 	bp isa HopfBifPoint && println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
 	println(io, "Normal form: ", bp.nf)
 end

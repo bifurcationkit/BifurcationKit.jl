@@ -36,9 +36,7 @@ end
 (dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)
 ####################################################################################################
 # equation of the arc length constraint
-function arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds)
-	return dt(u, du, p, dp, θ) - ds
-end
+arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
 ####################################################################################################
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
