@@ -118,7 +118,7 @@ ind_hopf = 1
 
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
-		br, ind_hopf, par_bru, (@lens _.l);
+		br, ind_hopf;
 		normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 ####################################################################################################Continuation of Periodic Orbit
@@ -164,7 +164,7 @@ BK.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 probSh = ShootingProblem(Fbru, par_hopf,
 	probsundials, Rodas4P(),
-	[orbitguess_f2[:,ii] for ii=1:dM:M]; abstol = 1e-10, retol = 1e-8, parallel = true)
+	[orbitguess_f2[:,ii] for ii=1:dM:M]; abstol = 1e-10, retol = 1e-8, parallel = false)
 
 res = @time probSh(initpo, par_hopf)
 norminf(res)
@@ -241,7 +241,7 @@ dM = 5
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
-probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), normals, centers; abstol = 1e-10, retol = 1e-8, parallel = true, δ = 1e-8)
+probHPsh = PoincareShootingProblem(Fbru, par_hopf, probsundials, Rodas4P(), normals, centers; abstol = 1e-10, retol = 1e-8, parallel = false, δ = 1e-8)
 
 initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 

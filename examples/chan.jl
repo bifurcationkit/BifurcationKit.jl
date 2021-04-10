@@ -32,14 +32,13 @@ function Jac_mat(u, p)
 end
 
 n = 101
-	a = 3.3
 	par = (α = 3.3, β = 0.01)
 	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-	optnewton = NewtonPar(tol = 1e-11, verbose = true)
+	optnewton = NewtonPar(tol = 1e-8, verbose = true)
 	# ca fait dans les 63.59k Allocations
 	out, hist, flag = @time newton( F_chan,	Jac_mat, sol, par, optnewton)
 
-optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 70, tol = 1e-8), maxSteps = 150)
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9), maxSteps = 150)
 	br, = @time continuation(
 		F_chan, Jac_mat,
 		out, par, (@lens _.α),

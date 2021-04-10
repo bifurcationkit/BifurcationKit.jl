@@ -152,9 +152,10 @@ and you should get
 
 ```julia
 julia> hopfpt
-SuperCritical - Hopf bifurcation point at p ≈ 0.5113310149554013.
-Period of the periodic orbit ≈ 2.9367552006841753.
-Normal form: (a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)
+SuperCritical - Hopf bifurcation point at l ≈ 0.5113310149554013.
+Period of the periodic orbit ≈ 2.9367552006841753
+Normal form z⋅(a⋅δp + b⋅|z|²): 
+(a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)
 ```
 
 ## Continuation of Hopf points

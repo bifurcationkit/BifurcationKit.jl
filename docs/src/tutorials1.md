@@ -76,7 +76,7 @@ Note that, in this case, we did not give the Jacobian. It was computed internall
 We can perform numerical continuation w.r.t. the parameter $\alpha$. This time, we need to provide additional parameters, but now for the continuation method:
 
 ```julia
-optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newtonOptions = NewtonPar(tol = 1e-8))
+optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9))
 ```
 
 Next, we call the continuation routine as follows.

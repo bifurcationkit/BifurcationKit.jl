@@ -81,7 +81,7 @@ optnewton = NewtonPar(tol = 1e-12, verbose = true)
 We call the Newton solver:
 
 ```julia
-out, = @time newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
+out, = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> norm(x, Inf64))
 ```
 and you should see
 

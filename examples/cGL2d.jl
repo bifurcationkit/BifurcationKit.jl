@@ -33,20 +33,20 @@ function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 	return A, D2x
 end
 
-function NL(u, p)
+@views function NL(u, p)
 	@unpack r, μ, ν, c3, c5, γ = p
 	n = div(length(u), 2)
-	u1 = @view u[1:n]
-	u2 = @view u[n+1:2n]
+	u1 = u[1:n]
+	u2 = u[n+1:2n]
 
 	ua = u1.^2 .+ u2.^2
 
 	f = similar(u)
-	f1 = @view f[1:n]
-	f2 = @view f[n+1:2n]
+	f1 = f[1:n]
+	f2 = f[n+1:2n]
 
-	@. f1 .= r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
-	@. f2 .= r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2 + γ
+	f1 .= @. r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
+	f2 .= @. r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2 + γ
 
 	return f
 end
@@ -56,10 +56,7 @@ function Fcgl!(f, u, p)
 	f .= f .+ NL(u, p)
 end
 
-function Fcgl(u, p)
-	f = similar(u)
-	Fcgl!(f, u, p)
-end
+Fcgl(u, p) = Fcgl!(similar(u), u, p)
 
 # computation of the first derivative
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
@@ -78,12 +75,12 @@ end
 d2Fcgl(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fcgl(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 
 # remark: I checked this against finite differences
-function Jcgl(u, p)
+@views function Jcgl(u, p)
 	@unpack r, μ, ν, c3, c5, Δ = p
 
 	n = div(length(u), 2)
-	u1 = @view u[1:n]
-	u2 = @view u[n+1:2n]
+	u1 = u[1:n]
+	u2 = u[n+1:2n]
 
 	ua = u1.^2 .+ u2.^2
 
@@ -130,9 +127,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, d
 # normal form computation
 using ForwardDiff
 
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
+D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
 
 d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
 d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
@@ -321,14 +316,14 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 ####################################################################################################
 ####################################################################################################
 # Experimental, full Inplace
-function NL!(f, u, p, t = 0.)
+@views function NL!(f, u, p, t = 0.)
 	@unpack r, μ, ν, c3, c5 = p
 	n = div(length(u), 2)
-	u1v = @view u[1:n]
-	u2v = @view u[n+1:2n]
+	u1v = u[1:n]
+	u2v = u[n+1:2n]
 
-	f1 = @view f[1:n]
-	f2 = @view f[n+1:2n]
+	f1 = f[1:n]
+	f2 = f[n+1:2n]
 
 	@inbounds for ii = 1:n
 		u1 = u1v[ii]
@@ -340,17 +335,17 @@ function NL!(f, u, p, t = 0.)
 	return f
 end
 
-function dNL!(f, u, p, du)
+@views function dNL!(f, u, p, du)
 	@unpack r, μ, ν, c3, c5 = p
 	n = div(length(u), 2)
-	u1v = @view u[1:n]
-	u2v = @view u[n+1:2n]
+	u1v = u[1:n]
+	u2v = u[n+1:2n]
 
-	du1v = @view du[1:n]
-	du2v = @view du[n+1:2n]
+	du1v = du[1:n]
+	du2v = du[n+1:2n]
 
-	f1 = @view f[1:n]
-	f2 = @view f[n+1:2n]
+	f1 = f[1:n]
+	f2 = f[n+1:2n]
 
 	@inbounds for ii = 1:n
 		u1 = u1v[ii]
@@ -363,7 +358,6 @@ function dNL!(f, u, p, du)
 
 		f2[ii] = (-4*c5*u2*u1^3 - 3*μ*u1^2 + (-4*c5*u2^3 - 2*c3*u2)*u1 - u2^2*μ + ν) * du1 + (-c5*u1^4 + (-6*c5*u2^2 - c3)*u1^2 - 2*μ*u1*u2 - 5*c5*u2^4 - 3*c3*u2^2 + r) * du2
 	end
-
 	return f
 end
 

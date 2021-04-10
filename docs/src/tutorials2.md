@@ -217,14 +217,35 @@ Again, repeating this from random guesses, we find several more solutions, like 
 We can now continue the solutions located in `deflationOp.roots`
 
 ```julia
-br, = @time continuation(F_sh, dF_sh,
+br1, = @time continuation(F_sh, dF_sh,
 	deflationOp[2], par, (@lens _.l), optcont;
 	plot = true, 
 	plotSolution = (x, p; kwargs...) -> (heatmap!(X,Y,reshape(x,Nx,Ny)'; color=:viridis, label="", kwargs...)))
 ```
 
-and using `plot(br)`, we obtain:
+and using `plot(br, br1)`, we obtain:
 
 ![](sh2dbranches.png)
 
 Note that the plot provides the stability of solutions and bifurcation points. Interested readers should consult the associated file `example/SH2d-fronts.jl` in the `example` folder.
+
+## Automatic branch switching
+
+Instead of relying on deflated newton, we can use [Branch switching](@ref) to compute the different branches emanating from the bifurcation point. For example, the following code will perform automatic branch switching from the second bifurcation point of `br`:
+
+```julia
+# we compute thedifferent differentials
+d2F_sh(u, p, dx1, dx2) = (2 .* p.ν .* dx2 .- 6 .* dx2 .* u) .* dx1
+d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
+jet = (F_sh, dF_sh, d2F_sh, d3F_sh)
+
+br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
+			plot = true, verbosity = 2,
+			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
+			printSolution = (x, p) -> norm(x),
+			normC = x -> norm(x, Inf))
+```
+
+We can then plot the branches using `plot(br, br2, br3)` and get
+
+![](SH2daBS.png)

@@ -84,7 +84,7 @@ heatmapsol(deflationOp[2])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
 	br, = @time BK.continuation(
@@ -95,7 +95,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		# linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
-		finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+		finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
 ###################################################################################################
@@ -117,35 +117,20 @@ sol_hexa, _, flag = @time newton(
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 ###################################################################################################
-function cb(x,f,J,res,it,itl,optN; kwargs...)
-	_x = get(kwargs, :z0, nothing)
-	fromNewton = get(kwargs, :fromNewton, false)
-	if ~fromNewton
+# Automatic branch switching
 
-		# @show norm(_x.u - x)   abs(_x.p - kwargs[:p]) res
-		return norm(_x.u - x) < 1e4 && abs(_x.p - kwargs[:p])<0.05 && res < 1e5
-	else
-		# @show res
-		return res < 1e2
-	end
-	true
-end
-
-
-br2, = continuation(jet..., br, 4, setproperties(optcont; ds = -0.001, detectBifurcation =  0, plotEveryStep = 5, dsmax = 0.01, detectLoop =true, maxSteps = 150);  nev = 30,
-			plot = true, verbosity = 0,
-			# usedeflation = true,
-			# δp = 0.005,
-			# tangentAlgo = BorderedPred(),
-			callbackN = cb,
-			# linearAlgo = MatrixBLS(),
-			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br;subplot=1,plotfold=false)),
+br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
+			plot = true, verbosity = 2,
+			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
 			printSolution = (x, p) -> norm(x),
-			finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 			normC = x -> norm(x, Inf))
 
-plot(br2)
+plot(br, br2, br3)
 
+
+
+###################################################################################################
+# Manual branch switching
 bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)
 BK.nf(bp2d)
 

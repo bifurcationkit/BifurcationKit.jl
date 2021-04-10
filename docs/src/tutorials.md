@@ -6,7 +6,7 @@ There are three levels of tutorials:
 2. semi-automatic bifurcation diagram computation: one uses automatic branch switching (**aBS**) to compute branches at specified bifurcation points
 3. manual bifurcation diagram computation: one does not uses automatic branch switching. This has only educational purposes and for complex problems where aBS fails.
 
-## Example(s) for ODE
+## ODE examples
 
 ```@contents
 Pages = ["tutorialsODE.md"]

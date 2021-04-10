@@ -71,6 +71,7 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) #|| (hasEvent(it) && it.event isa BifEvent)
 
 @inline getParams(it::ContIterable) = it.contParams
+Base.length(it::ContIterable) = it.contParams.maxSteps
 
 ####################################################################################################
 """

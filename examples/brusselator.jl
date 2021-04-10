@@ -116,9 +116,8 @@ opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, 
 		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
 ####################################################################################################
 using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
+D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
+
 d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
 d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
 d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
@@ -132,7 +131,7 @@ ind_hopf = 1
 	optnew = opts_br_eq.newtonOptions
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
-		br, ind_hopf, (@lens _.l);
+		br, ind_hopf;
 		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
 		options = (@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
@@ -140,7 +139,7 @@ ind_hopf = 1
 if 1==0
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
-		br, ind_hopf, (@lens _.l), (@lens _.β),
+		br, ind_hopf, (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); verbosity = 2, normC = norminf)
 
 	plot(br_hopf, label="")
@@ -150,14 +149,14 @@ d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
 
 hopfpoint, hist, flag = @time newton(
 	Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.l);
+	br, ind_hopf;
 	options = (@set optnew.verbose = true),
 	d2F = d2Fbru, normN = norminf)
 
-if 1==0
+if 1==1
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
-		br, ind_hopf, (@lens _.l), (@lens _.β),
+		br, ind_hopf, (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, detectBifurcation = 0, newtonOptions = optnew); plot = true,
 		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
 		verbosity = 2, normC = norminf)
@@ -202,23 +201,22 @@ outpo_f, _, flag = @time newton(poTrap,
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 	BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 
-
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, precisionStability = 1e-6, nInversion = 4,
-	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, precisionStability = 1e-6, nInversion = 4, detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15)
 	br_po, = @time continuation(poTrap,
 			outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont;
 			# linearPO = :FullLU,
-			# updateSectionEveryStep = 1,
-			linearPO = :FullSparseInplace,
+			updateSectionEveryStep = 1,
+			# linearPO = :FullSparseInplace,
+			linearPO = :BorderedSparseInplace,
 			# tangentAlgo = BorderedPred(),
 			verbosity = 3,	plot = true,
 			# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
-			finaliseSolution = (z, tau, step, contResult; k...) ->
-				(Base.display(contResult.eig[end].eigenvals) ;true),
+			# finaliseSolution = (z, tau, step, contResult; k...) ->
+				# (Base.display(contResult.eig[end].eigenvals) ;true),
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 			# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
 			normC = norminf)

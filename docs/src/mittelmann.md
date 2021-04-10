@@ -135,14 +135,13 @@ Several branch point were detected as can be seen using the command
 julia> br
 Branch number of points: 84
 Branch of Equilibrium
+Parameters λ from 0.05 to 0.025
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.36787944 ± 2e-10, step =  18, eigenelements in eig[ 19], ind_ev =   1 [converged], δ = ( 1,  0), bifurcation ∈ (0.36787944, 0.36787944)
-- #  2,      nd at p ≈ 0.27255474 ± 5e-06, step =  33, eigenelements in eig[ 34], ind_ev =   3 [converged], δ = ( 2,  0), bifurcation ∈ (0.27255937, 0.27255474)
-- #  3,      bp at p ≈ 0.15215124 ± 7e-06, step =  48, eigenelements in eig[ 49], ind_ev =   4 [converged], δ = ( 1,  0), bifurcation ∈ (0.15215818, 0.15215124)
-- #  4,      nd at p ≈ 0.03551852 ± 3e-05, step =  76, eigenelements in eig[ 77], ind_ev =   6 [converged], δ = ( 2,  0), bifurcation ∈ (0.03554981, 0.03551852)
-Fold points:
-- #  1,    fold at p ≈ 0.36787944, step =  19, eigenelements in eig[ 19], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.36787944 ∈ (+0.36787944, +0.36787944), |δp|=2e-10, [converged], δ = ( 1,  0), step =  18, eigenelements in eig[ 19], ind_ev =   1
+- #  2,    nd at λ ≈ +0.27255474 ∈ (+0.27255474, +0.27255937), |δp|=5e-06, [converged], δ = ( 2,  0), step =  33, eigenelements in eig[ 34], ind_ev =   3
+- #  3,    bp at λ ≈ +0.15215124 ∈ (+0.15215124, +0.15215818), |δp|=7e-06, [converged], δ = ( 1,  0), step =  48, eigenelements in eig[ 49], ind_ev =   4
+- #  4,    nd at λ ≈ +0.03551852 ∈ (+0.03551852, +0.03554981), |δp|=3e-05, [converged], δ = ( 2,  0), step =  76, eigenelements in eig[ 77], ind_ev =   6
 ```
 
 We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, `δ = ( 1,  0)` gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.
@@ -350,76 +349,68 @@ You can plot the branches using `plot(branches...)`. The branches are as follows
 
 ```julia
 julia> branches
-8-element Array{Branch,1}:
-  Branch number of points: 33
+8-element Vector{Branch}:
+ Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.0656104381834156
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255723 ± 7e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255723, 0.27255723)
-- #  2,      bp at p ≈ 0.14414814 ± 9e-05, step =  24, eigenelements in eig[ 25], ind_ev =   3 [converged], δ = ( 1,  0), bifurcation ∈ (0.14424073, 0.14414814)
-Fold points:
-- #  1,    fold at p ≈ 0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255723 ∈ (+0.27255723, +0.27255723), |δp|=7e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.14414814 ∈ (+0.14414814, +0.14424073), |δp|=9e-05, [converged], δ = ( 1,  0), step =  24, eigenelements in eig[ 25], ind_ev =   3
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.06561043854512201
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255723 ± 7e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255723, 0.27255723)
-- #  2,      bp at p ≈ 0.14414814 ± 9e-05, step =  24, eigenelements in eig[ 25], ind_ev =   3 [converged], δ = ( 1,  0), bifurcation ∈ (0.14424073, 0.14414814)
-Fold points:
-- #  1,    fold at p ≈ 0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255723 ∈ (+0.27255723, +0.27255723), |δp|=7e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.14414814 ∈ (+0.14414814, +0.14424073), |δp|=9e-05, [converged], δ = ( 1,  0), step =  24, eigenelements in eig[ 25], ind_ev =   3
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.06561044134787948
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255723 ± 7e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255723, 0.27255723)
-- #  2,      bp at p ≈ 0.14414816 ± 9e-05, step =  24, eigenelements in eig[ 25], ind_ev =   3 [converged], δ = ( 1,  0), bifurcation ∈ (0.14424075, 0.14414816)
-Fold points:
-- #  1,    fold at p ≈ 0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255723 ∈ (+0.27255723, +0.27255723), |δp|=7e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.14414815 ∈ (+0.14414815, +0.14424074), |δp|=9e-05, [converged], δ = ( 1,  0), step =  24, eigenelements in eig[ 25], ind_ev =   3
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.06561043798345574
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255723 ± 7e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255723, 0.27255723)
-- #  2,      bp at p ≈ 0.14414814 ± 9e-05, step =  24, eigenelements in eig[ 25], ind_ev =   3 [converged], δ = ( 1,  0), bifurcation ∈ (0.14424073, 0.14414814)
-Fold points:
-- #  1,    fold at p ≈ 0.27255723, step =   2, eigenelements in eig[  2], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255723 ∈ (+0.27255723, +0.27255723), |δp|=7e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.14414814 ∈ (+0.14414814, +0.14424073), |δp|=9e-05, [converged], δ = ( 1,  0), step =  24, eigenelements in eig[ 25], ind_ev =   3
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.09945404995078021
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255724 ± 9e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255724, 0.27255724)
-- #  2,      bp at p ≈ 0.27868730 ± 3e-08, step =  15, eigenelements in eig[ 16], ind_ev =   2 [converged], δ = (-1,  0), bifurcation ∈ (0.27868728, 0.27868730)
-Fold points:
-- #  1,    fold at p ≈ 0.27868730, step =  16, eigenelements in eig[ 16], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.09945405127587528
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255724 ± 9e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255724, 0.27255724)
-- #  2,      bp at p ≈ 0.27868730 ± 3e-08, step =  15, eigenelements in eig[ 16], ind_ev =   2 [converged], δ = (-1,  0), bifurcation ∈ (0.27868728, 0.27868730)
-Fold points:
-- #  1,    fold at p ≈ 0.27868730, step =  16, eigenelements in eig[ 16], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.09945404945914721
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255724 ± 9e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255724, 0.27255724)
-- #  2,      bp at p ≈ 0.27868730 ± 3e-08, step =  15, eigenelements in eig[ 16], ind_ev =   2 [converged], δ = (-1,  0), bifurcation ∈ (0.27868728, 0.27868730)
-Fold points:
-- #  1,    fold at p ≈ 0.27868730, step =  16, eigenelements in eig[ 16], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2
 
  Branch number of points: 33
 Branch of Equilibrium from NonSimpleBranchPoint bifurcation point.
+Parameters λ from 0.27255473583423384 to 0.09945404935297063
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,      bp at p ≈ 0.27255724 ± 9e-10, step =   1, eigenelements in eig[  2], ind_ev =   3 [converged], δ = (-1,  0), bifurcation ∈ (0.27255724, 0.27255724)
-- #  2,      bp at p ≈ 0.27868730 ± 3e-08, step =  15, eigenelements in eig[ 16], ind_ev =   2 [converged], δ = (-1,  0), bifurcation ∈ (0.27868728, 0.27868730)
-Fold points:
-- #  1,    fold at p ≈ 0.27868730, step =  16, eigenelements in eig[ 16], ind_ev =   0 [    guess]
+- #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2
 ```
