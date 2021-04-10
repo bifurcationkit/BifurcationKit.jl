@@ -38,42 +38,75 @@ z_sim = BorderedArray(rand(3), rand(2))
 z_sim2 = similar(z_sim)
 typeof(z_sim) == typeof(z_sim2)
 ####################################################################################################
+# test of the linear  solvers
+println("--> Test linear solver")
+J0 = rand(100,100) * 0.1 - I
+rhs = rand(100)
+sol_explicit = J0 \ rhs
+
+ls = DefaultLS()
+_sol, = ls(J0, rhs)
+@test  _sol == sol_explicit
+
+ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
+_sol, = ls(J0, rhs)
+@test  _sol ≈ sol_explicit
+
+ls = GMRESKrylovKit(rtol = 1e-16)
+_sol, = ls(J0, rhs)
+@test  _sol ≈ sol_explicit
+
+# Case with a shift
+sol_explicit = (0.9J0 + 0.1I) \ rhs
+
+ls = DefaultLS()
+_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+@test  _sol == sol_explicit
+
+ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
+_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+@test  _sol ≈ sol_explicit
+
+ls = GMRESKrylovKit(rtol = 1e-16)
+_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+@test  _sol ≈ sol_explicit
+####################################################################################################
 # test the bordered linear solvers
 println("--> Test linear Bordered solver")
 J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
-sol_explicit = J0 \ rhs
+sol_explicit = (J0 + 0.2spdiagm(vcat(ones(99),0))) \ rhs
 
 linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
-sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd1u
 @test sol_explicit[end] ≈ sol_bd1p
 
-ls = GMRESIterativeSolvers(reltol = 1e-9, N = length(rhs)-1)
+ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(rhs)-1)
 linBdsolver = BK.BorderingBLS(ls)
-sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd2u
 @test sol_explicit[end] ≈ sol_bd2p
 
-ls = GMRESKrylovKit(dim = length(rhs)-1)
+ls = GMRESKrylovKit(dim = length(rhs) - 1, rtol = 1e-11)
 linBdsolver = BK.BorderingBLS(ls)
-sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd2u
 @test sol_explicit[end] ≈ sol_bd2p
 
 linBdsolver = BK.MatrixBLS(ls)
-sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
- BK.MatrixFreeBLS(nothing   )
+BK.MatrixFreeBLS(nothing)
 linBdsolver = BK.MatrixFreeBLS(ls)
-sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd3u, sol_bd3p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd3u
 @test sol_explicit[end] ≈ sol_bd3p
 
 linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
-sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+sol_bd4u, sol_bd4p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
 @test sol_explicit[1:end-1] ≈ sol_bd4u
 @test sol_explicit[end] ≈ sol_bd4p
 

@@ -1,6 +1,6 @@
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
-# the following stuctures, say struct BDLS...;end rely on the hypotheses:
+# the following stuctures, say `struct BDLS;...;end` rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, xiu, xip; shift = nothing) must be provided
 
@@ -103,31 +103,39 @@ end
 # [b'	c]
 # It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
 #
-struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc}
+struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts}
 	J::Tj
 	a::Ta
 	b::Tb
 	c::Tc
+	shift::Ts
 end
 
-function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number}
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number, Ts}
 	# This implements the case where Tc is a number, ie there is one scalar constraint in the
 	# bordered linear system
 	out = similar(x)
 	copyto!(out.u, apply(lbmap.J, x.u))
 	axpy!(x.p, lbmap.a, out.u)
+	if isnothing(lbmap.shift) == false
+		axpy!(lbmap.shift, x.u, out.u)
+	end
 	out.p = dot(lbmap.b, x.u)  + lbmap.c  * x.p
 	return out
 end
 
-function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc})(x::AbstractArray) where {Tj, Ta <: AbstractArray, Tb, Tc <: Number}
+function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 	# This implements the case where Tc is a number, ie there is one scalar constraint in the
 	# bordered linear system
 	out = similar(x)
 	xu = @view x[1:end-1]
 	xp = x[end]
 	# copyto!(out.u, apply(lbmap.J, x.u))
-	out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a
+	if isnothing(lbmap.shift)
+		out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a
+	else
+		out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
+	end
 	out[end] = @views dot(lbmap.b, xu)  + lbmap.c  * xp
 	return out
 end
@@ -157,7 +165,7 @@ extractParBLS(x::BorderedArray)  = x.p
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
-	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip)
+	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip, shift)
 	# what is the vector type used?
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
