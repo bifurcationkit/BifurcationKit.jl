@@ -56,20 +56,13 @@ function NL!(f, u, p, t = 0.)
 	return f
 end
 
-function NL(u, p)
-	out = similar(u)
-	NL!(out, u, p)
-end
-
 function Fcgl!(f, u, p, t = 0.)
 	mul!(f, p.Δ, u)
 	f .= f .+ NL(u, p)
 end
 
-function Fcgl(u, p, t = 0.)
-	f = similar(u)
-	Fcgl!(f, u, p, t)
-end
+NL(u, p) = NL!(similar(u), u, p)
+Fcgl(u, p, t = 0.) = Fcgl!(similar(u), u, p, t)
 
 function Jcgl(u, p, t = 0.)
 	@unpack r, μ, ν, c3, c5, Δ = p
@@ -154,7 +147,7 @@ We define the linear solvers to be use by the (Matrix-Free) shooting method
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = optn, nev = 7, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)
 ```
 
 as
@@ -177,6 +170,10 @@ br_po, = continuation(
 	ampfactor = 1.5, δp = 0.01,
 	# regular parameters for the continuation
 	verbosity = 3, plot = true,
+	# a few parameters saved during run
+	printSolution = (u, p) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p)), period = u[end]),
+	# plotting of a section
+	plotSolution = (x, p; k...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, k...),
 	# print the Floquet exponent
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),

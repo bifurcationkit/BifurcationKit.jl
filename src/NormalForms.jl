@@ -396,7 +396,6 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	# linear solver
 	ls = options.linsolver
 
-
 	# "zero" eigenvalues at bifurcation point
 	rightEv = br.eig[bifpt.idx].eigenvals
 	indev = br.bifpoint[id_bif].ind_ev

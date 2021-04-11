@@ -60,3 +60,7 @@ end
 ### How do I stop `continuation`?
 
 Using the argument `finaliseSolution` in `continuation`. Simply make this function `finaliseSolution` return false.
+
+### How do I compute both sides of a branch?
+
+Instead of using two calls to `continuation`, you can pass the keyword `bothside=true` to `continuation`

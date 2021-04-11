@@ -179,12 +179,14 @@ which produces
 We now perform a Hopf continuation with respect to the parameters `l, β`
 
 !!! tip "Tip"
-    You don't need to call `newtonHopf` first in order to use `continuationHopf`.
+    You don't need to call `newton` first in order to use `continuation`.
 
 ```julia
+optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
 br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, (@lens _.β),
-	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton), verbosity = 2, normC = norminf)
+	optcdim2, verbosity = 2, 
+	normC = norminf)
 ```
 
 which gives using `plot(br_hopf)`

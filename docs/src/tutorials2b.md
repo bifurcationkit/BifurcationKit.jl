@@ -27,6 +27,24 @@ Hence, to solve the previous equation, only a **few** GMRES iterations are requi
 
 > In effect, the preconditioned PDE is an example of nonlocal problem.
 
+
+## Linear Algebra on the GPU
+
+We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
+
+```julia
+using Revise, CUDA
+
+# this disable slow operations but errors if you use one of them
+CUDA.allowscalar(false)
+
+# type used for the arrays, can be Float32 is GPU requires it
+TY = Float64
+
+# put the AF = Array{TY} instead to make the code on the CPU
+AF = CuArray{TY}
+```
+
 ## Computing the inverse of the differential operator
 The issue now is to compute $L$ but this is easy using Fourier transforms.
 
@@ -38,7 +56,6 @@ $$l_1 = 1+(1-k_x^2-k_y^2)^2$$
 which is pre-computed in the composite type `SHLinearOp `. Then, the effect of `L` on `u` is as simple as `real.(ifft( l1 .* fft(u) ))` and the inverse `L\u` is `real.(ifft( fft(u) ./ l1 ))`. However, in order to save memory on the GPU, we use inplace FFTs to reduce temporaries which explains the following code.
 
 ```julia
-using Revise
 using AbstractFFTs, FFTW, KrylovKit, Setfield, Parameters
 using BifurcationKit, LinearAlgebra, Plots
 const BK = BifurcationKit
@@ -66,25 +83,20 @@ end
 
 import Base: *, \
 
-# action of L
-function *(c::SHLinearOp, u)
+function apply(c::SHLinearOp, u, multiplier, op = *)
 	c.tmp_complex .= Complex.(u)
 	c.fftplan * c.tmp_complex
-	c.tmp_complex .= c.l1 .* c.tmp_complex
+	c.tmp_complex .= op.(c.tmp_complex, multiplier)
 	c.ifftplan * c.tmp_complex
 	c.tmp_real .= real.(c.tmp_complex)
 	return copy(c.tmp_real)
 end
 
+# action of L
+*(c::SHLinearOp, u) = apply(c, u, c.l1)
+
 # inverse of L
-function \(c::SHLinearOp, u)
-	c.tmp_complex .= Complex.(u)
-	c.fftplan * c.tmp_complex
-	c.tmp_complex .=  c.tmp_complex ./ c.l1
-	c.ifftplan * c.tmp_complex
-	c.tmp_real .= real.(c.tmp_complex)
-	return copy(c.tmp_real)
-end
+\(c::SHLinearOp, u) = apply(c, u, c.l1, /)
 ```
 
 Before applying a Newton solver, we need to tell how to solve the linear equation arising in the Newton Algorithm.
@@ -94,7 +106,8 @@ Before applying a Newton solver, we need to tell how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, tol = tol, maxiter = 6)
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, 
+	tol = tol, maxiter = 6)
 	return res, true, info.numops
 end
 ```
@@ -142,24 +155,6 @@ J_shfft(u, p) = (u, p.l, p.ν)
 par = (l = -0.15, ν = 1.3, L = L)
 ```
 
-## Linear Algebra on the GPU
-
-We plan to use `KrylovKit` on the GPU. We define the following types so it is easier to switch to `Float32` for example:
-
-```julia
-using CUDA
-
-# this disable slow operations but errors if you use one of them
-CUDA.allowscalar(false)
-
-# type used for the arrays, can be Float32 is GPU requires it
-TY = Float64
-
-# put the AF = Array{TY} instead to make the code on the CPU
-AF = CuArray{TY}
-```
-
-
 ## Newton iterations and deflation
 
 We are now ready to perform Newton iterations:
@@ -178,21 +173,19 @@ opt_new = NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 You should see this:
 
 ```julia
-Newton Iterations
-   Iterations      Func-count      f(x)      Linear-Iterations
+Newton Iterations      f(x)      Linear Iterations
 
-        0                1     2.7383e-01         0
-        1                2     1.2891e+02        13
-        2                3     3.8139e+01        33
-        3                4     1.0740e+01        23
-        4                5     2.8787e+00        17
-        5                6     7.7522e-01        14
-        6                7     1.9542e-01        12
-        7                8     3.0292e-02        11
-        8                9     1.1594e-03        10
-        9               10     1.8788e-06        10
-       10               11     5.9168e-08         8
-  0.365674 seconds (65.03 k allocations: 1.498 MiB)
+          0          3.3758e-01             0
+          1          8.0152e+01            12
+          2          2.3716e+01            27
+          3          6.7353e+00            22
+          4          1.9498e+00            17
+          5          5.5893e-01            14
+          6          1.0998e-01            12
+          7          1.1381e-02            11
+          8          1.6393e-04            11
+          9          6.7459e-08            10
+  0.317790 seconds (42.67 k allocations: 1.256 MiB)
 --> norm(sol) = 1.26017611779702
 ```
 
@@ -228,13 +221,15 @@ Finally, we can perform continuation of the branches on the GPU:
 
 ```julia
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, 
-	pMax = 0.2, pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
+	pMax = 0., pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
 	br, = @time continuation(F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l), opts_cont;
-		plot = true,
-		plotSolution = (x, p; kwargs...)->plotsol!(x; color=:viridis, kwargs...), normC = x->maximum(abs.(x)))
+		plot = true, verbosity = 3,
+		plotSolution = (x, p; kwargs...)->plotsol!(x; color=:viridis, kwargs...), 
+		normC = x -> maximum(abs.(x))
+		)
 ```
 
 We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at `examples/SH2d-fronts-cuda.jl`.

@@ -18,7 +18,7 @@ Note that we try to be pedagogical here. Hence, we may write "bad" code that we 
 
 The equations are as follows
 
-$$\partial_{t} u=\Delta u+(r+\mathrm{i} v) u-\left(c_{3}+\mathrm{i} \mu\right)|u|^{2} u-c_{5}|u|^{4} u, \quad u=u(t, x) \in \mathbb{C}$$
+$$\partial_{t} u=\Delta u+(r+\mathrm{i} v) u-\left(c_{3}+\mathrm{i} \mu\right)|u|^{2} u-c_{5}|u|^{4} u+\gamma, \quad u=u(t, x) \in \mathbb{C},\quad \gamma\in\mathbb R$$
 
 with Dirichlet boundary conditions. We discretize the square $\Omega = (0,L_x)\times(0,L_y)$ with $2N_xN_y$ points. We start by writing the Laplacian:
 
@@ -51,7 +51,7 @@ It is then straightforward to write the vector field
 ```julia
 # this encodes the nonlinearity
 function NL(u, p)
-	@unpack r, μ, ν, c3, c5 = p
+	@unpack r, μ, ν, c3, c5, γ = p
 	n = div(length(u), 2)
 	u1 = @view u[1:n]
 	u2 = @view u[n+1:2n]
@@ -62,7 +62,7 @@ function NL(u, p)
 	f1 = @view f[1:n]
 	f2 = @view f[n+1:2n]
 
-	@. f1 .= r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
+	@. f1 .= r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1 + γ
 	@. f2 .= r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
 
 	return f
@@ -113,7 +113,7 @@ lx = pi
 ly = pi/2
 
 Δ = Laplacian2D(Nx, Ny, lx, ly)
-par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ))
+par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), γ = 0.)
 sol0 = zeros(2Nx, Ny)
 ```
 
@@ -138,6 +138,8 @@ Bifurcation points:
 - #  1,  hopf at p ≈ +1.14777610 ∈ (+1.14766562, +1.14777610), |δp|=1e-04, [converged], δ = ( 2,  2), step =  94, eigenelements in eig[ 95], ind_ev =   2
 - #  2,  hopf at p ≈ +1.86107007 ∈ (+1.86018618, +1.86107007), |δp|=9e-04, [converged], δ = ( 2,  2), step = 195, eigenelements in eig[196], ind_ev =   4
 ```
+
+and (with `plot(br, ylims=(-0.1,0.1))`) 
 
 ![](cgl2d-bif.png)
 
@@ -168,6 +170,33 @@ Normal form: (a = 0.9999993843742166 + 7.024438596095504e-9im, b = 0.00487012987
 ```
 
 So the Hopf branch is subcritical.
+
+## Codim 2 Hopf continuation
+
+Having detected 2 hopf bifurcation points, we now continue them in the plane $(\gamma, r)$. To speed things up, we need an analytical version of the second derivative which works on complex inputs. This is not readily supported by `ForwardDiff.jl` but the package `BifurcationKit.jl` provides a way to by pass this difficulty:
+
+```julia
+d2Fc =(x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2)
+```
+
+Before, we start the codim 2 continuation, we tell `BifurcationKit.jl` to use the spectral information `startWithEigen = true` because the left eigenvector of the Jacobian is simply not the conjugate of the right one.
+
+```julia
+# we perform Hopf continuation of the first Hopf point in br
+ind_hopf = 1
+br_hopf, u1_hopf = @time continuation(
+	Fcgl, Jcgl,
+	br, ind_hopf, (@lens _.γ),
+	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 0.6, pMin = -0.6, newtonOptions = opts_br.newtonOptions, plotEveryStep = 5); plot = true,
+	updateMinAugEveryStep = 1,
+	d2F = d2Fc,
+	startWithEigen = true, bothside = true,
+	verbosity = 3, normC = norminf)
+
+plot(br_hopf, title = "Hopf continuation")
+```
+
+![](cGL-codim2-hopf.png)
 
 ## Periodic orbits continuation with stability
 Having found two Hopf bifurcation points, we aim at computing the periodic orbits branching from them. Like for the Brusselator example, we need to find some educated guess for the periodic orbits in order to have a successful Newton call.

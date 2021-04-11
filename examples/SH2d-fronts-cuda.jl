@@ -31,21 +31,7 @@ plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 norminf(x) = maximum(abs.(x))
 
-Nx = 2^10
-Ny = 2^10
-lx = 8pi * 2
-ly = 2*2pi/sqrt(3) * 2
-
-X = -lx .+ 2lx/Nx * collect(0:Nx-1)
-Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
-
-sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
-		sol0 .= sol0 .- minimum(vec(sol0))
-		sol0 ./= maximum(vec(sol0))
-		sol0 = sol0 .- 0.25
-		sol0 .*= 1.7
-		# heatmap(sol0, color=:viridis)
-
+#################################################################
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \
 
@@ -72,23 +58,33 @@ function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
 	return SHLinearOp(AF(zeros(Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
 
-function *(c::SHLinearOp, u)
+function apply(c::SHLinearOp, u, multiplier, op = *)
 	c.tmp_complex .= Complex.(u)
 	c.fftplan * c.tmp_complex
-	c.tmp_complex .= c.l1 .* c.tmp_complex
+	c.tmp_complex .= op.(c.tmp_complex, multiplier)
 	c.ifftplan * c.tmp_complex
 	c.tmp_real .= real.(c.tmp_complex)
 	return copy(c.tmp_real)
 end
 
-function \(c::SHLinearOp, u)
-	c.tmp_complex .= Complex.(u)
-	c.fftplan * c.tmp_complex
-	c.tmp_complex .=  c.tmp_complex ./ c.l1
-	c.ifftplan * c.tmp_complex
-	c.tmp_real .= real.(c.tmp_complex)
-	return copy(c.tmp_real)
-end
+*(c::SHLinearOp, u) = apply(c, u, c.l1)
+\(c::SHLinearOp, u) = apply(c, u, c.l1, /)
+#################################################################
+
+Nx = 2^8
+Ny = 2^8
+lx = 8pi * 2
+ly = 2*2pi/sqrt(3) * 2
+
+X = -lx .+ 2lx/Nx * collect(0:Nx-1)
+Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
+
+sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
+		sol0 .= sol0 .- minimum(vec(sol0))
+		sol0 ./= maximum(vec(sol0))
+		sol0 = sol0 .- 0.25
+		sol0 .*= 1.7
+		# heatmap(sol0, color=:viridis)
 
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J

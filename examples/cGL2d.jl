@@ -45,8 +45,8 @@ end
 	f1 = f[1:n]
 	f2 = f[n+1:2n]
 
-	f1 .= @. r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
-	f2 .= @. r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2 + γ
+	f1 .= @. r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1 + γ
+	f2 .= @. r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
 
 	return f
 end
@@ -57,10 +57,8 @@ function Fcgl!(f, u, p)
 end
 
 Fcgl(u, p) = Fcgl!(similar(u), u, p)
-
 # computation of the first derivative
 d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
-
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
 function dFcgl(x, p, dx)
@@ -121,7 +119,7 @@ eigls = EigArpack(1.0, :LM)
 # J1 = Jcgl(sol0, par_cgl)
 # norm(J0 - J1, Inf)
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 4)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 6)
 	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
@@ -135,6 +133,31 @@ d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
 jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
 
 hopfpt = computeNormalForm(jet..., br, 2)
+####################################################################################################
+# Continuation of the Hopf Point using Jacobian expression
+# we need to do startWithEigen = true because the left eigenvector is not simply
+# the conjugate of the right one
+
+ind_hopf = 1
+	# hopfpt = BK.HopfPoint(br, ind_hopf)
+	optnew = NewtonPar(opts_br.newtonOptions, verbose=true)
+	hopfpoint, _, flag = @time newton(
+		Fcgl, Jcgl,
+		br, ind_hopf;
+		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2),
+		options = optnew, normN = norminf, startWithEigen = true)
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
+
+br_hopf, u1_hopf = @time continuation(
+	Fcgl, Jcgl,
+	br, ind_hopf, (@lens _.γ),
+	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 0, newtonOptions = optnew, plotEveryStep = 5, precisionStability = 1e-7, nev = 15); plot = true,
+	updateMinAugEveryStep = 1,
+	d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2),
+	startWithEigen = true, bothside = true,
+	verbosity = 3, normC = norminf)
+
+plot(br_hopf, title = "Hopf continuation")
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -290,29 +313,18 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 # push!(branches, br_pok2)
 # plotBranch(branches,label="", xlabel="r",ylabel="Amplitude");title!("")
 ####################################################################################################
-# Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
-# rhs = rand(size(Jpo,1))
-# @time Jpo \ rhs
+Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
+rhs = rand(size(Jpo,1))
+kΔ = spdiagm(0 => ones(M-1), -1 => ones(M-2), M-2 => [1])
+	kI = spdiagm(0 => ones(M-1), -1 => -ones(M-2), M-2 => [-1])
+	h = orbitguess_f[end] / M
+	Jcglsp = Jcgl(orbitguess_f[1:2n], par_cgl)
+	# Precs2 = kron(kI, spdiagm(0 => ones(2n))) -  h/2 * kron(kΔ, par_cgl.Δ)
+	Precs2 = kron(kI, spdiagm(0 => ones(2n))) -  h/2 * kron(kΔ, Jcglsp)
+	Precs2 = ilu(Precs2, τ = 0.004)
+	ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-3, N = 2n*M-2n, restart = 20, maxiter = 1000, Pl = (Precs2), log=true)
 #
-# using IterativeSolvers
-# 	ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = size(Jpo,1), restart = 10, maxiter = 1000)
-# 	ls(Jpo, rand(ls.N))
-#
-# n = Nx*Ny
-# Jpo = @time  poTrap(@set par_cgl.r = r_hopf - 0.1)(Val(:JacFullSparse), orbitguess_f)[1:2n*M-2n,1:2n*M-2n]
-# rhs = rand(size(Jpo,1))
-# @time Jpo \ rhs
-# ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = size(Jpo,1), restart = 10, maxiter = 1000)
-# ls(Jpo, rand(ls.N))
-#
-# kΔ = spdiagm(0 => ones(M-1), -1 => ones(M-2), M-2 => [1])
-# 	kI = spdiagm(0 => ones(M-1), -1 => -ones(M-2), M-2 => [-1])
-# 	h = orbitguess_f[end] / M
-# 	Jcglsp = Jcgl(orbitguess_f[1:2n], par_cgl)
-# 	Precs2 = kron(kI, spdiagm(0 => ones(2n))) -  h/2 * kron(kΔ, par_cgl.Δ)
-# 	ls = GMRESIterativeSolvers(verbose = true, tol = 1e-3, N = 2n*M-2n, restart = 20, maxiter = 1000, Pl = lu(Precs2), log=true)
-#
-# ls(Jpo, rand(ls.N))
+ls(Jpo, rand(ls.N))
 ####################################################################################################
 ####################################################################################################
 # Experimental, full Inplace
@@ -470,9 +482,9 @@ par_cgl_gpu = @set par_cgl.Δ = CUDA.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.01))
 Precilu = @time ilu(Jpo, τ = 0.003)
 
-struct LUperso
-	L
-	Ut	# transpose of U in LU decomposition
+struct LUperso{Tl, Tu}
+	L::Tl
+	Ut::Tu	# transpose of U in LU decomposition
 end
 
 import Base: ldiv!
