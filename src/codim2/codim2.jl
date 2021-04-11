@@ -21,9 +21,9 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
 	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
 	if br.bifpoint[ind_bif].type == :hopf
-		return newtonHopf(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
+		return newtonHopf(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	else
-		return newtonFold(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, kwargs...)
+		return newtonFold(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2F, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	end
 end
 
@@ -62,8 +62,8 @@ where the parameters are as above except that you have to pass the branch `br` f
 function continuation(F, J, br::AbstractBranchResult, ind_bif::Int64, lens2::Lens, options_cont::ContinuationPar ; startWithEigen = false, Jᵗ = nothing, d2F = nothing, kwargs...)
 	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
 	if br.bifpoint[ind_bif].type == :hopf
-		return continuationHopf(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+		return continuationHopf(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, kwargs...)
 	else
-		return continuationFold(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+		return continuationFold(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, kwargs...)
 	end
 end

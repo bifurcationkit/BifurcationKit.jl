@@ -6,7 +6,7 @@ function HopfPoint(br::AbstractBranchResult, index::Int64)
 	bifpoint = br.bifpoint[index]								# Hopf point
 	eigRes   = br.eig											# eigenvector at the Hopf point
 	p = bifpoint.param											# parameter value at the Hopf point
-	ω = (imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_ev]))	# frequency at the Hopf point
+	ω = imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_ev])	# frequency at the Hopf point
 	return BorderedArray(bifpoint.x, [p, ω] )
 end
 
@@ -42,7 +42,6 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	b = hp.b
 	# update parameter
 	par = set(_par, hp.lens, p)
-
 
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
@@ -227,7 +226,7 @@ function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = noth
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
 	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-	eigenvec_ad = conj.(eigenvec)
+	eigenvec_ad = LinearAlgebra.conj.(eigenvec)
 
 	if startWithEigen
 		# computation of adjoint eigenvalue
