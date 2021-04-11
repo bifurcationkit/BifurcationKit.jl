@@ -75,7 +75,7 @@ _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 println("--> Test linear Bordered solver")
 J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
-sol_explicit = (J0 + 0.2spdiagm(vcat(ones(99),0))) \ rhs
+sol_explicit = (J0 + 0.2spdiagm(0 => vcat(ones(99),0))) \ rhs
 
 linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
 sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
