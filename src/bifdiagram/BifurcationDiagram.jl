@@ -99,7 +99,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 
 	for (id, pt) in enumerate(node.γ.bifpoint)
 		# we put this condition in case the bifpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
-		if pt.step > 1
+		if pt.step > 1 && pt.type in (:bp, :nd)
 			try
 				println("─"^80*"\n--> New branch, level = $(level[1]+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
 				γ, = letsbranch(id, pt, level)
