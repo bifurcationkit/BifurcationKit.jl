@@ -1,8 +1,12 @@
 using Documenter, BifurcationKit, Setfield
+using DocThemeIndigo
+
+# 1. generate the indigo theme css
+indigo = DocThemeIndigo.install(BifurcationKit)
 
 makedocs(doctest = false,
 	sitename = "Bifurcation Analysis in Julia",
-	format = Documenter.HTML(collapselevel = 1),
+	format = Documenter.HTML(collapselevel = 1, assets=String[indigo #= your other assets =#],),
 	# format = DocumenterLaTeX.LaTeX(),
 	authors = "Romain Veltz",
 	pages = Any[
@@ -12,6 +16,7 @@ makedocs(doctest = false,
 		"Functionalities" => [
 			"Plotting" => "plotting.md",
 			"Predictors / correctors" => "Predictors.md",
+			"Event Handling and Callback" => "EventCallback.md",
 			"Bifurcation detection" => "detectionBifurcation.md",
 			"Fold / Hopf Continuation (codim 2)" => "codim2Continuation.md",
 			"Normal form" =>[

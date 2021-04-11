@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   id="svg840"
+   version="1.1"
+   viewBox="0 0 298.87567 300.04239"
+   height="300.04239pt"
+   width="298.87567pt">
+  <metadata
+     id="metadata846">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs844" />
+  <path
+     id="path856"
+     d="M 0.28662141,297.22228 C 68.335116,290.3062 83.235631,275.03635 105.78063,265.34252 130.18598,254.84877 252.2503,208.3221 252.96069,166.39732 253.66515,124.82248 89.572581,145.4677 90.019281,87.64231 90.242631,58.729615 245.59426,16.559907 298.15492,2.7414841"
+     style="fill:none;stroke:#000000;stroke-width:5.66929;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+  <g
+     transform="rotate(-33.522579,151.03011,192.5334)"
+     id="g854">
+    <path
+       id="path833"
+       d="m 113.39844,225 c 0,20.71094 -16.789066,37.5 -37.500002,37.5 -20.710938,0 -37.5,-16.78906 -37.5,-37.5 0,-20.71094 16.789062,-37.5 37.5,-37.5 20.710936,0 37.500002,16.78906 37.500002,37.5"
+       style="fill:#ca3a33;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.5" />
+    <path
+       id="path835"
+       d="m 200,75 c 0,20.71094 -16.78907,37.5 -37.5,37.5 C 141.78906,112.5 125,95.71094 125,75 125,54.289062 141.78906,37.5 162.5,37.5 183.21093,37.5 200,54.289062 200,75"
+       style="fill:#389723;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.5" />
+    <path
+       id="path837"
+       d="m 286.60156,225 c 0,20.71094 -16.78906,37.5 -37.5,37.5 -20.71094,0 -37.5,-16.78906 -37.5,-37.5 0,-20.71094 16.78906,-37.5 37.5,-37.5 20.71094,0 37.5,16.78906 37.5,37.5"
+       style="fill:#9457b0;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.5" />
+  </g>
+</svg>
