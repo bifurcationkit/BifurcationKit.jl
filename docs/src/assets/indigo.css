@@ -43,7 +43,7 @@ html:not(.theme--documenter-dark) body #documenter article#documenter-page a.doc
 
 html:not(.theme--documenter-dark) body #documenter pre, html:not(.theme--documenter-dark) body #documenter code {
   color: inherit;
-  font-family: "JuliaMono"; }
+   }
   html:not(.theme--documenter-dark) body #documenter pre .hljs-meta, html:not(.theme--documenter-dark) body #documenter code .hljs-meta {
     color: #4595D1; }
   html:not(.theme--documenter-dark) body #documenter pre .hljs-keyword, html:not(.theme--documenter-dark) body #documenter code .hljs-keyword {

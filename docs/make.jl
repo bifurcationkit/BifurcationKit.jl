@@ -1,12 +1,9 @@
 using Documenter, BifurcationKit, Setfield
-using DocThemeIndigo
-
-# 1. generate the indigo theme css
-indigo = DocThemeIndigo.install(BifurcationKit)
+# using DocThemeIndigo
 
 makedocs(doctest = false,
 	sitename = "Bifurcation Analysis in Julia",
-	format = Documenter.HTML(collapselevel = 1, assets=String[indigo #= your other assets =#],),
+	format = Documenter.HTML(collapselevel = 1,assets = ["assets/indigo.css"]),
 	# format = DocumenterLaTeX.LaTeX(),
 	authors = "Romain Veltz",
 	pages = Any[
