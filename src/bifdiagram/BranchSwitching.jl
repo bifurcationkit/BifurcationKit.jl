@@ -54,7 +54,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
-    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
+    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
@@ -127,7 +127,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
-    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. It has been tested on GPU with very high memory pressure.
+    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
 function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
 
