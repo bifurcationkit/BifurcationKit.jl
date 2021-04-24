@@ -59,6 +59,10 @@ module BifurcationKit
 			using .Plots
 			include("plotting/PlotCont.jl")
 		end
+		@require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
+			using .AbstractPlotting: @recipe, inline!, layoutscene, Figure, Axis, lines!
+			include("plotting/RecipesMakie.jl")
+		end
 
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
 			using .JLD2
