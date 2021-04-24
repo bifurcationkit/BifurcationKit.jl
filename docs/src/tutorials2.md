@@ -9,7 +9,7 @@ We study the following PDE
 
 $$-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3 = 0$$
 
-with Neumann boundary conditions. This full example is in the file `example/SH2d-fronts.jl`. This example is also treated in the MATLAB package [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). We use a Sparse Matrix to express the operator $L_1=(I+\Delta)^2$
+with Neumann boundary conditions. This full example is in the file `example/SH2d-fronts.jl`. This example is also treated in the MATLAB package [pde2path](http://www.staff.uni-oldenburg.de/hannes.uecker/pde2path/). We use a Sparse Matrix to express the operator $L_1=(I+\Delta)^2$.
 
 ```julia
 using DiffEqOperators, Setfield, Parameters
@@ -234,16 +234,16 @@ Note that the plot provides the stability of solutions and bifurcation points. I
 Instead of relying on deflated newton, we can use [Branch switching](@ref) to compute the different branches emanating from the bifurcation point. For example, the following code will perform automatic branch switching from the second bifurcation point of `br`:
 
 ```julia
-# we compute thedifferent differentials
+# we compute the differentials
 d2F_sh(u, p, dx1, dx2) = (2 .* p.ν .* dx2 .- 6 .* dx2 .* u) .* dx1
 d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
 jet = (F_sh, dF_sh, d2F_sh, d3F_sh)
 
 br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
-			plot = true, verbosity = 2,
-			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
-			printSolution = (x, p) -> norm(x),
-			normC = x -> norm(x, Inf))
+	plot = true, verbosity = 2,
+	plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
+	printSolution = (x, p) -> norm(x),
+	normC = x -> norm(x, Inf))
 ```
 
 We can then plot the branches using `plot(br, br2, br3)` and get

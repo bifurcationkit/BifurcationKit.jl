@@ -126,9 +126,6 @@ br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBif
 			normC = x -> norm(x, Inf))
 
 plot(br, br2, br3)
-
-
-
 ###################################################################################################
 # Manual branch switching
 bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)
@@ -189,12 +186,11 @@ plot(diagram; code = (), legend = false, plotfold = false)
 # BK.add!(diagram, br2, 2)
 
 ###################################################################################################
-# deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
-
-optcontdf = @set optcont.newtonOptions.verbose = false
+deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+optcontdf = @set optcont.newtonOptions.verbose = true
 brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
 	deflationOp;
-	showplot = true, verbosity = 1,
+	showplot = true, verbosity = 3,
 	tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),
 	# plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),

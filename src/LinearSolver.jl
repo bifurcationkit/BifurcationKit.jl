@@ -59,7 +59,7 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to provide the backslash operator.
+This struct is used to provide the backslash operator. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
 $(TYPEDFIELDS)
 """
@@ -92,7 +92,7 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
-Linear solver based on gmres from `IterativeSolvers.jl`.
+Linear solver based on gmres from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
@@ -140,7 +140,7 @@ end
 
 """
 $(TYPEDEF)
-Linear solver based on gmres! from `IterativeSolvers.jl`.
+Linear solver based on gmres! from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers!{T, Tl, Tr} <: AbstractLinearSolver
@@ -187,7 +187,7 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
-Create a linear solver based on GMRES from `KrylovKit.jl`.
+Create a linear solver based on GMRES from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
@@ -224,10 +224,9 @@ end
 function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Tl}
 	if Tl == Nothing
 		res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
-		info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
 	else # use preconditioner
 		res, info = KrylovKit.linsolve(x -> (out = apply(J, x); ldiv!(l.Pl, out)), ldiv!(l.Pl, copy(rhs)), a₀, a₁; rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
-		info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
 	end
+	info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
 	return res, true, info.numops
 end

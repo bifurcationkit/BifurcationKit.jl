@@ -34,7 +34,7 @@ function Jac_mat(u, p)
 	return J
 end
 
-Jac_fd(u0, p) = BK.finiteDifferences(u->F_chan(u,p),u0)
+Jac_fd(u0, p) = BK.finiteDifferences(u -> F_chan(u,p), u0)
 
 # not really precise Finite Differences
 n = 101
@@ -42,9 +42,7 @@ sol = rand(n)
 sol[end] = sol[1]
 J_fold_fd  = Jac_fd(sol,(3,0.01))
 J_fold_exp = Jac_mat(sol,(3,0.01))
-@test (J_fold_exp - J_fold_fd) |> x->norm(x,Inf64) < 1e-2
-
-(J_fold_exp - J_fold_fd)[10,10]
+@test norm(J_fold_exp - J_fold_fd, Inf) < 1e-2
 
 n = 101
 	a = 3.3
@@ -54,61 +52,10 @@ n = 101
 							opt_newton, normN = x->norm(x,Inf64))
 
 # test with secant continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton)
-	br, u1 = @time continuation(F_chan, Jac_mat,
-		out, (a, 0.01), (@lens _[1]), opts_br0; plot = false, verbosity = 0, printSolution= (x,p) ->norm(x,Inf64))
+opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detectBifurcation = 3)
+	br, _ = @time continuation(F_chan, Jac_mat,
+		out, (a, 0.01), (@lens _[1]), opts_br0; printSolution= (x,p) ->norm(x, Inf))
 
-# test with Bordered tangent continuation
-br_tg, u1 = @time continuation(F_chan, Jac_mat,
-	out, (a, 0.01), (@lens _[1]), opts_br0; plot = false, verbosity = 0, printSolution= (x,p) ->norm(x,Inf64), tangentAlgo = BorderedPred())
-
-# test with natural continuation
-opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.05, ds= 0.01, pMax = 4.1, newtonOptions = opt_newton)
-	br_nat, u1 = @time BK.continuation(F_chan, Jac_mat,
-		out, (a, 0.01), (@lens _[1]), opts_br0; plot = false, verbosity = 3, printSolution= (x,p) ->norm(x,Inf64), tangentAlgo = NaturalPred())
-
-# idem with Matrix-Free solver
-function dF_chan(x, dx, p)
-	α, β = p
-	out = similar(x)
-	n = length(x)
-	out[1] = dx[1]
-	out[n] = dx[n]
-	for i=2:n-1
-		out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dsource_term(x[i], b = β) * dx[i]
-	end
-	return out
-end
-
-
-ls = GMRESKrylovKit(dim = 100)
-	opt_newton_mf = NewtonPar(tol = 1e-10, verbose = true, linsolver = ls, eigsolver = DefaultEig())
-	out_mf, hist, flag = @time newton(
-		F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
-		sol, (a, 0.01),
-		(@set opt_newton_mf.linsolver.Pl = lu(Jac_mat(zero(out),(a, 0.01)))))
-
-opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1, nev = 5, newtonOptions = setproperties(opt_newton_mf;maxIter = 70, verbose = false, tol = 1e-8), maxSteps = 150)
-
-brmf, u1 = @time continuation(
-		F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
-		out, (a, 0.01), (@lens _[1]), opts_cont_mf, verbosity = 0)
-
-brmf, u1 = @time continuation(
-	F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
-	sol, (a, 0.01), (@lens _[1]), opts_cont_mf,
-	tangentAlgo = BorderedPred(), verbosity = 0)
-
-brmf, u1 = @time continuation(
-	F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
-	sol, (a, 0.01), (@lens _[1]), opts_cont_mf,
-	linearAlgo = MatrixFreeBLS())
-
-brmf, u1 = @time continuation(
-	F_chan, (x, p) -> (dx -> dF_chan(x, dx, p)),
-	sol, (a, 0.01), (@lens _[1]), opts_cont_mf,
-	tangentAlgo = BorderedPred(),
-	linearAlgo = MatrixFreeBLS())
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
@@ -142,15 +89,13 @@ outdef1, = @time newton(
 		out.*(1 .+ 0.1*rand(n)), (a, 0.01),
 		opt_def, deflationOp)
 
-# matrix free version
-outdef1mf, = @time newton(
-		F_chan, Jac_mat,
-		out.*(1 .+ 0.1*rand(n)), (a, 0.01),
-		# (@set opt_newton_mf.linsolver.Pl = lu(Jac_mat(zero(out),(a, 0.01)))),
-		(@set opt_newton_mf.maxIter = 3),
-		deflationOp, ls)
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
+outfold, = newtonFold(F_chan, Jac_mat, br, 2; startWithEigen = true)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 5)
+outfoldco, = continuationFold(F_chan, Jac_mat, br, 2, (@lens _[2]), optcontfold; startWithEigen = true)
+
+# manual handling
 indfold = 1
 foldpt = FoldPoint(br, indfold)
 foldpb = FoldProblemMinimallyAugmented(
@@ -163,7 +108,7 @@ foldpb = FoldProblemMinimallyAugmented(
 		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, (a, 0.01)) |> norm
 
-outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x, br.bifpoint[indfold].x, NewtonPar(verbose=true) )
+outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x, br.bifpoint[indfold].x, NewtonPar(verbose=true))
 	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
 
 # example with KrylovKit
@@ -173,8 +118,7 @@ outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpo
 	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
 
 # continuation of the fold point
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., a = 2., theta = 0.3, newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 5)
-	outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (@lens _[2]), optcontfold, plot = false)
+outfoldco, hist, flag = @time continuation(F_chan, Jac_mat, br, indfold, (@lens _[2]), optcontfold, plot = false)
 
 # user defined Fold Problem
 indfold = 1
@@ -218,8 +162,8 @@ res_exp = res_explicit[end] \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, u1 = @time continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br, _ = @time continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, u1 = @time continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]),opts_br0,plot = false, verbosity = 0)
+br, _ = @time continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]),opts_br0,plot = false, verbosity = 0)

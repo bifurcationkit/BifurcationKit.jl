@@ -72,15 +72,21 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 opt_newton = NewtonPar(tol = 1e-11, verbose = true)
 	out, hist, flag = @time newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
-eigls = EigArpack(1.1, :LM)
-	opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = GMRESIterativeSolvers(reltol=1e-4, N = 2n), eigsolver = eigls)
-	out, hist, flag = @time newton(Fbru, Jbru_sp,
+# eigls = EigArpack(1.1, :LM)
+opt_newton = NewtonPar(tol = 1e-11)
+	out, = @time newton(Fbru, Jbru_sp,
 		sol0 .* (1 .+ 0.01rand(2n)), par_bru,
 		opt_newton)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.0051, pMax = 1.8, theta = 0.01, detectBifurcation = 3, nev = 16, nInversion = 4)
-	br, = @time continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, plot = false, printSolution = (x, p) -> norm(x, Inf64), verbosity = 0)
-#################################################################################################### Continuation of the Hopf Point using Dense method
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, detectBifurcation = 3, nev = 16, nInversion = 4)
+	br, = @time continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
+###################################################################################################
+# Hopf continuation with automatic procedure
+outhopf, = newtonHopf(Fbru, Jbru_sp, br, 1; startWithEigen = true)
+optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 5)
+outhopfco, = continuationHopf(Fbru, Jbru_sp, br, 1, (@lens _.β), optconthopf; startWithEigen = true)
+
+# Continuation of the Hopf Point using Dense method
 ind_hopf = 1
 # av = randn(Complex{Float64},2n); av = av./norm(av)
 # bv = randn(Complex{Float64},2n); bv = bv./norm(bv)

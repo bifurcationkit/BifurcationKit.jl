@@ -45,8 +45,9 @@ struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractLinearSolver
 	ifftplan::Tiplan
 end
 
-struct SHEigOp{Tsh <: SHLinearOp} <: BK.AbstractEigenSolver
+struct SHEigOp{Tsh <: SHLinearOp, Tσ} <: BK.AbstractEigenSolver
 	sh::Tsh
+	σ::Tσ
 end
 
 function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
@@ -89,13 +90,14 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, tol = tol, maxiter = 6)
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, tol = tol, maxiter = 6, issymmetric = true)
 	return res, true, info.numops
 end
 
-function (sheig::SHEigOp)(J, nev::Int; σ = 0.3, kwargs...)
+function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 	u, l, ν = J
 	sh = sheig.sh
+	σ = sheig.σ
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 
 	A = du -> sh(J, du; shift = σ, tol = 1e-5)[1]
@@ -114,7 +116,7 @@ end
 J_shfft(u, p) = (u, p.l, p.ν)
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
-Leig = SHEigOp(L) # for eigenvalues computation
+Leig = SHEigOp(L, 0.3) # for eigenvalues computation
 # Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
 
 par = (l = -0.1, ν = 1.3, L = L)
@@ -161,6 +163,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.0
 		F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l),
 		opts_cont;
+		# linearAlgo = MatrixFreeBLS()
 		plot = true, verbosity = 3,
 		plotSolution = (x, p;kwargs...)->plotsol!(x; color=:viridis, kwargs...),
 		printSolution = (x, p) -> norm(x), normC = norminf,

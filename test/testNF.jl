@@ -29,6 +29,8 @@ jet = (Fbp,
 	(x, p, dx1, dx2, dx3) -> d3F(x, p, dx1, dx2, dx3))
 
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
+@test BK.isTranscritical(bp) == true
+show(bp)
 
 # normal form
 nf = bp.nf
@@ -53,6 +55,12 @@ nf = bp.nf
 ####################################################################################################
 # Automatic branch switching
 br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
+@test br2 isa Branch
+@test BK.haseigenvalues(br2) == true
+@test BK.haseigenvector(br2) == true
+BK.eigenvals(br2, 1, true)
+BK.getfirstusertype(br2)
+@test length(br2) == 12
 # plot(br,br2)
 
 br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
@@ -66,6 +74,8 @@ brp, = @time BK.continuation(
 	printSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
 bpp = BK.computeNormalForm(jet..., brp, 1; verbose=false)
+show(bpp)
+
 nf = bpp.nf
 @test norm(nf[1]) < 1e-9
 	@test norm(nf[2] - 3.23) < 1e-9

@@ -269,7 +269,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 # Simplified call
 The call is as follows
 
-	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens1::Lens, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
+	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` you want to continue.
 
@@ -335,14 +335,13 @@ function continuationFold(F, J, foldpointguess::BorderedArray{vectype, T}, par, 
 		printSolution = (u, p) -> (;zip(lenses, (u.p, p))...),
 		finaliseSolution = updateMinAugFold,
 		kwargs...)
+
 	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
 function continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, startWithEigen = false, kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.bifpoint[ind_fold]
-	# bifpt = br.bifpoint[ind_fold]
-	# TODO USE FoldPoint!!!! A CHANGER
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 

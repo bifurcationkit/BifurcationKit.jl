@@ -31,12 +31,14 @@ end
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
+More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.
+
 # Constructor
 
 `EigArpack(sigma = nothing, which = :LR; kwargs...)`
 """
 struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
-	"Shift for Shift-Invert method"
+	"Shift for Shift-Invert method with `(J - sigma⋅I)"
 	sigma::T
 
 	"Which eigen-element to extract :LR, :LM, ..."
@@ -104,6 +106,8 @@ $(TYPEDFIELDS)
 end
 
 function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
+	# note that there is no need to order the eigen-elements. KrylovKit does it
+	# with the option `which`, by decreasing order.
 	if J isa AbstractMatrix && isnothing(l.x₀)
 		nev = min(_nev, size(J, 1))
 		vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
@@ -124,6 +128,8 @@ geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, Array{Int
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
+
+More information is available at [ArnoldiMethod.jl](https://github.com/haampie/ArnoldiMethod.jl). For example, you can pass the parameters `tol, mindim, maxdim, restarts`.
 
 # Constructor
 

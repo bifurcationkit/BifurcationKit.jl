@@ -1,7 +1,7 @@
 # using Revise
 using Test
 
-@testset "BifurcationKit" begin
+@testset verbose = true "BifurcationKit" begin
 
 	@testset "Linear Solvers" begin
 		include("precond.jl")
@@ -13,7 +13,7 @@ using Test
 		include("test-bordered-problem.jl")
 	end
 	
-	@testset "Newton" begin
+	@testset "Continuation" begin
 		include("test_bif_detection.jl")
 		include("test-cont-non-vector.jl")
 		include("simple_continuation.jl")

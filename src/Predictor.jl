@@ -18,19 +18,15 @@ struct DotTheta{Tdot}
 	dot::Tdot		# defaults to (x,y) -> dot(x,y) / length(x)
 end
 
-DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x))
+DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x) )
 
 # Implementation of the dot product associated to DotTheta
-function (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real}
-	# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
-	return real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
-end
+# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
+(dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
 
 # Implementation of the norm associated to DotTheta
-function (dt::DotTheta)(u, p::T, θ::T) where T
-	# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
-	return sqrt(dt(u, u, p, p, θ))
-end
+# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
+(dt::DotTheta)(u, p::T, θ::T) where T = sqrt(dt(u, u, p, p, θ))
 
 (dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, θ)
 (dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)

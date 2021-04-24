@@ -41,11 +41,7 @@ function NL(u, p)
 	out
 end
 
-function Fbr(x, p, t = 0.)
-	f = similar(x)
-	Fbr!(f, x, p)
-end
-
+Fbr(x, p, t = 0.) = Fbr!(similar(x), x, p)
 dNL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
 function dFbr(x, p, dx)
@@ -79,7 +75,7 @@ out, = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
 	plot();plot!(X,out[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 
-optcont = ContinuationPar(dsmax = 0.0051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370)
+optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370, nInversion = 10, maxBisectionSteps = 25)
 
 	br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
 		plot = true, verbosity = 3,
@@ -138,7 +134,7 @@ outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_br.C = -0.9), op
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = EigArpack()
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 2, dsminBisection = 1e-6)
+optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8, maxSteps = 140, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, precisionStability = 1e-7, detectBifurcation = 3, dsminBisection = 1e-6)
 	br_po, = @time continuation(poTrap, outpo_f, (@set par_br.C = -0.9), (@lens _.C), optcontpo;
 		verbosity = 3,
 		plot = true,
