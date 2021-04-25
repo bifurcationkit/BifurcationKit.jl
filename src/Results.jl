@@ -98,7 +98,7 @@ Return the eigenvalues of the ind-th continuation step.
 """
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	if verbose
-		println("--> There are ", br[ind].n_unstable, " unstable eigenvalues")
+		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
 	end
 	br.eig[ind].eigenvals
 end
@@ -157,6 +157,10 @@ This function is used to initialize the composite type `ContResult` according to
 		contparams =  contParams,
 		params = par,
 		lens = lens)
+end
+
+function _ContResult()
+	ContResult(branch = StructArray([(a=1,b=2)]), eig = [(eigenvals = Any[], eigenvec=Any[],step=0)],sol=Any[],contparams = opts_br, lens=(@lens _[1]), bifpoint=Any[]);
 end
 ####################################################################################################
 """

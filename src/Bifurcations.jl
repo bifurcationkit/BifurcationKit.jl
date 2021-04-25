@@ -116,21 +116,11 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 
 	if detected
 		# record information about the bifurcation point
-		bifpoint = GenericBifPoint(
-			type = tp,
-			# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
-			idx = state.step + 1,
-			param = getp(state),
-			norm = normC(getx(state)),
-			printsol = namedprintsol(printsolution(getx(state), getp(state))),
-			x = _copy(getx(state)),
-			tau = copy(state.tau),
-			ind_ev = ind_ev,
-			step = state.step,
-			status = status,
+		# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
+		bifpoint = GenericBifPoint(state, tp, status, printsolution, normC, interval;
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
-			precision = abs(interval[2] - interval[1]),
-			interval = interval)
+			idx = state.step + 1,
+			ind_ev = ind_ev)
 		(verbosity>0) && printstyled(color=:red, "!! ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
 	end
 	return detected, bifpoint

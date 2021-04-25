@@ -1,7 +1,7 @@
 # using Revise
 using Test
 
-@testset verbose = true "BifurcationKit" begin
+@testset "BifurcationKit" begin
 
 	@testset "Linear Solvers" begin
 		include("precond.jl")
