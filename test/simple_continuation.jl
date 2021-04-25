@@ -26,6 +26,8 @@ opts = @set opts.doArcLengthScaling = true
 br0, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
+BK.computeEigenvalues(opts)
+BK.computeEigenvectors(opts)
 
 # test with callbacks
 br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show nothing;true))
