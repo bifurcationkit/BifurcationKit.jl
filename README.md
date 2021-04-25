@@ -1,4 +1,4 @@
-# <img src="/Users/rveltz/work/prog_gd/Julia/dev/dev1/BifurcationKit/docs/src/assets/logoRM.png" width=280" title="BifurcationKit logo">
+# BifurcationKit.jl
 
 | **Documentation**                                                               | **Build Status**                                                                                |
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
