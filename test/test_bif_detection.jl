@@ -89,6 +89,8 @@ testBranch(br4)
 ####################################################################################################
 using ForwardDiff
 function F(X, p)
+using ForwardDiff
+function Ftb(X, p)
 	p1, p2, k = p
 	x, y = X
 	out = similar(X)
@@ -97,13 +99,13 @@ function F(X, p)
 	out
 end
 
-J(X, p) = ForwardDiff.jacobian(z -> F(z,p), X)
+J = (X, p) -> ForwardDiff.jacobian(z -> Ftb(z,p), X)
 par = (p1 = -3., p2=-3., k=3)
 
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 4, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, tolBisectionEvent = 1e-24)
 
-br, = continuation(F, J, -2ones(2), par, (@lens _.p1), @set opts.detectBifurcation = 2)
+br, = continuation(Ftb, J, -2ones(2), par, (@lens _.p1), @set opts.detectBifurcation = 2)
 testBranch(br)
 
-br, = continuation(F, J, -2ones(2), par, (@lens _.p1), opts)
+br, = continuation(Ftb, J, -2ones(2), par, (@lens _.p1), opts)
 testBranch(br)
