@@ -272,7 +272,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	return state, state
 end
 
-function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
+function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
 	# next line is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity) > 0
@@ -282,6 +282,7 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
+	
 	if verbose
 		println("#"^35*"\nStart of Continuation Step $step");
 		@printf("Step size = %2.4e\n", ds); print("Parameter ",getLensParam(it.lens))
@@ -297,8 +298,11 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Successful step
 	if state.isconverged
-		verbose && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
-		verbose && (print("Parameter ",getLensParam(it.lens));@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p))
+		if verbose
+			printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
+			print("Parameter ", getLensParam(it.lens))
+			@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p)
+		end
 
 		# Get tangent, it only mutates tau
 		getTangent!(state.tau, z_newton, state.z_old, it,
@@ -413,7 +417,7 @@ function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::Continu
 	it = ContIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
 	if bothside
 		res1 = continuation(it)
-		it = @set it.contParams.ds = -contParams.ds
+		@set! it.contParams.ds = -contParams.ds
 		res2 = continuation(it)
 		contresult = _merge(res1[1],res2[1])
 		return contresult, res1[2], res1[3]

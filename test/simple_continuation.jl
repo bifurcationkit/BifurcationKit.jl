@@ -39,6 +39,7 @@ state = iterate(iter)[1]
 contRes = ContResult(iter, state)
 continuation!(iter, state, contRes)
 eltype(iter)
+length(iter)
 #
 typeof(contRes)
 
