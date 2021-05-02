@@ -16,6 +16,9 @@ module BifurcationKit
 	include("Newton.jl")
 	include("ContParameters.jl")
 	include("Results.jl")
+	
+	include("events/Event.jl")
+	
 	include("Continuation.jl")
 	include("Bifurcations.jl")
 	include("Predictor.jl")
