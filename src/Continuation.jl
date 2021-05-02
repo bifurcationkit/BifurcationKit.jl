@@ -70,8 +70,8 @@ Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, 
 
 setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} = set(it.par, it.lens, p0)
 
-# hasEvent(it::ContIterable) = hasEvent(it.event) && it.contParams.detectEvent > 0
-@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) #|| (hasEvent(it) && it.event isa BifEvent)
+@inline isEventActive(it::ContIterable) = isActive(it.event) && it.contParams.detectEvent > 0
+@inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (isEventActive(it) && computeEigenElements(it.event))
 
 @inline getParams(it::ContIterable) = it.contParams
 Base.length(it::ContIterable) = it.contParams.maxSteps

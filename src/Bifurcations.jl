@@ -168,7 +168,8 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	# interval which contains the bifurcation point
 	interval = getinterval(getp(state), state.z_pred.p)
-	indinterval = 2 # index of active bound in the bisection, allows to track interval
+	# index of active index in the bisection interval, allows to track interval
+	indinterval = interval[1] == getp(state) ? 1 : 2
 
 	verbose && println("----> [Bisection] state.ds = ", state.ds)
 
@@ -225,7 +226,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		if verbose
 			ct0 = closesttozero(state.eigvals)
 			printstyled(color=:blue,
-				"----> $(state.step) - [Bisection] (n1, nc, n2) = ", (n1, nunstbls[end], n2),
+				"----> $(state.step) - [Bisection] (n1, n_current, n2) = ", (n1, nunstbls[end], n2),
 				", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
 				"\n----> bifurcation ∈ ", getinterval(interval...),
 				", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
@@ -243,7 +244,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			break
 		end
 
-		next = iterate(iter, state; _verbosity = 0)
+		next = iterate(iter, state; _verbosity = 0, bisection = true)
 	end
 
 	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
