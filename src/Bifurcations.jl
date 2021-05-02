@@ -200,10 +200,9 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		# perform one continuation step
 		(_, state) = next
 
-		eiginfo, _, n_unstable, n_imag = computeEigenvalues(iter, state; bisection = true)
-		updateStability!(state, n_unstable, n_imag)
-		push!(nunstbls, n_unstable)
-		push!(nimags, n_imag)
+		# the eigenelements have been computed/stored in state during the call iterate(iter, state)
+		push!(nunstbls, state.n_unstable[1])
+		push!(nimags, state.n_imag[1])
 
 		if nunstbls[end] == nunstbls[end-1]
 			# bifurcation point still after current state, keep going
@@ -221,7 +220,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		# iter.finaliseSolution(state.z_old, state.tau, state.step, nothing; bisection = true)
 
 		if verbose
-			ct0 = closesttozero(eiginfo[1])
+			ct0 = closesttozero(state.eigvals)
 			printstyled(color=:blue,
 				"----> $(state.step) - [Bisection] (n1, nc, n2) = ", (n1, nunstbls[end], n2),
 				", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
@@ -231,7 +230,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			verbose && Base.display(ct0[1:min(5, length(ct0))])
 		end
 
-		biflocated = abs(real.(closesttozero(eiginfo[1]))[1]) < iter.contParams.tolBisectionEigenvalue
+		biflocated = abs(real.(closesttozero(state.eigvals))[1]) < iter.contParams.tolBisectionEigenvalue
 
 		if (isnothing(next) == false &&
 				abs(state.ds) >= iter.contParams.dsminBisection &&
@@ -261,9 +260,9 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		copyto!(_state.z_old,  state.z_old)
 		copyto!(_state.tau, state.tau)
 
-		_state.eigvals = eiginfo[1]
+		_state.eigvals = state.eigvals
 		if iter.contParams.saveEigenvectors
-			_state.eigvecs = eiginfo[2]
+			_state.eigvecs = state.eigvecs
 		end
 
 		# to prevent bifurcation detection, update the following numbers carefully

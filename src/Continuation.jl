@@ -272,7 +272,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	return state, state
 end
 
-function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
+function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity, bisection = false)
 	if !done(it, state) return nothing end
 	# next line is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity) > 0
@@ -311,6 +311,13 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		# record previous parameter (cheap) and update current solution
 		state.z_pred.p = state.z_old.p
 		copyto!(state.z_old, z_newton)
+
+		# Eigen-elements computation, they are stored in state
+		if computeEigenElements(it)
+			# this compute eigen-elements, store them in state and update the stab indices in state
+			iteigen = computeEigenvalues!(it, state; bisection = bisection)
+			verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
+		end
 	else
 		verbose && printstyled("Newton correction failed\n", color=:red)
 		verbose && (println("--> Newton Residuals history = ");display(fval))
@@ -340,13 +347,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		# we perform saving, plotting, computation of eigenvalues...
 		# the case state.step = 0 was just done above
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
-
-			# Eigen-elements computation, they are stored in state
-			if computeEigenElements(it)
-				iteigen = computeEigenvalues!(it, state)
-				verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
-			end
-
 			# Detection of fold points based on parameter monotony, mutates contRes.bifpoint
 			# if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
 			if contParams.detectFold && contParams.detectBifurcation < 2
