@@ -67,7 +67,7 @@ and you should see
 │       4     │       3.2499e-11     │        1       │
 │       5     │       6.4963e-12     │        1       │
 └─────────────┴──────-───────────────┴────────────────┘
-  0.014715 seconds (2.90 k allocations: 2.555 MiB)
+  0.002715 seconds (2.20 k allocations: 2.542 MiB)
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -89,7 +89,7 @@ br, = @time continuation(F_chan, out, par, (@lens _.α),
 		plotSolution = (x, p; k...) -> plot!(x; ylabel="solution", label="", k...))
 ```
 
-The parameter axis `lens = @lens _.α` can be used to extract the component of `par` corresponding to `α`. Internally, it is used as `get(par, lens)` which returns `3.3`.
+The parameter axis `lens = @lens _.α` is used to extract the component of `par` corresponding to `α`. Internally, it is used as `get(par, lens)` which returns `3.3`.
 
 !!! tip "Tip"
     We don't need to call `newton` first in order to use `continuation`.
@@ -100,7 +100,7 @@ You should see
 The left figure is the norm of the solution as function of the parameter $p=\alpha$, the *y-axis* can be changed by passing a different `printSolution` to `continuation`. The top right figure is the value of $\alpha$ as function of the iteration number. The bottom right is the solution for the current value of the parameter. This last plot can be modified by changing the argument `plotSolution` to `continuation`.
 
 !!! note "Bif. point detection"
-    Two Fold points were detected. This can be seen by looking at `br.foldpoint` or by the black 	dots on the continuation plots. Note that the bifurcation points are located in `br.bifpoint`.
+    Two Fold points were detected. This can be seen by looking at `br.foldpoint` or by the black 	dots on the continuation plots when doing `plot(br, plotfold=true)`. Note that the bifurcation points are located in `br.bifpoint`.
 
 
 ## Continuation of Fold points
@@ -152,7 +152,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, 
 		# parameter axis to trace to codim 2 curve
 		(@lens _.β),
 		plot = true, verbosity = 2, optcontfold)
-plot(outfoldco)
+plot(outfoldco, plotfold=true)
 ```
 
 This produces:
@@ -201,15 +201,16 @@ out_mf, = @time newton(
 which gives:
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     2.3440e+01         0
-        1                2     1.3774e+00        68
-        2                3     1.6267e-02        98
-        3                4     2.4336e-06        73
-        4                5     6.2617e-12        73
-	0.323253 seconds (1.07 M allocations: 50.779 MiB)
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       2.3440e+01     │        0       │
+│       1     │       1.3774e+00     │       68       │
+│       2     │       1.6267e-02     │       98       │
+│       3     │       2.4336e-06     │       74       │
+│       4     │       5.6275e-12     │       63       │
+└─────────────┴──────-───────────────┴────────────────┘
+  0.333980 seconds (1.24 M allocations: 68.021 MiB, 9.13% gc time, 98.58% compilation time)
 ```
 
 We can improve this computation, *i.e.* reduce the number of `Linear-Iterations`, by using a preconditioner
@@ -222,7 +223,7 @@ P = spdiagm(0 => -2 * (n-1)^2 * ones(n), -1 => (n-1)^2 * ones(n-1), 1 => (n-1)^2
 P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 
 # define gmres solver with left preconditioner
-ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter = 10, Pl = lu(P))
+ls = GMRESIterativeSolvers(reltol = 1e-4, N = length(sol), restart = 10, maxiter = 10, Pl = lu(P))
 	optnewton_mf = NewtonPar(verbose = true, linsolver = ls)
 	out_mf, = @time newton(F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
@@ -232,14 +233,15 @@ ls = GMRESIterativeSolvers(tol = 1e-4, N = length(sol), restart = 10, maxiter = 
 which gives
 
 ```julia
- Newton Iterations
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     2.3440e+01         0
-        1                2     1.3777e+00         3
-        2                3     1.6266e-02         3
-        3                4     2.3699e-05         2
-        4                5     4.8930e-09         3
-        5                6     6.3288e-12         4
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       2.3440e+01     │        0       │
+│       1     │       1.3777e+00     │        3       │
+│       2     │       1.6266e-02     │        3       │
+│       3     │       2.3699e-05     │        2       │
+│       4     │       4.8929e-09     │        3       │
+│       5     │       5.6333e-12     │        4       │
+└─────────────┴──────-───────────────┴────────────────┘
 ```
 

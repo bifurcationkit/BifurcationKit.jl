@@ -286,16 +286,19 @@ BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 which gives 
 
 ```julia
-  Newton Iterations      f(x)      Linear Iterations
-
-          0          6.5444e-03             0
-          1          1.4419e-03             8
-          2          3.6748e-04             9
-          3          6.3454e-05            10
-          4          4.3534e-06            11
-          5          3.5527e-08            12
-          6          9.7033e-11            13
-  1.705926 seconds (109.97 k allocations: 1.080 GiB, 13.87% gc time)
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       6.5432e-03     │        0       │
+│       1     │       1.4372e-03     │        8       │
+│       2     │       3.6731e-04     │        8       │
+│       3     │       6.5658e-05     │        9       │
+│       4     │       4.3028e-06     │       10       │
+│       5     │       6.4509e-08     │       11       │
+│       6     │       2.9713e-10     │       12       │
+│       7     │       2.2181e-13     │       14       │
+└─────────────┴──────-───────────────┴────────────────┘
+  1.780986 seconds (132.31 k allocations: 1.237 GiB, 12.13% gc time)
 --> T = 6.532023020978835, amplitude = 0.2684635643839235
 ```
 
@@ -333,16 +336,19 @@ flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.g
 which gives 
 
 ```julia
-  Newton Iterations      f(x)      Linear Iterations
-
-          0          6.5444e-03             0
-          1          1.4419e-03             8
-          2          3.6748e-04             9
-          3          6.3454e-05            10
-          4          4.3534e-06            11
-          5          3.5527e-08            12
-          6          9.7032e-11            13
-  1.189189 seconds (23.03 k allocations: 400.077 MiB, 5.04% gc time)
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       6.5432e-03     │        0       │
+│       1     │       1.4372e-03     │        8       │
+│       2     │       3.6731e-04     │        8       │
+│       3     │       6.5658e-05     │        9       │
+│       4     │       4.3028e-06     │       10       │
+│       5     │       6.4509e-08     │       11       │
+│       6     │       2.9713e-10     │       12       │
+│       7     │       2.2188e-13     │       14       │
+└─────────────┴──────-───────────────┴────────────────┘
+  1.322440 seconds (35.03 k allocations: 459.996 MiB, 7.63% gc time)
 ```
 
 The speedup will increase a lot for larger $N_x, N_y$. Also, for Floquet multipliers computation, the speedup will be substantial.
@@ -433,16 +439,19 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 It gives	
 
 ```julia
- Newton Iterations      f(x)      Linear Iterations
-
-          0          6.5444e-03             0
-          1          1.4419e-03             8
-          2          3.6748e-04             9
-          3          6.3454e-05            10
-          4          4.3534e-06            11
-          5          3.5527e-08            12
-          6          9.7032e-11            13
-  1.096669 seconds (1.61 k allocations: 130.211 MiB)
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       6.5432e-03     │        0       │
+│       1     │       1.4372e-03     │        8       │
+│       2     │       3.6731e-04     │        8       │
+│       3     │       6.5658e-05     │        9       │
+│       4     │       4.3028e-06     │       10       │
+│       5     │       6.4509e-08     │       11       │
+│       6     │       2.9713e-10     │       12       │
+│       7     │       2.2143e-13     │       14       │
+└─────────────┴──────-───────────────┴────────────────┘
+  1.194715 seconds (952 allocations: 151.503 MiB)
 ```
 
 Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
@@ -467,17 +476,18 @@ outpo_f, hist, flag = @time newton(
 but it gives:
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     3.3294e-03         0
-        1                2     9.5343e-03        34
-        2                3     1.2791e-03        26
-        3                4     6.6873e-05        30
-        4                5     3.2492e-07        36
-        5                6     9.3987e-10        44
-        6                7     3.5842e-13        58
-  3.567416 seconds (61.43 k allocations: 1.003 GiB, 4.46% gc time)
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       3.3298e-03     │        0       │
+│       1     │       9.5088e-03     │       34       │
+│       2     │       1.2807e-03     │       26       │
+│       3     │       7.1393e-05     │       29       │
+│       4     │       4.1625e-07     │       36       │
+│       5     │       1.7924e-09     │       44       │
+│       6     │       6.2725e-13     │       60       │
+└─────────────┴──────-───────────────┴────────────────┘
+  3.533022 seconds (62.70 k allocations: 1009.781 MiB, 4.85% gc time)
 ```
 
 **Hence, it seems better to use the previous preconditioner.**
@@ -561,8 +571,8 @@ We can then use our functional to call `newtonFold` unlike for a regular functio
 ```julia
 outfold, hist, flag = @time BK.newtonFold(
 	(x, p) -> poTrap(x, p),
-	(x, p) -> poTrap(Val(:JacFullSparse), x, p);
-	br_po , indfold, #index of the fold point
+	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
+	br_po , indfold; #index of the fold point
 	# we change the linear solver for the one we 
 	# defined above
 	options = (@set opt_po.linsolver = ls),
@@ -573,16 +583,16 @@ flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p,
 and this gives
 
 ```julia
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     4.6366e-01         0
-        1                2     5.6561e-01        20
-        2                3     3.2592e-02        24
-        3                4     3.2054e-05        32
-        4                5     2.3656e-07        37
-        5                6     1.2573e-10        43
-        6                7     1.9629e-13        49
+┌────────────────────-────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       4.5937e-01     │        0       │
+│       1     │       5.6013e-01     │       20       │
+│       2     │       3.1385e-02     │       23       │
+│       3     │       6.0620e-05     │       29       │
+│       4     │       2.7839e-08     │       39       │
+│       5     │       8.1593e-12     │       45       │
+└─────────────┴──────-───────────────┴────────────────┘
  27.289005 seconds (1.07 M allocations: 24.444 GiB, 10.12% gc time)
 --> We found a Fold Point at α = 0.9470569704262517 from 0.9481896723164748
 ```

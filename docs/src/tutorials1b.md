@@ -12,7 +12,7 @@ We reconsider the first example by relying on the package `ApproxFun.jl` which a
 We start with some imports:
 
 ```julia 
-using ApproxFun, LinearAlgebra, Parameters
+using ApproxFun, LinearAlgebra, Parameters, Setfield
 
 using BifurcationKit, Plots
 const BK = BifurcationKit

@@ -1,4 +1,4 @@
-# 3d Swift-Hohenberg equation (advanced)
+# 3d Swift-Hohenberg equation, Finite differences
 
 ```@contents
 Pages = ["tutorialsSH3d.md"]
@@ -6,7 +6,7 @@ Depth = 3
 ```
 
 !!! info "Why this example?"
-    This example is challenging because we cannot employ the easy to use `\` sparse linear solver. One has to be tricky to devise a preconditioned linear solver that does not explode the memory budget. But then, one has to also devise a specific eigensolver. This is done in this tutorial. It also shows how this can be used for automatic branch switching. Hence, if you are not happy with the linear / eigen solvers in `BifurcationKit.jl`, this is perhaps the example you are looking for.
+    This example is challenging because we cannot employ the easy to use `\` sparse linear solver which takes to much time/memory to do the LU decomposition. Hence, one has to be tricky to devise a preconditioned linear solver that does not explode the memory budget. But then, one has to also devise a specific eigensolver. This is done in this tutorial. It also shows how this can be used for automatic branch switching. Hence, if you are not happy with the linear / eigen solvers in `BifurcationKit.jl`, this is perhaps the example you are looking for.
 
 We look at the following PDE on a 3d domain, *e.g.* a cube:
 

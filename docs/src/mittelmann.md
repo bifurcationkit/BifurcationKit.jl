@@ -117,7 +117,7 @@ At this stage, we note that the problem has a curve of homogenous (constant in s
 We can now call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
 
 ```julia
-br, = @time BK.continuation(
+br, = BK.continuation(
 	Fmit, JFmit,
 	sol0, par_mit, (@lens _.λ), opts_br;
 	printSolution = (x, p) -> normbratu(x),
@@ -303,7 +303,7 @@ This provides `length(deflationOp) = 5` solutions as there are some symmetries i
 We can continue this solution as follows in one direction
 
 ```julia
-brdef1, = @time continuation(
+brdef1, = continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
@@ -315,7 +315,7 @@ brdef1, = @time continuation(
 If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.bifpoint[2].param + 0.005`, we get 3 new solutions that we can continue
 
 ```julia
-brdef2, = @time continuation(
+brdef2, = continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);

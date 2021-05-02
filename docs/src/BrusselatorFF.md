@@ -28,16 +28,15 @@ const BK = BifurcationKit
 
 dev = CPU()					# Device (CPU/GPU)
 
-nx      = 512					# grid resolution
+nx      = 512				# grid resolution
 stepper = "FilteredRK4"		# timestepper
 dt  	= 0.01		# timestep
 nsteps  = 9000		# total number of time-steps
 nsubs	= 20		# number of time-steps for intermediate logging/plotting (nsteps must be multiple of nsubs)
 
-# parameters for the model
+# parameters for the model used by Tzou et al. (2013)
 E = 1.4
 L = 137.37				 # Domain length
-# Parameters used by Tzou et al. (2013)
 ε = 0.1
 μ = 25
 ρ = 0.178
@@ -66,25 +65,26 @@ diags = [u_solution]
 We now integrate the model to find a periodic orbit:
 
 ```julia
-l = 28;
+l = 28
 θ = @. (grid.x > -l/2) & (grid.x < l/2)
 
 au, av = -(E^2 + kc^2) / B, -1
 cu, cv = -E * (E + im) / B, 1
 
+# initial condition
 u0 = @.	  E + ε * real( au * exp(im * kc * grid.x) * θ + cu * (1 - θ) )
 v0 = @. B/E + ε * real( av * exp(im * kc * grid.x) * θ + cv * (1 - θ) )
-
 set_uv!(prob, u0, v0)
 
 plot_output(prob)
 
+# move forward in time to capture the periodic orbit
 for j=0:Int(nsteps/nsubs)
 	updatevars!(prob)
 	stepforward!(prob, diags, nsubs)
 end
 
-# estimate of the periodic orbit, will be used as initial condition for a Kyrlov-Newton
+# estimate of the periodic orbit, will be used as initial condition for a Krylov-Newton
 initpo = copy(vcat(vcat(prob.vars.u, prob.vars.v), 4.9))
 
 using RecursiveArrayTools

@@ -1,4 +1,4 @@
-# The Swift-Hohenberg equation (non-local) on the GPU (Advanced)
+# The Swift-Hohenberg equation (non-local) on the GPU, periodic BC (Advanced)
 
 ```@contents
 Pages = ["tutorials2b.md"]
@@ -83,6 +83,7 @@ end
 
 import Base: *, \
 
+# generic function to apply operator op to u
 function apply(c::SHLinearOp, u, multiplier, op = *)
 	c.tmp_complex .= Complex.(u)
 	c.fftplan * c.tmp_complex
