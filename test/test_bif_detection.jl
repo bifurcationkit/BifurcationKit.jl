@@ -14,38 +14,35 @@ function displayBr(contRes)
 	end
 end
 
-function teststab(br)
+function testBranch(br)
 	# test if stability works
 	# test that stability corresponds
 	out = true
 	for ii in eachindex(br.branch)
-		n_u = BK.isStable(br.contparams, br.eig[ii].eigenvals)
+		@test br.eig[ii].eigenvals == eigenvals(br, ii)
+		# compute number of unstable eigenvalues
+		isstable, n_u, n_i = BK.isStable(br.contparams, br.eig[ii].eigenvals)
 		# test that the stability matches the one in eig
-		br[ii].n_unstable != n_u[2] && (println( "$ii did not work!!",br[i].n_unstable ,", ", n_u[2]); @assert 1==0)
-		out = out && br[ii].n_unstable == n_u[2]
-		out = out && br[ii].stable  == n_u[1]
+		@test br[ii].n_unstable == n_u
+		@test br[ii].stable  == isstable
 		# we test that step = ii-1
-		out = out && br.branch[ii][end] == ii-1
+		@test br.branch[ii][end] == ii-1
 		# test that the field `step` match in the structure
-		out = out && br.branch[ii][end] == br.eig[ii].step
+		@test br.branch[ii][end] == br.eig[ii].step
 	end
-	@assert out "Basic structure of the branch is broken"
 	# test about bifurcation points
 	for bp in br.bifpoint
 		id = bp.idx
-		# @show id, br.n_unstable[id], br.n_unstable[id-1]
 		# test that the states marked as bifurcation points are always after true bifurcation points
-		out = out && abs(br[id].n_unstable - br[id-1].n_unstable) > 0
+		@test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
+		# test that the bifurcation point belongs to the interval
+		@test bp.interval[1] <= bp.param <= bp.interval[2]
 	end
-	out
 end
 
 NL(x) = -x^3
 dNL(x) = -3x^2
-
-function Ftb(x,p)
-	return -x .+ (p.L * x) .* p.λ .+ NL.(x)
-end
+Ftb(x,p) = -x .+ (p.L * x) .* p.λ .+ NL.(x)
 
 function Jtb(x, p)
 	J = copy(p.L .* p.λ)
@@ -65,11 +62,11 @@ dimBif = [ii for ii in 1:5]; append!(dimBif, [1 1 1 1])
 x0 = zeros(size(par.L, 1))
 
 optc = ContinuationPar(pMin = -1., pMax = 10., ds = 0.1, maxSteps = 150, detectBifurcation = 2, saveEigenvectors = false)
-	br1, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), optc; verbosity = 0)
-@test teststab(br1)
+br1, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), optc; verbosity = 0)
+testBranch(br1)
 
 br2, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
-@test teststab(br2)
+testBranch(br2)
 for bp in br2.bifpoint
 	@test bp.interval[1] <= bp.param <= bp.interval[2]
 end
@@ -83,13 +80,30 @@ dimBif2 = [abs(bp.δ[1]) for bp in br2.bifpoint]
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
 br3, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 8, tolBisectionEigenvalue = 1e-7); verbosity = 0)
-for bp in br3.bifpoint
-	@test bp.interval[1] <= bp.param <= bp.interval[2]
-end
+testBranch(br3)
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
 # in this case, we test if coming from above, and having no inversion, still leads to correct result
-br4, = continuation(Ftb, Jtb, x0, (@set par.λ = 0.95), (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 3)
-for bp in br4.bifpoint
-	@test bp.interval[1] <= bp.param <= bp.interval[2]
+br4, = continuation(Ftb, Jtb, x0, (@set par.λ = 0.95), (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
+testBranch(br4)
+####################################################################################################
+using ForwardDiff
+function F(X, p)
+	p1, p2, k = p
+	x, y = X
+	out = similar(X)
+	out[1] = p1 + x - y - x^k/k
+	out[2] = p1 + y + x - 2y^k/k
+	out
 end
+
+J(X, p) = ForwardDiff.jacobian(z -> F(z,p), X)
+par = (p1 = -3., p2=-3., k=3)
+
+opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 4, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, tolBisectionEvent = 1e-24)
+
+br, = continuation(F, J, -2ones(2), par, (@lens _.p1), @set opts.detectBifurcation = 2)
+testBranch(br)
+
+br, = continuation(F, J, -2ones(2), par, (@lens _.p1), opts)
+testBranch(br)

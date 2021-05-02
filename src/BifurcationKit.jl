@@ -100,7 +100,7 @@ module BifurcationKit
 
 
 	# linear solvers
-	export DefaultLS, GMRESIterativeSolvers, GMRESIterativeSolvers!, GMRESKrylovKit,
+	export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit,
 			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
 	# bordered nonlinear problems

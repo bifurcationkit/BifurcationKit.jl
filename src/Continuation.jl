@@ -319,6 +319,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 			iteigen = computeEigenvalues!(it, state; bisection = bisection)
 			verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
 		end
+		state.step += 1
 	else
 		verbose && printstyled("Newton correction failed\n", color=:red)
 		verbose && (println("--> Newton Residuals history = ");display(fval))
@@ -330,7 +331,6 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
 	end
 
-	state.step += 1
 	return state, state
 end
 
