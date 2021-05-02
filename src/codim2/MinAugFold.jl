@@ -370,6 +370,5 @@ end
 function (eig::FoldEig)(Jma, n; kwargs...)
 	J = Jma.fldpb.J(Jma.x.u, set(Jma.params,Jma.fldpb.lens,Jma.x.p))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
-	@show eigenelts[1]
 	return eigenelts
 end

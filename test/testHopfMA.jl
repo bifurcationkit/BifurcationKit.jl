@@ -83,8 +83,8 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, det
 ###################################################################################################
 # Hopf continuation with automatic procedure
 outhopf, = newtonHopf(Fbru, Jbru_sp, br, 1; startWithEigen = true)
-optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 5)
-outhopfco, = continuationHopf(Fbru, Jbru_sp, br, 1, (@lens _.β), optconthopf; startWithEigen = true)
+optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 5, detectBifurcation = 2)
+outhopfco, = continuationHopf(Fbru, Jbru_sp, br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1

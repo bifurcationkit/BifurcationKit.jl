@@ -130,7 +130,8 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	else
 		return Fold(bp...)
 	end
-	return
+	# we should never hit this
+	return nothing
 end
 
 computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = computeNormalForm1d(F, dF, d2F, d3F, getContResult(br), ind_bif; kwargs...)

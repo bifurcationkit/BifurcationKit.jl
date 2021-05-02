@@ -60,8 +60,12 @@ opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, max
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
 
-# quick test of scalardM deflation
-# BK.scalardM(deflationOp, sol, 5sol)
+# for testing
+show(deflationOp)
+length(deflationOp)
+deflationOp(2out, out)
+push!(deflationOp, rand(n))
+deleteat!(deflationOp, 2)
 
 chanDefPb = DeflatedProblem(F_chan, Jac_mat, deflationOp)
 
@@ -92,8 +96,8 @@ outdef1, = @time newton(
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 outfold, = newtonFold(F_chan, Jac_mat, br, 2; startWithEigen = true)
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 5)
-outfoldco, = continuationFold(F_chan, Jac_mat, br, 2, (@lens _[2]), optcontfold; startWithEigen = true)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 5, detectBifurcation = 2)
+outfoldco, = continuationFold(F_chan, Jac_mat, br, 2, (@lens _[2]), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1)
 
 # manual handling
 indfold = 1
