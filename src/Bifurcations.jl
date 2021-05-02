@@ -140,6 +140,9 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	n2, n1 = _state.n_unstable
 	if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
 
+	# get continuation parameters
+	contParams = iter.contParams
+
 	# we create a new state for stepping through the continuation routine
 	state = copy(_state)
 
@@ -157,7 +160,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	next = (state, state)
 
-	if abs(state.ds) < iter.contParams.dsmin; return :none, (_T(0), _T(0)); end
+	if abs(state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
 
 	# record sequence of unstable eigenvalue number and parameters
 	nunstbls = [n2]
@@ -230,12 +233,12 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			verbose && Base.display(ct0[1:min(5, length(ct0))])
 		end
 
-		biflocated = abs(real.(closesttozero(state.eigvals))[1]) < iter.contParams.tolBisectionEigenvalue
+		biflocated = abs(real.(closesttozero(state.eigvals))[1]) < contParams.tolBisectionEigenvalue
 
 		if (isnothing(next) == false &&
-				abs(state.ds) >= iter.contParams.dsminBisection &&
-				state.step < iter.contParams.maxBisectionSteps &&
-				n_inversion < iter.contParams.nInversion &&
+				abs(state.ds) >= contParams.dsminBisection &&
+				state.step < contParams.maxBisectionSteps &&
+				n_inversion < contParams.nInversion &&
 				biflocated == false) == false
 			break
 		end
@@ -255,13 +258,13 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# right of the bifurcation point if iseven(n_inversion) == true. Otherwise, the bifurcation
 	# point is still deemed undetected
 	if iseven(n_inversion)
-		status = :converged
+		status = n_inversion >= contParams.nInversion ? :converged : :guess
 		copyto!(_state.z_pred, state.z_pred)
 		copyto!(_state.z_old,  state.z_old)
 		copyto!(_state.tau, state.tau)
 
 		_state.eigvals = state.eigvals
-		if iter.contParams.saveEigenvectors
+		if contParams.saveEigenvectors
 			_state.eigvecs = state.eigvecs
 		end
 
