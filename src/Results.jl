@@ -6,7 +6,6 @@ namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
 namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in 1:length(x)), x)...)
 mergefromuser(x, a::NamedTuple) = merge(namedprintsol(x), a)
-
 ####################################################################################################
 # Structure to hold continuation result
 """

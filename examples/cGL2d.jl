@@ -402,15 +402,13 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 
 @time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
 
-
-
 outpo_f, _, flag = @time newton(poTrapMFi,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls); normN = norminf, linearPO = :FullMatrixFree)
 
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
 @assert 1==0 "tester code_warntype dans POTrapFunctionalJac! st POTrapFunctional!"
 
-lsi = GMRESIterativeSolvers!(verbose = false, N = length(orbitguess_f), reltol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true)
+lsi = GMRESIterativeSolvers(verbose = false, N = length(orbitguess_f), reltol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true, ismutating = true)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi); normN = norminf, linearPO = :FullMatrixFree)

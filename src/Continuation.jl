@@ -262,7 +262,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	end
 
 	# return the state
-	cbval = init(it.event, T) # event result
+	cbval = initialize(it.event, T) # event result
 	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
 
 	# update stability

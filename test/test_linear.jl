@@ -167,7 +167,7 @@ outit = ls(J0, x0; a₀ = 1., a₁ = 1.)
 outit = ls(J0, x0; a₀ = 1., a₁ = 1.5)
 outit = ls(J0, x0; a₀ = 0.5, a₁ = 1.5)
 
-ls = GMRESIterativeSolvers!(N = 100, reltol = 1e-9)
+ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9, ismutating = true)
 Jom = (o,x) -> mul!(o,J0,x)
 outit = ls(Jom, x0)
 @test out[1] ≈ outit[1]
