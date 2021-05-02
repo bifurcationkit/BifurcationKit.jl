@@ -142,7 +142,8 @@ function Base.copy(state::ContState)
 		n_unstable 		 = state.n_unstable,
 		n_imag 			 = state.n_imag,
 		eventValue		 = state.eventValue,
-		eigvals			 = state.eigvals
+		eigvals			 = state.eigvals,
+		eigvecs			 = state.eigvecs # can be removed? to save memory?
 	)
 end
 
