@@ -23,7 +23,7 @@ opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pM
 x0 = 0.01 * ones(N)
 
 opts = @set opts.doArcLengthScaling = true
-br0, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
+br0, = continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.computeEigenvalues(opts)
@@ -37,7 +37,7 @@ br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callb
 iter = ContIterable(F, Jac_m, x0, -1.5, (@lens _), opts)
 state = iterate(iter)[1]
 contRes = ContResult(iter, state)
-@time continuation!(iter, state, contRes)
+continuation!(iter, state, contRes)
 eltype(iter)
 #
 typeof(contRes)
@@ -48,7 +48,7 @@ typeof(contRes)
 #####
 
 opts = ContinuationPar(opts;detectBifurcation = 1,saveEigenvectors=true)
-br1, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts) #(14.28 k allocations: 1001.500 KiB)
+br1, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
 br1[1]
@@ -61,39 +61,39 @@ br1.param
 br1.params
 
 
-br2, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
+br2, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
 
 # test for different norms
-br3, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf)
+br3, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf)
 
 # test for linesearch in Newton method
 opts = @set opts.newtonOptions.linesearch = true
-br4, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
+br4, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts = @set opts.newtonOptions.linesearch = false
-br5, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = BorderingBLS())
+br5, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = BorderingBLS())
 
-br5, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = MatrixBLS())
+br5, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf, linearAlgo = MatrixBLS())
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult; k...) -> (step < 20)
-br5a, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, finaliseSolution = finaliseSolution)
+br5a, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, finaliseSolution = finaliseSolution)
 @test length(br5a.branch) == 21
 
 # test for different predictors
-br6, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = SecantPred())
+br6, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = SecantPred())
 
 optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
-br7, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPred(),printSolution = (x,p)->x[1])
+br7, = continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Bordered predictor
-br8, sol, _ = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BorderedPred(),printSolution = (x,p)->x[1])
+br8, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BorderedPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=true)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9, = @time continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
+	br9, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	printSolution = (x,p)->x[1],
 	tangentAlgo = MultiplePred(copy(x0), 0.01,13)
 	)
@@ -104,7 +104,7 @@ opts9 = (@set opts.newtonOptions.verbose=true)
 polpred = PolynomialPred(BorderedPred(),2,6,x0)
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
-	br10, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts9,
+	br10, = continuation(F, Jac_m, x0, -1.5, (@lens _), opts9,
 	tangentAlgo = polpred, plot=false,
 	printSolution = (x,p)->x[1],
 	)
@@ -151,10 +151,10 @@ polpred = PolynomialPred(BorderedPred(),2,6,x0)
 
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
-brsp, = @time continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts)
-brsp, = @time continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
-brsp, = @time continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.BorderingBLS())
-brsp, = @time continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.MatrixBLS())
+brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts)
+brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
+brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.BorderingBLS())
+brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.MatrixBLS())
 # plotBranch(br1,marker=:d);title!("")
 # plotBranch!(br8,marker=:d);title!("")
 ####################################################################################################
@@ -163,8 +163,8 @@ for talgo in [BorderedPred(), SecantPred()]
 	brbd,  = continuation(F,Jac_m,x0,-3.0, (@lens _), opts; tangentAlgo = talgo, verbosity = 0)
 	@test length(brbd) > 2
 end
-brbd,  = @time continuation(F,Jac_m,ones(N)*3,-3.0, (@lens _), ContinuationPar(opts, pMax = -2))
-brbd,  = @time continuation(F,Jac_m,ones(N)*3,-3.2, (@lens _), ContinuationPar(opts, pMax = -2), verbosity = 3)
+brbd,  = continuation(F,Jac_m,ones(N)*3,-3.0, (@lens _), ContinuationPar(opts, pMax = -2))
+brbd,  = continuation(F,Jac_m,ones(N)*3,-3.2, (@lens _), ContinuationPar(opts, pMax = -2), verbosity = 3)
 @test isnothing(brbd)
 ####################################################################################################
 # testing when starting with 2 points on the branch

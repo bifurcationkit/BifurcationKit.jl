@@ -11,13 +11,13 @@ function F0(x::Vector, r)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
-	out0, hist, flag = @time newton(F0, [0.8], 1., opt_newton0)
+	out0, hist, flag = newton(F0, [0.8], 1., opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
-br0, u1 = @time continuation(F0, out0, 1.0, (@lens _), opts_br0, printSolution = (x, p) -> x[1])
+br0, u1 = continuation(F0, out0, 1.0, (@lens _), opts_br0, printSolution = (x, p) -> x[1])
 
-outfold, hist, flag = @time newton(
+outfold, hist, flag = newton(
 		F0, (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 		br0, 2;
 		Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
@@ -57,25 +57,25 @@ end
 sol = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-out, hist, flag = @time newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
+out, hist, flag = newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, saveSolEveryStep = 1)
 
-	br, u1 = @time continuation(
+	br, u1 = continuation(
 		Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 		out,  (1., 1.), (@lens _[1]),
 		opts_br; printSolution = (x,p) -> x.u[1])
 
 # plot(br);title!("")
 
-outfold, hist, flag = @time newton(
+outfold, hist, flag = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	br, 1;
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
 	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.bifpoint[1].param,"\n")
 
-outfoldco, hist, flag = @time continuation(
+outfoldco, hist, flag = continuation(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	br, 1, (@lens _[2]), opts_br;
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
@@ -85,7 +85,7 @@ outfoldco, hist, flag = @time continuation(
 printstyled(color=:green, "--> test with Newton deflation 1")
 deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(sol)])
 soldef0 = BorderedArray([0.1], 0.0)
-soldef1,  = @time newton(
+soldef1,  = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	soldef0, (0., 1.),
 	opt_newton, deflationOp)
@@ -94,7 +94,7 @@ push!(deflationOp, soldef1)
 
 Random.seed!(1231)
 printstyled(color=:green, "--> test with Newton deflation 2")
-soldef2, = @time newton(
+soldef2, = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	rmul!(soldef0,rand()),  (0., 1.),
 	opt_newton, deflationOp)
@@ -151,7 +151,7 @@ function (l::linsolveBd_r)(J, dx)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_r())
-	out0, hist, flag = @time newton(
+	out0, hist, flag = newton(
 		Fr, (x, p) -> JacobianR(x, p[1]),
 		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),
 		opt_newton0)
@@ -160,34 +160,34 @@ Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copyto!(dest.vecs, in.vecs
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
 
-br0, u1 = @time continuation(
+br0, u1 = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	plot = false,
 	printSolution = (x,p) -> x[1][1])
 
-br0, u1 = @time continuation(
+br0, u1 = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	tangentAlgo = BorderedPred(),
 	plot = false,
 	printSolution = (x,p) -> x[1][1])
 
-outfold, hist, flag = @time newton(
+outfold, hist, flag = newton(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1; #index of the fold point
 	Jᵗ = (x, r) -> JacobianR(x, r[1]),
 	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
 		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.bifpoint[1].param,"\n")
 
-outfoldco, hist, flag = @time continuation(
+outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(@lens _[2]), opts_br0;
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
 	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = SecantPred(), plot = false)
 
-outfoldco, hist, flag = @time continuation(
+outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1, (@lens _[2]), opts_br0;
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
@@ -197,7 +197,7 @@ outfoldco, hist, flag = @time continuation(
 # try with newtonDeflation
 printstyled(color=:green, "--> test with Newton deflation 1")
 deflationOp = DeflationOperator(2.0, dot, 1.0, [(out0)])
-soldef1, = @time newton(
+soldef1, = newton(
 	Fr, (x, p) -> JacobianR(x, 0.),
 	out0, (0., 1.0),
 	opt_newton0, deflationOp)

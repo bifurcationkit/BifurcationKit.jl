@@ -42,7 +42,7 @@ nf = bp.nf
 
 ####################################################################################################
 # same but when the eigenvalues are not saved in the branch but computed on the fly
-br_noev, = @time BK.continuation(
+br_noev, = BK.continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
@@ -69,7 +69,7 @@ br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolu
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0
 par_pf = @set par_pf.x3 = -1.0
-brp, = @time BK.continuation(
+brp, = BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
 	printSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
@@ -133,11 +133,11 @@ end
 
 ##############################
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
-br_noev, = @time BK.continuation(
+br_noev, = BK.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 2, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
-bp2d = @time BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+bp2d = BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -0.123) < 1e-15
 @test abs(bp2d.nf.b3[1,1,2,2] / 2 - -0.234) < 1e-15
 @test abs(bp2d.nf.b3[1,1,1,2] / 2 - -0.0)   < 1e-15
@@ -155,7 +155,7 @@ d2FbpSecBif(x,p,dx1,dx2)     = D((z, p0) -> d1FbpSecBif(z, p0, dx1), x, p, dx2)
 d3FbpSecBif(x,p,dx1,dx2,dx3) = D((z, p0) -> d2FbpSecBif(z, p0, dx1, dx2), x, p, dx3)
 jet = (FbpSecBif, dFbpSecBif, d2FbpSecBif, d3FbpSecBif)
 
-br_snd1, = @time BK.continuation(
+br_snd1, = BK.continuation(
 	FbpSecBif, [0.0], -0.2, (@lens _),
 	printSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
@@ -163,7 +163,7 @@ br_snd1, = @time BK.continuation(
 
 # plot(br_snd1)
 
-br_snd2, = @time BK.continuation(
+br_snd2, = BK.continuation(
 	jet..., br_snd1, 1,
 	printSolution = (x, p) -> x[1],
 	setproperties(opts_br; pMin = -1.2, pMax = 0.2, ds = 0.001, detectBifurcation = 3, maxSteps=19, nInversion = 8, newtonOptions = NewtonPar(opts_br.newtonOptions),dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20); plot = false, verbosity = 0, normC = norminf,
@@ -261,7 +261,7 @@ d3Fsl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fsl(z, p0, dx1, dx2), x, p, dx3)
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
-br, = @time BK.continuation(
+br, = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	printSolution = (x, p) -> norminf(x),
 	opts_br; plot = false, verbosity = 0, normC = norminf)
@@ -281,7 +281,7 @@ BK.type(hp)
 
 ##############################
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
-br, _ = @time BK.continuation(
+br, _ = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	printSolution = (x, p) -> norminf(x),
 	setproperties(opts_br, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)

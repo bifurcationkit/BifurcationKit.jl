@@ -1,11 +1,11 @@
 # Langmuir–Blodgett transfer model (really advanced)
 
-!!! warning "Advanced"
+!!! warning ""
     Work in progress...
 
 
 !!! note "Advanced"
-    This is by far the most advanced example in the package. It uses all functionalities to their best. For example, the computation of periodic orbits with Finite Differences uses an inplace modification of the jacobian which allows to have quite a fine time discretization. The Shooting methods rely on parallel shooting with preconditioner and highly tuned ODE time stepper.
+    This is one of the most advanced example in the package. It uses all functionalities to their best. For example, the computation of periodic orbits with Finite Differences uses an inplace modification of the jacobian which allows to have quite a fine time discretization. The Shooting methods rely on parallel shooting with preconditioner and highly tuned ODE time stepper.
       
     
 In this tutorial, we try to replicate some of the results of the amazing paper [^Köpf]. This example is quite a marvel in the realm of bifurcation analysis, featuring a harp-like bifurcation diagram. The equations of the thin film are as follows:
@@ -24,9 +24,9 @@ As can be seen in the reference above, the bifurcation diagram is significantly 
 
 ```julia
 using Revise
-	using Parameters, Setfield, SparseArrays
-	using BifurcationKit, LinearAlgebra, Plots, ForwardDiff, BandedMatrices
-	const BK = BifurcationKit
+using Parameters, Setfield, SparseArrays
+using BifurcationKit, LinearAlgebra, Plots, ForwardDiff, BandedMatrices
+const BK = BifurcationKit
 	
 # norms
 norminf(x) = norm(x, Inf)
@@ -55,6 +55,7 @@ par = (N = N, Δx = Δx, c0 = -0.9, σ = 1.0, μ = 0.5, ν = 0.08, Δg = Δg)
 ## Encoding the PDE
 
 ```julia
+# function to enforce the boundary condition
 function putBC!(c, c0, N)
 	# we put boundary conditions using ghost points
 	# this boundary condition u''(0) = 0 = c1 -2c0 + c-1 gives c-1:
@@ -91,7 +92,7 @@ function Flgvf!(out, x, p, t = 0.)
 end
 Flgvf(x, p, t = 0) = Flgvf!(similar(x), x, p, t)
 
-# compute the jacobian of the vector field at position x
+# compute the jacobian of the PDE at position x
 @views function JanaSP(x, p)
 	# 63.446 μs (61 allocations: 137.97 KiB) pour N = 400
 	# 62.807 μs (44 allocations: 168.58 KiB) pour sparse(Jana(x, p))
@@ -115,7 +116,7 @@ end
 
 ## Continuation of stationary states
 
-We call the Krylov-Newton to find a stationary solution. Note that for this to work, the guess has to satisfy the boundary conditions approximately.
+We call the Krylov-Newton method to find a stationary solution. Note that for this to work, the guess has to satisfy the boundary conditions approximately.
 
 ```julia
 # newton iterations to refine the guess
@@ -129,14 +130,15 @@ plot(X, out)
 We then continue the previous guess and find this very nice folded structure with many Hopf bifurcation points.
 
 ```julia
-# careful here, in order to use Arpack.eig, you need rather big space or compute ~100 eigenvalues
+# careful here, in order to use Arpack.eig, you need rather big space 
+# or compute ~100 eigenvalues
 opts_cont = ContinuationPar(
 	dsmin = 1e-5, dsmax = 0.04, ds= -0.001, pMin = -0.01, pMax = 10.1,
 	# we adjust theta so that the continuation steps are larger
-	theta = 0.4, a = 0.75, plotEveryStep = 30,
+	theta = 0.4, a = 0.75, plotEveryStep = 30, maxSteps = 600,
 	newtonOptions = setproperties(opt_new; tol = 1e-9, maxIter = 10, verbose = false),
-	maxSteps = 600,
-	nev = 10, saveEigenvectors = true, precisionStability = 1e-5, detectBifurcation = 3, dsminBisection = 1e-8, maxBisectionSteps = 15, nInversion = 6, tolBisectionEigenvalue = 1e-9, saveSolEveryStep = 50)
+	nev = 10, saveEigenvectors = true, precisionStability = 1e-5, detectBifurcation = 3, 
+	dsminBisection = 1e-8, maxBisectionSteps = 15, nInversion = 6, tolBisectionEigenvalue = 1e-9, saveSolEveryStep = 50)
 
 	eig = EigKrylovKit(tol=1e-9, x₀ = rand(N), dim = 150)
 

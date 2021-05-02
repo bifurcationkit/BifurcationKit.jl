@@ -177,7 +177,7 @@ rhs = rand(size(J0, 1))
 sol0 = J0\rhs;
 
 ls0 = GMRESIterativeSolvers(N = size(J0,1), reltol = 1e-10)
-sol1, _ = @time ls0(J0, rhs)
+sol1, _ = ls0(J0, rhs)
 @test norm(sol0 .- sol1, Inf) < 1e-8
 
 h = 0.81

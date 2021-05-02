@@ -34,7 +34,7 @@ u0 = [.001, .001]
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_sl)
 algsl = KenCarp4()#Rodas4P()
 ####################################################################################################
-sol = @time solve(prob, algsl, abstol =1e-9, reltol=1e-6)
+sol = solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 function flowTS(x, t, pb = prob; alg = algsl, kwargs...)

@@ -10,19 +10,19 @@ Returns a variable containing parameters to affect the `newton` algorithm when s
 - `linsolver = DefaultLS()`: linear solver, must be `<: AbstractLinearSolver`
 - `eigsolver = DefaultEig()`: eigen solver, must be `<: AbstractEigenSolver`
 
-# Arguments only used in `newtonPALC`
-- `linesearch = false`: use line search algorithm
-- `alpha = 1.0`: alpha (damping) parameter for line search algorithm
-- `almin  = 0.001 `: minimal vslue of the damping `alpha`
+# Arguments for line search (Armijo)
+- `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
+- `α = 1.0`: alpha (damping) parameter for line search algorithm
+- `αmin  = 0.001 `: minimal vslue of the damping `alpha`
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
-	tol::T			 = 1e-10
+	tol::T           = 1e-10
 	maxIter::Int64 	 = 50
-	alpha::T         = convert(typeof(tol), 1.0)        # damping
-	almin::T         = convert(typeof(tol), 0.001)      # minimal damping
+	α::T             = convert(typeof(tol), 1.0)        # damping
+	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
 	verbose::Bool    = false
 	linesearch::Bool = false
 	linsolver::L 	 = DefaultLS()
@@ -40,7 +40,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `NewtonPar` will make `newton` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `NewtonPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`
-- `options` variable holding the internal parameters used by the `newton` method
+- `options::NewtonPar` variable holding the internal parameters used by the `newton` method
 - `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
     - `x` current solution
     - `f` current residual
@@ -53,7 +53,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
 # Output:
-- solution:
+- solution
 - history of residuals
 - flag of convergence
 - number of iterations
@@ -78,7 +78,7 @@ julia> F(x, p) = x.^3 .- 1
 julia> Jac(x, p) = spdiagm(0 => 3 .* x.^2) # sparse jacobian
 julia> x0 = rand(1_000)
 julia> opts = NewtonPar()
-julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x, Inf))
+julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x -> norm(x, Inf))
 ```
 
 !!! tip "Other formulation"
@@ -89,7 +89,7 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,
 """
 function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
 	# Extract parameters
-	@unpack tol, maxIter, verbose, linesearch = options
+	@unpack tol, maxIter, verbose, α, αmin, linesearch = options
 
 	# Initialize iterations
 	x = _copy(x0)
@@ -98,11 +98,16 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 
 	res = normN(f)
 	resHist = [res]
+
+	# iterations count
 	it = 0
+	
+	# total number of linear iterations
 	itlineartot = 0
 
 	# Displaying results
 	verbose && displayIteration(it, res)
+
 
 	# invoke callback before algo really starts
 	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)

@@ -79,7 +79,7 @@ opt_newton = NewtonPar(tol = 1e-11)
 		opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, detectBifurcation = 3, nev = 16, nInversion = 4)
-	br, = @time continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
+	br, = continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
 ###################################################################################################
 # Hopf continuation with automatic procedure
 outhopf, = newtonHopf(Fbru, Jbru_sp, br, 1; startWithEigen = true)
@@ -160,7 +160,7 @@ Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0,params=p ,
 #
 # newton convergence toward
 
-outhopf, _, flag, _ = @time newton((u, p) -> hopfpbVec(u, p),
+outhopf, _, flag, _ = newton((u, p) -> hopfpbVec(u, p),
 							# u -> Jac_hopf_fdMA(u, par_bru.β),
 							Bd2Vec(hopfpt), par_bru, NewtonPar(verbose = true, tol = 1e-8, maxIter = 10))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], " from ", hopfpt.p, "\n")
@@ -205,11 +205,11 @@ println("--> test jacobian expression for Hopf Minimally Augmented")
 # C = jac_hopf_fd[end-1:end,end-1:end]
 # println("--> dp, dom = ",(C - sigma' * X2m) \ (rhs[end-1:end] - sigma' * X1))
 # println("--> dp, dom FD = ",sol_fd[end-1:end])
-outhopf, hist, flag = @time newton(
+outhopf, hist, flag = newton(
 		Fbru, Jbru_sp, br, 1, Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
-outhopf, _, flag, _ = @time newton((u, p) -> hopfvariable(u, p),
+outhopf, _, flag, _ = newton((u, p) -> hopfvariable(u, p),
 							(x, p) -> Jac_hopf_MA(x, p, hopfvariable),
 							hopfpt, par_bru, NewtonPar(verbose = true, linsolver = BK.HopfLinearSolverMinAug()))
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], " from ", hopfpt.p, "\n")
@@ -227,16 +227,16 @@ function d2F(x, p1, du1, du2)
 	return out
 end
 
-outhopf, hist, flag = @time newton(Fbru, Jbru_sp, br, 1,
+outhopf, hist, flag = newton(Fbru, Jbru_sp, br, 1,
 		Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)),
 		d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 		flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
-br_hopf, u1_hopf = @time continuation(
+br_hopf, u1_hopf = continuation(
 			Fbru, Jbru_sp, br, ind_hopf, (@lens _.β),
 			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 1, plot = false)
 
-br_hopf, u1_hopf = @time continuation(Fbru, Jbru_sp, br, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
+br_hopf, u1_hopf = continuation(Fbru, Jbru_sp, br, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -296,7 +296,7 @@ floquetES = FloquetQaD(DefaultEig())
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
-	br_pok2, = @time continuation(
+	br_pok2, = continuation(
 		poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :BorderedLU,
 		plot = false, verbosity = 0)
 

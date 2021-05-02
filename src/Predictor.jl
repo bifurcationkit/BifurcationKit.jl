@@ -452,16 +452,16 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					normN = norm,
 					callback = cbDefault, kwargs...) where {T, S, E, vectype}
 	# Extract parameters
-	@unpack tol, maxIter, verbose, alpha, almin, linesearch = contparams.newtonOptions
+	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
 
 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
 	# Initialise iterations
-	x = _copy(z_pred.u) # copy(z_pred.u)
+	x = _copy(z_pred.u) 					# copy(z_pred.u)
 	p = z_pred.p
-	x_pred = _copy(x) # copy(x)
+	x_pred = _copy(x) 						# copy(x)
 
 	# Initialise residuals
 	res_f = F(x, set(par, paramlens, p));  res_n = N(x, p)
@@ -471,7 +471,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
 	dFdp = _copy(F(x, set(par, paramlens, p + finDiffEps)))
-	minus!(dFdp, res_f)	# dFdp = dFdp - res_f
+	minus!(dFdp, res_f)						# dFdp = dFdp - res_f
 	rmul!(dFdp, T(1) / finDiffEps)
 
 	res     = normAC(res_f, res_n)
@@ -481,13 +481,13 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 
 	# Displaying results
 	verbose && displayIteration(it, res)
-	step_ok = true
+	line_step = true
 
 	# invoke callback before algo really starts
 	compute = callback(x, res_f, nothing, res, 0, 0, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter) & step_ok & compute
+	while (res > tol) & (it < maxIter) & line_step & compute
 		# dFdp = (F(x, p + epsi) - F(x, p)) / epsi)
 		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
 			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
@@ -497,31 +497,32 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		itlineartot += sum(itlinear)
 
 		if linesearch
-			step_ok = false
-			while !step_ok & (alpha > almin)
-				# x_pred = x - alpha * u
-				copyto!(x_pred, x); axpy!(-alpha, u, x_pred)
+			line_step = false
+			while !line_step & (α > αmin)
+				# x_pred = x - α * u
+				copyto!(x_pred, x); axpy!(-α, u, x_pred)
 
-				p_pred = p - alpha * up
-				copyto!(res_f, F(x_pred, set(par, paramlens, p)))
+				p_pred = p - α * up
+				copyto!(res_f, F(x_pred, set(par, paramlens, p_pred)))
 
 				res_n  = N(x_pred, p_pred)
 				res = normAC(res_f, res_n)
 
 				if res < resHist[end]
-					if (res < resHist[end] / 2) & (alpha < 1)
-						alpha *= 2
+					if (res < resHist[end] / 2) & (α < 1)
+						α *= 2
 					end
-					step_ok = true
+					line_step = true
 					copyto!(x, x_pred)
 					p  = clamp(p_pred, pMin, pMax)
 					# p = p_pred
 				else
-					alpha /= 2
+					α /= 2
 				end
 			end
+			α = contparams.newtonOptions.α 	# we put back the initial value
 		else
-			minus!(x, u) 	# x .= x .- u
+			minus!(x, u) 					# x .= x .- u
 			p = clamp(p - up, pMin, pMax)
 			# p = p - up
 

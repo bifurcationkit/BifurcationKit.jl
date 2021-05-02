@@ -101,8 +101,8 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers:
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 
 # this function extracts the last component of the periodic orbit
-extractPeriodShooting(x::AbstractVector) = x[end]
-extractPeriodShooting(x::BorderedArray)  = x.p
+@inline extractPeriodShooting(x::AbstractVector) = x[end]
+@inline extractPeriodShooting(x::BorderedArray)  = x.p
 
 # this function updates the section during the continuation run
 function updateSection!(prob::ShootingProblem, x, par)

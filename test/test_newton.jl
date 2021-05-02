@@ -35,7 +35,7 @@ function test_newton_palc(x0, p0)
 	zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
 	optn = NewtonPar{Ty, DefaultLS, DefaultEig}()
 	optc = ContinuationPar{Ty, DefaultLS, DefaultEig}(newtonOptions = optn)
-	sol, hist, flag, _ = @time newtonPALC(F, Jac, p0, (@lens _), z0, τ0, zpred, Ty(0.02), θ, optc, dotθ)
+	sol, hist, flag, _ = newtonPALC(F, Jac, p0, (@lens _), z0, τ0, zpred, Ty(0.02), θ, optc, dotθ)
 end
 
 sol, = test_newton_palc(ones(10) .+ rand(10) * 0.1, 1.)

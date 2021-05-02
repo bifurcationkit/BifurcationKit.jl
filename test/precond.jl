@@ -5,7 +5,7 @@ using BifurcationKit
 N = 110
 A = I + sprand(N, N, 0.05)
 
-_, vecs, vals, info = @time KrylovKit.schursolve(A, rand(N), 10, :LM, Arnoldi(krylovdim = 30, verbosity = 0))
+_, vecs, vals, info = KrylovKit.schursolve(A, rand(N), 10, :LM, Arnoldi(krylovdim = 30, verbosity = 0))
 vals = eigvals(Array(A))
 
 # test some definitions
