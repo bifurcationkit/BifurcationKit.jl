@@ -3,7 +3,7 @@ abstract type AbstractContinuationIterable end
 abstract type AbstractContinuationState end
 ####################################################################################################
 # Iterator interface
-@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} <: AbstractContinuationIterable
+@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} <: AbstractContinuationIterable
 	F::TF
 	J::TJ
 
@@ -19,6 +19,7 @@ abstract type AbstractContinuationState end
 	plot::Bool = false
 	plotSolution::Tplotsolution
 	printSolution::Tprintsolution
+	event::Tevent = DefaultEvent()
 
 	normC::TnormC
 	dottheta::Tdot
@@ -44,6 +45,7 @@ function ContIterable(Fhandle, Jhandle,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = finaliseDefault,
 					callbackN = cbDefault,
+					event = DefaultEvent(),
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
@@ -59,13 +61,14 @@ function ContIterable(Fhandle, Jhandle,
 				dottheta = DotTheta(dotPALC),
 				finaliseSolution = finaliseSolution,
 				callbackN = callbackN,
+				event = event,
 				verbosity = verbosity,
 				filename = filename)
 end
 
-Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} = T
+Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} = T
 
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tfilename} = set(it.par, it.lens, p0)
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} = set(it.par, it.lens, p0)
 
 # hasEvent(it::ContIterable) = hasEvent(it.event) && it.contParams.detectEvent > 0
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) #|| (hasEvent(it) && it.event isa BifEvent)
@@ -97,7 +100,7 @@ Returns a variable containing the state of the continuation procedure. The field
 - `getp(state)` returns the p component of the current solution
 - `isStable(state)` whether the current state is stable
 """
-@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec} <: AbstractContinuationState
+@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState
 	z_pred::Tv								# predictor solution
 	tau::Tv									# tangent predictor
 	z_old::Tv								# current solution
@@ -118,6 +121,8 @@ Returns a variable containing the state of the continuation procedure. The field
 
 	eigvals::Teigvals = nothing				# current eigenvalues
 	eigvecs::Teigvec = nothing				# current eigenvectors
+
+	eventValue::Tcb = nothing
 end
 
 function Base.copy(state::ContState)
@@ -133,7 +138,9 @@ function Base.copy(state::ContState)
 		stopcontinuation = state.stopcontinuation,
 		stepsizecontrol  = state.stepsizecontrol,
 		n_unstable 		 = state.n_unstable,
-		n_imag 			 = state.n_imag
+		n_imag 			 = state.n_imag,
+		eventValue		 = state.eventValue,
+		eigvals			 = state.eigvals
 	)
 end
 
@@ -164,7 +171,7 @@ function updateStability!(state::ContState, n_unstable, n_imag)
 	state.n_imag = (n_imag, state.n_imag[1])
 end
 
-function save!(br::ContResult, it::ContIterable, state::ContState)
+function save!(br::ContResult, it::AbstractContinuationIterable, state::AbstractContinuationState)
 	# update branch field
 	push!(br.branch, getStateSummary(it, state))
 	# save solution
@@ -258,7 +265,8 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	end
 
 	# return the state
-	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, itnewton = 0, eigvals = eigvals, eigvecs = eigvecs, step = 0)
+	_cb = init(it.event, T) # event result
+	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (_cb, _cb))
 	return state, state
 end
 
