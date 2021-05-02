@@ -134,9 +134,16 @@ end
 getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} = br.eig[bp.idx]
 
 """
-This function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
+$(SIGNATURES)
+Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
+
+# Arguments
+- `br` result from `getStateSummary`
+- `par`: parameters
+- `lens`: lens to specify the continuation parameter
+- `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _ContResult(printsol, br, x0, par, lens::Lens, evsol, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool) where {T, S, E}
+ function _ContResult(printsol, br, x0, par, lens::Lens, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool) where {T, S, E}
 	# example of bifurcation point
 	bif0 = GenericBifPoint(x0, T, namedprintsol(printsol))
 	# shall we save full solution?
@@ -144,8 +151,8 @@ This function is used to initialize the composite type `ContResult` according to
 	n_unstable = 0; n_imag = 0; stability = true
 
 	if computeEigElements
-		evvectors = contParams.saveEigenvectors ? evsol[2] : nothing
-		_evvectors = (eigenvals = evsol[1], eigenvec = evvectors, step = 0)
+		evvectors = contParams.saveEigenvectors ? eiginfo[2] : nothing
+		_evvectors = (eigenvals = eiginfo[1], eigenvec = evvectors, step = 0)
 	else
 		_evvectors = (eigenvals = nothing, eigenvec = nothing, step = 0)
 	end

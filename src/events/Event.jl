@@ -16,7 +16,7 @@ isActive(::AbstractEvent) = true
 
 # general condition for detecting a (continuous) event. Made it default behaviour
 # Basically, we want to detect if some component of `abs.(fct(iter, state))` is below ϵ
-isEvent(::AbstractEvent, iter, state) = !isnothing(findfirst(x -> abs(x) < iter.contParams.tolBisectionEvent, state.event[2]))
+isEvent(::AbstractEvent, iter, state) = !isnothing(findfirst(x -> abs(x) < iter.contParams.tolBisectionEvent, state.eventValue[2]))
 
 # this function is called to determine if callbaclVals is an event
 test(::AbstractEvent, callbaclVals, precision) = false

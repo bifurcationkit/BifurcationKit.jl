@@ -116,6 +116,8 @@ Returns a variable containing the state of the continuation procedure. The field
 	stopcontinuation::Bool = false			# Boolean to stop continuation
 	stepsizecontrol::Bool = true			# Perform step size adaptation
 
+	# the following values encode the current, previous number of unstable (resp. imaginary) eigval
+	# it is initialized as -1 when unknown
 	n_unstable::Tuple{Int64,Int64}  = (-1, -1)	# (current, previous)
 	n_imag::Tuple{Int64,Int64} 		= (-1, -1)	# (current, previous)
 
@@ -195,15 +197,10 @@ end
 function ContResult(it::AbstractContinuationIterable, state::AbstractContinuationState)
 	x0 = getx(state); p0 = getp(state)
 	pt = it.printSolution(x0, p0)
-	if computeEigenElements(it)
-		eiginfo = computeEigenvalues(it, x0, setParam(it, p0))
-		_, n_unstable, n_imag = isStable(getParams(it), eiginfo[1])
-		updateStability!(state, n_unstable, n_imag)
-	else
-		eiginfo = nothing
-	end
+	eiginfo = computeEigenElements(it) ? (state.eigvals, state.eigvecs) : nothing
 	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it), computeEigenElements(it))
 end
+
 ####################################################################################################
 # Continuation Iterator
 #
@@ -213,13 +210,12 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# the keyword argument is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
 	p0 = get(it.par, it.lens)
-	ds = it.contParams.ds
 	T = eltype(it)
 
 	verbose && printstyled("#"^53*"\n********** Pseudo-Arclength Continuation ************\n\n", bold = true, color = :red)
 
 	# Get parameters
-	@unpack pMin, pMax, maxSteps, newtonOptions, η = it.contParams
+	@unpack pMin, pMax, maxSteps, newtonOptions, η, ds = it.contParams
 	if !(pMin <= p0 <= pMax)
 		@error "Initial parameter $p0 must be within bounds [$pMin, $pMax]"
 		return nothing
@@ -265,8 +261,14 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	end
 
 	# return the state
-	_cb = init(it.event, T) # event result
-	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (_cb, _cb))
+	cbval = init(it.event, T) # event result
+	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
+
+	# update stability
+	if computeEigenElements(it)
+		_, n_unstable, n_imag = isStable(getParams(it), eigvals)
+		updateStability!(state, n_unstable, n_imag)
+	end
 	return state, state
 end
 
@@ -280,9 +282,11 @@ function iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
-	verbose && println("#"^35*"\nStart of Continuation Step $step");
-	verbose && (@printf("Step size = %2.4e\n", ds);print("Parameter ",getLensParam(it.lens)))
-	verbose && @printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
+	if verbose
+		println("#"^35*"\nStart of Continuation Step $step");
+		@printf("Step size = %2.4e\n", ds); print("Parameter ",getLensParam(it.lens))
+		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
+	end
 
 	# Corrector, ie newton correction. This does not mutate the arguments
 	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
@@ -367,15 +371,12 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			plotBranchCont(contRes, state, it)
 
 			# Saving Solution to File
-			if contParams.saveToFile
-				saveToFile(it.filename, getx(state), getp(state), state.step, contRes)
-			end
+			contParams.saveToFile && saveToFile(it, getx(state), getp(state), state.step, contRes)
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-
 			state.stopcontinuation = ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes; state = state)
 
-			# Save solution
+			# Save current state in the branch
 			save!(contRes, it, state)
 		end
 		########################################################################################

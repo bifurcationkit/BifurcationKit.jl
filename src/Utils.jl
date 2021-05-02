@@ -74,7 +74,7 @@ Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(
 function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 	f = F(x)
 	x1 = copy(x)
-	for i ∈ eachindex(x)
+	@inbounds for i ∈ eachindex(x)
 		x1[i] += δ
 		J[:, i] .= F(x1)
 		x1[i] -= 2δ
@@ -93,11 +93,11 @@ function blockToSparse(J::AbstractBlockArray)
 	nl, nc = size(J.blocks)
 	# form the first line of blocks
 	res = J[Block(1,1)]
-	for j in 2:nc
+	@inbounds for j in 2:nc
 		res = hcat(res, J[Block(1,j)])
 	end
 	# continue with the other lines
-	for i in 2:nl
+	@inbounds for i in 2:nl
 		line = J[Block(i,1)]
 		for j in 2:nc
 			line = hcat(line, J[Block(i,j)])

@@ -73,7 +73,9 @@ module BifurcationKit
 			- `p` is the parameter
 			- `i` is the index of the solution to be saved
 			"""
-			function saveToFile(filename, sol, p, i::Int64, br::ContResult)
+			function saveToFile(iter::AbstractContinuationIterable, sol, p, i::Int64, br::ContResult)
+				if iter.contParams.saveToFile == false; return nothing; end
+				filename = iter.filename
 				try
 					# create a group in the JLD format
 					jldopen(filename*".jld2", "a+") do file
