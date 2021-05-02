@@ -1,4 +1,4 @@
-# Temperature model (simplest example for equilibria)
+# Temperature model (Simplest example)
 
 ```@contents
 Pages = ["tutorials1.md"]
@@ -57,15 +57,16 @@ out, = @time newton( F_chan, sol, par, optnewton)
 and you should see
 
 ```
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     2.3440e+01         0
-        1                2     1.3774e+00         1
-        2                3     1.6267e-02         1
-        3                4     2.4521e-06         1
-        4                5     5.9356e-11         1
-        5                6     5.8117e-12         1
+┌────────────────────-────────────────────────────────┐ 
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤ 
+│       0     │       2.3440e+01     │        0       │
+│       1     │       1.3774e+00     │        1       │
+│       2     │       1.6265e-02     │        1       │
+│       3     │       2.4488e-06     │        1       │
+│       4     │       3.2499e-11     │        1       │
+│       5     │       6.4963e-12     │        1       │
+└─────────────┴──────-───────────────┴────────────────┘
   0.014715 seconds (2.90 k allocations: 2.555 MiB)
 ```
 

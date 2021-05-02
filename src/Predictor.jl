@@ -539,6 +539,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		# shall we break the loop?
 		compute = callback(x, res_f, J, res, it, itlinear, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	end
+	verbose && displayIteration(it, res, 0, true) # display last line of the table
 	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, -1, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it, itlineartot
 end

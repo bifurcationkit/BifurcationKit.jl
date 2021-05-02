@@ -133,6 +133,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	end
 	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
 	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
+	verbose && displayIteration(0, res, 0, true) # display last line of the table
 	return x, resHist, flag, it, itlineartot
 end
 

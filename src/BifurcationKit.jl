@@ -1,6 +1,6 @@
 module BifurcationKit
 	using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
-	using Setfield: setproperties, @set, Lens, get, set, @lens
+	using Setfield: setproperties, @set, @set!, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
 	using RecursiveArrayTools: VectorOfArray
 	using DocStringExtensions

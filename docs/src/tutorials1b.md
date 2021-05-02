@@ -85,15 +85,16 @@ out, = @time BK.newton(F_chan, Jac_chan, sol, par_af, optnewton, normN = x -> no
 ```
 and you should see
 
-```
- Newton Iterations 
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     1.5707e+00         0
-        1                2     1.1546e-01         1
-        2                3     8.0149e-04         1
-        3                4     3.9038e-08         1
-        4                5     7.9049e-13         1
+```julia
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┐──────────────────────┐────────────────┤
+│       0     │       1.5707e+00     │        0       │
+│       1     │       1.1546e-01     │        1       │
+│       2     │       8.0149e-04     │        1       │
+│       3     │       3.9038e-08     │        1       │
+│       4     │       7.9049e-13     │        1       │
+└─────────────┴──────-───────────────┴────────────────┘
   0.103869 seconds (362.15 k allocations: 14.606 MiB)
 ```
 

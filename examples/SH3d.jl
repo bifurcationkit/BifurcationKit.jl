@@ -46,7 +46,7 @@ d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
 jet = (F_sh, (x, p) -> (dx -> dF_sh(x, p, dx)), d2F_sh, d3F_sh)
 
 const TY = Float64
-AF = Array{TY,2}
+AF = Array{TY}
 ####################################################################################################
 Nx = Ny = Nz = 22; N = Nx*Ny*Nz
 lx = ly = lz = pi

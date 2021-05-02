@@ -1,16 +1,24 @@
 closesttozero(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a,b) = (min(a,b), max(a,b))
 ####################################################################################################
-function displayIteration(i, residual, itlinear = 0)
-	(i == 0) && println("\n Newton Iterations      f(x)      Linear Iterations\n")
-	if length(itlinear)==1
-		@printf("%11d %19.4e %13d\n", i, residual, itlinear);
+function displayIteration(i, residual, itlinear = 0, lastRow = false)
+	if lastRow
+		lastRow && println("└─────────────┴──────-───────────────┴────────────────┘")
 	else
-		if itlinear isa Tuple{Int64, Int64}
-			@printf("%11d %19.4e      (%4d, %4d)\n", i, residual, itlinear[1], itlinear[2]);
+		if i == 0
+			println("\n┌────────────────────-────────────────────────────────┐")
+			  println("│ Newton Iterations      f(x)      Linear Iterations  │")
+			  println("├─────────────┐──────────────────────┐────────────────┤")
+		end
+		if length(itlinear) == 1
+			@printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear);
 		else
-			# used for nested linear solves
-			@printf("%11d %19.4e  ", i, residual); println(itlinear);
+			if itlinear isa Tuple{Int64, Int64}
+				@printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", i, residual, itlinear[1], itlinear[2]);
+			else
+				# used for nested linear solves
+				@printf("%11d %19.4e  ", i, residual); println(itlinear);
+			end
 		end
 	end
 end

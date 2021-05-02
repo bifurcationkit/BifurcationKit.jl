@@ -166,7 +166,7 @@ function getStateSummary(it, state)
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
-function updateStability!(state::ContState, n_unstable, n_imag)
+function updateStability!(state::ContState, n_unstable::Int, n_imag::Int)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
 	state.n_imag = (n_imag, state.n_imag[1])
 end
@@ -343,9 +343,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			# if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
 			if contParams.detectFold && contParams.detectBifurcation < 2
 				foldetected = locateFold!(contRes, it, state)
-				# if foldetected && contParams.detectLoop
-				# 	state.stopcontinuation = detectLoop(contRes, nothing)
-				# end
 			end
 
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
