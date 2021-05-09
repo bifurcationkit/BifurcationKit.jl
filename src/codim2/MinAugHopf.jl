@@ -398,6 +398,7 @@ function continuationHopf(F, J,
 		kwargs...,
 		printSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
+		)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end

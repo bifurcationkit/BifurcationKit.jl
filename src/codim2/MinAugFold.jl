@@ -382,6 +382,7 @@ function continuationFold(F, J,
 		kwargs...,
 		printSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
+		)
 
 
 	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
