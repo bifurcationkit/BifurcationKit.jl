@@ -200,6 +200,9 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 !!! tip "Jacobian tranpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
+!!! tip "ODE problems"
+    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
@@ -270,17 +273,30 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 # Simplified call:
 The call is as follows
 
-	continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, kwargs...)
+	continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, startWithEigen = false, kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 
+!!! tip "ODE problems"
+    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+
 !!! tip "Jacobian tranpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 """
-function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par, lens1::Lens, lens2::Lens, eigenvec, eigenvec_ad, options_cont::ContinuationPar ; Jᵗ = nothing, bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver), d2F = p2 -> nothing, updateMinAugEveryStep = 0, kwargs...) where {Tb,vectype}
+function continuationHopf(F, J,
+				hopfpointguess::BorderedArray{vectype, Tb}, par,
+				lens1::Lens, lens2::Lens,
+				eigenvec, eigenvec_ad,
+				options_cont::ContinuationPar ;
+				updateMinAugEveryStep = 0,
+				Jᵗ = nothing,
+				d2F = nothing,
+				d3F = nothing,
+				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
+				kwargs...) where {Tb,vectype}
 	@assert lens1 != lens2
 
 	# options for the Newton Solver inheritated from the ones the user provided
@@ -336,14 +352,21 @@ function continuationHopf(F, J, hopfpointguess::BorderedArray{vectype, Tb}, par,
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
 		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
-		printSolution = (u, p) -> (;zip(lenses, (u.p[1], p))...),
+		printSolution = (u, p) -> (;zip(lenses, (u.p[1], p))..., ω = u.p[2], k = dot(hopfPb.a, hopfPb.b)),
 		finaliseSolution = updateMinAugHopf,
 		kwargs...)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
-function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, startWithEigen = false, kwargs...)
+function continuationHopf(F, J,
+						br::AbstractBranchResult, ind_hopf::Int64,
+						lens2::Lens, options_cont::ContinuationPar ;
+						startWithEigen = false,
+						Jᵗ = nothing,
+						d2F = nothing,
+						d3F = nothing,
+						kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
@@ -362,7 +385,7 @@ function continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64, lens2
 		eigenvec_ad .= ζstar
 	end
 
-	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
 end
 
 struct HopfEig{S} <: AbstractEigenSolver

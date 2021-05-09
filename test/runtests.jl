@@ -12,14 +12,14 @@ using Test
 		include("test_newton.jl")
 		include("test-bordered-problem.jl")
 	end
-	
+
 	@testset "Continuation" begin
 		include("test_bif_detection.jl")
 		include("test-cont-non-vector.jl")
 		include("simple_continuation.jl")
 		include("testNF.jl")
 	end
-	
+
 	@testset "Fold Codim 2" begin
 		include("testJacobianFoldDeflation.jl")
 	end

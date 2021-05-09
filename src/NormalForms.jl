@@ -21,9 +21,9 @@ function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
 end
 
 """
-	getAdjointBasis(Lstar, λ::Number, options::NewtonPar; nev = 3)
+$(SIGNATURES)
 
-Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver.
+Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more eigenvalues than necessary.
 """
 function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	λstar, evstar = eigsolver(Lstar, nev)

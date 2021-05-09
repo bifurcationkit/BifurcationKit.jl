@@ -87,8 +87,19 @@ testBranch(br3)
 br4, = continuation(Ftb, Jtb, x0, (@set par.λ = 0.95), (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
 testBranch(br4)
 ####################################################################################################
+# this example is to test t failures in Newton annd how it affects the bifurcation points labels
 using ForwardDiff
+const  _rnd = rand(5)
+F = (x, p; k = 3) -> (@. p + x - _rnd .* x^k/k)
+Jac_m = (x, p; k = 2) -> diagm(0 => 1 .- _rnd .* x.^k)
 
+opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3)
+
+br4, = continuation(F, Jac_m, zeros(5), 0., (@lens _), opts; verbosity = 0,
+	printSolution = (x,p)->x[1])
+testBranch(br4)
+####################################################################################################
+using ForwardDiff
 function Ftb(X, p)
 	p1, p2, k = p
 	x, y = X

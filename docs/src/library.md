@@ -50,7 +50,7 @@ newton
 continuation
 ```
 
-## Event
+## Events
 
 ```@docs
 BifurcationKit.DiscreteEvent
@@ -61,8 +61,13 @@ BifurcationKit.ContinuousEvent
 ```
 
 ```@docs
+BifurcationKit.SetOfEvents
+```
+
+```@docs
 BifurcationKit.CompositeEvent
 ```
+
 ## Branch switching (branch point)
 
 ```@docs

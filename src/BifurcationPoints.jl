@@ -220,7 +220,7 @@ $(TYPEDFIELDS)
 
 ## Predictor
 
-You can call `predictor(bp, ds)` on such bifurcation point `bp` to get to find the guess for the periodic orbit.
+You can call `predictor(bp, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
 mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
 	"Hopf point"
