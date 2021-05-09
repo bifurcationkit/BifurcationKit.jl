@@ -276,7 +276,6 @@ function newtonHopf(F, J,
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
-		@debug dot(ζstar, ζ)
 		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
 

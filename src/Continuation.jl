@@ -372,8 +372,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				end
 			end
 
-			# Plotting
-			plotBranchCont(contRes, state, it)
 
 			# Saving Solution to File
 			contParams.saveToFile && saveToFile(it, getx(state), getp(state), state.step, contRes)
@@ -383,6 +381,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 			# Save current state in the branch
 			save!(contRes, it, state)
+			# Plotting
+			plotBranchCont(contRes, state, it)
 		end
 		########################################################################################
 		# body
