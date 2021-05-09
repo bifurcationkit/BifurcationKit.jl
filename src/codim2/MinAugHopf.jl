@@ -16,8 +16,8 @@ struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	Jᵗ::TJa						# Adjoint of the Jacobian of F
 	d2F::Td2f					# Hessian of F
 	lens::Tl					# parameter axis for the Hopf point
-	a::vectype					# close to null vector of (J + iω I)^*
-	b::vectype					# close to null vector of  J + iω I
+	a::vectype					# close to null vector of (J - iω I)^*
+	b::vectype					# close to null vector of  J - iω I
 	zero::vectype				# vector zero, to avoid allocating it
 	linsolver::S				# linear solver
 	linbdsolver::Sbd			# linear bordered solver
@@ -43,16 +43,16 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	# update parameter
 	par = set(_par, hp.lens, p)
 	# ┌         ┐┌  ┐ ┌ ┐
-	# │ J+iω  a ││v │=│0│
+	# │ J-iω  a ││v │=│0│
 	# │  b    0 ││σ1│ │1│
 	# └         ┘└  ┘ └ ┘
 	# In the notations of Govaerts 2000, a = w, b = v
-	# Thus, b should be a null vector of J + iω
-	#       a should be a null vector of J'- iω
+	# Thus, b should be a null vector of J - iω
+	#       a should be a null vector of J'+ iω
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
 	# note that the shift argument only affect J in this call:
-	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, ω))[2]
+	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, -ω))[2]
 
 	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
 	# we find sigma2 = conj(sigma1)
@@ -114,22 +114,22 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	n = T(1)
 
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
-	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, ω))
+	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, -ω))
 
 	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
-	w, σ2, _, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = -Complex{T}(0, ω))
+	w, σ2, _, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = Complex{T}(0, ω))
 
 	δ = T(1e-9)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
-	################### computation of σx σp ####################
+	###################  computation of σx σp  ####################
 	################### and inversion of Jhopf ####################
 	dpF   = (Fhandle(x, set(par, lens, p + ϵ1))	 - Fhandle(x, set(par, lens, p - ϵ1))) / T(2ϵ1)
 	dJvdp = (apply(J(x, set(par, lens, p + ϵ3)), v) - apply(J(x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
 	σp = -dot(w, dJvdp) / n
 
 	# case of sigma_omega
-	# σω = -dot(w, Complex{T}(0, 1) * v) / n
-	σω = - Complex{T}(0, 1) * dot(w, v) / n
+	# σω = dot(w, Complex{T}(0, 1) * v) / n
+	σω = Complex{T}(0, 1) * dot(w, v) / n
 
 	x1, x2, _, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
 
@@ -233,8 +233,8 @@ function newtonHopf(F, J,
 			kwargs...) where {vectypeR, T}
 	hopfproblem = HopfProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
-		_copy(eigenvec),
-		_copy(eigenvec_ad),
+		_copy(eigenvec_ad),	# this is pb.a ≈ null space of (J - iω I)^*
+		_copy(eigenvec), 	# this is pb.b ≈ null space of  J - iω I
 		options.linsolver, @set bdlinsolver.solver = options.linsolver)
 
 	# Jacobian for the Hopf problem
@@ -262,11 +262,12 @@ function newtonHopf(F, J,
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
-	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	ζ ./= norm(ζ)
 	ζad = LinearAlgebra.conj.(ζ)
 
 	if startWithEigen
-		# computation of adjoint eigenvalue. Recall that b should be a null vector of J+iω
+		# computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
 		λ = Complex(0, ω)
 		p = bifpt.param
 		parbif = setParam(br, p)
@@ -280,7 +281,7 @@ function newtonHopf(F, J,
 	end
 
 	# solve the hopf equations
-	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, ζad, ζ, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
+	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, ζ, ζad, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
 end
 
 """
@@ -340,8 +341,8 @@ function continuationHopf(F, J,
 	hopfPb = HopfProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F,
 		lens1,
-		_copy(eigenvec),
-		_copy(eigenvec_ad),
+		_copy(eigenvec_ad),	# this is pb.a ≈ null space of (J - iω I)^*
+		_copy(eigenvec), 	# this is pb.b ≈ null space of  J - iω I
 		options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
 	# Jacobian for the Hopf problem
@@ -370,14 +371,14 @@ function continuationHopf(F, J,
 		# compute new b
 		T = typeof(p1)
 		n = T(1)
-		newb = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
+		newb = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, -ω))[1]
 
 		# compute new a
 		JAd_at_xp = hasAdjoint(hopfPb) ? hopfPb.Jᵗ(x, newpar) : transpose(J_at_xp)
-		newa = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = -Complex(0, ω))[1]
+		newa = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 
 		hopfPb.a .= newa ./ norm(newa)
-		hopfPb.b .= newb ./ norm(newb)
+		hopfPb.b .= newb ./ dot(newb, hopfPb.a)
 
 		return true
 	end
@@ -385,7 +386,7 @@ function continuationHopf(F, J,
 	# it allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :printSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(hopfPb.a, hopfPb.b)) :
+		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., BT = dot(hopfPb.a, hopfPb.b)) :
 		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = 0., BT = dot(hopfPb.a, hopfPb.b))
 
 	# solve the hopf equations
@@ -409,13 +410,15 @@ function continuationHopf(F, J,
 						d3F = nothing,
 						kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
+	ω = hopfpointguess.p[2]
 	bifpt = br.bifpoint[ind_hopf]
-	eigenvec = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-	eigenvec_ad = conj.(eigenvec)
+	ζ = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	ζ ./= norm(ζ)
+	ζad = conj.(ζ)
 
 	if startWithEigen
 		# computation of adjoint eigenvalue
-		λ = Complex(0,hopfpointguess.p[2])
+		λ = Complex(0, ω)
 		p = bifpt.param
 		parbif = setParam(br, p)
 
@@ -423,10 +426,10 @@ function continuationHopf(F, J,
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = true)
-		eigenvec_ad .= ζstar
+		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
 
-	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, eigenvec_ad, eigenvec, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, ζ, ζad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
 end
 
 struct HopfEig{S} <: AbstractEigenSolver
