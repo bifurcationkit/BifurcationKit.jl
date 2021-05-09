@@ -42,9 +42,16 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	b = hp.b
 	# update parameter
 	par = set(_par, hp.lens, p)
-
+	# ┌         ┐┌  ┐ ┌ ┐
+	# │ J+iω  a ││v │=│0│
+	# │  b    0 ││σ1│ │1│
+	# └         ┘└  ┘ └ ┘
+	# In the notations of Govaerts 2000, a = w, b = v
+	# Thus, b should be a null vector of J + iω
+	#       a should be a null vector of J'- iω
 	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
+	# note that the shift argument only affect J in this call:
 	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, ω))[2]
 
 	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
@@ -95,28 +102,34 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 
 	# parameter axis
 	lens = pb.lens
+	# update parameter
+	par0 = set(par, lens, p)
 
 	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
-	J_at_xp = J(x, set(par, lens, p))
+	J_at_xp = J(x, par0)
 
 	# we do the following to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
-	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, set(par, lens, p)) : transpose(J_at_xp)
+	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, par0) : transpose(J_at_xp)
+
+	n = T(1)
+
+	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
+	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, ω))
+
+	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
+	w, σ2, _, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = -Complex{T}(0, ω))
 
 	δ = T(1e-9)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
-
-	# we solve Jv + a σ1 = 0 with <b, v> = n
-	n = T(1)
-	v, σ1, _, _ = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, ω))
-	w, σ2, _, _ = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = -Complex{T}(0, ω))
-
 	################### computation of σx σp ####################
+	################### and inversion of Jhopf ####################
 	dpF   = (Fhandle(x, set(par, lens, p + ϵ1))	 - Fhandle(x, set(par, lens, p - ϵ1))) / T(2ϵ1)
 	dJvdp = (apply(J(x, set(par, lens, p + ϵ3)), v) - apply(J(x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
 	σp = -dot(w, dJvdp) / n
 
 	# case of sigma_omega
-	σω = -dot(w, Complex{T}(0, 1) * v) / n
+	# σω = -dot(w, Complex{T}(0, 1) * v) / n
+	σω = - Complex{T}(0, 1) * dot(w, v) / n
 
 	x1, x2, _, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
 
@@ -131,16 +144,16 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 		e = zero(x)
 		for ii in CartesianIndices(x)
 			e[ii] = T(1)
-			d2Fve = (apply(J(x + ϵ2 * e, set(par, lens, p)), v) - apply(J(x - ϵ2 * e, set(par, lens, p)), v)) / T(2ϵ2)
+			d2Fve = (apply(J(x + ϵ2 * e, par0), v) - apply(J(x - ϵ2 * e, par0), v)) / T(2ϵ2)
 			σx[ii] = -dot(w, d2Fve) / n
 			e[ii] = T(0)
 		end
 		σxx1 = dot(σx, x1)
 		σxx2 = dot(σx, x2)
 	else
-		d2Fv = d2F(x, set(par, lens, p), v, x1)
+		d2Fv = d2F(x, par0, v, x1)
 		σxx1 = -dot(w, d2Fv) / n
-		d2Fv = d2F(x, set(par, lens, p), v, x2)
+		d2Fv = d2F(x, par0, v, x2)
 		σxx2 = -dot(w, d2Fv) / n
 	end
 	# we need to be carefull here because the dot produce conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
@@ -149,9 +162,9 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 			  [dup - real(σxx1), duω + imag(σxx1)]
 
 	if debug_
-		return x1 - dp * x2, dp, dω, true, it1 + it2, (σx, σp, σω, dpF)
+		return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw), (σx, σp, σω, dpF)
 	else
-		return x1 - dp * x2, dp, dω, true, it1 + it2
+		return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 	end
 end
 
@@ -188,6 +201,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
+- `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call:
@@ -206,12 +220,21 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 !!! warning "Hessian"
     The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
 """
-function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...) where {vectypeR, T}
+function newtonHopf(F, J,
+			hopfpointguess::BorderedArray{vectypeR, T},
+			par, lens::Lens,
+			eigenvec, eigenvec_ad,
+			options::NewtonPar;
+			Jᵗ = nothing,
+			d2F = nothing,
+			normN = norm,
+			bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
+			kwargs...) where {vectypeR, T}
 	hopfproblem = HopfProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec),
 		_copy(eigenvec_ad),
-		options.linsolver)
+		options.linsolver, @set bdlinsolver.solver = options.linsolver)
 
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfproblem)
@@ -220,10 +243,19 @@ function newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens:
 	opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
 
 	# solve the hopf equations
-	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN, kwargs...)
+	return newton(hopfproblem, Jac_hopf_MA, hopfpointguess, par, opt_hopf, normN = normN, kwargs...)..., hopfproblem
 end
 
-function newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, verbose = true, nev = br.contparams.nev, startWithEigen = false, kwargs...)
+function newtonHopf(F, J,
+			br::AbstractBranchResult, ind_hopf::Int64;
+			Jᵗ = nothing,
+			d2F = nothing,
+			normN = norm,
+			options = br.contparams.newtonOptions,
+			verbose = true,
+			nev = br.contparams.nev,
+			startWithEigen = false,
+			kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])

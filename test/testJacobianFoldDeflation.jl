@@ -166,8 +166,8 @@ res_exp = res_explicit[end] \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, _ = continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br, = continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, _ = continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]),opts_br0,plot = false, verbosity = 0)
+br, = continuation(F_chan, Jac_mat, out, (a, 0.01), (@lens _[1]),opts_br0,plot = false, verbosity = 0)

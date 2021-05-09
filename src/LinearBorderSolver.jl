@@ -27,7 +27,7 @@ end
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
-#          J  * dX +       dR   * dl = R
+# (shift⋅I + J) * dX +       dR   * dl = R
 # xiu * dz.u' * dX + xip * dz.p * dl = n
 function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 								dzu, dzp::T, R, n::T,
@@ -59,7 +59,6 @@ function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 
 		printstyled(color=:red,"--> res = ", ( norm(x2), abs(n - xip*dzp*dl -xiu* dot(dzu, x1))), "\n")
 	end
-
 	return x1, dl, true, (it1, it2)
 end
 ####################################################################################################
@@ -132,11 +131,11 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 	xp = x[end]
 	# copyto!(out.u, apply(lbmap.J, x.u))
 	if isnothing(lbmap.shift)
-		out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a
+		out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
 	else
-		out[1:end-1] .= @views apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
+		out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
 	end
-	out[end] = @views dot(lbmap.b, xu)  + lbmap.c  * xp
+	out[end] = dot(lbmap.b, xu)  + lbmap.c  * xp
 	return out
 end
 

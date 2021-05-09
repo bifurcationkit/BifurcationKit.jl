@@ -42,7 +42,13 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vect
 	b = fp.b
 	# update parameter
 	par = set(_par, fp.lens, p)
-
+	# ┌      ┐┌  ┐ ┌ ┐
+	# │ J  a ││v │=│0│
+	# │ b  0 ││σ1│ │1│
+	# └      ┘└  ┘ └ ┘
+	# In the notations of Govaerts 2000, a = w, b = v
+	# Thus, b should be a null vector of J
+	#       a should be a null vector of J'
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
@@ -94,15 +100,16 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	v, σ1, _, _ = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
+	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-	w, σ2, _, _ = pb.linbdsolver(JAd_at_xp, b, a, T(0), pb.zero, n)
+	w, σ2, _, itw = pb.linbdsolver(JAd_at_xp, b, a, T(0), pb.zero, n)
 
 	δ = T(1e-8)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 	################### computation of σx σp ####################
+	################### and inversion of Jfold ####################
 	dpF = minus(F(x, set(par, lens, p + ϵ1)), F(x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1) / T(2ϵ1))
 	dJvdp = minus(apply(J(x, set(par, lens, p + ϵ3)), v), apply(J(x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1) / T(2ϵ3))
 	σp = -dot(w, dJvdp) / n
@@ -124,6 +131,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		end
 
 		########## Resolution of the bordered linear system ########
+		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
 
 	else
@@ -145,9 +153,9 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	end
 
 	if debug_
-		return dX, dsig, true, sum(it), 0., [J(x, par0) dpF ; σx' σp]
+		return dX, dsig, true, sum(it)+sum(itv)+sum(itw), 0., [J(x, par0) dpF ; σx' σp]
 	else
-		return dX, dsig, true, sum(it), 0.
+		return dX, dsig, true, sum(it)+sum(itv)+sum(itw), 0.
 	end
 end
 
@@ -225,7 +233,7 @@ function newtonFold(F, J,
 	opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
 
 	# solve the Fold equations
-	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)
+	return newton(foldproblem, Jac_fold_MA, foldpointguess, par, opt_fold; normN = normN, kwargs...)..., foldproblem
 end
 
 function newtonFold(F, J,
@@ -331,6 +339,7 @@ function continuationFold(F, J,
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensParam(lens1, lens2)
 
+	# this function is used as a Finalizer
 	function updateMinAugFold(z, tau, step, contResult; kwargs...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u	# fold point
@@ -353,7 +362,7 @@ function continuationFold(F, J,
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 
 		foldPb.a .= newa ./ norm(newa)
-		foldPb.b .= newb ./ norm(newb)
+		foldPb.b .= newb ./ dot(newb, foldPb.a)
 
 		return true
 	end
@@ -396,7 +405,7 @@ function continuationFold(F, J,
 
 		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
 		eigenvec_ad = real.(ζstar)
-		eigenvec_ad ./= norm(eigenvec_ad)
+		eigenvec_ad ./= dot(eigenvec, eigenvec_ad)
 	end
 
 	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
