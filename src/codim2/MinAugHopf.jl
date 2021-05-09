@@ -152,9 +152,10 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 		σxx2 = dot(σx, x2)
 	else
 		d2Fv = d2F(x, par0, v, x1)
-		σxx1 = -dot(w, d2Fv) / n
+		# this matches the computations in the case hasHessian(pb) == false
+		σxx1 = -conj(dot(w, d2Fv) / n)
 		d2Fv = d2F(x, par0, v, x2)
-		σxx2 = -dot(w, d2Fv) / n
+		σxx2 = -conj(dot(w, d2Fv) / n)
 	end
 	# we need to be carefull here because the dot produce conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
 	dp, dω = [real(σp - σxx2) real(σω);
@@ -272,7 +273,7 @@ function newtonHopf(F, J,
 		# jacobian at bifurcation point
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
-		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = options.verbose)
+		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
 		eigenvec_ad .= ζstar
 	end
 
