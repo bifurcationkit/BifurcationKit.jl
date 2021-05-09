@@ -377,7 +377,8 @@ function continuationHopf(F, J,
 		newa = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 
 		hopfPb.a .= newa ./ norm(newa)
-		hopfPb.b .= newb ./ dot(newb, hopfPb.a)
+		# do not normalise with dot(newb, hopfPb.a), it prevents BT  detection
+		hopfPb.b .= newb ./ norm(newb)
 
 		return true
 	end

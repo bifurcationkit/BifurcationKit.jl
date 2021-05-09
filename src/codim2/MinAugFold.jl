@@ -362,7 +362,8 @@ function continuationFold(F, J,
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 
 		foldPb.a .= newa ./ norm(newa)
-		foldPb.b .= newb ./ dot(newb, foldPb.a)
+		# do not normalise with dot(newb, foldPb.a), it prevents BT  detection
+		foldPb.b .= newb ./ norm(newb)
 
 		return true
 	end

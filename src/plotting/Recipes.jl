@@ -44,7 +44,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 	@series begin
-		if hasstability(contres)
+		if hasstability(contres) && plotstability
 			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 		end
 		xguide --> xlab
