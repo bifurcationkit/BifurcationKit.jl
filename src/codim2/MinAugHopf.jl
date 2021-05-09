@@ -16,8 +16,8 @@ struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	Jᵗ::TJa						# Adjoint of the Jacobian of F
 	d2F::Td2f					# Hessian of F
 	lens::Tl					# parameter axis for the Hopf point
-	a::vectype					# close to null vector of (J - iω I)^*
-	b::vectype					# close to null vector of J - iω I
+	a::vectype					# close to null vector of (J + iω I)^*
+	b::vectype					# close to null vector of  J + iω I
 	zero::vectype				# vector zero, to avoid allocating it
 	linsolver::S				# linear solver
 	linbdsolver::Sbd			# linear bordered solver
@@ -258,15 +258,16 @@ function newtonHopf(F, J,
 			startWithEigen = false,
 			kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
+	ω = hopfpointguess.p[2]
 	bifpt = br.bifpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
-	eigenvec = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-	eigenvec_ad = LinearAlgebra.conj.(eigenvec)
+	ζ = geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	ζad = LinearAlgebra.conj.(ζ)
 
 	if startWithEigen
-		# computation of adjoint eigenvalue
-		λ = Complex(0, hopfpointguess.p[2])
+		# computation of adjoint eigenvalue. Recall that b should be a null vector of J+iω
+		λ = Complex(0, ω)
 		p = bifpt.param
 		parbif = setParam(br, p)
 
@@ -274,11 +275,12 @@ function newtonHopf(F, J,
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
-		eigenvec_ad .= ζstar
+		@debug dot(ζstar, ζ)
+		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
 
 	# solve the hopf equations
-	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, eigenvec_ad, eigenvec, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
+	return newtonHopf(F, J, hopfpointguess, br.params, br.lens, ζad, ζ, options; Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
 end
 
 """
