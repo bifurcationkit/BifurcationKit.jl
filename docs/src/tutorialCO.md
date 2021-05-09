@@ -61,9 +61,12 @@ pts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01, nInve
 br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	printSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = true, verbosity = 3, normC = norminf)
+	
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false)
+plot!(br,xlims=(0.8,1.8))
 ```
 
-And you should get from `plot(br)`:
+And you should get:
 
 ![](com-fig1.png)
 
@@ -81,7 +84,8 @@ sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	bothside=true,
 	bdlinsolver = MatrixBLS())
 	
-plot(sn_codim2.q2, sn_codim2.x, label = "Fold");plot!(br,xlims=(0.5,1.3))
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false)
+plot!(br,xlims=(0.8,1.8))
 ```
 
 ![](com-fig2.png)
@@ -103,9 +107,9 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	)
 	
 # plotting
-plot(br)
-plot!(sn_codim2.q2, sn_codim2.x, label = "SN",)
-plot!(hp_codim2.q2, hp_codim2.x, label = "Hopf", plotfold = false, xlims=(0.5,1.5))
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false)
+plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
+plot!(br, xlims=(0.6,1.5))
 ```	
 
 ![](com-fig3.png)

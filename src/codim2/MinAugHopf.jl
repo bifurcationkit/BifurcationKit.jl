@@ -354,7 +354,7 @@ function continuationHopf(F, J,
 
 	function updateMinAugHopf(z, tau, step, contResult; k...)
 		~modCounter(step, updateMinAugEveryStep) && return true
-		x = z.u.u		# fold point
+		x = z.u.u		# hopf point
 		p1 = z.u.p[1]	# first parameter
 		ω  = z.u.p[2]	# Hopf frequency
 		p2 = z.p		# second parameter
@@ -380,7 +380,8 @@ function continuationHopf(F, J,
 		# do not normalise with dot(newb, hopfPb.a), it prevents BT  detection
 		hopfPb.b .= newb ./ norm(newb)
 
-		return true
+		# if the frequency is null, this is not a Hopf point, we halt the process
+		return abs(ω) > options_newton.tol
 	end
 
 	# it allows to append information specific to the codim 2 continuation to the user data
