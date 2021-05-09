@@ -12,7 +12,7 @@ function COm(u, p)
 	x, y, s = u
 	z = 1-x-y-s
 	out = similar(u)
-	out[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
+	out[1] = 2 * q1 * z^2 - 2 * q5 * x^2 - q3 * x * y
 	out[2] = q2 * z - q6 * y - q3 * x * y
 	out[3] = q4 * z - k * q4 * s
 	out

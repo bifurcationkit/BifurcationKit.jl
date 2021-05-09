@@ -367,16 +367,21 @@ function continuationFold(F, J,
 		return true
 	end
 
+	# it allows to append information specific to the codim 2 continuation to the user data
+	_printsol = get(kwargs, :printSolution, nothing)
+	_printsol2 = isnothing(_printsol) ? (u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) : (u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
+	
 	# solve the Fold equations
-	branch, u, tau = continuation(
+	br, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
 		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
-		printSolution = (u, p) -> (;zip(lenses, (u.p, p))...),
+		kwargs...,
+		printSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
-		kwargs...)
 
-	return setproperties(branch; type = :FoldCodim2, functional = foldPb), u, tau
+
+	return setproperties(br; type = :FoldCodim2, functional = foldPb), u, tau
 end
 
 function continuationFold(F, J,

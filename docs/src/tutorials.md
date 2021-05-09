@@ -9,7 +9,7 @@ There are three levels of tutorials:
 ## ODE examples
 
 ```@contents
-Pages = ["tutorialsODE.md"]
+Pages = ["tutorialsODE.md", "tutorialCO.md"]
 Depth = 1
 ```
 

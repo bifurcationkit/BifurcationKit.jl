@@ -379,14 +379,20 @@ function continuationHopf(F, J,
 		return true
 	end
 
+	# it allows to append information specific to the codim 2 continuation to the user data
+	_printsol = get(kwargs, :printSolution, nothing)
+	_printsol2 = isnothing(_printsol) ?
+		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(hopfPb.a, hopfPb.b)) :
+		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = 0., BT = dot(hopfPb.a, hopfPb.b))
+
 	# solve the hopf equations
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
 		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
-		printSolution = (u, p) -> (;zip(lenses, (u.p[1], p))..., ω = u.p[2], k = dot(hopfPb.a, hopfPb.b)),
+		kwargs...,
+		printSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
-		kwargs...)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
