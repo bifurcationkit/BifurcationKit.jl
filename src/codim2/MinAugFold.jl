@@ -384,7 +384,7 @@ function continuationFold(F, J,
 		finaliseSolution = updateMinAugFold,
 
 
-	return setproperties(br; type = :FoldCodim2, functional = foldPb), u, tau
+	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
 end
 
 function continuationFold(F, J,
@@ -428,4 +428,22 @@ function (eig::FoldEig)(Jma, nev; kwargs...)
 	J = Jma.fldpb.J(Jma.x.u, set(Jma.params, Jma.fldpb.lens, Jma.x.p))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
+end
+
+"""
+$(SIGNATURES)
+
+This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
+"""
+function codim2FoldBifurcationPoints(contres::AbstractBranchResult)
+	if contres.functional isa FoldProblemMinimallyAugmented == false
+		return contres
+	end
+	conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
+	for (ind, bp) in pairs(contres.bifpoint)
+		if bp.type in keys(conversion)
+			@set! contres.bifpoint[ind].type = conversion[bp.type]
+		end
+	end
+	return contres
 end

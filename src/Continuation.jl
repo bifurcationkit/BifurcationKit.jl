@@ -381,6 +381,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 			# Save current state in the branch
 			save!(contRes, it, state)
+
 			# Plotting
 			plotBranchCont(contRes, state, it)
 		end

@@ -138,7 +138,7 @@ outfold, = newton((x, p) -> foldpbVec(x, p),
 	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold].param)
 
 rhs = rand(n+1)
-Jac_fold_fdMA(u0) = BK.finiteDifferences( u-> foldpbVec(u, (a, 0.01)), u0)
+Jac_fold_fdMA(u0) = BK.finiteDifferences( u -> foldpbVec(u, (a, 0.01)), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 

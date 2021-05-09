@@ -84,7 +84,7 @@ sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	bothside=true,
 	bdlinsolver = MatrixBLS())
 	
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false)
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(br,xlims=(0.8,1.8))
 ```
 
@@ -107,7 +107,7 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	)
 	
 # plotting
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false)
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 plot!(br, xlims=(0.6,1.5))
 ```	

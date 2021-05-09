@@ -238,3 +238,57 @@ end
 function plotPeriodicShooting(x, M; kwargs...)
 	plot();plotPeriodicShooting!(x, M; kwargs...)
 end
+####################################################################################################
+# plot recipe for codim 2 plot
+# TODO Use dispatch for this
+RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
+	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
+	ind1, ind2 = getPlotVars(contres, vars)
+	xlab, ylab = getAxisLabels(ind1, ind2, contres)
+	@series begin
+		if hasstability(contres) && false
+			linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
+		end
+		xguide --> xlab
+		yguide --> ylab
+		label --> branchlabel
+		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)
+	end
+
+	# display bifurcation points
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
+
+	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
+		if filterbifpoints == true
+			bifpt = filterBifurcations(bifpt)
+		end
+		@series begin
+			seriestype := :scatter
+			seriescolor --> map(x -> colorbif[x.type], bifpt)
+			markershape --> map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :square : :circle, bifpt)
+			markersize --> 3
+			markerstrokewidth --> 0
+			label --> ""
+			xguide --> xlab
+			yguide --> ylab
+			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [getproperty(contres[pt.idx], ind2) for pt in bifpt]
+		end
+		# add legend for bifurcation points
+		if putbifptlegend && length(bifpt) >= 1
+			bps = unique(x -> x.type, [pt for pt in bifpt if (pt.type != :none && (plotfold || pt.type != :fold))])
+			(length(bps) == 0) && return
+			for pt in bps
+				@series begin
+					seriestype := :scatter
+					seriescolor --> colorbif[pt.type]
+					label --> "$(pt.type)"
+					markersize --> 3
+					markerstrokewidth --> 0
+					xguide --> xlab
+					yguide --> ylab
+					[getproperty(contres[pt.idx], ind1)], [getproperty(contres[pt.idx], ind2)]
+				end
+			end
+		end
+	end
+end
