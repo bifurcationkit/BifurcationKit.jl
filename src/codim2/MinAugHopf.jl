@@ -49,7 +49,7 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J - iω
 	#       a should be a null vector of J'+ iω
-	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
+	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
 	n = T(1)
 	# note that the shift argument only affect J in this call:
 	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, -ω))[2]
@@ -113,7 +113,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 
 	n = T(1)
 
-	# we solve (J+iω)v + a σ1 = 0 with <b, v> = n
+	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
 	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, -ω))
 
 	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
@@ -357,7 +357,7 @@ function continuationHopf(F, J,
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u		# fold point
 		p1 = z.u.p[1]	# first parameter
-		ω = z.u.p[2]	# Hopf frequency
+		ω  = z.u.p[2]	# Hopf frequency
 		p2 = z.p		# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
@@ -436,8 +436,9 @@ struct HopfEig{S} <: AbstractEigenSolver
 	eigsolver::S
 end
 
-function (eig::HopfEig)(Jma, n; kwargs...)
-	J = Jma.hopfpb.J(Jma.x.u, set(Jma.params,Jma.hopfpb.lens,Jma.x.p[1]))
+function (eig::HopfEig)(Jma, nev; kwargs...)
+	n = min(nev, length(Jma.x.u))
+	J = Jma.hopfpb.J(Jma.x.u, set(Jma.params, Jma.hopfpb.lens, Jma.x.p[1]))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end

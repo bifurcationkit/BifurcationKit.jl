@@ -69,7 +69,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 			label --> ""
 			xguide --> xlab
 			yguide --> ylab
-			map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt)
+			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [getproperty(contres[pt.idx], ind2) for pt in bifpt]
 		end
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
@@ -84,7 +84,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 					markerstrokewidth --> 0
 					xguide --> xlab
 					yguide --> ylab
-					[getproperty(pt, ind1)], [getproperty(pt.printsol, ind2)]
+					[getproperty(contres[pt.idx], ind1)], [getproperty(contres[pt.idx], ind2)]
 				end
 			end
 		end

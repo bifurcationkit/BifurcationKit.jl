@@ -108,7 +108,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 
 	δ = T(1e-8)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
-	################### computation of σx σp ####################
+	###################  computation of σx σp  ####################
 	################### and inversion of Jfold ####################
 	dpF = minus(F(x, set(par, lens, p + ϵ1)), F(x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1) / T(2ϵ1))
 	dJvdp = minus(apply(J(x, set(par, lens, p + ϵ3)), v), apply(J(x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1) / T(2ϵ3))
@@ -369,8 +369,10 @@ function continuationFold(F, J,
 
 	# it allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :printSolution, nothing)
-	_printsol2 = isnothing(_printsol) ? (u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) : (u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
-	
+	_printsol2 = isnothing(_printsol) ?
+		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) :
+		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
+
 	# solve the Fold equations
 	br, u, tau = continuation(
 		foldPb, Jac_fold_MA,
@@ -420,8 +422,9 @@ struct FoldEig{S} <: AbstractEigenSolver
 	eigsolver::S
 end
 
-function (eig::FoldEig)(Jma, n; kwargs...)
-	J = Jma.fldpb.J(Jma.x.u, set(Jma.params,Jma.fldpb.lens,Jma.x.p))
+function (eig::FoldEig)(Jma, nev; kwargs...)
+	n = min(nev, length(Jma.x.u))
+	J = Jma.fldpb.J(Jma.x.u, set(Jma.params, Jma.fldpb.lens, Jma.x.p))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end
