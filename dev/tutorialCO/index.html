@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>CO-oxydation (codim 2) · Bifurcation Analysis in Julia</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="Bifurcation Analysis in Julia logo"/></a><div class="docs-package-name"><span class="docs-autofit">Bifurcation Analysis in Julia</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../guidelines/">Overview</a></li><li><a class="tocitem" href="../tutorials/">Tutorials</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Functionalities</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../Predictors/">Predictors / correctors</a></li><li><a class="tocitem" href="../EventCallback/">Event Handling and Callback</a></li><li><a class="tocitem" href="../detectionBifurcation/">Bifurcation detection</a></li><li><a class="tocitem" href="../codim2Continuation/">Fold / Hopf Continuation (codim 2)</a></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Normal form</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../simplebp/">Simple branch point</a></li><li><a class="tocitem" href="../nonsimplebp/">Non-simple branch point</a></li><li><a class="tocitem" href="../simplehopf/">Simple Hopf point</a></li></ul></li><li><a class="tocitem" href="../branchswitching/">Branch switching</a></li><li><a class="tocitem" href="../BifurcationDiagram/">Bifurcation diagram</a></li><li><a class="tocitem" href="../DeflatedContinuation/">Deflated Continuation</a></li><li><a class="tocitem" href="../deflatedproblem/">Deflated problem</a></li><li><a class="tocitem" href="../constrainedproblem/">Constrained problem</a></li><li><input class="collapse-toggle" id="menuitem-4-12" type="checkbox"/><label class="tocitem" for="menuitem-4-12"><span class="docs-label">Periodic Orbits</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../periodicOrbit/">Introduction</a></li><li><a class="tocitem" href="../periodicOrbitTrapeze/">Finite Differences</a></li><li><a class="tocitem" href="../periodicOrbitShooting/">Shooting</a></li></ul></li><li><a class="tocitem" href="../diffeq/">DiffEq wrapper</a></li><li><a class="tocitem" href="../iterator/">Iterator Interface</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Options</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../linearsolver/">Linear Solvers</a></li><li><a class="tocitem" href="../borderedlinearsolver/">Bordered linear solvers</a></li><li><a class="tocitem" href="../eigensolver/">Eigen Solvers</a></li><li><a class="tocitem" href="../Borderedarrays/">Bordered arrays</a></li></ul></li><li><a class="tocitem" href="../faq/">Frequently Asked Questions</a></li><li><a class="tocitem" href="../library/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>CO-oxydation (codim 2)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>CO-oxydation (codim 2)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/tutorialCO.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="CO-oxydation-(codim-2)-1"><a class="docs-heading-anchor" href="#CO-oxydation-(codim-2)-1">CO-oxydation (codim 2)</a><a class="docs-heading-anchor-permalink" href="#CO-oxydation-(codim-2)-1" title="Permalink"></a></h1><p>In this tutorial, we study the following ODE model of CO-oxydation (see <sup class="footnote-reference"><a id="citeref-Govaerts" href="#footnote-Govaerts">[Govaerts]</a></sup>). The goal of the tutorial is to show in a simple example how to perform codimension 2 bifurcation detection.</p><div>\[\left\{\begin{array}{l}\dot{x}=2 q_{1} z^{2}-2 q_{5} x^{2}-q_{3} x y \\ \dot{y}=q_{2} z-q_{6} y-q_{3} x y \\ \dot{s}=q_{4} z-k q_{4} s\end{array}\right.\tag{E}\]</div><p>Where <span>$z=1-x-y-s$</span>.</p><p>We start with some imports that are useful in the following.</p><pre><code class="language-julia">using Revise, Test, ForwardDiff, Parameters, Setfield, Plots
+using BifurcationKit
+const BK = BifurcationKit
+
+# automatic differentiation
+D(f, x, p, dx) = ForwardDiff.derivative(t-&gt;f(x .+ t .* dx, p), 0.)
+
+# define the sup norm
+norminf = x -&gt; norm(x, Inf)</code></pre><h2 id="Problem-setting-1"><a class="docs-heading-anchor" href="#Problem-setting-1">Problem setting</a><a class="docs-heading-anchor-permalink" href="#Problem-setting-1" title="Permalink"></a></h2><p>We can now encode the vector field (E) in a function and use automatic differentiation to compute its various derivatives.</p><pre><code class="language-julia"># vector field of the problem
+function COm(u, p)
+	@unpack q1,q2,q3,q4,q5,q6,k = p
+	x, y, s = u
+	z = 1-x-y-s
+	out = similar(u)
+	out[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
+	out[2] = q2 * z - q6 * y - q3 * x * y
+	out[3] = q4 * z - k * q4 * s
+	out
+end
+dCOm = (z, p) -&gt; ForwardDiff.jacobian(x -&gt; COm(x, p), z)
+
+# we group the differentials together
+d1COm(x,p,dx1) = ForwardDiff.derivative(t -&gt; COm(x .+ t .* dx1, p), 0.)
+d2COm(x,p,dx1,dx2) = ForwardDiff.derivative(t -&gt; d1COm(x .+ t .* dx2, p, dx1), 0.)
+d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -&gt; d2COm(x .+ t .* dx3, p, dx1, dx2), 0.)
+jet  = (COm, dCOm, d2COm, d3COm)
+
+# parameters used in the model
+par_com = (q1 = 2.5, q2 = 0.6, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
+
+# initial condition
+z0 = [0.07,0.2,05]</code></pre><h2 id="Continuation-1"><a class="docs-heading-anchor" href="#Continuation-1">Continuation</a><a class="docs-heading-anchor-permalink" href="#Continuation-1" title="Permalink"></a></h2><p>Once the problem is set up, we can continue the state and detect codim bifurcations. This is achieved as follows:</p><pre><code class="language-julia">pts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01, nInversion = 6, 
+	detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
+br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
+	printSolution = (x, p) -&gt; (x = x[1], y = x[2]),
+	plot = true, verbosity = 3, normC = norminf)
+	
+plot(sn_codim2, vars=(:q2, :x), branchlabel = &quot;Fold&quot;, plotstability = false)
+plot!(br,xlims=(0.8,1.8))</code></pre><p>And you should get:</p><p><img src="../com-fig1.png" alt/></p><h2 id="Continuation-of-Fold-points-1"><a class="docs-heading-anchor" href="#Continuation-of-Fold-points-1">Continuation of Fold points</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-Fold-points-1" title="Permalink"></a></h2><p>We follow the Fold points in the parameter plane <span>$(q_2, k)$</span> as follows. We tell the solver to consider <code>br.bifpint[2]</code> and continue it. </p><pre><code class="language-julia">sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
+	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., detectBifurcation = 0, ds = -0.001, dsmax = 0.05);
+	normC = norminf,
+	# we save the first component for plotting
+	printSolution = (u,p; kw...) -&gt; (x = u.u[1] ),
+	updateMinAugEveryStep = 1,
+	bothside=true,
+	bdlinsolver = MatrixBLS())
+	
+plot(sn_codim2, vars=(:q2, :x), branchlabel = &quot;Fold&quot;)
+plot!(br,xlims=(0.8,1.8))</code></pre><p><img src="../com-fig2.png" alt/></p><h2 id="Continuation-of-Hopf-points-1"><a class="docs-heading-anchor" href="#Continuation-of-Hopf-points-1">Continuation of Hopf points</a><a class="docs-heading-anchor-permalink" href="#Continuation-of-Hopf-points-1" title="Permalink"></a></h2><p>We tell the solver to consider <code>br.bifpint[1]</code> and continue it. </p><pre><code class="language-julia">hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), 
+	ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 0, ds = -0.001, dsmax = 0.1) ;
+	startWithEigen = true,
+	normC = norminf,
+	# we save the first component for plotting
+	printSolution = (u,p; kw...) -&gt; (x = u.u[1] ),
+	updateMinAugEveryStep = 1,
+	bothside = true,
+	bdlinsolver = MatrixBLS(),
+	)
+	
+# plotting
+plot(sn_codim2, vars=(:q2, :x), branchlabel = &quot;Fold&quot;)
+plot!(hp_codim2, vars=(:q2, :x), branchlabel = &quot;Hopf&quot;)
+plot!(br, xlims=(0.6,1.5))</code></pre><p><img src="../com-fig3.png" alt/></p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-Govaerts"><a class="tag is-link" href="#citeref-Govaerts">Govaerts</a><blockquote><p>Govaerts, Willy J. F. Numerical Methods for Bifurcations of Dynamical Equilibria. Philadelphia, Pa: Society for Industrial and Applied Mathematics, 2000.</p></blockquote></li></ul></section></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 11 May 2021 20:18">Tuesday 11 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
