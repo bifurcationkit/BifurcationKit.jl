@@ -29,11 +29,15 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
 ## Handling `ds` adaptation (see [`continuation`](@ref) for more information)
-- `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
+- `a = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
 - `thetaMin = 1.0e-3` minimum value of `theta`
 - `doArcLengthScaling` trigger further adaptation of `theta`
 
- ## Misc
+## Handling event detection
+- `detectEvent::Int` ∈ {0, 1, 2} If set to 0, nothing is done. If set to 1, the event locations are seek during the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the event (slower).
+- `tolBisectionEvent` tolerance on event residual to locate
+
+## Misc
 - `finDiffEps::T  = 1e-9` ε used in finite differences computations
 
 !!! tip "Mutating"
@@ -86,9 +90,16 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
-	tolBisectionEigenvalue::Float64 = 1e-16 # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+	tolBisectionEvent::Float64 = 1e-16 		# tolerance on event residual to detect
+	tolBisectionEigenvalue::Float64 = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+
+	# handling event detection
+	detectEvent::Int64 = 0					# event location
+
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
+	@assert detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2,3}"
+	@assert detectBifurcation * detectEvent == 0 "One of these options must be disabled"
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops
 end
