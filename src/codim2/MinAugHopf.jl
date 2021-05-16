@@ -390,8 +390,11 @@ function continuationHopf(F, J,
 	# it allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :printSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., BT = dot(hopfPb.a, hopfPb.b)) :
-		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = 0., BT = dot(hopfPb.a, hopfPb.b))
+		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b)) :
+		(u, p; kw...) -> begin
+
+			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b))
+		end
 
 	# solve the hopf equations
 	branch, u, tau = continuation(
