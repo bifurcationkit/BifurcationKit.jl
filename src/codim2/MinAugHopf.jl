@@ -332,7 +332,7 @@ function continuationHopf(F, J,
 				d3F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
 				kwargs...) where {Tb,vectype}
-	@assert lens1 != lens2
+	@assert lens1 != lens2 "Please choose 2 diffferent parameters"
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions
@@ -381,6 +381,9 @@ function continuationHopf(F, J,
 		hopfPb.b .= newb ./ norm(newb)
 
 		# if the frequency is null, this is not a Hopf point, we halt the process
+		if abs(ω) < options_newton.tol
+			@warn "The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations"
+		end
 		return abs(ω) > options_newton.tol
 	end
 

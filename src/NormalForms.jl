@@ -552,7 +552,7 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 end
 ####################################################################################################
 
-function hopfNormalForm(F, dF, d2F, d3F, pt::HopfBifPoint, ls; δ = 1e-8, verbose = false)
+function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose = false)
 	x0 = pt.x0
 	p = pt.p
 	lens = pt.lens
@@ -660,7 +660,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	ζstar ./= dot(ζ, ζstar)
 	@assert dot(ζ, ζstar) ≈ 1
 
-	hopfpt = HopfBifPoint(
+	hopfpt = Hopf(
 		bifpt.x,
 		bifpt.param,
 		ω,
@@ -674,7 +674,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end
 
-function predictor(hp::HopfBifPoint, ds::T; verbose = false, ampfactor = T(1) ) where T
+function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	# get the normal form
 	nf = hp.nf
 	a = nf.a

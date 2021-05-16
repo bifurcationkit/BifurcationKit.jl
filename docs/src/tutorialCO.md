@@ -46,7 +46,7 @@ d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2COm(x .+ t .* dx3, p, dx1
 jet  = (COm, dCOm, d2COm, d3COm)
 
 # parameters used in the model
-par_com = (q1 = 2.5, q2 = 0.6, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
+par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 # initial condition
 z0 = [0.07,0.2,05]
@@ -58,7 +58,7 @@ Once the problem is set up, we can continue the state and detect codim bifurcati
 
 ```julia
 opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01, nInversion = 6, 
-	detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
+	detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
 br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	printSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = true, verbosity = 3, normC = norminf)

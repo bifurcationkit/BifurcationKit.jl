@@ -319,7 +319,7 @@ function continuationFold(F, J,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
 				kwargs...) where {T, vectype}
-	@assert lens1 != lens2
+	@assert lens1 != lens2 "Please choose 2 diffferent parameters"
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions

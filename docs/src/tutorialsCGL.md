@@ -173,11 +173,7 @@ So the Hopf branch is subcritical.
 
 ## Codim 2 Hopf continuation
 
-Having detected 2 hopf bifurcation points, we now continue them in the plane $(\gamma, r)$. To speed things up, we need an analytical version of the second derivative which works on complex inputs. This is not readily supported by `ForwardDiff.jl` but the package `BifurcationKit.jl` provides a way to bypass this difficulty:
-
-```julia
-d2Fc =(x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2)
-```
+Having detected 2 hopf bifurcation points, we now continue them in the plane $(\gamma, r)$. To speed things up, we need an analytical version of the second derivative.
 
 Before we start the codim 2 continuation, we tell `BifurcationKit.jl` to use the spectral information `startWithEigen = true` because the left eigenvector of the Jacobian is simply not the conjugate of the right one.
 
@@ -188,10 +184,9 @@ br_hopf, u1_hopf = @time continuation(
 	Fcgl, Jcgl,
 	br, ind_hopf, (@lens _.γ),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 0.6, pMin = -0.6, newtonOptions = opts_br.newtonOptions, plotEveryStep = 5); plot = true,
-	updateMinAugEveryStep = 1,
-	d2F = d2Fc,
+	updateMinAugEveryStep = 1, verbosity = 3, normC = norminf,
 	startWithEigen = true, bothside = true,
-	verbosity = 3, normC = norminf)
+	d2F = jet[3],)
 
 plot(br_hopf, title = "Hopf continuation")
 ```

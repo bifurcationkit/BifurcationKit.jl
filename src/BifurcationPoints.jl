@@ -138,7 +138,6 @@ type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
 type(::Nothing) = nothing
 
-
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
 	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
 	println(io, "Normal form: ", bp.nf)
@@ -220,9 +219,9 @@ $(TYPEDFIELDS)
 
 ## Predictor
 
-You can call `predictor(bp, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
+You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
+mutable struct Hopf{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
 	"Hopf point"
 	x0::Tv
 
@@ -251,10 +250,10 @@ mutable struct HopfBifPoint{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <:
 	type::Symbol
 end
 
-type(bp::HopfBifPoint) = :Hopf
-HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf) = HopfBifPoint(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
+type(bp::Hopf) = :Hopf
+Hopf(x0, p, ω, params, lens, ζ, ζstar, nf) = Hopf(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
-function Base.show(io::IO, bp::HopfBifPoint)
+function Base.show(io::IO, bp::Hopf)
 	print(io, bp.type, " - ")
 	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
 	println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
