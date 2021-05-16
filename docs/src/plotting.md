@@ -18,9 +18,9 @@ plot!(br, label = "continuous line")
 The available arguments specific to our plotting methods are
 
 - `plotfold = true`: plot the fold points with black dots
-- `putbifptlegend = true`: display the legend corresponding to the bifurcation points
 - `plotstability = true`: display the stability of the branch
-- `plotbifpoints = true`: plot the bifurcation points on the branch
+- `plotspecialpoints = true`: plot the special (bifurcation) points on the branch
+- `putspecialptlegend = true`: display the legend corresponding to the bifurcation points
 - `branchlabel = "fold branch"`: assign label to a branch which is printed in the legend
 - `vars = nothing`: see below
 - `linewidthstable`: set the linewidth for the stable part of the branch

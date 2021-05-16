@@ -2,7 +2,7 @@ abstract type AbstractEvent end
 abstract type AbstractContinuousEvent <: AbstractEvent end
 abstract type AbstractDiscreteEvent <: AbstractEvent end
 
-# evaluate the functional whose roots are seek
+# evaluate the functional whose events are seek
 (eve::AbstractEvent)(iter, state) = eve.condition(iter, state)
 
 # initialize function, must return the same type as eve(iter, state)

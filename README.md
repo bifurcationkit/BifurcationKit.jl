@@ -64,6 +64,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 ## Main features
 
 - Newton-Krylov solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
+- Continuation written as an [iterator](https://rveltz.github.io/BifurcationKit.jl/dev/iterator/)
 - Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
 - Deflated continuation
 - Bifurcation points are located using a bisection algorithm
