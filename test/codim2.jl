@@ -25,16 +25,24 @@ d2COm(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1COm(x .+ t .* dx2, p, dx1), 0
 d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2COm(x .+ t .* dx3, p, dx1, dx2), 0.)
 jet  = (COm, dCOm, d2COm, d3COm)
 
-par_com = (q1 = 2.5, q2 = 0.6, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
+par_com = (q1 = 2.5, q2 = 2.0, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
 z0 = [0.07,0.2,05]
 
-opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
-	br1, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
+opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInversion = 4, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
+	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	printSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = false, verbosity = 0, normC = norminf,
-	bothside = false)
+	bothside = true)
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
+####################################################################################################
+hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])
+
+hpnf = computeNormalForm(jet..., br, 4)
+@test hpnf.nf.b |> real ≈ 1.070259e+01 rtol = 1e-2
+
+hpnf = computeNormalForm(jet..., br, 1)
+@test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2
 ####################################################################################################
 # different tests for the Fold point
 snpt = computeNormalForm(jet..., br, 2)
@@ -44,13 +52,13 @@ snpt = computeNormalForm(jet..., br, 2)
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 printstyled(color=:red, "--> guess for SN, p = ", br.bifpoint[2].param, ", psn = ", sn[1].p)
 	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
-@test sn[3] && sn[end] == 1
+@test sn[3] && sn[5] == 3
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm)
-@test sn[3] && sn[end] == 2
+@test sn[3] && sn[5] == 4
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true)
-@test sn[3] && sn[end] == 2
+@test sn[3] && sn[5] == 4
 
 sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 0, maxSteps = 1, saveSolEveryStep = 1), bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
 

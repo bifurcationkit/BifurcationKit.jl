@@ -22,7 +22,15 @@ function getPlotVars(contres, vars)
 end
 
 # https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
-const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :green1, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray, :user => :darkgoldenrod)
+const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :gray, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray, :user => :darkgoldenrod)
+
+function getColor(sp)
+	if sp in keys(colorbif)
+		return colorbif[sp]
+	else
+		return :darkgoldenrod
+	end
+end
 
 function getAxisLabels(ind1, ind2, br)
 	xguide = ""
@@ -39,7 +47,7 @@ function getAxisLabels(ind1, ind2, br)
 end
 
 # allow to plot a single branch
-RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false)
+RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, applytoY = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -50,7 +58,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 		xguide --> xlab
 		yguide --> ylab
 		label --> branchlabel
-		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)
+		getproperty(contres.branch, ind1), map(applytoY, getproperty(contres.branch, ind2))
 	end
 
 	# display bifurcation points
@@ -62,14 +70,14 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 		end
 		@series begin
 			seriestype := :scatter
-			seriescolor --> map(x -> colorbif[x.type], bifpt)
+			seriescolor --> map(x -> getColor(x.type), bifpt)
 			markershape --> map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :square : :circle, bifpt)
 			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""
 			xguide --> xlab
 			yguide --> ylab
-			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [getproperty(contres[pt.idx], ind2) for pt in bifpt]
+			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
 		end
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
@@ -78,13 +86,13 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 			for pt in bps
 				@series begin
 					seriestype := :scatter
-					seriescolor --> colorbif[pt.type]
+					seriescolor --> getColor(pt.type)
 					label --> "$(pt.type)"
 					markersize --> 3
 					markerstrokewidth --> 0
 					xguide --> xlab
 					yguide --> ylab
-					[getproperty(contres[pt.idx], ind1)], [getproperty(contres[pt.idx], ind2)]
+					[getproperty(contres[pt.idx], ind1)], [applytoY(getproperty(contres[pt.idx], ind2))]
 				end
 			end
 		end
@@ -92,7 +100,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 end
 
 # allow to plot branches specified by splatting
-RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, applytoY = identity)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
@@ -101,11 +109,11 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 		for pt in unique(x -> x.type, bp)
 			@series begin
 				seriestype := :scatter
-				seriescolor --> colorbif[pt.type]
+				seriescolor --> getColor(pt.type)
 				label --> "$(pt.type)"
 				markersize --> 3
 				markerstrokewidth --> 0
-				[pt.param], [pt.printsol]
+				[pt.param], [applytoY(pt.printsol)]
 			end
 		end
 	end
@@ -119,6 +127,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 			branchlabel --> branchlabel[id]
 			linewidthunstable --> linewidthunstable
 			linewidthstable --> linewidthstable
+			applytoY --> applytoY
 			vars --> vars
 			if ind1 == 1 || ind1 == :param
 				xguide --> String(getLensParam(brs[id].lens))
@@ -241,7 +250,7 @@ end
 ####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
-RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
+RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true, applytoY = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -252,7 +261,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 		xguide --> xlab
 		yguide --> ylab
 		label --> branchlabel
-		getproperty(contres.branch, ind1), getproperty(contres.branch, ind2)
+		getproperty(contres.branch, ind1), map(applytoY, getproperty(contres.branch, ind2))
 	end
 
 	# display bifurcation points
@@ -271,7 +280,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 			label --> ""
 			xguide --> xlab
 			yguide --> ylab
-			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [getproperty(contres[pt.idx], ind2) for pt in bifpt]
+			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
 		end
 		# add legend for bifurcation points
 		if putbifptlegend && length(bifpt) >= 1
@@ -286,7 +295,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 					markerstrokewidth --> 0
 					xguide --> xlab
 					yguide --> ylab
-					[getproperty(contres[pt.idx], ind1)], [getproperty(contres[pt.idx], ind2)]
+					[getproperty(contres[pt.idx], ind1)], [applytoY(getproperty(contres[pt.idx], ind2))]
 				end
 			end
 		end

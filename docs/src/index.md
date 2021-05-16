@@ -103,5 +103,4 @@ We make the same requirements than `KrylovKit.jl`. Hence, we refer to its [docs]
 - `Base.copyto!(dest, in)` this is required to reduce the allocations by avoiding too many copies
 
 ## Citations
-- Grant, Paul K., et al. **Interpretation of morphogen gradients by a synthetic bistable circuit.** Nature communications 11.1 (2020)
-- Quentin Cormier. **Long time behavior of a mean-field model of interacting spiking neurons. Probability** Université Cote d'Azur, 2021
+See [here](https://scholar.google.fr/scholar?hl=fr&as_sdt=2005&cites=159498619004863176%2C8662907770106865595&scipsc=&as_ylo=&as_yhi=)
