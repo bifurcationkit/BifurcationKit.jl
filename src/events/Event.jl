@@ -6,10 +6,7 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 (eve::AbstractEvent)(iter, state) = eve.condition(iter, state)
 
 # initialize function, must return the same type as eve(iter, state)
-initialize(eve::AbstractEvent, T) = error("Initialization method not implemented for event ", eve)
-
-# whether the event is active
-isActive(::AbstractEvent) = true
+initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
 
 # whether the event requires computing eigen-elements
 @inline computeEigenElements(::AbstractEvent) = false
@@ -21,7 +18,3 @@ isEvent(::AbstractEvent, iter, state) = !isnothing(findfirst(x -> abs(x) < iter.
 # this function is called to determine if callbaclVals is an event
 test(::AbstractEvent, callbaclVals, precision) = false
 ####################################################################################################
-# default event which does nothing
-struct DefaultEvent <: AbstractEvent end
-isActive(::DefaultEvent) = false
-initialize(::DefaultEvent, T) = nothing

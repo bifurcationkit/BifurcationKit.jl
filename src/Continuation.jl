@@ -3,7 +3,7 @@ abstract type AbstractContinuationIterable end
 abstract type AbstractContinuationState end
 ####################################################################################################
 # Iterator interface
-@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} <: AbstractContinuationIterable
+@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} <: AbstractContinuationIterable
 	F::TF
 	J::TJ
 
@@ -19,7 +19,7 @@ abstract type AbstractContinuationState end
 	plot::Bool = false
 	plotSolution::Tplotsolution
 	printSolution::Tprintsolution
-	event::Tevent = DefaultEvent()
+	event::Tevent = nothing
 
 	normC::TnormC
 	dottheta::Tdot
@@ -40,12 +40,12 @@ function ContIterable(Fhandle, Jhandle,
 					tangentAlgo = SecantPred(),
 					plot = false,
 					plotSolution = (x, p; kwargs...) -> nothing,
-					printSolution = (x, p) -> norm(x),
+					printSolution = (x, p; kwargs...) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = finaliseDefault,
 					callbackN = cbDefault,
-					event = DefaultEvent(),
+					event = nothing,
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
@@ -66,11 +66,11 @@ function ContIterable(Fhandle, Jhandle,
 				filename = filename)
 end
 
-Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} = T
+Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = T
 
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent <: AbstractEvent, Tfilename} = set(it.par, it.lens, p0)
+setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = set(it.par, it.lens, p0)
 
-@inline isEventActive(it::ContIterable) = isActive(it.event) && it.contParams.detectEvent > 0
+@inline isEventActive(it::ContIterable) = !isnothing(it.event) && it.contParams.detectEvent > 0
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (isEventActive(it) && computeEigenElements(it.event))
 
 @inline getParams(it::ContIterable) = it.contParams
@@ -262,7 +262,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	end
 
 	# return the state
-	cbval = initialize(it.event, T) # event result
+	cbval = isEventActive(it) ? initialize(it.event, T) : nothing # event result
 	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
 
 	# update stability
