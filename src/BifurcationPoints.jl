@@ -7,59 +7,59 @@ istranscritical(bp::AbstractBranchPoint) = false
 """
 $(TYPEDEF)
 
-Structure to record a generic bifurcation point.
+Structure to record a generic special (bifurcation) point.
 
 $(TYPEDFIELDS)
 """
-@with_kw struct GenericBifPoint{T, Tp, Tv} <: AbstractBifurcationPoint
+@with_kw struct SpecialPoint{T, Tp, Tv} <: AbstractBifurcationPoint
 	"Bifurcation type, `:hopf, :bp...`."
 	type::Symbol = :none
 
 	"Index in `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
 	idx::Int64 = 0
 
-	"Parameter value at the bifurcation point, this is an estimate."
+	"Parameter value at the special (bifurcation) point, this is an estimate."
 	param::T = 0.
 
-	"Norm of the equilibrium at the bifurcation point"
+	"Norm of the equilibrium at the special (bifurcation) point"
 	norm::T  = 0.
 
 	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
 	printsol::Tp = 0.
 
-	"Equilibrium at the bifurcation point"
+	"Equilibrium at the special (bifurcation) point"
 	x::Tv = Vector{T}(undef, 0)
 
-	"Tangent along the branch at the bifurcation point"
+	"Tangent along the branch at the special (bifurcation) point"
 	tau::BorderedArray{Tv, T} = BorderedArray(x, T(0))
 
-	"Eigenvalue index responsible for the bifurcation (if applicable)"
+	"Eigenvalue index responsible for the special (bifurcation) (if applicable)"
 	ind_ev::Int64 = 0
 
-	"Continuation step at which the bifurcation occurs"
+	"Continuation step at which the special (bifurcation) occurs"
 	step::Int64 = 0
 
-	"`status ∈ {:converged, :guess}` indicates whether the bisection algorithm was successful in detecting the bifurcation point"
+	"`status ∈ {:converged, :guess}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point"
 	status::Symbol = :guess
 
-	"`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the bifurcation point."
+	"`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the special (bifurcation) point."
 	δ::Tuple{Int64, Int64} = (0,0)
 
-	"Precision in the location of the bifurcation point"
+	"Precision in the location of the special (bifurcation) point"
 	precision::T = -1
 
-	"Interval containing the bifurcation point"
+	"Interval containing the special (bifurcation) point"
 	interval::Tuple{T, T} = (0, 0)
 end
 
-getVectorType(::Type{GenericBifPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
-type(bp::GenericBifPoint) = bp.type
-@inline kernelDim(bp::GenericBifPoint) = abs(bp.δ[1])
+getVectorType(::Type{SpecialPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
+type(bp::SpecialPoint) = bp.type
+@inline kernelDim(bp::SpecialPoint) = abs(bp.δ[1])
 
 # constructors
-GenericBifPoint(x0, T, printsol) = GenericBifPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
+SpecialPoint(x0, T, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
 
-GenericBifPoint(state::ContState, type::Symbol, status::Symbol, printsolution, normC, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = GenericBifPoint(
+SpecialPoint(state::ContState, type::Symbol, status::Symbol, printsolution, normC, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = SpecialPoint(
 				type = type,
 				idx = idx,
 				param = getp(state),
@@ -75,7 +75,7 @@ GenericBifPoint(state::ContState, type::Symbol, status::Symbol, printsolution, n
 				interval = interval)
 
 
-function _show(io::IO, bp::GenericBifPoint, ii::Int, p::String = "p")
+function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
 	if bp.type == :none ; return; end
 	if bp.status == :converged
 		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)

@@ -1,13 +1,13 @@
 """
-For an initial guess from the index of a Hopf bifurcation point located in ContResult.bifpoint, returns a point which will be refined using `newtonHopf`.
+For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonHopf`.
 """
 function HopfPoint(br::AbstractBranchResult, index::Int64)
-	@assert br.bifpoint[index].type == :hopf "The provided index does not refer to a Hopf point"
-	bifpoint = br.bifpoint[index]								# Hopf point
+	@assert br.specialpoint[index].type == :hopf "The provided index does not refer to a Hopf point"
+	specialpoint = br.specialpoint[index]								# Hopf point
 	eigRes   = br.eig											# eigenvector at the Hopf point
-	p = bifpoint.param											# parameter value at the Hopf point
-	ω = imag(eigRes[bifpoint.idx].eigenvals[bifpoint.ind_ev])	# frequency at the Hopf point
-	return BorderedArray(bifpoint.x, [p, ω] )
+	p = specialpoint.param											# parameter value at the Hopf point
+	ω = imag(eigRes[specialpoint.idx].eigenvals[specialpoint.ind_ev])	# frequency at the Hopf point
+	return BorderedArray(specialpoint.x, [p, ω] )
 end
 
 struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
@@ -259,7 +259,7 @@ function newtonHopf(F, J,
 			kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	ω = hopfpointguess.p[2]
-	bifpt = br.bifpoint[ind_hopf]
+	bifpt = br.specialpoint[ind_hopf]
 	options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
 	@assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
 	ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
@@ -419,7 +419,7 @@ function continuationHopf(F, J,
 						kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	ω = hopfpointguess.p[2]
-	bifpt = br.bifpoint[ind_hopf]
+	bifpt = br.specialpoint[ind_hopf]
 	ζ = geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
 	ζ ./= norm(ζ)
 	ζad = conj.(ζ)
@@ -433,7 +433,7 @@ function continuationHopf(F, J,
 		# jacobian at bifurcation point
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
-		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = true)
+		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = false)
 		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
 

@@ -348,7 +348,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		# we perform saving, plotting, computation of eigenvalues...
 		# the case state.step = 0 was just done above
 		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
-			# Detection of fold points based on parameter monotony, mutates contRes.bifpoint
+			# Detection of fold points based on parameter monotony, mutates contRes.specialpoint
 			# if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
 			if contParams.detectFold && contParams.detectBifurcation < 2
 				foldetected = locateFold!(contRes, it, state)
@@ -366,7 +366,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 				if detectBifucation(state)
 					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status, interval)
-					if bifpt.type != :none; push!(contRes.bifpoint, bifpt); end
+					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
 					# detect loop in the branch
 					# contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
 				end

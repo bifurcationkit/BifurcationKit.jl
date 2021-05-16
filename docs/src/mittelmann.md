@@ -283,14 +283,14 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogenous solutions
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
+vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:length(ve)
 	outdef1, _, flag, _ = @time newton(
 		Fmit, JFmit,
 		# initial guess for newton
-		br.bifpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
-		(@set par_mit.λ = br.bifpoint[2].param + 0.005),
+		br.specialpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
+		(@set par_mit.λ = br.specialpoint[2].param + 0.005),
 		optdef, deflationOp)
 		flag && push!(deflationOp, outdef1)
 end
@@ -305,19 +305,19 @@ We can continue this solution as follows in one direction
 ```julia
 brdef1, = continuation(
 	Fmit, JFmit,
-	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	deflationOp[3], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 ```
 
-If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.bifpoint[2].param + 0.005`, we get 3 new solutions that we can continue
+If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.specialpoint[2].param + 0.005`, we get 3 new solutions that we can continue
 
 ```julia
 brdef2, = continuation(
 	Fmit, JFmit,
-	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -> norm(x),

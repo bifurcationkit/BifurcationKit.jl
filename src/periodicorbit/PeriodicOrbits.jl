@@ -277,7 +277,7 @@ A modified version of `prob` is passed to `plotSolution` and `finaliseSolution`.
 function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar, prob::AbstractPeriodicOrbitProblem ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, usedeflation = false, nev = _contParams.nev, updateSectionEveryStep = 0, kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
-	verbose && (println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif))
+	verbose && (println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
 	cb = get(kwargs, :callbackN, cbDefault)
 
@@ -291,7 +291,7 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 	verbose && printstyled(color = :green, "#"^61*
 			"\n--> Start branching from Hopf bif. point to periodic orbits.
 			 \n--> Bifurcation type: ", hopfpt.type,
-			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.bifpoint[ind_bif].param,
+			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,
 			"\n----> period = ", abs(2pi/pred.ω), "\n")
 

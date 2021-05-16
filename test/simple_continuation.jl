@@ -30,7 +30,7 @@ BK.computeEigenvalues(opts)
 BK.computeEigenvectors(opts)
 
 # test with callbacks
-br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(@show nothing;true))
+br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
@@ -92,7 +92,7 @@ br7, = continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPre
 br8, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BorderedPred(),printSolution = (x,p)->x[1])
 
 # tangent prediction with Multiple predictor
-opts9 = (@set opts.newtonOptions.verbose=true)
+opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
 	printSolution = (x,p)->x[1],
@@ -176,7 +176,7 @@ x0, = newton(F,Jac_m,x0, -1.5, opts.newtonOptions)
 x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
 
 br0, = continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
-BK.getEigenelements(br0, br0.bifpoint[1])
+BK.getEigenelements(br0, br0.specialpoint[1])
 
 br1, = continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001))
 
@@ -188,6 +188,6 @@ br3, = continuation(F,Jac_m,x0, -1.5, (@lens _), opts; tangentAlgo = BorderedPre
 # test for deflated continuation
 brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
-	DeflationOperator(2.0, dot, .001, [[0.]]); showplot=false, verbosity = 1,
+	DeflationOperator(2.0, dot, .001, [[0.]]); showplot=false, verbosity = 0,
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)

@@ -56,8 +56,9 @@ function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 		x2 = apply(J, x1)
 		axpy!(dl, dR, x2)
 		axpy!(-1, R, x2)
-
-		printstyled(color=:red,"--> res = ", ( norm(x2), abs(n - xip*dzp*dl -xiu* dot(dzu, x1))), "\n")
+		if norm(x2) > lbs.tol || abs(n - xip*dzp*dl -xiu* dot(dzu, x1)) > lbs.tol
+			@warn "BorderingBLS did not achieve tolerance"
+		end
 	end
 	return x1, dl, true, (it1, it2)
 end

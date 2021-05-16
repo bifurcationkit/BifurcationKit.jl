@@ -121,9 +121,9 @@ In order to have an output like Auto07p, we provide the finaliser (see arguments
 
 ```julia
 function finSol(z, tau, step, br; k...)
-	if length(br.bifpoint)>0
-		if br.bifpoint[end].step == step
-			BK._show(stdout, br.bifpoint[end], step)
+	if length(br.specialpoint)>0
+		if br.specialpoint[end].step == step
+			BK._show(stdout, br.specialpoint[end], step)
 		end
 	end
 	return true

@@ -213,8 +213,7 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in algo.nb:-1:1
-		printstyled(color=:magenta, "--> ii = $ii
-	\n")
+		# printstyled(color=:magenta, "--> ii = $ii\n")
 		# record the current index
 		algo.currentind = ii
 		zpred = _copy(z_pred)
@@ -250,7 +249,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		dsnew = ds
 		if mpd.currentind == mpd.nb && abs(ds) * mpd.dsfact <= contparams.dsmax
 			(verbosity > 0) && @show dsnew
-			println("--> Increase ds")
+			# println("--> Increase ds")
 			dsnew = ds *  mpd.dsfact
 		end
 	end

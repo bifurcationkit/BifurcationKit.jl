@@ -22,8 +22,8 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 """
 function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
-	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
-	if br.bifpoint[ind_bif].type == :hopf
+	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
+	if br.specialpoint[ind_bif].type == :hopf
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
 		return newtonHopf(F, J, br, ind_bif; Jᵗ = Jᵗ, d2F = d2Fc, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	else
@@ -71,8 +71,8 @@ function continuation(F, J,
 				d2F = nothing,
 				d3F = nothing,
 				kwargs...)
-	@assert length(br.bifpoint) > 0 "The branch does not contain bifurcation points"
-	if br.bifpoint[ind_bif].type == :hopf
+	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
+	if br.specialpoint[ind_bif].type == :hopf
 		# redefine the multilinear form to accept complex arguments
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
 		d3Fc = isnothing(d3F) ? nothing : (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)

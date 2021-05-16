@@ -100,7 +100,7 @@ You should see
 The left figure is the norm of the solution as function of the parameter $p=\alpha$, the *y-axis* can be changed by passing a different `printSolution` to `continuation`. The top right figure is the value of $\alpha$ as function of the iteration number. The bottom right is the solution for the current value of the parameter. This last plot can be modified by changing the argument `plotSolution` to `continuation`.
 
 !!! note "Bif. point detection"
-    Two Fold points were detected. This can be seen by looking at `br.foldpoint` or by the black 	dots on the continuation plots when doing `plot(br, plotfold=true)`. Note that the bifurcation points are located in `br.bifpoint`.
+    Two Fold points were detected. This can be seen by looking at `br.foldpoint` or by the black 	dots on the continuation plots when doing `plot(br, plotfold=true)`. Note that the bifurcation points are located in `br.specialpoint`.
 
 
 ## Continuation of Fold points
@@ -124,13 +124,13 @@ using ForwardDiff
 # Jacobian of F_chan
 Jac_mat = (x,p) -> ForwardDiff.jacobian(z -> F_chan(z,p),x)
 
-# index of the Fold bifurcation point in br.bifpoint
+# index of the Fold bifurcation point in br.specialpoint
 indfold = 2
 
 outfold, _, flag = newton(F_chan, Jac_mat,
 	#index of the fold point
 	br, indfold)
-flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.bifpoint[indfold].param,"\n")
+flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 ```
 
 which gives

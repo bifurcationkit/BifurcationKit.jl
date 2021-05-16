@@ -259,7 +259,7 @@ d2Fsl(x,p,dx1,dx2)     = D((z, p0) -> d1Fsl(z, p0, dx1), x, p, dx2)
 d3Fsl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fsl(z, p0, dx1, dx2), x, p, dx3)
 
 # detect hopf bifurcation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 2, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 3, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
 br, = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),

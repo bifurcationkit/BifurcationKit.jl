@@ -4,7 +4,7 @@ The bifurcations are detected during a call to `br, _ = continuation(F, J, u0, p
 
 - `contParams.detectBifurcation = 2`
 
-The bifurcation points are located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalue λ is declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.bifpoint`. 
+The bifurcation points are located by looking at the spectrum **e.g.** by monitoring the unstable eigenvalues. The eigenvalue λ is declared unstable if `real(λ) > contParams.precisionStability`. The located bifurcation points are then returned in `br.specialpoint`. 
     
 ## Precise detection of bifurcation points using Bisection    
 
@@ -58,7 +58,7 @@ The detection is triggered by setting `detectFold = true` in the parameter `::Co
 
 The detection of Branch point is done by analysis of the spectrum of the Jacobian.
 
-The detection is triggered by setting `detectBifurcation > 0` in the parameter `::ContinuationPar` passed to `continuation`. When a **Hopf point** is detected, a point is added to `br.bifpoint` allowing for later refinement using the function `newtonHopf`.
+The detection is triggered by setting `detectBifurcation > 0` in the parameter `::ContinuationPar` passed to `continuation`. When a **Hopf point** is detected, a point is added to `br.specialpoint` allowing for later refinement using the function `newtonHopf`.
 
 
 ## Bifurcations of periodic orbits

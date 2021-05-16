@@ -6,8 +6,6 @@ source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dsource_term(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 d2source_term(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
-println("\n\n\n--> Test Fold continuation")
-
 function F_chan(x, p)
 	α, β = p
 	f = similar(x)
@@ -48,13 +46,13 @@ n = 101
 	a = 3.3
 	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 	opt_newton = NewtonPar(tol = 1e-8)
-	out, hist, flag = @time newton(F_chan, Jac_mat, sol, (3.3, 0.01),
+	out, hist, flag = newton(F_chan, Jac_mat, sol, (3.3, 0.01),
 							opt_newton, normN = x->norm(x,Inf64))
 
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detectBifurcation = 3)
 	br, _ = continuation(F_chan, Jac_mat,
-		out, (a, 0.01), (@lens _[1]), opts_br0; printSolution= (x,p) ->norm(x, Inf))
+		out, (a, 0.01), (@lens _[1]), opts_br0; printSolution= (x,p)->norm(x, Inf))
 
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
@@ -84,7 +82,7 @@ Jacdfsolver = DeflatedLinearSolver()
 
 res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolver),rhs)[1]
 
-println("--> Test jacobian expression for deflated problem")
+# Test jacobian expression for deflated problem
 @test norm(res_fd - res_explicit,Inf64) < 1e-4
 
 opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
@@ -107,19 +105,19 @@ foldpb = FoldProblemMinimallyAugmented(
 		(x, p) -> (Jac_mat(x, p)),
 		(x, p) -> transpose(Jac_mat(x, p)), nothing,
 		(@lens _[1]),
-		br.bifpoint[indfold].x,
-		br.bifpoint[indfold].x,
+		br.specialpoint[indfold].x,
+		br.specialpoint[indfold].x,
 		opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, (a, 0.01)) |> norm
 
-outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x, br.bifpoint[indfold].x, NewtonPar(verbose=true))
-	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
+outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(verbose=false))
+	println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
 
 # example with KrylovKit
 P = Jac_mat(sol.*0,(0,0))
-optils = NewtonPar(verbose=true, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
-outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.bifpoint[indfold].x,br.bifpoint[indfold].x, optils )
-	println("--> Fold found at α = ", outfold.p, " from ", br.bifpoint[indfold].param)
+optils = NewtonPar(verbose=false, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
+outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.specialpoint[indfold].x,br.specialpoint[indfold].x, optils )
+	# println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
 
 # continuation of the fold point
 outfoldco, hist, flag = continuation(F_chan, Jac_mat, br, indfold, (@lens _[2]), optcontfold, plot = false)
@@ -134,8 +132,7 @@ foldpbVec(x,p) = Bd2Vec(foldpb(Vec2Bd(x),p))
 
 outfold, = newton((x, p) -> foldpbVec(x, p),
 			Bd2Vec(foldpt), (a, 0.01),
-			NewtonPar(verbose=true) )
-	println("--> Fold found at α = ", outfold[end], " from ", br.bifpoint[indfold].param)
+			NewtonPar(verbose=false) )
 
 rhs = rand(n+1)
 Jac_fold_fdMA(u0) = BK.finiteDifferences( u -> foldpbVec(u, (a, 0.01)), u0)

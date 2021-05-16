@@ -11,14 +11,14 @@ This function returns several useful quantities regarding a Hopf bifurcation poi
 
 The arguments are
 - `br`: the continuation branch which lists the Hopf bifurcation points
-- `ind_hopf`: index of the bifurcation branch, as in `br.bifpoint`
+- `ind_hopf`: index of the bifurcation branch, as in `br.specialpoint`
 - `eigsolver`: the eigen solver used to find the eigenvectors
 - `M` number of time slices in the periodic orbit guess
 - `amplitude`: amplitude of the periodic orbit guess
 """
 function guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
 	hopfpoint = HopfPoint(br, ind_hopf)
-	bifpoint = br.bifpoint[ind_hopf]
+	specialpoint = br.specialpoint[ind_hopf]
 
 	# parameter value at the Hopf point
 	p_hopf = hopfpoint.p[1]
@@ -27,7 +27,7 @@ function guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitud
 	ωH  = hopfpoint.p[end] |> abs
 
 	# vec_hopf is the eigenvector for the eigenvalues iω
-	vec_hopf = geteigenvector(eigsolver, br.eig[bifpoint.idx][2], bifpoint.ind_ev-1)
+	vec_hopf = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev-1)
 	vec_hopf ./=  norm(vec_hopf)
 
 	 orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii=0:M-1]

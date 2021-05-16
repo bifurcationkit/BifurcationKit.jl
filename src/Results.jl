@@ -56,8 +56,8 @@ $(TYPEDFIELDS)
 	"Parameter axis used for computing the branch"
 	lens::Tl
 
-	"A vector holding the set of detected bifurcation points. See [`GenericBifPoint`](@ref) for a description of the fields."
-	bifpoint::Vector{Biftype}
+	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a description of the fields."
+	specialpoint::Vector{Biftype}
 end
 
 # returns the number of steps in a branch
@@ -76,19 +76,19 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 
 
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
-@inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.bifpoint))
+@inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.specialpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:bifpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
+	if s in (:specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
 		getfield(br, s)
 	else
 		getproperty(br.branch, s)
 	end
 end
-Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :bifpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
+Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
 
 """
 $(SIGNATURES)
@@ -107,7 +107,7 @@ $(SIGNATURES)
 
 Return the eigenvalues of the ind-th bifurcation point.
 """
-eigenvalsfrombif(br::AbstractBranchResult, ind::Int) = br.eig[br.bifpoint[ind].idx].eigenvals
+eigenvalsfrombif(br::AbstractBranchResult, ind::Int) = br.eig[br.specialpoint[ind].idx].eigenvals
 
 """
 $(SIGNATURES)
@@ -115,16 +115,16 @@ $(SIGNATURES)
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
 eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
-@inline kernelDim(br::ContResult, ind) = kernelDim(br.bifpoint[ind])
+@inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
 
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
 	println(io, "Branch of ", br.type, comment)
 	println(io, "Parameters ", getLensParam(br.lens), " from ", br.branch[1].param, " to ", br.branch[end].param,)
-	if length(br.bifpoint) > 0
+	if length(br.specialpoint) > 0
 		println(io, "Special points:\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)")
-		for ii in eachindex(br.bifpoint)
-			_show(io, br.bifpoint[ii], ii, String(getLensParam(br.lens)))
+		for ii in eachindex(br.specialpoint)
+			_show(io, br.specialpoint[ii], ii, String(getLensParam(br.lens)))
 		end
 	end
 end
@@ -144,7 +144,7 @@ Function is used to initialize the composite type `ContResult` according to the 
 """
  function _ContResult(printsol, br, x0, par, lens::Lens, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool) where {T, S, E}
 	# example of bifurcation point
-	bif0 = GenericBifPoint(x0, T, namedprintsol(printsol))
+	bif0 = SpecialPoint(x0, T, namedprintsol(printsol))
 	# shall we save full solution?
 	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
 	n_unstable = 0; n_imag = 0; stability = true
@@ -157,7 +157,7 @@ Function is used to initialize the composite type `ContResult` according to the 
 	end
 	return ContResult(
 		branch = StructArray([br]),
-		bifpoint = Vector{typeof(bif0)}(undef, 0),
+		specialpoint = Vector{typeof(bif0)}(undef, 0),
 		eig = computeEigenElements(contParams) ? [_evvectors] : empty([_evvectors]),
 		sol = sol,
 		contparams =  contParams,
@@ -202,12 +202,12 @@ function _reverse(br0::ContResult)
 			StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
 	end
 
-	if ~isnothing(br.bifpoint)
-		br = @set br.bifpoint =
+	if ~isnothing(br.specialpoint)
+		br = @set br.specialpoint =
 			[setproperties(pt;
 				step = nb - pt.step - 1,
 				idx = nb - pt.idx + 1,
-				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.bifpoint)]
+				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
 	end
 
 	if ~isnothing(br.eig)
@@ -236,11 +236,11 @@ function _cat!(br::ContResult, br2::ContResult)
 		append!(br.branch,
 			[setproperties(pt; step = nb + pt.step) for pt in br2.branch])
 	end
-	if ~isnothing(br.bifpoint)
-		append!(br.bifpoint,
+	if ~isnothing(br.specialpoint)
+		append!(br.specialpoint,
 			[setproperties(pt;
 				step = nb + pt.step,
-				idx = nb + pt.idx) for pt in br2.bifpoint])
+				idx = nb + pt.idx) for pt in br2.specialpoint])
 	end
 
 	if ~isnothing(br.eig)

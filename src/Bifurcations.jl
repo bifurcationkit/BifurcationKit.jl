@@ -35,7 +35,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
 		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in", getinterval(branch[end-1].param, branch[end].param), "\n")
 		npar = length( branch[1]) - 9
-		push!(contres.bifpoint, GenericBifPoint(
+		push!(contres.specialpoint, SpecialPoint(
 			type = :fold,
 			idx = length(branch)-1,
 			param = branch[end-1].param,
@@ -117,13 +117,13 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 	if detected
 		# record information about the bifurcation point
 		# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
-		bifpoint = GenericBifPoint(state, tp, status, printsolution, normC, interval;
+		specialpoint = SpecialPoint(state, tp, status, printsolution, normC, interval;
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
 			idx = state.step + 1,
 			ind_ev = ind_ev)
 		(verbosity>0) && printstyled(color=:red, "!! ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
 	end
-	return detected, bifpoint
+	return detected, specialpoint
 end
 
 """

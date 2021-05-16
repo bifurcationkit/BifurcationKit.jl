@@ -1,11 +1,11 @@
 """
-For an initial guess from the index of a Fold bifurcation point located in ContResult.bifpoint, returns a point which will be refined using `newtonFold`.
+For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonFold`.
 """
 function FoldPoint(br::AbstractBranchResult, index::Int64)
-	bptype = br.bifpoint[index].type
+	bptype = br.specialpoint[index].type
 	@assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point"
-	bifpoint = br.bifpoint[index]
-	return BorderedArray(_copy(bifpoint.x), bifpoint.param)
+	specialpoint = br.specialpoint[index]
+	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 
 ####################################################################################################
@@ -245,7 +245,7 @@ function newtonFold(F, J,
 				startWithEigen = false,
 				kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.bifpoint[ind_fold]
+	bifpt = br.specialpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
@@ -263,7 +263,7 @@ function newtonFold(F, J,
 
 		# computation of adjoint eigenvector
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
-		ζstar, = getAdjointBasis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
+		ζstar, = getAdjointBasis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = false)
 		eigenvec_ad .= real.(ζstar)
 		eigenvec_ad ./= norm(eigenvec_ad)
 	end
@@ -398,7 +398,7 @@ function continuationFold(F, J,
 				startWithEigen = false,
 				kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
-	bifpt = br.bifpoint[ind_fold]
+	bifpt = br.specialpoint[ind_fold]
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
@@ -441,9 +441,9 @@ function codim2FoldBifurcationPoints(contres::AbstractBranchResult)
 		return contres
 	end
 	conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
-	for (ind, bp) in pairs(contres.bifpoint)
+	for (ind, bp) in pairs(contres.specialpoint)
 		if bp.type in keys(conversion)
-			@set! contres.bifpoint[ind].type = conversion[bp.type]
+			@set! contres.specialpoint[ind].type = conversion[bp.type]
 		end
 	end
 	return contres

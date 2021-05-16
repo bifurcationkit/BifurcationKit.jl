@@ -161,14 +161,14 @@ Normal form z⋅(a⋅δp + b⋅|z|²):
 
 ## Continuation of Hopf points
 
-We use the bifurcation points guesses located in `br.bifpoint` to turn them into precise bifurcation points. For the second one, we have
+We use the bifurcation points guesses located in `br.specialpoint` to turn them into precise bifurcation points. For the second one, we have
 
 ```julia
-# index of the Hopf point in br.bifpoint
+# index of the Hopf point in br.specialpoint
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
 	br, ind_hopf; normN = norminf)
-flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
+flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 ```
 
 which produces

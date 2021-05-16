@@ -41,7 +41,7 @@ $(SIGNATURES)
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = length(eigenvalsfrombif(br, ind_bif)), Jᵗ = nothing, verbose = false, lens = br.lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3, scaleζ = norm)
-	bifpt = br.bifpoint[ind_bif]
+	bifpt = br.specialpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
@@ -345,12 +345,12 @@ end
 """
 $(SIGNATURES)
 
-Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif]`.
+Compute the normal form of the bifurcation point located at `br.specialpoint[ind_bif]`.
 
 # Arguments
 - `F, dF, d2F, d3F` vector field `(x, p) -> F(x, p)` and its derivatives w.r.t. `x`.
 - `br` result from a call to [`continuation`](@ref)
-- `ind_bif` index of the bifurcation point in `br.bifpoint`
+- `ind_bif` index of the bifurcation point in `br.specialpoint`
 
 # Optional arguments
 - `δ` used to compute ∂pF with finite differences
@@ -365,7 +365,7 @@ Compute the normal form of the bifurcation point located at `br.bifpoint[ind_bif
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jᵗ = nothing, verbose = false, ζs = nothing, lens = br.lens, issymmetric = false, Teigvec = getvectortype(br), scaleζ = norm)
-	bifpt = br.bifpoint[id_bif]
+	bifpt = br.specialpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
@@ -399,7 +399,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 
 	# "zero" eigenvalues at bifurcation point
 	rightEv = br.eig[bifpt.idx].eigenvals
-	indev = br.bifpoint[id_bif].ind_ev
+	indev = br.specialpoint[id_bif].ind_ev
 	λs = rightEv[indev-N+1:indev]
 	verbose && println("--> smallest eigenvalues at bifurcation = ", real.(λs))
 
@@ -609,7 +609,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose = fals
 	pt.nf = (a = a, b = b)
 	if real(a) * real(b) < 0
 		pt.type = :SuperCritical
-	elseif real(a) * real(b) > 0 
+	elseif real(a) * real(b) > 0
 		pt.type = :SubCritical
 	else
 		pt.type = :Singular
@@ -636,14 +636,14 @@ Compute the Hopf normal form.
 - `verbose` bool to print information
 """
 function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.lens, Teigvec = getvectortype(br), scaleζ = norm)
-	@assert br.bifpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
+	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	verbose && println("#"^53*"\n--> Hopf Normal form computation")
 
 	# Newton parameters
 	options = br.contparams.newtonOptions
 
 	# bifurcation point
-	bifpt = br.bifpoint[ind_hopf]
+	bifpt = br.specialpoint[ind_hopf]
 	eigRes = br.eig
 
 	# eigenvalue

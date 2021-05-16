@@ -39,7 +39,6 @@ z_sim2 = similar(z_sim)
 typeof(z_sim) == typeof(z_sim2)
 ####################################################################################################
 # test of the linear  solvers
-println("--> Test linear solver")
 J0 = rand(100,100) * 0.1 - I
 rhs = rand(100)
 sol_explicit = J0 \ rhs
@@ -72,7 +71,6 @@ _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test  _sol ≈ sol_explicit
 ####################################################################################################
 # test the bordered linear solvers
-println("--> Test linear Bordered solver")
 J0 = rand(100,100) * 0.9 - I
 rhs = rand(100)
 sol_explicit = (J0 + 0.2spdiagm(0 => vcat(ones(99),0))) \ rhs

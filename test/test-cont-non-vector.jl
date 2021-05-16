@@ -22,7 +22,7 @@ outfold, hist, flag = newton(
 		br0, 2;
 		Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
 		d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.bifpoint[2].param, "\n")
+	# flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.specialpoint[2].param, "\n")
 
 ####################################################################################################
 # Here is a more involved example
@@ -73,7 +73,7 @@ outfold, hist, flag = newton(
 	br, 1;
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
 	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.bifpoint[1].param,"\n")
+		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.specialpoint[1].param,"\n")
 
 outfoldco, hist, flag = continuation(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
@@ -82,7 +82,7 @@ outfoldco, hist, flag = continuation(
 	d2F = ((x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.)), plot = false)
 
 # try with newtonDeflation
-printstyled(color=:green, "--> test with Newton deflation 1")
+# test with Newton deflation 1
 deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(sol)])
 soldef0 = BorderedArray([0.1], 0.0)
 soldef1,  = newton(
@@ -93,7 +93,7 @@ soldef1,  = newton(
 push!(deflationOp, soldef1)
 
 Random.seed!(1231)
-printstyled(color=:green, "--> test with Newton deflation 2")
+# test with Newton deflation 2
 soldef2, = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	rmul!(soldef0,rand()),  (0., 1.),
@@ -178,7 +178,7 @@ outfold, hist, flag = newton(
 	br0, 1; #index of the fold point
 	Jᵗ = (x, r) -> JacobianR(x, r[1]),
 	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
-		flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.bifpoint[1].param,"\n")
+		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.specialpoint[1].param,"\n")
 
 outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
@@ -195,7 +195,7 @@ outfoldco, hist, flag = continuation(
 	tangentAlgo = BorderedPred(), plot = false)
 
 # try with newtonDeflation
-printstyled(color=:green, "--> test with Newton deflation 1")
+# test with Newton deflation 1
 deflationOp = DeflationOperator(2.0, dot, 1.0, [(out0)])
 soldef1, = newton(
 	Fr, (x, p) -> JacobianR(x, 0.),

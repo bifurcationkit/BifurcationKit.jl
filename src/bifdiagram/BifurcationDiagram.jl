@@ -40,7 +40,7 @@ Return the part of the tree corresponding to the indbif-th bifurcation point on 
 """
 function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
 	# parameter value at the bp
-	p = tree.γ.bifpoint[indbif].param
+	p = tree.γ.specialpoint[indbif].param
 	return BifDiagNode[br for br in tree.child if from(br).p == p]
 end
 
@@ -97,8 +97,8 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize = 2)))
 	end
 
-	for (id, pt) in enumerate(node.γ.bifpoint)
-		# we put this condition in case the bifpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
+	for (id, pt) in enumerate(node.γ.specialpoint)
+		# we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
 		if pt.step > 1 && pt.type in (:bp, :nd)
 			try
 				println("─"^80*"\n--> New branch, level = $(level[1]+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))

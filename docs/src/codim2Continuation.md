@@ -36,7 +36,7 @@ where $w,v$ are chosen in order to have a non-singular matrix $(M_h)$. More prec
 
 ## Newton refinement
 
-Once a Fold/Hopf point has been detected after a call to `br, _ = continuation(...)`, it can be refined using `newton` iterations. Let us say that `ind_bif` is the index in `br.bifpoint` of a Fold/Hopf point. This guess can be refined by newton iterations:
+Once a Fold/Hopf point has been detected after a call to `br, _ = continuation(...)`, it can be refined using `newton` iterations. Let us say that `ind_bif` is the index in `br.specialpoint` of a Fold/Hopf point. This guess can be refined by newton iterations:
 
 ```julia
 outfold, hist, flag =  newton(F, J, br::AbstractBranchResult, ind_bif::Int64; 

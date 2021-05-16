@@ -60,32 +60,32 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
-	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.bifpoint[ind_bif], ind_bif)
+	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
 	if kernelDim(br, ind_bif) > 1
 		return multicontinuation(F, dF, d2F, d3F, br, ind_bif, optionsCont; Jᵗ = Jᵗ, δ = δ, δp = δp, ampfactor = ampfactor, nev = nev, issymmetric = issymmetric, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
 	end
 
 	@assert br.type == :Equilibrium "Error! This bifurcation type is not handled.\n Branch point from $(br.type)"
-	@assert br.bifpoint[ind_bif].type == :bp "Error! This bifurcation type is not handled.\n Branch point from $(br.bifpoint[ind_bif].type)"
+	@assert br.specialpoint[ind_bif].type == :bp "Error! This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
 
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp
 	Ty = typeof(ds)
 
 	# compute the normal form of the branch point
-	bifpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
+	specialpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 
 	# compute predictor for a point on new branch
-	pred = predictor(bifpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
+	pred = predictor(specialpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 	if isnothing(pred); return nothing, nothing; end
 
-	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ", type(bifpoint), "\n----> newp = ", pred.p, ", δp = ", br.bifpoint[ind_bif].param - pred.p, "\n")
+	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ", type(specialpoint), "\n----> newp = ", pred.p, ", δp = ", br.specialpoint[ind_bif].param - pred.p, "\n")
 
 	if usedeflation
 		verbose && println("\n----> Compute point on the current branch with nonlinear deflation...")
 		optn = optionsCont.newtonOptions
-		bifpt = br.bifpoint[ind_bif]
+		bifpt = br.specialpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
 		solbif, _, flag, _ = newton(F, dF, convert(Teigvec, bifpt.x), pred.x, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
 		copyto!(pred.x, solbif)
@@ -93,10 +93,10 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 
 	# perform continuation
 	branch, u, tau =  continuation(F, dF,
-			bifpoint.x0, bifpoint.params,	# first point on the branch
+			specialpoint.x0, specialpoint.params,	# first point on the branch
 			pred.x, pred.p,					# second point on the branch
 			br.lens, optionsCont; kwargs...)
-	return Branch(branch, bifpoint), u, tau
+	return Branch(branch, specialpoint), u, tau
 end
 
 # same but for a Branch

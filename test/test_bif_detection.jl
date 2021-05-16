@@ -31,7 +31,7 @@ function testBranch(br)
 		@test br.branch[ii][end] == br.eig[ii].step
 	end
 	# test about bifurcation points
-	for bp in br.bifpoint
+	for bp in br.specialpoint
 		id = bp.idx
 		# test that the states marked as bifurcation points are always after true bifurcation points
 		@test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
@@ -56,7 +56,7 @@ par = (L = Diagonal([1.0/ii for ii in 1:5 for jj in 1:ii]), λ = .0)
 append!(par.L.diag, [1/6. 1/6.5 1/6.75 1/6.875])
 
 # ensemble of bifurcation points
-bifpoints = unique(1 ./par.L.diag);
+specialpoints = unique(1 ./par.L.diag);
 dimBif = [ii for ii in 1:5]; append!(dimBif, [1 1 1 1])
 
 x0 = zeros(size(par.L, 1))
@@ -67,14 +67,14 @@ testBranch(br1)
 
 br2, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
 testBranch(br2)
-for bp in br2.bifpoint
+for bp in br2.specialpoint
 	@test bp.interval[1] <= bp.param <= bp.interval[2]
 end
 
-bifpoint2 = [bp.param for bp in br2.bifpoint]
-@test bifpoint2 > bifpoints
-@test norm(bifpoints - bifpoint2, Inf) < 3e-3
-dimBif2 = [abs(bp.δ[1]) for bp in br2.bifpoint]
+specialpoint2 = [bp.param for bp in br2.specialpoint]
+@test specialpoint2 > specialpoints
+@test norm(specialpoints - specialpoint2, Inf) < 3e-3
+dimBif2 = [abs(bp.δ[1]) for bp in br2.specialpoint]
 @test dimBif2 == dimBif
 
 
@@ -87,7 +87,7 @@ testBranch(br3)
 br4, = continuation(Ftb, Jtb, x0, (@set par.λ = 0.95), (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
 testBranch(br4)
 ####################################################################################################
-# this example is to test t failures in Newton annd how it affects the bifurcation points labels
+# this example is to test failures in Newton annd how it affects the bifurcation points labels
 using ForwardDiff
 const  _rnd = rand(5)
 F = (x, p; k = 3) -> (@. p + x - _rnd .* x^k/k)
@@ -95,7 +95,7 @@ Jac_m = (x, p; k = 2) -> diagm(0 => 1 .- _rnd .* x.^k)
 
 opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3)
 
-br4, = continuation(F, Jac_m, zeros(5), 0., (@lens _), opts; verbosity = 0,
+br4, = continuation(F, Jac_m, zeros(5), 0., (@lens _), opts; #verbosity = 3, plot=true,
 	printSolution = (x,p)->x[1])
 testBranch(br4)
 ####################################################################################################

@@ -47,7 +47,7 @@ function getAxisLabels(ind1, ind2, br)
 end
 
 # allow to plot a single branch
-RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, applytoY = identity)
+RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putbifptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, applytoY = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -62,10 +62,10 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.bifpoint)
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
 
-	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
-		if filterbifpoints == true
+	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
+		if filterspecialpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
 		@series begin
@@ -100,10 +100,10 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 end
 
 # allow to plot branches specified by splatting
-RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, applytoY = identity)
+RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putbifptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, applytoY = identity)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
-	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].bifpoint if pt.type != :none])
+	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if pt.type != :none])
 	# add legend for bifurcation points
 	if putbifptlegend && length(bp) > 0
 		for pt in unique(x -> x.type, bp)
@@ -122,7 +122,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 		@series begin
 			putbifptlegend --> false
 			plotfold --> plotfold
-			plotbifpoints --> plotbifpoints
+			plotspecialpoints --> plotspecialpoints
 			plotstability --> plotstability
 			branchlabel --> branchlabel[id]
 			linewidthunstable --> linewidthunstable
@@ -139,7 +139,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 			end
 			# collect the values of the bifurcation points to be added in the legend
 			ind1, ind2 = getPlotVars(brs[id], vars)
-			for pt in res.bifpoint
+			for pt in res.specialpoint
 				# this does not work very well when changing optional argument vars
 				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, ind2)))
 			end
@@ -250,7 +250,7 @@ end
 ####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
-RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putbifptlegend = true, filterbifpoints = false, vars = nothing, plotstability = true, plotbifpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true, applytoY = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
+RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putbifptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true, applytoY = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -265,10 +265,10 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
 
-	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
-		if filterbifpoints == true
+	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
+		if filterspecialpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
 		@series begin

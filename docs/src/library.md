@@ -98,7 +98,7 @@ getBranchesFromBP
 ```
 
 ```@docs
-GenericBifPoint
+SpecialPoint
 ```
 
 ## Utils for periodic orbits

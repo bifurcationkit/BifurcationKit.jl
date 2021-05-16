@@ -24,7 +24,7 @@ end
 n = 101
 par = (3.3, 0.01)
 ig = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-optnewton = NewtonPar(verbose = true)
+optnewton = NewtonPar(verbose = false)
 sol, hist, flag = newton(F_chan, ig, par, optnewton)
 
 _tau = BorderedArray(rand(n), 1.0)
