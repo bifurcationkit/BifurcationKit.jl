@@ -46,19 +46,19 @@ hpnf = computeNormalForm(jet..., br, 1)
 ####################################################################################################
 # different tests for the Fold point
 snpt = computeNormalForm(jet..., br, 2)
-@set! opts_br.newtonOptions.verbose = true
+@set! opts_br.newtonOptions.verbose = false
 @set! opts_br.newtonOptions.maxIter = 10
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 printstyled(color=:red, "--> guess for SN, p = ", br.bifpoint[2].param, ", psn = ", sn[1].p)
 	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
-@test sn[3] && sn[5] == 3
+@test sn[3] && sn[5] == 6
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm)
-@test sn[3] && sn[5] == 4
+@test sn[3] && sn[5] == 8
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true)
-@test sn[3] && sn[5] == 4
+@test sn[3] && sn[5] == 8
 
 sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 0, maxSteps = 1, saveSolEveryStep = 1), bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
 
@@ -80,11 +80,39 @@ ind = argmin(abs.(eigvals))
 # different tests for the Hopf point
 hppt = computeNormalForm(jet..., br, 1)
 
-hp, = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions,startWithEigen = true, bdlinsolver = MatrixBLS())
-printstyled(color=:red, "--> guess for HP, p = ", br.bifpoint[1].param, ", php = ", hp.p)
-plot(br);scatter!([hp.p[1]], [hp.u[1]])
+@set! opts_br.newtonOptions.verbose = false
+
+hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true)
+# printstyled(color=:red, "--> guess for HP, p = ", br.bifpoint[1].param, ", php = ", hp[1].p)
+# plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
+# @test hp[3] && hp[5] == 6
+
+hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
+@test hp[3] && hp[5] == 12
+
+hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = true)
+@test hp[3] && hp[5] == 8
+
+# we check that we truly have a bifurcation point.
+pb = hp[end]
+ω = hp[1].p[2]
+par_hp = set(br.params, br.lens, hp[1].p[1])
+_J = dCOm(hp[1].u, par_hp)
+eigvals, eigvec, = eigen(_J)
+ind = argmin(abs.(eigvals .- Complex(0, ω)))
+@test real(eigvals[ind]) ≈ 0 atol=1e-9
+@test abs(imag(eigvals[ind])) ≈ abs(hp[1].p[2]) atol=1e-9
+ζ = eigvec[:, ind]
+# reminder: pb.b should be a null vector of (J+iω)
+@test pb.b ≈ ζ atol = 1e-3
 
 d2NLIFc =(x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2COm(x,p,_dx1,_dx2))(dx1,dx2)
-hp, = newtonHopf(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=false, d2F = d2NLIFc)
+hp, = newtonHopf(jet[1:2]..., br, 1;
+	options = NewtonPar( opts_br.newtonOptions; maxIter = 10),
+	startWithEigen = true,
+	bdlinsolver = MatrixBLS(),
+	d2F = d2NLIFc)
 printstyled(color=:red, "--> guess for HP, p = ", br.bifpoint[1].param, ", php = ", hp.p)
-plot(br);scatter!([hp.p[1]], [hp.u[1]])
+# plot(br);scatter!([hp.p[1]], [hp.u[1]])
+
+hp, = newtonHopf(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = d2NLIFc)

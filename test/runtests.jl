@@ -22,6 +22,7 @@ using Test
 
 	@testset "Fold Codim 2" begin
 		include("testJacobianFoldDeflation.jl")
+		include("codim2.jl")
 	end
 
 	@testset "Hopf Codim 2" begin
