@@ -551,7 +551,20 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 	return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
 
+Compute the Hopf normal form.
+
+# Arguments
+- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `pt::Hopf` Hopf bifurcation point
+- `ls` linear solver
+
+# Optional arguments
+- `δ = 1e-8` used for finite differences
+- `verbose` bool to print information
+"""
 function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose = false)
 	x0 = pt.x0
 	p = pt.p
@@ -594,7 +607,13 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose = fals
 	# return coefficients of the normal form
 	verbose && println((a = a, b = b))
 	pt.nf = (a = a, b = b)
-	pt.type = real(a) * real(b) < 0 ? :SuperCritical : :SubCritical
+	if real(a) * real(b) < 0
+		pt.type = :SuperCritical
+	elseif real(a) * real(b) > 0 
+		pt.type = :SubCritical
+	else
+		pt.type = :Singular
+	end
 	verbose && printstyled(color = :red,"--> Hopf bifurcation point is: ", pt.type, "\n")
 	return pt
 end
@@ -610,7 +629,7 @@ Compute the Hopf normal form.
 - `ind_hopf` index of the bifurcation point in `br`
 - `options` options for the Newton solver
 
-# Optional argument
+# Optional arguments
 - `Jᵗ` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector
 - `δ = 1e-8` used for finite differences
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector

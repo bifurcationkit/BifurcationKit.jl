@@ -54,7 +54,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.bifpoint)
 
 	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
 		if filterbifpoints == true

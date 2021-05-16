@@ -68,7 +68,6 @@ function dFcgl(x, p, dx)
 	f .= f .+ nl
 end
 
-
 # computation of the second derivative
 d2Fcgl(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fcgl(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 
@@ -144,7 +143,7 @@ ind_hopf = 1
 	hopfpoint, _, flag = @time newton(
 		Fcgl, Jcgl,
 		br, ind_hopf;
-		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2),
+		d2F = jet[3],
 		options = optnew, normN = norminf, startWithEigen = true)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
 
@@ -153,7 +152,7 @@ br_hopf, u1_hopf = @time continuation(
 	br, ind_hopf, (@lens _.γ),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 0, newtonOptions = optnew, plotEveryStep = 5, precisionStability = 1e-7, nev = 15); plot = true,
 	updateMinAugEveryStep = 1,
-	d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fcgl(x,p,_dx1,_dx2))(dx1,dx2),
+	d2F = jet[3], d3F = jet[4],
 	startWithEigen = true, bothside = true,
 	verbosity = 3, normC = norminf)
 
