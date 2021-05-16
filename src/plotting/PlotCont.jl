@@ -5,7 +5,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	l = computeEigenElements(contparms) ? @layout([a{0.5w} [b; c]; e{0.2h}]) : @layout([a{0.5w} [b; c]])
 	plot(layout = l )
 
-	plot!(contres ; filterbifpoints = true, putbifptlegend = false,
+	plot!(contres ; filterspecialpoints = true, putspecialptlegend	 = false,
 		xlabel = getLensParam(contres.lens),
 		ylabel = getfirstusertype(contres),
 		label = "", plotfold = false, subplot = 1)
@@ -20,6 +20,6 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
 	end
 
-	plot!(contres; vars = (:step, :param), putbifptlegend = false, plotbifpoints = false, xlabel = "step", ylabel = getLensParam(contres.lens), label = "", subplot = 2) |> display
+	plot!(contres; vars = (:step, :param), putbifptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = getLensParam(contres.lens), label = "", subplot = 2) |> display
 
 end

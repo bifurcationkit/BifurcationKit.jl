@@ -1,6 +1,9 @@
 # Event Handling
 
-Work in progress.
+`BifurcationKit.jl` allows for detecting events along the branch of solutions. Its main use consists in detecting bifurcation points but they can be used and combined together by the user too.
+
+!!! danger "Warning"
+    This is work in progress, this may not work until this warning has been removed
 
 ## Examples
 
@@ -114,13 +117,13 @@ Special points:
 ```
 
 
-### Example of composite event
+### Example of PairOfEvents event
 
 Let us be a bit more creative and combine a continuous event with a discrete one:
 
 ```julia
 br, = continuation(args...; kwargs...,
-	event = BK.CompositeEvent(
+	event = BK.PairOfEvents(
 		BK.ContinuousEvent(1, (iter, state) -> getp(state)),
 		BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)))
 ```

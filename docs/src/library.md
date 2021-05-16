@@ -65,7 +65,7 @@ BifurcationKit.SetOfEvents
 ```
 
 ```@docs
-BifurcationKit.CompositeEvent
+BifurcationKit.PairOfEvents
 ```
 
 ## Branch switching (branch point)

@@ -136,31 +136,27 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# type of scalars in iter
 	_T = eltype(iter)
 
-	# number of unstable eigenvalues
+	# number of unstable eigenvalues after, before the bifurcation point
 	n2, n1 = _state.n_unstable
 	if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
 
 	# get continuation parameters
 	contParams = iter.contParams
 
+	if abs(_state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
+	verbose && println("----> [Bisection] initial ds = ", _state.ds)
+	
 	# we create a new state for stepping through the continuation routine
 	state = copy(_state)
 
-	# iter = @set iter.contParams.newtonOptions.verbose = false
-
-	verbose && println("----> [Bisection] initial ds = ", _state.ds)
-
-	# the bifurcation point is before the current state
-	# so we want to first iterate backward with half step size
-	# we turn off stepsizecontrol because it would not make a
-	# bisection otherwise
+	# the bifurcation point is before the current state so we want to first iterate backward with
+	# half step size. We turn off stepsizecontrol because it would not make a bisection otherwise
 	state.ds *= -1
 	state.step = 0
 	state.stepsizecontrol = false
 
+	# this variable is used for the iterator
 	next = (state, state)
-
-	if abs(state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
 
 	# record sequence of unstable eigenvalue number and parameters
 	nunstbls = [n2]
