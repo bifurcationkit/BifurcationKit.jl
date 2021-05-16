@@ -244,7 +244,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			break
 		end
 
-		next = iterate(iter, state; _verbosity = 0, bisection = true)
+		next = iterate(iter, state; _verbosity = 0)
 	end
 
 	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
