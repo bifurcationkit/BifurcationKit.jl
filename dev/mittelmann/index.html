@@ -126,25 +126,25 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogenous solutions
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
+vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:length(ve)
 	outdef1, _, flag, _ = @time newton(
 		Fmit, JFmit,
 		# initial guess for newton
-		br.bifpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
-		(@set par_mit.λ = br.bifpoint[2].param + 0.005),
+		br.specialpoint[2].x .+ 0.01 .*  real.(ve[ii]) .* (1 .+ 0.01 .* rand(Nx*Ny)),
+		(@set par_mit.λ = br.specialpoint[2].param + 0.005),
 		optdef, deflationOp)
 		flag &amp;&amp; push!(deflationOp, outdef1)
 end</code></pre><p>This provides <code>length(deflationOp) = 5</code> solutions as there are some symmetries in the problem. For example <code>plotsol(deflationOp[5])</code> gives</p><p><img src="../mittlemann5.png" alt/></p><p>We can continue this solution as follows in one direction</p><pre><code class="language-julia">brdef1, = continuation(
 	Fmit, JFmit,
-	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	deflationOp[3], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -&gt; norm(x),
-	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p>If we repeat the above loop but before the branch point by using <code>@set par_mit.λ = br.bifpoint[2].param + 0.005</code>, we get 3 new solutions that we can continue</p><pre><code class="language-julia">brdef2, = continuation(
+	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p>If we repeat the above loop but before the branch point by using <code>@set par_mit.λ = br.specialpoint[2].param + 0.005</code>, we get 3 new solutions that we can continue</p><pre><code class="language-julia">brdef2, = continuation(
 	Fmit, JFmit,
-	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) -&gt; norm(x),
@@ -218,4 +218,4 @@ Parameters λ from 0.27255473583423384 to 0.09945404935297063
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
 - #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
-- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 12 May 2021 07:12">Wednesday 12 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 20 May 2021 10:52">Thursday 20 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
