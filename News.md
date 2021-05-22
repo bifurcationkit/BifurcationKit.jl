@@ -2,6 +2,34 @@ BifurcationKit.jl, Changelog
 ========================
 
 All notable changes to this project will be documented in this file.
+
+## [0.0.1] - 2021-05-16
+- rename `HopfBifPoint` -> `Hopf`
+- rename `GenericBifPoint` into `SpecialPoint` and `bifpoint` to `specialpoint`
+- add applytoY keyword to plot recipe
+
+## [0.0.1] - 2021-05-9
+- remove `p->nothing` as default argument in `continuationHopf`
+- add bordered linear solver option in `newtonHopf`
+
+## [0.0.1] - 2021-05-2
+- remove type piracy for `iterate`
+- put the computation of eigenvalues in the iterator
+- correct mistake in bracketing interval in `locateBifurcation!`
+- remove `GMRESIterativeSolvers!` from linearsolvers
+
+## [0.0.1] - 2021-04-3
+- correct bug in the interval locating the bifurcation point (in bisection method)
+
+## [0.0.1] - 2021-01-24
+- add `bothside` kwargs to continuation to compute a branch on both sides of initial guess
+- update the Minimally augmented problem during the continuation. This is helpful otherwise the codim 2 continuation fails.
+- [WIP] detection of Bogdanov-takens and Fold-Hopf bifurcations
+- remove field `foldpoint` from ContResult
+
+## [0.0.1] - 2020-11-29
+- improve bordered solvers for POTrap based on the cyclic matrix
+
 ## [0.0.1] - 2020-11-7
 - update phase condition during continuation for shooting problems and Trapezoid method
 	

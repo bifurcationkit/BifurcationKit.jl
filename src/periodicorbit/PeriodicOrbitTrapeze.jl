@@ -737,7 +737,7 @@ end
 ####################################################################################################
 # newton wrappers
 function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
-	@assert orbitguess[end] > 0 "The guess for the period should be positive."
+	@assert orbitguess[end] >= 0 "The guess for the period should be positive, I get $(orbitguess[end])"
 	@assert linearPO in [:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 	M, N = size(probPO)
 
@@ -851,7 +851,7 @@ This is the continuation routine for computing a periodic orbit using a function
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
 """
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
-	@assert orbitguess[end] > 0 "The guess for the period should be positive."
+	@assert orbitguess[end] >= 0 "The guess for the period should be positive."
 	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 
 	M, N = size(prob)
