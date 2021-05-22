@@ -28,7 +28,7 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
 # (shift⋅I + J) * dX +       dR   * dl = R
-#   xiu * dz.u' * dX + xip * dz.p * dl = n
+# xiu * dz.u' * dX + xip * dz.p * dl = n
 function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 								dzu, dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, S, Ts, Ttol}

@@ -150,7 +150,7 @@ end
 ####################################################################################################
 
 function filterBifurcations(bifpt)
-# this function filters Fold points and Branch points which are located at the same/previous/next point
+	# this function filters Fold points and Branch points which are located at the same/previous/next point
 	length(bifpt) == 0 && return bifpt
 	res = [(type = :none, idx = 1, param = 1., printsol = bifpt[1].printsol, status = :guess)]
 	ii = 1

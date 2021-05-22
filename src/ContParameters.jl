@@ -29,7 +29,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `tolBisectionEigenvalue` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
 ## Handling `ds` adaptation (see [`continuation`](@ref) for more information)
-- `a = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
+- `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
 - `thetaMin = 1.0e-3` minimum value of `theta`
 - `doArcLengthScaling` trigger further adaptation of `theta`
 

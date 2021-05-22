@@ -98,6 +98,7 @@ Returns a variable containing the state of the continuation procedure. The field
 - `solution(state)` returns the current solution (x, p)
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
+- `getpreviousp(state)` returns the p component of the previous solution
 - `isStable(state)` whether the current state is stable
 """
 @with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState
@@ -169,6 +170,7 @@ end
 solution(state::AbstractContinuationState) = state.z_old
 getx(state::AbstractContinuationState) = state.z_old.u
 @inline getp(state::AbstractContinuationState) = state.z_old.p
+@inline getpreviousp(state::AbstractContinuationState) = state.z_pred.p
 @inline isStable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 ####################################################################################################
