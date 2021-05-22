@@ -132,9 +132,9 @@ ind_hopf = 1
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
 		br, ind_hopf;
-		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
+		d2F = d2Fbru,
 		options = (@set optnew.verbose=true), normN = norminf)
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 if 1==0
 	br_hopf, u1_hopf = @time continuation(
@@ -144,8 +144,6 @@ if 1==0
 
 	plot(br_hopf, label="")
 end
-# test with analytical Hessian but with dummy expression ;)
-d2Fbru(x, p, dx1, dx2) = dx1 .* dx2
 
 hopfpoint, hist, flag = @time newton(
 	Fbru, Jbru_sp,
@@ -156,9 +154,10 @@ hopfpoint, hist, flag = @time newton(
 if 1==1
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
-		br, ind_hopf, (@lens _.l),
-		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 0.1, detectBifurcation = 3, newtonOptions = optnew); plot = true,
-		d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2),
+		br, ind_hopf, (@lens _.β),
+		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew); plot = true,
+		updateMinAugEveryStep = 1,
+		d2F = d2Fbru,
 		verbosity = 2, normC = norminf, bothside = true)
 end
 plot(br_hopf)

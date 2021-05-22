@@ -147,6 +147,25 @@ function Base.copy(state::ContState)
 	)
 end
 
+function Base.copyto!(dest::ContState, src::ContState)
+		copyto!(dest.z_pred , src.z_pred)
+		copyto!(dest.tau , src.tau)
+		copyto!(dest.z_old , src.z_old)
+		src.isconverged = src.isconverged
+		src.itnewton 	= src.itnewton
+		src.step 		= src.step
+		src.ds 			= src.ds
+		src.theta 		= src.theta
+		src.stopcontinuation = src.stopcontinuation
+		src.stepsizecontrol  = src.stepsizecontrol
+		src.n_unstable 		 = src.n_unstable
+		src.n_imag 			 = src.n_imag
+		src.eventValue		 = src.eventValue
+		src.eigvals			 = src.eigvals
+		src.eigvecs			 = src.eigvecs # can be removed? to save memory?
+	return dest
+end
+
 solution(state::AbstractContinuationState) = state.z_old
 getx(state::AbstractContinuationState) = state.z_old.u
 @inline getp(state::AbstractContinuationState) = state.z_old.p

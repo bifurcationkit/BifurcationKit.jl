@@ -88,9 +88,9 @@ plotsol(out)
 
 ####################################################################################################
 function finSol(z, tau, step, br; k...)
-	if length(br.bifpoint)>0
-		if br.bifpoint[end].step == step
-			BK._show(stdout, br.bifpoint[end], step)
+	if length(br.specialpoint)>0
+		if br.specialpoint[end].step == step
+			BK._show(stdout, br.specialpoint[end], step)
 		end
 	end
 	return true
@@ -164,7 +164,7 @@ function optionsCont(x,p,l; opt = opts_br)
 end
 
 code = ()
-	plot(diagram; code = code, level = (0, 2), plotfold = false, putbifptlegend=false, markersize=2)
+	plot(diagram; code = code, level = (0, 2), plotfold = false, putspecialptlegend=false, markersize=2)
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")
@@ -297,14 +297,14 @@ optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogenous solutions
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.bifpoint[2].param), 5)
+vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:size(ve, 1)
 		outdef1, _, flag, _ = @time newton(
 			Fmit, JFmit,
 			# initial guess for newton
-			real.(br.bifpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))),
-			(@set par_mit.λ = br.bifpoint[2].param + 0.005),
+			real.(br.specialpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))),
+			(@set par_mit.λ = br.specialpoint[2].param + 0.005),
 			optdef, deflationOp)
 			flag && push!(deflationOp, outdef1)
 	end
@@ -321,8 +321,8 @@ l = @layout grid(3,2)
 
 brdef1, _ = @time BK.continuation(
 	Fmit, JFmit,
-	deflationOp[3], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
-	# bp2d([0.6,0.6], -0.01), br.bifpoint[2].param - 0.005,
+	deflationOp[3], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
+	# bp2d([0.6,0.6], -0.01), br.specialpoint[2].param - 0.005,
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) ->  normbratu(x),
@@ -333,12 +333,12 @@ plot(br,br1,br2, brdef1,plotfold=false)
 
 brdef2, _ = @time BK.continuation(
 	Fmit, JFmit,
-	deflationOp[5], (@set par_mit.λ = br.bifpoint[2].param + 0.005), (@lens _.λ),
+	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
 	printSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
-plot(br,br1,br2, brdef1, brdef2,plotfold=false, putbifptlegend = false)
+plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
 
-plot(brdef1, brdef2,plotfold = false, putbifptlegend = false)
+plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)

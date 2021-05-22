@@ -127,7 +127,7 @@ outfold, _, flag = @time newtonFold(
 		br, indfold, #index of the fold point
 		par_af, (@lens _.alpha),
 		optcont.newtonOptions)
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.bifpoint[indfold][3],"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
 indfold = 2
 

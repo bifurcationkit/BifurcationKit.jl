@@ -36,6 +36,8 @@ br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callb
 # using RecursiveArrayTools
 iter = ContIterable(F, Jac_m, x0, -1.5, (@lens _), opts)
 state = iterate(iter)[1]
+# test copy, copyto!
+state1 = copy(state);copyto!(state1, state)
 contRes = ContResult(iter, state)
 continuation!(iter, state, contRes)
 eltype(iter)

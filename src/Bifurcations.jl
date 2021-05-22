@@ -164,6 +164,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	# interval which contains the bifurcation point
 	interval = getinterval(getp(state), state.z_pred.p)
+	
 	# index of active index in the bisection interval, allows to track interval
 	indinterval = interval[1] == getp(state) ? 1 : 2
 

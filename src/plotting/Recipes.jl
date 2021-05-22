@@ -71,7 +71,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = fal
 		@series begin
 			seriestype := :scatter
 			seriescolor --> map(x -> getColor(x.type), bifpt)
-			markershape --> map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :square : :circle, bifpt)
+			markershape --> map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :square : :circle, bifpt)
 			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""
@@ -274,7 +274,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 		@series begin
 			seriestype := :scatter
 			seriescolor --> map(x -> colorbif[x.type], bifpt)
-			markershape --> map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :square : :circle, bifpt)
+			markershape --> map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :square : :circle, bifpt)
 			markersize --> 3
 			markerstrokewidth --> 0
 			label --> ""

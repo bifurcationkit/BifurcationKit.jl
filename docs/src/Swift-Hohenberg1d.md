@@ -100,9 +100,11 @@ Depending on the level of recursion in the bifurcation diagram, we change a bit 
 function optrec(x, p, l; opt = opts)
 	level =  l
 	if level <= 2
-		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx, detectLoop = false)
+		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, 
+			nev = Nx, detectLoop = false)
 	else
-		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = Nx, detectLoop = true)
+		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, 
+			nev = Nx, detectLoop = true)
 	end
 end
 ```

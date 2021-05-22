@@ -120,7 +120,7 @@ ind_hopf = 1
 		Fbru, Jbru_sp,
 		br, ind_hopf;
 		normN = norminf)
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 ####################################################################################################Continuation of Periodic Orbit
 M = 10
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
@@ -136,14 +136,14 @@ Jbru(x, dx, p) = ForwardDiff.derivative(t -> Fbru(x .+ t .* dx, p), 0.)
 JacOde(J, x, p, t) = copyto!(J, Jbru_sp(x, p))
 
 u0 = sol0 .+ 0.01 .* rand(2n)
-par_hopf = (@set par_bru.l = br.bifpoint[1].param + 0.01)
+par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
 # probsundials = ODEProblem(FOde, u0, (0., 520.), par_hopf) # gives 0.68s
 
 jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
 	jac_prototype.nzval .= ones(length(jac_prototype.nzval))
 
 # vf = ODEFunction(FOde; jac = (J,u,p,t) -> J .= Jbru_sp(u,p), jac_prototype = jac_prototype)
-	# probsundials = ODEProblem(vf,  u0, (0.0, 520.), @set par_bru.l = br.bifpoint[1].param) # gives .37s
+	# probsundials = ODEProblem(vf,  u0, (0.0, 520.), @set par_bru.l = br.specialpoint[1].param) # gives .37s
 
 using SparseDiffTools, SparseArrays, DiffEqDiffTools
 _colors = matrix_colors(jac_prototype)

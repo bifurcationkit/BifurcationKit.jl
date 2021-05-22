@@ -97,8 +97,8 @@ M = 61
 # we get the parameters from the Hopf point
 orbitguess = zeros(2N, M)
 vec_hopf = geteigenvector(optnewton.eigsolver,
-			br.eig[br.bifpoint[ind_hopf].idx][2],
-			br.bifpoint[ind_hopf].ind_ev-1)
+			br.eig[br.specialpoint[ind_hopf].idx][2],
+			br.specialpoint[ind_hopf].ind_ev-1)
 vec_hopf ./=  norm(vec_hopf)
 # vec_hopf is the eigenvector for the eigenvalues iω
 phase = []

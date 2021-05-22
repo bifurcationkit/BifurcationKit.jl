@@ -15,6 +15,7 @@ AF = Array{TY}
 # 	using GR
 # 	GR.inline("iterm")
 # end
+####################################################################################################
 
 using CUDA
 CUDA.allowscalar(false)
@@ -25,13 +26,13 @@ axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+
 
 TY = Float64
 AF = CuArray{TY}
-#################################################################
+####################################################################################################
 # to simplify plotting of the solution
 plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 norminf(x) = maximum(abs.(x))
 
-#################################################################
+####################################################################################################
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \
 
@@ -70,8 +71,7 @@ end
 
 *(c::SHLinearOp, u) = apply(c, u, c.l1)
 \(c::SHLinearOp, u) = apply(c, u, c.l1, /)
-#################################################################
-
+####################################################################################################
 Nx = 2^8
 Ny = 2^8
 lx = 8pi * 2
@@ -87,10 +87,10 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 		sol0 .*= 1.7
 		# heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
+function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, tol = tol, maxiter = 6, issymmetric = true)
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, rtol = rtol, maxiter = 6, ishermitian = true)
 	return res, true, info.numops
 end
 
@@ -100,7 +100,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 	σ = sheig.σ
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 
-	A = du -> sh(J, du; shift = σ, tol = 1e-5)[1]
+	A = du -> sh(J, du; shift = σ)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
 	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))

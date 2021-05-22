@@ -94,7 +94,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
 			usedeflation = usedeflation,
-			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putbifptlegend = false, markersize = 2)))
+			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putspecialptlegend = false, markersize = 2)))
 	end
 
 	for (id, pt) in enumerate(node.γ.specialpoint)

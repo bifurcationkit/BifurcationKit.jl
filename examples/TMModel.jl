@@ -89,7 +89,7 @@ br_posh, = @time continuation(
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
 			plot!(xtt; legend = false, k...);
-			plot!(br, subplot=1, putbifptlegend = false)
+			plot!(br, subplot=1, putspecialptlegend = false)
 		end,
 	normC = norminf)
 
@@ -124,8 +124,8 @@ br_popsh, = @time continuation(
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
 			plot!(xtt; legend = false, k...);
-			plot!(br,subplot=1, putbifptlegend = false)
-			# plot!(br_potrap,subplot=1, putbifptlegend = false)
+			plot!(br,subplot=1, putspecialptlegend = false)
+			# plot!(br_potrap,subplot=1, putspecialptlegend = false)
 		end,
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (return res<1e16),
 	finaliseSolution = (z, tau, step, contResult; prob=nothing, k...) ->

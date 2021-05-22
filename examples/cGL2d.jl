@@ -145,7 +145,7 @@ ind_hopf = 1
 		br, ind_hopf;
 		d2F = jet[3],
 		options = optnew, normN = norminf, startWithEigen = true)
-	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.bifpoint[ind_hopf].param, "\n")
+	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf, u1_hopf = @time continuation(
 	Fcgl, Jcgl,
@@ -246,7 +246,7 @@ br_po, = @time continuation(
 
 branches = Any[br_pok2]
 # push!(branches, br_po)
-plot(branches[1]; putbifptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
+plot(branches[1]; putspecialptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
 ###################################################################################################
 # automatic branch switching from Hopf point
 br_po, _ = continuation(

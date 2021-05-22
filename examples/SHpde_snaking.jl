@@ -76,7 +76,7 @@ end
 diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args..., verbosity=0)
 
 code = ()
-	plot(diagram; code = code, plotfold = false,  markersize = 2, putbifptlegend = false)
+	plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false)
 	plot!(brflat)
 	title!("#branches = $(size(diagram, code))")
 
