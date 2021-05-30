@@ -20,6 +20,10 @@ using Test
 		include("testNF.jl")
 	end
 
+	@testset "Events / User function" begin
+		include("event.jl")
+	end
+
 	@testset "Fold Codim 2" begin
 		include("testJacobianFoldDeflation.jl")
 		include("codim2.jl")

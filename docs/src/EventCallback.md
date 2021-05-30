@@ -1,9 +1,67 @@
 # Event Handling
 
-`BifurcationKit.jl` allows for detecting events along the branch of solutions. Its main use consists in detecting bifurcation points but they can be used and combined together by the user too.
 
 !!! danger "Warning"
     This is work in progress, this may not work until this warning has been removed
+
+`BifurcationKit.jl` allows for detecting events along the branch of solutions. Its main use consists in detecting bifurcation points but they can be used and combined together by the user too.
+
+The events are detected during a call to `br, = continuation(F, J, u0, p0, lens, contParams::ContinuationPar;kwargs...)` by turning on the following flags:
+
+- `contParams.detectEvent = 1`
+
+The event points are located by looking at the function defining the event (see below). The located event points are then returned in `br.specialpoint`.
+
+## Precise detection of event points using Bisection
+
+Note that the event points detected when `detectEvent = 1` are only approximate event points. Indeed, we only signal that, in between two continuation steps which can be large, a (several) event point has been detected. Hence, we only have a rough idea of where the event is located, unless your `ContinuationPar().dsmax` is very small... This can be improved as follows.
+
+If you choose `detectEvent = 2`, a bisection algorithm is used to locate the event points more precisely. It means that we recursively track down the event. Some options in `ContinuationPar` control this behavior:
+
+- `nInversion`: number of sign inversions in the bisection algorithm
+- `maxBisectionSteps` maximum number of bisection steps
+- `tolParamBisectionEvent` tolerance on parameter to locate event
+
+## Different event types
+
+### Continuous event
+
+```@docs
+BifurcationKit.ContinuousEvent
+```
+
+### Discrete event
+
+```@docs
+BifurcationKit.DiscreteEvent
+```
+
+### PairOfEvents event
+
+```@docs
+BifurcationKit.PairOfEvents
+```
+
+### SetOfEvents event
+
+```@docs
+BifurcationKit.SetOfEvents
+```
+
+## Built-in events
+
+```@docs
+BifurcationKit.SaveAtEvent
+```
+
+```@docs
+BifurcationKit.FoldDetectEvent
+```
+
+```@docs
+BifurcationKit.BifDetectEvent
+```
+
 
 ## Examples
 

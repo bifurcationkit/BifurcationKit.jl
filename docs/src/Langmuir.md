@@ -1,9 +1,5 @@
 # Langmuir–Blodgett transfer model (really advanced)
 
-!!! warning ""
-    Work in progress...
-
-
 !!! note "Advanced"
     This is one of the most advanced example in the package. It uses all functionalities to their best. For example, the computation of periodic orbits with Finite Differences uses an inplace modification of the jacobian which allows to have quite a fine time discretization. The Shooting methods rely on parallel shooting with preconditioner and highly tuned ODE time stepper.
       

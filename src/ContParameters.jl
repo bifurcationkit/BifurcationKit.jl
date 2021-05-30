@@ -91,11 +91,11 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
-	tolBisectionEvent::Float64 = 1e-16 		# tolerance on event residual to detect
-	tolBisectionEigenvalue::Float64 = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+	tolBisectionEigenvalue::T = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
 	# handling event detection
 	detectEvent::Int64 = 0					# event location
+	tolBisectionEvent::T = 1e-16 		# tolerance on event residual to detect
 
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"

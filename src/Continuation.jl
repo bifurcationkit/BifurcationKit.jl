@@ -223,6 +223,15 @@ function ContResult(it::AbstractContinuationIterable, state::AbstractContinuatio
 	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it), computeEigenElements(it))
 end
 
+# function to update the state according to the event
+function updateEvent!(it::ContIterable, state::ContState)
+	# if the event is not active, we return false (not detected)
+	if (isEventActive(it) == false) return false; end
+	outcb = it.event(it, state)
+	state.eventValue = (outcb, state.eventValue[1])
+	# update number of positive values
+	return isEventCrossed(it.event, it, state)
+end
 ####################################################################################################
 # Continuation Iterator
 #
@@ -291,6 +300,9 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 		_, n_unstable, n_imag = isStable(getParams(it), eigvals)
 		updateStability!(state, n_unstable, n_imag)
 	end
+
+	# we update the test function result
+	updateEvent!(it, state)
 	return state, state
 end
 
@@ -393,6 +405,21 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				end
 			end
 
+			if isEventActive(it)
+				# check if an event occured between the 2 continuation steps
+				eveDetected = updateEvent!(it, state)
+				eveDetected && (verbose && printstyled(color=:red, "--> Event detected before p = ", getp(state), "\n"))
+				# save the event if detected and / or use bisection to locate it precisely
+				if eveDetected
+					_T = eltype(it); status = :guess; intervalevent = (_T(0),_T(0))
+					if contParams.detectEvent > 1
+						# interval = getinterval(state.z_pred.p, getp(state))::Tuple{_T, _T}
+						status, intervalevent = locateEvent!(it.event, it, state, it.verbosity > 2)
+					end
+					_, bifpt = getEventType(it.event, it, state, it.verbosity, status, intervalevent)
+					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
+				end
+			end
 
 			# Saving Solution to File
 			contParams.saveToFile && saveToFile(it, getx(state), getp(state), state.step, contRes)

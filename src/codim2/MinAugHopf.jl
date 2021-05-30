@@ -382,7 +382,7 @@ function continuationHopf(F, J,
 
 		# if the frequency is null, this is not a Hopf point, we halt the process
 		if abs(ω) < options_newton.tol
-			@warn "The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at $p1, $p2"
+			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at $p1, $p2"
 		end
 		return abs(ω) > options_newton.tol
 	end
@@ -440,6 +440,7 @@ function continuationHopf(F, J,
 	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, ζ, ζad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
 end
 
+# structure to compute the eigenvalues along the Hopf branch
 struct HopfEig{S} <: AbstractEigenSolver
 	eigsolver::S
 end
