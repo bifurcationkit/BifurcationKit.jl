@@ -7,9 +7,7 @@ function FoldPoint(br::AbstractBranchResult, index::Int64)
 	specialpoint = br.specialpoint[index]
 	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
-
 ####################################################################################################
-
 """
 $(TYPEDEF)
 
@@ -22,7 +20,7 @@ $(FIELDS)
 struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
 	"Function F(x, p) = 0"
 	F::TF
-	"Jacobian of F wrt x"
+	"Jacobian of F w.r.t. x"
 	J::TJ
 	"Adjoint of the Jacobian of F"
 	Jᵗ::TJa

@@ -9,28 +9,60 @@ function HopfPoint(br::AbstractBranchResult, index::Int64)
 	ω = imag(eigRes[specialpoint.idx].eigenvals[specialpoint.ind_ev])	# frequency at the Hopf point
 	return BorderedArray(specialpoint.x, [p, ω] )
 end
+####################################################################################################
+"""
+$(TYPEDEF)
 
+Structure to encode Hopf functional based on a Minimally Augmented formulation.
+
+# Fields
+
+$(FIELDS)
+"""
 struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
-	F::TF 						# Function F(x, p) = 0
-	J::TJ 						# Jacobian of F wrt x
-	Jᵗ::TJa						# Adjoint of the Jacobian of F
-	d2F::Td2f					# Hessian of F
-	lens::Tl					# parameter axis for the Hopf point
-	a::vectype					# close to null vector of (J - iω I)^*
-	b::vectype					# close to null vector of  J - iω I
-	zero::vectype				# vector zero, to avoid allocating it
-	linsolver::S				# linear solver
-	linbdsolver::Sbd			# linear bordered solver
-	linbdsolverAdjoint::Sbda	# linear bordered solver for the jacobian adjoint
+	"Function F(x, p) = 0"
+	F::TF
+	"Jacobian of F w.r.t. x"
+	J::TJ
+	"Adjoint of the Jacobian of F"
+	Jᵗ::TJa
+	"Hessian of F"
+	d2F::Td2f
+	"parameter axis for the Fold point"
+	lens::Tl
+	"close to null vector of (J - iω I)^*"
+	a::vectype
+	"J - iω I"
+	b::vectype
+	"vector zero, to avoid allocating it"
+	zero::vectype
+	"linear solver"
+	linsolver::S
+	"linear bordered solver"
+	linbdsolver::Sbd
+	"linear bordered solver for the jacobian adjoint"
+	linbdsolverAdjoint::Sbda
 end
+
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linbdsolve, linbdsolve)
+
+HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
 @inline hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = Td2f != Nothing
 
 @inline hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
 
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linbdsolve, linbdsolve)
-
-HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+function applyJacobian(pb::HopfProblemMinimallyAugmented, x, par, dx, transposeJac = false)
+	if transposeJac == false
+		return apply(pb.J(x, par), dx)
+	else
+		if hasAdjoint(pb)
+			return apply(pb.Jᵗ(x, par), dx)
+		else
+			return apply(transpose(pb.J(x, par)), dx)
+		end
+	end
+end
 
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
@@ -136,6 +168,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	# σω = dot(w, Complex{T}(0, 1) * v) / n
 	σω = Complex{T}(0, 1) * dot(w, v) / n
 
+	# we solve J⋅x1 = duu and J⋅x2 = dpF
 	x1, x2, _, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
 
 	# the case of ∂_xσ is a bit more involved
@@ -144,15 +177,15 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	σx = similar(x, Complex{T})
 
 	if hasHessian(pb) == false
-		# We invert the jacobian of the Hopf problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
-		prod(size(x)) > 1e4 && @warn "You might want to pass the Hessian, finite differences with $(prod(size(x))) unknowns"
-		e = zero(x)
-		for ii in CartesianIndices(x)
-			e[ii] = T(1)
-			d2Fve = (apply(J(x + ϵ2 * e, par0), v) - apply(J(x - ϵ2 * e, par0), v)) / T(2ϵ2)
-			σx[ii] = -dot(w, d2Fve) / n
-			e[ii] = T(0)
-		end
+		cw = conj(w)
+		vr = real(v); vi = imag(v)
+		u1r = applyJacobian(pb, x + ϵ2 * vr, par0, cw, true)
+		u1i = applyJacobian(pb, x + ϵ2 * vi, par0, cw, true)
+		u2 = apply(JAd_at_xp,  cw)
+		σxv2r = @. -(u1r-u2) / ϵ2
+		σxv2i = @. -(u1i-u2) / ϵ2
+		σx = @. σxv2r + Complex{T}(0,1) * σxv2i
+
 		σxx1 = dot(σx, x1)
 		σxx2 = dot(σx, x2)
 	else
@@ -168,7 +201,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 			  [dup - real(σxx1), duω + imag(σxx1)]
 
 	if debugArray isa AbstractVector
-		debugArray .= [σp, σω] #[σx, σp, σω, dpF]
+		debugArray .= vcat(σp, σω, σx)
 	end
 	return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end

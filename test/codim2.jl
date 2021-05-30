@@ -18,7 +18,7 @@ end
 dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
 jet = BK.get3Jet(COm, dCOm)
 
-par_com = (q1 = 2.5, q2 = 2.0, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
+par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
 opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInversion = 4, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)

@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, Parameters
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, Parameters, ForwardDiff
 const BK = BifurcationKit
 
 f1(u, v) = u^2 * v
@@ -65,20 +65,27 @@ function Jbru_sp(x, p)
 	return J
 end
 
+Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
+jet = BK.get3Jet(Fbru, Jbru_ana)
+
 n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 
-opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-	out, hist, flag = newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
+# test that the jacobian is well computed
+@test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, detectBifurcation = 3, nev = 16, nInversion = 4)
-	br, = continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
+opt_newton = NewtonPar(tol = 1e-11, verbose = false)
+	out, hist, flag = newton(jet[1], jet[2], sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
+
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, newtonOptions = opt_newton, detectBifurcation = 3, nev = 16, nInversion = 4)
+	br, = continuation(jet[1], jet[2], out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
 ###################################################################################################
 # Hopf continuation with automatic procedure
-outhopf, = newtonHopf(Fbru, Jbru_sp, br, 1; startWithEigen = true)
-optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 5, detectBifurcation = 2)
-outhopfco, = continuationHopf(Fbru, Jbru_sp, br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1)
+outhopf, = newton(jet[1], jet[2], br, 1; startWithEigen = true, d2F = jet[3])
+outhopf, = newtonHopf(jet[1], jet[2], br, 1; startWithEigen = true)
+optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 50, detectBifurcation = 2)
+outhopfco, = continuationHopf(jet[1], jet[2], br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1, plot = false)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -87,7 +94,7 @@ ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
-					Fbru, Jbru_sp, nothing, nothing,
+					jet[1], jet[2], nothing, nothing,
 					(@lens _.l),
 					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
 					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
@@ -102,106 +109,36 @@ Vec2Bd(x) = BorderedArray(x[1:end-2], x[end-1:end])
 hopfpbVec(x, p) = Bd2Vec(hopfvariable(Vec2Bd(x),p))
 
 # finite differences Jacobian
-Jac_hopf_fdMA(u0, p) = BK.finiteDifferences( u-> hopfpbVec(u, p), u0)
+Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian( u-> hopfpbVec(u, p), u0)
 # ``analytical'' jacobian
 Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0,params=p ,hopfpb=pb))
-
-# # on construit la matrice a inverser pour calculer sigma1 et sigma2
-# ω = hopfpt[end]
-# # av = hopfvariable(b).a
-# # bv = hopfvariable(b).b
-# Jh = hopfvariable(b).J(hopfpt[1:end-2], hopfpt[end-1])
-# A = Jh + Complex(0, ω ) * I
-# A = Array(A)
-# Atot = [A av ; (bv') 0.]
-# res1 = Atot \ [zeros(2n)' Complex(1,0)]'
-# res2 = Atot' \ [zeros(2n)' Complex(1,0)]'
-# println("--> σ1 = ", res1[end], ",\n--> σ2 = ", res2[end])
-#
-# dot(res2, Atot*res1)
-#
-# v, σ1, _ = BK.linearBorderedSolver(Jh + Complex(0, ω) * I, av, bv, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
-#
-# w, σ2, _ = BK.linearBorderedSolver(Jh' - Complex(0, ω) * I, bv, av, 0., zeros(2n), 1.0, hopfvariable(b).linsolve)
-#
-# res1[1:end-1]-v |> norm
-# res2[1:end-1]-w |> norm
-#
-# L1 = hcat(Jh, -ω*I, real.(av), -imag.(av))
-# L2 = hcat(ω*I, Jh, imag.(av), real.(av))
-# L3 = hcat(real.(bv)', imag.(bv)', 0, 0)
-# L4 = hcat(-imag.(bv)', real.(bv)', 0, 0)
-# Atot2 = vcat(L1, L2, L3, L4)
-# res12 = Atot2 \ hcat(zeros(4n)',[1],[0])'
-# res22 = Atot2' \ hcat(zeros(4n)',[1],[0])'
-#
-# @test res12[1:2n] - real(res1[1:end-1]) |> norm < 1e-10
-# @test res12[2n+1:4n] - imag(res1[1:end-1]) |> norm < 1e-10
-# @test res22[1:2n] - real(res2[1:end-1]) |> norm < 1e-10
-# @test res22[2n+1:4n] - imag(res2[1:end-1]) |> norm < 1e-10
-#
-# @test v - res1[1:end-1] |> norm < 1e-10
-# @test w - res2[1:end-1] |> norm < 1e-10
-#
-# println("--> version reelle σ1 = ", res12[end-1:end])
-# println("--> version reelle σ2 = ", res22[end-1:end])
-#
-# # on calcule les derivees de sigma1 et sigma2
-# jac_hopf_fd = Jac_hopf_fdMA(hopfpt, b)
-# println("-->\n FD sigma_omega = ", jac_hopf_fd[end-1:end,end-1:end])
-# dot(res22[1:2n], res12[1:2n])
-# dot(res22[2n+1:4n], res12[2n+1:4n])
-#
-# newton convergence toward
-
-outhopf, _, flag, _ = newton((u, p) -> hopfpbVec(u, p),
-							# u -> Jac_hopf_fdMA(u, par_bru.β),
-							Bd2Vec(hopfpt), par_bru, NewtonPar(verbose = false, tol = 1e-8, maxIter = 10))
-	# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf[end-1], ", ω = ", outhopf[end], " from ", hopfpt.p, "\n")
 
 rhs = rand(length(hopfpt))
 jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
 sol_fd = jac_hopf_fd \ rhs
+
 # create a linear solver
 hopfls = BK.HopfLinearSolverMinAug()
-tmpVecforσ = zeros(ComplexF64, 2)
-sol_ma,  = @time hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debugArray = tmpVecforσ)
+tmpVecforσ = zeros(ComplexF64, 2+2n)
+sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debugArray = tmpVecforσ)
 
-# TODO TODO fix these two lines
-# test jacobian expression for Hopf Minimally Augmented
-@test Bd2Vec(sol_ma) - sol_fd |> x-> norm(x, Inf64) < 1e3
+# we test the expression for σp
+σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end,end-1])
+σp_fd_ana = tmpVecforσ[1]
+@test σp_fd ≈ σp_fd_ana rtol = 1e-5
 
-@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-4
+# we test the expression for σω
+σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end,end])
+σω_fd_ana = tmpVecforσ[2]
+@test σω_fd ≈ σω_fd_ana rtol = 1e-7
 
-# dF = jac_hopf_fd[:,end-1]
-# sig_vec_re = jac_hopf_fd[end-1,1:end-2]
-# sig_vec_im = jac_hopf_fd[end,1:end-2]
-#
-# println("-->\n FD sigma_omega = ", jac_hopf_fd[end-1:end,end-1:end]')
-#
-# norm(sig_vec_re - real.(sigomMA[1]), Inf64)
-# norm(sig_vec_im - imag.(sigomMA[1]), Inf64)
-# norm(dF[1:end-2] - sigomMA[end], Inf64)
-#
-# # on essaie de resoudre jac_hopf_fd \ rhs
-# Jh = jac_hopf_fd[1:end-2,1:end-2]
-# sig1 = jac_hopf_fd[end-1,1:end-2]
-# sig2 = jac_hopf_fd[end,1:end-2]
-# sig1p = jac_hopf_fd[end-1,end-1]
-# sig2p = jac_hopf_fd[end,end-1]
-# sig1o = jac_hopf_fd[end-1,end]
-# sig2o = jac_hopf_fd[end,end]
-#
-# sigma = hcat(sig1,sig2)
-#
-# X1 = Jh \ rhs[1:end-2]
-# X2 = Jh \ dF[1:end-2]#jac_hopf_fd[1:end-2,end-2]
-# X2m = hcat(X2, 0*X2)
-# C = jac_hopf_fd[end-1:end,end-1:end]
-# println("--> dp, dom = ",(C - sigma' * X2m) \ (rhs[end-1:end] - sigma' * X1))
-# println("--> dp, dom FD = ",sol_fd[end-1:end])
+# we test the expression for σx
+σx_fd = jac_hopf_fd[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fd[end, 1:end-2]
+σx_fd_ana = tmpVecforσ[3:end]
+@test σx_fd ≈ σx_fd_ana rtol = 1e-3
+
 outhopf, hist, flag = newton(
-		Fbru, Jbru_sp, br, 1, Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)))
+		jet[1], jet[2], br, 1, Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)))
 		# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 outhopf, _, flag, _ = newton((u, p) -> hopfvariable(u, p),
@@ -222,16 +159,16 @@ function d2F(x, p1, du1, du2)
 	return out
 end
 
-outhopf, hist, flag = newton(Fbru, Jbru_sp, br, 1,
+outhopf, hist, flag = newton(jet[1], jet[2], br, 1,
 		Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)),
 		d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 		# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
 
 br_hopf, u1_hopf = continuation(
-			Fbru, Jbru_sp, br, ind_hopf, (@lens _.β),
+			jet[1], jet[2], br, ind_hopf, (@lens _.β),
 			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
 
-br_hopf, u1_hopf = continuation(Fbru, Jbru_sp, br, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
+br_hopf, u1_hopf = continuation(jet[1], jet[2], br, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -254,7 +191,7 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-poTrap = PeriodicOrbitTrapProblem(Fbru, Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2n	)
+poTrap = PeriodicOrbitTrapProblem(jet[1], jet[2], real.(vec_hopf), hopfpt.u, M, 2n	)
 
 jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
