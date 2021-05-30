@@ -17,7 +17,7 @@ Structure to encode Fold functional based on a Minimally Augmented formulation.
 
 $(FIELDS)
 """
-struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
+struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: ProblemMinimallyAugmented
 	"Function F(x, p) = 0"
 	F::TF
 	"Jacobian of F w.r.t. x"
@@ -32,9 +32,9 @@ struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	a::vectype
 	"close to null vector of J"
 	b::vectype
-	"vector zero, to avoid allocating it"
+	"vector zero, to avoid allocating it many times"
 	zero::vectype
-	"linear solver"
+	"linear solver. Used to invert the jacobian of MA functional."
 	linsolver::S
 	"linear solver for the jacobian adjoint"
 	linsolverAdjoint::Sa
@@ -57,7 +57,7 @@ FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLine
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-function applyJacobian(pb::FoldProblemMinimallyAugmented, x, par, dx, transposeJac = false)
+function applyJacobian(pb::ProblemMinimallyAugmented, x, par, dx, transposeJac = false)
 	if issymmetric(pb)
 		return apply(pb.J(x, par), dx)
 	else
@@ -73,7 +73,7 @@ function applyJacobian(pb::FoldProblemMinimallyAugmented, x, par, dx, transposeJ
 	end
 end
 
-function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vectype, T}
+function (fp::FoldProblemMinimallyAugmented)(x, p::T, _par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
@@ -111,6 +111,9 @@ struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 							rhsu, rhsp;
 							debugArray = nothing) where T
+	################################################################################################
+	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
+	################################################################################################
 	# recall that  the functional we want to solve is [F(x,p), σ(x,p)] where  σ(x,p) is computed in the previous function.
 	# The jacobian has to be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
@@ -122,8 +125,6 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	#           └         ┘
 	# where σx := ∂_xσ and σp := ∂_pσ
 	# We recall the expression of σx = -< w, d2F(x,p)[v, x2]> where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
-	################################################################################################
-	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
 	########################## Extraction of function names ########################################
 	F = pb.F
 	J = pb.J

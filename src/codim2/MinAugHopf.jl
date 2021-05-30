@@ -13,13 +13,13 @@ end
 """
 $(TYPEDEF)
 
-Structure to encode Hopf functional based on a Minimally Augmented formulation.
+Structure to encode Hopf functional based on a Minimally Augmented (MA) formulation.
 
 # Fields
 
 $(FIELDS)
 """
-struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver}
+struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: ProblemMinimallyAugmented
 	"Function F(x, p) = 0"
 	F::TF
 	"Jacobian of F w.r.t. x"
@@ -28,15 +28,15 @@ struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	Jᵗ::TJa
 	"Hessian of F"
 	d2F::Td2f
-	"parameter axis for the Fold point"
+	"parameter axis for the Hopf point"
 	lens::Tl
 	"close to null vector of (J - iω I)^*"
 	a::vectype
-	"J - iω I"
+	"close to null vector of (J - iω I)"
 	b::vectype
-	"vector zero, to avoid allocating it"
+	"vector zero, to avoid allocating it many times"
 	zero::vectype
-	"linear solver"
+	"linear solver. Used to invert the jacobian of MA functional."
 	linsolver::S
 	"linear bordered solver"
 	linbdsolver::Sbd
@@ -52,17 +52,8 @@ HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLine
 
 @inline hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
 
-function applyJacobian(pb::HopfProblemMinimallyAugmented, x, par, dx, transposeJac = false)
-	if transposeJac == false
-		return apply(pb.J(x, par), dx)
-	else
-		if hasAdjoint(pb)
-			return apply(pb.Jᵗ(x, par), dx)
-		else
-			return apply(transpose(pb.J(x, par)), dx)
-		end
-	end
-end
+# used for applying jacobian
+@inline issymmetric(pb::HopfProblemMinimallyAugmented) = false
 
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point

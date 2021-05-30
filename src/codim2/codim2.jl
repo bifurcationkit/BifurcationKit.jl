@@ -1,3 +1,5 @@
+abstract type ProblemMinimallyAugmented end
+
 """
 $(SIGNATURES)
 
