@@ -1,6 +1,3 @@
-import Base: push!, pop!, length, deleteat!, empty!
-import Base: show, getindex
-
 """
 DeflationOperator. It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) \\cdot Π_i(dot(u - roots_i, u - roots_i)^{-p} + shift) := F(u) \\cdot M(u)``. The fields of the struct `DeflationOperator` are as follows:
@@ -20,14 +17,16 @@ struct DeflationOperator{T <: Real, Tdot, vectype}
 	roots::Vector{vectype}
 end
 
-push!(df::DeflationOperator{T, Tdot, vectype}, v::vectype) where {T, Tdot, vectype} = push!(df.roots, v)
-pop!(df::DeflationOperator) = pop!(df.roots)
-getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
-length(df::DeflationOperator) = length(df.roots)
-deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
-empty!(df::DeflationOperator) = empty!(df.roots)
+Base.push!(df::DeflationOperator{T, Tdot, vectype}, v::vectype) where {T, Tdot, vectype} = push!(df.roots, v)
+Base.pop!(df::DeflationOperator) = pop!(df.roots)
+Base.getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
+Base.length(df::DeflationOperator) = length(df.roots)
+Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
+Base.empty!(df::DeflationOperator) = empty!(df.roots)
+Base.firstindex(df::DeflationOperator) = 1
+Base.lastindex(df::DeflationOperator) = length(df)
 
-show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
+Base.show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
 
 # Compute M(u)
 function (df::DeflationOperator{T, Tdot, vectype})(u::vectype) where {T, Tdot, vectype}

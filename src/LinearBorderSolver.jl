@@ -142,16 +142,20 @@ end
 
 """
 $(TYPEDEF)
+
 This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x,p)`.
+
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
+	"Linear solver used to solve the extended linear system"
 	solver::S
+	"What is the structure used to hold `(x,p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
 	useBorderedArray::Bool
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixFreeBLS() = MatrixFreeBLS(nothing, true)
+MatrixFreeBLS(useBorderedArray::Bool = true) = MatrixFreeBLS(nothing, useBorderedArray)
 MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
 MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 

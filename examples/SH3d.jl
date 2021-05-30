@@ -71,7 +71,7 @@ LinearAlgebra.ldiv!(P::SuiteSparse.CHOLMOD.Factor{Float64}, v) = -(P \ v)
 
 # rtol must be small enough to pass the folds and to get precise eigenvalues
 ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Pr)
-###################################################################################################
+####################################################################################################
 struct SH3dEig{Ts, Tσ} <: BK.AbstractEigenSolver
 	ls::Ts
 	σ::Tσ
@@ -116,7 +116,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 
 BK.plotBranch(br)
 contour3dMakie(u1.u)
-###################################################################################################
+####################################################################################################
 computeNormalForm(jet..., br, 2; issymmetric = true)
 
 br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 0, pMax = 0.1, plotEveryStep = 5, dsmax = 0.01);

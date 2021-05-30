@@ -148,6 +148,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	# we do the following to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
 	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, par0) : transpose(J_at_xp)
 
+	# normalization
 	n = T(1)
 
 	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
@@ -251,7 +252,7 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function newtonHopf(F, J,
 			hopfpointguess::BorderedArray{vectypeR, T},
@@ -345,7 +346,7 @@ The call is as follows
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
 !!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`

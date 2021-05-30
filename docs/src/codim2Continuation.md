@@ -16,6 +16,8 @@ g(u,p)
 
 where $w,v$ are chosen in order to have a non-singular matrix $(M_f)$. More precisely, $v$ (resp. $w$) should be close to a null vector of `dF(u,p)` (resp. `dF(u,p)'`). During continuation, the vectors $w,v$ are updated so that the matrix $(M_f)$ remains non-singular ; this is controlled with the argument `updateMinAugEveryStep` (see below).
 
+> note that there are very simplified calls to this, see **Newton refinement** below. In particular, you don't need to set up the Fold Minimally Augmented problem yourself. This is done in the background.
+
 !!! warning "Linear Method"
     You can pass the bordered linear solver to solve $(M_f)$ using the option `bdlinsolver ` (see below). Note that the choice `bdlinsolver = BorderingBLS()` can lead to singular systems. Indeed, in this case, $(M_f)$ is solved by inverting `dF(u,p)` which is singular at Fold points.
 
@@ -35,6 +37,8 @@ g(u,\omega,p)
 \end{array}\right]\quad\quad (M_h)$$
 
 where $w,v$ are chosen in order to have a non-singular matrix $(M_h)$. More precisely, $w$ (resp. $v$) should be a left (resp. right) approximate null vector of $dF(u,p)-i\omega I_n$. During continuation, the vectors $w,v$ are updated so that the matrix $(M_h)$ remains non-singular ; this is controlled with the argument `updateMinAugEveryStep ` (see below).
+
+> note that there are very simplified calls to this, see **Newton refinement** below. In particular, you don't need to set up the Hopf Minimally Augmented problem yourself. This is done in the background.
 
 
 ## Newton refinement

@@ -147,6 +147,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, par0) : transpose(J_at_xp)
 	end
 
+	# normalization
 	n = T(1)
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
@@ -170,7 +171,6 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		u1 = applyJacobian(pb, x + ϵ2 * v, par0, w, true)
 		u2 = apply(JAd_at_xp, w)
 		σx = minus(u2, u1); rmul!(σx, 1 / ϵ2)
-
 		########## Resolution of the bordered linear system ########
 		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
@@ -178,6 +178,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
 
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
+		# !!! Carefull, this method makes the linear system singular
 		x1, x2, _, it = pb.linsolver(J_at_xp, rhsu, dpF)
 
 		d2Fv = d2F(x, par0, x1, v)
@@ -245,7 +246,7 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function newtonFold(F, J,
 				foldpointguess, par,
@@ -345,7 +346,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function continuationFold(F, J,
 				foldpointguess::BorderedArray{vectype, T}, par,

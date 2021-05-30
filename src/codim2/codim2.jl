@@ -62,7 +62,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences. This can be slow for many variables, e.g. ~1e6
+    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function continuation(F, J,
 				br::AbstractBranchResult, ind_bif::Int64,
