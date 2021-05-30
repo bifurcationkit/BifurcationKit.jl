@@ -115,7 +115,7 @@ res_fd =  J_fold_fd \ rhs
 Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ
-res_explicit = @time jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
+res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
 
 Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
@@ -129,7 +129,6 @@ Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
 # we test the expression for σx
 σx_fd = J_fold_fd[end,1:end-1]
-@show norminf(σx_fd)
 σx_ana = debugTmpForσ[end,1:end-1]
 @test σx_fd ≈ σx_ana rtol = 1e-2
 
@@ -150,7 +149,7 @@ res_fd =  J_fold_fd \ rhs
 Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ
-res_explicit = @time jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
+res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
 
 Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
@@ -164,7 +163,6 @@ Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
 # we test the expression for σx
 σx_fd = J_fold_fd[end,1:end-1]
-@show norminf(σx_fd)
 σx_ana = debugTmpForσ[end,1:end-1]
 @test σx_fd ≈ σx_ana rtol = 1e-2
 
@@ -179,8 +177,8 @@ res_exp = debugTmpForσ \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, = continuation(jet[1], jet[2], out, (a, 0.01), (@lens _[1]), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, = continuation(jet[1], jet[2], out, (a, 0.01), (@lens _[1]),opts_br0,plot = false, verbosity = 0)
+br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α),opts_br0,plot = false, verbosity = 0)
