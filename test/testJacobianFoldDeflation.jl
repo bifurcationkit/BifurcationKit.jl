@@ -24,7 +24,7 @@ par_chan = (α = 3.3, β = 0.01)
 
 n = 101
 	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-	opt_newton = NewtonPar(tol = 1e-9, verbose = true)
+	opt_newton = NewtonPar(tol = 1e-9, verbose = false)
 	out, hist, flag = newton(jet[1], jet[2], sol, par_chan,
 							opt_newton, normN = norminf)
 
