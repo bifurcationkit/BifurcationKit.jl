@@ -409,13 +409,45 @@ function continuationFold(F, J,
 		newb = foldPb.linbdsolver(J_at_xp, a, b, T(0), foldPb.zero, T(1))[1]
 
 		# compute new a
-		JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+		if foldPb.issymmetric
+			JAd_at_xp = J_at_xp
+		else
+			JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, par0) : transpose(J_at_xp)
+		end
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 
 		copyto!(foldPb.a, newa); rmul!(foldPb.a, 1/normC(newa))
 		# do not normalize with dot(newb, foldPb.a), it prevents BT  detection
 		copyto!(foldPb.b, newb); rmul!(foldPb.b, 1/normC(newb))
 		return true
+	end
+
+	function testForBifurcations(iter, state)
+		z = getx(state)
+		x = z.u				# fold point
+		p1 = z.p			# first parameter
+		p2 = getp(state)	# second parameter
+		newpar = set(par, lens1, p1)
+		newpar = set(newpar, lens2, p2)
+
+		a = foldPb.a
+		b = foldPb.b
+
+		# expression of the jacobian
+		J_at_xp = foldPb.J(x, newpar)
+
+		# compute new b
+		ζ = foldPb.linbdsolver(J_at_xp, a, b, T(0), foldPb.zero, T(1))[1]
+		ζ ./= norm(ζ)
+
+		# compute new a
+		JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+		ζstar = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
+		ζstar ./= norm(ζstar)
+
+		BT = dot(ζstar, ζ)
+		CP = state.tau.p
+		return BT, CP
 	end
 
 	# it allows to append information specific to the codim 2 continuation to the user data
@@ -446,6 +478,7 @@ function continuationFold(F, J,
 				br::AbstractBranchResult, ind_fold::Int,
 				lens2::Lens,
 				options_cont::ContinuationPar = br.contparams ;
+				normC = norm,
 				issymmetric = false,
 				Jᵗ = nothing,
 				d2F = nothing,

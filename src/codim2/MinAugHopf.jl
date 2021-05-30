@@ -3,9 +3,9 @@ For an initial guess from the index of a Hopf bifurcation point located in ContR
 """
 function HopfPoint(br::AbstractBranchResult, index::Int)
 	@assert br.specialpoint[index].type == :hopf "The provided index does not refer to a Hopf point"
-	specialpoint = br.specialpoint[index]								# Hopf point
-	eigRes   = br.eig											# eigenvector at the Hopf point
-	p = specialpoint.param											# parameter value at the Hopf point
+	specialpoint = br.specialpoint[index]			# Hopf point
+	eigRes = br.eig									# eigenvector at the Hopf point
+	p = specialpoint.param							# parameter value at the Hopf point
 	ω = imag(eigRes[specialpoint.idx].eigenvals[specialpoint.ind_ev])	# frequency at the Hopf point
 	return BorderedArray(specialpoint.x, [p, ω] )
 end
@@ -228,7 +228,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 
 # Optional arguments:
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
-- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
+- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x, p)[v1, v2]`.
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -387,6 +387,8 @@ function continuationHopf(F, J,
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
 
+	# current lypunov coefficient
+	l1 = Complex{eltype(Tb)}(0,0)
 
 	# this function is used as a Finalizer
 	function updateMinAugHopf(z, tau, step, contResult; k...)
@@ -421,16 +423,57 @@ function continuationHopf(F, J,
 		if abs(ω) < options_newton.tol
 			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at $p1, $p2"
 		end
-		return abs(ω) > options_newton.tol
+		# we stop continuation at Bogdanov-Takens points
+		isbt = isnothing(contResult) ? true : isnothing(findfirst(x->x.type == :bt, contResult.specialpoint))
+		return abs(ω) >= 100options_newton.tol && isbt
+	end
+
+	function computeL1(iter, state)
+		z = getx(state)
+		x = z.u					# hopf point
+		p1 = z.p[1]				# first parameter
+		ω  = z.p[2]				# Hopf frequency
+		p2 = getp(state)		# second parameter
+		newpar = set(par, lens1, p1)
+		newpar = set(newpar, lens2, p2)
+
+		a = hopfPb.a
+		b = hopfPb.b
+
+		# expression of the jacobian
+		J_at_xp = hopfPb.J(x, newpar)
+
+		# compute new b
+		T = typeof(p1)
+		n = T(1)
+		ζ = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, -ω))[1]
+		ζ ./= normC(ζ)
+
+		# compute new a
+		JAd_at_xp = hasAdjoint(hopfPb) ? hopfPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+		ζstar = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
+		# test function for Bogdanov-Takens
+		BT = dot(ζstar ./ normC(ζstar), ζ)
+		ζstar ./= dot(ζ, ζstar)
+
+		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex(0., 0.), b = Complex(0.,0.)), :hopf)
+		hopfNormalForm(F, J, d2F, d3F, hp, options_newton.linsolver, verbose=false)
+
+		# lyapunov coefficient
+		l1 = hp.nf.b
+		# test for Bautin bifurcation.
+		# If GH is too large, we take the previous value to avoid spurious detection
+		# GH will be large close to BR points
+		GH = abs(real(hp.nf.b))<1e10 ? real(hp.nf.b) : state.eventValue[2][1]
+		return GH, real(BT)
 	end
 
 	# it allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :printSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b)) :
+		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = dot(hopfPb.a, hopfPb.b)) :
 		(u, p; kw...) -> begin
-
-			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b))
+			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = l1, BT = dot(hopfPb.a, hopfPb.b))
 		end
 
 	# eigen solver
@@ -445,6 +488,7 @@ function continuationHopf(F, J,
 		normC = normC,
 		printSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
+		event = ContinuousEvent(2, computeL1, ("gh","bt"))
 	)
 
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau

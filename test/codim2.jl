@@ -43,7 +43,7 @@ snpt = computeNormalForm(jet..., br, 2)
 @set! opts_br.newtonOptions.maxIter = 10
 
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
-printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
+# printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
 	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test sn[3] && sn[5] == 6
 
@@ -53,10 +53,8 @@ sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = M
 sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true)
 @test sn[3] && sn[5] == 8
 
-sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 0, maxSteps = 1, saveSolEveryStep = 1), bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
-
-# we test the jacobian
-
+sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
+@test sn_br.specialpoint[1].type == :bt
 
 # we test the jacobian and problem update
 par_sn = set(br.params, br.lens, sn_br.sol[end].x.p)
@@ -64,9 +62,9 @@ par_sn = set(par_sn, sn_br.lens, sn_br.sol[end].p)
 _J = dCOm(sn_br.sol[end].x.u, par_sn)
 _eigvals, eigvec, = eigen(_J)
 ind = argmin(abs.(_eigvals))
-@test _eigvals[ind] ≈ 0 atol=1e-15
+@test _eigvals[ind] ≈ 0 atol=1e-10
 ζ = eigvec[:, ind]
-@test sn_br.functional.b ./ norm(sn_br.functional.b) ≈ ζ
+@test sn_br.functional.b ./ norm(sn_br.functional.b) ≈ -ζ
 
 _eigvals, eigvec, = eigen(_J')
 ind = argmin(abs.(_eigvals))
@@ -81,7 +79,7 @@ hppt = computeNormalForm(jet..., br, 1)
 hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true)
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)
 # plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
-# @test hp[3] && hp[5] == 6
+@test hp[3] && hp[5] == 12
 
 hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
 @test hp[3] && hp[5] == 12
@@ -107,7 +105,10 @@ hp, = newton(jet[1:2]..., br, 1;
 	startWithEigen = true,
 	bdlinsolver = MatrixBLS(),
 	d2F = jet[3])
-printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
+# printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
 # plot(br);scatter!([hp.p[1]], [hp.u[1]])
 
 hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])
+
+hp_br, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], d3F = jet[4], startWithEigen = true, updateMinAugEveryStep = 1, verbosity=0, plot=false)
+@test hp_br.specialpoint[1].type == :gh

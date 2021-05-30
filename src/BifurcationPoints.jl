@@ -255,7 +255,7 @@ Hopf(x0, p, ω, params, lens, ζ, ζstar, nf) = Hopf(x0, p, ω, params, lens, ζ
 
 function Base.show(io::IO, bp::Hopf)
 	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
 	println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
 	println(io, "Normal form z⋅(a⋅δp + b⋅|z|²): \n", bp.nf)
 end
