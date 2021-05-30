@@ -147,7 +147,14 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	verbose && println("----> [Bisection] initial ds = ", _state.ds)
 
 	# we create a new state for stepping through the continuation routine
-	state = copy(_state)
+	after = copy(_state)	# after the bifurcation point
+	state = copy(_state)	# current state of the bisection
+	before = copy(_state)	# before the bifurcation point
+
+	# we reverse some indicators for `before`. It is OK, it will never be used other than for getp(before)
+	before.n_unstable = (before.n_unstable[2], before.n_unstable[1])
+	before.n_imag = (before.n_imag[2], before.n_imag[1])
+	before.z_pred.p, before.z_old.p = before.z_old.p, before.z_pred.p
 
 	# the bifurcation point is before the current state so we want to first iterate backward with
 	# half step size. We turn off stepsizecontrol because it would not make a bisection otherwise
@@ -215,6 +222,12 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			indinterval = (indinterval == 2) ? 1 : 2
 		end
 
+		if iseven(n_inversion)
+			copyto!(after, state)
+		else
+			copyto!(before, state)
+		end
+
 		state.step > 0 && (interval = @set interval[indinterval] = getp(state))
 
 		# we call the finalizer
@@ -269,17 +282,28 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		# to prevent bifurcation detection, update the following numbers carefully
 		# since the current state is after the bifurcation point, we just save
 		# the current state of n_unstable and n_imag
-		_state.n_unstable = (state.n_unstable[1], _state.n_unstable[2])
-		_state.n_imag = (state.n_imag[1], _state.n_imag[2])
+		_state.n_unstable = (state.n_unstable[1], before.n_unstable[1])
+		_state.n_imag = (state.n_imag[1], before.n_imag[1])
+
+		# previous_p = n_inversion == 0 ? before.z_pred.p : getp(before)
+		interval = (getp(state), getp(before))
 	else
-		@warn "Bisection failed to locate bifurcation point precisely around p = $(getp(_state)). Fall back to original guess for the bifurcation point. Number of Bisections = $n_inversion"
-		# we update the interval. We could do much better if we saved the last state
-		# with iseven(n_inversion) = true
-		if getp(_state) < interval[1]
-			interval = @set interval[1] = getp(_state)
-		elseif getp(_state) >= interval[2]
-			interval = @set interval[2] = getp(_state)
+		status = :guessL
+		copyto!(_state.z_pred, after.z_pred)
+		copyto!(_state.z_old,  after.z_old)
+		copyto!(_state.tau, after.tau)
+
+		_state.eigvals = after.eigvals
+		if contParams.saveEigenvectors
+			_state.eigvecs = after.eigvecs
 		end
+
+		# to prevent bifurcation detection, update the following numbers carefully
+		# since the current state is before the bifurcation point, we just save
+		# the current state of n_unstable and n_imag
+		_state.n_unstable = (after.n_unstable[1], state.n_unstable[1])
+		_state.n_imag = (after.n_imag[1], state.n_imag[1])
+		interval = (getp(state), getp(after))
 	end
 	verbose && println("----> Leaving [Loc-Bif]")
 	return status, getinterval(interval...)
