@@ -42,15 +42,21 @@ struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	linsolverAdjoint::Sa
 	"bordered linear solver"
 	linbdsolver::Sbd
+	"whether the Jacobian is Symmetric, avoid computing Jᵗ"
+	issymmetric::Bool
 end
+
+@inline issymmetric(pb::FoldProblemMinimallyAugmented) = pb.issymmetric
 
 @inline hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
 
 function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vectype, T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
@@ -114,7 +120,11 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	J_at_xp = J(x, par0)
 
 	# we do the following in order to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
+	if issymmetric(pb)
+		JAd_at_xp = J_at_xp
+	else
 	JAd_at_xp = hasAdjoint(pb) ? pb.Jᵗ(x, par0) : transpose(J_at_xp)
+	end
 
 	n = T(1)
 
@@ -196,7 +206,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-	newtonFold(F, J, foldpointguess, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm, kwargs...)
+($SIGNATURES)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -209,6 +219,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
+- `issymmetric` whether the Jacobian is Symmetric
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
 - `normN = norm`
@@ -218,7 +229,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens; Jᵗ = nothing, d2F = nothing, options = br.contparams.newtonOptions, kwargs...)
+	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens::Lens; options = br.contparams.newtonOptions, kwargs...)
 
 where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -237,6 +248,7 @@ function newtonFold(F, J,
 				eigenvec, eigenvec_ad,
 				options::NewtonPar;
 				 normN = norm,
+				issymmetric = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
@@ -244,7 +256,7 @@ function newtonFold(F, J,
 	foldproblem = FoldProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec),
-		_copy(eigenvec_ad),
+		_copy(eigenvec_ad), issymmetric,
 		options.linsolver, @set bdlinsolver.solver = options.linsolver)
 
 	# Jacobian for the Fold problem
@@ -258,6 +270,7 @@ end
 
 function newtonFold(F, J,
 				br::AbstractBranchResult, ind_fold::Int64;
+				issymmetric = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				options = br.contparams.newtonOptions,
@@ -289,7 +302,7 @@ function newtonFold(F, J,
 	end
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 """
@@ -306,7 +319,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
-
+- `issymmetric` whether the Jacobian is Symmetric
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
 - `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
 - `bdlinsolver` bordered linear solver for the constraint equation
@@ -335,6 +348,7 @@ function continuationFold(F, J,
 				eigenvec, eigenvec_ad,
 				options_cont::ContinuationPar ;
 				updateMinAugEveryStep = 0,
+				issymmetric = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
@@ -348,7 +362,7 @@ function continuationFold(F, J,
 			F, J, Jᵗ, d2F,
 			lens1,
 			_copy(eigenvec),
-			_copy(eigenvec_ad),
+			_copy(eigenvec_ad), issymmetric,
 			options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
 
 	# Jacobian for the Fold problem
@@ -404,7 +418,6 @@ function continuationFold(F, J,
 		finaliseSolution = updateMinAugFold,
 		)
 
-
 	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
 end
 
@@ -412,6 +425,7 @@ function continuationFold(F, J,
 				br::AbstractBranchResult, ind_fold::Int64,
 				lens2::Lens,
 				options_cont::ContinuationPar ;
+				issymmetric = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				nev = br.contparams.nev,
@@ -432,12 +446,12 @@ function continuationFold(F, J,
 		L = J(bifpt.x, parbif)
 		_Jt = isnothing(Jᵗ) ? transpose(L) : Jᵗ(bifpt.x, parbif)
 
-		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = true)
+		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
 		eigenvec_ad = real.(ζstar)
 		eigenvec_ad ./= dot(eigenvec, eigenvec_ad)
 	end
 
-	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, kwargs...)
+	return continuationFold(F, J, foldpointguess, parbif, br.lens, lens2, eigenvec, eigenvec_ad, options_cont ; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, kwargs...)
 end
 
 struct FoldEig{S} <: AbstractEigenSolver

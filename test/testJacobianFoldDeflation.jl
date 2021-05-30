@@ -53,7 +53,6 @@ n = 101
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detectBifurcation = 3)
 	br, = continuation(F_chan, Jac_mat,
 		out, (a, 0.01), (@lens _[1]), opts_br0; printSolution= (x,p)->norm(x, Inf))
-
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
@@ -94,8 +93,12 @@ outdef1, = newton(
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 outfold, = newtonFold(F_chan, Jac_mat, br, 2; startWithEigen = true)
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 5, detectBifurcation = 2)
+outfold, = newtonFold(F_chan, Jac_mat, br, 2; startWithEigen = true, issymmetric = true)
+outfold, = newton(F_chan, Jac_mat, br, 2; startWithEigen = true, issymmetric = true)
+
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 50, detectBifurcation = 2)
 outfoldco, = continuationFold(F_chan, Jac_mat, br, 2, (@lens _[2]), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1)
+outfoldco, = continuationFold(F_chan, Jac_mat, br, 2, (@lens _[2]), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, issymmetric = true)
 
 # manual handling
 indfold = 1
