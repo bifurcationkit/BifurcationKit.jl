@@ -65,6 +65,9 @@ end
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 d1Fmit(x, p, dx) = ForwardDiff.derivative(t -> Fmit(x .+ t .* dx, p), 0.)
 d2Fmit(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fmit(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
+
+# compute 3-Jet
+jet  = BK.get3Jet(Fmit, JFmit)
 ####################################################################################################
 Nx = 30
 	Ny = 30
@@ -94,7 +97,7 @@ function finSol(z, tau, step, br; k...)
 	return true
 end
 
-opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-17, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, maxBisectionSteps = 25)
 
 	br, = @time BK.continuation(
 		Fmit, JFmit,
@@ -115,14 +118,6 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	end
 	true
 end
-
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
-d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
-d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
-d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
-
-jet = (Fmit, JFmit, d2Fmit, d3Fmit)
 
 BK.computeNormalForm(jet..., br, 3; verbose = false, nev = 50)
 

@@ -32,6 +32,8 @@ end
 	# @time Jac_carr(sol, par_car)
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
+jet = BK.get3Jet(F_carr, Jac_carr)
+
 N = 200
 X = LinRange(-1,1,N)
 dx = X[2] - X[1]
@@ -44,13 +46,11 @@ optnew = NewtonPar(tol = 1e-8, verbose = true)
 		F_carr, Jac_carr, sol, par_car, optnew, normN = x -> norm(x, Inf64))
 	Plots.plot(out, label="Solution")
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 0, nev = 40)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 3, nev = 40, nInversion = 6, maxBisectionSteps = 25)
 	br, = @time continuation(
-		F_carr, Jac_carr, 0*out, par_car, (@lens _.ϵ), optcont;
-		plot = true,
-		# plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
-		verbosity = 2,
-		printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
+		F_carr, Jac_carr, zeros(N), par_car, (@lens _.ϵ), optcont;
+		plot = true, verbosity = 3,
+		printSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		normC = x -> norm(x, Inf64))
 
 plot(br)

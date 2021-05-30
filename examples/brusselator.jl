@@ -115,15 +115,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, 
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
 		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
 ####################################################################################################
-using ForwardDiff
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
-
+jet  = BK.get3Jet(Fbru, Jbru_sp)
 hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1

@@ -51,7 +51,7 @@ n = 101
 
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detectBifurcation = 3)
-	br, _ = continuation(F_chan, Jac_mat,
+	br, = continuation(F_chan, Jac_mat,
 		out, (a, 0.01), (@lens _[1]), opts_br0; printSolution= (x,p)->norm(x, Inf))
 
 ####################################################################################################

@@ -122,15 +122,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, d
 	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
-using ForwardDiff
-
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
-d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
-d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
-d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
-jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
-
+jet  = BK.get3Jet(Fcgl, Jcgl)
 hopfpt = computeNormalForm(jet..., br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression

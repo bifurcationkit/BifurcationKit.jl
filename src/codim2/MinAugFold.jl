@@ -9,19 +9,39 @@ function FoldPoint(br::AbstractBranchResult, index::Int64)
 end
 
 ####################################################################################################
-# Method using Minimally Augmented formulation
+
+"""
+$(TYPEDEF)
+
+Structure to encode Fold functional based on a Minimally Augmented formulation.
+
+# Fields
+
+$(FIELDS)
+"""
 struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver}
-	F::TF					# Function F(x, p) = 0
-	J::TJ					# Jacobian of F wrt x
-	Jᵗ::TJa					# Adjoint of the Jacobian of F
-	d2F::Td2f				# Hessian of F
-	lens::Tl				# parameter axis for the Fold point
-	a::vectype				# close to null vector of Jᵗ
-	b::vectype				# close to null vector of J
-	zero::vectype			# vector zero, to avoid allocating it
-	linsolver::S			# linear solver
-	linsolverAdjoint::Sa	# linear solver for the jacobian adjoint
-	linbdsolver::Sbd		# bordered linear solver
+	"Function F(x, p) = 0"
+	F::TF
+	"Jacobian of F wrt x"
+	J::TJ
+	"Adjoint of the Jacobian of F"
+	Jᵗ::TJa
+	"Hessian of F"
+	d2F::Td2f
+	"parameter axis for the Fold point"
+	lens::Tl
+	"close to null vector of Jᵗ"
+	a::vectype
+	"close to null vector of J"
+	b::vectype
+	"vector zero, to avoid allocating it"
+	zero::vectype
+	"linear solver"
+	linsolver::S
+	"linear solver for the jacobian adjoint"
+	linsolverAdjoint::Sa
+	"bordered linear solver"
+	linbdsolver::Sbd
 end
 
 @inline hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing

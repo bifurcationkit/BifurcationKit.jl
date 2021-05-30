@@ -98,11 +98,10 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 	sh = sheig.sh
 	σ = sheig.σ
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-
 	A = du -> sh(J, du; shift = σ)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
-	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(40, nev + 10))
+	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(40, nev + 10))
 	@show 1 ./vals .+ σ
 	return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -162,7 +161,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.0
 		F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l),
 		opts_cont;
-		# linearAlgo = MatrixFreeBLS()
+		# linearAlgo = MatrixFreeBLS(L),
 		plot = true, verbosity = 3,
 		plotSolution = (x, p;kwargs...)->plotsol!(x; color=:viridis, kwargs...),
 		printSolution = (x, p) -> norm(x), normC = norminf,

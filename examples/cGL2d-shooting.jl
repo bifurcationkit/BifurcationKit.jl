@@ -161,15 +161,7 @@ br_po, upo, = @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _
 
 ####################################################################################################
 # automatic branch switching
-using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
-	d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
-	d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
-
-jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+jet  = BK.get3Jet(Fcgl, Jcgl)
 
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)

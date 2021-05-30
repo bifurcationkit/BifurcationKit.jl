@@ -204,14 +204,7 @@ br_po, = @time continuation(probSh,
 ####################################################################################################
 # automatic branch switching with Shooting
 using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-	d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-	d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
+jet  = BK.get3Jet(Fbru, Jbru_sp)
 
 # linear solvers
 ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)

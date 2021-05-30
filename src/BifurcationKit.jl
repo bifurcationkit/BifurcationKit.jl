@@ -20,6 +20,9 @@ module BifurcationKit
 	include("events/Event.jl")
 	
 	include("Continuation.jl")
+	include("events/EventDetection.jl")
+	include("events/BifurcationDetection.jl")
+
 	include("Bifurcations.jl")
 	include("Predictor.jl")
 
@@ -123,6 +126,9 @@ module BifurcationKit
 
 	# continuation methods
 	export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
+
+	# events
+	export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
 
 	# iterators for continuation
 	export ContIterable, iterate, ContState, solution, getx, getp

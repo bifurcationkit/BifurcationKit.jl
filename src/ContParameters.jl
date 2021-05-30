@@ -35,7 +35,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling event detection
 - `detectEvent::Int` ∈ {0, 1, 2} If set to 0, nothing is done. If set to 1, the event locations are seek during the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the event (slower).
-- `tolBisectionEvent` tolerance on event residual to locate
+- `tolParamBisectionEvent` tolerance on parameter to locate event
 
 ## Misc
 - `finDiffEps::T  = 1e-9` ε used in finite differences computations
@@ -94,8 +94,9 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	tolBisectionEigenvalue::T = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
 	# handling event detection
-	detectEvent::Int64 = 0					# event location
+	detectEvent::Int64 = 0				# event location
 	tolBisectionEvent::T = 1e-16 		# tolerance on event residual to detect
+	tolParamBisectionEvent::T = 1e-16	# tolerance on value of parameter
 
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"

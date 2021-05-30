@@ -20,10 +20,7 @@ TMvf(z, p) = TMvf!(similar(z), z, p, 0)
 dTMvf = (z,p) -> ForwardDiff.jacobian(x-> TMvf(x,p), z)
 
 # we group the differentials together
-d1TMvf(x,p,dx1) = D((z, p0) -> TMvf(z, p0), x, p, dx1)
-d2TMvf(x,p,dx1,dx2) = D((z, p0) -> d1TMvf(z, p0, dx1), x, p, dx2)
-d3TMvf(x,p,dx1,dx2,dx3) = D((z, p0) -> d2TMvf(z, p0, dx1, dx2), x, p, dx3)
-jet  = (TMvf, dTMvf, d2TMvf, d3TMvf)
+jet  = BK.get3Jet(TMvf, dTMvf)
 
 par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF = 1.5, τS = 0.007) #2.87
 z0 = [0.238616, 0.982747, 0.367876 ]

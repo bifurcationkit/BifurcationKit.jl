@@ -21,18 +21,22 @@ function R_SH(u, par)
 	out .= L1 * u .- p .* u .+ b .* u.^3 - u.^5
 end
 
-Jac_sp = (u, par) -> par.L1 + spdiagm(0 => -par.p .+ 3*par.b .* u.^2 .- 5 .* u.^4)
+Jac_sp(u, par) = par.L1 + spdiagm(0 => -par.p .+ 3*par.b .* u.^2 .- 5 .* u.^4)
+d2R(u,p,dx1,dx2) = @. p.b * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
+d3R(u,p,dx1,dx2,dx3) = @. p.b * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
+jet = (R_SH, Jac_sp, d2R, d3R)
+
 parSH = (p = 0.7, b = 2., L1 = Lsh)
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 	optnew = NewtonPar(verbose = false, tol = 1e-12)
-	# allocations 26.47k, 0.038s, tol = 1e-10
-	sol1, hist, flag = @time BK.newton(
+	# allocations 357, 0.8ms
+	sol1, = @time newton(
 	R_SH, Jac_sp,
 	sol0, (@set parSH.p = -1.95), optnew)
 	Plots.plot(X, sol1)
 
-opts = BK.ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
+opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
 		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMin = -2.1,
 		maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 
@@ -53,16 +57,13 @@ args = (verbosity = 3,
 	callbackN = cb
 	)
 
-brflat, u1 = @time continuation(
+brflat, = @time continuation(
 	R_SH, Jac_sp, sol1, (@set parSH.p = 1.), (@lens _.p), opts;
 	args...)
 
 plot(brflat)
 ####################################################################################################
 # branch switching
-d2R(u,p,dx1,dx2) = @. p.b * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
-d3R(u,p,dx1,dx2,dx3) = @. p.b * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
-jet = (R_SH, Jac_sp, d2R, d3R)
 
 function optrec(x, p, l; opt = opts)
 	level =  l
