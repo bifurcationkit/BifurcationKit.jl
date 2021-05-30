@@ -93,7 +93,7 @@ Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :specialpoint
 """
 $(SIGNATURES)
 
-Return the eigenvalues of the ind-th continuation step.
+Return the eigenvalues of the ind-th continuation step. `verbose` is used to tell the number of unstable eigen elements.
 """
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	if verbose

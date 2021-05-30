@@ -120,7 +120,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 
 	for (id, res) in pairs(brs)
 		@series begin
-			putspecialptlegend --> false
+			putspecialptlegend --> putspecialptlegend
 			plotfold --> plotfold
 			plotspecialpoints --> plotspecialpoints
 			plotstability --> plotstability

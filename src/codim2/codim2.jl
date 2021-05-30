@@ -44,7 +44,7 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `ind_bif` bifurcation index in `br`
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2
-- `options_cont` arguments to be passed to the regular [`continuation`](@ref)
+- `options_cont = br.contparams` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
 - `issymmetric` whether the Jacobian is Symmetric (for Fold)
@@ -68,7 +68,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 """
 function continuation(F, J,
 				br::AbstractBranchResult, ind_bif::Int64,
-				lens2::Lens, options_cont::ContinuationPar ;
+				lens2::Lens, options_cont::ContinuationPar = br.contparams ;
 				startWithEigen = false,
 				issymmetric = false,
 				Jᵗ = nothing,
