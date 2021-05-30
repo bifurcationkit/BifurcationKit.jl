@@ -168,7 +168,8 @@ extractParBLS(x::BorderedArray)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
-								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing) where {T <: Number, S, Ts}
+								xiu::T = T(1), xip::T = T(1); shift = nothing) where {T <: Number, S}
+	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip, shift)
 	# what is the vector type used?
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)

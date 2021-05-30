@@ -319,7 +319,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	
 	if verbose
 		println("#"^35*"\nStart of Continuation Step $step");
-		@printf("Step size = %2.4e\n", ds); print("Parameter ",getLensParam(it.lens))
+		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))
 		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
 	end
 
@@ -334,7 +334,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	if state.isconverged
 		if verbose
 			printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
-			print("Parameter ", getLensParam(it.lens))
+			print("Parameter ", getLensSymbol(it.lens))
 			@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p)
 		end
 

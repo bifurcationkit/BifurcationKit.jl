@@ -4,7 +4,7 @@ function AbstractPlotting.convert_arguments(::AbstractPlotting.PointBased, contr
 end
 
 function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true)
-	if length(contres) ==0; return ;end
+	if length(contres) == 0; return ;end
 
 	ind1, ind2 = getPlotVars(contres, nothing)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)

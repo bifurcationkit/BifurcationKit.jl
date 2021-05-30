@@ -1,15 +1,15 @@
 using RecipesBase
 using Setfield
-getLensParam(lens) = :p
-getLensParam(lens::Setfield.PropertyLens{F}) where F = F
-getLensParam(lens::Setfield.ComposedLens) = getLensParam(lens.inner)
-getLensParam(::Setfield.IdentityLens) = :p
-getLensParam(::Setfield.IndexLens{Tuple{Int64}}) = :p
-getLensParam(br::AbstractBranchResult) = getLensParam(br.lens)
+getLensSymbol(lens) = :p
+getLensSymbol(lens::Setfield.PropertyLens{F}) where F = F
+getLensSymbol(lens::Setfield.ComposedLens) = getLensSymbol(lens.inner)
+getLensSymbol(::Setfield.IdentityLens) = :p
+getLensSymbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
+getLensSymbol(br::AbstractBranchResult) = getLensSymbol(br.lens)
 
-function getLensParam(lens1::Lens, lens2::Lens)
-	p1 = getLensParam(lens1)
-	p2 = getLensParam(lens2)
+function getLensSymbol(lens1::Lens, lens2::Lens)
+	p1 = getLensSymbol(lens1)
+	p2 = getLensSymbol(lens2)
 	out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
 end
 
@@ -36,7 +36,7 @@ function getAxisLabels(ind1, ind2, br)
 	xguide = ""
 	yguide = ""
 	if ind1 == 1 || ind1 == :param
-		xguide = String(getLensParam(br))
+		xguide = String(getLensSymbol(br))
 	elseif ind1 isa Symbol
 		xguide = String(ind1)
 	end
@@ -130,7 +130,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 			applytoY --> applytoY
 			vars --> vars
 			if ind1 == 1 || ind1 == :param
-				xguide --> String(getLensParam(brs[id].lens))
+				xguide --> String(getLensSymbol(brs[id].lens))
 			elseif ind1 isa Symbol
 				xguide --> String(ind1)
 			end

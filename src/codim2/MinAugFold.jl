@@ -259,8 +259,10 @@ function newtonFold(F, J,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
 				kwargs...) where {T, vectype}
+
 	foldproblem = FoldProblemMinimallyAugmented(
-		F, J, Jᵗ, d2F, lens,
+		F, J, Jᵗ, d2F,
+		lens,
 		_copy(eigenvec),
 		_copy(eigenvec_ad), issymmetric,
 		options.linsolver, @set bdlinsolver.solver = options.linsolver)
@@ -377,7 +379,7 @@ function continuationFold(F, J,
 	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
 
 	# this functions allows to tackle the case where the two parameters have the same name
-	lenses = getLensParam(lens1, lens2)
+	lenses = getLensSymbol(lens1, lens2)
 
 	# this function is used as a Finalizer
 	function updateMinAugFold(z, tau, step, contResult; kwargs...)

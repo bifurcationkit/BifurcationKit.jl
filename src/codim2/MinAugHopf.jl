@@ -383,7 +383,8 @@ function continuationHopf(F, J,
 	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 
 	# this functions allows to tackle the case where the two parameters have the same name
-	lenses = getLensParam(lens1, lens2)
+	lenses = getLensSymbol(lens1, lens2)
+
 
 	function updateMinAugHopf(z, tau, step, contResult; k...)
 		~modCounter(step, updateMinAugEveryStep) && return true
