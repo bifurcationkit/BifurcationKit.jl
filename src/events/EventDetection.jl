@@ -213,11 +213,14 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 end
 ####################################################################################################
 ####################################################################################################
+# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information) corresponding to the current event point are saved in br.eig[step+1]
+EventSpecialPoint(state::ContState, Utype::Symbol, status::Symbol, printsolution, normC, interval) = SpecialPoint(state, Utype, status, printsolution, normC, interval; idx = state.step + 1)
+
 # I put the callback in first argument even if it is in iter in order to allow for dispatch
 # function to tell the event type based  on the coordinates of the zero
 function getEventType(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
-	# record information about the bifurcation point
-	userpoint = SpecialPoint(state, :user, status, iter.printSolution, iter.normC, interval)
+	# record information about the event point
+	userpoint = EventSpecialPoint(state, :user, status, iter.printSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end
@@ -245,8 +248,8 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_C)
 	end
-	# record information about the bifurcation point
-	userpoint = SpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
+	# record information about the event point
+	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Continuous user point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end
@@ -270,8 +273,8 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_D)
 	end
-	# record information about the bifurcation point
-	userpoint = SpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
+	# record information about the ev point
+	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Discrete user point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end

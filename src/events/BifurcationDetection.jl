@@ -28,7 +28,7 @@ computeEigenElements(::BifEvent) = true
 function detectBifurcationEVE(iter, state)
 	# Note that the computation of eigen-elements should have occured before events are called
 	# state should be thus up to date at this stage
-	@assert state.n_unstable[1] >=0 "Issue with `detectBifurcationCB`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
+	@assert state.n_unstable[1] >=0 "Issue with `detectBifurcationEVE`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
 	# put the max because n_unstable is initialized at -1 at the beginning of the continuation
 	return max(0, state.n_unstable[1])
 end
@@ -36,7 +36,7 @@ end
 """
 	`BifDetectEvent`
 
-This event implements the detection of bifurcations points along a continuation curve. The detection is based on monitoring  the number of unsttable eigenvalues. More details are given at [Detection of bifurcation points](@ref).
+This event implements the detection of bifurcations points along a continuation curve. The detection is based on monitoring  the number of unstable eigenvalues. More details are given at [Detection of bifurcation points](@ref).
 """
 BifDetectEvent = BifEvent(1, detectBifurcationEVE)
 

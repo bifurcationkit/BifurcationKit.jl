@@ -158,7 +158,7 @@ Function is used to initialize the composite type `ContResult` according to the 
 	return ContResult(
 		branch = StructArray([br]),
 		specialpoint = Vector{typeof(bif0)}(undef, 0),
-		eig = computeEigenElements(contParams) ? [_evvectors] : empty([_evvectors]),
+		eig = computeEigElements ? [_evvectors] : empty([_evvectors]),
 		sol = sol,
 		contparams =  contParams,
 		params = par,
