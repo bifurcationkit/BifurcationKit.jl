@@ -459,11 +459,12 @@ function continuationHopf(F, J,
 	ζ ./= norm(ζ)
 	ζad = conj.(ζ)
 
+	p = bifpt.param
+	parbif = setParam(br, p)
+
 	if startWithEigen
 		# computation of adjoint eigenvalue
 		λ = Complex(0, ω)
-		p = bifpt.param
-		parbif = setParam(br, p)
 
 		# jacobian at bifurcation point
 		L = J(bifpt.x, parbif)
@@ -472,7 +473,7 @@ function continuationHopf(F, J,
 		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
 
-	return continuationHopf(F, J, hopfpointguess, br.params, br.lens, lens2, ζ, ζad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
+	return continuationHopf(F, J, hopfpointguess, parbif, br.lens, lens2, ζ, ζad, options_cont ; Jᵗ = Jᵗ, d2F = d2F, d3F = d3F, kwargs...)
 end
 
 # structure to compute the eigenvalues along the Hopf branch

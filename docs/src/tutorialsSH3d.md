@@ -72,7 +72,7 @@ contour3dMakie(ax, x::AbstractVector; k...) = contour3dMakie(ax, reshape(x,Nx,Ny
 contour3dMakie!(ax, x; k...) = (AbstractPlotting.contour!(ax, x;  k...))
 contour3dMakie!(ax, x::AbstractVector; k...) = contour3dMakie!(ax, reshape(x,Nx,Ny,Nz); k...)
 ```
-## Setting up the problem and linear solver
+## Setting up the problem
 
 We provide the parameters defining the PDE:
 
@@ -96,6 +96,23 @@ sol0 = [(cos(x) .* cos(y )) for x in X, y in Y, z in Z]
 L1 = (I + Δ)^2
 par = (l = 0.1, ν = 1.2, L1 = L1)
 ```
+
+## Choice of linear solver
+
+Let us run a quick benchmark to evaluate the direct linear solvers:
+
+```julia
+julia> @time cholesky(L1) \ sol_hexa;
+  0.152849 seconds (54 allocations: 87.273 MiB)
+
+julia> @time lu(L1) \ sol_hexa;
+  0.556157 seconds (87 allocations: 226.210 MiB, 0.49% compilation time)
+
+julia> @time qr(L1) \ sol_hexa;
+  1.609175 seconds (8.96 k allocations: 989.285 MiB, 2.67% gc time, 0.67% compilation time)
+```
+
+Hence, `cholesky` is the big winner but it requires a positive matrix so let's see how to do that.
 
 As said in the introduction, the LU linear solver does not scale well with dimension $N$. Hence, we do something else. We note that the matrix $L_1$ is hermitian positive and use it as a preconditioner. Thus, we pre-factorize it using a Cholesky decomposition:
 

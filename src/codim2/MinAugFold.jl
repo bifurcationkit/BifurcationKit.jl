@@ -452,11 +452,11 @@ function continuationFold(F, J,
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
-	if startWithEigen
-		# computation of adjoint eigenvalue
 	p = bifpt.param
 	parbif = setParam(br, p)
 
+	if startWithEigen
+		# computation of adjoint eigenvalue
 		eigenvec .= real.(geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 		eigenvec ./= norm(eigenvec)
 

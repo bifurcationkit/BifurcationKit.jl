@@ -66,7 +66,7 @@ And you should get:
 
 ## Continuation of Fold points
 
-We follow the Fold points in the parameter plane $(q_2, k)$ as follows. We tell the solver to consider `br.bifpint[2]` and continue it. 
+We follow the Fold points in the parameter plane $(q_2, k)$. We tell the solver to consider `br.specialpoint[2]` and continue it. 
 
 ```julia
 sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),

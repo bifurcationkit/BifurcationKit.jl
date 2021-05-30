@@ -16,28 +16,28 @@ Dxx = sparse(CenteredDifference(2, 2, hx, Nx) * Q)[1]
 Lsh = -(I + Dxx)^2
 
 function R_SH(u, par)
-	@unpack p, b, L1 = par
+	@unpack l, ν, L1 = par
 	out = similar(u)
-	out .= L1 * u .- p .* u .+ b .* u.^3 - u.^5
+	out .= L1 * u .+ l .* u .+ ν .* u.^3 - u.^5
 end
 
-Jac_sp(u, par) = par.L1 + spdiagm(0 => -par.p .+ 3*par.b .* u.^2 .- 5 .* u.^4)
-d2R(u,p,dx1,dx2) = @. p.b * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
-d3R(u,p,dx1,dx2,dx3) = @. p.b * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
+Jac_sp(u, par) = par.L1 + spdiagm(0 => par.l .+ 3 .* par.ν .* u.^2 .- 5 .* u.^4)
+d2R(u,p,dx1,dx2) = @. p.ν * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
+d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
 jet = (R_SH, Jac_sp, d2R, d3R)
 
-parSH = (p = 0.7, b = 2., L1 = Lsh)
+parSH = (l = -0.7, ν = 2., L1 = Lsh)
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 	optnew = NewtonPar(verbose = false, tol = 1e-12)
 	# allocations 357, 0.8ms
 	sol1, = @time newton(
 	R_SH, Jac_sp,
-	sol0, (@set parSH.p = -1.95), optnew)
+	sol0, (@set parSH.l = -1.95), optnew)
 	Plots.plot(X, sol1)
 
-opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = -0.01,
-		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMin = -2.1,
+opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,
+		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMax = 1.,
 		maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
 
 function cb(x,f,J,res,it,itl,optN; kwargs...)
@@ -58,10 +58,10 @@ args = (verbosity = 3,
 	)
 
 brflat, = @time continuation(
-	R_SH, Jac_sp, sol1, (@set parSH.p = 1.), (@lens _.p), opts;
+	R_SH, Jac_sp, sol1, (@set parSH.l = -1.), (@lens _.l), opts;
 	args...)
 
-plot(brflat)
+plot(brflat, putspecialptlegend = false)
 ####################################################################################################
 # branch switching
 
@@ -74,7 +74,7 @@ function optrec(x, p, l; opt = opts)
 	end
 end
 
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.p = 1.), (@lens _.p), 4, optrec; args..., verbosity=0)
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -1.), (@lens _.l), 4, optrec; args..., verbosity=0)
 
 code = ()
 	plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false)
@@ -88,8 +88,8 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [sol1])
 
 br, = @time continuation(
 	R_SH, Jac_sp,
-	(@set parSH.p = 1.), (@lens _.p),
-	setproperties(opts; ds = -0.001, maxSteps = 20000, pMax = 2.7, pMin = -2.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 2),
+	(@set parSH.l = 1.), (@lens _.l),
+	setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 2.1, pMin = -2.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 2),
 	deflationOp;
 	verbosity = 1,
 	maxBranches = 150,

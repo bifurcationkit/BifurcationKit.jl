@@ -148,7 +148,6 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 	end
 end
 ####################################################################################################
-
 function filterBifurcations(bifpt)
 	# this function filters Fold points and Branch points which are located at the same/previous/next point
 	length(bifpt) == 0 && return bifpt
@@ -173,10 +172,8 @@ function filterBifurcations(bifpt)
 
 	return res[2:end]
 end
-
 ####################################################################################################
 # plot recipes for the bifurcation diagram
-
 RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
 	for b in bd
 		@series begin
