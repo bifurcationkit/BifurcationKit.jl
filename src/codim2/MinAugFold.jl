@@ -266,7 +266,9 @@ function newtonFold(F, J,
 		lens,
 		_copy(eigenvec),
 		_copy(eigenvec_ad), issymmetric,
-		options.linsolver, @set bdlinsolver.solver = options.linsolver)
+		options.linsolver,
+		# do not change linear solver if user provides it
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Fold problem
 	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldproblem)
@@ -372,7 +374,9 @@ function continuationFold(F, J,
 			lens1,
 			_copy(eigenvec),
 			_copy(eigenvec_ad), issymmetric,
-			options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
+			options_newton.linsolver,
+			# do not change linear solver if user provides it
+			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Fold problem
 	Jac_fold_MA = (x, param) -> (x = x, params = param, fldpb = foldPb)
@@ -417,11 +421,14 @@ function continuationFold(F, J,
 		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) :
 		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
 
+	# eigen solver
+	eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver)
+
 	# solve the Fold equations
 	br, u, tau = continuation(
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
-		(@set opt_fold_cont.newtonOptions.eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver));
+		(@set opt_fold_cont.newtonOptions.eigsolver = eigsolver);
 		kwargs...,
 		printSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
@@ -445,9 +452,11 @@ function continuationFold(F, J,
 	eigenvec = bifpt.tau.u
 	eigenvec_ad = _copy(eigenvec)
 
+	if startWithEigen
+		# computation of adjoint eigenvalue
 	p = bifpt.param
 	parbif = setParam(br, p)
-	if startWithEigen
+
 		eigenvec .= real.(geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 		eigenvec ./= norm(eigenvec)
 

@@ -210,7 +210,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-	newtonHopf(F, J, hopfpointguess::BorderedArray{vectypeR, T}, par, lens::Lens, eigenvec, eigenvec_ad, options::NewtonPar; Jᵗ = nothing, d2F = nothing, normN = norm) where {vectypeR, T}
+($SIGNATURES)
 
 This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -259,7 +259,9 @@ function newtonHopf(F, J,
 		F, J, Jᵗ, d2F, lens,
 		_copy(eigenvec_ad),	# this is pb.a ≈ null space of (J - iω I)^*
 		_copy(eigenvec), 	# this is pb.b ≈ null space of  J - iω I
-		options.linsolver, @set bdlinsolver.solver = options.linsolver)
+		options.linsolver,
+		# do not change linear solver if user provides it
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfproblem)
@@ -298,6 +300,8 @@ function newtonHopf(F, J,
 
 		# jacobian at bifurcation point
 		L = J(bifpt.x, parbif)
+
+		# computation of adjoint eigenvector
 		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(bifpt.x, parbif)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
 		ζad .= ζstar ./ dot(ζstar, ζ)
@@ -366,7 +370,9 @@ function continuationHopf(F, J,
 		lens1,
 		_copy(eigenvec_ad),	# this is pb.a ≈ null space of (J - iω I)^*
 		_copy(eigenvec), 	# this is pb.b ≈ null space of  J - iω I
-		options_newton.linsolver, @set bdlinsolver.solver = options_newton.linsolver)
+		options_newton.linsolver,
+		# do not change linear solver if user provides it
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
@@ -377,6 +383,7 @@ function continuationHopf(F, J,
 	lenses = getLensSymbol(lens1, lens2)
 
 
+	# this function is used as a Finalizer
 	function updateMinAugHopf(z, tau, step, contResult; k...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u		# hopf point
@@ -421,12 +428,14 @@ function continuationHopf(F, J,
 			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b))
 		end
 
+	# eigen solver
+	eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver)
 
 	# solve the hopf equations
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
 		hopfpointguess, par, lens2,
-		(@set opt_hopf_cont.newtonOptions.eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver));
+		(@set opt_hopf_cont.newtonOptions.eigsolver = eigsolver);
 		kwargs...,
 		printSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
