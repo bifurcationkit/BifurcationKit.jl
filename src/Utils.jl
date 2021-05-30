@@ -173,3 +173,19 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
+####################################################################################################
+"""
+$(SIGNATURES)
+
+Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f).
+"""
+function get3Jet(f, J = nothing)
+	d1f(x,p,dx1) = ForwardDiff.derivative(t -> f(x .+ t .* dx1, p), 0.)
+	d2f(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1f(x .+ t .* dx2, p, dx1), 0.)
+	d3f(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2f(x .+ t .* dx3, p, dx1, dx2), 0.)
+	if isnothing(J)
+	 	return (f, d1f, d2f, d3f)
+	else
+		return (f, J, d2f, d3f)
+	end
+end

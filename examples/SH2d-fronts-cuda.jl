@@ -31,7 +31,6 @@ AF = CuArray{TY}
 plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 norminf(x) = maximum(abs.(x))
-
 ####################################################################################################
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \

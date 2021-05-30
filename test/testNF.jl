@@ -3,10 +3,7 @@ using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff, Parame
 const BK = BifurcationKit
 norminf = x -> norm(x, Inf)
 
-function Fbp(x, p)
-	return [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
-end
-
+Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
 par = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
 ####################################################################################################
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20)
@@ -28,6 +25,10 @@ jet = (Fbp,
 	(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2),
 	(x, p, dx1, dx2, dx3) -> d3F(x, p, dx1, dx2, dx3))
 
+bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
+@test BK.isTranscritical(bp) == true
+
+jet = BK.get3Jet(Fbp, (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x))
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 show(bp)
