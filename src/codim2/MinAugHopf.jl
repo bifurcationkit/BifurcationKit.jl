@@ -162,7 +162,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 		d2Fv = d2F(x, par0, v, x2)
 		σxx2 = -conj(dot(w, d2Fv) / n)
 	end
-	# we need to be carefull here because the dot produce conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
+	# we need to be carefull here because the dot produces conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
 	dp, dω = [real(σp - σxx2) real(σω);
 			  imag(σp + σxx2) imag(σω) ] \
 			  [dup - real(σxx1), duω + imag(σxx1)]
@@ -395,6 +395,7 @@ function continuationHopf(F, J,
 
 			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], BT = dot(hopfPb.a, hopfPb.b))
 		end
+
 
 	# solve the hopf equations
 	branch, u, tau = continuation(

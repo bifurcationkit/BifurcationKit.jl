@@ -14,9 +14,6 @@ using Revise, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
 
-# automatic differentiation
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
 # define the sup norm
 norminf = x -> norm(x, Inf)
 ```
@@ -40,10 +37,7 @@ end
 dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
 
 # we group the differentials together
-d1COm(x,p,dx1) = ForwardDiff.derivative(t -> COm(x .+ t .* dx1, p), 0.)
-d2COm(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1COm(x .+ t .* dx2, p, dx1), 0.)
-d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2COm(x .+ t .* dx3, p, dx1, dx2), 0.)
-jet  = (COm, dCOm, d2COm, d3COm)
+jet = BK.get3Jet(COm, dCOm)
 
 # parameters used in the model
 par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)

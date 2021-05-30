@@ -65,6 +65,8 @@ BifurcationKit.BifDetectEvent
 
 ## Examples
 
+We show how to use the different events. We first set up a problem as usual.
+
 ```julia
 using Revise, BifurcationKit, Setfield, ForwardDiff
 using Plots
@@ -101,9 +103,12 @@ kwargs = (plot = true, verbosity = 3, printSolution = (x,p) -> x[1], linearAlgo 
 
 ### Example of continuous event
 
+In this first example, we build an event to detect when the parameter value is `-2` or when the first component of the solution is `1`.
+
 ```julia
 br, = continuation(args...; kwargs...,
-	event = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1)),)
+	event = BK.ContinuousEvent(2, 
+		(iter, state) -> (getp(state)+2, getx(state)[1]-1)),)
 ```
 
 gives
@@ -127,11 +132,13 @@ This shows for example that the first component of the event was detected `userC
 
 ![](event1.png)
 
-You can also name the event as follows
+You can also name the events as follows
 
 ```julia
  br, = continuation(args...; kwargs...,
- 	event = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1),("event1", "event2")))
+ 	event = BK.ContinuousEvent(2, 
+ 		(iter, state) -> (getp(state)+2, getx(state)[1]-1),
+ 		("event1", "event2")))
 ```
 
 And get:
@@ -157,7 +164,8 @@ You can also use discrete events to detect a change. For example, the following 
 
 ```julia
 br, = continuation(args...; kwargs...,
-	event = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2))
+	event = BK.DiscreteEvent(1, 
+		(iter, state) -> getp(state)>-2))
 ```
 
 gives

@@ -1,11 +1,9 @@
 # using Revise, Plots
 using Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
-using BifurcationKit, Test
+using BifurcationKit
 const BK = BifurcationKit
 
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
 norminf = x -> norm(x, Inf)
-
 ####################################################################################################
 function COm(u, p)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
@@ -18,12 +16,7 @@ function COm(u, p)
 	out
 end
 dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
-
-# we group the differentials together
-d1COm(x,p,dx1) = ForwardDiff.derivative(t -> COm(x .+ t .* dx1, p), 0.)
-d2COm(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1COm(x .+ t .* dx2, p, dx1), 0.)
-d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2COm(x .+ t .* dx3, p, dx1, dx2), 0.)
-jet  = (COm, dCOm, d2COm, d3COm)
+jet = BK.get3Jet(COm, dCOm)
 
 par_com = (q1 = 2.5, q2 = 2.0, q3=10., q4 = 0.0675,q5=1.,q6=0.1,k=0.4)
 z0 = [0.07,0.2,05]
@@ -54,13 +47,16 @@ printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", p
 	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test sn[3] && sn[5] == 6
 
-sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm)
+sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = jet[3])
 @test sn[3] && sn[5] == 8
 
-sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true)
+sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true)
 @test sn[3] && sn[5] == 8
 
-sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 0, maxSteps = 1, saveSolEveryStep = 1), bdlinsolver = MatrixBLS(), d2F = d2COm, startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
+sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 0, maxSteps = 1, saveSolEveryStep = 1), bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
+
+# we test the jacobian
+
 
 # we test the jacobian and problem update
 par_sn = set(br.params, br.lens, sn_br.sol[end].x.p)
@@ -106,13 +102,12 @@ ind = argmin(abs.(_eigvals .- Complex(0, ω)))
 # reminder: pb.b should be a null vector of (J+iω)
 @test pb.b ≈ ζ atol = 1e-3
 
-d2NLIFc =(x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2COm(x,p,_dx1,_dx2))(dx1,dx2)
-hp, = newtonHopf(jet[1:2]..., br, 1;
+hp, = newton(jet[1:2]..., br, 1;
 	options = NewtonPar( opts_br.newtonOptions; maxIter = 10),
 	startWithEigen = true,
 	bdlinsolver = MatrixBLS(),
-	d2F = d2NLIFc)
+	d2F = jet[3])
 printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
 # plot(br);scatter!([hp.p[1]], [hp.u[1]])
 
-hp, = newtonHopf(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = d2NLIFc)
+hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])

@@ -37,7 +37,7 @@ function testBranch(br)
 end
 ####################################################################################################
 # test vector field for event detection
-function F(X, p)
+function Feve(X, p)
 	p1, p2, k = p
 	x, y = X
 	out = similar(X)
@@ -46,12 +46,12 @@ function F(X, p)
 	out
 end
 
-J(X, p) = ForwardDiff.jacobian(z -> F(z,p), X)
+Jeve(X, p) = ForwardDiff.jacobian(z -> Feve(z,p), X)
 
 par = (p1 = -3., p2=-3., k=3)
 
 opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, saveSolEveryStep = 1, newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5), detectBifurcation = 3, detectEvent = 0, nInversion = 8, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, tolBisectionEvent = 1e-24, plotEveryStep = 10)
-	br0, = continuation(F, J, -2ones(2), par, (@lens _.p1), opts0;
+	br0, = continuation(Feve, Jeve, -2ones(2), par, (@lens _.p1), opts0;
 		plot = false, verbosity = 0,
 		printSolution = (x, p) -> x[1],
 		)
@@ -59,7 +59,7 @@ testBranch(br0)
 # plot(br0, plotspecialpoints=true)
 ####################################################################################################
 opts = ContinuationPar(opts0; saveSolEveryStep = 1, detectBifurcation = 0, detectEvent = 2, dsminBisection = 1e-9, maxBisectionSteps = 15)
-	br, = continuation(F, J, -2ones(2), par, (@lens _.p1), opts;
+	br, = continuation(Feve, Jeve, -2ones(2), par, (@lens _.p1), opts;
 		plot = false, verbosity = 0,
 		printSolution = (x, p) -> x[1],
 		)
@@ -68,7 +68,7 @@ opts = ContinuationPar(opts0; saveSolEveryStep = 1, detectBifurcation = 0, detec
 # pretty_table(br.branch[1:40])
 
 # arguments for continuation
-args = (F, J, -2ones(2), par, (@lens _.p1), opts)
+args = (Feve, Jeve, -2ones(2), par, (@lens _.p1), opts)
 kwargs = (plot = false, verbosity = 0, printSolution = (x,p) -> x[1], linearAlgo = MatrixBLS(),)
 
 br, = continuation(args...; kwargs...,

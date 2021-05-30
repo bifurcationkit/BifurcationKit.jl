@@ -243,8 +243,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 			end
 		end
 	end
-	isempty(event_index_C) && @warn "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
-	@assert isempty(event_index_C) == false
+	@assert isempty(event_index_C) == false "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_C)
 	end
@@ -268,8 +267,7 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
 			end
 		end
 	end
-	isempty(event_index_D) &&  @warn "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
-	@assert isempty(event_index_D) == false
+	@assert isempty(event_index_D) == false "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_D)
 	end
