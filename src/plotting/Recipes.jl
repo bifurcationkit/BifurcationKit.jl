@@ -273,7 +273,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 		end
 		@series begin
 			seriestype := :scatter
-			seriescolor --> map(x -> colorbif[x.type], bifpt)
+			seriescolor --> map(x -> getColor(x.type), bifpt)
 			markershape --> map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :square : :circle, bifpt)
 			markersize --> 3
 			markerstrokewidth --> 0
@@ -289,7 +289,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 			for pt in bps
 				@series begin
 					seriestype := :scatter
-					seriescolor --> colorbif[pt.type]
+					seriescolor --> getColor(pt.type)
 					label --> "$(pt.type)"
 					markersize --> 3
 					markerstrokewidth --> 0

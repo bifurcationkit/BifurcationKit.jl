@@ -84,8 +84,6 @@ eigls = EigKrylovKit(dim = 70)
 	out, hist, flag = @time newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(out)
-
-
 ####################################################################################################
 function finSol(z, tau, step, br; k...)
 	if length(br.specialpoint)>0
@@ -164,7 +162,7 @@ function optionsCont(x,p,l; opt = opts_br)
 end
 
 code = ()
-	plot(diagram; code = code, level = (0, 2), plotfold = false, putspecialptlegend=false, markersize=2)
+	plot!(diagram; code = code, level = (0, 6), plotfold = false, putspecialptlegend=false, markersize=2)
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")

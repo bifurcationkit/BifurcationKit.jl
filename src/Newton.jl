@@ -41,7 +41,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault(x, f, J, res, it, itlinear, options; k...) = true`. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
     - `x` current solution
     - `f` current residual
     - `J` current jacobian

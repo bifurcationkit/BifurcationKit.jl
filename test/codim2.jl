@@ -39,7 +39,7 @@ opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInv
 hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])
 
 hpnf = computeNormalForm(jet..., br, 4)
-@test hpnf.nf.b |> real ≈ 1.070259e+01 rtol = 1e-2
+@test hpnf.nf.b |> real ≈ 1.070259e+01 rtol = 1e-3
 
 hpnf = computeNormalForm(jet..., br, 1)
 @test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2

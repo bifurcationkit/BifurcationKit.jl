@@ -145,7 +145,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 
 	if abs(_state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
 	verbose && println("----> [Bisection] initial ds = ", _state.ds)
-	
+
 	# we create a new state for stepping through the continuation routine
 	state = copy(_state)
 
@@ -163,8 +163,8 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	nimags   = [state.n_imag[1]]
 
 	# interval which contains the bifurcation point
-	interval = getinterval(getp(state), state.z_pred.p)
-	
+	interval = getinterval(getp(state), getpreviousp(state))
+
 	# index of active index in the bisection interval, allows to track interval
 	indinterval = interval[1] == getp(state) ? 1 : 2
 
@@ -250,7 +250,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		iter.tangentAlgo.update = true
 	end
 
-	######## update current state
+	######## update current state ########
 	# So far we have (possibly) performed an even number of bifurcation crossings
 	# we started at the right of the bifurcation point. The current state is thus at the
 	# right of the bifurcation point if iseven(n_inversion) == true. Otherwise, the bifurcation
@@ -267,7 +267,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		end
 
 		# to prevent bifurcation detection, update the following numbers carefully
-		# since the current state is at the right of the bifurcation point, we just save
+		# since the current state is after the bifurcation point, we just save
 		# the current state of n_unstable and n_imag
 		_state.n_unstable = (state.n_unstable[1], _state.n_unstable[2])
 		_state.n_imag = (state.n_imag[1], _state.n_imag[2])

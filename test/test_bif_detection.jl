@@ -89,13 +89,12 @@ testBranch(br4)
 ####################################################################################################
 # this example is to test failures in Newton annd how it affects the bifurcation points labels
 using ForwardDiff
-const  _rnd = rand(5)
-F = (x, p; k = 3) -> (@. p + x - _rnd .* x^k/k)
-Jac_m = (x, p; k = 2) -> diagm(0 => 1 .- _rnd .* x.^k)
+F = (x, p; k = 3) -> (@. p * x -  x^k/k)
+Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
-opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = -0.001, maxSteps = 130, pMin = -3., pMax = 3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3)
+opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, maxSteps = 130, pMin = -3., pMax = 0.1, saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3, nInversion=4)
 
-br4, = continuation(F, Jac_m, zeros(5), 0., (@lens _), opts; #verbosity = 3, plot=true,
+br4, = continuation(F, Jac_m, zeros(1), -0.1, (@lens _), opts; verbosity = 0, plot=false,
 	printSolution = (x,p)->x[1])
 testBranch(br4)
 ####################################################################################################
@@ -109,13 +108,16 @@ function Ftb(X, p)
 	out
 end
 
-J = (X, p) -> ForwardDiff.jacobian(z -> Ftb(z,p), X)
+Jtb2 = (X, p) -> ForwardDiff.jacobian(z -> Ftb(z,p), X)
 par = (p1 = -3., p2=-3., k=3)
 
-opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 4, dsminBisection = 1e-9, maxBisectionSteps = 15)
+opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 135, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 6, dsminBisection = 1e-9, maxBisectionSteps = 15, nev = 2)
 
-br, = continuation(Ftb, J, -2ones(2), par, (@lens _.p1), @set opts.detectBifurcation = 2)
+br, = continuation(Ftb, Jtb2, -2ones(2), par, (@lens _.p1), (@set opts.detectBifurcation = 3);
+	plot = false, verbosity = 0,
+	printSolution = (x, p) -> x[1],)
+	show(br)
 testBranch(br)
 
-br, = continuation(Ftb, J, -2ones(2), par, (@lens _.p1), opts)
+br, = continuation(Ftb, Jtb2, -2ones(2), par, (@lens _.p1), opts)
 testBranch(br)

@@ -50,7 +50,7 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 			if detectBifucation(state)
 				_T  = eltype(it)
 				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, :guess, getinterval(current_param, current_param-ds))
-				if bifpt.type != :none; push!(contResult.bifpoint, bifpt); end
+				if bifpt.type != :none; push!(contResult.specialpoint, bifpt); end
 			end
 		end
 		state.step += 1

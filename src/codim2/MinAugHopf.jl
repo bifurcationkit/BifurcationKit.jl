@@ -382,7 +382,7 @@ function continuationHopf(F, J,
 
 		# if the frequency is null, this is not a Hopf point, we halt the process
 		if abs(ω) < options_newton.tol
-			@warn "The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations"
+			@warn "The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at $p1, $p2"
 		end
 		return abs(ω) > options_newton.tol
 	end
