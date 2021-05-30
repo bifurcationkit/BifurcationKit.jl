@@ -3,9 +3,6 @@
 using BifurcationKit
 const BK = BifurcationKit
 
-# automatic differentiation
-D(f, x, p, dx) = ForwardDiff.derivative(t-&gt;f(x .+ t .* dx, p), 0.)
-
 # define the sup norm
 norminf = x -&gt; norm(x, Inf)</code></pre><h2 id="Problem-setting-1"><a class="docs-heading-anchor" href="#Problem-setting-1">Problem setting</a><a class="docs-heading-anchor-permalink" href="#Problem-setting-1" title="Permalink"></a></h2><p>We can now encode the vector field (E) in a function and use automatic differentiation to compute its various derivatives.</p><pre><code class="language-julia"># vector field of the problem
 function COm(u, p)
@@ -21,10 +18,7 @@ end
 dCOm = (z, p) -&gt; ForwardDiff.jacobian(x -&gt; COm(x, p), z)
 
 # we group the differentials together
-d1COm(x,p,dx1) = ForwardDiff.derivative(t -&gt; COm(x .+ t .* dx1, p), 0.)
-d2COm(x,p,dx1,dx2) = ForwardDiff.derivative(t -&gt; d1COm(x .+ t .* dx2, p, dx1), 0.)
-d3COm(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -&gt; d2COm(x .+ t .* dx3, p, dx1, dx2), 0.)
-jet  = (COm, dCOm, d2COm, d3COm)
+jet = BK.get3Jet(COm, dCOm)
 
 # parameters used in the model
 par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
@@ -68,4 +62,4 @@ plot!(br, xlims=(0.8,1.8))</code></pre><p><img src="../com-fig2.png" alt/></p><h
 # plotting
 plot(sn_codim2, vars=(:q2, :x), branchlabel = &quot;Fold&quot;)
 plot!(hp_codim2, vars=(:q2, :x), branchlabel = &quot;Hopf&quot;)
-plot!(br, xlims=(0.6,1.5))</code></pre><p><img src="../com-fig3.png" alt/></p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-Govaerts"><a class="tag is-link" href="#citeref-Govaerts">Govaerts</a><blockquote><p>Govaerts, Willy J. F. Numerical Methods for Bifurcations of Dynamical Equilibria. Philadelphia, Pa: Society for Industrial and Applied Mathematics, 2000.</p></blockquote></li></ul></section></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 22 May 2021 21:18">Saturday 22 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot!(br, xlims=(0.6,1.5))</code></pre><p><img src="../com-fig3.png" alt/></p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-Govaerts"><a class="tag is-link" href="#citeref-Govaerts">Govaerts</a><blockquote><p>Govaerts, Willy J. F. Numerical Methods for Bifurcations of Dynamical Equilibria. Philadelphia, Pa: Society for Industrial and Applied Mathematics, 2000.</p></blockquote></li></ul></section></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 May 2021 19:51">Sunday 30 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

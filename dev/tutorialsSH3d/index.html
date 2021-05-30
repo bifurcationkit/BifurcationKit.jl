@@ -59,7 +59,7 @@ sol0 = [(cos(x) .* cos(y )) for x in X, y in Y, z in Z]
 	sol0 .*= 1.7
 
 # parameters for PDE
-Δ, D2x = @time Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann)
+Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann)
 L1 = (I + Δ)^2
 par = (l = 0.1, ν = 1.2, L1 = L1)</code></pre><p>As said in the introduction, the LU linear solver does not scale well with dimension <span>$N$</span>. Hence, we do something else. We note that the matrix <span>$L_1$</span> is hermitian positive and use it as a preconditioner. Thus, we pre-factorize it using a Cholesky decomposition:</p><pre><code class="language-julia">Pr = cholesky(L1)
 using SuiteSparse
@@ -113,13 +113,13 @@ end</code></pre><p>We can then declare our eigensolver and pass it to the newton
 	pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), 
 	maxSteps = 146, detectBifurcation = 3, nev = 15, nInversion = 4, plotEveryStep = 1)
 
-br, _ = continuation(
+br, = continuation(
 	F_sh, (x, p) -&gt; (dx -&gt; dF_sh(x, p, dx)),
 	zeros(N), par, (@lens _.l), optcont;
 	plot = true, verbosity = 3,
 	plotSolution = (ax, x, p) -&gt; contour3dMakie(ax, x),
 	printSolution = (x, p) -&gt; (n2 = norm(x), n8 = norm(x, 8)),
-	normC = x -&gt; norm(x, Inf))</code></pre><p>The following result shows the detected bifurcation points</p><pre><code class="language-julia">julia&gt; br
+	normC = x -&gt; norm(x, Inf))</code></pre><p>The following result shows the detected bifurcation points (its takes ~300s)</p><pre><code class="language-julia">julia&gt; br
 Branch number of points: 34
 Branch of Equilibrium
 Parameters l from 0.1 to -0.1
@@ -127,7 +127,7 @@ Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
 - #  1,    bp at l ≈ +0.06243495 ∈ (+0.06243495, +0.06287689), |δp|=4e-04, [converged], δ = (-1,  0), step =   8, eigenelements in eig[  9], ind_ev =  10
 - #  2,    nd at l ≈ +0.06069653 ∈ (+0.06069653, +0.06069826), |δp|=2e-06, [converged], δ = (-6,  0), step =   9, eigenelements in eig[ 10], ind_ev =   9
-- #  3,    nd at l ≈ -0.00007046 ∈ (-0.00007046, +0.00015051), |δp|=2e-04, [converged], δ = (-3,  0), step =  18, eigenelements in eig[ 19], ind_ev =   3</code></pre><p>We get the following plot during computation:</p><p><img src="../sh3dfrontleft.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>We don&#39;t need to call <code>newton</code> first in order to use <code>continuation</code>.</p></div></div><h2 id="Automatic-branch-switching-1"><a class="docs-heading-anchor" href="#Automatic-branch-switching-1">Automatic branch switching</a><a class="docs-heading-anchor-permalink" href="#Automatic-branch-switching-1" title="Permalink"></a></h2><p>We can use <a href="@ref">Branch switching</a> to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of <code>br</code>. Note that this bifurcation point is 3d.</p><pre><code class="language-julia">br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10, 
+- #  3,    nd at l ≈ -0.00007046 ∈ (-0.00007046, +0.00015051), |δp|=2e-04, [converged], δ = (-3,  0), step =  18, eigenelements in eig[ 19], ind_ev =   3</code></pre><p>We get the following plot during computation:</p><p><img src="../sh3dfrontleft.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>We don&#39;t need to call <code>newton</code> first in order to use <code>continuation</code>.</p></div></div><h2 id="Automatic-branch-switching-1"><a class="docs-heading-anchor" href="#Automatic-branch-switching-1">Automatic branch switching</a><a class="docs-heading-anchor-permalink" href="#Automatic-branch-switching-1" title="Permalink"></a></h2><div class="admonition is-warning"><header class="admonition-header">Computation time</header><div class="admonition-body"><p>The following computation takes ~1.5h </p></div></div><p>We can use <a href="@ref">Branch switching</a> to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of <code>br</code>. Note that this bifurcation point is 3d.</p><pre><code class="language-julia">br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10, 
 	detectBifurcation = 0, pMax = 0.1, plotEveryStep = 5, dsmax = 0.02);
 	plot = true, verbosity = 3,
 	# to set initial point on the branch
@@ -149,4 +149,4 @@ Bifurcation points:
 		contour3dMakie!(ax, br1[i].sol[2].x)
 		ax.protrusions = (0, 0, 0, 10)
 	end
-	display(fig)</code></pre><p><img src="../sh3dallSols.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 22 May 2021 21:18">Saturday 22 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	display(fig)</code></pre><p><img src="../sh3dallSols.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 May 2021 19:51">Sunday 30 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
