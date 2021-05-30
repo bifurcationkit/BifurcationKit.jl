@@ -73,32 +73,33 @@ using Plots
 const BK = BifurcationKit
 ####################################################################################################
 # test vector field for event detection
-function F(X, p)
+function Feve(X, p)
 	p1, p2, k = p
 	x, y = X
 	out = similar(X)
 	out[1] = p1 + x - y - x^k/k
-	out[2] = p1 + y - 2y^k/k
+	out[2] = p1 + y + x - 2y^k/k
 	out
 end
 
 # associated jacobian
-J(X, p) = ForwardDiff.jacobian(z -> F(z,p), X)
+Jeve(X, p) = ForwardDiff.jacobian(z -> Feve(z,p), X)
 
 # parameters for the vector field
 par = (p1 = -3., p2=-3., k=3)
 
 # parameters for the continuation
-opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 128, pMin = -3., pMax = 0.5,
-	 saveSolEveryStep = 1, plotEveryStep = 10,
-	 newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5),
-	 # parameters specific to event detection
-	 detectBifurcation = 0, detectEvent = 2, nInversion = 6, dsminBisection = 1e-9, 
-	 maxBisectionSteps = 15, detectFold=false, tolBisectionEvent = 1e-4)
-	 
+opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 128, pMin = -3., pMax = 4.0,
+     saveSolEveryStep = 1, plotEveryStep = 10,
+     newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5),
+     # parameters specific to event detection
+     detectBifurcation = 0, detectEvent = 2, nInversion = 6, dsminBisection = 1e-9,
+     maxBisectionSteps = 15, detectFold=false)
+
 # arguments for continuation
-args = (F, J, -2ones(2), par, (@lens _.p1), opts)
-kwargs = (plot = true, verbosity = 3, printSolution = (x,p) -> x[1], linearAlgo = MatrixBLS(),)
+args = (Feve, Jeve, -2ones(2), par, (@lens _.p1), opts)
+kwargs = (plot = true, verbosity = 3, printSolution = (x,p) -> x[1],
+    linearAlgo = MatrixBLS(),)
 ```
 
 ### Example of continuous event
@@ -214,16 +215,15 @@ Here `userD-1` means that the first component of the discrete event was detected
 ### Example of set of events
 We can combine more events and chain them like we want using `SetOfEvents`. In this example, we show how to do bifurcation detection and event location altogether:
 
-```julia
-# event to detect when p = 1
+```julia		
 ev1 = BK.ContinuousEvent(1, (iter, state) -> getp(state)-1)
 ev2 = BK.ContinuousEvent(2, (iter, state) -> (getp(state)-2, getp(state)-2.5))
 # event to detect bifurcation
-ev3 = BK.BifDetectCB
+ev3 = BK.BifDetectEvent
 # we combine the events together
 eve = BK.SetOfEvents(ev1, ev2, ev3)
 
-br, = continuation(args2...; kwargs...,
+br, = continuation(args...; kwargs...,
 		event = eve)
 ```
 

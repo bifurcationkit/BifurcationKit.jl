@@ -50,7 +50,7 @@ Jeve(X, p) = ForwardDiff.jacobian(z -> Feve(z,p), X)
 
 par = (p1 = -3., p2=-3., k=3)
 
-opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, saveSolEveryStep = 1, newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5), detectBifurcation = 3, detectEvent = 0, nInversion = 8, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, tolBisectionEvent = 1e-24, plotEveryStep = 10)
+opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, saveSolEveryStep = 1, newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5), detectBifurcation = 3, detectEvent = 0, nInversion = 8, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, plotEveryStep = 10)
 	br0, = continuation(Feve, Jeve, -2ones(2), par, (@lens _.p1), opts0;
 		plot = false, verbosity = 0,
 		printSolution = (x, p) -> x[1],

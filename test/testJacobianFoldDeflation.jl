@@ -80,8 +80,9 @@ outfold = newton(jet[1], jet[2], br, 2; startWithEigen = true, issymmetric = tru
 @test  outfold[3] && outfold[4] == 2
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 50, detectBifurcation = 2)
-outfoldco, = continuationFold(jet[1], jet[2], br, 2, (@lens _.β), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, plot = true)
-outfoldco, = continuationFold(jet[1], jet[2], br, 2, (@lens _.β), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, issymmetric = true, plot = true)
+outfoldco, = continuationFold(jet[1], jet[2], br, 2, (@lens _.β), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, plot = false)
+outfoldco, = continuationFold(jet[1], jet[2], br, 2, (@lens _.β), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, issymmetric = true, plot = false)
+outfoldco, = continuationFold(jet[1], jet[2], br, 2, (@lens _.β), optcontfold; startWithEigen = true, updateMinAugEveryStep = 1, issymmetric = true, d2F = jet[3], plot = false)
 
 # manual handling
 indfold = 1

@@ -107,7 +107,11 @@ function blockToSparse(J::AbstractBlockArray)
 	return res
 end
 ####################################################################################################
-# this function extracts the indices of the blocks composing the matrix A. We assume that the blocks have the same sparsity
+"""
+$(SIGNATURES)
+
+This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
+"""
 function getBlocks(A::SparseMatrixCSC, N, M)
 	I,J,K = findnz(A)
 	out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
@@ -145,7 +149,11 @@ apply(f, x) = f(x)
 # the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
 # this is done so as to use AD (ForwardDiff.jl,...) to provide the differentials which only works on reals (usually).
 
-# struct for bilinear map
+"""
+$(TYPEDEF)
+
+This structure wraps a bilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
+"""
 struct BilinearMap{Tm}
 	bl::Tm
 end
@@ -157,7 +165,11 @@ function (R2::BilinearMap)(dx1, dx2)
 end
 (b::BilinearMap)(dx1::T, dx2::T) where {T <: AbstractArray{<: Real}} = b.bl(dx1, dx2)
 
-# struct for trilinear map
+"""
+$(TYPEDEF)
+
+This structure wraps a trilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
+"""
 struct TrilinearMap{Tm}
 	tl::Tm
 end
@@ -177,7 +189,7 @@ end
 """
 $(SIGNATURES)
 
-Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f).
+Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f). These differentials are computed using ForwardDiff.jl
 """
 function get3Jet(f, J = nothing)
 	d1f(x,p,dx1) = ForwardDiff.derivative(t -> f(x .+ t .* dx1, p), 0.)

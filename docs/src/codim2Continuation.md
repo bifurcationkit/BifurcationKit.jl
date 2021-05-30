@@ -16,6 +16,9 @@ g(u,p)
 
 where $w,v$ are chosen in order to have a non-singular matrix $(M_f)$. More precisely, $v$ (resp. $w$) should be close to a null vector of `dF(u,p)` (resp. `dF(u,p)'`). During continuation, the vectors $w,v$ are updated so that the matrix $(M_f)$ remains non-singular ; this is controlled with the argument `updateMinAugEveryStep` (see below).
 
+!!! warning "Linear Method"
+    You can pass the bordered linear solver to solve $(M_f)$ using the option `bdlinsolver ` (see below). Note that the choice `bdlinsolver = BorderingBLS()` can lead to singular systems. Indeed, in this case, $(M_f)$ is solved by inverting `dF(u,p)` which is singular at Fold points.
+
 ## Hopf continuation
 
 The continuation of Fold bifurcation points is based on a **Minimally Augmented** (see [^Govaerts] p. 87) formulation which is an efficient way to detect singularities. The continuation of Hopf points is based on the formulation $G(u,\omega,p) = (F(u,\omega,p), g(u,\omega,p))\in\mathbb R^{n+2}$ where the test function $g$ is solution of
@@ -40,8 +43,10 @@ Once a Fold/Hopf point has been detected after a call to `br, _ = continuation(.
 
 ```julia
 outfold, hist, flag =  newton(F, J, br::AbstractBranchResult, ind_bif::Int64; 
-	Jᵗ = nothing, d2F = nothing, normN = norm, 
-	options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
+	issymmetric = false, Jᵗ = nothing, d2F = nothing, 
+	normN = norm, 	options = br.contparams.newtonOptions, 
+	bdlinsolver = BorderingBLS(options.linsolver),
+	startWithEigen = false, kwargs...)
 ```
 
 where `par` is the set of parameters used in the call to [`continuation`](@ref) to compute `br`. For the options parameters, we refer to [Newton](@ref).
@@ -53,7 +58,9 @@ It is important to note that for improved performances, a function implementing 
 To compute the codim 2 curve of Fold/Hopf points, one can call [`continuation`](@ref) with the following options
 
 ```@docs
- continuation(F, J, br::BifurcationKit.AbstractBranchResult, ind_bif::Int64, lens2::Setfield.Lens, options_cont::BifurcationKit.ContinuationPar ; startWithEigen = false, Jᵗ = nothing, d2F = nothing, kwargs...)
+ continuation(F, J, br::BifurcationKit.AbstractBranchResult, ind_bif::Int64,
+ 	lens2::Setfield.Lens, options_cont::BifurcationKit.ContinuationPar ; 
+ 	startWithEigen = false, Jᵗ = nothing, d2F = nothing, kwargs...)
 ```
 
 where the options are as above except with have an additional parameter axis `lens2` which is used to locate the bifurcation points. 

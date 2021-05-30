@@ -190,7 +190,6 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 		σxx2 = dot(σx, x2)
 	else
 		d2Fv = d2F(x, par0, v, x1)
-		# this matches the computations in the case hasHessian(pb) == false
 		σxx1 = -conj(dot(w, d2Fv) / n)
 		d2Fv = d2F(x, par0, v, x2)
 		σxx2 = -conj(dot(w, d2Fv) / n)

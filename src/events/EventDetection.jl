@@ -142,7 +142,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		end
 
 		eventlocated = (isEventCrossed(event, iter, state) &&
-				abs(interval[2] - interval[1]) < contParams.tolBisectionEvent)
+				abs(interval[2] - interval[1]) < contParams.tolParamBisectionEvent)
 
 		# condition for breaking the while loop
 		if (isnothing(next) == false &&

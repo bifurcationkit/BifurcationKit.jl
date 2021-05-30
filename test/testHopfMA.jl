@@ -191,7 +191,7 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-poTrap = PeriodicOrbitTrapProblem(jet[1], jet[2], real.(vec_hopf), hopfpt.u, M, 2n	)
+poTrap = PeriodicOrbitTrapProblem(jet[1], Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2n	)
 
 jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))

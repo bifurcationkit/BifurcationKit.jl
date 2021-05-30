@@ -194,9 +194,6 @@ which gives using `plot(br_hopf)`
 
 ![](bru-hopf-cont.png)
 
-!!! tip "Performance"
-    You can really speed this up by passing the second differential. In this case, we have `d2Fbru` above from `ForwardDiff` but it does not like `Complex` arguments. You can then pass the following argument which circumvents the problem of using `ForwardDiff`: `d2F = (x,p,dx1,dx2) -> BK.BilinearMap((_dx1, _dx2) -> d2Fbru(x,p,_dx1,_dx2))(dx1,dx2)`
-
 ## Continuation of periodic orbits (Finite differences)
 
 Here, we perform continuation of periodic orbits branching from the Hopf bifurcation points.We need an educated guess for the periodic orbit which is given by `guessFromHopf`:

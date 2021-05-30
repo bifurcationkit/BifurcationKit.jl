@@ -95,7 +95,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 	# handling event detection
 	detectEvent::Int64 = 0				# event location
-	tolBisectionEvent::T = 1e-16 		# tolerance on event residual to detect
 	tolParamBisectionEvent::T = 1e-16	# tolerance on value of parameter
 
 	@assert iseven(nInversion) "The option `nInversion` number must be odd"

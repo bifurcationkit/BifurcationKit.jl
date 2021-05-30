@@ -175,7 +175,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
 	else
-		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically. Much faster than the previous case
+		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
 
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
 		x1, x2, _, it = pb.linsolver(J_at_xp, rhsu, dpF)
