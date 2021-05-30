@@ -46,17 +46,34 @@ struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <
 	issymmetric::Bool
 end
 
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
+
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
+
+
 @inline issymmetric(pb::FoldProblemMinimallyAugmented) = pb.issymmetric
 
 @inline hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, issymmetric)
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
-
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
+function applyJacobian(pb::FoldProblemMinimallyAugmented, x, par, dx, transposeJac = false)
+	if issymmetric(pb)
+		return apply(pb.J(x, par), dx)
+	else
+		if transposeJac == false
+			return apply(pb.J(x, par), dx)
+		else
+			if hasAdjoint(pb)
+				return apply(pb.Jᵗ(x, par), dx)
+			else
+				return apply(transpose(pb.J(x, par)), dx)
+			end
+		end
+	end
+end
 
 function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vectype, T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
@@ -151,25 +168,14 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	σp = -dot(w, dJvdp) / n
 
 	if hasHessian(pb) == false
-		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically. We thus rely on finite differences which can be slow for large dimensions
-		prod(size(x)) > 1e4 && @warn "You might want to pass the Hessian, you are using finite differences with $(prod(size(x))) unknowns to compute a gradient"
-		# we first need to compute the value of ∂_xσ written σx
-		σx = zero(x)
-		e  = zero(x)
-
-		# this is the part which does not work if x is not AbstractArray. We use CartesianIndices to support AbstractArray as a type for the solution we are looking for
-		for ii in CartesianIndices(x)
-			e[ii] = T(1)
-			# d2Fve := d2F(x,p)[v,e]
-			d2Fve = (apply(J(x + ϵ2 * e, par0), v) - apply(J(x - ϵ2 * e, par0), v)) / T(2ϵ2)
-			σx[ii] = -dot(w, d2Fve) / n
-			e[ii] = T(0)
-		end
+		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
+		u1 = applyJacobian(pb, x + ϵ2 * v, par0, w, true)
+		u2 = apply(JAd_at_xp, w)
+		σx = minus(u2, u1); rmul!(σx, 1 / ϵ2)
 
 		########## Resolution of the bordered linear system ########
 		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
-
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically. Much faster than the previous case
 
