@@ -215,7 +215,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-($SIGNATURES)
+$(SIGNATURES)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -247,9 +247,6 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
-
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function newtonFold(F, J,
 				foldpointguess, par,
@@ -257,7 +254,7 @@ function newtonFold(F, J,
 				eigenvec, eigenvec_ad,
 				options::NewtonPar;
 				normN = norm,
-				issymmetric = false,
+				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
@@ -284,7 +281,7 @@ end
 function newtonFold(F, J,
 				br::AbstractBranchResult, ind_fold::Int;
 				normN = norm,
-				issymmetric = false,
+				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				options = br.contparams.newtonOptions,
@@ -343,7 +340,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 # Simplified call
 The call is as follows
 
-	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; Jᵗ = nothing, d2F = nothing, nev = br.contparams.nev, startWithEigen = false, kwargs...)
+	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` you want to continue.
 
@@ -353,8 +350,8 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
+!!! tip "Detection of Bogdanov-Takens and Cusp bifurcations"
+    In order to trigger the detection, pass `detectEvent = 1,2` in `options_cont`.
 """
 function continuationFold(F, J,
 				foldpointguess::BorderedArray{vectype, T}, par,
@@ -363,7 +360,7 @@ function continuationFold(F, J,
 				options_cont::ContinuationPar ;
 				normC = norm,
 				updateMinAugEveryStep = 0,
-				issymmetric = false,
+				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
@@ -479,7 +476,7 @@ function continuationFold(F, J,
 				lens2::Lens,
 				options_cont::ContinuationPar = br.contparams ;
 				normC = norm,
-				issymmetric = false,
+				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				nev = br.contparams.nev,

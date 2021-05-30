@@ -94,6 +94,13 @@ end
 !!! tip "Tip"
     We could have used `DiffEqOperators.jl` like for the Swift-Hohenberg tutorial.
 
+Finally, it will prove useful to have access to the hessian and third derivative
+
+```julia
+# we group the differentials together
+jet  = BK.get3Jet(Fbru, Jbru_sp)
+```
+
 We shall now compute the equilibria and their stability.
 
 ```julia
@@ -135,17 +142,6 @@ We obtain the following bifurcation diagram with 3 Hopf bifurcation points
 We can compute the normal form of the Hopf points as follows
 
 ```julia
-using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-# we group the differentials together
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
-
 hopfpt = BK.computeNormalForm(jet..., br, 1)
 ```
 and you should get

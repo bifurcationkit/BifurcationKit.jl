@@ -56,7 +56,7 @@ In Julia, we have for now a [wrapper](https://github.com/JuliaDiffEq/PyDSTool.jl
 
 The examples which follow have not **all** been written with the goal of performance but rather simplicity (except maybe [Complex Ginzburg-Landau 2d](@ref)). One could surely turn them into more efficient codes. The intricacies of PDEs make the writing of efficient code highly problem dependent and one should take advantage of every particularity of the problem under study.
 
-For example, in the first tutorial on [Temperature model (simplest example for equilibria)](@ref), one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.
+For example, in the first tutorial on [Temperature model (Simplest example)](@ref), one could use `BandedMatrices.jl` for the jacobian and an inplace modification when the jacobian is called ; using a composite type would be favored. Porting them to GPU would be another option.
 
 ## Main features
 
@@ -71,6 +71,7 @@ For example, in the first tutorial on [Temperature model (simplest example for e
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic bifurcation diagram computation**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
+- detection of Bogdanov-Takens, Bautin and Cusp bifurcations
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
 - Computation and Continuation of Fold of periodic orbits

@@ -17,7 +17,7 @@ A composite type [`DeflationOperator`](@ref) implements this functional. Given a
 
 > the `dot` argument in `DeflationOperator` lets you specify a dot product from which the norm is derived in the expression of $M$.
 
-See examples [Snaking computed with deflation](@ref) and [Newton iterations and deflation](@ref).
+See example [Snaking computed with deflation](@ref).
 
 Note that you can add new solution `x0` to `M` by doing `push!(M, x0)`. Also `M[i]` returns `xi`.
 

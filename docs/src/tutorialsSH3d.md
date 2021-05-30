@@ -242,7 +242,7 @@ We get the following plot during computation:
 !!! warning "Computation time"
     The following computation takes ~1.5h 
 
-We can use [Branch switching](@ref) to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of `br`. Note that this bifurcation point is 3d.
+We can use [Branch switching](https://rveltz.github.io/BifurcationKit.jl/dev/branchswitching/) to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of `br`. Note that this bifurcation point is 3d.
 
 ```julia
 br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10, 

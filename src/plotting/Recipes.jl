@@ -47,7 +47,18 @@ function getAxisLabels(ind1, ind2, br)
 end
 
 # allow to plot a single branch
-RecipesBase.@recipe function Plots(contres::AbstractBranchResult; plotfold = false, putspecialptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, applytoY = identity)
+RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
+	plotfold = false,
+	putspecialptlegend = true,
+	filterspecialpoints = false,
+	vars = nothing,
+	plotstability = true,
+	plotspecialpoints = true,
+	branchlabel = "",
+	linewidthunstable = 1.0,
+	linewidthstable = 2linewidthunstable,
+	plotcirclesbif = false,
+	applytoY = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)

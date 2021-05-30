@@ -59,9 +59,9 @@ sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
 L1 = (I + Δ)^2
 par = (l = -0.1, ν = 1.3, L1 = L1)
 
-optnew = BK.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
-# optnew = BK.NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
-	sol_hexa, hist, flag = @time BK.newton(F_sh, dF_sh, vec(sol0), par, optnew)
+optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
+# optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
+	sol_hexa, hist, flag = newton(F_sh, dF_sh, vec(sol0), par, optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
@@ -87,7 +87,7 @@ heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
 
-	br, = @time BK.continuation(
+	br, = @time continuation(
 		F_sh, dF_sh,
 		deflationOp[1], par, (@lens _.l), optcont;
 		plot = true, verbosity = 3,
@@ -98,6 +98,18 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
+###################################################################################################
+# codim2 Fold continuation
+optfold = @set optcont.detectBifurcation = 0
+@set! optfold.newtonOptions.verbose = true
+optfold = setproperties(optfold; pMin = -2., pMax= 2., dsmax = 0.1)
+brfold = continuation(F_sh, dF_sh, br, 1, (@lens _.ν), optfold;
+	verbosity = 3, plot = true, issymmetric = true,
+	# bdlinsolver = MatrixBLS(),
+	updateMinAugEveryStep = 1,
+	)
+
+
 ###################################################################################################
 using IncompleteLU
 prec = ilu(L1 + I,τ = 0.15)

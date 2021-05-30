@@ -24,7 +24,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 """
-function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, issymmetric = false, kwargs...)
+function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, issymmetric::Bool = false, kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	if br.specialpoint[ind_bif].type == :hopf
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
@@ -42,17 +42,18 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
 - `br` results returned after a call to [`continuation`](@ref)
 - `ind_bif` bifurcation index in `br`
-- `lens1` parameter axis for parameter 1
-- `lens2` parameter axis for parameter 2
+- `lens2` parameters used for the vector field
 - `options_cont = br.contparams` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
 - `issymmetric` whether the Jacobian is Symmetric (for Fold)
 - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` associated jacobian transpose
-- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`. This helps solving the linear problem associated to the minimally augmented formulation.
+- `d3F = (x, p, v1, v2, v3) -> d3F(x, p, v1, v2, v3)` this is the third derivative of `F` computed at `(x, p)` and evaluated at `(v1, v2, v3)`. This is used to detect **Bautin** bifurcation.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
+- `detectCodim2Bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
@@ -62,26 +63,32 @@ where the parameters are as above except that you have to pass the branch `br` f
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
-
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function continuation(F, J,
 				br::AbstractBranchResult, ind_bif::Int64,
 				lens2::Lens, options_cont::ContinuationPar = br.contparams ;
 				startWithEigen = false,
-				issymmetric = false,
+				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
 				d3F = nothing,
+				detectCodim2Bifurcation::Int = 0,
 				kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
+	# options to detect codim2 bifurcations
+	if detectCodim2Bifurcation > 0
+		_options_cont = setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
+	else
+		_options_cont = options_cont
+	end
+
+
 	if br.specialpoint[ind_bif].type == :hopf
 		# redefine the multilinear form to accept complex arguments
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
 		d3Fc = isnothing(d3F) ? nothing : (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)
-		return continuationHopf(F, J, br, ind_bif, lens2, options_cont; Jᵗ = Jᵗ, d2F = d2Fc, d3F = d3Fc, startWithEigen = startWithEigen, kwargs...)
+		return continuationHopf(F, J, br, ind_bif, lens2, _options_cont; Jᵗ = Jᵗ, d2F = d2Fc, d3F = d3Fc, startWithEigen = startWithEigen, kwargs...)
 	else
-		return continuationFold(F, J, br, ind_bif, lens2, options_cont; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, kwargs...)
+		return continuationFold(F, J, br, ind_bif, lens2, _options_cont; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, kwargs...)
 	end
 end

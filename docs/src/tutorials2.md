@@ -232,7 +232,7 @@ Note that the plot provides the stability of solutions and bifurcation points. I
 
 ## Automatic branch switching
 
-Instead of relying on deflated newton, we can use [Branch switching](@ref) to compute the different branches emanating from the bifurcation point. For example, the following code will perform automatic branch switching from the second bifurcation point of `br`:
+Instead of relying on deflated newton, we can use [Branch switching](https://rveltz.github.io/BifurcationKit.jl/dev/branchswitching/) to compute the different branches emanating from the bifurcation point. For example, the following code will perform automatic branch switching from the second bifurcation point of `br`:
 
 ```julia
 # we compute the differentials

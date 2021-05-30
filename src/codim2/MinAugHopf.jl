@@ -214,7 +214,7 @@ end
 
 ################################################################################################### Newton / Continuation functions
 """
-($SIGNATURES)
+$(SIGNATURES)
 
 This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F   = (x, p) -> F(x, p)` where `p` is a set of parameters.
@@ -245,9 +245,6 @@ where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is 
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
-
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 """
 function newtonHopf(F, J,
 			hopfpointguess::BorderedArray,
@@ -332,7 +329,8 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 # Optional arguments:
 
 - `Jᵗ = (x, p) -> adjoint(d_xF(x, p))` associated jacobian adjoint
-- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`.
+- `d2F = (x, p, v1, v2) -> d2F(x, p, v1, v2)` this is the hessian of `F` computed at `(x, p)` and evaluated at `(v1, v2)`. This helps solving the linear problem associated to the Hopf minimally augmented formulation.
+- `d3F = (x, p, v1, v2, v3) -> d3F(x, p, v1, v2, v3)` this is the third derivative of `F` computed at `(x, p)` and evaluated at `(v1, v2, v3)`. This is used to detect **Bautin** bifurcation.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
@@ -340,18 +338,18 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 # Simplified call:
 The call is as follows
 
-	continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  Jᵗ = nothing, d2F = nothing, startWithEigen = false, kwargs...)
+	continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
-
-!!! warning "Hessian"
-    The hessian of `F`, when `d2F` is not passed, is computed with Finite differences.
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "Jacobian tranpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
+
+!!! tip "Detection of Bogdanov-Takens and Bautin bifurcations"
+    In order to trigger the detection, pass `detectEvent = 1,2` in `options_cont`. Note that you need to provide `d3F`.
 """
 function continuationHopf(F, J,
 				hopfpointguess::BorderedArray{vectype, Tb}, par,
@@ -366,6 +364,11 @@ function continuationHopf(F, J,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 diffferent parameters"
+
+	# we need d2F and d3F to detect Bautin bifurcation
+	if options_cont.detectEvent > 0
+		@assert ~isnothing(d2F) && ~isnothing(d3F) "Please provide d2F and d3F"
+	end
 
 	# options for the Newton Solver inheritated from the ones the user provided
 	options_newton = options_cont.newtonOptions

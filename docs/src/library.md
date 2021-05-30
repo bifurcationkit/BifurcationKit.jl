@@ -98,7 +98,7 @@ getBranchesFromBP
 ```
 
 ```@docs
-SpecialPoint
+BifurcationKit.SpecialPoint
 ```
 
 ## Utils for periodic orbits

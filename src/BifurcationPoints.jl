@@ -139,13 +139,13 @@ type(bp::Transcritical) = :Transcritical
 type(::Nothing) = nothing
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
-	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
 	println(io, "Normal form: ", bp.nf)
 end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensParam(bp.lens)," ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
 	println(io, "Normal form x⋅(b1⋅δp + b3⋅x²/6): \n", bp.nf)
 end
 
@@ -204,7 +204,7 @@ type(bp::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint)
-	println(io, "Non simple bifurcation point at ", getLensParam(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
+	println(io, "Non simple bifurcation point at ", getLensSymbol(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
 	println(io, "Normal form :")
 	println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
 end

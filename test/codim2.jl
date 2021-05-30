@@ -55,6 +55,7 @@ sn = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = M
 
 sn_br, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
 @test sn_br.specialpoint[1].type == :bt
+@test ~isnothing(sn_br.eig)
 
 # we test the jacobian and problem update
 par_sn = set(br.params, br.lens, sn_br.sol[end].x.p)
@@ -112,3 +113,4 @@ hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; max
 
 hp_br, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], d3F = jet[4], startWithEigen = true, updateMinAugEveryStep = 1, verbosity=0, plot=false)
 @test hp_br.specialpoint[1].type == :gh
+@test ~isnothing(hp_br.eig)

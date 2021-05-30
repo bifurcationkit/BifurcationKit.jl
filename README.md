@@ -74,6 +74,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic bifurcation diagram computation**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
+- detection of Bogdanov-Takens, Bautin and Cusp bifurcations
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
 - Computation and Continuation of Fold of periodic orbits

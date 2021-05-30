@@ -83,7 +83,7 @@ optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newton
 Next, we call the continuation routine as follows.
 
 ```julia
-br, = @time continuation(F_chan, out, par, (@lens _.α),
+br, = continuation(F_chan, out, par, (@lens _.α),
 		optcont; plot = true, verbosity = 0,
 		# function to plot the solution
 		plotSolution = (x, p; k...) -> plot!(x; ylabel="solution", label="", k...))
@@ -100,7 +100,7 @@ You should see
 The left figure is the norm of the solution as function of the parameter $p=\alpha$, the *y-axis* can be changed by passing a different `printSolution` to `continuation`. The top right figure is the value of $\alpha$ as function of the iteration number. The bottom right is the solution for the current value of the parameter. This last plot can be modified by changing the argument `plotSolution` to `continuation`.
 
 !!! note "Bif. point detection"
-    Two Fold points were detected. This can be seen by looking at `br.foldpoint` or by the black 	dots on the continuation plots when doing `plot(br, plotfold=true)`. Note that the bifurcation points are located in `br.specialpoint`.
+    Two Fold points were detected. This can be seen by looking at `br.specialpoint`, by the black	dots on the continuation plots when doing `plot(br, plotfold=true)` or by typing `br` in the REPL. Note that the bifurcation points are located in `br.specialpoint`.
 
 
 ## Continuation of Fold points
@@ -145,13 +145,12 @@ We can finally continue this fold point in the plane $(a,b)$ by performing a Fol
     We don't need to call `newton` first in order to use `continuation` for the codim 2 curve of bifurcation points.
 
 ```julia
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05,ds= 0.01, pMax = 4.1, pMin = 0.)
-	outfoldco, = @time continuation(
-		F_chan, Jac_mat,
-		br, indfold, 
-		# parameter axis to trace to codim 2 curve
-		(@lens _.β),
-		plot = true, verbosity = 2, optcontfold)
+outfoldco, = @time continuation(
+	F_chan, Jac_mat,
+	br, indfold, 
+	# parameter axis to trace to codim 2 curve
+	(@lens _.β),
+	plot = true, verbosity = 2)
 plot(outfoldco, plotfold=true)
 ```
 

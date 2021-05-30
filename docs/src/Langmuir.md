@@ -108,6 +108,13 @@ Flgvf(x, p, t = 0) = Flgvf!(similar(x), x, p, t)
 	return J
 end
 ```
+
+It will prove useful to have access to higher derivatives as well
+
+```julia
+# jet to compute the normal form
+jet  = BK.get3Jet(Flgvf, JanaSP)
+```
  
 
 ## Continuation of stationary states
@@ -152,20 +159,52 @@ opts_cont = ContinuationPar(
 
 ![](langmuir3.png)
 
+## Continuation of Hopf and Fold points
+
+Let us study the continuation of Hopf and Fold points and show that they merge at a **Bogdanov-Takens** bifurcation point:
+
+```julia
+# compute branch of Fold points from 7th bifurcation point on br
+sn_codim2, = continuation(jet[1:2]..., br, 7, (@lens _.Δx), 
+	ContinuationPar(opts_cont, pMin = -2, pMax = 0.12, ds = -0.01, dsmax = 0.01, precisionStability = 1e-8, maxSteps = 325, nev=23) ; 
+	plot = true, verbosity = 3,
+	# start the problem with information from eigen elements
+	startWithEigen = true,
+	# this improves tracking the Fold points
+	d2F = jet[3],
+	# detection of codim 2 bifurcations with bisection
+	detectCodim2Bifurcation = 2,
+	# we update the Fold problem at every continuation step
+	updateMinAugEveryStep = 1,
+	# compute both sides of the initial condition
+	bothside = true
+	)
+	
+# compute branch of Hopf points from 5th bifurcation point on br
+hp_codim2, = continuation(jet[1:2]..., br, 5, (@lens _.Δx), ContinuationPar(opts_cont, pMax = 0.1, ds = -0.01, dsmax = 0.01, maxSteps = 230, precisionStability = 1e-8) ; 
+	plot = true, verbosity = 3,
+	# start the problem with information from eigen elements
+	startWithEigen = true,
+	# we update the Hopf problem at every continuation step
+	updateMinAugEveryStep = 1,
+	# detection of codim 2 bifurcations with bisection
+	detectCodim2Bifurcation = 2,
+	# this is required to detect the bifurcations
+	d2F = jet[3], d3F = jet[4],
+	)
+
+# plot the branches
+plot(sn_codim2, branchlabel = "Fold")
+plot!(hp_codim2, branchlabel = "Hopf", plotcirclesbif=true)
+```
+
+![](langmuirCodim2.png)
+
 ## Continuation of periodic orbits (FD)
 
 We would like to compute the branches of periodic solutions from the Hopf points. We do this automatic branch switching as follows
 
 ```julia
-using ForwardDiff
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-d1F(x,p,dx1) = D((z, p0) -> Flgvf(z, p0), x, p, dx1)
-d2F(x,p,dx1,dx2) = D((z, p0) -> d1F(z, p0, dx1), x, p, dx2)
-d3F(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F(z, p0, dx1, dx2), x, p, dx3)
-
-# jet to compute the normal form
-jet  = (Flgvf, JanaSP, d2F, d3F)
-
 # parameters for newton
 opt_po = NewtonPar(tol =  1e-10, verbose = true, maxIter = 50)
 

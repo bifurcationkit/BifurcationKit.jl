@@ -64,7 +64,7 @@ This struct is used to provide the backslash operator. Can be used to solve `(aâ
 $(TYPEDFIELDS)
 """
 @with_kw struct DefaultLS <: AbstractLinearSolver
-	"Whether to catch a factorization for multiple solves. Some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides."
+	"Whether to catch a factorization for multiple solves. Some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides. Some matrices do not have `factorize` like `StaticArrays.MMatrix`."
 	useFactorization::Bool = true
 end
 

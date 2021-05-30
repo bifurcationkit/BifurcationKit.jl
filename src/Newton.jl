@@ -109,7 +109,6 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	# Displaying results
 	verbose && displayIteration(it, res)
 
-
 	# invoke callback before algo really starts
 	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 
