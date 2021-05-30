@@ -116,7 +116,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 
 	if detected
 		# record information about the bifurcation point
-		# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements corresponding to the current bifurcation point are saved in eig[step+1]
+		# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information)  corresponding to the current bifurcation point are saved in br.eig[step+1]
 		specialpoint = SpecialPoint(state, tp, status, printsolution, normC, interval;
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
 			idx = state.step + 1,

@@ -37,6 +37,8 @@ function testBranch(br)
 		@test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
 		# test that the bifurcation point belongs to the interval
 		@test bp.interval[1] <= bp.param <= bp.interval[2]
+		# test that bp.param = br[id].param
+		@test bp.param == br[id].param
 	end
 end
 

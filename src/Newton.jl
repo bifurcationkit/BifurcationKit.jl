@@ -56,7 +56,8 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - solution
 - history of residuals
 - flag of convergence
-- number of iterations
+- number of newton iterations
+- total number of linear iterations
 
 # Simplified calls
 When `J` is not passed, the jacobian **matrix** is then computed with finite differences (beware of large systems of equations!). The call is as follows:

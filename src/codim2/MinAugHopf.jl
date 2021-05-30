@@ -78,13 +78,18 @@ The function solve the linear problem associated with a linearization of the min
 """
 function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, par,
 	 						duu, dup, duω;
-							debug_ = false) where T
+							debugArray = nothing) where T
+	################################################################################################
+	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is used
+	################################################################################################
 	# N = length(du) - 2
 	# The jacobian should be passed as a tuple as Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# the jacobian expression of the hopf problem Jhopf is
-	#					[ J dpF   0
-	#					 σx  σp  σω]
+	#           ┌             ┐
+	#  Jhopf =  │  J  dpF   0 │
+	#           │ σx   σp  σω │
+	#           └             ┘
 	########## Resolution of the bordered linear system ########
 	# J * dX	  + dpF * dp		   = du => dX = x1 - dp * x2
 	# The second equation
@@ -162,26 +167,21 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 			  imag(σp + σxx2) imag(σω) ] \
 			  [dup - real(σxx1), duω + imag(σxx1)]
 
-	if debug_
-		return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw), (σx, σp, σω, dpF)
-	else
-		return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
+	if debugArray isa AbstractVector
+		debugArray .= [σp, σω] #[σx, σp, σω, dpF]
 	end
+	return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; debug_ = false)  where {vectype, T}
+function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; debugArray = nothing)  where {vectype, T}
 	out = hopfMALinearSolver((Jhopf.x).u,
 				(Jhopf.x).p[1],
 				(Jhopf.x).p[2],
 				Jhopf.hopfpb,
 				Jhopf.params,
 				du.u, du.p[1], du.p[2];
-				debug_ = debug_)
-	if debug_ == false
-		return BorderedArray(out[1], [out[2], out[3]]), out[4], out[5]
-	else
-		return BorderedArray(out[1], [out[2], out[3]]), out[4], out[5], out[6]
-	end
+				debugArray = debugArray)
+	BorderedArray{vectype, T}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 
 ################################################################################################### Newton / Continuation functions

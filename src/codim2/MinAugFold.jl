@@ -95,15 +95,21 @@ struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
 function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 							rhsu, rhsp;
-							debug_::Bool = false) where T
-	# The jacobian should be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
+							debugArray = nothing) where T
+	# recall that  the functional we want to solve is [F(x,p), σ(x,p)] where  σ(x,p) is computed in the previous function.
+	# The jacobian has to be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# We solve here Jfold⋅res = rhs := [rhsu, rhsp]
-	# The Jacobian expression of the Fold problem is Jfold = [J dpF ; σx σp] where σx := ∂_xσ
+	# The Jacobian expression of the Fold problem is
+	#           ┌         ┐
+	#  Jfold =  │  J  dpF │
+	#           │ σx   σp │
+	#           └         ┘
+	# where σx := ∂_xσ and σp := ∂_pσ
 	# We recall the expression of σx = -< w, d2F(x,p)[v, x2]> where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
-	############### Extraction of function names #################
-	# N = length(du) - 1
-
+	################################################################################################
+	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
+	########################## Extraction of function names ########################################
 	F = pb.F
 	J = pb.J
 
@@ -182,26 +188,21 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		dX = _copy(x1); axpy!(-dsig, x2, dX)
 	end
 
-	if debug_
-		return dX, dsig, true, sum(it)+sum(itv)+sum(itw), 0., [J(x, par0) dpF ; σx' σp]
-	else
-		return dX, dsig, true, sum(it)+sum(itv)+sum(itw), 0.
+	if debugArray isa AbstractArray
+		debugArray .= [J(x, par0) dpF ; σx' σp]
 	end
+
+	return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}, debug_::Bool = false) where {vectype, T}
+function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; debugArray = nothing) where {vectype, T}
 	out =  foldMALinearSolver((Jfold.x).u,
 				 (Jfold.x).p,
 				 Jfold.fldpb,
 				 Jfold.params,
 				 du.u, du.p;
-				 debug_ = debug_)
-
-	if debug_ == false
-		return BorderedArray(out[1], out[2]), out[3], out[4], out[5]
-	else
-		return BorderedArray(out[1], out[2]), out[3], out[4], out[5], out[6]
-	end
+				 debugArray = debugArray)
+	return BorderedArray{vectype, T}(out[1], out[2]), out[3], out[4]
 end
 
 ################################################################################################### Newton / Continuation functions

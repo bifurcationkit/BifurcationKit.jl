@@ -116,7 +116,7 @@ foldpb(foldpt, (a, 0.01)) |> norm
 outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(verbose=false))
 	println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
 
-# example with KrylovKit
+# example with (preconditioned) KrylovKit
 P = Jac_mat(sol.*0,(0,0))
 optils = NewtonPar(verbose=false, linsolver = GMRESKrylovKit(atol=1e-9, Pl=lu(P)), tol=1e-7)
 outfold, = newtonFold(F_chan, Jac_mat, foldpt, (a, 0.01), (@lens _[1]), br.specialpoint[indfold].x,br.specialpoint[indfold].x, optils )
@@ -144,23 +144,23 @@ res_fd =  J_fold_fd \ rhs
 
 Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
-res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, (a, 0.01), foldpb), Vec2Bd(rhs), true)
+debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ
+res_explicit = @time jacFoldSolver(Jac_fold_MA(foldpt, (a, 0.01), foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
 
 Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
 # test whether the Jacobian Matrix for the Fold problem is correct
 println("--> FD σp = ", J_fold_fd[end,end])
-println("--> MA σp = ", res_explicit[end][end,end])
+println("--> MA σp = ", debugTmpForσ[end,end])
 
 @test J_fold_fd[end,:] -  J_fold_fd[end,:] |> x->norm(x,Inf64) <1e-7
 @test J_fold_fd[:,end] -  J_fold_fd[:,end] |> x->norm(x,Inf64) <1e-7
 # this part is where we compare the FD Jacobian with Jac_chan, not really good
-@test (res_explicit[end] - J_fold_fd)[1:end-1,1:end-1] |> x->norm(x,Inf64) < 1e-1
-
+@test (debugTmpForσ - J_fold_fd)[1:end-1,1:end-1] |> x->norm(x,Inf64) < 1e-3
 
 # check our solution of the bordered problem
-res_exp = res_explicit[end] \ rhs
-@test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-8
+res_exp = debugTmpForσ \ rhs
+@test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
 ####################################################################################################
 # Use of different eigensolvers
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())

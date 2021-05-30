@@ -72,11 +72,6 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 opt_newton = NewtonPar(tol = 1e-11, verbose = false)
 	out, hist, flag = newton(Fbru, Jbru_sp, sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
-opt_newton = NewtonPar(tol = 1e-11)
-	out, = @time newton(Fbru, Jbru_sp,
-		sol0 .* (1 .+ 0.01rand(2n)), par_bru,
-		opt_newton)
-
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, detectBifurcation = 3, nev = 16, nInversion = 4)
 	br, = continuation(Fbru, Jbru_sp,out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
 ###################################################################################################
@@ -92,7 +87,7 @@ ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
-					Fbru, Jbru_sp, (x, p) -> transpose(Jbru_sp(x, p)), nothing,
+					Fbru, Jbru_sp, nothing, nothing,
 					(@lens _.l),
 					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
 					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
@@ -169,13 +164,14 @@ jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
 sol_fd = jac_hopf_fd \ rhs
 # create a linear solver
 hopfls = BK.HopfLinearSolverMinAug()
-sol_ma, _, _, sigomMA  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debug_ = true)
+tmpVecforσ = zeros(ComplexF64, 2)
+sol_ma,  = @time hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debugArray = tmpVecforσ)
 
 # TODO TODO fix these two lines
 # test jacobian expression for Hopf Minimally Augmented
 @test Bd2Vec(sol_ma) - sol_fd |> x-> norm(x, Inf64) < 1e3
 
-@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-1
+@test (Bd2Vec(sol_ma) - sol_fd)[1:end-2] |> x->norm(x, Inf64) < 1e-4
 
 # dF = jac_hopf_fd[:,end-1]
 # sig_vec_re = jac_hopf_fd[end-1,1:end-2]
