@@ -3,7 +3,7 @@ function AbstractPlotting.convert_arguments(::AbstractPlotting.PointBased, contr
 	return ([AbstractPlotting.Point2f0(i, j) for (i, j) in zip(getproperty(contres.branch, ind1), getproperty(contres.branch, ind2))],)
 end
 
-function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction; plotfold = false, plotbifpoints = true, filterbifpoints = false, plotcirclesbif = true)
+function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true)
 	if length(contres) ==0; return ;end
 
 	ind1, ind2 = getPlotVars(contres, nothing)
@@ -31,9 +31,9 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
-	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
-		if filterbifpoints == true
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
+		if filterspecialpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
 		AbstractPlotting.scatter!(ax1, map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt), marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), markersize = 7, color = map(x -> colorbif[x.type], bifpt))
@@ -43,7 +43,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	fig
 end
 
-function plotBranch(contres::AbstractBranchResult; plotfold = false, plotbifpoints = true, filterbifpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	if length(contres) == 0; return ;end
 
 	ind1, ind2 = getPlotVars(contres, nothing)
@@ -65,9 +65,9 @@ function plotBranch(contres::AbstractBranchResult; plotfold = false, plotbifpoin
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
-	if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
-		if filterbifpoints == true
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
+		if filterspecialpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
 		AbstractPlotting.scatter!(ax1, map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt), marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), markersize = 7, color = map(x -> colorbif[x.type], bifpt))
@@ -77,7 +77,7 @@ function plotBranch(contres::AbstractBranchResult; plotfold = false, plotbifpoin
 	fig
 end
 
-function plotBranch(contresV::AbstractBranchResult...; plotfold = false, plotbifpoints = true, filterbifpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+function plotBranch(contresV::AbstractBranchResult...; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	if length(contresV) == 0; return ;end
 	fig = AbstractPlotting.Figure(resolution = (1200, 700))
 	ax1 = fig[1, 1] = AbstractPlotting.Axis(fig)
@@ -94,9 +94,9 @@ function plotBranch(contresV::AbstractBranchResult...; plotfold = false, plotbif
 		ax1.xlabel = xlab; ax1.ylabel = ylab
 
 		# display bifurcation points
-		bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.bifpoint)
-		if length(bifpt) >= 1 && plotbifpoints #&& (ind1 == :param)
-			if filterbifpoints == true
+		bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+		if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
+			if filterspecialpoints == true
 				bifpt = filterBifurcations(bifpt)
 			end
 			AbstractPlotting.scatter!(ax1, map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt), marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), markersize = 7, color = map(x -> colorbif[x.type], bifpt))

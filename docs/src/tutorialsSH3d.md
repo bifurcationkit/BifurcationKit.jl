@@ -92,7 +92,7 @@ sol0 = [(cos(x) .* cos(y )) for x in X, y in Y, z in Z]
 	sol0 .*= 1.7
 
 # parameters for PDE
-Δ, D2x = @time Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann)
+Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann)
 L1 = (I + Δ)^2
 par = (l = 0.1, ν = 1.2, L1 = L1)
 ```
@@ -190,7 +190,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 	pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), 
 	maxSteps = 146, detectBifurcation = 3, nev = 15, nInversion = 4, plotEveryStep = 1)
 
-br, _ = continuation(
+br, = continuation(
 	F_sh, (x, p) -> (dx -> dF_sh(x, p, dx)),
 	zeros(N), par, (@lens _.l), optcont;
 	plot = true, verbosity = 3,
@@ -199,7 +199,7 @@ br, _ = continuation(
 	normC = x -> norm(x, Inf))
 ```
 
-The following result shows the detected bifurcation points
+The following result shows the detected bifurcation points (its takes ~300s)
 
 ```julia
 julia> br
@@ -221,6 +221,9 @@ We get the following plot during computation:
     We don't need to call `newton` first in order to use `continuation`.
     
 ## Automatic branch switching
+
+!!! warning "Computation time"
+    The following computation takes ~1.5h 
 
 We can use [Branch switching](@ref) to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of `br`. Note that this bifurcation point is 3d.
 

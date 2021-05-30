@@ -50,6 +50,23 @@ newton
 continuation
 ```
 
+## Events
+
+```@docs
+BifurcationKit.DiscreteEvent
+```
+
+```@docs
+BifurcationKit.ContinuousEvent
+```
+
+```@docs
+BifurcationKit.SetOfEvents
+```
+
+```@docs
+BifurcationKit.PairOfEvents
+```
 
 ## Branch switching (branch point)
 

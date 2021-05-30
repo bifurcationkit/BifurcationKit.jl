@@ -62,7 +62,7 @@ function (fp::FoldProblemMinimallyAugmented)(x::vectype, p::T, _par) where {vect
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
-	# - p guess for the parameter at which the jacobian is singular
+	# - p guess for the parameter value `<: Real` at which the jacobian is singular
 	# The jacobian of the MA problem is solved with a bordering method
 	a = fp.a
 	b = fp.b
