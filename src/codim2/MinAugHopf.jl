@@ -363,7 +363,7 @@ function continuationHopf(F, J,
 				d3F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
 				kwargs...) where {Tb, vectype}
-	@assert lens1 != lens2 "Please choose 2 diffferent parameters"
+	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 
 	# we need d2F and d3F to detect Bautin bifurcation
 	if options_cont.detectEvent > 0

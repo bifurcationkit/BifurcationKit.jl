@@ -34,6 +34,8 @@ function COm(u, p)
 	out[3] = q4 * z - k * q4 * s
 	out
 end
+
+# jacobian
 dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
 
 # we group the differentials together

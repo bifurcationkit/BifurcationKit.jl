@@ -1,9 +1,5 @@
 # Event Handling
 
-
-!!! danger "Warning"
-    This is work in progress, this may not work until this warning has been removed
-
 `BifurcationKit.jl` allows for detecting events along the branch of solutions. Its main use consists in detecting bifurcation points but they can be used and combined together by the user too.
 
 The events are detected during a call to `br, = continuation(F, J, u0, p0, lens, contParams::ContinuationPar;kwargs...)` by turning on the following flags:

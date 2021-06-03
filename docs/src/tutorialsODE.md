@@ -44,6 +44,7 @@ end
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
 
 # we group the differentials together
+dTMvf = (z,p) -> ForwardDiff.jacobian(x-> TMvf(x,p), z)
 jet  = BK.get3Jet(TMvf, dTMvf)
 
 # parameter values
@@ -57,7 +58,7 @@ We first compute the branch of equilibria
 
 ```julia
 # continuation options
-opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.125,
+opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.05,
 	nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
 
 # continuation of equilibria
