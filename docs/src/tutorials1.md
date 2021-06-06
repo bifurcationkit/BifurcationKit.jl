@@ -9,17 +9,18 @@ Depth = 3
 
 This is a simple example in which we aim at solving $\Delta T+\alpha N(T,\beta)=0$ with boundary conditions $T(0) = T(1)=\beta$. This example is coded in `examples/chan.jl`. We start with some imports:
 
-```julia
+```@example TUT1
 using BifurcationKit, LinearAlgebra, Plots, Parameters, Setfield
 # Setfield.jl is used to provide the parameter axis @lens
 const BK = BifurcationKit
 
 N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
+nothing #hide
 ```
 
 We then write our functional:
 
-```julia
+```@example TUT1
 function F_chan(x, p)
 	@unpack α, β = p
 	f = similar(x)
@@ -31,43 +32,32 @@ function F_chan(x, p)
 	end
 	return f
 end	
+nothing #hide
 ```
 We want to call a Newton solver. We first need an initial guess:
 
-```julia
+```@example TUT1
 n = 101
 sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
 # set of parameters
 par = (α = 3.3, β = 0.01)
+nothing #hide
 ```
 
 Finally, we need to provide some parameters for the Newton iterations. This is done by calling
 
-```julia
+```@example TUT1
 optnewton = NewtonPar(tol = 1e-11, verbose = true)
+nothing #hide
 ```
 
 We call the Newton solver:
 
-```julia
+```@example TUT1
+out, = newton( F_chan, sol, par, @set optnewton.verbose=false) # hide
 out, = @time newton( F_chan, sol, par, optnewton)
-```
-
-and you should see
-
-```
-┌────────────────────-────────────────────────────────┐ 
-│ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤ 
-│       0     │       2.3440e+01     │        0       │
-│       1     │       1.3774e+00     │        1       │
-│       2     │       1.6265e-02     │        1       │
-│       3     │       2.4488e-06     │        1       │
-│       4     │       3.2499e-11     │        1       │
-│       5     │       6.4963e-12     │        1       │
-└─────────────┴──────-───────────────┴────────────────┘
-  0.002715 seconds (2.20 k allocations: 2.542 MiB)
+nothing # hide
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -76,17 +66,19 @@ Note that, in this case, we did not give the Jacobian. It was computed internall
 
 We can perform numerical continuation w.r.t. the parameter $\alpha$. This time, we need to provide additional parameters, but now for the continuation method:
 
-```julia
-optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9))
+```@example TUT1
+optcont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMin = 0., pMax = 4.1, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9))
+nothing #hide
 ```
 
 Next, we call the continuation routine as follows.
 
-```julia
+```@example TUT1
 br, = continuation(F_chan, out, par, (@lens _.α),
 		optcont; plot = true, verbosity = 0,
 		# function to plot the solution
 		plotSolution = (x, p; k...) -> plot!(x; ylabel="solution", label="", k...))
+nothing #hide		
 ```
 
 The parameter axis `lens = @lens _.α` is used to extract the component of `par` corresponding to `α`. Internally, it is used as `get(par, lens)` which returns `3.3`.
@@ -118,7 +110,7 @@ Fold points:
 
 We can take the first Fold point, which has been guessed during the previous continuation run and locate it precisely. However, this only works well when the jacobian is computed analytically. We use automatic differentiation for that
 
-```julia
+```@example TUT1
 using ForwardDiff
 
 # Jacobian of F_chan
@@ -133,36 +125,26 @@ outfold, _, flag = newton(F_chan, Jac_mat,
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 ```
 
-which gives
-
-```julia
---> We found a Fold Point at α = 3.1556507316107947, β = 0.01, from 3.155651011218501
-```
-
 We can finally continue this fold point in the plane $(a,b)$ by performing a Fold Point continuation. In the present case, we find a Cusp point.
 
 !!! tip "Tip"
     We don't need to call `newton` first in order to use `continuation` for the codim 2 curve of bifurcation points.
 
-```julia
-outfoldco, = @time continuation(
+```@example TUT1
+outfoldco, = continuation(
 	F_chan, Jac_mat,
 	br, indfold, 
 	# parameter axis to trace to codim 2 curve
 	(@lens _.β),
 	plot = true, verbosity = 2)
-plot(outfoldco, plotfold=true)
+plot(outfoldco, plotfold=true, legend = :bottomright)
 ```
-
-This produces:
-
-![](chan-cusp.png)
 
 ## Using GMRES or another linear solver
 
 We continue the previous example but now using Matrix Free methods. The user can pass its own solver by implementing a version of `LinearSolver`. Some linear solvers have been implemented from `KrylovKit.jl` and `IterativeSolvers.jl` (see [Linear solvers (LS)](@ref) for more information), we can use them here. Note that we can also use preconditioners as shown below. The same functionality is present for the eigensolver.
 
-```julia
+```@example TUT1
 # derivative of N
 dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 
@@ -195,26 +177,12 @@ out_mf, = @time newton(
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	sol, par,
 	optnewton_mf)
-```
-
-which gives:
-
-```julia
-┌────────────────────-────────────────────────────────┐
-│ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
-│       0     │       2.3440e+01     │        0       │
-│       1     │       1.3774e+00     │       68       │
-│       2     │       1.6267e-02     │       98       │
-│       3     │       2.4336e-06     │       74       │
-│       4     │       5.6275e-12     │       63       │
-└─────────────┴──────-───────────────┴────────────────┘
-  0.333980 seconds (1.24 M allocations: 68.021 MiB, 9.13% gc time, 98.58% compilation time)
+nothing # hide
 ```
 
 We can improve this computation, *i.e.* reduce the number of `Linear-Iterations`, by using a preconditioner
 
-```julia
+```@example TUT1
 using SparseArrays
 
 # define preconditioner which is basically Δ
@@ -227,20 +195,5 @@ ls = GMRESIterativeSolvers(reltol = 1e-4, N = length(sol), restart = 10, maxiter
 	out_mf, = @time newton(F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	sol, par, optnewton_mf)
+nothing # hide
 ```
-
-which gives
-
-```julia
-┌────────────────────-────────────────────────────────┐
-│ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
-│       0     │       2.3440e+01     │        0       │
-│       1     │       1.3777e+00     │        3       │
-│       2     │       1.6266e-02     │        3       │
-│       3     │       2.3699e-05     │        2       │
-│       4     │       4.8929e-09     │        3       │
-│       5     │       5.6333e-12     │        4       │
-└─────────────┴──────-───────────────┴────────────────┘
-```
-

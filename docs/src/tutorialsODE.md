@@ -20,7 +20,7 @@ The model is interesting because the branch of periodic solutions converges to a
 
 It is easy to encode the ODE as follows
 
-```julia
+```@example TUTODE
 using Revise, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
@@ -52,11 +52,12 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 
 # initial condition
 z0 = [0.238616, 0.982747, 0.367876 ]
+nothing # hide
 ```
 
 We first compute the branch of equilibria
 
-```julia
+```@example TUTODE
 # continuation options
 opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.05,
 	nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
@@ -70,24 +71,18 @@ br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
 plot(br, plotfold=false, markersize=3, legend=:topleft)
 ```
 
-and you should see
-
-![](ex1ODE1.png)
-
 ```julia
 julia> br
-Branch number of points: 34
+Branch number of points: 72
 Branch of Equilibrium
-Parameters from -2.0 to -0.9
-Bifurcation points:
+Type of vectors: Vector{Float64}
+Parameters E0 from -2.0 to -0.9
+Special points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,    bp at p ≈ -1.46302733 ∈ (-1.46302733, -1.46302733), |δp|=9e-12, [converged], δ = ( 1,  0), step =   7, eigenelements in eig[  8], ind_ev =   1
-- #  2,  hopf at p ≈ -1.85060119 ∈ (-1.86397115, -1.85060119), |δp|=1e-02, [converged], δ = ( 2,  2), step =  16, eigenelements in eig[ 17], ind_ev =   3
-- #  3,    nd at p ≈ -1.86522391 ∈ (-1.86522391, -1.86522391), |δp|=6e-12, [converged], δ = (-1, -2), step =  18, eigenelements in eig[ 19], ind_ev =   3
-- #  4,  hopf at p ≈ -1.15105927 ∈ (-1.15105947, -1.15105927), |δp|=2e-07, [converged], δ = (-2, -2), step =  30, eigenelements in eig[ 31], ind_ev =   2
-Fold points:
-- #  1, fold at p ≈ -1.46302733, [    guess], step =   8, eigenelements in eig[  8], ind_ev =   0
-- #  2, fold at p ≈ -1.86522391, [    guess], step =  19, eigenelements in eig[ 19], ind_ev =   0
+- #  1,    bp at E0 ≈ -1.46302733 ∈ (-1.46302733, -1.46302733), |δp|=4e-14, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
+- #  2,  hopf at E0 ≈ -1.85012460 ∈ (-1.85012460, -1.85012447), |δp|=1e-07, [converged], δ = ( 2,  2), step =  32, eigenelements in eig[ 33], ind_ev =   3
+- #  3,    bp at E0 ≈ -1.86522391 ∈ (-1.86522391, -1.86522391), |δp|=2e-15, [converged], δ = (-1,  0), step =  36, eigenelements in eig[ 37], ind_ev =   3
+- #  4,  hopf at E0 ≈ -1.15105934 ∈ (-1.15105942, -1.15105934), |δp|=8e-08, [converged], δ = (-2, -2), step =  65, eigenelements in eig[ 66], ind_ev =   2
 ```
 
 ## Branch of periodic orbits with finite differences
@@ -96,7 +91,7 @@ We then compute the branch of periodic orbits from the last Hopf bifurcation poi
 
 ```julia
 # newton parameters
-optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10)
+optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10) 
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5.,
@@ -133,8 +128,6 @@ plot(br, br_potrap, markersize = 3)
 ![](ex1ODE1a.png)
 
 We plot the maximum (resp. minimum) of the limit cycle. We can see that the min converges to the smallest equilibrium indicating a homoclinic orbit.
-
-![](ex1ODE2.png)
 
 ## Periodic orbits with Parallel Standard Shooting
 

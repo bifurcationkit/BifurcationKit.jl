@@ -9,20 +9,21 @@ Where $z=1-x-y-s$.
 
 We start with some imports that are useful in the following.
 
-```julia
+```@example TUTCO
 using Revise, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
 
 # define the sup norm
 norminf = x -> norm(x, Inf)
+nothing # hide
 ```
 
 ## Problem setting
 
 We can now encode the vector field (E) in a function and use automatic differentiation to compute its various derivatives.
 
-```julia
+```@example TUTCO
 # vector field of the problem
 function COm(u, p)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
@@ -46,13 +47,14 @@ par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4
 
 # initial condition
 z0 = [0.07,0.2,05]
+nothing # hide
 ```
 
 ## Continuation and codim 1 bifurcations
 
 Once the problem is set up, we can continue the state w.r.t. $q_2$ to and detect codim 1 bifurcations. This is achieved as follows:
 
-```julia
+```@example TUTCO
 # continuation parameters
 opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01,
 	# options to detect codim 1 bifurcations using bisection 
@@ -69,15 +71,11 @@ br, = continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 plot(br, xlims=(0.8,1.8))
 ```
 
-And you should get:
-
-![](com-fig1.png)
-
 ## Continuation of Fold points
 
 We follow the Fold points in the parameter plane $(q_2, k)$. We tell the solver to consider `br.specialpoint[2]` and continue it. 
 
-```julia
+```@example TUTCO
 sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., 
 		ds = -0.001, dsmax = 0.05);
@@ -97,13 +95,11 @@ plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(br, xlims=(0.8,1.8))
 ```
 
-![](com-fig2.png)
-
 ## Continuation of Hopf points
 
 We tell the solver to consider `br.bifpint[1]` and continue it. 
 
-```julia
+```@example TUTCO
 hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), 
 	ContinuationPar(opts_br, pMin = 0., pMax = 2.8, 
 		ds = -0.001, dsmax = 0.05) ;
@@ -129,8 +125,6 @@ plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 plot!(br, xlims=(0.6,1.5))
 ```	
-
-![](com-fig3.png)
 
 ## References
 
