@@ -146,6 +146,7 @@ br_hopf, u1_hopf = @time continuation(
 	updateMinAugEveryStep = 1,
 	d2F = jet[3], d3F = jet[4],
 	startWithEigen = true, bothside = true,
+	detectCodim2Bifurcation = 1,
 	verbosity = 3, normC = norminf)
 
 plot(br_hopf, title = "Hopf continuation")

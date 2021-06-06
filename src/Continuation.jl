@@ -31,6 +31,9 @@ abstract type AbstractContinuationState end
 	filename::Tfilename
 end
 
+# default finalizer
+finaliseDefault(z, tau, step, contResult; k...) = true
+
 # constructor
 function ContIterable(Fhandle, Jhandle,
 					x0, par, lens::Lens,
@@ -167,6 +170,7 @@ function Base.copyto!(dest::ContState, src::ContState)
 	return dest
 end
 
+# getters
 solution(state::AbstractContinuationState) = state.z_old
 getx(state::AbstractContinuationState) = state.z_old.u
 @inline getp(state::AbstractContinuationState) = state.z_old.p
@@ -174,9 +178,6 @@ getx(state::AbstractContinuationState) = state.z_old.u
 @inline isStable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 ####################################################################################################
-# getters
-finaliseDefault(z, tau, step, contResult; k...) = true
-
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
@@ -212,7 +213,7 @@ end
 
 function plotBranchCont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
 	if iter.plot && mod(state.step, getParams(iter).plotEveryStep) == 0
-		return plotBranchCont(contres, state.z_old, getParams(iter), iter.plotSolution)
+		return plotBranchCont(contres, solution(state), getParams(iter), iter.plotSolution)
 	end
 end
 
@@ -291,7 +292,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 		eigvals, eigvecs = nothing, nothing
 	end
 
-	# return the state
+	# compute event value and store into state
 	cbval = isEventActive(it) ? initialize(it.event, T) : nothing # event result
 	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, theta = it.contParams.theta, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
 
@@ -301,7 +302,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 		updateStability!(state, n_unstable, n_imag)
 	end
 
-	# we update the test function result
+	# we update the event function result
 	updateEvent!(it, state)
 	return state, state
 end
@@ -309,7 +310,7 @@ end
 function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
 	if !done(it, state) return nothing end
 	# next line is to overwrite verbosity behaviour, like when locating bifurcations
-	verbosity = min(it.verbosity, _verbosity) > 0
+	verbosity = min(it.verbosity, _verbosity)
 	verbose = verbosity > 0
 
 	@unpack step, ds, theta = state

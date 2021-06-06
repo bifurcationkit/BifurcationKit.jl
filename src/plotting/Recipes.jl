@@ -112,7 +112,18 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 end
 
 # allow to plot branches specified by splatting
-RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = false, putspecialptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = fill("",length(brs)), linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, applytoY = identity)
+RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
+		plotfold = false,
+		putspecialptlegend = true,
+		filterspecialpoints = false,
+		vars = nothing,
+		plotstability = true,
+		plotspecialpoints = true,
+		branchlabel = fill("",length(brs)),
+		linewidthunstable = 1.0,
+		linewidthstable = 2linewidthunstable,
+		applytoY = identity,
+		applytoX = identity)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if pt.type != :none])
@@ -139,6 +150,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 			branchlabel --> branchlabel[id]
 			linewidthunstable --> linewidthunstable
 			linewidthstable --> linewidthstable
+			applytoX --> applytoX
 			applytoY --> applytoY
 			vars --> vars
 			if ind1 == 1 || ind1 == :param

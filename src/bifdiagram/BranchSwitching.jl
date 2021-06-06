@@ -47,7 +47,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `Jᵗ` associated jacobian transpose, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `δ` used internally to compute derivatives w.r.t the parameter `p`.
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
-- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
@@ -56,7 +56,17 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = 1, nev = optionsCont.nev, issymmetric = false, usedeflation = false, Teigvec = getvectortype(br), scaleζ = norm, verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), perturb = identity, kwargs...)
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ;
+		Jᵗ = nothing,
+		δ::Real = 1e-8, δp = nothing, ampfactor::Real = 1,
+		nev = optionsCont.nev, issymmetric = false,
+		usedeflation::Bool = false,
+		Teigvec = getvectortype(br),
+		scaleζ = norm,
+		verbosedeflation::Bool = false,
+		maxIterDeflation::Int = min(50, 15optionsCont.newtonOptions.maxIter),
+		perturb = identity,
+		kwargs...)
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -129,7 +139,18 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = nothing, ampfactor = getvectoreltype(br)(1), nev = optionsCont.nev, issymmetric = false, Teigvec = getvectortype(br), ζs = nothing, verbosedeflation = false, scaleζ = norm, kwargs...)
+function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ;
+		Jᵗ = nothing,
+		δ::Real = 1e-8,
+		δp = nothing,
+		ampfactor::Real = getvectoreltype(br)(1),
+		nev::Int = optionsCont.nev,
+		issymmetric::Bool = false,
+		Teigvec = getvectortype(br),
+		ζs = nothing,
+		verbosedeflation::Bool = false,
+		scaleζ = norm,
+		kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
