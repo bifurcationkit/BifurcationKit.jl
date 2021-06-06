@@ -89,7 +89,7 @@ Special points:
 
 We then compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite differences to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
 
-```julia
+```@example TUTODE
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10) 
 
