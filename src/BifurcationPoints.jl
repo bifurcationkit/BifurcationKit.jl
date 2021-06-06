@@ -54,6 +54,12 @@ end
 
 getVectorType(::Type{SpecialPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
 type(bp::SpecialPoint) = bp.type
+
+"""
+$(SIGNATURES)
+
+Return the dimension of the kernel of the special point.
+"""
 @inline kernelDim(bp::SpecialPoint) = abs(bp.δ[1])
 
 # constructors
@@ -91,6 +97,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 	@eval begin
 		"""
 		$(TYPEDEF)
+
 		$(TYPEDFIELDS)
 
 		## Associated methods
@@ -156,6 +163,7 @@ end
 This is a type which holds information for the bifurcation points of equilibria with dim(Ker)>1.
 
 $(TYPEDEF)
+
 $(TYPEDFIELDS)
 
 ## Associated methods
@@ -213,6 +221,7 @@ end
 
 """
 $(TYPEDEF)
+
 $(TYPEDFIELDS)
 
 # Associated methods

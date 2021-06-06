@@ -96,10 +96,12 @@ $(SIGNATURES)
 Return the eigenvalues of the ind-th continuation step. `verbose` is used to tell the number of unstable eigen elements.
 """
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
+	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
 	if verbose
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
 	end
-	br.eig[ind].eigenvals
+	println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
+	br.eig[ind+1].eigenvals
 end
 
 """
@@ -114,7 +116,7 @@ $(SIGNATURES)
 
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
-eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind].eigenvec, indev)
+eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
 @inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
 
 function Base.show(io::IO, br::ContResult, comment = "")
@@ -200,12 +202,12 @@ function _reverse(br0::ContResult)
 	br = deepcopy(br0)
 	nb = length(br.branch)
 	if ~isnothing(br.branch)
-		br = @set br.branch =
+		@set! br.branch =
 			StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
 	end
 
 	if ~isnothing(br.specialpoint)
-		br = @set br.specialpoint =
+		@set! br.specialpoint =
 			[setproperties(pt;
 				step = nb - pt.step - 1,
 				idx = nb - pt.idx + 1,
@@ -213,12 +215,12 @@ function _reverse(br0::ContResult)
 	end
 
 	if ~isnothing(br.eig)
-		br = @set br.eig =
+		@set! br.eig =
 			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
 	end
 
 	if ~isnothing(br.sol)
-		br = @set br.sol =
+		@set! br.sol =
 			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
 	end
 	return br
@@ -226,6 +228,7 @@ end
 
 _append!(x,y) = append!(x,y)
 _append!(x,::Nothing) = nothing
+
 """
 $(SIGNATURES)
 
@@ -291,12 +294,12 @@ function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
 	end
 
 	if minimum(br1.branch.param) < minimum(br2.branch.param)
-		@info "b1-b2"
+		@debug "b1-b2"
 		# br1 is the first branch and then br2
 		# we need to look at the indexing
 		return _cat!(_reverse(br1), br2)
 	else
-		@info "b2-b1"
+		@debug "b2-b1"
 		return _cat!(_reverse(br1), br2)
 	end
 end

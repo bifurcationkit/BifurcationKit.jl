@@ -324,7 +324,8 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
 - `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as returned by the function `FoldPoint`
 - `par` set of parameters
-- `lens` parameter axis for parameter 2
+- `lens1` parameter axis for parameter 1
+- `lens2` parameter axis for parameter 2
 - `eigenvec` guess for the 0 eigenvector at p1_0
 - `eigenvec_ad` guess for the 0 adjoint eigenvector
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)

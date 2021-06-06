@@ -425,7 +425,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			contParams.saveToFile && saveToFile(it, getx(state), getp(state), state.step, contRes)
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
-			state.stopcontinuation = ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes; state = state)
+			# we put a OR to stop continuation if the stop was required before
+			state.stopcontinuation |= ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes; state = state, iter = it)
 
 			# Save current state in the branch
 			save!(contRes, it, state)
