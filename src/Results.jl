@@ -89,6 +89,7 @@ function Base.getproperty(br::ContResult, s::Symbol)
 	end
 end
 Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
+@inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
 
 """
 $(SIGNATURES)
@@ -99,8 +100,8 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
 	if verbose
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-	end
 	println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
+	end
 	br.eig[ind+1].eigenvals
 end
 
@@ -116,8 +117,10 @@ $(SIGNATURES)
 
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
-eigenvec(br::AbstractBranchResult, ind::Int, indev::Int) = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
-@inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
+function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
+	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
+	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
+end
 
 function Base.show(io::IO, br::ContResult, comment = "")
 	println(io, "Branch number of points: ", length(br.branch))
