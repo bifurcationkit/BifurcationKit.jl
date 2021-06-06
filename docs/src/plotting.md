@@ -26,6 +26,7 @@ The available arguments specific to our plotting methods are
 - `linewidthunstable`: set the linewidth for the unstable part of the branch
 - `linewidthstable`: set the linewidth for the stable part of the branch
 - `plotcirclesbif = false` use circles to plot bifurcation points
+- `applytoX = identity` apply transformation `applytoX` to x-axis
 - `applytoY = identity` apply transformation `applytoY` to y-axis
 
 If you have severals branches `br1, br2`, you can plot them in the same figure by doing

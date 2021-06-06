@@ -63,7 +63,6 @@ BK.getvectoreltype(br1)
 br1.param
 br1.params
 
-
 br2, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
 
 # test for different norms

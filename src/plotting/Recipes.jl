@@ -58,7 +58,8 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 	linewidthunstable = 1.0,
 	linewidthstable = 2linewidthunstable,
 	plotcirclesbif = false,
-	applytoY = identity)
+	applytoY = identity,
+	applytoX = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -69,7 +70,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 		xguide --> xlab
 		yguide --> ylab
 		label --> branchlabel
-		getproperty(contres.branch, ind1), map(applytoY, getproperty(contres.branch, ind2))
+		map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2))
 	end
 
 	# display bifurcation points
@@ -88,7 +89,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 			label --> ""
 			xguide --> xlab
 			yguide --> ylab
-			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
+			[applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
 		end
 		# add legend for bifurcation points
 		if putspecialptlegend && length(bifpt) >= 1
@@ -103,7 +104,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 					markerstrokewidth --> 0
 					xguide --> xlab
 					yguide --> ylab
-					[getproperty(contres[pt.idx], ind1)], [applytoY(getproperty(contres[pt.idx], ind2))]
+					[applytoX(getproperty(contres[pt.idx], ind1))], [applytoY(getproperty(contres[pt.idx], ind2))]
 				end
 			end
 		end
@@ -124,7 +125,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...; plotfold = fals
 				label --> "$(pt.type)"
 				markersize --> 3
 				markerstrokewidth --> 0
-				[pt.param], [applytoY(pt.printsol)]
+				[applytoX(pt.param)], [applytoY(pt.printsol)]
 			end
 		end
 	end
@@ -258,7 +259,20 @@ end
 ####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
-RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}; plotfold = false, putspecialptlegend = true, filterspecialpoints = false, vars = nothing, plotstability = true, plotspecialpoints = true, branchlabel = "", linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, plotcirclesbif = false, _basicplot = true, applytoY = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
+RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl};
+	plotfold = false,
+	putspecialptlegend = true,
+	filterspecialpoints = false,
+	vars = nothing,
+	plotstability = true,
+	plotspecialpoints = true,
+	branchlabel = "",
+	linewidthunstable = 1.0,
+	linewidthstable = 2linewidthunstable,
+	plotcirclesbif = false,
+	_basicplot = true,
+	applytoY = identity,
+	applytoX = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -269,7 +283,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 		xguide --> xlab
 		yguide --> ylab
 		label --> branchlabel
-		getproperty(contres.branch, ind1), map(applytoY, getproperty(contres.branch, ind2))
+		map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2))
 	end
 
 	# display bifurcation points
@@ -288,7 +302,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 			label --> ""
 			xguide --> xlab
 			yguide --> ylab
-			[getproperty(contres[pt.idx], ind1) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
+			[applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]
 		end
 		# add legend for bifurcation points
 		if putspecialptlegend && length(bifpt) >= 1
@@ -303,7 +317,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 					markerstrokewidth --> 0
 					xguide --> xlab
 					yguide --> ylab
-					[getproperty(contres[pt.idx], ind1)], [applytoY(getproperty(contres[pt.idx], ind2))]
+					[applytoX(getproperty(contres[pt.idx], ind1))], [applytoY(getproperty(contres[pt.idx], ind2))]
 				end
 			end
 		end
