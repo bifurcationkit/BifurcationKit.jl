@@ -391,7 +391,7 @@ function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1
 	# jacobian at bifurcation point
 	L = dF(x0, parbif)
 
-	# we only invert L repeatdly, so we try to factorize it
+	# we invert L repeatdly, so we try to factorize it
 	Linv = L isa AbstractMatrix ? factorize(L) : L
 
 	# linear solver

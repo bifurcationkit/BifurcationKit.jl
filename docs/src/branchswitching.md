@@ -24,6 +24,8 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 	Jᵗ = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
 ```
 
+An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+
 > See [Branch switching (branch point)](@ref) for precise method definition
 
 ## Branch switching from Hopf point to periodic orbits
