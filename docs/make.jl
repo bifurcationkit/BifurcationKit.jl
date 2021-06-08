@@ -1,5 +1,6 @@
 using Documenter, BifurcationKit, Setfield
 # using DocThemeIndigo
+ENV["GKSwstype"] = "100"
 
 makedocs(doctest = false,
 	sitename = "Bifurcation Analysis in Julia",
