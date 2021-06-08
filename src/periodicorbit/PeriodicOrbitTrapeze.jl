@@ -22,7 +22,7 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
 """
 	pb = PeriodicOrbitTrapProblem(F, J, ϕ, xπ, M::Int)
-This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitFD/). The arguments are as follows
+This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitTrapeze/). The arguments are as follows
 - `F(x,p)` vector field
 - `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
     1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.

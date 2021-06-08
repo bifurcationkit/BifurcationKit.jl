@@ -1,4 +1,4 @@
-# Branch switching
+# [Branch switching](@id Branch-switching-page)
 
 The precise definition of the methods are given [Branch switching (branch point)](@ref) and [Branch switching (Hopf point)](@ref).
 

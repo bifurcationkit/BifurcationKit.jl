@@ -6,7 +6,7 @@ $(SIGNATURES)
 This function turns an initial guess for a Fold/Hopf point into a solution to the Fold/Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `F  = (x, p) -> F(x, p)` where `p` is a set of parameters.
 - `J  = (x, p) -> d_xF(x, p)` associated jacobian
-- `br` results returned after a call to [`continuation`](@ref)
+- `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
 - `lens` parameter axis used to locate the Fold/Hopf point.
 - `options::NewtonPar`
@@ -40,10 +40,10 @@ $(SIGNATURES)
 codim 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold/Hopf point into a curve of Fold/Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `F = (x, p) ->	F(x, p)` where `p` is a set of parameters
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
-- `br` results returned after a call to [`continuation`](@ref)
+- `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
 - `lens2` parameters used for the vector field
-- `options_cont = br.contparams` arguments to be passed to the regular [`continuation`](@ref)
+- `options_cont = br.contparams` arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 # Optional arguments:
 - `issymmetric` whether the Jacobian is Symmetric (for Fold)
@@ -54,11 +54,11 @@ codim 2 continuation of Fold / Hopf points. This function turns an initial guess
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
 - `detectCodim2Bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.
-- `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
+- `kwargs` keywords arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
-!!! tip "Jacobian tranpose"
+!!! tip "Jacobian transpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! tip "ODE problems"

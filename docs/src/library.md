@@ -44,7 +44,7 @@ PoincareShootingProblem
 newton
 ```
 
-## Continuation
+## [Continuation](@id Library-Continuation)
 
 ```@docs
 continuation
