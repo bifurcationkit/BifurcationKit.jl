@@ -16,7 +16,7 @@ const BK = BifurcationKit
 
 # define the sup norm
 norminf = x -> norm(x, Inf)
-nothing # hide
+nothing #hide
 ```
 
 ## Problem setting
@@ -47,7 +47,7 @@ par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4
 
 # initial condition
 z0 = [0.07,0.2,05]
-nothing # hide
+nothing #hide
 ```
 
 ## Continuation and codim 1 bifurcations
@@ -68,7 +68,7 @@ br, = continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	plot = true, verbosity = 3, normC = norminf)
 	
 # plot the branch
-plot(br, xlims=(0.8,1.8))
+scene = plot(br, xlims=(0.8,1.8))
 ```
 
 ## Continuation of Fold points
@@ -91,8 +91,8 @@ sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	# use this linear bordered solver, better for ODEs
 	bdlinsolver = MatrixBLS())
 	
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
-plot!(br, xlims=(0.8,1.8))
+scene = plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
+plot!(scene, br, xlims=(0.8,1.8))
 ```
 
 ## Continuation of Hopf points
@@ -121,9 +121,9 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	)
 	
 # plotting
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
-plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
-plot!(br, xlims=(0.6,1.5))
+scene = plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
+plot!(scene, hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
+plot!(scene, br, xlims=(0.6,1.5))
 ```	
 
 ## References

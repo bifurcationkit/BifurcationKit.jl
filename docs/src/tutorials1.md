@@ -57,7 +57,7 @@ We call the Newton solver:
 ```@example TUT1
 out, = newton( F_chan, sol, par, @set optnewton.verbose=false) # hide
 out, = @time newton( F_chan, sol, par, optnewton)
-nothing # hide
+nothing #hide
 ```
 
 Note that, in this case, we did not give the Jacobian. It was computed internally using Finite Differences. 
@@ -137,7 +137,7 @@ outfoldco, = continuation(
 	# parameter axis to trace to codim 2 curve
 	(@lens _.β),
 	plot = true, verbosity = 2)
-plot(outfoldco, plotfold=true, legend = :bottomright)
+scene = plot(outfoldco, plotfold=true, legend = :bottomright)
 ```
 
 ## Using GMRES or another linear solver
@@ -177,7 +177,7 @@ out_mf, = @time newton(
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	sol, par,
 	optnewton_mf)
-nothing # hide
+nothing #hide
 ```
 
 We can improve this computation, *i.e.* reduce the number of `Linear-Iterations`, by using a preconditioner
@@ -195,5 +195,5 @@ ls = GMRESIterativeSolvers(reltol = 1e-4, N = length(sol), restart = 10, maxiter
 	out_mf, = @time newton(F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	sol, par, optnewton_mf)
-nothing # hide
+nothing #hide
 ```

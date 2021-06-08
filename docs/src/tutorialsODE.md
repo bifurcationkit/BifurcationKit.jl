@@ -52,7 +52,7 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 
 # initial condition
 z0 = [0.238616, 0.982747, 0.367876 ]
-nothing # hide
+nothing #hide
 ```
 
 We first compute the branch of equilibria
@@ -68,7 +68,7 @@ br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
 	tangentAlgo = BorderedPred(),
 	plot = true, verbosity = 0, normC = norminf)
 
-plot(br, plotfold=false, markersize=3, legend=:topleft)
+scene = plot(br, plotfold=false, markersize=3, legend=:topleft)
 ```
 
 ```julia
@@ -89,7 +89,7 @@ Special points:
 
 We then compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite differences to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
 
-```@example TUTODE
+```julia
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10) 
 
@@ -121,8 +121,8 @@ Mt = 200 # number of time sections
 		end,
 	normC = norminf)
 
-plot(br, br_potrap, markersize = 3)
-	plot!(br_potrap.param, br_potrap.min, label = "")
+scene = plot(br, br_potrap, markersize = 3)
+plot!(scene, br_potrap.param, br_potrap.min, label = "")
 ```
 
 ![](ex1ODE1a.png)
