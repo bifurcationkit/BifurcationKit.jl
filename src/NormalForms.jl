@@ -136,6 +136,19 @@ end
 
 computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = computeNormalForm1d(F, dF, d2F, d3F, getContResult(br), ind_bif; kwargs...)
 
+"""
+$(SIGNATURES)
+
+This function provides prediction for what the zeros of the Transcritical bifurcation point.
+
+# Arguments
+- `bp::Transcritical` the bifurcation point
+- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
+
+# Optional arguments
+- `verbose`	display information
+- `ampfactor = 1` factor multiplying prediction
+"""
 function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
 	nf = bp.nf
 	a, b1, b2, b3 = nf
@@ -148,6 +161,19 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
 end
 
+"""
+$(SIGNATURES)
+
+This function provides prediction for what the zeros of the Pitchfork bifurcation point.
+
+# Arguments
+- `bp::Pitchfork` the bifurcation point
+- `ds` at with distance relative to the bifurcation point do you want the prediction. Based on the criticality of the Picthfork, its sign is enforced no matter what you pass. Basically the parameter is `bp.p + abs(ds) * dsfactor` where `dsfactor = ±1` depending on the criticality.
+
+# Optional arguments
+- `verbose`	display information
+- `ampfactor = 1` factor multiplying prediction
+"""
 function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) where T
 	nf = bp.nf
 	a, b1, b2, b3 = nf
@@ -189,7 +215,7 @@ function factor3d(i,j,k)
 	end
 end
 
-function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
+function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
 	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
 	# dimension of the kernel
 	N = length(bp.ζ)
@@ -200,10 +226,10 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p)
 	# coefficient p
 	out .= p .* nf.a
 	# factor to account for factorials
-	factor = 1.0
+	factor = T(1)
 
 	@inbounds for ii in 1:N
-		factor = 1.
+		factor = T(1)
 		out[ii] = 0
 		# coefficient x*p
 		for jj in 1:N
@@ -235,7 +261,7 @@ function (bp::NdBranchPoint)(x, δp::Real)
 end
 
 """
-	 nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
+$(SIGNATURES)
 
 Print the normal form `bp` with a nice string.
 """
@@ -523,7 +549,22 @@ end
 
 computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
 
-function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1), nbfailures = 30, maxiter = 100, perturb = identity, jac = nothing, normN = x -> norm(x, Inf), optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
+"""
+$(SIGNATURES)
+
+This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm to find these zeros is based on deflated newton.
+"""
+function predictor(bp::NdBranchPoint, δp::T;
+		verbose::Bool = false,
+		ampfactor = T(1),
+		nbfailures = 30,
+		maxiter = 100,
+		perturb = identity,
+		J = nothing,
+		normN = x -> norm(x, Inf),
+		optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
+
+	@warn "C'EST  QUOI CE jac? ARGUMENT SIMILAR POUR TOUS"
 	# dimension of the kernel
 	n = length(bp.ζ)
 
@@ -534,10 +575,11 @@ function predictor(bp::NdBranchPoint, δp::T; verbose = false, ampfactor = T(1),
 		# we allow for 10 failures of nonlinear deflation
 		outdef1 = rand(n)
 		while failures < nbfailures
-			if isnothing(jac)
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
-			else
+			if isnothing(J)
+				jac = (x,p) -> ForwardDiff.jacobian( z->perturb(bp(Val(:reducedForm), z, p)), x)
 				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
+			else
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
 			end
 			flag && push!(deflationOp, ampfactor .* outdef1)
 			~flag && (failures += 1)
@@ -565,7 +607,7 @@ Compute the Hopf normal form.
 - `δ = 1e-8` used for finite differences
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose = false)
+function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose::Bool = false)
 	x0 = pt.x0
 	p = pt.p
 	lens = pt.lens
@@ -635,7 +677,7 @@ Compute the Hopf normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose = false, lens = br.lens, Teigvec = getvectortype(br), scaleζ = norm)
+function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose::Bool = false, lens = br.lens, Teigvec = getvectortype(br), scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	verbose && println("#"^53*"\n--> Hopf Normal form computation")
 

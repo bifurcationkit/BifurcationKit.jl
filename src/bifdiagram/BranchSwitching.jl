@@ -3,14 +3,19 @@ $(SIGNATURES)
 
 This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
-function continuation(Fhandle, Jhandle, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv
+function continuation(F, J, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv
 	# Create a bordered linear solver using the newton linear solver provided by the user
+	# dont modify it if the user passed its own version
+	if isnothing(linearAlgo.solver)
 	_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+	else
+		_linearAlgo = linearAlgo
+	end
 	# check the sign of ds
 	dsfactor = sign(p1 - get(par0, lens))
 	# create an iterable
 	_contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
-	it = ContIterable(Fhandle, Jhandle, x0, par0, lens, _contParams, _linearAlgo; kwargs...)
+	it = ContIterable(F, J, x0, par0, lens, _contParams, _linearAlgo; kwargs...)
 	return continuation(it, x0, get(par0, lens), x1, p1)
 end
 
@@ -50,7 +55,8 @@ Automatic branch switching at branch points based on a computation of the normal
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
-- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
+- `usedeflation = true` whether to use nonlinear deflation (see ) to help finding the guess on the bifurcated branch
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
@@ -130,8 +136,8 @@ Automatic branch switching at branch points based on a computation of the normal
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
-- `verbosedeflation = true` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `scaleζ` norm used to normalise eigenbasis when computing the reduced equation
+- `verbosedeflation = true` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
+- `scaleζ` norm used to normalize eigenbasis when computing the reduced equation
 - `Teigvec` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `ζs` basis of the kernel
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.

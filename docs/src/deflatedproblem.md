@@ -1,4 +1,4 @@
-# Deflated problems
+# [Deflated problems](@id Deflated-problems)
 
 !!! unknown "References"
     P. E. Farrell, A. Birkisson, and S. W. Funke. **Deflation techniques for finding distinct solutions of nonlinear partial differential equations**. SIAM J. Sci. Comput., 2015.,

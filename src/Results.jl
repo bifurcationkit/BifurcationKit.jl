@@ -183,13 +183,22 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractBranchResult
+	"Set of branches branching  off the bifurcation point `bp`"
 	γ::T
+	"Bifurcation point. It is thought as the root of the branches in γ"
 	bp::Tbp
 end
 
 Base.length(br::Branch) = length(br.γ)
+
+"""
+$(SIGNATURES)
+
+Return the bifurcation point of a `::Branch`.
+"""
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
+from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
 

@@ -19,14 +19,14 @@ _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.
 """
 $(SIGNATURES)
 
-Return the size of the bifurcation diagram. The arguement `code` is the same as in `getBranch`.
+Return the size of the bifurcation diagram. The argument `code` is the same as in `getBranch`.
 """
 Base.size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
 
 """
 $(SIGNATURES)
 
-Return the part of the tree (bifurcation diagram) by recursively descending the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
+Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
 """
 function getBranch(tree::BifDiagNode, code)
 	isempty(code) && return tree
@@ -89,7 +89,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 	function letsbranch(_id, _pt, _level, _dsfactor = 1)
 		plotfunc = get(kwargs, :plotSolution, (x, p; kws...) -> plot!(x; kws...))
 		optscont = options(_pt.x, _pt.param, _level.current + 1)
-		optscont = @set optscont.ds *= _dsfactor
+		@set! optscont.ds *= _dsfactor
 
 		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
