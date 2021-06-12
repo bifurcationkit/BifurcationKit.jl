@@ -32,7 +32,7 @@ The user must specify the number of eigenvalues to be computed (like `nev = 10`)
 |---|---|
 | Fold | fold |
 | Hopf | hopf |
-| Branch point (single eigenvalue stability change) | bp |
+| Bifurcation point (single eigenvalue stability change, Fold or branch point) | bp |
 | Neimark-Sacker | ns |
 | Period doubling | pd |
 | Not documented | nd |

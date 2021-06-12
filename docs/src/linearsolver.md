@@ -27,7 +27,10 @@ ls(rand(2,2), rand(2))
 - Default `\` solver based on `LU` or `Cholesky` depending on the type of the Jacobian. This works for sparse matrices as well. You can create one via `linsolver = DefaultLS()`.
 - GMRES from `IterativeSolvers.jl`. You can create one via `linsolver = GMRESIterativeSolvers()` and pass appropriate options.
 - GMRES from `KrylovKit.jl`. You can create one via `linsolver = GMRESKrylovKit()` and pass appropriate options.
-
+    
+!!! tip "Different linear solvers"
+    By tuning the options of `GMRESKrylovKit`, you can select CG, GMRES... see [KrylovKit.jl](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve).
+    
 !!! note "Other solvers"
     It is very straightforward to implement the Conjugate Gradients from [IterativeSolvers.jl](https://juliamath.github.io/IterativeSolvers.jl/dev/linear_systems/cg/) by copying the interface done for `gmres`. Same goes for `minres`,... Not needing them, I did not implement this.
 

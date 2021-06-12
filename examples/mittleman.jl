@@ -28,7 +28,6 @@ function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
 	return A, D2x
 end
 
-
 ϕ(u, λ)  = -10(u-λ*exp(u))
 dϕ(u, λ) = -10(1-λ*exp(u))
 
@@ -63,8 +62,6 @@ end
 
 # computation of the derivatives
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
-d1Fmit(x, p, dx) = ForwardDiff.derivative(t -> Fmit(x .+ t .* dx, p), 0.)
-d2Fmit(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fmit(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 
 # compute 3-Jet
 jet  = BK.get3Jet(Fmit, JFmit)
@@ -84,7 +81,7 @@ eigls = EigArpack(20.5, :LM)
 eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
 	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
+	out, hist, flag = newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(out)
 ####################################################################################################
@@ -119,26 +116,23 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	true
 end
 
-BK.computeNormalForm(jet..., br, 3; verbose = false, nev = 50)
+BK.computeNormalForm(jet..., br, 3)
 
-br1, = continuation(jet...,
-		br, 3,
-		setproperties(opts_br;ds = 0.001, maxSteps = 140, detectBifurcation = 3);
+br1, = continuation(jet..., br, 3;
 		verbosity = 0, plot = true,
 		printSolution = (x, p) -> normbratu(x),
 		finaliseSolution = finSol,
-		tangentAlgo = BorderedPred(),
 		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		normC = norminf)
 
 plot(br,br1,plotfold=false)
 
-br2, = continuation(jet...,
-		br1, 1, setproperties(opts_br;ds = 0.0025, maxSteps = 140, detectBifurcation = 0);
+br2, = continuation(jet..., br1, 1;
 		verbosity = 0, plot = true,
 		tangentAlgo = BorderedPred(),
 		printSolution = (x, p) -> normbratu(x),
+		tangentAlgo = BorderedPred(),
 		finaliseSolution = finSol,
 		callbackN = cb,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)

@@ -44,8 +44,8 @@ end
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
 
 # we group the differentials together
-dTMvf = (z,p) -> ForwardDiff.jacobian(x-> TMvf(x,p), z)
-jet  = BK.get3Jet(TMvf, dTMvf)
+dTMvf = (z,p) -> ForwardDiff.jacobian(x -> TMvf(x,p), z)
+jet = BK.get3Jet(TMvf, dTMvf)
 
 # parameter values
 par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF = 1.5, τS = 0.007)
@@ -59,8 +59,13 @@ We first compute the branch of equilibria
 
 ```@example TUTODE
 # continuation options
-opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.05,
-	nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
+opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, 
+	# parameters to have a smooth result
+	ds = 0.04, dsmax = 0.05,
+		# this is to detect bifurcation points precisely
+		detectBifurcation = 3,
+	# Optional: bisection options for locating bifurcations
+	nInversion = 8, maxBisectionSteps = 25, nev = 3)
 
 # continuation of equilibria
 br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;

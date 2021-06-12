@@ -26,9 +26,9 @@ const BK = BifurcationKit
 
 # define the sup norm and a L2 norm
 norminf = x -> norm(x, Inf)
-normbratu = x-> norm(x) / sqrt(length(x))
+normbratu = x -> norm(x) / sqrt(length(x))
 
-# some plotting function to simplify our life
+# some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 ```
@@ -80,13 +80,11 @@ function JFmit(x,p)
 end
 ```
 
-We need to pass the parameters associated to this problem:
+We need to define the parameters associated to this problem:
 
 ```julia
-Nx = 30
-Ny = 30
-lx = 0.5
-ly = 0.5
+Nx = 30; Ny = 30
+lx = 0.5; ly = 0.5
 
 Δ = Laplacian2D(Nx, Ny, lx, ly)
 par_mit = (λ = .05, Δ = Δ)
@@ -101,20 +99,28 @@ To compute the eigenvalues, we opt for the shift-invert strategy with shift `=0.
 # eigensolver
 eigls = EigKrylovKit(dim = 70)
 
-# options for Newton solver
+# options for Newton solver, we pass the eigensolverr
 opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
 # options for continuation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 3, nev = 30, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
-	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
+opts_br = ContinuationPar(pMax = 3.5, pMin = 0.025,
+	# for a good looking curve
+	dsmin = 0.001, dsmax = 0.05, ds = 0.01, 
+	# number of eigenvalues to compute
+	nev = 30, 
+	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	maxSteps = 100, precisionStability = 1e-6, 
+	# detect codim 1 bifurcations
+	detectBifurcation = 3,
+	# Optional: bisection options for locating bifurcations
+	nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)
 ```	 
 Note that we put the option `detectBifurcation = 3` to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.
 
 ## Branch of homogenous solutions
 At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$. We shall compute this branch now.
 
-We can now call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
+We call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
 
 ```julia
 br, = BK.continuation(
@@ -196,7 +202,7 @@ br2, = continuation(jet..., br1, 1,
 
 ## Analysis at the 2d-branch points (manual)
 
-The second bifurcation point on the branch `br` of homogenous solutions has a 2d kernel. We don't provide automatic branch switching but we provide two methods to deal with such case
+The second bifurcation point on the branch `br` of homogenous solutions has a 2d kernel. we provide two methods to deal with such case
 - automatic local bifurcation diagram (see below)
 - branch switching with deflation (see next section)
 

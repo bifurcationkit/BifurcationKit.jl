@@ -58,7 +58,9 @@ Once the problem is set up, we can continue the state w.r.t. $q_2$ to and detect
 # continuation parameters
 opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01,
 	# options to detect codim 1 bifurcations using bisection 
-	nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, 
+	detectBifurcation = 3,
+	# Optional: bisection options for locating bifurcations
+	nInversion = 6, maxBisectionSteps = 25, 
 	# number of eigenvalues
 	nev = 3)
 	
@@ -77,8 +79,7 @@ We follow the Fold points in the parameter plane $(q_2, k)$. We tell the solver 
 
 ```@example TUTCO
 sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
-	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., 
-		ds = -0.001, dsmax = 0.05);
+	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., ds = -0.001, dsmax = 0.05);
 	normC = norminf,
 	# detection of codim 2 bifurcations with bisection
 	detectCodim2Bifurcation = 2,

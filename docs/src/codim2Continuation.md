@@ -2,7 +2,14 @@
 
 For this to work best, it is necessary to have an analytical expression for the jacobian. See the tutorial [Temperature model (Simplest example)](@ref) for more details.
 
-In this page, we explain how to perform continuation of Fold / Hopf points and detect the associated bifurcations: **Bogdanov-Takens**, **Bautin** and **Cusp**.
+In this page, we explain how to perform continuation of Fold / Hopf points and detect the associated bifurcations.
+
+### List of detected bifurcation points
+|Bifurcation|index used|
+|---|---|
+| Bogdanov-Takens | bt |
+| Bautin | gh |
+| Cusp | cusp |
 
 In a nutshell, all you have to do (see below) is to call `continuation(F, J, br, ind_bif)` to continue the bifurcation point stored in `br.specialpoint[ind_bif]` and set proper options. 
 

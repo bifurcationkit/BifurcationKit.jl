@@ -194,7 +194,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
-	@error "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
+	@info "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
 	return nothing
 end
 ####################################################################################################
@@ -390,7 +390,17 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm(F, dF, d2F, d3F, br::ContResult, id_bif::Int ; δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), Jᵗ = nothing, verbose = false, ζs = nothing, lens = br.lens, issymmetric = false, Teigvec = getvectortype(br), scaleζ = norm)
+function computeNormalForm(F, dF, d2F, d3F,
+			br::ContResult, id_bif::Int ;
+			δ = 1e-8,
+			nev = length(eigenvalsfrombif(br, id_bif)),
+			Jᵗ = nothing,
+			verbose = false,
+			ζs = nothing,
+			lens = br.lens,
+			issymmetric = false,
+			Teigvec = getvectortype(br),
+			scaleζ = norm)
 	bifpt = br.specialpoint[id_bif]
 	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)

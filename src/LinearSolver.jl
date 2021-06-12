@@ -150,8 +150,11 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
+
 Create a linear solver based on GMRES from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 $(TYPEDFIELDS)
+!!! tip "Different linear solvers"
+    By tuning the options, you can select CG, GMRES... see [here](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve)
 """
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
 	"Krylov Dimension"

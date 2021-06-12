@@ -62,7 +62,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar ;
+function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams ;
 		Jᵗ = nothing,
 		δ::Real = 1e-8, δp = nothing, ampfactor::Real = 1,
 		nev = optionsCont.nev, issymmetric = false,
@@ -116,7 +116,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 end
 
 # same but for a Branch
-continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
+continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams ; kwargs...) = continuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
 
 """
 $(SIGNATURES)
@@ -145,7 +145,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar ;
+function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams;
 		Jᵗ = nothing,
 		δ::Real = 1e-8,
 		δp = nothing,
@@ -169,7 +169,7 @@ end
 multicontinuation(F, dF, br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...) = nothing
 
 # general function for branching from Nd bifurcation points
-function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...)
+function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar = br.contparams; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
 
@@ -182,7 +182,7 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 	return multicontinuation(F, dF, br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, kwargs...)
 end
 
-function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -212,7 +212,7 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchP
 end
 
 # In this function, I keep usedeflation although it is not used to simplify the calls
-function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
 
 	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
 
@@ -247,4 +247,4 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 end
 
 # same but for a Branch
-multicontinuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar ; kwargs...) = multicontinuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
+multicontinuation(F, dF, d2F, d3F, br::Branch, ind_bif::Int, optionsCont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(F, dF, d2F, d3F, getContResult(br), ind_bif, optionsCont ; kwargs...)
