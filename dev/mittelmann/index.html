@@ -6,9 +6,9 @@ const BK = BifurcationKit
 
 # define the sup norm and a L2 norm
 norminf = x -&gt; norm(x, Inf)
-normbratu = x-&gt; norm(x) / sqrt(length(x))
+normbratu = x -&gt; norm(x) / sqrt(length(x))
 
-# some plotting function to simplify our life
+# some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))</code></pre><p>and with the discretization of the problem</p><pre><code class="language-julia">function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
 	hx = 2lx/Nx
@@ -46,10 +46,8 @@ Fmit(u, p) = Fmit!(similar(u), u, p)</code></pre><p>It will also prove useful to
 	J = p.Δ
 	dg = dϕ.(x, p.λ)
 	return J + spdiagm(0 =&gt; dg)
-end</code></pre><p>We need to pass the parameters associated to this problem:</p><pre><code class="language-julia">Nx = 30
-Ny = 30
-lx = 0.5
-ly = 0.5
+end</code></pre><p>We need to define the parameters associated to this problem:</p><pre><code class="language-julia">Nx = 30; Ny = 30
+lx = 0.5; ly = 0.5
 
 Δ = Laplacian2D(Nx, Ny, lx, ly)
 par_mit = (λ = .05, Δ = Δ)
@@ -58,13 +56,21 @@ par_mit = (λ = .05, Δ = Δ)
 sol0 = zeros(Nx, Ny) |&gt; vec</code></pre><p>To compute the eigenvalues, we opt for the shift-invert strategy with shift <code>=0.5</code></p><pre><code class="language-julia"># eigensolver
 eigls = EigKrylovKit(dim = 70)
 
-# options for Newton solver
+# options for Newton solver, we pass the eigensolverr
 opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
 # options for continuation
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 3.5, pMin = 0.025,
-	detectBifurcation = 3, nev = 30, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
-	maxSteps = 100, precisionStability = 1e-6, nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)</code></pre><p>Note that we put the option <code>detectBifurcation = 3</code> to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.</p><h2 id="Branch-of-homogenous-solutions-1"><a class="docs-heading-anchor" href="#Branch-of-homogenous-solutions-1">Branch of homogenous solutions</a><a class="docs-heading-anchor-permalink" href="#Branch-of-homogenous-solutions-1" title="Permalink"></a></h2><p>At this stage, we note that the problem has a curve of homogenous (constant in space) solutions <span>$u_h$</span> solving <span>$N(\lambda, u_h)=0$</span>. We shall compute this branch now.</p><p>We can now call <code>continuation</code> with the initial guess <code>sol0</code> which is homogenous, thereby generating homogenous solutions:</p><pre><code class="language-julia">br, = BK.continuation(
+opts_br = ContinuationPar(pMax = 3.5, pMin = 0.025,
+	# for a good looking curve
+	dsmin = 0.001, dsmax = 0.05, ds = 0.01, 
+	# number of eigenvalues to compute
+	nev = 30, 
+	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
+	maxSteps = 100, precisionStability = 1e-6, 
+	# detect codim 1 bifurcations
+	detectBifurcation = 3,
+	# Optional: bisection options for locating bifurcations
+	nInversion = 4, dsminBisection = 1e-7, maxBisectionSteps = 25)</code></pre><p>Note that we put the option <code>detectBifurcation = 3</code> to detect bifurcations precisely with a bisection method. Indeed, we need to locate these branch points precisely to be able to call automatic branch switching.</p><h2 id="Branch-of-homogenous-solutions-1"><a class="docs-heading-anchor" href="#Branch-of-homogenous-solutions-1">Branch of homogenous solutions</a><a class="docs-heading-anchor-permalink" href="#Branch-of-homogenous-solutions-1" title="Permalink"></a></h2><p>At this stage, we note that the problem has a curve of homogenous (constant in space) solutions <span>$u_h$</span> solving <span>$N(\lambda, u_h)=0$</span>. We shall compute this branch now.</p><p>We call <code>continuation</code> with the initial guess <code>sol0</code> which is homogenous, thereby generating homogenous solutions:</p><pre><code class="language-julia">br, = BK.continuation(
 	Fmit, JFmit,
 	sol0, par_mit, (@lens _.λ), opts_br;
 	printSolution = (x, p) -&gt; normbratu(x),
@@ -90,7 +96,7 @@ d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2Fmit(z, p0, dx1, dx2), x, p, dx3)</c
 	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../mittlemann2.png" alt/></p><p>You can also plot the two branches together <code>plot(br,br1,plotfold=false)</code> and get</p><p><img src="../mittlemann3.png" alt/></p><p>We continue our journey and compute the branch bifurcating of the first bifurcation point from the last branch we computed:</p><pre><code class="language-julia">br2, = continuation(jet..., br1, 1, 
 	setproperties(opts_br;ds = 0.001, maxSteps = 40); 	verbosity = 3, plot = true,
 	printSolution = (x, p) -&gt; normbratu(x),
-	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p><img src="../mittlemann4.png" alt/></p><h2 id="Analysis-at-the-2d-branch-points-(manual)-1"><a class="docs-heading-anchor" href="#Analysis-at-the-2d-branch-points-(manual)-1">Analysis at the 2d-branch points (manual)</a><a class="docs-heading-anchor-permalink" href="#Analysis-at-the-2d-branch-points-(manual)-1" title="Permalink"></a></h2><p>The second bifurcation point on the branch <code>br</code> of homogenous solutions has a 2d kernel. We don&#39;t provide automatic branch switching but we provide two methods to deal with such case</p><ul><li>automatic local bifurcation diagram (see below)</li><li>branch switching with deflation (see next section)</li></ul><p>We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)</p><pre><code class="language-julia">bp2d = computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)</code></pre><p>You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see <a href="../nonsimplebp/#Non-simple-branch-point-1">Non-simple branch point</a>.</p><pre><code class="language-julia">julia&gt; bp2d
+	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...), normC = norminf)</code></pre><p><img src="../mittlemann4.png" alt/></p><h2 id="Analysis-at-the-2d-branch-points-(manual)-1"><a class="docs-heading-anchor" href="#Analysis-at-the-2d-branch-points-(manual)-1">Analysis at the 2d-branch points (manual)</a><a class="docs-heading-anchor-permalink" href="#Analysis-at-the-2d-branch-points-(manual)-1" title="Permalink"></a></h2><p>The second bifurcation point on the branch <code>br</code> of homogenous solutions has a 2d kernel. we provide two methods to deal with such case</p><ul><li>automatic local bifurcation diagram (see below)</li><li>branch switching with deflation (see next section)</li></ul><p>We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)</p><pre><code class="language-julia">bp2d = computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)</code></pre><p>You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see <a href="../nonsimplebp/#Non-simple-branch-point-1">Non-simple branch point</a>.</p><pre><code class="language-julia">julia&gt; bp2d
 Non simple bifurcation point at p ≈ 0.27255473583423123. 
 Kernel dimension = 2
 Normal form :
@@ -218,4 +224,4 @@ Parameters λ from 0.27255473583423384 to 0.09945404935297063
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
 - #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
-- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 8 June 2021 20:46">Tuesday 8 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Saturday 12 June 2021 20:04">Saturday 12 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
