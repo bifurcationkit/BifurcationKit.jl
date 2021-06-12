@@ -64,7 +64,7 @@ bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par,  (@lens _.μ), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 8, detectBifurcation = 3, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
 	printSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
-	plot = true, verbosity = 0, normC = norminf)
+	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 # Case of the pitchfork
 par_pf = @set par.x2 = 0.0

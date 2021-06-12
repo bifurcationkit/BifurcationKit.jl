@@ -130,7 +130,7 @@ sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[
 # we test the expression for σω
 σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end,end])
 σω_fd_ana = tmpVecforσ[2]
-@test σω_fd ≈ σω_fd_ana rtol = 1e-7
+@test σω_fd ≈ σω_fd_ana rtol = 1e-4
 
 # we test the expression for σx
 σx_fd = jac_hopf_fd[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fd[end, 1:end-2]
