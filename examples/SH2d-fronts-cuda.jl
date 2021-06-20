@@ -1,5 +1,5 @@
 using Revise
-using LinearAlgebra, Plots, Setfield, Parameters
+using LinearAlgebra, Setfield, Parameters, KrylovKit
 
 using BifurcationKit
 const BK = BifurcationKit
@@ -27,6 +27,7 @@ axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+
 TY = Float64
 AF = CuArray{TY}
 ####################################################################################################
+using Plots
 # to simplify plotting of the solution
 plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)

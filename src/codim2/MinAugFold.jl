@@ -229,8 +229,8 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 
 # Optional arguments:
 - `issymmetric` whether the Jacobian is Symmetric
-- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
-- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x,p)[v1,v2]`.
+- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoids recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
+- `d2F = (x, p, v1, v2) ->  d2F(x, p, v1, v2)` a bilinear operator representing the hessian of `F`. It has to provide an expression for `d2F(x, p)[v1, v2]`.
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -517,7 +517,7 @@ end
 
 function (eig::FoldEig)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
-	J = Jma.fldpb.J(Jma.x.u, set(Jma.params,Jma.fldpb.lens,Jma.x.p))
+	J = Jma.fldpb.J(Jma.x.u, set(Jma.params, Jma.fldpb.lens, Jma.x.p))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end

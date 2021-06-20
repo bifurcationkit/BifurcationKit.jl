@@ -14,6 +14,7 @@ mutable struct BifDiagNode{Tγ, Tc}
 	child::Tc
 end
 
+@inline level(node::BifDiagNode) = node.level
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
@@ -90,9 +91,26 @@ end
 """
 $(SIGNATURES)
 
-Same as [`bifurcationdiagram`](@ref) but you pass a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
+Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed bifurcation diagram `node` from which you want to further compute the bifurcated branches. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
+
+# Arguments
+- `node::BifDiagNode` a node in the bifurcation diagram
+- `level = (current = 0, maxlevel = 1)` provides the current level of recursion and the maximum one.
+- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
+
+# Optional arguments
+- `code = "0"`
+- `usedeflation = false`
+- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://rveltz.github.io/BifurcationKit.jl/dev/library/#Continuation-1).
+
 """
-function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTuple{(:current, :maxlevel),Tuple{Int64,Int64}}, options; code = "0", usedeflation = false, kwargs...)
+function bifurcationdiagram!(F, dF, d2F, d3F,
+		node::BifDiagNode,
+		level::NamedTuple{(:current, :maxlevel),Tuple{Int64,Int64}},
+		options;
+		code = "0",
+		usedeflation = false,
+		kwargs...)
 	if level[1] >= level[2] || isnothing(node.γ); return node; end
 
 	# convenient function for branching

@@ -381,7 +381,7 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 # Optional arguments
 - `δ` used to compute ∂pF with finite differences
 - `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
-- `Jᵗ = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
+- `Jᵗ = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoids recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `verbose` whether to display information
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF

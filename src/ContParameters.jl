@@ -6,7 +6,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 # Arguments
 - `dsmin, dsmax` are the minimum, maximum arclength allowed value. It controls the density of points in the computed branch of solutions.
 - `ds` is the initial arclength.
-- `theta` is a parameter in the arclength constraint. It is very **important** to tune it. See the docs of [`continuation`](@ref).
+- `theta` is a parameter in the arclength constraint. It is very **important** to tune it. See the docs of [`continuation`](@ref). We quote them here "It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
 - `pMin, pMax` allowed parameter range for `p`
 - `maxSteps` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm

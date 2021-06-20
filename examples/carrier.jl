@@ -104,19 +104,11 @@ plot(br..., branchlabel = 1:length(br), legend=true)#, marker=:d)
 BifurcationKit.mergeBranches(br)
 ####################################################################################################
 # bifurcation diagram
-using ForwardDiff
-D(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0.)
-dF_carr(x,p)         =  ForwardDiff.jacobian( z-> F_carr(z,p), x)
-d1F_carr(x,p,dx1)         = D((z, p0) -> F_carr(z, p0), x, p, dx1)
-d2F_carr(x,p,dx1,dx2)     = D((z, p0) -> d1F_carr(z, p0, dx1), x, p, dx2)
-d3F_carr(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F_carr(z, p0, dx1, dx2), x, p, dx3)
-jet = (F_carr, Jac_carr, d2F_carr, d3F_carr)
-
 diagram = bifurcationdiagram(jet...,
 		0*out, par_car,
 		(@lens _.ϵ), 2,
 		(arg...) -> @set optcont.newtonOptions.verbose=false;
-		printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
+		printSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		plot = true)
 
 plot(diagram, legend=false)

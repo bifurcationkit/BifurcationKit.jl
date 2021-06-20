@@ -183,6 +183,7 @@ bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 # plot(bdiag; putbifptlegend=false, markersize=2, plotfold=false, title = "#branch = $(size(bdiag))")
 
 # test calls for aBD
+BK.level(bdiag)
 BK.hasbranch(bdiag)
 BK.from(bdiag.child[1].γ)
 BK.getBranchesFromBP(bdiag, 2)

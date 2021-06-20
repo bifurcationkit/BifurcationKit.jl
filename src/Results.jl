@@ -123,12 +123,16 @@ function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
 end
 
 function Base.show(io::IO, br::ContResult, comment = "")
-	println(io, "Branch number of points: ", length(br.branch))
-	println(io, "Branch of ", br.type, comment)
-	println(io, "Type of vectors: ", getvectortype(br))	
-	println(io, "Parameters ", getLensSymbol(br.lens), " from ", br.branch[1].param, " to ", br.branch[end].param,)
+	println(io, " ┌─ Branch number of points: ", length(br.branch))
+	print(io, " ├─ Branch of ")
+	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
+	print(io, "\n ├─ Type of vectors: ")
+	printstyled(io, getvectortype(br), color=:light_cyan, bold = true)
+	print(io, "\n ├─ Parameters ")
+	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
+	println(io, " from ", br.branch[1].param, " to ", br.branch[end].param,)
 	if length(br.specialpoint) > 0
-		println(io, "Special points:\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)")
+		println(io, " └─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
 		for ii in eachindex(br.specialpoint)
 			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br.lens)))
 		end

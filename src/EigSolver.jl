@@ -47,7 +47,7 @@ struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
 	"Sorting function, default to real"
 	by::Tby
 
-	"Key words arguments passed to EigArpack"
+	"Keyword arguments passed to EigArpack"
 	kwargs::Tw
 end
 

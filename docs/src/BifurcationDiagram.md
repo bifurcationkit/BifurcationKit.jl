@@ -128,3 +128,39 @@ plot(bdiag; putspecialptlegend =false, markersize=2, plotfold=false, title="#bra
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false)))
 ```
  
+## Plotting the structure of the diagram
+
+It is sometimes useful to have a global representation of the bifurcation diagram. Here, we provide a text representation
+
+```julia
+using AbstractTrees
+
+AbstractTrees.children(node::BK.BifDiagNode) = node.child
+
+## Things that make printing prettier
+AbstractTrees.printnode(io::IO, node::BifDiagNode) = print(io, "$(node.code) [ $(node.level)]")
+
+print_tree(bdiag)
+# using GraphPlot 
+# gplot(diagram)
+```
+
+which should return
+
+```julia
+
+julia> print_tree(bdiag)
+0 [ 1]
+├─ 1 [ 2]
+│  ├─ 2 [ 3]
+│  ├─ 2 [ 3]
+│  ├─ 4 [ 3]
+│  ├─ 4 [ 3]
+│  ├─ 4 [ 3]
+│  ├─ 4 [ 3]
+│  ├─ 4 [ 3]
+│  └─ 4 [ 3]
+└─ 1 [ 2]
+   ├─ 2 [ 3]
+   └─ 2 [ 3]
+```

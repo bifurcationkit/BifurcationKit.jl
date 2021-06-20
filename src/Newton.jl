@@ -1,14 +1,10 @@
 """
-	options = NewtonPar(tol = 1e-4,...)
+$(TYPEDEF)
 
 Returns a variable containing parameters to affect the `newton` algorithm when solving `F(x) = 0`.
 
 # Arguments (with default values):
-- `tol = 1e-10`: absolute tolerance for `F(x)`
-- `maxIter = 50`: number of Newton iterations
-- `verbose = false`: display Newton iterations?
-- `linsolver = DefaultLS()`: linear solver, must be `<: AbstractLinearSolver`
-- `eigsolver = DefaultEig()`: eigen solver, must be `<: AbstractEigenSolver`
+$(TYPEDFIELDS)
 
 # Arguments for line search (Armijo)
 - `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
@@ -19,14 +15,19 @@ Returns a variable containing parameters to affect the `newton` algorithm when s
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
+	"absolute tolerance for `F(x)`"
 	tol::T           = 1e-10
+	"number of Newton iterations"
 	maxIter::Int64 	 = 50
-	α::T             = convert(typeof(tol), 1.0)        # damping
-	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
+	"display Newton iterations?"
 	verbose::Bool    = false
 	linesearch::Bool = false
+	"linear solver, must be `<: AbstractLinearSolver`"
 	linsolver::L 	 = DefaultLS()
+	"eigen solver, must be `<: AbstractEigenSolver`"
 	eigsolver::E 	 = DefaultEig()
+	α::T             = convert(typeof(tol), 1.0)        # damping
+	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
 end
 
 ####################################################################################################
