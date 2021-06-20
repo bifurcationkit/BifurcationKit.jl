@@ -1,5 +1,10 @@
 # CO-oxydation (codim 2)
 
+```@contents
+Pages = ["tutorialCO.md"]
+Depth = 3
+```
+
 In this tutorial, we study the Bykov–Yablonskii–Kim
 model of CO-oxydation (see [^Govaerts]). The goal of the tutorial is to show in a simple example how to perform codimension 2 bifurcation detection.
 

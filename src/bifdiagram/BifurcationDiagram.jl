@@ -1,14 +1,24 @@
 mutable struct BifDiagNode{Tγ, Tc}
+	# current level of recursion
 	level::Int64
+
+	# code for finding this node in the tree, this is the index of the bifurcation point
+	# from which γ branches off
+	code::Int64
+
+	# branch associated to the current node
 	γ::Tγ
+
+	# childs of current node. These are the different branches off the bifurcation points
+	# in γ
 	child::Tc
 end
 
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
 from(tree::BifDiagNode) = from(tree.γ)
-add!(tree::BifDiagNode, γ::AbstractBranchResult, l::Int) = push!(tree.child, BifDiagNode(l, γ, BifDiagNode[]))
-add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, l::Int) = map(x->add!(tree,x,l),γ)
-add!(tree::BifDiagNode, γ::Nothing, l::Int) = nothing
+add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
+add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
+add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
 Base.show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
@@ -74,7 +84,7 @@ end
 # TODO, BifDiagNode[] makes it type unstable it seems
 function bifurcationdiagram(F, dF, d2F, d3F, br::AbstractBranchResult, level::Int, options; usedeflation = false, kwargs...)
 	printstyled(color = :magenta, "#"^50 * "\n---> Automatic computation of bifurcation diagram\n\n")
-	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
+	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, 0, br, BifDiagNode[]), (current = 1, maxlevel = level), options; code = "0", usedeflation = usedeflation, kwargs...)
 end
 
 """
@@ -86,13 +96,14 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 	if level[1] >= level[2] || isnothing(node.γ); return node; end
 
 	# convenient function for branching
-	function letsbranch(_id, _pt, _level, _dsfactor = 1)
+	function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
 		plotfunc = get(kwargs, :plotSolution, (x, p; kws...) -> plot!(x; kws...))
 		optscont = options(_pt.x, _pt.param, _level.current + 1)
 		@set! optscont.ds *= _dsfactor
 
 		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
+			ampfactor = _ampfactor,
 			usedeflation = usedeflation,
 			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level[1]+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putspecialptlegend = false, markersize = 2)))
 	end
@@ -103,13 +114,19 @@ function bifurcationdiagram!(F, dF, d2F, d3F, node::BifDiagNode, level::NamedTup
 			try
 				println("─"^80*"\n--> New branch, level = $(level[1]+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
 				γ, = letsbranch(id, pt, level)
-				add!(node, γ, level.current+1)
+				add!(node, γ, level.current+1, id)
 				 ~isnothing(γ) && printstyled(color = :green, "----> From ", type(from(γ)), "\n")
 
 				# in the case of a Transcritical bifurcation, we compute the other branch
-				if ~isnothing(γ) && ~(γ isa Vector) && (from(γ) isa Transcritical)
-					γ, = letsbranch(id, pt, level, -1)
-					add!(node, γ, level.current+1)
+				if ~isnothing(γ) && ~(γ isa Vector)
+					if from(γ) isa Transcritical
+						γ, = letsbranch(id, pt, level; _dsfactor = -1)
+						add!(node, γ, level.current+1, id)
+					end
+					if from(γ) isa Pitchfork
+						γ, = letsbranch(id, pt, level; _ampfactor = -1)
+						add!(node, γ, level.current+1, id)
+					end
 				end
 
 			catch ex

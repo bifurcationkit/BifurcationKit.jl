@@ -573,8 +573,6 @@ function predictor(bp::NdBranchPoint, δp::T;
 		J = nothing,
 		normN = x -> norm(x, Inf),
 		optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
-
-	@warn "C'EST  QUOI CE jac? ARGUMENT SIMILAR POUR TOUS"
 	# dimension of the kernel
 	n = length(bp.ζ)
 

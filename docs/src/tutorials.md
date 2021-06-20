@@ -15,13 +15,13 @@ Depth = 1
 
 ## Bifurcation of Equilibria
 ```@contents
-Pages = ["tutorials1.md", "tutorials2.md", "mittelmann.md", "tutorials1b.md","tutorials2b.md", "tutorialsSH3d.md"]
+Pages = ["tutorials1.md", "tutorials2.md", "mittelmann.md", "tutorials1b.md", "tutorials2b.md", "tutorialsSH3d.md"]
 Depth = 1
 ```
 
 ### Automatic bifurcation diagram
 ```@contents
-Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md", "tutorialCarrier.md"]
+Pages = ["Swift-Hohenberg1d.md", "mittelmannAuto.md", "tutorialCarrier.md", "ks1d.md"]
 Depth = 1
 ```
 

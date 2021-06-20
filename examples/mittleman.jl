@@ -152,13 +152,13 @@ end
 
 code = ()
 	plot()
-	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :n2))
+	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")
 	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
-plot(getBranchesFromBP(diagram, 4); plotfold = false, legend = false)
+plot(getBranchesFromBP(diagram, 4); plotfold = false, legend = false, vars = (:param, :n2))
 
 diagram = bifurcationdiagram(jet...,
 		sol0, par_mit, (@lens _.λ), 5, optionsCont;
@@ -239,7 +239,6 @@ res, = BK.continuation(jet..., br, 2,
 	printSolution = (x, p) -> normbratu(x),
 	tangentAlgo = BorderedPred()
 	)
-
 
 plot(res..., br ;plotfold= false)
 
