@@ -1,23 +1,32 @@
 """
-DeflationOperator. It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
+$(TYPEDEF)
+
+It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) \\cdot Π_i(dot(u - roots_i, u - roots_i)^{-p} + shift) := F(u) \\cdot M(u)``. The fields of the struct `DeflationOperator` are as follows:
-- power `p`
-- `dot` function, this function has to be bilinear and symmetric for the linear solver to work well
-- shift
-- roots
+
+$(TYPEDFIELDS)
+
 The deflation operator is is ``M(u) = \\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^{-p})``
 where ``norm(u) = dot(u,u)``.
 
 Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 """
-struct DeflationOperator{T <: Real, Tdot, vectype}
-	power::T
+struct DeflationOperator{Tp <: Real, Tdot, T, vectype}
+	"power `p`. You can use an  `Int` for example"
+	power::Tp
+
+	"function, this function has to be bilinear and symmetric for the linear solver to work well"
 	dot::Tdot
-	shift::T
+
+	"shift"
+	α::T
+
+	"roots"
 	roots::Vector{vectype}
 end
 
-Base.push!(df::DeflationOperator{T, Tdot, vectype}, v::vectype) where {T, Tdot, vectype} = push!(df.roots, v)
+Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
+Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, Tdot, T, vectype} = push!(df.roots, v)
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
 Base.getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
 Base.length(df::DeflationOperator) = length(df.roots)
@@ -25,31 +34,30 @@ Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
 Base.firstindex(df::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
-
 Base.show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
 
 # Compute M(u)
-function (df::DeflationOperator{T, Tdot, vectype})(u::vectype) where {T, Tdot, vectype}
-	nrm  = u -> df.dot(u, u)
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(u::vectype) where {Tp, Tdot, T, vectype}
 	if length(df.roots) == 0
 		return T(1)
 	end
+	ρ = u -> T(1) / df.dot(u, u)^df.power + df.α
 	# compute u - df.roots[1]
 	tmp = _copy(u);	axpy!(T(-1), df.roots[1], tmp)
-	out = T(1) / nrm(tmp)^df.power + df.shift
+	out::T = ρ(tmp)
 	for ii in 2:length(df.roots)
 		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
-		out *= T(1) / nrm(tmp)^df.power + df.shift
+		out *= ρ(tmp)
 	end
 	return out
 end
 
 # Compute dM(u)⋅du. We use a tmp for storing
-function (df::DeflationOperator{T, Tdot, vectype})(::Val{:dMwithTmp}, tmp, u::vectype, du) where {T, Tdot, vectype}
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u::vectype, du) where {Tp, Tdot, T, vectype}
 	if length(df) == 0
 		return T(0)
 	end
-	δ = 1e-8
+	δ = T(1e-8)
 	copyto!(tmp, u); axpy!(δ, du, tmp)
 	return (df(tmp) - df(u)) / δ
 end
@@ -61,17 +69,17 @@ end
 
 This creates a deflated problem ``M(u) \\cdot F(u) = 0`` where `M` is a `DeflationOperator` which encodes the penalization term. `J` is the jacobian of `F`. Can be used to call `newton` and `continuation`.
 """
-struct DeflatedProblem{T, Tdot, vectype, TF, TJ, def <: DeflationOperator{T, Tdot, vectype}}
+struct DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ}
 	F::TF
 	J::TJ
-	M::def
+	M::DeflationOperator{Tp, Tdot, T, vectype}
 end
 @inline length(prob::DeflatedProblem) = length(prob.M)
 
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{T, Tdot, vectype, TF, TJ, def})(u::vectype, par) where {T, Tdot, vectype, TF, TJ, def}
+function (df::DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ})(u::vectype, par) where {Tp, Tdot, T, vectype, TF, TJ}
 	out = df.F(u, par)
 	rmul!(out, df.M(u))
 	return out
@@ -80,7 +88,7 @@ end
 """
 Return the jacobian of the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{T, Tdot, vectype, TF, TJ, def})(u::vectype, par, du) where {T, Tdot, vectype, TF, TJ, def}
+function (df::DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ})(u::vectype, par, du) where {Tp, Tdot, T, vectype, TF, TJ}
 	# dF(u)⋅du * M(u) + F(u) dM(u)⋅du
 	# out = dF(u)⋅du * M(u)
 	out = apply(df.J(u, par), du)
@@ -94,7 +102,6 @@ function (df::DeflatedProblem{T, Tdot, vectype, TF, TJ, def})(u::vectype, par, d
 	end
 	return out
 end
-
 ###################################################################################################
 # Implement the Jacobian operator of the Deflated problem
 
@@ -102,7 +109,7 @@ end
 struct DeflatedLinearSolver <: AbstractLinearSolver end
 
 """
-Implement the linear solver for the deflated problem
+Implement the linear solver for the deflated problem.
 """
 function (dfl::DeflatedLinearSolver)(J, rhs)
 	# the expression of the Functional is now
@@ -113,9 +120,11 @@ function (dfl::DeflatedLinearSolver)(J, rhs)
 	# the point at which to compute the Jacobian
 	u = J[1]
 	p = J[2]
+
 	# deflated Problem composite type
 	defPb = J[3]
 	linsolve = J[4]
+
 	Fu = defPb.F(u, p)
 	Mu = defPb.M(u)
 	Ju = defPb.J(u, p)
@@ -141,21 +150,23 @@ function (dfl::DeflatedLinearSolver)(J, rhs)
 
 	z = z1 / (Mu + z2)
 
+	# we extract the type of defPb
+	_T = eltype(defPb)
 	# return (h1 - z * h2) / Mu, true, (it1, it2)
 	copyto!(tmp, h1)
 	axpy!(-z, h2, tmp)
-	rmul!(tmp, 1 / Mu)
+	rmul!(tmp, _T(1) / Mu)
 	return tmp, true, (it1, it2)
 end
 ####################################################################################################
 """
-	function newton(F, J, x0::vectype, p0, options:: NewtonPar{T}, defOp::DeflationOperator{T, Tf, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {T, Tf, vectype}
+$(SIGNATURES)
 
 This is the deflated version of the Krylov-Newton Solver for `F(x, p0) = 0` with Jacobian `J(x, p0)`. We refer to [`newton`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more information.
 
 # Arguments
 Compared to [`newton`](@ref), the only different arguments are
-- `defOp` deflation operator
+- `defOp::DeflationOperator` deflation operator
 - `linsolver` linear solver used to invert the Jacobian of the deflated functional. We have a custom solver `DeflatedLinearSolver()` with requires solving two linear systems `J⋅x = rhs`. For other linear solvers, a matrix free method is used for the deflated functional.
 
 # Output:
@@ -169,7 +180,7 @@ When `J` is not passed. It then computed with finite differences. The call is as
 
 	newton(F, x0, p0, options, defOp; kwargs...)
 """
-function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}, linsolver::DeflatedLinearSolver = DeflatedLinearSolver(); kwargs...) where {T, Tf, vectype, S, E}
+function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::DeflatedLinearSolver = DeflatedLinearSolver(); kwargs...) where {T, S, E, Tp, Tdot, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(F, J, defOp)
 

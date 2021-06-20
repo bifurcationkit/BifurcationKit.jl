@@ -11,7 +11,7 @@ function test_newton(x0)
 	opts = NewtonPar( tol = Ty(1e-8))
 	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf))
 end
-######################################################################
+####################################################################################################
 # we test the regular newton algorithm
 # simple case
 test_newton(ones(10) .+ rand(10) * 0.1)
@@ -19,7 +19,7 @@ test_newton(ones(10) .+ rand(10) * 0.1)
 # test types for newton
 sol, = test_newton(Float16.(ones(10) .+ rand(10) * 0.1))
 @test eltype(sol) == Float16
-######################################################################
+####################################################################################################
 function test_newton_palc(x0, p0)
 	Ty = eltype(x0)
 	N = length(x0)
@@ -43,3 +43,10 @@ sol, = test_newton_palc(ones(10) .+ rand(10) * 0.1, 1.)
 #test type
 sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.1), Float32(1.))
 @test typeof(sol) == BorderedArray{Vector{Float32}, Float32}
+####################################################################################################
+# test of  deflated problems
+_T = Float32
+F4def = (x,p) -> (x-1) * (x-2)
+deflationOp = DeflationOperator(_T(2), dot, _T(1), [[_T(1)]])
+@test eltype(deflationOp) == _T
+@test deflationOp(rand(_T,1)) isa _T
