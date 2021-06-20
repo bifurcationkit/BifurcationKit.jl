@@ -194,14 +194,14 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchP
 	cbnewton = get(kwargs, :callbackN, cbDefault)
 
 	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
-	defOpp = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
+	defOpp = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
 	for xsol in rootsNFp
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
 		flag && push!(defOpp, solbif)
 	end
 
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
-	defOpm = DeflationOperator(2.0, dot, 1.0, Vector{typeof(bpnf.x0)}())
+	defOpm = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
 	for xsol in rootsNFm
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
 		flag && push!(defOpm, solbif)
