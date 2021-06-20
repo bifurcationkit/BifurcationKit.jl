@@ -83,7 +83,7 @@ outfoldco, hist, flag = continuation(
 
 # try with newtonDeflation
 # test with Newton deflation 1
-deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(sol)])
+deflationOp = DeflationOperator(2, 1.0, [zero(sol)])
 soldef0 = BorderedArray([0.1], 0.0)
 soldef1,  = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
@@ -196,7 +196,7 @@ outfoldco, hist, flag = continuation(
 
 # try with newtonDeflation
 # test with Newton deflation 1
-deflationOp = DeflationOperator(2.0, dot, 1.0, [(out0)])
+deflationOp = DeflationOperator(2, 1.0, [out0])
 soldef1, = newton(
 	Fr, (x, p) -> JacobianR(x, 0.),
 	out0, (0., 1.0),

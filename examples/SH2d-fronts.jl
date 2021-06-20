@@ -3,11 +3,11 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays
 	const BK = BifurcationKit
 
-heatmapsol(x, Nx=Nx, Ny=Ny) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
-heatmapsol!(x, Nx=Nx, Ny=Ny; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
+plotsol(x, Nx=Nx, Ny=Ny) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
+plotsol!(x, Nx=Nx, Ny=Ny; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
 
-Nx = 151*1
-	Ny = 100*1
+Nx = 151
+	Ny = 100
 	lx = 8pi
 	ly = 2*2pi/sqrt(3)
 
@@ -63,7 +63,7 @@ optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
 	sol_hexa, hist, flag = @time newton(F_sh, dF_sh, vec(sol0), par, optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
-	heatmapsol(sol_hexa)
+	plotsol(sol_hexa)
 
 heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
@@ -78,12 +78,12 @@ outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
 		par, optnew, deflationOp, normN = x -> norm(x, Inf))
 	println("--> norm(sol) = ", norm(outdef))
-	heatmapsol(outdef) |> display
+	plotsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
 
-heatmapsol(deflationOp[end])
+plotsol(deflationOp[end])
 
-heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
+plotsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
@@ -94,7 +94,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		plot = true, verbosity = 3,
 		# tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
-		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
+		plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 		# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
@@ -128,13 +128,13 @@ sol_hexa, _, flag = @time newton(
 		vec(sol0), par,
 		@set optnew.linsolver = ls)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
-	heatmapsol(sol_hexa)
+	plotsol(sol_hexa)
 ###################################################################################################
 # Automatic branch switching
 
 br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
 			plot = true, verbosity = 2,
-			plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
+			plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
 			printSolution = (x, p) -> norm(x),
 			normC = x -> norm(x, Inf))
 
@@ -187,7 +187,7 @@ diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
 	# tangentAlgo = BorderedPred(),
 	callbackN = cb,
 	# linearAlgo = MatrixBLS(),
-	plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
+	plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
 	printSolution = (x, p) -> norm(x),
 	finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = x -> norm(x, Inf)
@@ -206,7 +206,7 @@ brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; de
 	showplot = true, verbosity = 2,
 	# tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),
-	# plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
+	# plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
 	maxIterDefOp = 50,
 	maxBranches = 40,
 	seekEveryStep = 5,

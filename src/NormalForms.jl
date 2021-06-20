@@ -72,7 +72,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	# corresponding eigenvector, it must be real
 	if haseigenvector(br) == false
 		# we recompute the eigen-elements if there were not saved during the computation of the branch
-		@info "Eigen-elements no saved in the branch. Recomputing them..."
+		@info "Eigen-elements not saved in the branch. Recomputing them..."
 		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
 		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
 		ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))

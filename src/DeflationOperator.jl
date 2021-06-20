@@ -23,9 +23,16 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype}
 
 	"roots"
 	roots::Vector{vectype}
+
+	# internal, to reduce allocations during computation
+	tmp::vectype
 end
 
-DeflationOperator(p::Real, α::Real, roots) = DeflationOperator(p, dot, α, roots)
+# constructors
+DeflationOperator(p::Real, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dot, α, roots, _copy(roots[1]))
+DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]))
+
+# methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
 Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, Tdot, T, vectype} = push!(df.roots, v)
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
@@ -44,11 +51,11 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(u::vectype) where {Tp, Td
 	end
 	ρ = u -> T(1) / df.dot(u, u)^df.power + df.α
 	# compute u - df.roots[1]
-	tmp = _copy(u);	axpy!(T(-1), df.roots[1], tmp)
-	out::T = ρ(tmp)
+	copyto!(df.tmp, u);	axpy!(T(-1), df.roots[1], df.tmp)
+	out::T = ρ(df.tmp)
 	for ii in 2:length(df.roots)
-		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
-		out *= ρ(tmp)
+		copyto!(df.tmp, u); axpy!(T(-1), df.roots[ii], df.tmp)
+		out *= ρ(df.tmp)
 	end
 	return out
 end
@@ -98,8 +105,8 @@ function (df::DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ})(u::vectype, par, du
 	# we add the remaining part
 	if length(df) > 0
 		F = df.F(u, par)
-		# F(u) dM(u)⋅du
-		out .+= df.M(u, du) .* F
+		# F(u) dM(u)⋅du, out .+= df.M(u, du) .* F
+		axpy!(df.M(u, du), F, out)
 	end
 	return out
 end
@@ -216,7 +223,7 @@ $(TYPEDEF)
 
 This specific Newton-Kyrlov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge to the guess `x1` while avoiding the previous solution `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
-function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}()); kwargs...) where {T, vectype, L, E}
+function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, dot, 1.0, Vector{vectype}(), _copy(x0)); kwargs...) where {T, vectype, L, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)
 	@assert res0[3] "Newton did not converge to the trivial solution x0."
 	push!(defOp, res0[1])
