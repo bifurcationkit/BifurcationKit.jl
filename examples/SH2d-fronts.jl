@@ -61,15 +61,16 @@ par = (l = -0.1, ν = 1.3, L1 = L1)
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
-	sol_hexa, hist, flag = newton(F_sh, dF_sh, vec(sol0), par, optnew)
+	sol_hexa, hist, flag = @time newton(F_sh, dF_sh, vec(sol0), par, optnew)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	heatmapsol(sol_hexa)
 
 heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 
+heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 ###################################################################################################
 # recherche de solutions
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
 outdef, _, flag, _ = @time newton(F_sh, dF_sh,
@@ -80,7 +81,7 @@ outdef, _, flag, _ = @time newton(F_sh, dF_sh,
 	heatmapsol(outdef) |> display
 	flag && push!(deflationOp, outdef)
 
-heatmapsol(deflationOp[2])
+heatmapsol(deflationOp[end])
 
 heatmapsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
@@ -95,7 +96,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		# linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
 		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
-		finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+		# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
 ###################################################################################################
@@ -202,12 +203,17 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 optcontdf = @set optcont.newtonOptions.verbose = true
 brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
 	deflationOp;
-	showplot = true, verbosity = 3,
-	tangentAlgo = BorderedPred(),
+	showplot = true, verbosity = 2,
+	# tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),
 	# plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...)),
+	maxIterDefOp = 50,
+	maxBranches = 40,
+	seekEveryStep = 5,
 	printSolution = (x, p) -> norm(x),
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	# finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	# callbackN = cb,
 	normN = x -> norm(x, Inf))
+
+plot(brdf...)

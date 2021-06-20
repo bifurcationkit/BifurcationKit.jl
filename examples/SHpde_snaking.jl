@@ -80,7 +80,7 @@ end
 
 
 
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -1.), (@lens _.l), 4, optrec; kwargsC..., halfbranch = true, verbosity = 0)
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -0.1), (@lens _.l), 4, optrec; kwargsC..., halfbranch = true, verbosity = 0)
 
 code = ()
 	vars = (:param, :n2)

@@ -11,7 +11,7 @@ where ``norm(u) = dot(u,u)``.
 
 Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 """
-struct DeflationOperator{Tp <: Real, Tdot, T, vectype}
+struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype}
 	"power `p`. You can use an  `Int` for example"
 	power::Tp
 
@@ -25,6 +25,7 @@ struct DeflationOperator{Tp <: Real, Tdot, T, vectype}
 	roots::Vector{vectype}
 end
 
+DeflationOperator(p::Real, α::Real, roots) = DeflationOperator(p, dot, α, roots)
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
 Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, Tdot, T, vectype} = push!(df.roots, v)
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
@@ -181,7 +182,7 @@ When `J` is not passed. It then computed with finite differences. The call is as
 
 	newton(F, x0, p0, options, defOp; kwargs...)
 """
-function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::DeflatedLinearSolver = DeflatedLinearSolver(); kwargs...) where {T, S, E, Tp, Tdot, vectype}
+function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::DeflatedLinearSolver = DeflatedLinearSolver(); kwargs...) where {T, L, E, Tp, Tdot, vectype}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(F, J, defOp)
 
@@ -194,7 +195,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::Defla
 	return newton(deflatedPb, Jacdf, x0, p0, opt_def; kwargs...)
 end
 
-function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::AbstractLinearSolver; kwargs...) where {Tp, T, Tdot, vectype, S, E}
+function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::AbstractLinearSolver; kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(F, J, defOp)
 
@@ -205,7 +206,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::Defla
 end
 
 # simplified call when no Jacobian is given
-function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {Tp, T, Tdot, vectype, S, E}
+function newton(F, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	J = (u, p) -> finiteDifferences(z -> F(z,p), u)
 	return newton(F, J, x0, p0, options, defOp, linsolver; kwargs...)
 end
@@ -215,7 +216,7 @@ $(TYPEDEF)
 
 This specific Newton-Kyrlov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge to the guess `x1` while avoiding the previous solution `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
-function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator = DeflationOperator(2.0, dot, 1.0, Vector{vectype}()); kwargs...) where {T, Tf, vectype, S, E}
+function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}()); kwargs...) where {T, vectype, L, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)
 	@assert res0[3] "Newton did not converge to the trivial solution x0."
 	push!(defOp, res0[1])
