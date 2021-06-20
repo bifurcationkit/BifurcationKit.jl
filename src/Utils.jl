@@ -3,12 +3,12 @@ getinterval(a,b) = (min(a,b), max(a,b))
 ####################################################################################################
 function displayIteration(i, residual, itlinear = 0, lastRow = false)
 	if lastRow
-		lastRow && println("└─────────────┴──────-───────────────┴────────────────┘")
+		lastRow && println("└─────────────┴──────────────────────┴────────────────┘")
 	else
 		if i == 0
-			println("\n┌────────────────────-────────────────────────────────┐")
+			println("\n┌─────────────────────────────────────────────────────┐")
 			  println("│ Newton Iterations      f(x)      Linear Iterations  │")
-			  println("├─────────────┐──────────────────────┐────────────────┤")
+			  println("├─────────────┬──────────────────────┬────────────────┤")
 		end
 		if length(itlinear) == 1
 			@printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear);

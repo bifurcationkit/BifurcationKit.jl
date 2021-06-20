@@ -151,7 +151,8 @@ function (dfl::DeflatedLinearSolver)(J, rhs)
 	z = z1 / (Mu + z2)
 
 	# we extract the type of defPb
-	_T = eltype(defPb)
+	_T = eltype(defPb.M)
+
 	# return (h1 - z * h2) / Mu, true, (it1, it2)
 	copyto!(tmp, h1)
 	axpy!(-z, h2, tmp)
@@ -193,7 +194,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::Defla
 	return newton(deflatedPb, Jacdf, x0, p0, opt_def; kwargs...)
 end
 
-function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}, linsolver::AbstractLinearSolver; kwargs...) where {T, Tf, vectype, S, E}
+function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver::AbstractLinearSolver; kwargs...) where {Tp, T, Tdot, vectype, S, E}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(F, J, defOp)
 
@@ -204,7 +205,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::Defla
 end
 
 # simplified call when no Jacobian is given
-function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {T, Tf, vectype, S, E}
+function newton(F, x0::vectype, p0, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {Tp, T, Tdot, vectype, S, E}
 	J = (u, p) -> finiteDifferences(z -> F(z,p), u)
 	return newton(F, J, x0, p0, options, defOp, linsolver; kwargs...)
 end

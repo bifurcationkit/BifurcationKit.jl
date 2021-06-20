@@ -61,9 +61,9 @@ br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolu
 
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par,  (@lens _.μ), 2,
-	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 8, detectBifurcation = 3, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
+	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 30, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
 	printSolution = (x, p) -> x[1],
-	# tangentAlgo = BorderedPred(),
+	tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 # Case of the pitchfork
@@ -95,7 +95,7 @@ BK.propertynames(br2)
 
 # automatic bifurcation diagram (Pitchfork)
 bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par_pf,  (@lens _.μ), 2,
-	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 8, detectBifurcation = 3, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
+	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 30, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
 	printSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 2, normC = norminf)

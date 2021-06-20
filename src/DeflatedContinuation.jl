@@ -126,7 +126,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 	end
 
 	# we make a copy of the deflation operator
-	deflationOp = DeflationOperator(defOp.power, defOp.dot, defOp.shift, deepcopy(defOp.roots))
+	deflationOp = DeflationOperator(defOp.power, defOp.dot, defOp.α, deepcopy(defOp.roots))
 
 	verbosity > 0 && printstyled(color=:magenta, "#"^51*"\n")
 	verbosity > 0 && printstyled(color=:magenta, "--> There are $(length(deflationOp)) branches\n")

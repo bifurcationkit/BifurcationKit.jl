@@ -176,6 +176,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
 		λ .= l.sigma .- 1 ./ λ
 	end
 	Ind = sortperm(λ, by = l.by, rev = true)
-	length(λ) < nev && @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
+	ncv = length(λ)
+	ncv < nev && @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
 	return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), true, 1
 end

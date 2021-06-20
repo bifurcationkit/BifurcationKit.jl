@@ -128,7 +128,7 @@ function Base.show(io::IO, br::ContResult, comment = "")
 	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
 	print(io, "\n ├─ Type of vectors: ")
 	printstyled(io, getvectortype(br), color=:light_cyan, bold = true)
-	print(io, "\n ├─ Parameters ")
+	print(io, "\n ├─ Parameter ")
 	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
 	println(io, " from ", br.branch[1].param, " to ", br.branch[end].param,)
 	if length(br.specialpoint) > 0

@@ -6,14 +6,14 @@ Depth = 3
 ```
 
 !!! warning "Warning"
-    This is work in progress...
+    This is work in progress... In particular, there is a combinatorial explosion that I need to address.
 
 !!! unknown "References"
     The following example is exposed in Evstigneev, Nikolay M., and Oleg I. Ryabkov. **Bifurcation Diagram of Stationary Solutions of the 2D Kuramoto-Sivashinsky Equation in Periodic Domains.** Journal of Physics: Conference Series 1730, no. 1 2021
 
 We study the 1d Kuramoto–Sivashinsky equation with Dirichlet boundary conditions:
 
-$$\lambda\left(2 u u'+ u''\right)+4 u^{(4)}=0,\ u(0)=u(\pi)=0.$$
+$$\left(2 u u'+ u''\right)+2\lambda u^{(4)}=0,\ u(0)=u(\pi)=0.$$
 
 We discretize the problem by using $u(x)=\sum_{k=1}^{\infty} u_{k} \sin (k x)$ which gives
 
@@ -24,13 +24,15 @@ This is a good example for the use of automatic bifurcation diagram as we shall 
 ```julia
 using Revise, LinearAlgebra, Plots
 using Parameters, Setfield, ForwardDiff
-using ApproxFun # for Plotting
 using BifurcationKit
 const  BK = BifurcationKit
 
+# we use this library for plotting
+using ApproxFun
+
 function generateLinear(n)
 	Δ = [-k^2 for k = 1:n]
-	return Δ, Δ .^2
+	return Δ, Δ.^2
 end
 
 function Fks1d(a, p)
@@ -60,7 +62,7 @@ end
 Jks1d(u, p) = ForwardDiff.jacobian(z -> Fks1d(z,p), u)
 
 # we group the differentials together
-jet  = BK.get3Jet(Fks1d, Jks1d)
+jet = BK.get3Jet(Fks1d, Jks1d)
 ```
 
 Having defined the model, we chose parameters:
@@ -109,7 +111,7 @@ diagram = @time bifurcationdiagram(jet...,
 		)
 ```
 
-Plotting the result is as easy as
+Plotting the result can be done using
 
 ```julia
 plot(diagram; code = (), plotfold = false,  markersize = 3, putspecialptlegend = false,

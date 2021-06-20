@@ -5,10 +5,13 @@ using Revise
 	const BK = BifurcationKit
 ################################################################################
 # case of the SH equation
-norminf(x) = norm(x, Inf64)
 Nx = 200; Lx = 6.;
 X = -Lx .+ 2Lx/Nx*(0:Nx-1) |> collect
 hx = X[2]-X[1]
+
+norminf(x) = norm(x, Inf64)
+const _weight = rand(Nx)
+normweighted(x) = norm(_weight .* x)
 
 # Q = Neumann0BC(hx)
 Q = Dirichlet0BC(hx |> typeof)
@@ -26,14 +29,14 @@ d2R(u,p,dx1,dx2) = @. p.ν * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
 d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
 jet = (R_SH, Jac_sp, d2R, d3R)
 
-parSH = (l = -0.7, ν = 2., L1 = Lsh)
+parSH = (l = -0.1, ν = 2., L1 = Lsh)
 ####################################################################################################
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 	optnew = NewtonPar(verbose = false, tol = 1e-12)
 	# allocations 357, 0.8ms
 	sol1, = @time newton(
 	R_SH, Jac_sp,
-	sol0, (@set parSH.l = -1.95), optnew)
+	sol0, (@set parSH.l = -.1), optnew)
 	Plots.plot(X, sol1)
 
 opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,
@@ -49,17 +52,18 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	true
 end
 
-args = (verbosity = 3,
+kwargsC = (verbosity = 3,
 	plot = true,
 	# tangentAlgo = BorderedPred(),
 	linearAlgo  = MatrixBLS(),
+	printSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x)),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
 	callbackN = cb
 	)
 
 brflat, = @time continuation(
-	R_SH, Jac_sp, sol1, (@set parSH.l = -1.), (@lens _.l), opts;
-	args...)
+	R_SH, Jac_sp, sol1, (@set parSH.l = -0.1), (@lens _.l), opts;
+	kwargsC...)
 
 plot(brflat, putspecialptlegend = false)
 ####################################################################################################
@@ -74,14 +78,18 @@ function optrec(x, p, l; opt = opts)
 	end
 end
 
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -1.), (@lens _.l), 4, optrec; args..., verbosity=0)
+
+
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -1.), (@lens _.l), 4, optrec; kwargsC..., halfbranch = true, verbosity = 0)
 
 code = ()
-	plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false)
-	plot!(brflat)
+	vars = (:param, :n2)
+	plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars = vars)
+	plot!(brflat, vars = vars)
 	title!("#branches = $(size(diagram, code))")
 
-diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (2,)),  (current = 1, maxlevel = 2), optrec; args...)
+diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (1,)),  (current = 1, maxlevel = 2), optrec; kwargsC...)
+
 
 ####################################################################################################
 deflationOp = DeflationOperator(2.0, dot, 1.0, [sol1])
