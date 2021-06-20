@@ -74,7 +74,7 @@ Nx = 30
 	Δ, = Laplacian2D(Nx, Ny, lx, ly)
 	par_mit = (λ = .01, Δ = Δ)
 	sol0 = 0*ones(Nx, Ny) |> vec
-	w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
+	const w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
 	w .-= minimum(w)
 ####################################################################################################
 eigls = EigArpack(20.5, :LM)
@@ -99,7 +99,7 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, 
 	br, = @time BK.continuation(
 		Fmit, JFmit,
 		sol0, par_mit, (@lens _.λ), opts_br;
-		printSolution = (x, p) -> normbratu(x),
+		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 		finaliseSolution = finSol,
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		plot = true, verbosity = 0, normC = norminf)
@@ -120,9 +120,9 @@ BK.computeNormalForm(jet..., br, 3)
 
 br1, = continuation(jet..., br, 3;
 		verbosity = 0, plot = true,
-		printSolution = (x, p) -> normbratu(x),
 		finaliseSolution = finSol,
 		callbackN = cb,
+		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 		normC = norminf)
 
@@ -131,10 +131,10 @@ plot(br,br1,plotfold=false)
 br2, = continuation(jet..., br1, 1;
 		verbosity = 0, plot = true,
 		tangentAlgo = BorderedPred(),
-		printSolution = (x, p) -> normbratu(x),
 		tangentAlgo = BorderedPred(),
 		finaliseSolution = finSol,
 		callbackN = cb,
+		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br, br1, br2, plotfold=false)
@@ -151,7 +151,8 @@ function optionsCont(x,p,l; opt = opts_br)
 end
 
 code = ()
-	plot!(diagram; code = code, level = (0, 6), plotfold = false, putspecialptlegend=false, markersize=2)
+	plot()
+	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :n2))
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")
@@ -163,7 +164,7 @@ diagram = bifurcationdiagram(jet...,
 		sol0, par_mit, (@lens _.λ), 5, optionsCont;
 		# δp = 0.001,
 		verbosity = 0, plot = true,
-		printSolution = (x, p) -> normbratu(x),
+		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 		callbackN = cb,
 		tangentAlgo = BorderedPred(),
 		usedeflation = true,
