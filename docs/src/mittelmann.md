@@ -12,7 +12,7 @@ Depth = 3
         
 We consider the problem of Mittelmann:
 
-$$\Delta u +NL(\lambda,u) = 0$$
+$$\Delta u + NL(\lambda,u) = 0$$
 
 with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$. This is a good example to show how automatic branch switching works and also nonlinear deflation.
 
@@ -26,7 +26,7 @@ const BK = BifurcationKit
 
 # define the sup norm and a L2 norm
 norminf = x -> norm(x, Inf)
-normbratu = x -> norm(x) / sqrt(length(x))
+normbratu = x -> norm(x .* w) / sqrt(length(x)) # the weight w is defined below
 
 # some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -70,7 +70,7 @@ end
 Fmit(u, p) = Fmit!(similar(u), u, p)
 ```
 
-It will also prove useful to have the jacobian of our functional: 
+It will also prove useful to have the derivatives of our functional: 
 
 ```julia
 function JFmit(x,p)
@@ -78,6 +78,9 @@ function JFmit(x,p)
 	dg = dϕ.(x, p.λ)
 	return J + spdiagm(0 => dg)
 end
+
+# compute 3-Jet
+jet = BK.get3Jet(Fmit, JFmit)
 ```
 
 We need to define the parameters associated to this problem:
@@ -85,6 +88,8 @@ We need to define the parameters associated to this problem:
 ```julia
 Nx = 30; Ny = 30
 lx = 0.5; ly = 0.5
+# weight for the weighted norm
+const w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
 
 Δ = Laplacian2D(Nx, Ny, lx, ly)
 par_mit = (λ = .05, Δ = Δ)
@@ -120,15 +125,21 @@ Note that we put the option `detectBifurcation = 3` to detect bifurcations preci
 ## Branch of homogenous solutions
 At this stage, we note that the problem has a curve of homogenous (constant in space) solutions $u_h$ solving $N(\lambda, u_h)=0$. We shall compute this branch now.
 
+Given that we will use these arguments for `continuation` many times, it is wise to collect them:
+
+```julia
+# optional arguments for continuation
+kwargsC = (verbosity = 3, plot = true,
+	printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+	plotSolution = (x, p; k...) -> plotsol!(x ; k...),
+	normC = norminf
+	)
+```
+
 We call `continuation` with the initial guess `sol0` which is homogenous, thereby generating homogenous solutions:
 
 ```julia
-br, = BK.continuation(
-	Fmit, JFmit,
-	sol0, par_mit, (@lens _.λ), opts_br;
-	printSolution = (x, p) -> normbratu(x),
-	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-	plot = true, verbosity = 3, normC = norminf)
+br, = BK.continuation(Fmit, JFmit, sol0, par_mit, (@lens _.λ), opts_br; kwargsC...)
 ```
 
 You should see the following result:
@@ -154,31 +165,11 @@ We notice several simple bifurcation points for which the dimension of the kerne
 
 ## Automatic branch switching at simple branch points
 
-To be able to perform branch switching, we need to pass the differentials of our functional. Using automatic differentiation, this is not a big deal:
-
-```julia
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
-d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
-d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
-d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
-```
-
-It is convenient to define the jet of `Fmit`
-
-```julia
-jet = (Fmit, JFmit, d2Fmit, d3Fmit)
-```
-
-We can now compute the branch off the third bifurcation point:
+We can compute the branch off the third bifurcation point:
 
 ```julia
 br1, = continuation(jet..., br, 3, 
-	setproperties(opts_br;ds = 0.001, maxSteps = 40);
-	verbosity = 3, plot = true,
-	printSolution = (x, p) -> normbratu(x),
-	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-	normC = norminf)
+	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)
 ```	
 
 and you should see:
@@ -193,9 +184,7 @@ We continue our journey and compute the branch bifurcating of the first bifurcat
 
 ```julia
 br2, = continuation(jet..., br1, 1, 
-	setproperties(opts_br;ds = 0.001, maxSteps = 40); 	verbosity = 3, plot = true,
-	printSolution = (x, p) -> normbratu(x),
-	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)
 ```
 
 ![](mittlemann4.png)
@@ -282,7 +271,7 @@ At this stage, we know what happens at the 2d bifurcation point of the curve of 
 ```julia
 out = zeros(Nx*Ny)
 # deflation operator to 
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [zeros(Nx*Ny)])
+deflationOp = DeflationOperator(2, 1.0, [zeros(Nx*Ny)])
 
 # options for the newton solver
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 100)
@@ -313,9 +302,7 @@ brdef1, = continuation(
 	Fmit, JFmit,
 	deflationOp[3], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 3, dsmax = 0.01, maxSteps = 500);
-	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
-	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+	kwargsC...)
 ```
 
 If we repeat the above loop but before the branch point by using `@set par_mit.λ = br.specialpoint[2].param + 0.005`, we get 3 new solutions that we can continue
@@ -325,9 +312,7 @@ brdef2, = continuation(
 	Fmit, JFmit,
 	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
-	verbosity = 3, plot = true,
-	printSolution = (x, p) -> norm(x),
-	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+	kwargsC...)
 ```	
 
 thereby providing the following bifurcation diagram with `plot(br,br1,br2,brdef1, brdef2,plotfold=false, putbifptlegend = false)`
@@ -343,15 +328,12 @@ The call for automatic branch switching is the same as in the case of simple bra
 ```julia
 branches, = continuation(jet..., br, 2,
 	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
-	nev = 30, verbosity = 3,	
-	plot = true,
-	plotSolution = (x, p; k...) ->(plotsol!(x; k...); plot!(br,subplot=1)),
-	tangentAlgo = BorderedPred()
+	kwargsC...,
+	nev = 30, tangentAlgo = BorderedPred()
 	)
 ```
 
 You can plot the branches using `plot(branches...)`. The branches are as follows
-
 
 ```julia
 julia> branches

@@ -56,7 +56,6 @@ Automatic branch switching at branch points based on a computation of the normal
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors in the computation of the reduced equation.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
-- `usedeflation = true` whether to use nonlinear deflation (see ) to help finding the guess on the bifurcated branch
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"

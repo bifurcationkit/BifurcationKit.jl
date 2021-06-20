@@ -25,6 +25,8 @@ const BK = BifurcationKit
 
 # define the sup norm
 norminf = x -> norm(x, Inf)
+norm2 = x -> norm(x) / sqrt(length(x))
+normbratu = x -> norm(x .* w) / sqrt(length(x)) # the weight w is defined below
 
 # some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -77,11 +79,7 @@ function JFmit(x,p)
 	return J + spdiagm(0 => dg)
 end
 
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-d1Fmit(x,p,dx1) = D((z, p0) -> Fmit(z, p0), x, p, dx1)
-d2Fmit(x,p,dx1,dx2) = D((z, p0) -> d1Fmit(z, p0, dx1), x, p, dx2)
-d3Fmit(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fmit(z, p0, dx1, dx2), x, p, dx3)
-jet = (Fmit, JFmit, d2Fmit, d3Fmit)
+jet = BK.get3Jet(Fmit, JFmit)
 ```
 
 We need to pass the parameters associated to this problem:
@@ -91,6 +89,11 @@ Nx = 30
 Ny = 30
 lx = 0.5
 ly = 0.5
+
+# weight for normbratu
+const w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
+w .-= minimum(w)
+
 
 Δ = Laplacian2D(Nx, Ny, lx, ly)
 
@@ -162,26 +165,21 @@ end
 We are then ready to compute the bifurcation diagram. If we choose a level 5 of recursion like 
 
 ```julia
-# weight for normbratu
-const w = ones(Nx*Ny)
-normbratu = x -> norm(x .* w) / sqrt(length(x))
-
-
-diagram = bifurcationdiagram(jet...,
+diagram = @time bifurcationdiagram(jet...,
 	sol0, par_mit, (@lens _.λ), 
 	# important argument: this is the maximal 
 	# recursion level 
 	5, 
 	optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -> normbratu(x),
+	printSolution = (x, p) -> (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	usedeflation = true,
 	finaliseSolution = finSol,
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	normC = norminf)
 ```
-this gives using `plot(diagram; plotfold = false, putbifptlegend=false, markersize=2);title!("")`:
+this gives using `plot(diagram; plotfold = false, putspecialptlegend=false, markersize=2, title = "#branches = $(size(diagram))")`:
 
 ![](mittlemanBD.png)
 
@@ -189,22 +187,19 @@ We can zoom in on the left part to get
 
 ![](mittlemanBD1.png)
 
-Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries
+Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries and use it to print the solution, we get
 
 ```julia
-w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
-w .-= minimum(w)
-normbratu = x -> norm(x .* w) / sqrt(length(x))
+plot(diagram; plotfold = false, putspecialptlegend=false, markersize=2, 
+	title = "#branches = $(size(diagram))", vars = (:param, :nw))
 ```
-and use it to print the solution (we redid the computation), we get:
 
 ![](mittlemannBD-1.png)
 
 We can make more sense of these spaghetti by only plotting the first two levels of recursion
 
 ```julia
-plot(diagram; level = (1, 2), plotfold = false, putbifptlegend=false, markersize=2)
-title!("#branches = $(size(getBranch(diagram, code)))")
+plot(diagram; level = (1, 2), plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :nw))
 ```
 
 ![](mittlemannBD-2.png)
@@ -213,7 +208,7 @@ title!("#branches = $(size(getBranch(diagram, code)))")
 
 We can see that the non-simple 2d branch points (magenta points) have produced non trivial branches. For example, we can look at the second bifurcation point (the first is the fold) which is composed of 8 branches
 
-`plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false)`
+`plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false, vars = (:param, :nw))`
 
 ![](mittlemannBD-2-1.png)
 
@@ -224,11 +219,11 @@ Let's say you have been cautious and did not launch a deep bifurcation diagram c
 ```julia
 diagram = bifurcationdiagram(jet...,
 	sol0, par_mit, (@lens _.λ), 
-	# here the recusion level is
+	# here the recursion level is
 	2,
 	optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -> normbratu(x),
+	printSolution = (x, p) -> (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	tangentAlgo = BorderedPred(),
 	usedeflation = true,
@@ -250,7 +245,7 @@ bifurcationdiagram!(jet...,
 	# has 8 branches
 	getBranch(diagram, (1,)), (current = 3, maxlevel = 6), optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -> normbratu(x),
+	printSolution = (x, p) -> (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	finaliseSolution = finSol,
 	usedeflation = true,

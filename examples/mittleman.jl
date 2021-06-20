@@ -5,6 +5,8 @@ using Revise
 
 norminf = x -> norm(x, Inf)
 normbratu = x -> norm(x .* w) / sqrt(length(x))
+##########################################################################################
+# plotting function
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 
@@ -64,7 +66,7 @@ end
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
 # compute 3-Jet
-jet  = BK.get3Jet(Fmit, JFmit)
+jet = BK.get3Jet(Fmit, JFmit)
 ####################################################################################################
 Nx = 30
 	Ny = 30
@@ -78,7 +80,7 @@ Nx = 30
 	w .-= minimum(w)
 ####################################################################################################
 eigls = EigArpack(20.5, :LM)
-eigls = EigKrylovKit(dim = 70)
+# eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
 	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 	out, hist, flag = newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
@@ -94,19 +96,6 @@ function finSol(z, tau, step, br; k...)
 	return true
 end
 
-opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, maxBisectionSteps = 25)
-
-	br, = @time BK.continuation(
-		Fmit, JFmit,
-		sol0, par_mit, (@lens _.λ), opts_br;
-		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
-		finaliseSolution = finSol,
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		plot = true, verbosity = 0, normC = norminf)
-
-plot(br)
-####################################################################################################
-# branch switching
 function cb(x,f,J,res,it,itl,optN; kwargs...)
 	_x = get(kwargs, :z0, nothing)
 	fromNewton = get(kwargs, :fromNewton, false)
@@ -116,26 +105,31 @@ function cb(x,f,J,res,it,itl,optN; kwargs...)
 	true
 end
 
-BK.computeNormalForm(jet..., br, 3)
+# optional parameters for continuation
+kwargsC = (verbosity = 3,
+	plot = true,
+	printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+	plotSolution = (x, p; k...) -> plotsol!(x ; k...),
+	callbackN = cb,
+	finaliseSolution = finSol,
+	normC = norminf
+	)
 
-br1, = continuation(jet..., br, 3;
-		verbosity = 0, plot = true,
-		finaliseSolution = finSol,
-		callbackN = cb,
-		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		normC = norminf)
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, maxBisectionSteps = 25)
+
+	br, = @time continuation(
+		Fmit, JFmit,
+		sol0, par_mit, (@lens _.λ), opts_br; kwargsC...)
+
+plot(br)
+####################################################################################################
+# automatic branch switching
+
+br1, = continuation(jet..., br, 3; kwargsC...)
 
 plot(br,br1,plotfold=false)
 
-br2, = continuation(jet..., br1, 1;
-		verbosity = 0, plot = true,
-		tangentAlgo = BorderedPred(),
-		tangentAlgo = BorderedPred(),
-		finaliseSolution = finSol,
-		callbackN = cb,
-		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+br2, = continuation(jet..., br1, 1; kwargsC...)
 
 plot(br, br1, br2, plotfold=false)
 ####################################################################################################
@@ -150,6 +144,14 @@ function optionsCont(x,p,l; opt = opts_br)
 	end
 end
 
+diagram = @time bifurcationdiagram(jet..., sol0, par_mit, (@lens _.λ), 3, optionsCont; kwargsC...,
+	usedeflation = true,
+	halfbranch = true,
+	)
+
+bifurcationdiagram!(jet..., getBranch(diagram, (14,)), (current = 3, maxlevel = 6), optionsCont;
+	kwargsC..., usedeflation = true, halfbranch = true,)
+
 code = ()
 	plot()
 	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
@@ -158,32 +160,9 @@ code = ()
 	title!("#branches = $(size(getBranch(diagram, code)))")
 	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
-plot(getBranchesFromBP(diagram, 4); plotfold = false, legend = false, vars = (:param, :n2))
+plot(getBranchesFromBP(diagram, 4); plotfold = false, legend = false, vars = (:param, :x))
 
-diagram = bifurcationdiagram(jet...,
-		sol0, par_mit, (@lens _.λ), 5, optionsCont;
-		# δp = 0.001,
-		verbosity = 0, plot = true,
-		printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
-		callbackN = cb,
-		tangentAlgo = BorderedPred(),
-		usedeflation = true,
-		finaliseSolution = finSol,
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		normC = norminf)
-
-bifurcationdiagram!(jet...,
-		getBranch(diagram, (14,)), (current = 3, maxlevel = 6), optionsCont;
-		# δp = 0.001,
-		verbosity = 0, plot = true,
-		printSolution = (x, p) -> normbratu(x),
-		callbackN = cb,
-		finaliseSolution = finSol,
-		usedeflation = true,
-		plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-		normC = norminf)
-
-BK.getBranch(diagram, (10,1,1)) |> plot
+BK.getBranch(diagram, (10,1,)) |> plot
 
 ####################################################################################################
 # analyse 2d bifurcation point
@@ -228,26 +207,22 @@ plot(
 	scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
 
 ####################################################################################################
-bp = @time computeNormalForm(jet..., br, 2, nev = 30; issymmetric = true)
+bp2d = @time computeNormalForm(jet..., br, 2, nev = 30; issymmetric = true)
 
 res, = BK.continuation(jet..., br, 2,
 	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
 	nev = 30, verbosity = 3,
-	# callbackN = cb,
-	plot = true,
-	plotSolution = (x, p; k...) -> (plotsol!(x; k...); plot!(br,subplot=1)),
-	printSolution = (x, p) -> normbratu(x),
-	tangentAlgo = BorderedPred()
+	kwargsC...,
 	)
 
 plot(res..., br ;plotfold= false)
 
 
 δp = 0.005
-	deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(2)])
+	deflationOp = DeflationOperator(2, dot, 1.0, [zeros(2)])
 		success = [0]
 while sum(success) < 10
-	outdef1, _, flag, _ = newton((x, p) -> bp2d(Val(:reducedForm),x, p[1]), rand(2), [δp], NewtonPar(maxIter = 50), deflationOp)
+	outdef1, _, flag, _ = newton((x, p) -> bp2d(Val(:reducedForm), x, p[1]), rand(2), [δp], NewtonPar(maxIter = 50), deflationOp)
 	@show flag
 	flag && push!(deflationOp, outdef1)
 	(flag==false) && push!(success, 1)
@@ -279,7 +254,7 @@ plot(branches2...)
 plot!(brnf2)
 ####################################################################################################
 # find isolated branch, see Farrell et al.
-deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
+deflationOp = DeflationOperator(2, 1.0, [out])
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
 # eigen-elements close to the second bifurcation point on the branch
@@ -329,3 +304,16 @@ brdef2, _ = @time BK.continuation(
 plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
 
 plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)
+####################################################################################################
+# deflated continuation
+brdef2, _ = @time BK.continuation(
+	Fmit, JFmit, (@set par_mit.λ = 0.367), (@lens _.λ),
+	ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
+	DeflationOperator(2.0, dot, 1., ([sol0]));
+	showplot=true, verbosity = 2,
+	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),
+	printSolution = (x, p) ->  normbratu(x),
+	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+	normN = norminf)
+
+plot(brdef2..., color=:red)

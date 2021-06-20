@@ -90,7 +90,7 @@ args = (verbosity = 3,
 	plot = true,
 	linearAlgo  = MatrixBLS(),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
-	callbackN = cb
+	callbackN = cb, halfbranch = true,
 	)
 ```
 
@@ -128,7 +128,7 @@ After ~700s, you can plot the result
 
 ```julia
 plot(diagram;  plotfold = false,  
-	markersize = 2, putbifptlegend = false, xlims=(-1,1))
+	markersize = 2, putspecialptlegend = false, xlims=(-1,1))
 title!("#branches = $(size(diagram))")
 ```	
 
@@ -158,7 +158,7 @@ Special points:
 We can access the different branches with `BK.getBranch(diagram, (1,))`. Alternatively, you can plot a specific branch:
 
 ```julia
-	plot(diagram; code = (1,), plotfold = false,  markersize = 2, putbifptlegend = false, xlims=(-1,1))
+	plot(diagram; code = (1,), plotfold = false,  markersize = 2, putspecialptlegend = false, xlims=(-1,1))
 ```
 
 ![](BDSH1d-1.png)
