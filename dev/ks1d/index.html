@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>1d Kuramoto–Sivashinsky Equation · Bifurcation Analysis in Julia</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/indigo.css" rel="stylesheet" type="text/css"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="Bifurcation Analysis in Julia logo"/></a><div class="docs-package-name"><span class="docs-autofit">Bifurcation Analysis in Julia</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../guidelines/">Overview</a></li><li><a class="tocitem" href="../tutorials/">Tutorials</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Functionalities</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><a class="tocitem" href="../Predictors/">Predictors / correctors</a></li><li><a class="tocitem" href="../EventCallback/">Event Handling and Callback</a></li><li><a class="tocitem" href="../detectionBifurcation/">Bifurcation detection (codim 1)</a></li><li><a class="tocitem" href="../codim2Continuation/">Fold / Hopf Continuation (codim 2)</a></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Normal form</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../simplebp/">Simple branch point</a></li><li><a class="tocitem" href="../nonsimplebp/">Non-simple branch point</a></li><li><a class="tocitem" href="../simplehopf/">Simple Hopf point</a></li></ul></li><li><a class="tocitem" href="../branchswitching/">Branch switching</a></li><li><a class="tocitem" href="../BifurcationDiagram/">Bifurcation diagram</a></li><li><a class="tocitem" href="../DeflatedContinuation/">Deflated Continuation</a></li><li><a class="tocitem" href="../deflatedproblem/">Deflated problem</a></li><li><a class="tocitem" href="../constrainedproblem/">Constrained problem</a></li><li><input class="collapse-toggle" id="menuitem-4-12" type="checkbox"/><label class="tocitem" for="menuitem-4-12"><span class="docs-label">Periodic Orbits</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../periodicOrbit/">Introduction</a></li><li><a class="tocitem" href="../periodicOrbitTrapeze/">Finite Differences</a></li><li><a class="tocitem" href="../periodicOrbitShooting/">Shooting</a></li></ul></li><li><a class="tocitem" href="../diffeq/">DiffEq wrapper</a></li><li><a class="tocitem" href="../iterator/">Iterator Interface</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Options</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../linearsolver/">Linear Solvers</a></li><li><a class="tocitem" href="../borderedlinearsolver/">Bordered linear solvers</a></li><li><a class="tocitem" href="../eigensolver/">Eigen Solvers</a></li><li><a class="tocitem" href="../Borderedarrays/">Bordered arrays</a></li></ul></li><li><a class="tocitem" href="../faq/">Frequently Asked Questions</a></li><li><a class="tocitem" href="../library/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>1d Kuramoto–Sivashinsky Equation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>1d Kuramoto–Sivashinsky Equation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/ks1d.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="d-Kuramoto–Sivashinsky-Equation-1"><a class="docs-heading-anchor" href="#d-Kuramoto–Sivashinsky-Equation-1">1d Kuramoto–Sivashinsky Equation</a><a class="docs-heading-anchor-permalink" href="#d-Kuramoto–Sivashinsky-Equation-1" title="Permalink"></a></h1><ul><li><a href="#d-Kuramoto–Sivashinsky-Equation-1">1d Kuramoto–Sivashinsky Equation</a></li><ul><li><a href="#Computation-of-the-bifurcation-diagram-1">Computation of the bifurcation diagram</a></li></ul></ul><div class="admonition is-warning"><header class="admonition-header">Warning</header><div class="admonition-body"><p>This is work in progress... In particular, there is a combinatorial explosion that I need to address.</p></div></div><div class="admonition is-category-unknown"><header class="admonition-header">References</header><div class="admonition-body"><p>The following example is exposed in Evstigneev, Nikolay M., and Oleg I. Ryabkov. <strong>Bifurcation Diagram of Stationary Solutions of the 2D Kuramoto-Sivashinsky Equation in Periodic Domains.</strong> Journal of Physics: Conference Series 1730, no. 1 2021</p></div></div><p>We study the 1d Kuramoto–Sivashinsky equation with Dirichlet boundary conditions:</p><div>\[\left(2 u u&#39;+ u&#39;&#39;\right)+2\lambda u^{(4)}=0,\ u(0)=u(\pi)=0.\]</div><p>We discretize the problem by using <span>$u(x)=\sum_{k=1}^{\infty} u_{k} \sin (k x)$</span> which gives</p><div>\[\left(2\lambda k^4-k^2\right) u_{k}+\frac{k}{2}\left(\sum_{l=1}^{\infty} u_{k+l} u_{k}-\frac{1}{2} \sum_{l+m=k} u_{l} u_{m}\right)=0.\]</div><p>This is a good example for the use of automatic bifurcation diagram as we shall see. Let us first encode our problem</p><pre><code class="language-julia">using Revise, LinearAlgebra, Plots
+using Parameters, Setfield, ForwardDiff
+using BifurcationKit
+const  BK = BifurcationKit
+
+# we use this library for plotting
+using ApproxFun
+
+function generateLinear(n)
+	Δ = [-k^2 for k = 1:n]
+	return Δ, Δ.^2
+end
+
+function Fks1d(a, p)
+	@unpack Δ, Δ2, λ, N = p
+	out = (2λ) .* (Δ2 .* a)
+	out .+= (Δ .* a)
+	for l=1:N
+		for m=1:N
+			if 0 &lt; l+m &lt;= N
+				out[l+m] += l*a[l]*a[m]
+			end
+			if 0 &lt; m-l &lt;= N
+				out[m-l] += l*a[l]*a[m]
+			end
+
+			if 0 &lt; -(m-l) &lt;= N
+				out[l-m] -= l*a[l]*a[m]
+			end
+		end
+	end
+
+	out .*= -1
+	return out
+end
+
+# functional jacobian
+Jks1d(u, p) = ForwardDiff.jacobian(z -&gt; Fks1d(z,p), u)
+
+# we group the differentials together
+jet = BK.get3Jet(Fks1d, Jks1d)</code></pre><p>Having defined the model, we chose parameters:</p><pre><code class="language-julia">N = 50
+Δ, Δ2 = generateLinear(N)
+par_ks = (Δ = Δ, Δ2 = Δ2, λ = 0.75, N = N)</code></pre><p>and continuation options</p><pre><code class="language-julia">optn = NewtonPar(verbose = false, tol = 1e-9, maxIter = 15)
+	optc = ContinuationPar(pMin = 1/150., pMax = 1., maxSteps = 700, newtonOptions = optn,
+	dsmax = 0.01, dsmin = 1e-4, ds = -0.001, detectBifurcation = 3, nev = N, nInversion = 8,
+	maxBisectionSteps = 30, dsminBisection = 1e-10, plotEveryStep = 50)
+
+kwargscont = (linearAlgo = MatrixBLS(),
+	verbosity = 2, plot = true,
+	printSolution = (x, p) -&gt; (s = sum(x), u2 = x[3], nrm = norm(x)),
+	plotSolution = (x, p; kwargs...) -&gt; plot!(Fun(SinSpace(), x) ; kwargs...),
+	normC = norm)</code></pre><h2 id="Computation-of-the-bifurcation-diagram-1"><a class="docs-heading-anchor" href="#Computation-of-the-bifurcation-diagram-1">Computation of the bifurcation diagram</a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-bifurcation-diagram-1" title="Permalink"></a></h2><pre><code class="language-julia"># function to adapt continuation option to recursion level
+function optrec(x, p, l; opt = optc)
+	level = l
+	if level &lt;= 2
+		return setproperties(opt;  dsmax = 0.005, maxSteps = 2000, 
+		detectBifurcation = 3, detectLoop = true, nInversion = 6)
+	else
+		return setproperties(opt;  dsmax = 0.005, maxSteps = 2000, 
+		detectBifurcation = 3, detectLoop = true, nInversion = 6)
+	end
+end
+
+# we now compute the bifurcation diagram
+# that is the connected component of (0,0)
+diagram = @time bifurcationdiagram(jet...,
+		zeros(N), par_ks, (@lens _.λ), 4, optrec;
+		kwargscont..., verbosity = 0,
+		)</code></pre><p>Plotting the result can be done using</p><pre><code class="language-julia">plot(diagram; code = (), plotfold = false,  markersize = 3, putspecialptlegend = false,
+	 plotcirclesbif = true, applytoX = x-&gt;2/x, vars = (:param, :nrm), 
+	 xlim = (0,150), ylim=(0,8))
+title!(&quot;#branches = $(size(diagram, code))&quot;)</code></pre><p><img src="../ks1d-1.png" alt/></p></article></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 21 June 2021 12:30">Monday 21 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
