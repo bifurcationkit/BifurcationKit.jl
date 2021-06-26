@@ -8,11 +8,11 @@ function COm(u, p)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
 	x, y, s = u
 	z = 1-x-y-s
-	out = similar(u)
-	out[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
-	out[2] = q2 * z - q6 * y - q3 * x * y
-	out[3] = q4 * z - k * q4 * s
-	out
+	[
+		2q1 * z^2 - 2q5 * x^2 - q3 * x * y,
+		q2 * z - q6 * y - q3 * x * y,
+		q4 * z - k * q4 * s
+	]
 end
 dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
 jet = BK.get3Jet(COm, dCOm)
@@ -25,8 +25,7 @@ opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInv
 	@set! opts_br.newtonOptions.verbose = true
 	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	printSolution = (x, p) -> (x = x[1], y = x[2]),
-	# tangentAlgo = BorderedPred(),
-	plot = true, verbosity = 3, normC = norminf,
+		plot = false, verbosity = 3, normC = norminf,
 	bothside = true)
 	show(br)
 

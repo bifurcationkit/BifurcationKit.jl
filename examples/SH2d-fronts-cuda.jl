@@ -98,11 +98,10 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 	u, l, ν = J
 	sh = sheig.sh
 	σ = sheig.σ
-	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 	A = du -> sh(J, du; shift = σ)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
-	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(40, nev + 10))
+	vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(30, nev + 10))
 	@show 1 ./vals .+ σ
 	return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -115,7 +114,7 @@ end
 J_shfft(u, p) = (u, p.l, p.ν)
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
-Leig = SHEigOp(L, 0.3) # for eigenvalues computation
+Leig = SHEigOp(L, 0.1) # for eigenvalues computation
 # Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
 
 par = (l = -0.1, ν = 1.3, L = L)

@@ -33,7 +33,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	branch = contres.branch
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
-		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in", getinterval(branch[end-1].param, branch[end].param), "\n")
+		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
 		npar = length( branch[1]) - 9
 		push!(contres.specialpoint, SpecialPoint(
 			type = :fold,
@@ -196,7 +196,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# emulate a do-while
 	while true
 		if ~state.isconverged
-			@error "----> Newton failed when locating bifurcation point using bisection method!"
+			@error "Newton failed when locating bifurcation point using bisection method!"
 			break
 		 end
 

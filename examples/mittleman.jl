@@ -153,8 +153,7 @@ bifurcationdiagram!(jet..., getBranch(diagram, (14,)), (current = 3, maxlevel = 
 	kwargsC..., usedeflation = true, halfbranch = true,)
 
 code = ()
-	plot()
-	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
+	plot(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")

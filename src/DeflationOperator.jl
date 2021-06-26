@@ -31,6 +31,7 @@ end
 # constructors
 DeflationOperator(p::Real, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dot, α, roots, _copy(roots[1]))
 DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]))
+DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype) where vectype = DeflationOperator(p, dot, α, roots, v)
 
 # methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T

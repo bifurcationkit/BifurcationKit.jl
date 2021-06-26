@@ -22,7 +22,14 @@ add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::
 add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
-Base.show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
+
+function Base.show(io::IO, tree::BifDiagNode)
+	println(io, "[Bifurcation diagram]")
+	println(io, " ┌─ From $(tree.code)-th bifurcation point.")
+	println(io, " ├─ Children number: $(length(tree.child))" );
+	println(io, " └─ Root (recursion level $(tree.level))")
+	show(io, tree.γ; prefix = "      ")
+end
 
 # total size of the tree
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1

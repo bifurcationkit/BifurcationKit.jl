@@ -56,7 +56,7 @@ kwargsC = (verbosity = 3,
 	plot = true,
 	# tangentAlgo = BorderedPred(),
 	linearAlgo  = MatrixBLS(),
-	printSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x)),
+	printSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
 	callbackN = cb
 	)
@@ -80,31 +80,31 @@ end
 
 
 
-diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -0.1), (@lens _.l), 4, optrec; kwargsC..., halfbranch = true, verbosity = 0)
+diagram = @time bifurcationdiagram(jet..., sol1, (@set parSH.l = -0.1), (@lens _.l), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = true)
 
 code = ()
 	vars = (:param, :n2)
 	plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars = vars)
-	plot!(brflat, vars = vars)
+	plot!(brflat, putspecialptlegend = false, vars = vars)
 	title!("#branches = $(size(diagram, code))")
 
-diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (1,)),  (current = 1, maxlevel = 2), optrec; kwargsC...)
-
+diagram2 = bifurcationdiagram!(jet..., BK.getBranch(diagram, (2,)), 3, optrec; kwargsC..., halfbranch = true)
 
 ####################################################################################################
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol1])
+deflationOp = DeflationOperator(2, 1.0, [sol1])
 
 br, = @time continuation(
 	R_SH, Jac_sp,
-	(@set parSH.l = 1.), (@lens _.l),
-	setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 2.1, pMin = -2.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 2),
+	(@set parSH.l = -1.), (@lens _.l),
+	setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 0.25, pMin = -1., newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 0),
 	deflationOp;
 	verbosity = 1,
 	maxBranches = 150,
 	perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),
 	normN = x -> norm(x, Inf64),
+	printSolution = (x, p) -> (s5 = x[end ÷ 5], n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4],),
 	# tangentAlgo = SecantPred(),
 	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)
 
-plot(br, legend=false, color=:red, linewidth=1)
+plot(br..., legend=false, linewidth=1, vars = (:param, :n2))

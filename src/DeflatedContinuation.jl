@@ -97,6 +97,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 
 # Outputs:
 - `contres::Vector{ContResult}` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,
+- the iterator associated with the computation
 - the solutions at the last parameter value,
 - current parameter value.
 """
@@ -195,7 +196,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 					if isActive(state) && (n_active < maxBranches)
 						n_active += 1
 						_success = true
-						verbosity >= 2 && println("----> Deflation for branch $idb")
+						verbosity >= 2 && println("----> Deflating branch $idb")
 						while _success
 							sol1, hist, _success, itnewton = getNewSolution(state, current_param, idb)
 							if _success && normN(sol1 - getx(state)) < optnewton.tol

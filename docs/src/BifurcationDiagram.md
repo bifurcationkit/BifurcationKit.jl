@@ -128,7 +128,7 @@ plot(bdiag; putspecialptlegend =false, markersize=2, plotfold=false, title="#bra
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false)))
 ```
  
-## Plotting the structure of the diagram
+## Printing the structure of the diagram
 
 It is sometimes useful to have a global representation of the bifurcation diagram. Here, we provide a text representation
 
@@ -141,8 +141,6 @@ AbstractTrees.children(node::BK.BifDiagNode) = node.child
 AbstractTrees.printnode(io::IO, node::BifDiagNode) = print(io, "$(node.code) [ $(node.level)]")
 
 print_tree(bdiag)
-# using GraphPlot 
-# gplot(diagram)
 ```
 
 which should return
@@ -163,4 +161,55 @@ julia> print_tree(bdiag)
 └─ 1 [ 2]
    ├─ 2 [ 3]
    └─ 2 [ 3]
+```
+
+## Plotting the structure of the diagram
+
+We can also use `GraphPlot` to plot the tree underlying the bifurcation diagram:
+
+```julia
+using LightGraphs, MetaGraphs, GraphPlot
+
+function graphFromDiagram!(_graph, diagram, indp)
+	# ind is the index of the parent node
+	# add vertex and associated information
+	add_vertex!(_graph)
+	set_props!(_graph, nv(_graph), Dict(:code => diagram.code, :level => diagram.level))
+	if nv(_graph) > 1
+		add_edge!(_graph, indp, nv(_graph))
+	end
+	if length(diagram.child) > 0
+		# we now run through the children
+		new_indp = nv(_graph)
+		for diag in diagram.child
+			graphFromDiagram!(_graph, diag, new_indp)
+		end
+	end
+end
+
+function graphFromDiagram(diagram) 
+	_g = MetaGraph()
+	graphFromDiagram!(_g, diagram, 1)
+	return _g
+end
+
+_g = graphFromDiagram(bdiag)
+
+gplot(_g, nodelabel = [props(_g, ve)[:code] for ve in vertices(_g)])
+```
+
+which gives the following picture. The node label represent the index of the bifurcation point from which the branch branches.
+
+
+### Using `GraphRecipes`
+
+Another solution is to use `GraphRecipes` and 
+
+```julia
+using GraphRecipes
+
+graphplot(_g, 
+	node_weights = ones(nv(_g)).*10, 
+	names=[props(_g, ve)[:code] for ve in vertices(_g)], 
+	curvature_scalar=0.)
 ```

@@ -251,7 +251,7 @@ br_po, _ = continuation(
 	verbosity = 3,	plot = true,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
-	(Base.display(contResult.eig[end].eigenvals) ;true),
+	(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 	printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
@@ -442,7 +442,7 @@ outfold, hist, flag = @time BK.newtonFold(
 		br_po , indfold; #index of the fold point
 		options = (@set opt_po.linsolver = ls),
 		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 

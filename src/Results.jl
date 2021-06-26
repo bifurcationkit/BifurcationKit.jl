@@ -122,17 +122,17 @@ function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
 	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
 end
 
-function Base.show(io::IO, br::ContResult, comment = "")
-	println(io, " ┌─ Branch number of points: ", length(br.branch))
-	print(io, " ├─ Branch of ")
+function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
+	println(io, prefix * "┌─ Branch number of points: ", length(br.branch))
+	print(io, prefix * "├─ Branch of ")
 	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
-	print(io, "\n ├─ Type of vectors: ")
+	print(io, "\n" * prefix * "├─ Type of vectors: ")
 	printstyled(io, getvectortype(br), color=:light_cyan, bold = true)
-	print(io, "\n ├─ Parameter ")
+	print(io, "\n" * prefix * "├─ Parameter ")
 	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
-	println(io, " from ", br.branch[1].param, " to ", br.branch[end].param,)
+	println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
 	if length(br.specialpoint) > 0
-		println(io, " └─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
+		println(io, prefix * "└─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
 		for ii in eachindex(br.specialpoint)
 			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br.lens)))
 		end
@@ -204,7 +204,7 @@ from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
-Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
+Base.show(io::IO, br::Branch{T, Tbp}; k...) where {T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is

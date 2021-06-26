@@ -138,7 +138,7 @@ br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBif
 			printSolution = (x, p) -> norm(x),
 			normC = x -> norm(x, Inf))
 
-plot(br, br2, br3)
+plot(br, br2...)
 ###################################################################################################
 # Manual branch switching
 bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)

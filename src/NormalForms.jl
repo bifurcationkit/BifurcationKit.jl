@@ -225,6 +225,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
 	nf = bp.nf
 	# coefficient p
 	out .= p .* nf.a
+
 	# factor to account for factorials
 	factor = T(1)
 
@@ -578,7 +579,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 
 	# find zeros for the normal on each side of the bifurcation point
 	function getRootsNf(_ds)
-		deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(n)])
+		deflationOp = DeflationOperator(2, 1.0, [zeros(n)])
 		failures = 0
 		# we allow for 10 failures of nonlinear deflation
 		outdef1 = rand(n)
@@ -597,7 +598,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 	rootsNFm =  getRootsNf(-abs(δp))
 	rootsNFp =  getRootsNf(abs(δp))
 	println("\n--> BS from Non simple branch point")
-	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point counting the trivial solution (Reduced equation).\n")
+	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
 	return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################

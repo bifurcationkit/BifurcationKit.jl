@@ -181,7 +181,20 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 	return multicontinuation(F, dF, br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, kwargs...)
 end
 
-function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+"""
+$(SIGNATURES)
+
+Function to transform predictors `solfromRE` in the normal form coordinates of `bpnf` into solutions. Note that `solfromRE = (before = Vector{vectype}, after = Vector{vectype})`.
+"""
+function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, solfromRE,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		kwargs...)
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -191,27 +204,40 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchP
 
 	# attempting now to convert the guesses from the normal form into true zeros of F
 	optn = optionsCont.newtonOptions
+
+	# options for newton
 	cbnewton = get(kwargs, :callbackN, cbDefault)
+	normn = get(kwargs, :normN, norm)
 
 	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
-	defOpp = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
-	for xsol in rootsNFp
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
+	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	for (ind, xsol) in pairs(rootsNFp)
+		print("--> attempt to converge zero #$ind")
+		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpp, solbif)
 	end
 
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
-	defOpm = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
-	for xsol in rootsNFm
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
+	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	for (ind, xsol) in pairs(rootsNFm)
+		print("--> attempt to converge zero #$ind")
+		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpm, solbif)
 	end
-	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
+	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots after (resp. before) the bifurcation point.\n")
 	return (before = defOpm, after = defOpp, bpm = bpnf.p - ds, bpp = bpnf.p + ds)
 end
 
 # In this function, I keep usedeflation although it is not used to simplify the calls
-function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+function multicontinuation(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, solfromRE,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		kwargs...)
 
 	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
 
