@@ -331,7 +331,7 @@ function biorthogonalise(ζs, ζstars, verbose)
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
+	@assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
 	# save those in case the first algo fails
 	_ζs = deepcopy(ζs)
@@ -448,7 +448,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
 			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[1:length(rightEv)])))
 			if norm(_λ[1:length(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
-			@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
+				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
 			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
@@ -585,10 +585,10 @@ function predictor(bp::NdBranchPoint, δp::T;
 		outdef1 = rand(n)
 		while failures < nbfailures
 			if isnothing(J)
-				jac = (x,p) -> ForwardDiff.jacobian( z->perturb(bp(Val(:reducedForm), z, p)), x)
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
+				jac = (x,p) -> ForwardDiff.jacobian(z -> perturb(bp(Val(:reducedForm), z, p)), x)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
 			else
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
 			end
 			flag && push!(deflationOp, ampfactor .* outdef1)
 			~flag && (failures += 1)
@@ -608,7 +608,7 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `pt::Hopf` Hopf bifurcation point
 - `ls` linear solver
 
@@ -675,7 +675,7 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_hopf` index of the bifurcation point in `br`
 - `options` options for the Newton solver

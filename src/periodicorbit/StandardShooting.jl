@@ -183,7 +183,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 			out.u[ii] .= sh.flow(xc[ii], par, sh.ds[ii] * T) .- xc[ip1]
 		end
 	else
-		@assert 1==0 "Not implemented yet. Try to use AbstractVectors instead"
+		@assert 1==0 "Not implemented yet. Try to use an AbstractVector instead"
 	end
 
 	# add constraint

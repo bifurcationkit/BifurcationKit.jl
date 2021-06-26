@@ -231,7 +231,7 @@ bdiag = bifurcationdiagram(jet..., zeros(3), pard6, (@lens _.μ), 3,
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
 
-# plot(bdiag; putbifptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
+# plot(bdiag; putspecialptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
 
 ####################################################################################################
 # test of the Hopf normal form
