@@ -10,6 +10,7 @@ makedocs(doctest = false,
 	pages = Any[
 		"Home" => "index.md",
 		"Overview" => "guidelines.md",
+		"Educational introduction" => "Bifurcation_Educational.md",
 		"Tutorials" => "tutorials.md",
 		"Functionalities" => [
 			"Plotting" => "plotting.md",
