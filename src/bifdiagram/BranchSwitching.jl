@@ -212,7 +212,7 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
 	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
 	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
 	for (ind, xsol) in pairs(rootsNFp)
-		print("--> attempt to converge zero #$ind")
+		print("\n--> attempt to converge zero #$ind")
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpp, solbif)
 	end
@@ -220,7 +220,7 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
 	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
 	for (ind, xsol) in pairs(rootsNFm)
-		print("--> attempt to converge zero #$ind")
+		print("\n--> attempt to converge zero #$ind")
 		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpm, solbif)
 	end
@@ -240,6 +240,40 @@ function multicontinuation(F, dF, br::AbstractBranchResult,
 		kwargs...)
 
 	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
+
+	multicontinuation(F, dF, br,
+			bpnf, defOpm, defOpp, optionsCont;
+			δp = δp,
+			Teigvec = Teigvec,
+			verbosedeflation = verbosedeflation,
+			maxIterDeflation = maxIterDeflation,
+			lsdefop = lsdefop,
+			kwargs...)
+end
+
+"""
+$(SIGNATURES)
+
+Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+
+# Arguments
+- `F, dF`: function `(x, p) -> F(x, p)` and its differential `(x, p, dx) -> d1F(x, p, dx)`
+- `br` branch result from a call to [`continuation`](@ref)
+- `bpnf` normal form
+- `defOpm::DeflationOperator, defOpp::DeflationOperator` to specify converged points on nonn-trivial branches before/after the bifurcation points.
+
+The rest is as the regular `multicontinuation` function.
+
+"""
+function multicontinuation(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, defOpm::DeflationOperator, defOpp::DeflationOperator,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		kwargs...)
 
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -268,7 +302,7 @@ function multicontinuation(F, dF, br::AbstractBranchResult,
 		# br, = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
 	end
 
-	return branches, (before = defOpm, after = defOpp), (before = solfromRE.before, after = solfromRE.after)
+	return branches, (before = defOpm, after = defOpp)
 end
 
 # same but for a Branch
