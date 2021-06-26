@@ -95,7 +95,7 @@ However, this is a bit disappointing as we only find two branches.
 
 ```julia
 # deflation operator to hold solutions
-deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
+deflationOp = DeflationOperator(2, dot, 1.0, [out])
 
 # parameter values for the problem
 par_def = @set par_car.ϵ = 0.6

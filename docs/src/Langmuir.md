@@ -1,8 +1,4 @@
-# Langmuir–Blodgett transfer model (really advanced)
-
-!!! note "Advanced"
-    This is one of the most advanced example in the package. It uses all functionalities to their best. For example, the computation of periodic orbits with Finite Differences uses an inplace modification of the jacobian which allows to have quite a fine time discretization. The Shooting methods rely on parallel shooting with preconditioner and highly tuned ODE time stepper.
-      
+# Langmuir–Blodgett transfer model (really advanced)     
     
 In this tutorial, we try to replicate some of the results of the amazing paper [^Köpf]. This example is quite a marvel in the realm of bifurcation analysis, featuring a harp-like bifurcation diagram. The equations of the thin film are as follows:
 
@@ -148,6 +144,7 @@ opts_cont = ContinuationPar(
 	@time br, u1 = @time continuation(
 		Flgvf, JanaSP,
 		out, (@set par.ν = 0.06), (@lens _.ν ), opts_cont,
+		# we form a sparse matrix for the bordered linear problem
 		linearAlgo = MatrixBLS(),
 		plot = true, verbosity = 2,
 		printSolution = (x, p) -> normL2(x),
@@ -208,6 +205,7 @@ We would like to compute the branches of periodic solutions from the Hopf points
 # parameters for newton
 opt_po = NewtonPar(tol =  1e-10, verbose = true, maxIter = 50)
 
+# parameters for continuation
 opts_po_cont = ContinuationPar(dsmin = 1e-5, dsmax = 0.35, ds= 0.001,
 	pMax = 1.0, maxSteps = 100, theta = 0.75,
 	newtonOptions = setproperties(opt_po; maxIter = 15, tol = 1e-6), plotEveryStep = 1)
@@ -218,11 +216,15 @@ br_potrap, utrap = continuation(
 	jet..., br, 5,
 	# arguments for continuation
 	opts_po_cont, PeriodicOrbitTrapProblem(M = M);
-	ampfactor = 0.99, δp = 1e-5,
-	linearPO = :FullSparseInplace,
-	tangentAlgo = BorderedPred(),
-	verbosity = 3,	plot = true,
+	# parameter value used for branching
+	δp = 1e-5, 
+	# use deflated Newton to find non-trivial solutions
 	usedeflation = true,
+	# algorithm to solve linear associated with periodic orbit problem
+	linearPO = :FullSparseInplace,
+	# tangent algorithm along the branch
+	tangentAlgo = BorderedPred(),
+	verbosity = 3, plot = true,
 	updateSectionEveryStep = 1,
 	printSolution = (x, p) -> normL2T(x[1:end-1], M = M),
 	plotSolution  = (x, p; kwargs...) -> begin

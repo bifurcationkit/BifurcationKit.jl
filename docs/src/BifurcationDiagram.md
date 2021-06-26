@@ -21,7 +21,7 @@ Thanks to the functionality presented in this part, we can compute the bifurcati
 
 ## Basic example with simple branch points
 
-```julia
+```@example
 using Revise, Plots
 using BifurcationKit, Setfield, ForwardDiff
 const BK = BifurcationKit
@@ -53,6 +53,9 @@ diagram = bifurcationdiagram(jet...,
 	2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3, dsminBisection =1e-18, maxBisectionSteps=20);
 	printSolution = (x, p) -> x[1])
+	
+# You can plot the diagram like 
+plot(diagram; putspecialptlegend=false, markersize=2, plotfold=false, title = "#branches = $(size(diagram))")
 ```
 
 This gives
@@ -67,10 +70,6 @@ Bifurcation points:
 - #  1,      bp point around p ≈ 0.00000281, step =  31, eigenelements in eig[ 32], ind_ev =   1 [converged], δ = ( 1,  0)
 - #  2,      bp point around p ≈ 0.15000005, step =  53, eigenelements in eig[ 54], ind_ev =   1 [converged], δ = (-1,  0)
 ```
-
-You can plot the diagram like `plot(diagram; putspecialptlegend=false, markersize=2, plotfold=false, title = "#branches = $(size(diagram))")` and it gives:
-
-![](diagram1d.png)
 
 ## Example with nonsimple branch points
 

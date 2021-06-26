@@ -21,7 +21,7 @@ const BK = BifurcationKit
 
 # define the sup norm
 norminf = x -> norm(x, Inf)
-nothing #hide
+nothing # hide
 ```
 
 ## Problem setting
@@ -52,7 +52,7 @@ par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4
 
 # initial condition
 z0 = [0.07,0.2,05]
-nothing #hide
+nothing # hide
 ```
 
 ## Continuation and codim 1 bifurcations

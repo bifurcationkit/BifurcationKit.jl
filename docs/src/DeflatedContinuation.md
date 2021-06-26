@@ -54,7 +54,7 @@ The following piece of information is valuable in order to get the algorithm wor
 
 We show a quick and simple example of use. Note in particular that the algoritm is able to find the disconnected branch. The starting points are marked with crosses
 
-```julia
+```@example
 using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, Plots
 const BK = BifurcationKit
 
@@ -72,5 +72,3 @@ brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)
 plot(brdc...)
 ```
-
-![](DCexample.png)

@@ -41,7 +41,7 @@ ContState
 
 We show a quick and simple example of use. Note that it is not very optimized because of the use of global variables.
 
-```julia
+```@example ITERATOR
 using BifurcationKit, SparseArrays, LinearAlgebra, Plots, Setfield
 const BK = BifurcationKit
 
@@ -73,10 +73,6 @@ end
 # plot the result
 plot(resp, resx; label = "", xlabel = "p")
 ```
-
-and you should see:
-
-![](iterator.png)
 
 ## Additional information
 
