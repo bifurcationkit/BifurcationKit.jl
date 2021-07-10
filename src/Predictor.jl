@@ -89,7 +89,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("--> predictor = ", algo)
+	(verbosity > 0) && println("Predictor: ", algo)
 	# we do nothing here, the predictor will just copy z_old into z_pred
 end
 ####################################################################################################
@@ -101,7 +101,7 @@ struct SecantPred <: AbstractSecantPredictor end
 # tangent computation using Secant predictor
 # tau is the tangent prediction
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("--> predictor = ", algo)
+	(verbosity > 0) && println("Predictor: ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(τ, z_new)
 	minus!(τ, z_old)
@@ -117,7 +117,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 # tangent computation using Bordered system
 # tau is the tangent prediction
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("--> predictor = Bordered")
+	(verbosity > 0) && println("Predictor: Bordered")
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
 	# dFdl = (F(z_new.u, z_new.p + ϵ) - F(z_new.u, z_new.p)) / ϵ
@@ -143,6 +143,7 @@ end
 ####################################################################################################
 """
 	Multiple Tangent predictor
+
 $(TYPEDFIELDS)
 
 # Constructor(s)
@@ -195,7 +196,7 @@ end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
-	(verbosity > 0) && print("--> predictor = MultiplePred\n--")
+	(verbosity > 0) && print("Predictor: MultiplePred\n--")
 	getTangent!(τ, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
 	copyto!(algo.τ, τ)
 end
@@ -352,7 +353,7 @@ end
 
 function getTangent!(tau::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
-	(verbosity > 0) && println("--> predictor = PolynomialPred")
+	(verbosity > 0) && println("Predictor: PolynomialPred")
 
 	if polypred.update
 		# update the list of solutions

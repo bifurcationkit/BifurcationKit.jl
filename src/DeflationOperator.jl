@@ -2,12 +2,9 @@
 $(TYPEDEF)
 
 It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
-``F(u) \\cdot Π_i(dot(u - roots_i, u - roots_i)^{-p} + shift) := F(u) \\cdot M(u)``. The fields of the struct `DeflationOperator` are as follows:
+``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u,u)``. The fields of the struct `DeflationOperator` are as follows:
 
 $(TYPEDFIELDS)
-
-The deflation operator is is ``M(u) = \\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^{-p})``
-where ``norm(u) = dot(u,u)``.
 
 Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 """
@@ -50,13 +47,13 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) 
 	if length(df.roots) == 0
 		return T(1)
 	end
-	ρ = u -> T(1) / df.dot(u, u)^df.power + df.α
+	M = u -> T(1) / df.dot(u, u)^df.power + df.α
 	# compute u - df.roots[1]
 	copyto!(tmp, u);	axpy!(T(-1), df.roots[1], tmp)
-	out = ρ(tmp)
+	out = M(tmp)
 	for ii in 2:length(df.roots)
 		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
-		out *= ρ(tmp)
+		out *= M(tmp)
 	end
 	return out
 end

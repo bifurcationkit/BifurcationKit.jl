@@ -313,6 +313,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	# next line is to overwrite verbosity behaviour, like when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity)
 	verbose = verbosity > 0
+	verbose1 = verbosity > 1
 
 	@unpack step, ds, theta = state
 
@@ -320,7 +321,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	getPredictor!(state, it)
 	
 	if verbose
-		println("#"^35*"\nStart of Continuation Step $step");
+		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
 		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))
 		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
 	end
@@ -335,7 +336,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	# Successful step
 	if state.isconverged
 		if verbose
-			printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
+			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
 			print("Parameter ", getLensSymbol(it.lens))
 			@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p)
 		end
@@ -352,7 +353,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		if computeEigenElements(it)
 			# this compute eigen-elements, store them in state and update the stab indices in state
 			iteigen = computeEigenvalues!(it, state)
-			verbose && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
+			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
 		end
 		state.step += 1
 	else
@@ -372,6 +373,7 @@ end
 function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 	contParams = getParams(it)
 	verbose = it.verbosity > 0
+	verbose1 = it.verbosity > 1
 
 	next = (state, state)
 
@@ -394,7 +396,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				_T = eltype(it)
 				interval::Tuple{_T, _T} = getinterval(state.z_pred.p, getp(state))
 				if contParams.detectBifurcation > 2
-					verbose && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
+					verbose1 && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end
@@ -506,7 +508,11 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `callbackN` callback for newton iterations. see docs for [`newton`](@ref). Can be used to change preconditioners
 - `tangentAlgo = SecantPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`. See below for more information.
 - `linearAlgo = BorderingBLS()`. Used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS` or `MatrixFreeBLS`.
-- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`
+- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
+    - case 0: print nothing
+    - case 1: print basic information about the continuation: used predictor, step size and parameter values
+    - case 2: print newton iterations number, stability of solution, detected bifurcations / events
+    - case 3: print information during bisection to detect bifurcation / events
 - `normC = norm` norm used in the different Newton solves
 - `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
