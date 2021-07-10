@@ -79,6 +79,7 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 @inline getParams(it::ContIterable) = it.contParams
 Base.length(it::ContIterable) = it.contParams.maxSteps
 @inline isInDomain(it::ContIterable, p) = it.contParams.pMin < p < it.contParams.pMax
+@inline isOnBoundary(it::ContIterable, p) = (it.contParams.pMin == p) || (p == it.contParams.pMax)
 
 ####################################################################################################
 """
