@@ -191,6 +191,6 @@ br3, = continuation(F,Jac_m,x0, -1.5, (@lens _), opts; tangentAlgo = BorderedPre
 # test for deflated continuation
 brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
-	DeflationOperator(2, .001, [[0.]]); showplot=false, verbosity = 0,
+	DeflationOperator(2, .001, [[0.]]); plot=false, verbosity = 0,
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)
