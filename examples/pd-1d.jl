@@ -79,7 +79,7 @@ optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurca
 
 	br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
 		plot = true, verbosity = 3,
-		printSolution = (x, p) -> norm(x, Inf),
+		recordFromSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 
 plot(br)
@@ -141,7 +141,7 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8
 		linearPO = :FullSparseInplace,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
 		plotSolution = (x, p;kwargs...) ->  heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...),
-		printSolution = (u, p) -> BK.maximumPOTrap(u, N, M; ratio = 2),
+		recordFromSolution = (u, p) -> BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
 plot(br, br_po, label = "")
@@ -203,7 +203,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.
 		finaliseSolution = (z, tau, step, contResult; kw...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
@@ -252,6 +252,6 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		finaliseSolution = (z, tau, step, contResult; k...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
 		plotSolution = (x, p; kwargs...) -> (BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...); plot!(br_po_sh; subplot=1, legend=false)),
-		printSolution = (u, p; k...) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p; k...) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 
 plot(br_po_sh_pd, br, label = "");title!("")

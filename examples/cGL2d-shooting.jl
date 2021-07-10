@@ -157,7 +157,7 @@ br_po, upo, = @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _
 		linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
 		# callbackN = cb_ss,
 		plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-		printSolution = (u, p; k...) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p; k...) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 
 ####################################################################################################
 # automatic branch switching
@@ -180,7 +180,7 @@ br_po, = continuation(
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	printSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
+	recordFromSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
 	normC = norminf)
 
 #ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;

@@ -42,14 +42,14 @@ end
 extractVector(pb::BorderedProblem, x::AbstractVector) = @view x[1:end-getParameterDim(pb)]
 setVector!(pb::BorderedProblem, out::AbstractVector, x::AbstractVector) = out[1:end-getParameterDim(pb)] .= x
 
-etParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out[end] = p
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out[end] = p
 setParameter!(pb::BorderedProblem, out::AbstractVector, p) = out[end-getParameterDim(pb)+1:end] .= p
 
-extractParameter(pb::BorderedProblem, x::BorderedArray) = x.p
-extractVector(pb::BorderedProblem, x::BorderedArray) = x.u
-setVector!(pb::BorderedProblem, out::BorderedArray, x) = copyto!(out.u, x)
-setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out.p = p
-setParameter!(pb::BorderedProblem, out::BorderedArray, p) = copyto!(out.p, p)
+# extractParameter(pb::BorderedProblem, x::BorderedArray) = x.p
+# extractVector(pb::BorderedProblem, x::BorderedArray) = x.u
+# setVector!(pb::BorderedProblem, out::BorderedArray, x) = copyto!(out.u, x)
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out.p = p
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p) = copyto!(out.p, p)
 
 function (pb::BorderedProblem)(xe, par)
 	out = similar(xe)

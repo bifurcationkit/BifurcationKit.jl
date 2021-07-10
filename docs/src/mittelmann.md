@@ -130,7 +130,7 @@ Given that we will use these arguments for `continuation` many times, it is wise
 ```julia
 # optional arguments for continuation
 kwargsC = (verbosity = 3, plot = true,
-	printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 	plotSolution = (x, p; k...) -> plotsol!(x ; k...),
 	normC = norminf
 	)

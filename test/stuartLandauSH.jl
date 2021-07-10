@@ -104,7 +104,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 		verbosity = 0,
 		plot = false,
 		# plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; kwargs...),
-		printSolution = (u, p) -> norm(u[1:2]),
+		recordFromSolution = (u, p) -> norm(u[1:2]),
 		normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
@@ -115,13 +115,13 @@ d2Fsl(x, p, dx1, dx2) = FD.derivative(t -> d1Fsl(x .+ t .* dx2, p, dx1), 0.)
 d3Fsl(x, p, dx1, dx2, dx3) = FD.derivative(t -> d2Fsl(x .+ t .* dx3, p, dx1, dx2), 0.)
 jet = (Fsl, JFsl, d2Fsl, d3Fsl)
 
-br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf, prob, KenCarp4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf)
+br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf, prob, KenCarp4());recordFromSolution = (u, p) -> norm(u[1:2]), normC = norminf)
 
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detectBifurcation=0
-br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());printSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
+br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4());recordFromSolution = (u, p) -> norm(u[1:2]), normC = norminf, plot=false)
 ####################################################################################################
 # test shooting interface M > 1
 _pb = ShootingProblem(Fsl, par_hopf, prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
@@ -183,7 +183,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMax = 4
 		tangentAlgo = BorderedPred(),
 		plot = false,
 		# plotSolution = (x, p;kwargs...) -> plot!(x; kwargs...),
-		printSolution = (u, p) -> norm(u), normC = norminf)
+		recordFromSolution = (u, p) -> norm(u), normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
 # normals = [[-1., 0.], [1, -1]]
@@ -219,7 +219,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 		tangentAlgo = BorderedPred(),
 		plot = false,
 		# plotSolution = (x, p;kwargs...) -> plot!(x; kwargs...),
-		printSolution = (u, p) -> norm(u), normC = norminf)
+		recordFromSolution = (u, p) -> norm(u), normC = norminf)
 
 ####################################################################################################
 normals = [[-1., 0.], [1, 0], [0, 1]]

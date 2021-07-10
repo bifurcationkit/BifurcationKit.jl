@@ -49,7 +49,7 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
 				_T  = eltype(it)
-				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.printSolution, it.verbosity, :guess, getinterval(current_param, current_param-ds))
+				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.recordFromSolution, it.verbosity, :guess, getinterval(current_param, current_param-ds))
 				if bifpt.type != :none; push!(contResult.specialpoint, bifpt); end
 			end
 		end
@@ -86,7 +86,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 - `maxBranches::Int = 100` maximum number of branches considered,
 - `maxIterDefOp::Int` maximum number of deflated Newton iterations
 - `showplot = false` whether to plot the solution while computing,
-- `printSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...),
+- `recordFromSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...),
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution,
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners or affect the newton iterations. In the deflation part of the algorithm, when seeking for new branches, the callback is passed the keyword argument `fromDeflatedNewton = true` to tell the user can it is not in the continuation part (regular newton) of the algorithm,
 - `tangentAlgo = NaturalPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`,
@@ -110,7 +110,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			tangentAlgo = SecantPred(),
 			linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver),
 			dotPALC = (x,y) -> dot(x,y) / length(x),
-			printSolution = (x, p) -> norm(x),
+			recordFromSolution = (x, p) -> norm(x),
 			plotSolution = (x, p ;kwargs...) -> plot!(x; kwargs...),
 			perturbSolution = (x, p, id) -> x,
 			callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true,
@@ -133,7 +133,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 	verbosity > 0 && printstyled(color=:magenta, "--> There are $(length(deflationOp)) branches\n")
 
 	# underlying continuation iterator
-	contIt = ContIterable(F, J, defOp[1], par, lens, ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep), linearAlgo; tangentAlgo = tangentAlgo, plot=showplot, plotSolution = plotSolution, printSolution = printSolution, normC = normN, dotPALC = dotPALC, finaliseSolution = finaliseDefault, callbackN = callbackN, verbosity = verbosity-2, filename = nothing)
+	contIt = ContIterable(F, J, defOp[1], par, lens, ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep), linearAlgo; tangentAlgo = tangentAlgo, plot=showplot, plotSolution = plotSolution, recordFromSolution = recordFromSolution, normC = normN, dotPALC = dotPALC, finaliseSolution = finaliseDefault, callbackN = callbackN, verbosity = verbosity-2, filename = nothing)
 
 	# we "hack" the saveSolEveryStep option because we always want to record the first point on each branch
 	iter = DefContIterable(contIt, maxBranches, seekEveryStep, perturbSolution, acceptSolution, updateDeflationOp)

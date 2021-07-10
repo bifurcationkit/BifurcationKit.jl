@@ -503,7 +503,7 @@ br_po, = @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 This gives the following bifurcation diagram:
@@ -534,7 +534,7 @@ br_po, = @time continuation(poTrapMF, outpo_f,
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.getAmplitude(poTrapMF, u, par_cgl; ratio = 2), normC = norminf)
 ```
 
 ## Continuation of Fold of periodic orbits
@@ -729,7 +729,7 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
    orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r = p),
    opts_po_cont, linearPO = :FullMatrixFree;
    verbosity = 2,
-   printSolution = (u,p) -> getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x->maximum(abs.(x)))
+   recordFromSolution = (u,p) -> getAmplitude(poTrapMFGPU, u, par_cgl_gpu), normC = x->maximum(abs.(x)))
 ```
 
 !!! info "Preconditioner update"

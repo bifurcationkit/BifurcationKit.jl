@@ -199,7 +199,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			opts_po_cont; linearPO = :FullLU
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
-			printSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
+			recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
@@ -235,7 +235,7 @@ br_po, = @time continuation(
 		opts_po_cont; linearPO = :FullMatrixFree,
 		verbosity = 3,	plot = true,
 		plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-		printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+		recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 branches = Any[br_pok2]
 # push!(branches, br_po)
@@ -253,7 +253,7 @@ br_po, _ = continuation(
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 	(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
 # preconditioner not taking into account the constraint
@@ -297,7 +297,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			verbosity = 2,	plot = true,
 			plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			callbackN = callbackPO,
-			printSolution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
+			recordFromSolution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
 			normC = norminf)
 
 
@@ -608,4 +608,4 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 		orbitguess_cu, r_hopf - 0.01,
 		opts_po_cont, :FullMatrixFree;
 		verbosity = 2,
-		printSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = x -> maximum(abs.(x)))
+		recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = x -> maximum(abs.(x)))

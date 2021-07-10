@@ -130,7 +130,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
-		printSolution = (x,p) -> x[n÷2], normC = norminf)
+		recordFromSolution = (x,p) -> x[n÷2], normC = norminf)
 ```
 
 We obtain the following bifurcation diagram with 3 Hopf bifurcation points
@@ -304,7 +304,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax =
 br, = @time continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
-	printSolution = (x, p)->x[n÷2], normC = norminf)
+	recordFromSolution = (x, p)->x[n÷2], normC = norminf)
 ```
 
 We need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper:

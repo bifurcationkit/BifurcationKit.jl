@@ -828,7 +828,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::Newt
 # continuation wrapper
 
 """
-	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), kwargs...)
+	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), kwargs...)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -848,9 +848,9 @@ This is the continuation routine for computing a periodic orbit using a function
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 
-Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
+Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, printSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
+function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, recordFromSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive."
 	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
 
@@ -899,7 +899,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 			prob, jac,
 			orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)), linearAlgo; kwargs...,
-			printSolution = printSolution,
+			recordFromSolution = recordFromSolution,
 			finaliseSolution = _finsol2,)
 	else
 		if linearPO == :BorderedLU
@@ -931,7 +931,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		br, z, τ = continuation(prob, jacPO, orbitguess, par, lens,
 			contParams, linearAlgo;
 			kwargs...,
-			printSolution = printSolution,
+			recordFromSolution = recordFromSolution,
 			finaliseSolution = _finsol2,)
 	end
 	return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
@@ -957,11 +957,11 @@ This is the continuation routine for computing a periodic orbit using a function
     - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 
-Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `printSolution` argument.
+Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, printSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
-	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, printSolution = printSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
+	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, recordFromSolution = recordFromSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
 end
 
 ####################################################################################################
@@ -1006,12 +1006,12 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
-- `printSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
+- `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 """
-function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, printSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
+function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, recordFromSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
 	verbose = get(kwargs, :verbosity, 0) > 0
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 
@@ -1059,7 +1059,7 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 	# Right now, it can be quite large.
 
 	# perform continuation
-	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, printSolution = printSolution, linearAlgo = _linearAlgo, kwargs...)
+	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, recordFromSolution = recordFromSolution, linearAlgo = _linearAlgo, kwargs...)
 
 	#create a branch
 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)

@@ -54,9 +54,9 @@ plot(br, vars = (:param, :x))
 ```
 The available symbols are `:param, :sol, :itnewton, :ds, :theta, :step` and:
 
-- `x` if `printSolution` (see [`continuation`](@ref)) returns a `Number`.
-- `x1, x2,...` if `printSolution` returns a `Tuple`.
-- the keys of the `NamedTuple` returned by `printSolution`.
+- `x` if `recordFromSolution` (see [`continuation`](@ref)) returns a `Number`.
+- `x1, x2,...` if `recordFromSolution` returns a `Tuple`.
+- the keys of the `NamedTuple` returned by `recordFromSolution`.
 
 ### Plotting directly using the field names
 

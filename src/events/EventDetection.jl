@@ -220,7 +220,7 @@ EventSpecialPoint(state::ContState, Utype::Symbol, status::Symbol, printsolution
 # function to tell the event type based  on the coordinates of the zero
 function getEventType(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
 	# record information about the event point
-	userpoint = EventSpecialPoint(state, :user, status, iter.printSolution, iter.normC, interval)
+	userpoint = EventSpecialPoint(state, :user, status, iter.recordFromSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end
@@ -248,7 +248,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 		typeE = labels(event, event_index_C)
 	end
 	# record information about the event point
-	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
+	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Continuous user point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end
@@ -272,7 +272,7 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
 		typeE = labels(event, event_index_D)
 	end
 	# record information about the ev point
-	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.printSolution, iter.normC, interval)
+	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Discrete user point at p ≈ $(getp(state)) \n")
 	return true, userpoint
 end

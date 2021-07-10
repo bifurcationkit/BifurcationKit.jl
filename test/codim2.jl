@@ -23,7 +23,7 @@ z0 = [0.07,0.2,05]
 
 opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInversion = 4, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
 	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
-	printSolution = (x, p) -> (x = x[1], y = x[2]),
+	recordFromSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = false, verbosity = 0, normC = norminf,
 	bothside = true)
 

@@ -83,7 +83,7 @@ optn = NewtonPar(verbose = false, tol = 1e-9, maxIter = 15)
 
 kwargscont = (linearAlgo = MatrixBLS(),
 	verbosity = 2, plot = true,
-	printSolution = (x, p) -> (s = sum(x), u2 = x[3], nrm = norm(x)),
+	recordFromSolution = (x, p) -> (s = sum(x), u2 = x[3], nrm = norm(x)),
 	plotSolution = (x, p; kwargs...) -> plot!(Fun(SinSpace(), x) ; kwargs...),
 	normC = norm)
 ```

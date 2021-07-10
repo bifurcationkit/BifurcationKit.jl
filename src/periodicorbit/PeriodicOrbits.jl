@@ -215,7 +215,7 @@ function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens
 		prob, jac,
 		orbitguess, par, lens,
 		(@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)), linearAlgo;
-		printSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
+		recordFromSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
 		finaliseSolution = _finsol2,
 		kwargs...,)
 	return setproperties(branch; type = :PeriodicOrbit, functional = prob), u, τ
@@ -312,14 +312,15 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
 	end
 
-	# pass the problem to the plotting and printSolution functions
+	# pass the problem to the plotting and recordFromSolution functions
 	_plotsol = get(kwargs, :plotSolution, nothing)
-	_plotsol2 = isnothing(_plotsol) ? (x,p; k...) -> nothing : (x,p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
+	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 
-	if :printSolution in keys(kwargs)
-		_printsol = get(kwargs, :printSolution, nothing)
- 		kwargs = @set kwargs[:printSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
+	if :recordFromSolution in keys(kwargs)
+		_printsol = get(kwargs, :recordFromSolution, nothing)
+ 		kwargs = @set kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
 	end
+
 	# perform continuation
 	branch, u, τ = continuation(probPO, orbitguess, setParam(br, pred.p), br.lens, _contParams; kwargs..., plotSolution = _plotsol2, updateSectionEveryStep = updateSectionEveryStep)
 

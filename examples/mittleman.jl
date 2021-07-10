@@ -108,7 +108,7 @@ end
 # optional parameters for continuation
 kwargsC = (verbosity = 3,
 	plot = true,
-	printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 	plotSolution = (x, p; k...) -> plotsol!(x ; k...),
 	callbackN = cb,
 	finaliseSolution = finSol,
@@ -234,7 +234,7 @@ solbif, flag, _ = newton(Fmit, JFmit, bp2d.x0, bp2d(deflationOp[3], δp), (@set 
 plotsol(solbif-0*bp2d(deflationOp[2], δp))
 
 brnf1, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 
@@ -244,7 +244,7 @@ push!(branches2, brnf1)
 # plot!(brnf1)
 
 brnf2, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 
@@ -286,7 +286,7 @@ brdef1, _ = @time BK.continuation(
 	# bp2d([0.6,0.6], -0.01), br.specialpoint[2].param - 0.005,
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br,br1,br2, brdef1,plotfold=false)
@@ -297,7 +297,7 @@ brdef2, _ = @time BK.continuation(
 	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
@@ -311,7 +311,7 @@ brdef2, _ = @time BK.continuation(
 	DeflationOperator(2.0, dot, 1., ([sol0]));
 	showplot=true, verbosity = 2,
 	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	normN = norminf)
 

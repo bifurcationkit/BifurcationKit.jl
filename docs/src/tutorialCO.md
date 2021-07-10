@@ -71,7 +71,7 @@ opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01,
 	
 # compute the branch of solutions	
 br, = continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
-	printSolution = (x, p) -> (x = x[1], y = x[2]),
+	recordFromSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = true, verbosity = 3, normC = norminf)
 	
 # plot the branch
@@ -89,7 +89,7 @@ sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	# detection of codim 2 bifurcations with bisection
 	detectCodim2Bifurcation = 2,
 	# we save the first component for plotting
-	printSolution = (u,p; kw...) -> (x = u.u[1] ),
+	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	# we update the Fold problem at every continuation step
 	updateMinAugEveryStep = 1,
 	# compute both sides of the initial condition
@@ -117,7 +117,7 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	# tell to start the Hopf problem using eigen elements: compute left eigenvector
 	startWithEigen = true,
 	# we save the first component for plotting
-	printSolution = (u,p; kw...) -> (x = u.u[1] ),
+	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	# we update the Hopf problem at every continuation step
 	updateMinAugEveryStep = 1,
 	# compute both sides of the initial condition

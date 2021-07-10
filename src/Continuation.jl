@@ -18,7 +18,7 @@ abstract type AbstractContinuationState end
 
 	plot::Bool = false
 	plotSolution::Tplotsolution
-	printSolution::Tprintsolution
+	recordFromSolution::Tprintsolution
 	event::Tevent = nothing
 
 	normC::TnormC
@@ -43,7 +43,7 @@ function ContIterable(Fhandle, Jhandle,
 					tangentAlgo = SecantPred(),
 					plot = false,
 					plotSolution = (x, p; kwargs...) -> nothing,
-					printSolution = (x, p; kwargs...) -> norm(x),
+					recordFromSolution = (x, p; kwargs...) -> norm(x),
 					normC = norm,
 					dotPALC = (x,y) -> dot(x,y) / length(x),
 					finaliseSolution = finaliseDefault,
@@ -59,7 +59,7 @@ function ContIterable(Fhandle, Jhandle,
 				linearAlgo = linearAlgo,
 				plot = plot,
 				plotSolution = plotSolution,
-				printSolution = printSolution,
+				recordFromSolution = recordFromSolution,
 				normC = normC,
 				dottheta = DotTheta(dotPALC),
 				finaliseSolution = finaliseSolution,
@@ -78,6 +78,7 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 
 @inline getParams(it::ContIterable) = it.contParams
 Base.length(it::ContIterable) = it.contParams.maxSteps
+@inline isInDomain(it::ContIterable, p) = it.contParams.pMin < p < it.contParams.pMax
 
 ####################################################################################################
 """
@@ -181,12 +182,12 @@ getx(state::AbstractContinuationState) = state.z_old.u
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
-			((it.contParams.pMin < state.z_old.p < it.contParams.pMax) || state.step == 0) &&
+			(isInDomain(it, state.z_old.p) || state.step == 0) &&
 			(state.stopcontinuation == false)
 
 function getStateSummary(it, state)
 	x = getx(state); p = getp(state)
-	pt = it.printSolution(x, p)
+	pt = it.recordFromSolution(x, p)
 	stable = computeEigenElements(it) ? isStable(state) : nothing
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, theta = state.theta, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
@@ -219,7 +220,7 @@ end
 
 function ContResult(it::AbstractContinuationIterable, state::AbstractContinuationState)
 	x0 = getx(state); p0 = getp(state)
-	pt = it.printSolution(x0, p0)
+	pt = it.recordFromSolution(x0, p0)
 	eiginfo = computeEigenElements(it) ? (state.eigvals, state.eigvecs) : nothing
 	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it), computeEigenElements(it))
 end
@@ -399,7 +400,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				end
 				# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 				if detectBifucation(state)
-					_, bifpt = getBifurcationType(contParams, state, it.normC, it.printSolution, it.verbosity, status, interval)
+					_, bifpt = getBifurcationType(contParams, state, it.normC, it.recordFromSolution, it.verbosity, status, interval)
 					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
 					# detect loop in the branch
 					# contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
@@ -482,7 +483,7 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), printSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), recordFromSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`.
 
@@ -499,7 +500,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution while computing
-- `printSolution = (x, p) -> norm(x)` function used save a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
+- `recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution. For example, you can pass something like `(x, p; kwargs...) -> plot(x; kwargs...)`.
 - `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. see docs for [`newton`](@ref). Can be used to change preconditioners

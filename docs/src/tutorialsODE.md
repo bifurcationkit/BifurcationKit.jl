@@ -69,7 +69,7 @@ opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9,
 
 # continuation of equilibria
 br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
-	printSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),
+	recordFromSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),
 	tangentAlgo = BorderedPred(),
 	plot = true, verbosity = 0, normC = norminf)
 
@@ -115,7 +115,7 @@ Mt = 200 # number of time sections
 	linearPO = :Dense,
 	# regular continuation options
 	verbosity = 2,	plot = true,
-	printSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
+	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	plotSolution = (x, p; k...) -> begin
 		# the problem prob is passed back in p:
 		xtt = BK.getTrajectory(p.prob, x, p.p)
@@ -163,7 +163,7 @@ br_posh, = @time continuation(jet...,
 	updateSectionEveryStep = 2,
 	# regular continuation parameters
 	verbosity = 2,	plot = true,
-	printSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
+	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
 	plotSolution = (x, p; k...) ->
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)

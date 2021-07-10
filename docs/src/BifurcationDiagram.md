@@ -52,7 +52,7 @@ diagram = bifurcationdiagram(jet...,
 	# at most in the present case.
 	2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3, dsminBisection =1e-18, maxBisectionSteps=20);
-	printSolution = (x, p) -> x[1])
+	recordFromSolution = (x, p) -> x[1])
 	
 # You can plot the diagram like 
 plot(diagram; putspecialptlegend=false, markersize=2, plotfold=false, title = "#branches = $(size(diagram))")
@@ -101,7 +101,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pM
 
 bdiag = bifurcationdiagram(jet..., zeros(3), pard6, (@lens _.μ), 3,
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, maxBisectionSteps=20, newtonOptions = opt_newton);
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	xwnormC = norminf)
 ```
 

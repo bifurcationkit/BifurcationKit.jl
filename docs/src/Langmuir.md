@@ -147,7 +147,7 @@ opts_cont = ContinuationPar(
 		# we form a sparse matrix for the bordered linear problem
 		linearAlgo = MatrixBLS(),
 		plot = true, verbosity = 2,
-		printSolution = (x, p) -> normL2(x),
+		recordFromSolution = (x, p) -> normL2(x),
 		plotSolution = (x, p; kwargs...) -> plot!(X, x, subplot = 3, xlabel = "Nx = $(length(x))", label = ""),
 		normC = normL2)
 ```
@@ -226,7 +226,7 @@ br_potrap, utrap = continuation(
 	tangentAlgo = BorderedPred(),
 	verbosity = 3, plot = true,
 	updateSectionEveryStep = 1,
-	printSolution = (x, p) -> normL2T(x[1:end-1], M = M),
+	recordFromSolution = (x, p) -> normL2T(x[1:end-1], M = M),
 	plotSolution  = (x, p; kwargs...) -> begin
 			heatmap!(reshape(x[1:end-1], N, M)'; ylabel="T=$(round(x[end]))", color=:viridis, kwargs...)
 			plot!(br, subplot=1, label="")

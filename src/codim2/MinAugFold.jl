@@ -449,7 +449,7 @@ function continuationFold(F, J,
 	end
 
 	# it allows to append information specific to the codim 2 continuation to the user data
-	_printsol = get(kwargs, :printSolution, nothing)
+	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
 		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) :
 		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
@@ -464,7 +464,7 @@ function continuationFold(F, J,
 		(@set opt_fold_cont.newtonOptions.eigsolver = eigsolver);
 		kwargs...,
 		normC = normC,
-		printSolution = _printsol2,
+		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
 		event = ContinuousEvent(2, testForBifurcations, ("bt", "cusp")),
 		)

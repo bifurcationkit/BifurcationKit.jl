@@ -24,7 +24,7 @@ $(TYPEDFIELDS)
 	"Norm of the equilibrium at the special (bifurcation) point"
 	norm::T  = 0.
 
-	"`printsol = printSolution(x, param)` where `printSolution` is one of the arguments to [`continuation`](@ref)"
+	"`printsol = recordFromSolution(x, param)` where `recordFromSolution` is one of the arguments to [`continuation`](@ref)"
 	printsol::Tp = 0.
 
 	"Equilibrium at the special (bifurcation) point"

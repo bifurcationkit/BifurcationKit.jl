@@ -124,7 +124,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = true,
-		printSolution = (x,p) -> x[div(n,2)], normC = norminf)
+		recordFromSolution = (x,p) -> x[div(n,2)], normC = norminf)
 ```
 
 We obtain the following bifurcation diagram with 3 Hopf bifurcation points
@@ -391,7 +391,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax =
 br, = @time continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
-	printSolution = (x, p)->x[div(n,2)], normC = norminf)
+	recordFromSolution = (x, p)->x[div(n,2)], normC = norminf)
 ```
 
 We need to create a guess for the periodic orbit. We proceed as previously:
@@ -535,7 +535,7 @@ br_po, = @time continuation(probSh,	outpo, par_hopf, (@lens _.l),
 	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
-	printSolution = (u, p) -> u[end], normC = norminf)
+	recordFromSolution = (u, p) -> u[end], normC = norminf)
 ```
 
 We can observe that simple shooting is faster but the Floquet multipliers are less accurate than for multiple shooting. Also, when the solution is very unstable, simple shooting can have spurious branch switching. Finally, note the $0=\log 1$ eigenvalue of the monodromy matrix in the graph below.

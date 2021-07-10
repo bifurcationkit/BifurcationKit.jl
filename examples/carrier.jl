@@ -50,7 +50,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, p
 	br, = @time continuation(
 		F_carr, Jac_carr, zeros(N), par_car, (@lens _.ϵ), optcont;
 		plot = true, verbosity = 3,
-		printSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
+		recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		normC = x -> norm(x, Inf64))
 
 plot(br)
@@ -93,7 +93,7 @@ br, _ = @time continuation(
 	verbosity = 1,
 	maxBranches = 100,
 	perturbSolution = perturbsol,
-	printSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
+	recordFromSolution = (x, p) -> (x[2] - x[1]) * sum(x.^2),
 	normN = x -> norm(x, Inf64),
 	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)
@@ -108,7 +108,7 @@ diagram = bifurcationdiagram(jet...,
 		0*out, par_car,
 		(@lens _.ϵ), 2,
 		(arg...) -> @set optcont.newtonOptions.verbose=false;
-		printSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
+		recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		plot = true)
 
 plot(diagram, legend=false)

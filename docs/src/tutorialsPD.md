@@ -94,7 +94,7 @@ opts_br = ContinuationPar(dsmax = 0.04, ds = -0.01, pMin = -1.8,
 
 br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
 	plot = true, verbosity = 3,
-	printSolution = (x, p) -> norm(x, Inf),
+	recordFromSolution = (x, p) -> norm(x, Inf),
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ```
 
@@ -157,7 +157,7 @@ br_po_sh, = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts
 	plot = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
 ```
 
 We plot the result using `plot(br_po_sh, br, label = "")`:
@@ -216,7 +216,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = 
 br_po_sh_pd, = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
 	opts_po_cont; verbosity = 2, plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-	printSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 ```
 
 and plot it using `plot(br_po_sh, br, br_po_sh_pd, label = "")`:

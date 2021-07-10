@@ -163,6 +163,6 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.0
 		opts_cont;
 		# linearAlgo = MatrixFreeBLS(L),
 		plot = true, verbosity = 3,
-		plotSolution = (x, p;kwargs...)->plotsol!(x; color=:viridis, kwargs...),
-		printSolution = (x, p) -> norm(x), normC = norminf,
+		plotSolution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
+		recordFromSolution = (x, p) -> norm(x), normC = norminf,
 		)

@@ -113,7 +113,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, 
 		opts_br_eq, verbosity = 0,
 		plot = true,
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
-		printSolution = (x, p) -> x[div(n,2)], normC = norminf)
+		recordFromSolution = (x, p) -> x[div(n,2)], normC = norminf)
 ####################################################################################################
 jet  = BK.get3Jet(Fbru, Jbru_sp)
 hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
@@ -210,7 +210,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0,
 			# finaliseSolution = (z, tau, step, contResult; k...) ->
 				# (Base.display(contResult.eig[end].eigenvals) ;true),
 			plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
-			# printSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
+		# recordFromSolution = (x, p;kwargs...) -> BK.amplitude(x, n, M; ratio = 2),
 			normC = norminf)
 
 ####################################################################################################

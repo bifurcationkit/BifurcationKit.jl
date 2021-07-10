@@ -72,7 +72,7 @@ opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 128, pMin = -3., pMax
 
 # arguments for continuation
 args = (Feve, Jeve, -2ones(2), par, (@lens _.p1), opts)
-kwargs = (plot = true, verbosity = 3, printSolution = (x,p) -> x[1],
+kwargs = (plot = true, verbosity = 3, recordFromSolution = (x,p) -> x[1],
     linearAlgo = MatrixBLS(),)
 ```
 

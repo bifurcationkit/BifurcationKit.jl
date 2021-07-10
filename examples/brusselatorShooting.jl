@@ -111,7 +111,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7
 		Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
 		opts_br_eq, verbosity = 0,
 		plot = false,
-		printSolution = (x, p) -> x[n÷2], normC = norminf)
+		recordFromSolution = (x, p) -> x[n÷2], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
 	# hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -199,7 +199,7 @@ br_po, = @time continuation(probSh,
 		finaliseSolution = (z, tau, step, contResult; k...) ->
 			(Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
-		printSolution = (u, p) -> u[end], normC = norminf)
+		recordFromSolution = (u, p) -> u[end], normC = norminf)
 
 ####################################################################################################
 # automatic branch switching with Shooting

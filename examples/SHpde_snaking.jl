@@ -56,7 +56,7 @@ kwargsC = (verbosity = 3,
 	plot = true,
 	# tangentAlgo = BorderedPred(),
 	linearAlgo  = MatrixBLS(),
-	printSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
+	recordFromSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)),
 	callbackN = cb
 	)
@@ -102,7 +102,7 @@ br, = @time continuation(
 	maxBranches = 150,
 	perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),
 	normN = x -> norm(x, Inf64),
-	printSolution = (x, p) -> (s5 = x[end ÷ 5], n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4],),
+	recordFromSolution = (x, p) -> (s5 = x[end ÷ 5], n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4],),
 	# tangentAlgo = SecantPred(),
 	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)

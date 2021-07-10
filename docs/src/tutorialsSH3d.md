@@ -212,7 +212,7 @@ br, = continuation(
 	zeros(N), par, (@lens _.l), optcont;
 	plot = true, verbosity = 3,
 	plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
-	printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+	recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 	normC = x -> norm(x, Inf))
 ```
 
@@ -257,7 +257,7 @@ br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep
 	# compute the left eigenvectors
 	issymmetric = true,
 	plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
-	printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+	recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 	normC = x -> norm(x, Inf))
 ```
 

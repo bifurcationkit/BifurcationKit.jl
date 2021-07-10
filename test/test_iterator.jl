@@ -16,7 +16,7 @@ opts = BK.ContinuationPar(dsmax = 0.1, dsmin = 1e-3, ds = -0.001, maxSteps = 130
 
 
 println("\n"*"#"^120)
-	br0, u1, _ = BK.continuation(F,Jac_m,[0.8],1.,(@lens _),opts;verbosity=0,printSolution = (x,p) -> x[1]) #130 => 73 points
+	br0, u1, _ = BK.continuation(F,Jac_m,[0.8],1.,(@lens _),opts;verbosity=0,recordFromSolution = (x,p) -> x[1]) #130 => 73 points
 	plot(br0);title!("")
 
 br0.branch[:,:]'

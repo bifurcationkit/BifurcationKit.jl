@@ -96,7 +96,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 		# tangentAlgo = BorderedPred(),
 		# linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
-		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+		recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 		# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
@@ -136,7 +136,7 @@ sol_hexa, _, flag = @time newton(
 br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
 			plot = true, verbosity = 2,
 			plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
-			printSolution = (x, p) -> norm(x),
+			recordFromSolution = (x, p) -> norm(x),
 			normC = x -> norm(x, Inf))
 
 plot(br, br2...)
@@ -189,7 +189,7 @@ diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
 	callbackN = cb,
 	# linearAlgo = MatrixBLS(),
 	plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = x -> norm(x, Inf)
 	)
@@ -211,7 +211,7 @@ brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; de
 	maxIterDefOp = 50,
 	maxBranches = 40,
 	seekEveryStep = 5,
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	# finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	# callbackN = cb,

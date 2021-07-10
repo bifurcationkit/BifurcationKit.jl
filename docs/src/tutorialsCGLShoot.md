@@ -171,7 +171,7 @@ br_po, = continuation(
 	# regular parameters for the continuation
 	verbosity = 3, plot = true,
 	# a few parameters saved during run
-	printSolution = (u, p) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p)), period = u[end]),
+	recordFromSolution = (u, p) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p)), period = u[end]),
 	# plotting of a section
 	plotSolution = (x, p; k...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, k...),
 	# print the Floquet exponent
@@ -223,5 +223,5 @@ br_po, = @time continuation(probSh,
 	initpo, (@set par_cgl.r = 1.2), (@lens _.r), opts_po_cont;
 	verbosity = 3, plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-	printSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 ```

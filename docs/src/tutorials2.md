@@ -136,7 +136,7 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.00
 		sol_hexa, par, (@lens _.l), optcont;		plot = true, verbosity = 3,
 		tangentAlgo = BorderedPred(),
 		plotSolution = (x, p; kwargs...) -> (heatmap!(X, Y, reshape(x, Nx, Ny)'; color=:viridis, label="", kwargs...);ylims!(-1,1,subplot=4);xlims!(-.5,.3,subplot=4)),
-		printSolution = (x, p) -> norm(x),
+		recordFromSolution = (x, p) -> norm(x),
 		normC = x -> norm(x, Inf))
 ```
 
@@ -243,7 +243,7 @@ jet = (F_sh, dF_sh, d2F_sh, d3F_sh)
 br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
 	plot = true, verbosity = 2,
 	plotSolution = (x, p; kwargs...) -> (heatmapsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	normC = x -> norm(x, Inf))
 ```
 

@@ -24,9 +24,11 @@ $(TYPEDFIELDS)
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 - `br[k+1]` gives information about the k-th step
+- `getSolx(br, k)` returns the k-th solution on the branch
+- `getSolp(br, k)` returns the parameter  value associated with k-th solution on the branch
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
@@ -80,6 +82,8 @@ getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
+getSolx(br::ContResult, ind::Int) = br.sol[ind].x
+getSolp(br::ContResult, ind::Int) = br.sol[ind].p
 
 function Base.getproperty(br::ContResult, s::Symbol)
 	if s in (:specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)

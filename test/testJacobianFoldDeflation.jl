@@ -177,7 +177,7 @@ res_exp = debugTmpForσ \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α), opts_br0, printSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α), opts_br0, recordFromSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
