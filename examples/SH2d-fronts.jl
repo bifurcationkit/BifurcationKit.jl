@@ -73,10 +73,11 @@ heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
 
 optnew = @set optnew.maxIter = 250
+optnewd = @set optnew.maxIter = 250
 outdef, _, flag, _ = @time newton(F_sh, dF_sh,
-		# 0.4vec(sol_hexa) .* vec([exp(-1(x+1lx)^2/25) for x in X, y in Y]),
-		0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]),
-		par, optnew, deflationOp, normN = x -> norm(x, Inf))
+		0.4vec(sol_hexa) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y]),
+		# 0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+lx)^2/55) for x in X, y in Y]),
+		par, optnewd, deflationOp)
 	println("--> norm(sol) = ", norm(outdef))
 	plotsol(outdef) |> display
 	flag && push!(deflationOp, outdef)

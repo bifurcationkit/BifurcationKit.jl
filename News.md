@@ -3,6 +3,21 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2021-06-26
+- add new function getFirstPointsOnBranch to allow fine grained control of aBS
+
+## [0.1.5] - 2021-06-20
+- add computing full transcritical/pitchfork branch (not half) in `bifurcationDiagram`
+
+## [0.1.4] - 2021-06-06
+- move toward automatic generation of docs with figures
+- add `applytoX, applytoY` option to plotting
+
+## [0.1.4] - 2021-05-30
+- add function `get3Jet` to compute Taylor expansion
+- `getLensParam` becomes `getLensSymbol`
+- add detection of codim 2 singularities
+
 ## [0.0.1] - 2021-05-16
 - rename `HopfBifPoint` -> `Hopf`
 - rename `GenericBifPoint` into `SpecialPoint` and `bifpoint` to `specialpoint`

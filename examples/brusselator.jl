@@ -124,7 +124,7 @@ ind_hopf = 1
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
 		br, ind_hopf;
-		d2F = d2Fbru,
+		d2F = jet[3],
 		options = (@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
@@ -141,7 +141,7 @@ hopfpoint, hist, flag = @time newton(
 	Fbru, Jbru_sp,
 	br, ind_hopf;
 	options = (@set optnew.verbose = true),
-	d2F = d2Fbru, normN = norminf)
+	d2F = jet[3], normN = norminf)
 
 if 1==1
 	br_hopf, u1_hopf = @time continuation(
@@ -149,7 +149,7 @@ if 1==1
 		br, ind_hopf, (@lens _.β),
 		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew); plot = true,
 		updateMinAugEveryStep = 1,
-		d2F = d2Fbru,
+		d2F = jet[3],
 		verbosity = 2, normC = norminf, bothside = true)
 end
 plot(br_hopf)
@@ -175,7 +175,7 @@ poTrapMF = PeriodicOrbitTrapProblem(
 			hopfpt.u,
 			M, ls0)
 
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)

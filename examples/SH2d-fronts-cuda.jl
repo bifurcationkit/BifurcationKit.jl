@@ -121,7 +121,7 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 @time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-opt_new = NewtonPar(verbose = true, tol = 1e-7, linsolver = L, eigsolver = Leig)
+opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 	sol_hexa, hist, flag = @time newton(
 				F_shfft, J_shfft,
 				AF(sol0), par,
@@ -139,7 +139,7 @@ plotsol(sol_hexa)
 # 	return res, true, info.numops
 # end
 ####################################################################################################
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+	deflationOp = DeflationOperator(2, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(F_shfft, J_shfft,

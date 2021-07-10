@@ -144,11 +144,7 @@ optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMin = -1.8
 		printSolution = (u, p) -> BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
-# branches = [br_po]
-push!(branches, br_po)
-plot(vcat(branches, br)..., label = "")
-
-plot(vcat(br_po, br)..., label = "")
+plot(br, br_po, label = "")
 ####################################################################################################
 # Period doubling
 ind_pd = 1
