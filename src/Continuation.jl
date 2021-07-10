@@ -395,7 +395,10 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				status::Symbol = :guess
 				_T = eltype(it)
 				interval::Tuple{_T, _T} = getinterval(state.z_pred.p, getp(state))
-				if contParams.detectBifurcation > 2
+				# if the detected bifurcation point involves a parameter values with is on
+				# the boundary of the parameter domain, we disable bisection because it would
+				# lead to infinite looping. Indeed, clamping messes up the `ds`
+				if contParams.detectBifurcation > 2 && ~isOnBoundary(it, getp(state))
 					verbose1 && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
