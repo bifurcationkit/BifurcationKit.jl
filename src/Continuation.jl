@@ -99,7 +99,7 @@ Returns a variable containing the state of the continuation procedure. The field
 
 # Useful functions
 - `copy(state)` returns a copy of `state`
-- `solution(state)` returns the current solution (x, p)
+- `getSolution(state)` returns the current solution (x, p)
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
 - `getpreviousp(state)` returns the p component of the previous solution
@@ -172,7 +172,7 @@ function Base.copyto!(dest::ContState, src::ContState)
 end
 
 # getters
-solution(state::AbstractContinuationState) = state.z_old
+getSolution(state::AbstractContinuationState) 		= state.z_old
 getx(state::AbstractContinuationState) = state.z_old.u
 @inline getp(state::AbstractContinuationState) = state.z_old.p
 @inline getpreviousp(state::AbstractContinuationState) = state.z_pred.p
@@ -214,7 +214,7 @@ end
 
 function plotBranchCont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
 	if iter.plot && mod(state.step, getParams(iter).plotEveryStep) == 0
-		return plotBranchCont(contres, solution(state), getParams(iter), iter.plotSolution)
+		return plotBranchCont(contres, getSolution(state), getParams(iter), iter.plotSolution)
 	end
 end
 

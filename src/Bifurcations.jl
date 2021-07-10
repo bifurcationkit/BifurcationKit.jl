@@ -55,7 +55,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	end
 end
 
-locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.recordFromSolution, iter.verbosity)
+locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, getSolution(state), state.tau, iter.normC, iter.recordFromSolution, iter.verbosity)
 ####################################################################################################
 """
 Function for coarse detection of bifurcation points.
