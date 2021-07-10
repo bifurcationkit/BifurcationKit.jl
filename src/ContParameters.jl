@@ -103,6 +103,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops
+	@assert 0 <= theta <=1 "theta must belong to [0,1]"
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
