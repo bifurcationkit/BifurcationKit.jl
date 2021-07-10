@@ -67,7 +67,7 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140,
 
 brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
-	DeflationOperator(2.0, dot, .001, [[0.]]); showplot=true, verbosity = 0,
+	DeflationOperator(2.0, dot, .001, [[0.]]); plot=true, verbosity = 0,
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)
 plot(brdc...)
