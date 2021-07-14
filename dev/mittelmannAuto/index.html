@@ -102,7 +102,7 @@ end</code></pre><p>We are then ready to compute the bifurcation diagram. If we c
 	5, 
 	optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	usedeflation = true,
 	finaliseSolution = finSol,
@@ -114,7 +114,7 @@ end</code></pre><p>We are then ready to compute the bifurcation diagram. If we c
 	2,
 	optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	tangentAlgo = BorderedPred(),
 	usedeflation = true,
@@ -126,9 +126,9 @@ end</code></pre><p>We are then ready to compute the bifurcation diagram. If we c
 	# has 8 branches
 	getBranch(diagram, (1,)), (current = 3, maxlevel = 6), optionsCont;
 	verbosity = 0, plot = true,
-	printSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -&gt; (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,
 	finaliseSolution = finSol,
 	usedeflation = true,
 	plotSolution = (x, p; kwargs...) -&gt; plotsol!(x ; kwargs...),
-	normC = norminf)</code></pre><p>This gives the following diagram. Using this call, you can pinpoint the particular location where to refine the diagram.</p><p><img src="../mittlemanBD3.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Thursday 1 July 2021 17:24">Thursday 1 July 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	normC = norminf)</code></pre><p>This gives the following diagram. Using this call, you can pinpoint the particular location where to refine the diagram.</p><p><img src="../mittlemanBD3.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Wednesday 14 July 2021 14:31">Wednesday 14 July 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
