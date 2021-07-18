@@ -148,14 +148,8 @@ and (with `plot(br, ylims=(-0.1,0.1))`)
 We compute the Hopf normal form of the first bifurcation point.
 
 ```julia
-using ForwardDiff
-
-D(f, x, p, dx)= ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-
-d1Fcgl(x,p,dx) = D(Fcgl, x, p, dx)
-d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
-d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
-jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+# we group the differentials together
+jet  = BK.getJet(Fcgl, Jcgl)
 
 hopfpt = computeNormalForm(jet..., br, 1)
 ```
@@ -164,9 +158,10 @@ We can look at the coefficients of the normal form
 
 ```julia
 julia> hopfpt
-SubCritical - Hopf bifurcation point at p ≈ 1.1477761028276166.
-Period of the periodic orbit ≈ 6.283185307179584.
-Normal form: (a = 0.9999993843742166 + 7.024438596095504e-9im, b = 0.004870129870129872 + 0.00048701298701298696im)
+SubCritical - Hopf bifurcation point at r ≈ 1.1477761028276166.
+Period of the periodic orbit ≈ 6.283185307179592
+Normal form z⋅(a⋅δp + b⋅|z|²): 
+(a = 0.9999993808297818 - 6.092862765364455e-9im, b = 0.004870129870129872 + 0.0004870129870129874im)
 ```
 
 So the Hopf branch is subcritical.
@@ -281,9 +276,9 @@ BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 which gives 
 
 ```julia
-┌────────────────────-────────────────────────────────┐
+┌─────────────────────────────────────────────────────┐
 │ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
+├─────────────┬──────────────────────┬────────────────┤
 │       0     │       6.5432e-03     │        0       │
 │       1     │       1.4372e-03     │        8       │
 │       2     │       3.6731e-04     │        8       │
@@ -292,7 +287,7 @@ which gives
 │       5     │       6.4509e-08     │       11       │
 │       6     │       2.9713e-10     │       12       │
 │       7     │       2.2181e-13     │       14       │
-└─────────────┴──────-───────────────┴────────────────┘
+└─────────────┴──────────────────────┴────────────────┘
   1.780986 seconds (132.31 k allocations: 1.237 GiB, 12.13% gc time)
 --> T = 6.532023020978835, amplitude = 0.2684635643839235
 ```
@@ -331,9 +326,9 @@ flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.g
 which gives 
 
 ```julia
-┌────────────────────-────────────────────────────────┐
+┌─────────────────────────────────────────────────────┐
 │ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
+├─────────────┬──────────────────────┬────────────────┤
 │       0     │       6.5432e-03     │        0       │
 │       1     │       1.4372e-03     │        8       │
 │       2     │       3.6731e-04     │        8       │
@@ -342,7 +337,7 @@ which gives
 │       5     │       6.4509e-08     │       11       │
 │       6     │       2.9713e-10     │       12       │
 │       7     │       2.2188e-13     │       14       │
-└─────────────┴──────-───────────────┴────────────────┘
+└─────────────┴──────────────────────┴────────────────┘
   1.322440 seconds (35.03 k allocations: 459.996 MiB, 7.63% gc time)
 ```
 
@@ -434,9 +429,9 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 It gives	
 
 ```julia
-┌────────────────────-────────────────────────────────┐
+┌─────────────────────────────────────────────────────┐
 │ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
+├─────────────┬──────────────────────┬────────────────┤
 │       0     │       6.5432e-03     │        0       │
 │       1     │       1.4372e-03     │        8       │
 │       2     │       3.6731e-04     │        8       │
@@ -445,8 +440,8 @@ It gives
 │       5     │       6.4509e-08     │       11       │
 │       6     │       2.9713e-10     │       12       │
 │       7     │       2.2143e-13     │       14       │
-└─────────────┴──────-───────────────┴────────────────┘
-  1.194715 seconds (952 allocations: 151.503 MiB)
+└─────────────┴──────────────────────┴────────────────┘
+  1.179854 seconds (902 allocations: 151.500 MiB)
 ```
 
 Notice the small speed boost but the reduced allocations. At this stage, further improvements could target the use of `BlockBandedMatrices.jl` for the Laplacian operator, etc.
@@ -471,9 +466,9 @@ outpo_f, hist, flag = @time newton(
 but it gives:
 
 ```julia
-┌────────────────────-────────────────────────────────┐
+┌─────────────────────────────────────────────────────┐
 │ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
+├─────────────┬──────────────────────┬────────────────┤
 │       0     │       3.3298e-03     │        0       │
 │       1     │       9.5088e-03     │       34       │
 │       2     │       1.2807e-03     │       26       │
@@ -481,8 +476,8 @@ but it gives:
 │       4     │       4.1625e-07     │       36       │
 │       5     │       1.7924e-09     │       44       │
 │       6     │       6.2725e-13     │       60       │
-└─────────────┴──────-───────────────┴────────────────┘
-  3.533022 seconds (62.70 k allocations: 1009.781 MiB, 4.85% gc time)
+└─────────────┴──────────────────────┴────────────────┘
+  3.479920 seconds (62.64 k allocations: 1009.778 MiB, 5.19% gc time)
 ```
 
 **Hence, it seems better to use the previous preconditioner.**
@@ -578,9 +573,9 @@ flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p,
 and this gives
 
 ```julia
-┌────────────────────-────────────────────────────────┐
+┌─────────────────────────────────────────────────────┐
 │ Newton Iterations      f(x)      Linear Iterations  │
-├─────────────┐──────────────────────┐────────────────┤
+├─────────────┬──────────────────────┬────────────────┤
 │       0     │       4.5937e-01     │        0       │
 │       1     │       5.6013e-01     │       20       │
 │       2     │       3.1385e-02     │       23       │

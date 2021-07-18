@@ -158,7 +158,7 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
 	dsfactor = T(1)
 
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
 """
@@ -190,7 +190,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 	# 	pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
 	end
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T

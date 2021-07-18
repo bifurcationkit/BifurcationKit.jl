@@ -29,7 +29,7 @@ show(bp)
 nf = bp.nf
 
 @test norm(nf.a) < 1e-10
-	@test norm(nf.b1 - 3.23) < 1e-8
+	@test norm(nf.b1 - 3.23) < 1e-10
 	@test norm(nf.b2/2 - -1.12) < 1e-10
 	@test norm(nf.b3/6 - 0.234) < 1e-10
 
@@ -42,7 +42,7 @@ br_noev, = BK.continuation(
 bp = BK.computeNormalForm(jet..., br_noev, 1; verbose=false)
 nf = bp.nf
 @test norm(nf[1]) < 1e-10
-	@test norm(nf[2] - 3.23) < 1e-8
+	@test norm(nf[2] - 3.23) < 1e-10
 	@test norm(nf[3]/2 - -1.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
