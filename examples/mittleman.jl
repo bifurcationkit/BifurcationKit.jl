@@ -309,7 +309,7 @@ brdef2, _ = @time BK.continuation(
 	Fmit, JFmit, (@set par_mit.λ = 0.367), (@lens _.λ),
 	ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
 	DeflationOperator(2.0, dot, 1., ([sol0]));
-	showplot=true, verbosity = 2,
+	plot=true, verbosity = 2,
 	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),
 	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),

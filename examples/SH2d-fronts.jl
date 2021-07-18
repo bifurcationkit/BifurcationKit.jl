@@ -204,7 +204,7 @@ deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
 optcontdf = @set optcont.newtonOptions.verbose = true
 brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
 	deflationOp;
-	showplot = true, verbosity = 2,
+	plot = true, verbosity = 2,
 	# tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),
 	# plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
