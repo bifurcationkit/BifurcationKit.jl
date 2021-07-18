@@ -1,4 +1,4 @@
-# Brusselator 1d (automatic)
+# 1d Brusselator (automatic)
 
 ```@contents
 Pages = ["tutorials3.md"]
@@ -98,7 +98,7 @@ Finally, it will prove useful to have access to the hessian and third derivative
 
 ```julia
 # we group the differentials together
-jet  = BK.get3Jet(Fbru, Jbru_sp)
+jet  = BK.getJet(Fbru, Jbru_sp)
 ```
 
 We shall now compute the equilibria and their stability.

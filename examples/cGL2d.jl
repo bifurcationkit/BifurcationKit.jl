@@ -122,7 +122,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, d
 	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
-jet  = BK.get3Jet(Fcgl, Jcgl)
+jet  = BK.getJet(Fcgl, Jcgl)
 hopfpt = computeNormalForm(jet..., br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression

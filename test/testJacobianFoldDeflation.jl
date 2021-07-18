@@ -19,7 +19,7 @@ function F_chan(x, p)
 end
 
 J_chan(u0, p) = ForwardDiff.jacobian(u -> F_chan(u,p), u0)
-jet = BK.get3Jet(F_chan, J_chan)
+jet = BK.getJet(F_chan, J_chan)
 par_chan = (α = 3.3, β = 0.01)
 
 n = 101

@@ -1,4 +1,4 @@
-# Complex Ginzburg-Landau 2d (shooting)
+# 2d Ginzburg-Landau equation (shooting)
 
 ```@contents
 Pages = ["tutorialsCGLShoot.md"]

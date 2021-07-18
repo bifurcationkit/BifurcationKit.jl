@@ -1,4 +1,4 @@
-# Complex Ginzburg-Landau 2d
+# 2d Ginzburg-Landau equation (finite differences)
 
 ```@contents
 Pages = ["tutorialsCGL.md"]

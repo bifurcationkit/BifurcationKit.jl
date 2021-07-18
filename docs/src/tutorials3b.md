@@ -1,4 +1,4 @@
-# Brusselator 1d (advanced user)
+# 1d Brusselator (advanced user)
 
 ```@contents
 Pages = ["tutorials3b.md"]

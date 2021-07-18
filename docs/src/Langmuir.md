@@ -1,4 +1,4 @@
-# Langmuir–Blodgett transfer model (advanced)
+# 1d Langmuir–Blodgett transfer model (advanced)
     
 In this tutorial, we try to replicate some of the results of the amazing paper [^Köpf]. This example is quite a marvel in the realm of bifurcation analysis, featuring a harp-like bifurcation diagram. The equations of the thin film are as follows:
 
@@ -109,7 +109,7 @@ It will prove useful to have access to higher derivatives as well
 
 ```julia
 # jet to compute the normal form
-jet  = BK.get3Jet(Flgvf, JanaSP)
+jet  = BK.getJet(Flgvf, JanaSP)
 ```
  
 

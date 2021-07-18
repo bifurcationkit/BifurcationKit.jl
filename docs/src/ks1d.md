@@ -62,7 +62,7 @@ end
 Jks1d(u, p) = ForwardDiff.jacobian(z -> Fks1d(z,p), u)
 
 # we group the differentials together
-jet = BK.get3Jet(Fks1d, Jks1d)
+jet = BK.getJet(Fks1d, Jks1d)
 ```
 
 Having defined the model, we chose parameters:

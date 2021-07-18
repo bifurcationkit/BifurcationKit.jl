@@ -189,14 +189,22 @@ end
 """
 $(SIGNATURES)
 
-Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f). These differentials are computed using ForwardDiff.jl
+Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f). These differentials are computed using ForwardDiff.jl.
+
+## Optional argument
+- `matrixfree = true` returns the matrix-free jacobian operator. Otherwise returns the Matrix based jacobian.
 """
-function get3Jet(f, J = nothing)
+function getJet(f, J = nothing; matrixfree = true)
 	d1f(x,p,dx1) = ForwardDiff.derivative(t -> f(x .+ t .* dx1, p), 0.)
 	d2f(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1f(x .+ t .* dx2, p, dx1), 0.)
 	d3f(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2f(x .+ t .* dx3, p, dx1, dx2), 0.)
 	if isnothing(J)
+		if matrixfree
 	 	return (f, d1f, d2f, d3f)
+		else
+			Jmat(x,p) = ForwardDiff.jacobian(z -> f(z, p), x)
+			return (f, Jmat, d2f, d3f)
+		end
 	else
 		return (f, J, d2f, d3f)
 	end

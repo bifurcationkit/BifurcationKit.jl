@@ -1,4 +1,4 @@
-# A generalized Bratu–Gelfand problem in two dimensions
+# 2d generalized Bratu–Gelfand problem
 
 ```@contents
 Pages = ["mittelmann.md"]
@@ -80,7 +80,7 @@ function JFmit(x,p)
 end
 
 # compute 3-Jet
-jet = BK.get3Jet(Fmit, JFmit)
+jet = BK.getJet(Fmit, JFmit)
 ```
 
 We need to define the parameters associated to this problem:

@@ -79,7 +79,7 @@ function JFmit(x,p)
 	return J + spdiagm(0 => dg)
 end
 
-jet = BK.get3Jet(Fmit, JFmit)
+jet = BK.getJet(Fmit, JFmit)
 ```
 
 We need to pass the parameters associated to this problem:

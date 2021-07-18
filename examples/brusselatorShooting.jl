@@ -204,7 +204,7 @@ br_po, = @time continuation(probSh,
 ####################################################################################################
 # automatic branch switching with Shooting
 using ForwardDiff
-jet  = BK.get3Jet(Fbru, Jbru_sp)
+jet  = BK.getJet(Fbru, Jbru_sp)
 
 # linear solvers
 ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)

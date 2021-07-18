@@ -66,7 +66,7 @@ function Jbru_sp(x, p)
 end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
-jet = BK.get3Jet(Fbru, Jbru_ana)
+jet = BK.getJet(Fbru, Jbru_ana)
 
 n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)

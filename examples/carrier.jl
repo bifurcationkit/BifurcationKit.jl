@@ -32,13 +32,15 @@ end
 	# @time Jac_carr(sol, par_car)
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
-jet = BK.get3Jet(F_carr, Jac_carr)
+jet = BK.getJet(F_carr, Jac_carr)
 
 N = 200
 X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
 sol = -(1 .- par_car.X.^2)
+norminf(x) = norm(x,Inf)
+recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)

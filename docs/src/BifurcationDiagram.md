@@ -29,7 +29,7 @@ const BK = BifurcationKit
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
 dFbpSecBif(x,p) =  ForwardDiff.jacobian( z-> FbpSecBif(z,p), x)
 # we group the differential together
-jet = BK.get3Jet(FbpSecBif, dFbpSecBif)
+jet = BK.getJet(FbpSecBif, dFbpSecBif)
 
 # options for Krylov-Newton
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20)
@@ -88,7 +88,7 @@ function FbpD6(x, p)
 end
 
 # we group the differential together
-jet = BK.get3Jet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
+jet = BK.getJet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
 
 # model parameters
 pard6 = (μ = -0.2, a = 0.3, b = 1.5, c = 2.9)

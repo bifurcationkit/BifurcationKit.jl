@@ -15,12 +15,12 @@ br, = continuation(
 
 ####################################################################################################
 # normal form computation
-jet = BK.get3Jet(Fbp, (x, p) -> ForwardDiff.jacobian(z -> Fbp(z, p), x))
+jet = BK.getJet(Fbp, (x, p) -> ForwardDiff.jacobian(z -> Fbp(z, p), x))
 
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 
-jet = BK.get3Jet(Fbp, (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x))
+jet = BK.getJet(Fbp, (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x))
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 show(bp)
@@ -106,7 +106,7 @@ function Fbp2d(x, p)
 			 -x[3]]
 end
 
-jet = BK.get3Jet(Fbp2d, (x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, p), x))
+jet = BK.getJet(Fbp2d, (x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, p), x))
 
 par = (μ = -0.2, ν = 0, α = -1)
 
@@ -152,7 +152,7 @@ bp2d = BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 # vector field to test nearby secondary bifurcations
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
 dFbpSecBif(x,p)=  ForwardDiff.jacobian( z-> FbpSecBif(z,p), x)
-jet = BK.get3Jet(FbpSecBif, dFbpSecBif)
+jet = BK.getJet(FbpSecBif, dFbpSecBif)
 
 br_snd1, = BK.continuation(
 	FbpSecBif, [0.0], -0.2, (@lens _),
@@ -199,7 +199,7 @@ function FbpD6(x, p)
 			 p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c*(x[3]^2 + x[1]^2) * x[2]),
 			 p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c*(x[2]^2 + x[1]^2) * x[3])]
 end
-jet = BK.get3Jet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
+jet = BK.getJet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
 
 pard6 = (μ = -0.2, a = 0.3, b = 1.5, c = 2.9)
 
@@ -249,7 +249,7 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
 par_sl = (r = 0.5, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
-jet = BK.get3Jet(Fsl2, (x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x))
+jet = BK.getJet(Fsl2, (x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x))
 
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 3, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)

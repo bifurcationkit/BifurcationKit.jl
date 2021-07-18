@@ -66,7 +66,7 @@ end
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
 # compute 3-Jet
-jet = BK.get3Jet(Fmit, JFmit)
+jet = BK.getJet(Fmit, JFmit)
 ####################################################################################################
 Nx = 30
 	Ny = 30

@@ -161,7 +161,7 @@ br_po, upo, = @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _
 
 ####################################################################################################
 # automatic branch switching
-jet  = BK.get3Jet(Fcgl, Jcgl)
+jet  = BK.getJet(Fcgl, Jcgl)
 
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
