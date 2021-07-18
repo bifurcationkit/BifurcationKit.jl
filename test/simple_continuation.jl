@@ -11,7 +11,7 @@ Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 # test creation of specific scalar product
 _dt = BK.DotTheta()
 # tests for the predictors
-BK.emptypredictor!(nothing)
+BK.empty!(nothing)
 BK.mergefromuser(1., (a=1,))
 BK.mergefromuser(rand(2), (a=1,))
 BK.mergefromuser((1,2), (a=1,))
@@ -101,7 +101,7 @@ opts9 = (@set opts.newtonOptions.verbose=false)
 	recordFromSolution = (x,p)->x[1],
 	tangentAlgo = MultiplePred(copy(x0), 0.01,13)
 	)
-	BK.emptypredictor!(BK.MultiplePred(copy(x0), 0.01,13))
+	BK.empty!(BK.MultiplePred(copy(x0), 0.01,13))
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 
 # tangent prediction with Polynomial predictor
@@ -114,7 +114,7 @@ polpred = PolynomialPred(BorderedPred(),2,6,x0)
 	)
 	# plot(br10) |> display
 	polpred(0.1)
-	BK.emptypredictor!(polpred)
+	BK.empty!(polpred)
 	# plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
 	# plot!(br9)
 

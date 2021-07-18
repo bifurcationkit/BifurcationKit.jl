@@ -187,7 +187,7 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 		 		nstep < contParams.maxSteps
 		# we update the parameter value
 		current_param += contParams.ds
-		current_param = clampPred(current_param, contIt)
+		current_param = clampPredp(current_param, contIt)
 
 		verbosity > 0 && println("──"^51)
 		nactive = mapreduce(x -> x.isactive, +, states)

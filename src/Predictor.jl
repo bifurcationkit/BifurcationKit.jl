@@ -45,7 +45,10 @@ getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, 
 Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 
 # clamp p value
-clampPred(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
+clampPredp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
+
+# clamp ds value
+clampDs(dsnew, contparams::ContinuationPar) = sign(dsnew) * clamp(abs(dsnew), contparams.dsmin, contparams.dsmax)
 
 # this function only mutates z_pred
 # the nrm argument allows to just increment z_pred.p by ds
@@ -61,7 +64,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	if z_pred.p <= it.contParams.pMin || z_pred.p >= it.contParams.pMax
-		z_pred.p = clampPred(z_pred.p, it)
+		z_pred.p = clampPredp(z_pred.p, it)
 		return corrector(it, z_old, τ, z_pred, ds, θ, NaturalPred(), linearalgo;
 						normC = normC, callback = callback, kwargs...)
 	end
@@ -84,7 +87,7 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 			algo::NaturalPred, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPred(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
+	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPredp(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2:end]...
 end
 
@@ -181,7 +184,7 @@ $(TYPEDFIELDS)
 	"Factor to increase ds upon successful step"
 	dsfact::T = 1.5
 end
-MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo= algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
+MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo = algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
 MultiplePred(x0, α, nb) = MultiplePred(SecantPred(), x0, α, nb)
 Base.empty!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 
@@ -189,7 +192,7 @@ Base.empty!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
 	resHist = get(kwargs, :resHist, nothing)
 	if mpred.currentind > 1
-		return iteration - mpred.pmimax > 0 ?  resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
+		return iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
 	end
 	return true
 end
@@ -240,7 +243,7 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	return zold, res, flag, itnewton, itlinear
 end
 
-function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, mpd::MultiplePred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	if converged == false
 		dsnew = ds
 		if abs(ds) < (1 + mpd.nb) * contparams.dsmin
@@ -315,16 +318,21 @@ mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredicto
 	"Coefficients for the polynomials for the parameter"
 	coeffsPar::Vector{T}
 
-	"Update the predictor ?"
+	"Update the predictor by adding the last point (x, p)? This can be disabled in order to just use the polynomial prediction. It is useful when the predictor is called mutiple times during bifurcation detection using bisection."
 	update::Bool
 end
 
-PolynomialPred(algo, n, k, v0) = (@assert n<k; ;PolynomialPred(n,k,zeros(eltype(v0),k,n+1),algo,
-	CircularBuffer{typeof(v0)}(k),CircularBuffer{eltype(v0)}(k),
-	CircularBuffer{eltype(v0)}(k),
-	Vector{typeof(v0)}(undef, n+1),
-	Vector{eltype(v0)}(undef, n+1),true))
-PolynomialPred(n, k, v0) = PolynomialPred(SecantPred(),n,k,v0)
+function PolynomialPred(algo, n, k, v0)
+	@assert n<k "k must be larger than the degree of the polynomial"
+	PolynomialPred(n,k,zeros(eltype(v0), k, n+1), algo,
+		CircularBuffer{typeof(v0)}(k),  # solutions
+		CircularBuffer{eltype(v0)}(k),  # parameters
+		CircularBuffer{eltype(v0)}(k),  # arclengths
+		Vector{typeof(v0)}(undef, n+1), # coeffsSol
+		Vector{eltype(v0)}(undef, n+1), # coeffsPar
+		true)
+end
+PolynomialPred(n, k, v0) = PolynomialPred(SecantPred(), n, k, v0)
 
 isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
 
@@ -333,16 +341,19 @@ function Base.empty!(ppd::PolynomialPred)
 end
 
 function getStats(polypred::PolynomialPred)
-	Sbar = sum(polypred.arclengths) / polypred.n
-	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / (polypred.n))
+	Sbar = sum(polypred.arclengths) / length(polypred.arclengths)
+	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / length(polypred.arclengths))
 	# return 0,1
 	return Sbar, σ
 end
 
-function (polypred::PolynomialPred)(ds)
+function (polypred::PolynomialPred)(ds::T) where T
 	sbar, σ = getStats(polypred)
 	s = polypred.arclengths[end] + ds
-	S = [((s-sbar)/σ)^(jj-1) for jj=1:polypred.n+1]
+	snorm = (s-sbar)/σ
+	# vector of powers of snorm
+	S = Vector{T}(undef, polypred.n+1); S[1] = T(1)
+	for jj = 1:polypred.n; S[jj+1] = S[jj] * snorm; end
 	p = sum(S .* polypred.coeffsPar)
 	x = sum(S .* polypred.coeffsSol)
 	return x, p
@@ -350,25 +361,24 @@ end
 
 function updatePred!(polypred::PolynomialPred)
 	Sbar, σ = getStats(polypred)
+	# re-scale the previous arclengths so that the Vandermond matrix is well conditioned
 	Ss = (polypred.arclengths .- Sbar) ./ σ
 	# construction of the Vandermond Matrix
 	polypred.A[:, 1] .= 1
-	for jj in 1:polypred.n
-		polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss
-	end
+	for jj in 1:polypred.n; polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss; end
 	# invert linear system for least square fitting
 	B = (polypred.A' * polypred.A) \ polypred.A'
 	mul!(polypred.coeffsSol, B, polypred.solutions)
 	mul!(polypred.coeffsPar, B, polypred.parameters)
+	return true
 end
 
 function getTangent!(tau::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
 	(verbosity > 0) && println("Predictor: PolynomialPred")
-
+	# do we update the predictor with last converged point?
 	if polypred.update
-		# update the list of solutions
-		if length(polypred.arclengths)==0
+		if length(polypred.arclengths) == 0
 			push!(polypred.arclengths, ds)
 		else
 			push!(polypred.arclengths, polypred.arclengths[end]+ds)
@@ -413,10 +423,6 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 	return thetanew
 end
 ####################################################################################################
-function clampDs(dsnew, contparams::ContinuationPar)
-	return sign(dsnew) * clamp(abs(dsnew), contparams.dsmin, contparams.dsmax)
-end
-
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
