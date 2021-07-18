@@ -475,8 +475,9 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	# we record the damping parameter
 	α0 = α
 	
-	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
-	normAC = (resf, resn) -> max(normN(resf), abs(resn))
+	# N = θ⋅(x - z0.u)⋅τ0.u + (1 - θ)⋅(p - z0.p)⋅τ0.p  -  ds
+	N(x, p) = arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
+	normAC(resf, resn) = max(normN(resf), abs(resn))
 
 	# Initialise iterations
 	x = _copy(z_pred.u) 					# copy(z_pred.u)
@@ -535,7 +536,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 				res = normAC(res_f, res_n)
 
 				if res < resHist[end]
-					if (res < resHist[end] / 2) && (α < 1)
+					if (res < resHist[end] / 4) && (α < 1)
 						α *= 2
 					end
 					line_step = true

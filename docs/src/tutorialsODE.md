@@ -1,11 +1,9 @@
-# Neural mass equation (automatic)
+# Neural mass equation (Hopf aBS)
 
 ```@contents
 Pages = ["tutorialsODE.md"]
 Depth = 3
 ```
-
-We present an example of the use of the package in the case of ODE. Although `BifurcationKit.jl` is not geared towards them, we provide some specific methods which allow to study the bifurcations of ODE in a relatively efficient way.
 
 The following model is taken from [^Cortes]:
 
