@@ -5,11 +5,11 @@ Pages = ["tutorialsCGLShoot.md"]
 Depth = 3
 ```
 
-In this tutorial, we re-visit the example [Complex Ginzburg-Landau 2d](@ref) using a Standard Simple Shooting method. In the tutorial [Brusselator 1d (advanced user)](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
+In this tutorial, we re-visit the example [2d Ginzburg-Landau equation (finite differences)](@ref) using a Standard Simple Shooting method. In the tutorial [1d Brusselator (advanced user)](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
 
 $$\dot x = Ax+g(x)$$ 
 
-where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the same beginning as in [Complex Ginzburg-Landau 2d](@ref):
+where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the same beginning as in [2d Ginzburg-Landau equation (finite differences)](@ref):
 
 ```julia
 using Revise

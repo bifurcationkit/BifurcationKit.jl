@@ -21,7 +21,7 @@ See the description of [continuation](https://rveltz.github.io/BifurcationKit.jl
 
 ### How can I change the preconditioner during computations?
 
-The easiest way to achieve this is by using the callbacks provided by `newton` and `continuation`. See the documentation about these two methods. See also the example [Complex Ginzburg-Landau 2d](@ref)
+The easiest way to achieve this is by using the callbacks provided by `newton` and `continuation`. See the documentation about these two methods. See also the example [2d Ginzburg-Landau equation (finite differences)](@ref)
 
 ### How can I implement my own bifurcation detection method?
 

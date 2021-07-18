@@ -4,7 +4,7 @@
     The general method is exposed in Golubitsky, Martin, David G Schaeffer, and Ian Stewart. **Singularities and Groups in Bifurcation Theory**. New York: Springer-Verlag, 1985, VI.1.d page 295
     
 !!! tip "Example"
-    An example of use of the methods presented here is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).    
+    An example of use of the methods presented here is provided in [2d generalized Bratu–Gelfand problem](@ref).    
 
 We expose our method to study *non-simple branch points*. Such branch point $(x_0,p_0)$ for the problem $F(x,p)=0$ satisfies $d=\dim \ker dF(x_0,p_0) > 1$ and the eigenvalues have zero imaginary part. At such point, we can apply **Lyapunov-Schmidt** reduction to transform the initial problem in large dimensions to a $d$-dimensional polynomial equation, called the **reduced equation**.
 

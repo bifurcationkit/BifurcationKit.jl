@@ -322,8 +322,8 @@ function jacobianPOTrapBlock(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, p
 	cylicPOTrapBlock!(pb, u0, par, Aγ)
 
 	In = spdiagm( 0 => ones(N))
-	setblock!(Aγ, -γ * In, M, 1)
-	setblock!(Aγ,  In,     M, M)
+	Aγ[Block(M, 1)] = -γ * In
+	Aγ[Block(M, M)] = In
 	return Aγ
 end
 
@@ -344,21 +344,21 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 
 	h = T * getTimeStep(pb, 1)
 	Jn = In - h/2 .* tmpJ
-	setblock!(Jc, Jn, 1, 1)
+	Jc[Block(1, 1)] = Jn
 
 	# we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
 	Jn = @views -In - h/2 .* pb.J(u0c[:, M-1], par)
-	setblock!(Jc, Jn, 1, M-1)
+	Jc[Block(1, M-1)] = Jn
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		Jn = -In - h/2 .* tmpJ
-		setblock!(Jc, Jn, ii, ii-1)
+		Jc[Block(ii, ii-1)] = Jn
 
 		tmpJ = @views pb.J(u0c[:, ii], par)
 
 		Jn = In - h/2 .* tmpJ
-		setblock!(Jc, Jn, ii, ii)
+		Jc[Block(ii, ii)] = Jn
 	end
 	return Jc
 end
@@ -526,14 +526,14 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 
 	h = T * getTimeStep(pb, 1)
 	@views Jn = In - h/2 .* pb.J(u0c[:, 1], par)
-	setblock!(A_diagBlock, Jn, 1, 1)
+	A_diagBlock[Block(1, 1)] = Jn
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		@views Jn = In - h/2 .* pb.J(u0c[:, ii], par)
-		setblock!(A_diagBlock, Jn, ii, ii)
+		A_diagBlock[Block(ii, ii)]= Jn
 	end
-	setblock!(A_diagBlock, In, M, M)
+	A_diagBlock[Block(M, M)]= In
 
 	A_diag_sp = blockToSparse(A_diagBlock) # most of the computing time is here!!
 	return A_diag_sp
@@ -592,7 +592,6 @@ end
 
 # this function updates the section during the continuation run
 @views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
-	@error "Updating section"
 	M, N = size(prob)
 	xc = extractTimeSlices(prob, x)
 	T = extractPeriodFDTrap(x)

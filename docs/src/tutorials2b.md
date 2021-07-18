@@ -7,7 +7,7 @@ Depth = 3
 
 Here we give an example where the continuation can be done **entirely** on the GPU, *e.g.* on a single V100 NIVDIA.
 
-We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See [Snaking in the 2d Swift-Hohenberg equation](@ref) for more details. Solving the sparse linear problem in $v$
+We choose the 2d Swift-Hohenberg as an example and consider a larger grid. See [2d Swift-Hohenberg equation: snaking, Finite Differences](@ref) for more details. Solving the sparse linear problem in $v$
 
 $$-(I+\Delta)^2 v+(l +2\nu u-3u^2)v = rhs$$
 

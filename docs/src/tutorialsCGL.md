@@ -191,7 +191,7 @@ plot(br_hopf, title = "Hopf continuation")
 ## Periodic orbits continuation with stability
 Having found two Hopf bifurcation points, we aim at computing the periodic orbits branching from them. Like for the Brusselator example, we need to find some educated guess for the periodic orbits in order to have a successful Newton call.
 
-The following code is very close to the one explained in the tutorial [Brusselator 1d (advanced user)](@ref) so we won't give too much details here.
+The following code is very close to the one explained in the tutorial [1d Brusselator (advanced user)](@ref) so we won't give too much details here.
 
 We focus on the first Hopf bifurcation point. Note that, we do not improve the guess for the Hopf bifurcation point, *e.g.* by calling `newtonHopf`, as this is not really needed.
 

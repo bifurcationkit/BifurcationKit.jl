@@ -346,7 +346,7 @@ d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
 jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
 ```
 
-We are now ready to call the automatic branch switching. Note how similar it is to the previous section based on finite differences. This case is more deeply studied in the tutorial [Brusselator 1d (advanced user)](@ref). We use a parallel Shooting.
+We are now ready to call the automatic branch switching. Note how similar it is to the previous section based on finite differences. This case is more deeply studied in the tutorial [1d Brusselator (advanced user)](@ref). We use a parallel Shooting.
 
 ```julia
 # linear solvers

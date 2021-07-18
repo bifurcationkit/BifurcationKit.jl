@@ -11,7 +11,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 	Jᵗ = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
 ```
 
-where `br` is a branch computed after a call to `continuation` with detection of bifurcation points enabled. This call computes the branch bifurcating from the `ind_bif `th bifurcation point in `br`. An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+where `br` is a branch computed after a call to `continuation` with detection of bifurcation points enabled. This call computes the branch bifurcating from the `ind_bif `th bifurcation point in `br`. An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
 > See [Branch switching (branch point)](@ref) precise method definition
 
@@ -24,7 +24,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::Continu
 	Jᵗ = nothing, δ = 1e-8, nev = 5, verbose = false, kwargs...)
 ```
 
-An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
 > See [Branch switching (branch point)](@ref) for precise method definition
 
@@ -44,7 +44,7 @@ continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, _contParams::Continu
 
 We refer to [`continuation`](@ref) for more information about the arguments. Here, we just say a few words about how we can specify `prob::AbstractPeriodicOrbitProblem`. For [Periodic orbits based on trapezoidal rule](@ref), you can pass `prob = PeriodicOrbitTrapProblem(M = 51)` where `M` is the number of times slices in the periodic orbit. For [Periodic orbits based on the shooting method](@ref), you need more parameters. For example, you can pass `prob = ShootingProblem(2, par, prob, Euler())` or `prob = PoincareShootingProblem(2, par, prob, Euler())` where `prob::ODEProblem` is an ODE problem to specify the Cauchy problem and `par` is the set of parameters passed to the vector field and which must be the same as `br.params`.
 
-Several examples are provided like [Brusselator 1d (automatic)](@ref) or [Complex Ginzburg-Landau 2d](@ref).
+Several examples are provided like [1d Brusselator (automatic)](@ref) or [2d Ginzburg-Landau equation (finite differences)](@ref).
 
 > See [Branch switching (Hopf point)](@ref) precise method definition
 
@@ -55,7 +55,7 @@ Several examples are provided like [Brusselator 1d (automatic)](@ref) or [Comple
 
 We only provide (for now) this method for the case of [`PeriodicOrbitTrapProblem`](@ref). The call is as follows. Please note that a deflation is included in this method to simplify branch switching. 
 
-An example of use is provided in [Brusselator 1d (automatic)](@ref).
+An example of use is provided in [1d Brusselator (automatic)](@ref).
 
 ```@docs
 continuationPOTrapBPFromPO

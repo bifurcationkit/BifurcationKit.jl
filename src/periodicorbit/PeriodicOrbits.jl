@@ -36,6 +36,9 @@ function applyJ(pb::AbstractPOFDProblem, dest, x, p, dx)
 	end
 	dest
 end
+
+# function too extract trajectories from branch
+getTrajectory(br::AbstractBranchResult, ind::Int) = getTrajectory(br.functional, br.sol[ind].x, br.sol[ind].p)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -241,7 +244,7 @@ end
 """
 $(SIGNATURES)
 
-Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points on a previously computed branch `br::ContResult`. It first computes a Hopf normal form.
+Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points of a previously computed branch `br::ContResult`. It first computes a Hopf normal form.
 
 # Arguments
 

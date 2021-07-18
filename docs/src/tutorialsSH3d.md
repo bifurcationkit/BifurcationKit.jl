@@ -12,7 +12,7 @@ We look at the following PDE on a 3d domain, *e.g.* a cube:
 
 $$-(I+\Delta)^2 u+l\cdot u +\nu u^2-u^3 = 0\tag{E}$$
 
-with Neumann boundary conditions. We use a Sparse Matrix to express the operator $L_1\equiv(I+\Delta)^2$. However, compared to the 2d case (see [Snaking in the 2d Swift-Hohenberg equation](@ref)), we cannot use directly `\` to solve linear systems because the LU décomposition is a bit slow, it uses a lot of memory.
+with Neumann boundary conditions. We use a Sparse Matrix to express the operator $L_1\equiv(I+\Delta)^2$. However, compared to the 2d case (see [2d Swift-Hohenberg equation: snaking, Finite Differences](@ref)), we cannot use directly `\` to solve linear systems because the LU décomposition is a bit slow, it uses a lot of memory.
 
 We start by defining the associated functional to encode (E).
 
