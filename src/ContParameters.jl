@@ -97,7 +97,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	detectEvent::Int64 = 0				# event location
 	tolParamBisectionEvent::T = 1e-16	# tolerance on value of parameter
 
-	@assert iseven(nInversion) "The option `nInversion` number must be odd"
+	@assert iseven(nInversion) "The option `nInversion` number must be even"
 	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
 	@assert detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
 	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
