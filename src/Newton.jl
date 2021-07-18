@@ -8,8 +8,8 @@ $(TYPEDFIELDS)
 
 # Arguments for line search (Armijo)
 - `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
-- `α = 1.0`: alpha (damping) parameter for line search algorithm
-- `αmin  = 0.001 `: minimal vslue of the damping `alpha`
+- `α = 1.0`: initial value of α (damping) parameter for line search algorithm
+- `αmin  = 0.001 `: minimal value of the damping `alpha`
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
@@ -28,6 +28,7 @@ $(TYPEDFIELDS)
 	linesearch::Bool = false
 	α::T             = convert(typeof(tol), 1.0)        # damping
 	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
+	@assert 0 <= α <= 1
 end
 
 ####################################################################################################
@@ -114,7 +115,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter) & compute
+	while (res > tol) && (it < maxIter) && compute
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
 		itlineartot += sum(itlinear)

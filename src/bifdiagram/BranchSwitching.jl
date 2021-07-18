@@ -285,7 +285,7 @@ function multicontinuation(F, dF, br::AbstractBranchResult,
 	# compute the different branches
 	function _continue(_sol, _dp, _ds)
 		# needed to reset the tangent algorithm in case fields are used
-		emptypredictor!(get(kwargs, :tangentAlgo, nothing))
+		empty!(get(kwargs, :tangentAlgo, nothing))
 		println("#"^50)
 		continuation(F, dF,
 			bpnf.x0, par,		# first point on the branch

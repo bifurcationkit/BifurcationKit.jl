@@ -42,7 +42,7 @@ getPredictor!(state::AbstractContinuationState, iter::AbstractContinuationIterab
 getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, verbosity) = getTangent!(state.tau, state.z_new, state.z_old, it, state.ds, θ, it.tangenAlgo::NaturalPred, it.verbosity)
 
 # reset the predictor
-emptypredictor!(::Union{Nothing, AbstractTangentPredictor}) = nothing
+Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 
 # clamp p value
 clampPred(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
@@ -152,7 +152,7 @@ $(TYPEDFIELDS)
 
 	MultiplePred(x0, α, n)
 
-- `α` damping in Newton iterations
+- `α` damping in Newton iterations, 0 < α < 1.
 - `n` number of predictors
 - `x0` example of vector solution to be stored
 """
@@ -183,7 +183,7 @@ $(TYPEDFIELDS)
 end
 MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo= algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
 MultiplePred(x0, α, nb) = MultiplePred(SecantPred(), x0, α, nb)
-emptypredictor!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
+Base.empty!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 
 # callback for newton
 function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
@@ -198,12 +198,13 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	# compute tangent and store it
 	(verbosity > 0) && print("Predictor: MultiplePred\n--")
 	getTangent!(τ, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
+	# record the tangent for later use
 	copyto!(algo.τ, τ)
 end
 
 function getPredictor!(z_pred::M, z_old::M, τ::M, ds, algo::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do nothing!
-	# emptypredictor!(algo)
+	# empty!(algo)
 	return nothing
 end
 
@@ -317,7 +318,7 @@ PolynomialPred(n, k, v0) = PolynomialPred(SecantPred(),n,k,v0)
 
 isready(ppd::PolynomialPred) = length(ppd.solutions) >= ppd.k
 
-function emptypredictor!(ppd::PolynomialPred)
+function Base.empty!(ppd::PolynomialPred)
 	empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
 end
 
@@ -455,6 +456,9 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
 
+	# we record the damping parameter
+	α0 = α
+
 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
 
@@ -487,18 +491,24 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	compute = callback(x, res_f, nothing, res, 0, 0, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter) & line_step & compute
+	while (res > tol) && (it < maxIter) && line_step && compute
 		# dFdp = (F(x, p + epsi) - F(x, p)) / epsi)
 		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
 			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 
+		# compute jacobian
 		J = Jh(x, set(par, paramlens, p))
+		# solve linear system
+		# ┌            ┐┌  ┐   ┌     ┐
+		# │ J     dFdp ││u │ = │res_f│
+		# │ τ0.u  τ0.p ││up│   │res_n│
+		# └            ┘└  ┘   └     ┘
 		u, up, flag, itlinear = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
 		itlineartot += sum(itlinear)
 
 		if linesearch
 			line_step = false
-			while !line_step & (α > αmin)
+			while !line_step && (α > αmin)
 				# x_pred = x - α * u
 				copyto!(x_pred, x); axpy!(-α, u, x_pred)
 
@@ -509,22 +519,25 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 				res = normAC(res_f, res_n)
 
 				if res < resHist[end]
-					if (res < resHist[end] / 2) & (α < 1)
+					if (res < resHist[end] / 2) && (α < 1)
 						α *= 2
 					end
 					line_step = true
 					copyto!(x, x_pred)
-					p  = clamp(p_pred, pMin, pMax)
+
 					# p = p_pred
+					p  = clamp(p_pred, pMin, pMax)
 				else
 					α /= 2
 				end
 			end
-			α = contparams.newtonOptions.α 	# we put back the initial value
+			# we put back the initial value
+			α = α0
 		else
-			minus!(x, u) 					# x .= x .- u
+			# x .= x .- u
+			minus!(x, u)
+			# p  = p  - up
 			p = clamp(p - up, pMin, pMax)
-			# p = p - up
 
 			copyto!(res_f, F(x, set(par, paramlens, p)))
 

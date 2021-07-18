@@ -50,8 +50,8 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, p
 	br, = @time continuation(
 		F_carr, Jac_carr, zeros(N), par_car, (@lens _.ϵ), optcont;
 		plot = true, verbosity = 3,
-		recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
-		normC = x -> norm(x, Inf64))
+		recordFromSolution = recordFromSolution,
+		normC = norminf)
 
 plot(br)
 
@@ -92,10 +92,10 @@ br, _ = @time continuation(
 	deflationOp;
 	verbosity = 1,
 	maxBranches = 100,
+	# tangentAlgo = BorderedPred(),
 	perturbSolution = perturbsol,
-	recordFromSolution = (x, p) -> (x[2] - x[1]) * sum(x.^2),
-	normN = x -> norm(x, Inf64),
-	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
+	recordFromSolution = recordFromSolution,
+	normN = norminf,
 	)
 
 plot(br..., branchlabel = 1:length(br), legend=true)#, marker=:d)
