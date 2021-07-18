@@ -211,11 +211,13 @@ end
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		algo::MultiplePred, linearalgo = MatrixFreeBLS(); normC = norm,
 		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
+	verbose = it.verbosity
+	(verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─MultiplePred tangent predictor\n")
 	# we combine the callbacks for the newton iterations
 	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in algo.nb:-1:1
-		# printstyled(color=:magenta, "--> ii = $ii\n")
+		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
 		# record the current index
 		algo.currentind = ii
 		zpred = _copy(z_pred)
@@ -223,6 +225,14 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 		# we restore the original callback if it reaches the usual case ii == 0
 		zold, res, flag, itnewton, itlinear = corrector(it, z_old, tau, zpred, ds, θ,
 				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
+		if verbose > 1
+			if flag
+				printstyled("YES", color=:green)
+			else
+				printstyled(" NO", color=:red)
+			end
+			printstyled("]\n", color=:magenta)
+		end
 		if flag || ii == 1 # for i==1, we return the result anyway
 			return zold, res, flag, itnewton, itlinear
 		end
@@ -235,7 +245,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		dsnew = ds
 		if abs(ds) < (1 + mpd.nb) * contparams.dsmin
 			if mpd.pmimax < mpd.imax
-				@error "--> Increase pmimax"
+				(verbosity > 0) && printstyled("--> Increase pmimax\n", color=:red)
 				mpd.pmimax += 1
 			else
 				(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
