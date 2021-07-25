@@ -13,7 +13,7 @@ $$\Delta u +NL(\lambda,u) = 0$$
 
 with Neumann boundary condition on $\Omega = (0,1)^2$ and where $NL(\lambda,u)\equiv-10(u-\lambda e^u)$.
 
-We start by installing the package [GridapBifurcationKit.jl](https://rveltz.github.io/GridapBifurcationKit.jl). Then, we can import the different packages:
+We start by installing the package [GridapBifurcationKit.jl](https://github.com/rveltz/GridapBifurcationKit). Then, we can import the different packages:
 
 ```julia
 using Revise

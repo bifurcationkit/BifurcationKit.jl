@@ -56,16 +56,8 @@ function Fbr!(f, u, p)
 	f .= f .+ NL(u, p)
 end
 
-function NL(u, p)
-	out = similar(u)
-	NL!(out, u, p)
-	out
-end
-
-function Fbr(x, p, t = 0.)
-	f = similar(x)
-	Fbr!(f, x, p)
-end
+NL(u, p) = NL!(similar(u), u, p)
+Fbr(x, p, t = 0.) = Fbr!(similar(x), x, p)
 
 # this is not very efficient but simple enough ;)
 Jbr(x,p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
@@ -193,19 +185,20 @@ flag && printstyled(color=:red, "--> T = ", out_po_sh_pd[end], ", amplitude = ",
 which gives
 
 ```julia
- Newton Iterations
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     5.2811e-01         0
-        1                2     3.0518e-02        13
-        2                3     6.4500e-03        14
-        3                4     1.8029e-03        13
-        4                5     6.9716e-05        11
-        5                6     6.6815e-07        12
-        6                7     2.6769e-08        14
-        7                8     1.0727e-09        13
-        8                9     4.3002e-11        13
-  6.941868 seconds (3.59 M allocations: 2.286 GiB, 8.26% gc time)
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       4.3061e+00     │        0       │
+│       1     │       5.3254e-02     │       10       │
+│       2     │       5.5053e-03     │       12       │
+│       3     │       1.6203e-03     │       13       │
+│       4     │       5.6236e-05     │       12       │
+│       5     │       7.6290e-07     │       12       │
+│       6     │       3.0634e-08     │       13       │
+│       7     │       1.2282e-09     │       12       │
+│       8     │       4.9233e-11     │       13       │
+└─────────────┴──────────────────────┴────────────────┘
+  4.249150 seconds (497.85 k allocations: 2.030 GiB, 11.13% gc time)
 --> T = 6.126399996979465, amplitude = 1.410164896740365
 ```
 

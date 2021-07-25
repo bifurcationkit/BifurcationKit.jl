@@ -125,7 +125,7 @@ outfold, _, flag = newton(F_chan, Jac_mat,
 flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 ```
 
-We can finally continue this fold point in the plane $(a,b)$ by performing a Fold Point continuation. In the present case, we find a Cusp point.
+We can finally continue this fold point in the plane $(α,β)$ by performing a Fold Point continuation. In the present case, we find a Cusp point.
 
 !!! tip "Tip"
     We don't need to call `newton` first in order to use `continuation` for the codim 2 curve of bifurcation points.
@@ -134,7 +134,7 @@ We can finally continue this fold point in the plane $(a,b)$ by performing a Fol
 outfoldco, = continuation(
 	F_chan, Jac_mat,
 	br, indfold, 
-	# parameter axis to trace to codim 2 curve
+	# second parameter axis to use for codim 2 curve
 	(@lens _.β),
 	plot = true, verbosity = 2)
 scene = plot(outfoldco, plotfold=true, legend = :bottomright)

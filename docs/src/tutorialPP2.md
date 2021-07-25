@@ -14,7 +14,6 @@ u_{1}^{\prime}=3 u_{1}\left(1-u_{1}\right)-u_{1} u_{2}-p_1\left(1-e^{-5 u_{1}}\r
 u_{2}^{\prime}=-u_{2}+3 u_{1} u_{2}
 \end{array}$$
 
-
 It is easy to encode the ODE as follows
 
 ```@example TUTPP2
@@ -68,7 +67,7 @@ opts_br = ContinuationPar(pMin = 0.1, pMax = 1.0, dsmax = 0.01,
 nothing #hide
 ```
 
-We are now. Ready to compute the diagram
+We are now ready to compute the diagram
 
 ```@example TUTPP2
 diagram = bifurcationdiagram(jet...,
@@ -77,7 +76,7 @@ diagram = bifurcationdiagram(jet...,
 	# specify the continuation parameter
 	(@lens _.p1),
 	# very important parameter. This specifies the maximum amount of recursion
-	# when computing the bifurcation diagram. It means we allow computing branches of branches
+	# when computing the bifurcation diagram. It means we allow computing branches of branches of branches
 	# at most in the present case.
 	3,
 	(args...) -> setproperties(opts_br; ds = -0.001, dsmax = 0.01, nInversion = 8, detectBifurcation = 3);
@@ -103,7 +102,9 @@ brH = BK.getBranch(diagram, (2,1)).γ
 optn_po = NewtonPar(tol = 1e-8,  maxIter = 25)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.001, dsmin = 1e-4, newtonOptions = (@set optn_po.tol = 1e-8), precisionStability = 1e-2, detectBifurcation = 1, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.001, dsmin = 1e-4,
+ newtonOptions = (@set optn_po.tol = 1e-8), precisionStability = 1e-2,
+ detectBifurcation = 1, saveSolEveryStep=1)
 
 Mt = 101 # number of time sections
 	br_po, utrap = continuation(

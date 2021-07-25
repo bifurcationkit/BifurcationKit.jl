@@ -131,14 +131,7 @@ br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, v
 We then compute the differentials of the vector field, this is needed by the branch switching method because it first computes the Hopf normal form. Thankfully, this is little work using Automatic Differentiation:
 
 ```julia
-using ForwardDiff
-
-D(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0.)
-d1Fcgl(x,p,dx1) = D((z, p0) -> Fcgl(z, p0), x, p, dx1)
-d2Fcgl(x,p,dx1,dx2) = D((z, p0) -> d1Fcgl(z, p0, dx1), x, p, dx2)
-d3Fcgl(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fcgl(z, p0, dx1, dx2), x, p, dx3)
-
-jet = (Fcgl, Jcgl, d2Fcgl, d3Fcgl)
+jet = BK.getJet(Fcgl, Jcgl)
 ```
 
 We define the linear solvers to be use by the (Matrix-Free) shooting method
