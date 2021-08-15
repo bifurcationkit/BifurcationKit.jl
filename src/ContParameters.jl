@@ -104,6 +104,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops
 	@assert 0 <= theta <=1 "theta must belong to [0, 1]"
+	@assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
