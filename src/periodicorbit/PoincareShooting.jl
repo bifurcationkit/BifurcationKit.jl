@@ -428,7 +428,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 end
 
 # out of place version
-(psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(length(x), length(x)), x, par)
+(psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
 function problemForBS(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers, period)

@@ -304,7 +304,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 end
 
 # out of place version
-(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(length(x), length(x)), x, par)
+(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 
 function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
@@ -352,7 +352,6 @@ function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
 		return sol[1]
 	end
 end
-
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point

@@ -40,3 +40,8 @@ Depth = 1
 ```
 
 ## Freezing, waves, fronts
+
+```@contents
+Pages = ["autocatalytic.md"]
+Depth = 1
+```
