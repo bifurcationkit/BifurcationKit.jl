@@ -24,7 +24,7 @@ using BifurcationKit
 const BK = BifurcationKit
 
 # sup norm
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 # vector field
 function TMvf!(dz, z, p, t)
@@ -42,7 +42,7 @@ end
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
 
 # we group the differentials together
-dTMvf = (z,p) -> ForwardDiff.jacobian(x -> TMvf(x,p), z)
+dTMvf(z,p) = ForwardDiff.jacobian(x -> TMvf(x,p), z)
 jet = BK.getJet(TMvf, dTMvf)
 
 # parameter values
@@ -57,7 +57,7 @@ We first compute the branch of equilibria
 
 ```@example TUTODE
 # continuation options
-opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, 
+opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9,
 	# parameters to have a smooth result
 	ds = 0.04, dsmax = 0.05,
 		# this is to detect bifurcation points precisely
@@ -94,7 +94,7 @@ We then compute the branch of periodic orbits from the last Hopf bifurcation poi
 
 ```julia
 # newton parameters
-optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10) 
+optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10)
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5.,

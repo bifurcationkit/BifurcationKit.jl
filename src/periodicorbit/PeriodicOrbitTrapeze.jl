@@ -107,7 +107,7 @@ end
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
 getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 
-# dummy constructor, useful for specifying the "algorithm" to look for periodic orbits
+# for a dummy constructor, useful for specifying the "algorithm" to look for periodic orbits,
 # just call PeriodicOrbitTrapProblem()
 
 function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
@@ -462,6 +462,7 @@ end
 
 	h = T * getTimeStep(pb, 1)
 	Jn = In - tmpJ * (h/2)
+
 	# setblock!(Jc, Jn, 1, 1)
 	J0.nzval[indx[1,1]] .= Jn.nzval
 
@@ -964,7 +965,7 @@ function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Len
 end
 
 ####################################################################################################
-# functions needed Branch switching from Hopf bifurcation point
+# function needed for automatic Branch switching from Hopf bifurcation point
 function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::AbstractVector, orbitguess_a, period)
 	M = length(orbitguess_a)
 	N = length(ζr)

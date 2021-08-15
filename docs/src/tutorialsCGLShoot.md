@@ -5,9 +5,9 @@ Pages = ["tutorialsCGLShoot.md"]
 Depth = 3
 ```
 
-In this tutorial, we re-visit the example [2d Ginzburg-Landau equation (finite differences)](@ref) using a Standard Simple Shooting method. In the tutorial [1d Brusselator (advanced user)](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form 
+In this tutorial, we re-visit the example [2d Ginzburg-Landau equation (finite differences)](@ref) using a Standard Simple Shooting method. In the tutorial [1d Brusselator (advanced user)](@ref), we used the implicit solver `Rodas4P` for the shooting. We will use the exponential-RK scheme `ETDRK2` ODE solver to compute the solution of cGL equations. This method is convenient for solving semilinear problems of the form
 
-$$\dot x = Ax+g(x)$$ 
+$$\dot x = Ax+g(x)$$
 
 where $A$ is the infinitesimal generator of a $C_0$-semigroup. We use the same beginning as in [2d Ginzburg-Landau equation (finite differences)](@ref):
 
@@ -17,17 +17,17 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly)
 	hx = 2lx/Nx
 	hy = 2ly/Ny
 	D2x = CenteredDifference(2, 2, hx, Nx)
 	D2y = CenteredDifference(2, 2, hy, Ny)
-	
+
 	Qx = Dirichlet0BC(typeof(hx))
 	Qy = Dirichlet0BC(typeof(hy))
-	
+
 	D2xsp = sparse(D2x * Qx)[1]
 	D2ysp = sparse(D2y * Qy)[1]
 
@@ -89,7 +89,7 @@ function Jcgl(u, p, t = 0.)
 end
 ```
 
-with parameters 
+with parameters
 
 ```julia
 Nx = 41
@@ -116,7 +116,7 @@ sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14)
 
 ## Automatic branch switching from the Hopf points
 
-We show how to use automatic branch switching from the Hopf points computed in the previous section. To compute the periodic orbits, we use a Standard Shooting method. 
+We show how to use automatic branch switching from the Hopf points computed in the previous section. To compute the periodic orbits, we use a Standard Shooting method.
 
 We first recompute the Hopf points as in the previous tutorial:
 
@@ -148,7 +148,7 @@ as
 ```julia
 Mt = 1 # number of time sections
 br_po, = continuation(
-	# we want to compute the bifurcated branch from 
+	# we want to compute the bifurcated branch from
 	# the first Hopf point
 	jet..., br, 1,
 	# arguments for continuation

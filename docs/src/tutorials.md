@@ -39,4 +39,4 @@ Pages = ["tutorials3.md","tutorials3b.md", "BrusselatorFF.md", "tutorialsPD.md",
 Depth = 1
 ```
 
-## Bifurcation diagrams with waves
+## Freezing, waves, fronts

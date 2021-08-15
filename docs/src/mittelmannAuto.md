@@ -8,7 +8,7 @@ Depth = 3
 !!! unknown "References"
     The following example is exposed in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. **The Computation of Disconnected Bifurcation Diagrams.** ArXiv:1603.00809 [Math], March 2, 2016. . It is also treated in Michiel Wouters. **Automatic Exploration Techniques for the Numerical Continuation of Large–Scale Nonlinear Systems**, 2019.
 
-        
+
 We consider the problem of Mittelmann:
 
 $$\Delta u +NL(\lambda,u) = 0$$
@@ -24,9 +24,9 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 const BK = BifurcationKit
 
 # define the sup norm
-norminf = x -> norm(x, Inf)
-norm2 = x -> norm(x) / sqrt(length(x))
-normbratu = x -> norm(x .* w) / sqrt(length(x)) # the weight w is defined below
+norminf(x) = norm(x, Inf)
+norm2(x) = norm(x) / sqrt(length(x))
+normbratu(x) = norm(x .* w) / sqrt(length(x)) # the weight w is defined below
 
 # some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -70,7 +70,7 @@ end
 Fmit(u, p) = Fmit!(similar(u), u, p)
 ```
 
-It will also prove useful to have the jacobian of our functional and the other derivatives: 
+It will also prove useful to have the jacobian of our functional and the other derivatives:
 
 ```julia
 function JFmit(x,p)
@@ -113,7 +113,7 @@ eigls = EigKrylovKit(dim = 70)
 # options for Newton solver
 opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
 
-# options for continuation, we want to locate very precisely the 
+# options for continuation, we want to locate very precisely the
 # bifurcation points, so we tune the bisection accordingly
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, precisionStability = 1e-6, nInversion = 6, dsminBisection = 1e-7, maxBisectionSteps = 25, tolBisectionEigenvalue = 1e-19)
 ```	 
@@ -162,14 +162,14 @@ function optionsCont(x,p,l; opt0 = opts_br)
 end
 ```
 
-We are then ready to compute the bifurcation diagram. If we choose a level 5 of recursion like 
+We are then ready to compute the bifurcation diagram. If we choose a level 5 of recursion like
 
 ```julia
 diagram = @time bifurcationdiagram(jet...,
-	sol0, par_mit, (@lens _.λ), 
-	# important argument: this is the maximal 
-	# recursion level 
-	5, 
+	sol0, par_mit, (@lens _.λ),
+	# important argument: this is the maximal
+	# recursion level
+	5,
 	optionsCont;
 	verbosity = 0, plot = true,
 	recordFromSolution = (x, p) -> (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
@@ -183,14 +183,14 @@ this gives using `plot(diagram; plotfold = false, putspecialptlegend=false, mark
 
 ![](mittlemanBD.png)
 
-We can zoom in on the left part to get 
+We can zoom in on the left part to get
 
 ![](mittlemanBD1.png)
 
 Actually, this plot is misleading because of the symmetries. If we chose a weighted norm which breaks those symmetries and use it to print the solution, we get
 
 ```julia
-plot(diagram; plotfold = false, putspecialptlegend=false, markersize=2, 
+plot(diagram; plotfold = false, putspecialptlegend=false, markersize=2,
 	title = "#branches = $(size(diagram))", vars = (:param, :nw))
 ```
 
@@ -218,7 +218,7 @@ Let's say you have been cautious and did not launch a deep bifurcation diagram c
 
 ```julia
 diagram = bifurcationdiagram(jet...,
-	sol0, par_mit, (@lens _.λ), 
+	sol0, par_mit, (@lens _.λ),
 	# here the recursion level is
 	2,
 	optionsCont;
@@ -232,7 +232,7 @@ diagram = bifurcationdiagram(jet...,
 	normC = norminf)
 ```
 
-You would end up with this diagram 
+You would end up with this diagram
 
 ![](mittlemanBD2.png)
 

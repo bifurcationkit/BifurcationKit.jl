@@ -3,7 +3,7 @@ using BifurcationKit
 const BK = BifurcationKit
 
 D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 ####################################################################################################
 function TMvf!(dz, z, p, t)
 	@unpack J, α, E0, τ, τD, τF, U0 = p
@@ -17,7 +17,7 @@ function TMvf!(dz, z, p, t)
 end
 
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
-dTMvf = (z,p) -> ForwardDiff.jacobian(x-> TMvf(x,p), z)
+dTMvf(z,p) = ForwardDiff.jacobian(x-> TMvf(x,p), z)
 
 # we group the differentials together
 jet  = BK.getJet(TMvf, dTMvf)
@@ -48,7 +48,7 @@ Mt = 200 # number of sections
 	PeriodicOrbitTrapProblem(M = Mt);
 	linearPO = :Dense,
 	verbosity = 2,	plot = true,
-	printSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
+	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	plotSolution = (x, p; k...) -> begin
 		xtt = BK.getTrajectory(p.prob, x, p.p)
 		plot!(xtt.t, xtt.u[1,:]; label = "E", k...)
@@ -81,7 +81,7 @@ br_posh, = @time continuation(
 	linearPO = :autodiffDense,
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
-	printSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
+	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
 	plotSolution = (x, p; k...) ->
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
@@ -101,7 +101,7 @@ function TMvfExtended!(dz, z, p, t)
 	dz[4:end] .= @views ForwardDiff.derivative(t -> TMvf(z[1:3] .+ t .* z[4:end], p), 0)
 end
 
-probmono = ODEProblem(TMvfExtended!, vcat(u0, u0), (0., 1000.), par_tm; atol = 1e-10, rtol = 1e-9)
+probmono = ODEProblem(TMvfExtended!, vcat(z0, z0), (0., 1000.), par_tm; atol = 1e-10, rtol = 1e-9)
 
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-5, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=15), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 5, saveSolEveryStep = 2)
 
@@ -116,7 +116,7 @@ br_popsh, = @time continuation(
 	linearPO = :autodiffDense,
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
-	printSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
+	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
 	plotSolution = (x, p; k...) ->
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
@@ -135,6 +135,3 @@ br_popsh, = @time continuation(
 	normC = norminf)
 
 plot(br, br_popsh, markersize=3)
-
-_po = br_popsh.sol[1].x
-fl = br_popsh.functional.flow

@@ -26,13 +26,12 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
 const BK = BifurcationKit
 
 f1(u, v) = u * u * v
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
-function Fbru(x, p)
+function Fbru!(f, x, p, t = 0)
 	@unpack α, β, D1, D2, l = p
-	f = similar(x)
 	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
+	h2 = 1.0 / n^2
 	c1 = D1 / l^2 / h2
 	c2 = D2 / l^2 / h2
 
@@ -40,10 +39,10 @@ function Fbru(x, p)
 	v = @view x[n+1:2n]
 
 	# Dirichlet boundary conditions
-	f[1]   = c1 * (α      - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
+	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
 	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
 
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α  )  + α - (β + 1) * u[n] + f1(u[n], v[n])
+	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
 	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
 
 	for i=2:n-1
@@ -52,6 +51,8 @@ function Fbru(x, p)
 	end
 	return f
 end
+
+Fbru(x, p, t = 0) = Fbru!(similar(x), x, p, t)
 ```
 
 For computing periodic orbits, we will need a Sparse representation of the Jacobian:
@@ -92,7 +93,7 @@ end
 ```
 
 !!! tip "Tip"
-    We could have used `DiffEqOperators.jl` like for the Swift-Hohenberg tutorial.
+    We could have used `DiffEqOperators.jl` like for the Swift-Hohenberg tutorial instead of writing our laplacian ourselves.
 
 Finally, it will prove useful to have access to the hessian and third derivative
 
@@ -150,7 +151,7 @@ and you should get
 julia> hopfpt
 SuperCritical - Hopf bifurcation point at l ≈ 0.5113310149554013.
 Period of the periodic orbit ≈ 2.9367552006841753
-Normal form z⋅(a⋅δp + b⋅|z|²): 
+Normal form z⋅(a⋅δp + b⋅|z|²):
 (a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)
 ```
 
@@ -181,7 +182,13 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
 br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, (@lens _.β),
-	optcdim2, verbosity = 2, 
+	optcdim2, verbosity = 2,
+	# detection of codim 2 bifurcations with bisection
+	detectCodim2Bifurcation = 2,
+	# this is required to detect the bifurcations
+	d2F = jet[3], d3F = jet[4],
+	# we update the Fold problem at every continuation step
+	updateMinAugEveryStep = 1,
 	normC = norminf)
 ```
 
@@ -249,7 +256,7 @@ br_po2, = BK.continuationPOTrapBPFromPO(
 	normC = norminf)
 ```
 
-It is now straightforward to get the full following diagram
+It is now straightforward to get the following diagram
 
 ![](bru-po-cont-3br.png)
 
@@ -257,35 +264,7 @@ It is now straightforward to get the full following diagram
 
 > Note that what follows is not really optimized on the `DifferentialEquations.jl` side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern, ...
 
-We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field `Fbru`. We will show how to do this with an implicit method `Rodas4P` from `DifferentialEquations.jl`. Note that the user can pass its own time stepper but for convenience, we use the ones in `DifferentialEquations.jl`. More information regarding the shooting method is contained in [Periodic orbits based on the shooting method](@ref). To define the flow, it is better to have an **inplace** version of the vector field:
-
-```julia
-function Fbru!(f, x, p)
-	@unpack α, β, D1, D2, l = p
-	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
-	c1 = D1 / l^2 / h2
-	c2 = D2 / l^2 / h2
-
-	u = @view x[1:n]
-	v = @view x[n+1:2n]
-
-	# Dirichlet boundary conditions
-	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
-	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
-
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
-	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
-
-	for i=2:n-1
-		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
-		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
-	end
-	return f
-end
-
-Fbru(x, p) = Fbru!(similar(x), x, p)
-```
+We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field `Fbru`. We will show how to do this with an implicit method `Rodas4P` from `DifferentialEquations.jl`. Note that the user can pass its own time stepper but for convenience, we use the ones in `DifferentialEquations.jl`. More information regarding the shooting method is contained in [Periodic orbits based on the shooting method](@ref).
 
 We then recompute the locus of the Hopf bifurcation points using the same method as above.
 
@@ -312,13 +291,13 @@ We need to build a problem which encodes the Shooting functional. This done as f
 ```julia
 using DifferentialEquations, DiffEqOperators
 
-FOde(f, x, p, t) = Fbru!(f, x, p)
+FOde(f, x, p, t) = Fbru!(f, x, p, t)
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 
 # this is the ODE time stepper when used with `solve`
-probsundials = ODEProblem(FOde, u0, (0., 1000.), par_bru;
-	atol = 1e-10, rtol = 1e-8, jac = (J,u,p,t) -> J .= Jbru_sp(u,p), jac_prototype = Jbru_sp(u0, par_bru))
+prob = ODEProblem(FOde, u0, (0., 1000.), par_bru;
+	atol = 1e-10, rtol = 1e-8, jac = (J,u,p,t) -> J .= Jbru_sp(u, p), jac_prototype = Jbru_sp(u0, par_bru))
 ```
 
 !!! tip "Performance"
@@ -335,23 +314,15 @@ probsundials = ODEProblem(FOde, u0, (0., 1000.), par_bru;
 We also compute with automatic differentiation, the differentials of the vector field. This is is needed for branch switching as it is based on the computation of the Hopf normal form:
 
 ```julia
-using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
+jet  = BK.getJet(Fbru, Jbru_sp)
 ```
 
 We are now ready to call the automatic branch switching. Note how similar it is to the previous section based on finite differences. This case is more deeply studied in the tutorial [1d Brusselator (advanced user)](@ref). We use a parallel Shooting.
 
 ```julia
 # linear solvers
-ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
-eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100)
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
@@ -365,7 +336,7 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Parallel Standard Shooting
-	ShootingProblem(Mt, par_bru, probsundials, Rodas4P(), abstol = 1e-10, retol = 1e-8, parallel = true);
+	ShootingProblem(Mt, par_bru, prob, Rodas4P(), abstol = 1e-10, reltol = 1e-8, parallel = true);
 	ampfactor = 1.0, δp = 0.0075,
 	# the next option is not necessary
 	# it speeds up the newton iterations
@@ -389,18 +360,18 @@ We show how to use this method, the code is very similar to the case of the Para
 ```julia
 # linear solvers
 ls = GMRESIterativeSolvers(reltol = 1e-8, maxiter = 100)
-eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50)
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), dim = 50)
 # newton parameters
-optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
+optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 15, linsolver = ls, eigsolver = eig)
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 2)
 
 # number of time slices
-Mt = 1
+Mt = 2
 br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, par_bru, probsundials, Rodas4P(); abstol = 1e-10, retol = 1e-8, parallel = true);
+	opts_po_cont, PoincareShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
 	# the next option is not necessary
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system

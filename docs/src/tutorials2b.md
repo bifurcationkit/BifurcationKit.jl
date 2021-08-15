@@ -107,7 +107,7 @@ Before applying a Newton solver, we need to tell how to solve the linear equatio
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, 
+	res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs,
 	tol = tol, maxiter = 6)
 	return res, true, info.numops
 end
@@ -166,7 +166,7 @@ opt_new = NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 		F_shfft, J_shfft,
 		AF(sol0), par,
 		opt_new, normN = norminf)
-				
+
 	println("--> norm(sol) = ", maximum(abs.(sol_hexa)))
 	plotsol(sol_hexa)
 ```
@@ -174,18 +174,20 @@ opt_new = NewtonPar(verbose = true, tol = 1e-6, maxIter = 100, linsolver = L)
 You should see this:
 
 ```julia
-Newton Iterations      f(x)      Linear Iterations
-
-          0          3.3758e-01             0
-          1          8.0152e+01            12
-          2          2.3716e+01            27
-          3          6.7353e+00            22
-          4          1.9498e+00            17
-          5          5.5893e-01            14
-          6          1.0998e-01            12
-          7          1.1381e-02            11
-          8          1.6393e-04            11
-          9          6.7459e-08            10
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       3.3758e-01     │        0       │
+│       1     │       8.0152e+01     │       12       │
+│       2     │       2.3716e+01     │       28       │
+│       3     │       6.7353e+00     │       22       │
+│       4     │       1.9498e+00     │       17       │
+│       5     │       5.5893e-01     │       14       │
+│       6     │       1.0998e-01     │       12       │
+│       7     │       1.1381e-02     │       11       │
+│       8     │       1.6393e-04     │       11       │
+│       9     │       7.3277e-08     │       10       │
+└─────────────┴──────────────────────┴────────────────┘
   0.317790 seconds (42.67 k allocations: 1.256 MiB)
 --> norm(sol) = 1.26017611779702
 ```
@@ -199,7 +201,7 @@ The solution is:
 We can also use the deflation technique (see [`DeflationOperator`](@ref) and [`DeflatedProblem`](@ref) for more information) on the GPU as follows
 
 ```julia
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(
@@ -221,14 +223,14 @@ and get:
 Finally, we can perform continuation of the branches on the GPU:
 
 ```julia
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, 
-	pMax = 0., pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005,
+	pMax = 0., pMin = -1.0, theta = 0.5, plotEveryStep = 5,
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
 	br, = @time continuation(F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l), opts_cont;
 		plot = true, verbosity = 3,
-		plotSolution = (x, p; kwargs...)->plotsol!(x; color=:viridis, kwargs...), 
+		plotSolution = (x, p; kwargs...)->plotsol!(x; color=:viridis, kwargs...),
 		normC = x -> maximum(abs.(x))
 		)
 ```

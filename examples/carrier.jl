@@ -42,7 +42,6 @@ sol = -(1 .- par_car.X.^2)
 norminf(x) = norm(x,Inf)
 recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
-
 optnew = NewtonPar(tol = 1e-8, verbose = true)
 	out, = @time newton(
 		F_carr, Jac_carr, sol, par_car, optnew, normN = x -> norm(x, Inf64))

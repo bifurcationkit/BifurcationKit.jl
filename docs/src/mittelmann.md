@@ -9,7 +9,7 @@ Depth = 3
     The following example is exposed in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. **The Computation of Disconnected Bifurcation Diagrams.** ArXiv:1603.00809 [Math], March 2, 2016. It is also treated in Michiel Wouters. **Automatic Exploration Techniques for the Numerical Continuation of Large–Scale Nonlinear Systems**, 2019.
 
 
-        
+
 We consider the problem of Mittelmann:
 
 $$\Delta u + NL(\lambda,u) = 0$$
@@ -25,8 +25,8 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 const BK = BifurcationKit
 
 # define the sup norm and a L2 norm
-norminf = x -> norm(x, Inf)
-normbratu = x -> norm(x .* w) / sqrt(length(x)) # the weight w is defined below
+norminf(x) = norm(x, Inf)
+normbratu(x) = norm(x .* w) / sqrt(length(x)) # the weight w is defined below
 
 # some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -70,7 +70,7 @@ end
 Fmit(u, p) = Fmit!(similar(u), u, p)
 ```
 
-It will also prove useful to have the derivatives of our functional: 
+It will also prove useful to have the derivatives of our functional:
 
 ```julia
 function JFmit(x,p)
@@ -110,11 +110,11 @@ opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter
 # options for continuation
 opts_br = ContinuationPar(pMax = 3.5, pMin = 0.025,
 	# for a good looking curve
-	dsmin = 0.001, dsmax = 0.05, ds = 0.01, 
+	dsmin = 0.001, dsmax = 0.05, ds = 0.01,
 	# number of eigenvalues to compute
-	nev = 30, 
-	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
-	maxSteps = 100, precisionStability = 1e-6, 
+	nev = 30,
+	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true),
+	maxSteps = 100, precisionStability = 1e-6,
 	# detect codim 1 bifurcations
 	detectBifurcation = 3,
 	# Optional: bisection options for locating bifurcations
@@ -168,9 +168,9 @@ We notice several simple bifurcation points for which the dimension of the kerne
 We can compute the branch off the third bifurcation point:
 
 ```julia
-br1, = continuation(jet..., br, 3, 
+br1, = continuation(jet..., br, 3,
 	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)
-```	
+```
 
 and you should see:
 
@@ -183,7 +183,7 @@ You can also plot the two branches together `plot(br,br1,plotfold=false)` and ge
 We continue our journey and compute the branch bifurcating of the first bifurcation point from the last branch we computed:
 
 ```julia
-br2, = continuation(jet..., br1, 1, 
+br2, = continuation(jet..., br1, 1,
 	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)
 ```
 
@@ -205,7 +205,7 @@ You can print the 2d reduced equation as follows. Note that this is a multivaria
 
 ```julia
 julia> bp2d
-Non simple bifurcation point at p ≈ 0.27255473583423123. 
+Non simple bifurcation point at p ≈ 0.27255473583423123.
 Kernel dimension = 2
 Normal form :
  + -73.8978 * x1 ⋅ p + 0.0071 ⋅ x1³ + 0.0231 ⋅ x1² ⋅ x2 + -0.0273 ⋅ x1 ⋅ x2² + -0.0076 ⋅ x2³
@@ -259,8 +259,8 @@ We could use the solutions saved in `resp, resx` as initial guesses for a call t
 
 !!! tip "Solutions"
     The brute force method provided all solutions in a neighborhood of the bifurcation point.
-    
-    
+
+
 !!! info "Advanced computation"
     Instead of using brute force and computing the vector field on a grid. One can rely on `IntervalConstraintProgramming.jl` to do better using bisection. See also this [discourse post](https://discourse.julialang.org/t/nd-level-sets/38532/13) where the same example is treated by D. P. Sanders.    
 
@@ -270,7 +270,7 @@ At this stage, we know what happens at the 2d bifurcation point of the curve of 
 
 ```julia
 out = zeros(Nx*Ny)
-# deflation operator to 
+# deflation operator to
 deflationOp = DeflationOperator(2, 1.0, [zeros(Nx*Ny)])
 
 # options for the newton solver
@@ -313,7 +313,7 @@ brdef2, = continuation(
 	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 3, dsmax = 0.01);
 	kwargsC...)
-```	
+```
 
 thereby providing the following bifurcation diagram with `plot(br,br1,br2,brdef1, brdef2,plotfold=false, putbifptlegend = false)`
 

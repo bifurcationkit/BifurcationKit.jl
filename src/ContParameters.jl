@@ -98,8 +98,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	tolParamBisectionEvent::T = 1e-16	# tolerance on value of parameter
 
 	@assert iseven(nInversion) "The option `nInversion` number must be even"
-	@assert detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
-	@assert detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
+	@assert 0 <= detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
+	@assert 0 <= detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
 	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops

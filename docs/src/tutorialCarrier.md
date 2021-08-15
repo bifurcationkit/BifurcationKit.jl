@@ -71,13 +71,7 @@ optnew = NewtonPar(tol = 1e-8, verbose = true)
 We can start by using our Automatic bifurcation method.
 
 ```julia
-using ForwardDiff
-D(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0.)
-dF_carr(x,p)         	   =  ForwardDiff.jacobian( z-> F_carr(z,p), x)
-d1F_carr(x,p,dx1)         = D((z, p0) -> F_carr(z, p0), x, p, dx1)
-d2F_carr(x,p,dx1,dx2)     = D((z, p0) -> d1F_carr(z, p0, dx1), x, p, dx2)
-d3F_carr(x,p,dx1,dx2,dx3) = D((z, p0) -> d2F_carr(z, p0, dx1, dx2), x, p, dx3)
-jet = (F_carr, Jac_carr, d2F_carr, d3F_carr)
+jet = BK.getJet(F_carr, Jac_carr)
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 3, nev = 40)
 
@@ -121,7 +115,7 @@ br, = @time continuation(
 	deflationOp;
 	perturbSolution = perturbsol,
 	recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x.^2),
-	normN = x -> norm(x, Inf64),
+	normN = x -> norm(x, Inf),
 	)
 
 plot(br...)

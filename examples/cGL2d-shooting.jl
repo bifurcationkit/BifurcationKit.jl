@@ -3,7 +3,7 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 	hx = 2lx/Nx

@@ -3,8 +3,8 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
-normbratu = x -> norm(x .* w) / sqrt(length(x))
+norminf(x) = norm(x, Inf)
+normbratu(x) = norm(x .* w) / sqrt(length(x))
 ##########################################################################################
 # plotting function
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)

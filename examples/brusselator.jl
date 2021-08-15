@@ -3,7 +3,7 @@ using Revise
 	const BK = BifurcationKit
 
 f1(u, v) = u * u * v
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function plotsol(x; kwargs...)
 	N = div(length(x), 2)
@@ -71,6 +71,8 @@ function Jbru_sp(x, p)
 	return J
 end
 
+jet = BK.getJet(Fbru, Jbru_sp)
+
 function finalise_solution(z, tau, step, contResult)
 	n = div(length(z.u), 2)
 	printstyled(color=:red, "--> Solution constant = ", norm(diff(z.u[1:n])), " - ", norm(diff(z.u[n+1:2n])), "\n")
@@ -115,7 +117,6 @@ opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, 
 		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
 		recordFromSolution = (x, p) -> x[div(n,2)], normC = norminf)
 ####################################################################################################
-jet  = BK.getJet(Fbru, Jbru_sp)
 hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
@@ -153,7 +154,7 @@ if 1==1
 		verbosity = 2, normC = norminf, bothside = true)
 end
 plot(br_hopf)
-####################################################################################################Continuation of Periodic Orbit
+#################################################################################################### Continuation of Periodic Orbit
 # number of time slices
 M = 51
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2*2.7; phase = 0.25)
@@ -175,7 +176,7 @@ poTrapMF = PeriodicOrbitTrapProblem(
 			hopfpt.u,
 			M, ls0)
 
-deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
 ####################################################################################################
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
@@ -184,9 +185,9 @@ outpo_f, _, flag = @time newton(poTrap,
 		orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 		opt_po;
 		# deflationOp,
-		linearPO = :BorderedSparseInplace, #  3.2 seconds (756.76 k allocations: 2.363 GiB, 6.67% gc time)
+		linearPO = :BorderedSparseInplace, #  3.428727 seconds (874.14 k allocations: 2.376 GiB, 5.56% gc time, 8.77% compilation time)
 		# linearPO = :BorderedLU,
-		# linearPO = :FullSparseInplace, # 3.634019 seconds (775.86 k allocations: 2.452 GiB, 6.40% gc time)
+		# linearPO = :FullSparseInplace,
 		normN = norminf,
 		callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
 		)
@@ -254,7 +255,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
-	detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 3., nInversion = 4)
+	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, nInversion = 4)
 
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
@@ -270,9 +271,6 @@ br_po, _ = continuation(
 	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 
-# branches = [br_po]
-push!(branches, br_po)
-plot(branches..., legend = :bottomright, plotfold = false)
 
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO

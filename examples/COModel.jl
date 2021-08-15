@@ -2,7 +2,7 @@ using Revise, Test, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 ####################################################################################################
 function COm(u, p)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
@@ -14,7 +14,7 @@ function COm(u, p)
 		q4 * z - k * q4 * s
 	]
 end
-dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
+dCOm(z, p) = ForwardDiff.jacobian(x -> COm(x, p), z)
 jet = BK.getJet(COm, dCOm)
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)

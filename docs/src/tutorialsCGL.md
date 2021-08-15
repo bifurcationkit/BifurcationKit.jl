@@ -28,7 +28,7 @@ using DiffEqOperators, ForwardDiff
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly)
 	hx = 2lx/Nx; hy = 2ly/Ny
@@ -37,10 +37,10 @@ function Laplacian2D(Nx, Ny, lx, ly)
 
 	Qx = Dirichlet0BC(typeof(hx))
 	Qy = Dirichlet0BC(typeof(hy))
-	
+
 	D2xsp = sparse(D2x * Qx)[1]
 	D2ysp = sparse(D2y * Qy)[1]
-	
+
 	A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
 	return A
 end
@@ -139,7 +139,7 @@ Bifurcation points:
 - #  2,  hopf at p ≈ +1.86107007 ∈ (+1.86018618, +1.86107007), |δp|=9e-04, [converged], δ = ( 2,  2), step = 195, eigenelements in eig[196], ind_ev =   4
 ```
 
-and (with `plot(br, ylims=(-0.1,0.1))`) 
+and (with `plot(br, ylims=(-0.1,0.1))`)
 
 ![](cgl2d-bif.png)
 
@@ -160,7 +160,7 @@ We can look at the coefficients of the normal form
 julia> hopfpt
 SubCritical - Hopf bifurcation point at r ≈ 1.1477761028276166.
 Period of the periodic orbit ≈ 6.283185307179592
-Normal form z⋅(a⋅δp + b⋅|z|²): 
+Normal form z⋅(a⋅δp + b⋅|z|²):
 (a = 0.9999993808297818 - 6.092862765364455e-9im, b = 0.004870129870129872 + 0.0004870129870129874im)
 ```
 
@@ -216,27 +216,27 @@ We create a problem to hold the functional and compute Periodic orbits based on 
 
 ```julia
 poTrap = PeriodicOrbitTrapProblem(
-# vector field and sparse Jacobian	
+# vector field and sparse Jacobian
 	Fcgl, Jcgl,
 # parameters for the phase condition
 	real.(eigvec),
 	hopfpt.u,
-# number of time slices	
+# number of time slices
 	M,
-# space dimension	
+# space dimension
 	2n)
 ```
 
 We can use this (family) problem `poTrap` with `newton` on our periodic orbit guess to find a periodic orbit. Hence, one can be tempted to use
 
-	
+
 !!! danger "Don't run this!!"
-    It uses too much memory 
-    
+    It uses too much memory
+
     ```julia
     opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, 	 maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()))
     br_po, upo, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_po_cont)
-    ```	
+    ```
 
 
 **However, the linear system associated to the newton iterations will be solved by forming the sparse jacobian of size $(2N_xN_yM+1)^2$ and the use of `\` (based on LU decomposition). It takes way too much time and memory.**
@@ -259,7 +259,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 ls(Jpo, rand(ls.N))
 ```
 
-This converges in `7` iterations whereas, without the preconditioner, it does not converge after `100` iterations. 
+This converges in `7` iterations whereas, without the preconditioner, it does not converge after `100` iterations.
 
 We set the parameters for the `newton` solve.
 
@@ -267,13 +267,13 @@ We set the parameters for the `newton` solve.
 opt_po = @set opt_newton.verbose = true
 outpo_f, _, flag = @time newton(poTrap,
    orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-   (@set opt_po.linsolver = ls); 
+   (@set opt_po.linsolver = ls);
    linearPO = :FullMatrixFree, normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrap, outpo_f, par_cgl; ratio = 2),"\n")
 BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);
 ```
 
-which gives 
+which gives
 
 ```julia
 ┌─────────────────────────────────────────────────────┐
@@ -318,12 +318,12 @@ We can now use newton
 ```julia
 outpo_f, _, flag = @time newton(poTrapMF,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-	(@set opt_po.linsolver = ls); 
+	(@set opt_po.linsolver = ls);
 	linearPO = :FullMatrixFree, normN = norminf)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.getAmplitude(poTrapMF, outpo_f, par_cgl; ratio = 2),"\n")
 ```
 
-which gives 
+which gives
 
 ```julia
 ┌─────────────────────────────────────────────────────┐
@@ -426,7 +426,7 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),	(@set opt_po.linsolver = ls);
 	linearPO = :FullMatrixFree, normN = norminf)
 ```
-It gives	
+It gives
 
 ```julia
 ┌─────────────────────────────────────────────────────┐
@@ -491,10 +491,10 @@ We can now perform continuation of the newly found periodic orbit and compute th
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 
 # parameters for the continuation
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), 
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls),
 	nev = 5, precisionStability = 1e-7, detectBifurcation = 0)
 
-br_po, = @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -511,7 +511,7 @@ This gives the following bifurcation diagram:
 We did not change the preconditioner in the previous example as it does not seem needed. Let us show how to do this nevertheless:
 
 ```julia
-# callback which will be sent to newton. 
+# callback which will be sent to newton.
 # `iteration` in the arguments refers to newton iterations
 function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
 	# we update the preconditioner every 10 continuation steps
@@ -524,7 +524,7 @@ function callbackPO(x, f, J, res, iteration, itlinear, linsolver = ls, prob = po
 	true
 end
 
-br_po, = @time continuation(poTrapMF, outpo_f, 
+br_po, = @time continuation(poTrapMF, outpo_f,
 	(@set par_cgl.r = r_hopf - 0.01), (@lens _.r),	opts_po_cont, linearPO = :FullMatrixFree;
 	verbosity = 2,	plot = true,
 	callbackN = callbackPO,
@@ -563,7 +563,7 @@ outfold, hist, flag = @time BK.newtonFold(
 	(x, p) -> poTrap(x, p),
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 	br_po , indfold; #index of the fold point
-	# we change the linear solver for the one we 
+	# we change the linear solver for the one we
 	# defined above
 	options = (@set opt_po.linsolver = ls),
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
@@ -611,7 +611,7 @@ There is still room for a lot of improvements here. Basically, the idea would be
 !!! tip ""
     This is a very neat example **all done** on the GPU using the following ingredients: Matrix-Free computation of periodic orbits using preconditioners.
 
-We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the **big** preconditioner. 
+We now take advantage of the computing power of GPUs. The section is run on an NVIDIA Tesla V100. Given the small number of unknowns, we can (only) expect significant speedup in the application of the **big** preconditioner.
 
 > Note that we use the parameters `Nx = 82; Ny = 42; M=30`.
 
@@ -712,7 +712,7 @@ opt_po = @set opt_newton.verbose = true
 	outpo_f, hist, flag = @time newton(poTrapMFGPU,
 		orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01),
 		(@set opt_po.linsolver = lsgpu), :FullMatrixFree;
-		normN = x->maximum(abs.(x))) 
+		normN = x->maximum(abs.(x)))
 ```
 The computing time is `6.914367 seconds (2.94 M allocations: 130.348 MiB, 1.10% gc time)`. The same computation on the CPU, runs in `13.972836 seconds (551.41 k allocations: 1.300 GiB, 1.05% gc time)`.
 
@@ -729,5 +729,3 @@ br_po, upo , _= @time continuation(poTrapMFGPU,
 
 !!! info "Preconditioner update"
     For now, the preconditioner has been precomputed on the CPU which forbids its (efficient) update during continuation of a branch of periodic orbits. This could be improved using `ilu0!` and friends in `CuArrays`.
-
-

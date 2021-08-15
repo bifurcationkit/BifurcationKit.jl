@@ -27,7 +27,7 @@ using DiffEqOperators, ForwardDiff, DifferentialEquations, SparseArrays
 using BifurcationKit, LinearAlgebra, Plots, Setfield
 const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 f(u, v, p) = p.η * (      u + p.a * v - p.C * u * v - u * v^2)
 g(u, v, p) = p.η * (p.H * u + p.b * v + p.C * u * v + u * v^2)
 

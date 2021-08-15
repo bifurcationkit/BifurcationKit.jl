@@ -6,7 +6,7 @@ Depth = 3
 ```
 
 !!! info "Why this example?"
-    This example is challenging because we cannot employ the easy to use `\` sparse linear solver which takes to much time/memory to do the LU decomposition. Hence, one has to be tricky to devise a preconditioned linear solver that does not explode the memory budget. But then, one has to also devise a specific eigensolver. This is done in this tutorial. It also shows how this can be used for automatic branch switching. Hence, if you are not happy with the linear / eigen solvers in `BifurcationKit.jl`, this is perhaps the example you are looking for.
+    This example is challenging because we cannot employ the easy to use `\` sparse linear solver which takes too much time/memory to do the LU decomposition. Hence, one has to be tricky to devise a preconditioned linear solver that does not explode the memory budget. But then, one has to also devise a specific eigensolver. This is done in this tutorial. It also shows how this can be used for automatic branch switching. Hence, if you are not happy with the linear / eigen solvers in `BifurcationKit.jl`, this is perhaps the example you are looking for.
 
 We look at the following PDE on a 3d domain, *e.g.* a cube:
 
@@ -139,24 +139,26 @@ sol_hexa, hist, flag = @time BK.newton(F_sh,
 which gives
 
 ```julia
- Newton Iterations      f(x)      Linear Iterations
-
-          0          2.6003e+02             0
-          1          1.5414e+02            24
-          2          2.6040e+02            23
-          3          7.3531e+01            21
-          4          2.0512e+01            20
-          5          6.4608e+00            17
-          6          1.3743e+00            17
-          7          1.7448e-01            17
-          8          4.0925e-03            17
-          9          2.4078e-06            17
-         10          1.7275e-10            17
-  2.054799 seconds (1.35 M allocations: 212.193 MiB, 6.63% gc time, 17.77% compilation time)
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       2.6003e+02     │        0       │
+│       1     │       1.5414e+02     │       25       │
+│       2     │       2.6040e+02     │       21       │
+│       3     │       7.3531e+01     │       21       │
+│       4     │       2.0513e+01     │       23       │
+│       5     │       6.4608e+00     │       18       │
+│       6     │       1.3743e+00     │       18       │
+│       7     │       1.7447e-01     │       17       │
+│       8     │       4.0924e-03     │       17       │
+│       9     │       2.4048e-06     │       17       │
+│      10     │       1.8389e-10     │       17       │
+└─────────────┴──────────────────────┴────────────────┘
+  1.405419 seconds (1.22 M allocations: 205.788 MiB, 2.16% gc time, 18.84% compilation time)
 ```
 
 and `contour3dMakie(sol_hexa)` produces
- 
+
 ![](sh3dhexa.png)
 
 ## Continuation and bifurcation points
@@ -185,7 +187,7 @@ function (sheig::SH3dEig)(J, nev::Int; verbosity = 0, kwargs...)
 	A = du -> sheig.ls(Jshift, du)[1]
 	# we adapt the krylov dimension as function of the requested eigenvalue number
 	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(Nx*Ny*Nz)), nev, :LM;
-		 tol = 1e-12, maxiter = 20, verbosity = verbosity, ishermitian = true, 
+		 tol = 1e-12, maxiter = 20, verbosity = verbosity, ishermitian = true,
 		 krylovdim = max(nv, nev + nv))
 	vals2 = 1 ./vals .+ σ
 	Ind = sortperm(vals2, by = real, rev = true)
@@ -203,8 +205,8 @@ eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 We are now ready to perform continuation and detection of bifurcation points:
 
 ```julia
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15, 
-	pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), 
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15,
+	pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15),
 	maxSteps = 146, detectBifurcation = 3, nev = 15, nInversion = 4, plotEveryStep = 1)
 
 br, = continuation(
@@ -236,21 +238,21 @@ We get the following plot during computation:
 
 !!! tip "Tip"
     We don't need to call `newton` first in order to use `continuation`.
-    
+
 ## Automatic branch switching
 
 !!! warning "Computation time"
-    The following computation takes ~1.5h 
+    The following computation takes ~1.5h
 
 We can use [Branch switching](https://rveltz.github.io/BifurcationKit.jl/dev/branchswitching/) to compute the different branches emanating from the bifurcation points. For example, the following code will perform automatic branch switching from the last bifurcation point of `br`. Note that this bifurcation point is 3d.
 
 ```julia
-br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10, 
+br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep = 10,
 	detectBifurcation = 0, pMax = 0.1, plotEveryStep = 5, dsmax = 0.02);
 	plot = true, verbosity = 3,
 	# to set initial point on the branch
 	δp = 0.01,
-	# remove display of deflated newton iterations 
+	# remove display of deflated newton iterations
 	verbosedeflation = false,
 	tangentAlgo = BorderedPred(),
 	# to compute the normal form, so we don't have to
@@ -265,7 +267,7 @@ We can then plot the branches using `BK.plotBranch(br, branches...)` where green
 
 ![](sh3dbranches.png)
 
-There are 19 banches that were discovered. You can plot the solutions on the branches using 
+There are 19 banches that were discovered. You can plot the solutions on the branches using
 
 ```julia
 fig = Figure(resolution = (1200, 900))

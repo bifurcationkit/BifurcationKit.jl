@@ -3,7 +3,7 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 	hx = 2lx/Nx
@@ -146,7 +146,7 @@ br_hopf, u1_hopf = @time continuation(
 	updateMinAugEveryStep = 1,
 	d2F = jet[3], d3F = jet[4],
 	startWithEigen = true, bothside = true,
-	detectCodim2Bifurcation = 1,
+	detectCodim2Bifurcation = 2,
 	verbosity = 3, normC = norminf)
 
 plot(br_hopf, title = "Hopf continuation")

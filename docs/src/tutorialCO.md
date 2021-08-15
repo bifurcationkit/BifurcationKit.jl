@@ -20,7 +20,7 @@ using BifurcationKit
 const BK = BifurcationKit
 
 # define the sup norm
-norminf = x -> norm(x, Inf)
+norminf(x) =  norm(x, Inf)
 nothing # hide
 ```
 
@@ -42,7 +42,7 @@ function COm(u, p)
 end
 
 # jacobian
-dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
+dCOm(z, p) = ForwardDiff.jacobian(x -> COm(x, p), z)
 
 # we group the differentials together
 jet = BK.getJet(COm, dCOm)
@@ -62,25 +62,25 @@ Once the problem is set up, we can continue the state w.r.t. $q_2$ to and detect
 ```@example TUTCO
 # continuation parameters
 opts_br = ContinuationPar(pMin = 0.6, pMax = 1.9, ds = 0.002, dsmax = 0.01,
-	# options to detect codim 1 bifurcations using bisection 
+	# options to detect codim 1 bifurcations using bisection
 	detectBifurcation = 3,
 	# Optional: bisection options for locating bifurcations
-	nInversion = 6, maxBisectionSteps = 25, 
+	nInversion = 6, maxBisectionSteps = 25,
 	# number of eigenvalues
 	nev = 3)
-	
-# compute the branch of solutions	
+
+# compute the branch of solutions
 br, = continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	recordFromSolution = (x, p) -> (x = x[1], y = x[2]),
 	plot = true, verbosity = 3, normC = norminf)
-	
+
 # plot the branch
 scene = plot(br, xlims=(0.8,1.8))
 ```
 
 ## Continuation of Fold points
 
-We follow the Fold points in the parameter plane $(q_2, k)$. We tell the solver to consider `br.specialpoint[2]` and continue it. 
+We follow the Fold points in the parameter plane $(q_2, k)$. We tell the solver to consider `br.specialpoint[2]` and continue it.
 
 ```@example TUTCO
 sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
@@ -96,18 +96,18 @@ sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k),
 	bothside=true,
 	# use this linear bordered solver, better for ODEs
 	bdlinsolver = MatrixBLS())
-	
+
 scene = plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(scene, br, xlims=(0.8,1.8))
 ```
 
 ## Continuation of Hopf points
 
-We tell the solver to consider `br.bifpint[1]` and continue it. 
+We tell the solver to consider `br.bifpint[1]` and continue it.
 
 ```Julia
-hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), 
-	ContinuationPar(opts_br, pMin = 0., pMax = 2.8, 
+hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
+	ContinuationPar(opts_br, pMin = 0., pMax = 2.8,
 		ds = -0.001, dsmax = 0.05) ;
 	normC = norminf,
 	# detection of codim 2 bifurcations with bisection
@@ -125,16 +125,15 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	# use this linear bordered solver, better for ODEs
 	bdlinsolver = MatrixBLS(),
 	)
-	
+
 # plotting
 scene = plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(scene, hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 plot!(scene, br, xlims=(0.6,1.5))
-```	
+```
 
 ![](com-fig3.png)
 
 ## References
 
 [^Govaerts]: > Govaerts, Willy J. F. Numerical Methods for Bifurcations of Dynamical Equilibria. Philadelphia, Pa: Society for Industrial and Applied Mathematics, 2000.
-

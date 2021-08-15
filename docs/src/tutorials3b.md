@@ -29,13 +29,12 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
 const BK = BifurcationKit
 
 f1(u, v) = u * u * v
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
-function Fbru(x, p)
+function Fbru!(f, x, p, t = 0)
 	@unpack α, β, D1, D2, l = p
-	f = similar(x)
 	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
+	h2 = 1.0 / n^2
 	c1 = D1 / l^2 / h2
 	c2 = D2 / l^2 / h2
 
@@ -43,10 +42,10 @@ function Fbru(x, p)
 	v = @view x[n+1:2n]
 
 	# Dirichlet boundary conditions
-	f[1]   = c1 * (α      - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
+	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
 	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
 
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α  )  + α - (β + 1) * u[n] + f1(u[n], v[n])
+	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
 	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
 
 	for i=2:n-1
@@ -55,6 +54,8 @@ function Fbru(x, p)
 	end
 	return f
 end
+
+Fbru(x, p, t = 0) = Fbru!(similar(x), x, p, t)
 ```
 
 For computing periodic orbits, we will need a Sparse representation of the Jacobian:
@@ -116,14 +117,13 @@ eigls = EigArpack(1.1, :LM)
 We continue the trivial equilibrium to find the Hopf points
 
 ```julia
-opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
+opt_newton = NewtonPar(eigsolver = eigls)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
 
 	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
-		opts_br_eq, verbosity = 0,
-		plot = true,
+		opts_br_eq, plot = true,
 		recordFromSolution = (x,p) -> x[div(n,2)], normC = norminf)
 ```
 
@@ -136,16 +136,8 @@ We obtain the following bifurcation diagram with 3 Hopf bifurcation points
 We can compute the normal form of the Hopf points as follows
 
 ```julia
-using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -> Fbru(z, p0), x, p, dx1)
-d2Fbru(x,p,dx1,dx2) = D((z, p0) -> d1Fbru(z, p0, dx1), x, p, dx2)
-d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -> d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
 # we group the differentials together
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)
+jet  = BK.getJet(Fbru, Jbru_sp)
 
 hopfpt = computeNormalForm(jet..., br, 1)
 ```
@@ -155,7 +147,7 @@ and you should get
 julia> hopfpt
 SuperCritical - Hopf bifurcation point at l ≈ 0.512353005225085.
 Period of the periodic orbit ≈ 2.9370202332411925
-Normal form z⋅(a⋅δp + b⋅|z|²): 
+Normal form z⋅(a⋅δp + b⋅|z|²):
 (a = 0.8770732861140638 + 0.5671547647542317im, b = -0.0009380187660555578 + 0.0009391565464102912im)
 ```
 
@@ -185,8 +177,7 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 ```julia
 optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
 br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.β),
-	optcdim2, verbosity = 2, 
+	br, ind_hopf, (@lens _.β), optcdim2,
 	normC = norminf)
 ```
 
@@ -245,7 +236,7 @@ For convenience, we provide a simplified newton / continuation methods for perio
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
 	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), 		opt_po, normN = norminf,
 		linearPO = :FullSparseInplace,
-		callback = (x, f, J, res, itlin, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true))
+		)
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 # plot of the periodic orbit
 BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
@@ -254,24 +245,18 @@ BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
 and obtain
 
 ```julia
-Newton Iterations      f(x)      Linear Iterations
-
-          0          1.5184e-03             0
---> amplitude = 0.22182446481949203
-          1          3.2748e-03             2
---> amplitude = 0.5042141710317618
-          2          4.4409e-04             2
---> amplitude = 0.41320367911246847
-          3          8.5523e-05             2
---> amplitude = 0.36741372418160223
-          4          4.9208e-06             2
---> amplitude = 0.3560261988596807
-          5          1.6632e-08             2
---> amplitude = 0.35535508808242433
-          6          2.4921e-13             2
---> amplitude = 0.3553527952167588
---> amplitude = 0.3553527952167588
-  4.384568 seconds (868.10 k allocations: 2.456 GiB, 10.67% gc time)
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       1.5225e-03     │        0       │
+│       1     │       2.6324e-03     │        2       │
+│       2     │       3.0558e-04     │        2       │
+│       3     │       5.7499e-05     │        2       │
+│       4     │       2.0407e-06     │        2       │
+│       5     │       2.8184e-09     │        2       │
+│       6     │       8.3969e-14     │        2       │
+└─────────────┴──────────────────────┴────────────────┘
+  3.210008 seconds (77.85 k allocations: 2.497 GiB, 5.42% gc time)
 ```
 
 and
@@ -303,7 +288,7 @@ to obtain the period of the orbit as function of `l`
 Looking for periodic orbits branching of bifurcation points, it is very useful to use `newton` algorithm with deflation. We thus define a deflation operator (see previous example)
 
 ```Julia
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 ```
 
 which allows to find periodic orbits different from `orbitguess_f `. Note that the `dot` product removes the last component, *i.e.* the period of the cycle is not considered during this particular deflation. We can now use
@@ -341,40 +326,7 @@ A more complete diagram can be obtained combining the methods (essentially defla
 
 > Note that what follows is not really optimized on the `DifferentialEquations.jl` side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern,...
 
-We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field `Fbru`. We will show how to do this with an implicit method `Rodas4P` from `DifferentialEquations.jl`. Note that the user can pass its own time stepper but for convenience, we use the ones in `DifferentialEquations.jl`. More information regarding the shooting method is contained in [Periodic orbits based on the shooting method](@ref). To define the flow, it is better to have an **inplace** version of the vector field:
-
-```julia
-function Fbru!(f, x, p)
-	@unpack α, β, D1, D2, l = p
-	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
-	c1 = D1 / l^2 / h2
-	c2 = D2 / l^2 / h2
-
-	u = @view x[1:n]
-	v = @view x[n+1:2n]
-
-	# Dirichlet boundary conditions
-	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
-	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
-
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
-	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
-
-	for i=2:n-1
-		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
-		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
-	end
-	return f
-end
-
-function Fbru(x, p)
-	f = similar(x)
-	Fbru!(f, x, p)
-end
-```
-
-We then recompute the locus of the Hopf bifurcation points using the same method as above.
+We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field `Fbru`. We will show how to do this with an implicit method `Rodas4P` from `DifferentialEquations.jl`. Note that the user can pass its own time stepper but for convenience, we use the ones in `DifferentialEquations.jl`. More information regarding the shooting method is contained in [Periodic orbits based on the shooting method](@ref).
 
 ```julia
 n = 100
@@ -436,7 +388,7 @@ jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
 jac_prototype.nzval .= ones(length(jac_prototype.nzval))
 _colors = matrix_colors(jac_prototype)
 vf = ODEFunction(FOde; jac_prototype = jac_prototype, colorvec = _colors)
-probsundials = ODEProblem(vf,  sol0, (0.0, 520.), par_bru)
+prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru)
 ```
 
 We create the parallel standard shooting problem:
@@ -448,7 +400,7 @@ probSh = ShootingProblem(
 	Fbru, par_hopf,
 
 	# we pass the ODEProblem encoding the flow and the time stepper
-	probsundials, Rodas4P(),
+	prob, Rodas4P(),
 
 	# this is for the phase condition, you can pass your own section as well
 	[orbitguess_f2[:,ii] for ii=1:dM:M];
@@ -463,7 +415,7 @@ probSh = ShootingProblem(
 We are now ready to call `newton`
 
 ```julia
-ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100, verbose = false)
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100)
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 outpo, = @time newton(probSh,
 	initpo, par_hopf, optn_po;
@@ -475,17 +427,29 @@ plot!(outpo[1:end-1], label = "sol")
 which gives (note that we did not have a really nice guess...)
 
 ```julia
-  Newton Iterations      f(x)      Linear Iterations
-
-          0          1.8260e-01             0
-          1          1.1913e-01            49
-          2          7.4174e-03            43
-          3          3.0445e-04            49
-          4          1.5705e-04            47
-          5          1.0346e-06            49
-          6          2.4545e-08            50
-          7          7.2087e-11            50
-  5.336648 seconds (2.73 M allocations: 4.784 GiB, 3.55% gc time)
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       1.9613e-01     │        0       │
+│       1     │       5.6101e-02     │       45       │
+│       2     │       1.0307e-01     │       49       │
+│       3     │       4.1119e-03     │       48       │
+│       4     │       8.0511e-03     │       49       │
+│       5     │       3.8250e-02     │       48       │
+│       6     │       9.8080e-03     │       49       │
+│       7     │       2.1179e+01     │       53       │
+│       8     │       2.0105e+00     │       36       │
+│       9     │       2.0545e+00     │       49       │
+│      10     │       4.8793e-01     │       49       │
+│      11     │       4.8457e-02     │       46       │
+│      12     │       2.3299e-02     │       49       │
+│      13     │       1.6365e-02     │       48       │
+│      14     │       1.3534e-04     │       49       │
+│      15     │       1.4582e-05     │       48       │
+│      16     │       1.5886e-08     │       49       │
+│      17     │       1.7228e-11     │       49       │
+└─────────────┴──────────────────────┴────────────────┘
+  9.706977 seconds (7.61 M allocations: 13.964 GiB, 3.62% gc time)
 ```
 
 and
@@ -495,25 +459,21 @@ and
 Note that using Simple Shooting, the convergence is much faster. Indeed, running the code above with `dM = 10` gives:
 
 ```julia
-
- Newton Iterations      f(x)      Linear Iterations
-
-          0          8.1464e-03             0
-          1          2.9785e-03             6
-          2          4.7400e-03             6
-          3          2.7021e-03             7
-          4          1.6648e+00             8
-          5          3.1953e-01             5
-          6          1.8953e-01             5
-          7          4.0122e-02             6
-          8          1.0293e-02             7
-          9          2.7078e-03             7
-         10          4.6741e-04             7
-         11          1.9485e-05             7
-         12          1.2012e-07             7
-         13          4.2622e-09             8
-         14          7.3854e-12             8
-  0.901249 seconds (314.81 k allocations: 796.430 MiB, 2.70% gc time)
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       6.1712e-03     │        0       │
+│       1     │       3.4465e-03     │        6       │
+│       2     │       1.0516e-01     │        8       │
+│       3     │       7.4614e-03     │        6       │
+│       4     │       1.6620e-03     │        7       │
+│       5     │       3.9589e-04     │        7       │
+│       6     │       4.3043e-05     │        8       │
+│       7     │       1.7232e-06     │        8       │
+│       8     │       8.0455e-09     │        8       │
+│       9     │       3.9453e-11     │        8       │
+└─────────────┴──────────────────────┴────────────────┘
+  0.612070 seconds (217.21 k allocations: 523.069 MiB, 4.83% gc time)
 ```
 
 !!! info "Convergence and speedup"
@@ -563,7 +523,7 @@ probHPsh = PoincareShootingProblem(
 	Fbru, par_hopf,
 
 	# ODEProblem, ODE solver used to compute the flow
-	probsundials, Rodas4P(),
+	prob, Rodas4P(),
 
 	# parameters for the Poincaré sections
 	normals, centers;
@@ -587,8 +547,8 @@ We can now call `continuation` to get the first branch.
 
 ```julia
 # eigen / linear solver
-eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 40)
-ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), dim = 40)
+ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(vec(initpo_bar)), maxiter = 500)
 
 # newton options
 optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 140, linsolver = ls)
