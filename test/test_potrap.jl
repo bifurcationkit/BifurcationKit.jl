@@ -49,11 +49,11 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
-# @btime pb($orbitguess_f, $par); 							# 17.825 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $par); 							# 12.768 ms (2 allocations: 17.17 MiB)
-# @btime pb($orbitguess_f, $par, $orbitguess_f) 				# 28.427 ms (122 allocations: 51.50 MiB)
-# @btime pbi($orbitguess_f, $par, $orbitguess_f)  			# 14.170 ms (2 allocations: 17.17 MiB)
-# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
+# @btime pb($orbitguess_f, $par); 								# 17.825 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par); 								# 12.768 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $par, $orbitguess_f) 					# 28.427 ms (122 allocations: 51.50 MiB)
+# @btime pbi($orbitguess_f, $par, $orbitguess_f)  				# 14.170 ms (2 allocations: 17.17 MiB)
+# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) 	# 7.117 ms (0 allocations: 0 bytes)
 # @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) #  13.117 ms (0 allocations: 0 bytes)
 
 #
@@ -89,14 +89,16 @@ function _functional(poPb, u0, p)
 	M, N = size(poPb)
 	T = u0[end]
 	h = T * BK.getTimeStep(poPb, 1)
+	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
 	u0c = BK.extractTimeSlices(poPb, u0)
 	outc = similar(u0c)
-	outc[:, 1] .= (u0c[:, 1] .- u0c[:, M-1]) .- h/2 .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
+
+	outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
 
 	for ii = 2:M-1
 		h = T * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= (u0c[:, ii] .- u0c[:, ii-1]) .- h/2 .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
+		outc[:, ii] .= Mass * (u0c[:, ii] .- u0c[:, ii-1]) .- (h/2) .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
 	end
 
 	# closure condition ensuring a periodic orbit
@@ -114,17 +116,18 @@ function _dfunctional(poPb, u0, p, du)
 	dT = du[end]
 	h = T * BK.getTimeStep(poPb, 1)
 	dh = dT * BK.getTimeStep(poPb, 1)
+	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
 	u0c = BK.extractTimeSlices(poPb, u0)
 	duc = BK.extractTimeSlices(poPb, du)
 	outc = similar(u0c)
 
-	outc[:, 1] .= (duc[:, 1] .- duc[:, M-1]) .- h/2 .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))
+	outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))
 
 	for ii = 2:M-1
 		h = T * BK.getTimeStep(poPb, ii)
 		dh = dT * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= (duc[:, ii] .- duc[:, ii-1]) .- h/2 .* (poPb.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.J(u0c[:, ii-1], p)(duc[:, ii-1]))
+		outc[:, ii] .= Mass * (duc[:, ii] .- duc[:, ii-1]) .- (h/2) .* (poPb.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.J(u0c[:, ii-1], p)(duc[:, ii-1]))
 	end
 
 	dh = dT * BK.getTimeStep(poPb, 1)
@@ -151,6 +154,17 @@ _du = rand(length(orbitguess_f))
 res = @time pb(orbitguess_f, par, _du)
 _res = _dfunctional(pb, orbitguess_f, par, _du)
 @test res ≈ _res
+
+# with mass matrix
+pbmass = @set pb.massmatrix = spdiagm( 0 => rand(pb.N))
+res = @time pbmass(orbitguess_f, par)
+_res = _functional(pbmass, orbitguess_f, par)
+@test res ≈ _res
+
+_du = rand(length(orbitguess_f))
+res = @time pbmass(orbitguess_f, par, _du)
+_res = _dfunctional(pbmass, orbitguess_f, par, _du)
+@test res ≈ _res
 ####################################################################################################
 # test whether the analytical version of the Jacobian is right
 n = 50
@@ -169,6 +183,16 @@ Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @time pbsp(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
+#test for :Dense
+@time pbsp(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
+@test norm(Jfd - Jan, Inf) < 1e-6
+
+# test for inplace
+Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+Jan2 = copy(Jan); _indx = BK.getBlocks(Jan2, pbsp.N, pbsp.M)
+pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
+@test norm(Jan2 - Jan, Inf) < 1e-6
+
 Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
 
@@ -181,6 +205,40 @@ Jan2 = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @time pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par)
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
 Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+@test norm(Jfd2[1:size(Jan2,1),1:size(Jan2,1)] - Jan2, Inf) < 1e-6
+
+##########################
+#### idem with mass matrix
+pbsp_mass = @set pbsp.massmatrix = massmatrix = spdiagm( 0 => rand(pbsp.N))
+Jfd = sparse( ForwardDiff.jacobian(x -> pbsp_mass(x, par), orbitguess_f) )
+Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+@test norm(Jfd - Jan, Inf) < 1e-6
+
+@time pbsp_mass(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
+@test norm(Jfd - Jan, Inf) < 1e-6
+
+#test for :Dense
+@time pbsp_mass(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
+@test norm(Jfd - Jan, Inf) < 1e-6
+
+# test for inplace
+Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jan2 = copy(Jan); _indx = BK.getBlocks(Jan2, pbsp_mass.N, pbsp_mass.M)
+pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
+@test norm(Jan2 - Jan, Inf) < 1e-6
+
+Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
+@test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
+
+# we update the section
+BK.updateSection!(pbsp_mass, rand(2n*10+1), par)
+Jfd2 = sparse( ForwardDiff.jacobian(x -> pbsp_mass(x, par), orbitguess_f) )
+Jan2 = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+@test Jan2 != Jan
+@test norm(Jfd2 - Jan2, Inf) < 1e-6
+@time pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par)
+@test norm(Jfd2 - Jan2, Inf) < 1e-6
+Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
 @test norm(Jfd2[1:size(Jan2,1),1:size(Jan2,1)] - Jan2, Inf) < 1e-6
 
 ####################################################################################################
@@ -210,6 +268,26 @@ Jpo = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 _indx = BK.getBlocks(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
+@test nnz(Jpo2 - Jpo) == 0
+
+##########################
+#### idem with mass matrix
+pbsp_mass = @set pbsp.massmatrix = massmatrix = spdiagm( 0 => rand(pbsp.N))
+Jpo = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jpo2 = copy(Jpo)
+pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
+@test nnz(Jpo2 - Jpo) == 0
+
+# version with indices in the full matrix
+_indx = BK.getBlocks(Jpo, 2n, M)
+pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
+@test nnz(Jpo2 - Jpo) == 0
+
+# version with indices in the cyclic matrix
+Jpo = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
+_indx = BK.getBlocks(Jpo, 2n, M-1)
+Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
+pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
 # test of the version with inhomogenous time discretisation

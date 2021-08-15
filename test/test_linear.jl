@@ -185,21 +185,21 @@ sol1 = (I/h - J0)\rhs
 
 sol0,_ = ls0(I - h*J0, rhs)
 sol1,_ = ls0(J0, rhs; a₀ = 1.0, a₁ = -h)
-@test norm(sol0 - sol1,Inf) < 1e-8
+@test norm(sol0 - sol1, Inf) < 1e-8
 
 ls0 = GMRESKrylovKit(atol = 1e-10)
 sol0,_ = ls0(I - h*J0, rhs)
 sol1,_ = ls0(J0, rhs; a₀ = 1.0, a₁ = -h)
-@test norm(sol0 - sol1,Inf) < 1e-8
+@test norm(sol0 - sol1, Inf) < 1e-8
 
 sol0,_ = ls0(I - h*J0, rhs)
 sol1,_ = ls0(J0, rhs; a₀ = 1.0/h, a₁ = -1.)
-@test norm(sol0 - sol1/h,Inf) < 1e-8
+@test norm(sol0 - sol1/h, Inf) < 1e-8
 
 
 sol0,_ = ls0(I - h*J0, rhs)
 sol1,_ = ls0(J0, rhs; a₀ = 1., a₁ = -h)
-@test norm(sol0 - sol1,Inf) < 1e-8
+@test norm(sol0 - sol1, Inf) < 1e-8
 
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
