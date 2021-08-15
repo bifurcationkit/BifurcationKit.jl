@@ -5,7 +5,7 @@ Pages = ["mittelmannGridap.md"]
 Depth = 3
 ```
 
-We re-consider the problem of Mittelmann treated in the previous [tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) but using a finite elements method (FEM) implemented in the package [Gridap.jl](https://github.com/gridap/Gridap.jl). 
+We re-consider the problem of Mittelmann treated in the previous [tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) but using a finite elements method (FEM) implemented in the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
 
 Recall that the problem is defined by solving
 
@@ -77,12 +77,13 @@ sol, = newton(prob, uh, par_bratu, NewtonPar(optn; verbose = true))
 which gives
 
 ```julia
- Newton Iterations
-   Iterations      Func-count      f(x)      Linear-Iterations
-
-        0                1     2.4687e-03         0
-        1                2     1.2637e-07         1
-        2                3     3.3579e-16         1
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       2.4687e-03     │        0       │
+│       1     │       1.2637e-07     │        1       │
+│       2     │       3.3833e-16     │        1       │
+└─────────────┴──────────────────────┴────────────────┘
 ```
 
 In the same vein, we can continue this solution as function of $\lambda$:
@@ -99,19 +100,19 @@ We obtain:
 
 ```julia
 julia> br
- Branch number of points: 53
-Branch of Equilibrium
-Bifurcation points:
+ ┌─ Branch number of points: 53
+ ├─ Branch of Equilibrium
+ ├─ Type of vectors: Vector{Float64}
+ ├─ Parameter λ starts at 0.01, ends at 0.01
+ └─ Special points:
+
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,    bp at p ≈ +0.36782970 ∈ (+0.36782970, +0.36787920), |δp|=5e-05, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
-- #  2,    nd at p ≈ +0.27168226 ∈ (+0.27168226, +0.27286757), |δp|=1e-03, [converged], δ = ( 2,  0), step =  19, eigenelements in eig[ 20], ind_ev =   3
-- #  3,    bp at p ≈ +0.15186464 ∈ (+0.15186464, +0.15187849), |δp|=1e-05, [converged], δ = ( 1,  0), step =  26, eigenelements in eig[ 27], ind_ev =   4
-- #  4,    nd at p ≈ +0.03484879 ∈ (+0.03484879, +0.03491029), |δp|=6e-05, [converged], δ = ( 2,  0), step =  41, eigenelements in eig[ 42], ind_ev =   6
-- #  5,    nd at p ≈ +0.01556655 ∈ (+0.01556655, +0.01559518), |δp|=3e-05, [converged], δ = ( 2,  0), step =  48, eigenelements in eig[ 49], ind_ev =   8
-Fold points:
-- #  1, fold at p ≈ 0.36782970 ∈ (0.36782970, 0.36782970), |δp|=-1e+00, [    guess], δ = ( 0,  0), step =  13, eigenelements in eig[ 13], ind_ev =   0
 
-
+- #  1,    bp at λ ≈ +0.36782970 ∈ (+0.36782970, +0.36787920), |δp|=5e-05, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
+- #  2,    nd at λ ≈ +0.27168226 ∈ (+0.27168226, +0.27286757), |δp|=1e-03, [converged], δ = ( 2,  0), step =  19, eigenelements in eig[ 20], ind_ev =   3
+- #  3,    bp at λ ≈ +0.15186464 ∈ (+0.15186464, +0.15187849), |δp|=1e-05, [converged], δ = ( 1,  0), step =  26, eigenelements in eig[ 27], ind_ev =   4
+- #  4,    nd at λ ≈ +0.03484879 ∈ (+0.03484879, +0.03491029), |δp|=6e-05, [converged], δ = ( 2,  0), step =  41, eigenelements in eig[ 42], ind_ev =   6
+- #  5,    nd at λ ≈ +0.01556655 ∈ (+0.01556655, +0.01559518), |δp|=3e-05, [converged], δ = ( 2,  0), step =  48, eigenelements in eig[ 49], ind_ev =   8
 ```
 
 ![](fig1gridap.png)
