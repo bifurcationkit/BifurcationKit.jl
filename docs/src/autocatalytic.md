@@ -212,7 +212,7 @@ jet = BK.getJet(FcatWave, JcatWave)
 Mt = 30
 probTP = PeriodicOrbitTrapProblem(M = Mt ; massmatrix = spdiagm(0 => vcat(ones(2N),0.)),)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.001, pMin = 0.05, maxSteps = 130, newtonOptions = optn, nev = 7, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMin = 0.05, maxSteps = 130, newtonOptions = optn, nev = 7, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
 	opts_po_cont = @set opts_po_cont.newtonOptions.maxIter = 10
 	opts_po_cont = @set opts_po_cont.newtonOptions.tol = 1e-6
 
@@ -258,7 +258,7 @@ plot(br);plot!(br_po, label = "modulated fronts")
 Let us plot one modulated front:
 
 ```@example TUTAUTOCAT
-modfront = BK.getTrajectory(br_po, 15)
+modfront = BK.getTrajectory(br_po, length(br_po))
 plot(plot(modfront.t, modfront.u[end,:], xlabel = "t", ylabel = "s", label = ""),
 	contour(modfront.t, X, modfront.u[1:N,:], color = :viridis, xlabel = "t", title = "u for a = $(round(br_po.sol[15].p,digits=4))", fill = true, ylims=(-10,10)))
 ```
