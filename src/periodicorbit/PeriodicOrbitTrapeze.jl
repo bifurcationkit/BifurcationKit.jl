@@ -17,7 +17,6 @@ Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 
 Base.collect(ms::TimeMesh) = ms.ds
 Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], ms.ds)
-
 ####################################################################################################
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
 """
@@ -68,16 +67,16 @@ You will see below that you can evaluate the residual of the functional (and oth
 	# Function F(x, par)
 	F::TF = nothing
 
-	# Jacobian of F wrt x
+	# Jacobian of F w.r.t. x
 	J::TJ = nothing
 
-	# Jacobian transpose of F wrt x. This is mainly used for matrix-free computation of Folds of limit cycles
+	# Jacobian transpose of F w.r.t. x. This is mainly used for matrix-free computation of Folds of limit cycles
 	Jᵗ::TJt = nothing
 
-	# Hessian of F wrt x, useful for continuation of Fold of periodic orbits
+	# Hessian of F w.r.t. x, useful for continuation of Fold of periodic orbits
 	d2F::Td2F = nothing
 
-	# 3rd differential of F wrt x, useful for branch switching from branch of periodic orbits
+	# 3rd differential of F w.r.t. x, useful for branch switching from branch of periodic orbits
 	d3F::Td3F = nothing
 
 	# variables to define a Section for the phase constraint equation
@@ -138,11 +137,11 @@ PeriodicOrbitTrapProblem(F, J, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinea
 
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(x::AbstractVector) = x[end]
-@inline extractPeriodFDTrap(x::BorderedArray)  = x.T
+# @inline extractPeriodFDTrap(x::BorderedArray)  = x.T
 
 # these functions extract the time slices components
 extractTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
-extractTimeSlices(x::BorderedArray,  N, M) = x.u
+# extractTimeSlices(x::BorderedArray,  N, M) = x.u
 extractTimeSlices(pb::PeriodicOrbitTrapProblem, x) = extractTimeSlices(x, pb.N, pb.M)
 
 function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
@@ -151,8 +150,8 @@ function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tm
 	# basically tmp is F(u2)
 	if linear
 		dest .= tmp
-		# tmp <- pb.F(u1, par)
-		applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
+			# tmp <- pb.F(u1, par)
+			applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
 		dest .= u1 .- u2 .- h .* (dest .+ tmp)
 	else
 		dest .-= h .* tmp
@@ -176,34 +175,34 @@ end
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 function POTrapFunctional!(pb::AbstractPOFDProblem, out, u0, par)
-	M, N = size(pb)
+		M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	u0c  = extractTimeSlices(pb, u0)
-	outc = extractTimeSlices(pb, out)
+		outc = extractTimeSlices(pb, out)
 
-	# outc[:, M] plays the role of tmp until it is used just after the for-loop
+		# outc[:, M] plays the role of tmp until it is used just after the for-loop
 	@views applyF(pb, outc[:, M], u0c[:, M-1], par)
 
-	h = T * getTimeStep(pb, 1)
+		h = T * getTimeStep(pb, 1)
 	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], par, h/2, outc[:, M])
 
-	for ii in 2:M-1
-		h = T * getTimeStep(pb, ii)
+		for ii in 2:M-1
+			h = T * getTimeStep(pb, ii)
 		# this function avoids computing F(u0c[:, ii]) twice
 		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], par, h/2, outc[:, M])
-	end
+		end
 
-	# closure condition ensuring a periodic orbit
+		# closure condition ensuring a periodic orbit
 	outc[:, M] .= @views u0c[:, M] .- u0c[:, 1]
 
-	# this is for CuArrays.jl to work in the mode allowscalar(false)
-	if onGpu(pb)
+		# this is for CuArrays.jl to work in the mode allowscalar(false)
+		if onGpu(pb)
 		return @views vcat(out[1:end-1], dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
-	else
+		else
 		out[end] = @views dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
-		return out
-	end
+			return out
+		end
 end
 
 """
@@ -464,18 +463,18 @@ end
 	Jn = In - tmpJ * (h/2)
 
 	# setblock!(Jc, Jn, 1, 1)
-	J0.nzval[indx[1,1]] .= Jn.nzval
+	J0.nzval[indx[1, 1]] .= Jn.nzval
 
 	Jn .= -In .- pb.J(u0c[:, M-1], par) .* (h/2)
 	# setblock!(Jc, Jn, 1, M-1)
-	J0.nzval[indx[1,M-1]] .= Jn.nzval
+	J0.nzval[indx[1, M-1]] .= Jn.nzval
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
 		@. Jn = -In - tmpJ * (h/2)
 		# the next lines cost the most
 		# setblock!(Jc, Jn, ii, ii-1)
-		J0.nzval[indx[ii,ii-1]] .= Jn.nzval
+		J0.nzval[indx[ii, ii-1]] .= Jn.nzval
 
 		tmpJ .= pb.J(u0c[:, ii], par)# * (h/2)
 
@@ -541,12 +540,36 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 end
 ####################################################################################################
 # Utils
+"""
+$(SIGNATURES)
 
-function getTimeDiff(pb::PeriodicOrbitTrapProblem, u0)
+Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+"""
+@views function getTrajectory(prob::AbstractPOFDProblem, u::AbstractVector, p)
+	T = getPeriod(prob, u, p)
+	M, N = size(prob)
+	uv = u[1:end-1]
+	uc = reshape(uv, N, M)
+	return (t = cumsum(T .* collect(prob.mesh)), u = uc)
+end
+
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x`.
+"""
+@inline getPeriod(prob::PeriodicOrbitTrapProblem, x, p) = extractPeriodFDTrap(x)
+
+"""
+$(SIGNATURES)
+
+Compute `norm(du/dt)`
+"""
+function getTimeDiff(pb::PeriodicOrbitTrapProblem, u)
 	M, N = size(pb)
-	T = extractPeriodFDTrap(u0)
-	u0c = @views reshape(u0[1:end-1], N, M)
-	return [norm(u0c[:,ii+1].-u0c[:,ii]) * T/M for ii in 1:M-1]
+	T = extractPeriodFDTrap(u)
+	uc = @views reshape(u[1:end-1], N, M)
+	return [norm(uc[:,ii+1].-uc[:,ii]) * T/M for ii in 1:M-1]
 end
 
 """
@@ -568,27 +591,7 @@ Compute the maximum of the periodic orbit associated to `x`. The keyword argumen
 """
 function getMaximum(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
 	n = div(length(x)-1, ratio)
-	_max = maximum(x[1:n])
-end
-
-"""
-$(SIGNATURES)
-
-Compute the period of the periodic orbit associated to `x`.
-"""
-@inline getPeriod(prob::PeriodicOrbitTrapProblem, x, p) = extractPeriodFDTrap(x)
-
-"""
-$(SIGNATURES)
-
-Compute the full trajectory associated to `x`. Mainly for plotting purposes.
-"""
-function getTrajectory(prob::AbstractPOFDProblem, x::AbstractVector, p)
-	T = getPeriod(prob, x, p)
-	M, N = size(prob)
-	xv = @view x[1:end-1]
-	xc = reshape(xv, N, M)
-	return (t = cumsum(T .* collect(prob.mesh)), u = xc)
+	return maximum(x[1:n])
 end
 
 # this function updates the section during the continuation run
@@ -663,7 +666,7 @@ end
 	linsolver::Tls = DefaultLS()
 end
 
-function _combineSolutionAγLinearSolver(rhs, xbar, N)
+@views function _combineSolutionAγLinearSolver(rhs, xbar, N)
 	x = similar(rhs)
 	x[1:end-N] .= xbar
 	x[end-N+1:end] .= x[1:N] .+ rhs[end-N+1:end]
@@ -682,7 +685,7 @@ end
 @views function (ls::AγLinearSolver)(A::AγOperatorLU, rhs)
 	# dimension of a time slice
 	N = A.N
-	xbar, flag, numiter = @views ls.linsolver(A.Jc, rhs[1:end - N])
+	xbar, flag, numiter = ls.linsolver(A.Jc, rhs[1:end - N])
 	!flag && @warn "Sparse solver for Aγ did not converge"
 	return _combineSolutionAγLinearSolver(rhs, xbar, N), flag, numiter
 end
@@ -691,7 +694,7 @@ end
 	# dimension of a time slice
 	N = A.prob.N
 	# we invert the cyclic part Jc of Aγ
-	xbar, flag, numiter = @views ls.linsolver(A.Jcfact, rhs[1:end - N])
+	xbar, flag, numiter = ls.linsolver(A.Jcfact, rhs[1:end - N])
 	!flag && @warn "Sparse solver for Aγ did not converge"
 	return _combineSolutionAγLinearSolver(rhs, xbar, N), flag, numiter
 end
@@ -699,13 +702,13 @@ end
 ####################################################################################################
 # The following structure encodes the jacobian of a PeriodicOrbitTrapProblem which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuationPOTrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
-	∂TGpo::T∂ = nothing		# derivative of the PO functional G wrt T
+	∂TGpo::T∂ = nothing		# derivative of the PO functional G w.r.t. T
 	Aγ::Tag					# Aγ Operator involved in the Jacobian of the PO functional
 end
 
 # this function is called whenever the jacobian of G has to be updated
 function (J::POTrapJacobianBordered)(orbitguess0::AbstractVector, par; δ = 1e-9)
-	# we compute the derivative of the problem wrt the period TODO: remove this or improve!!
+	# we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
 	T = extractPeriodFDTrap(orbitguess0)
 	# TODO REMOVE CE vcat!
 	@views J.∂TGpo .= (J.Aγ.prob(vcat(orbitguess0[1:end-1], T + δ), par) .- J.Aγ.prob(orbitguess0, par)) ./ δ
@@ -735,13 +738,24 @@ end
 # One could think that by implementing (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBLS, rhs1, rhs2), we could speed up the computation of the linear Bordered system arising in the continuation process. However, we can note that this speed up would be observed only if a factorization of J.Aγ is available like an LU one. When such factorization is available, it is automatically stored as such in J.Aγ and so no speed up would be gained by implementing (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBLS, rhs1, rhs2)
 
 ####################################################################################################
+const DocStrLinearPO = """
+- `linearPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
+    - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
+    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+    - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
+    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
+    - For `:BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
+    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+"""
+##########################
 # newton wrappers
 function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive, I get $(orbitguess[end])"
-	@assert linearPO in [:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
+	@assert linearPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
 	M, N = size(probPO)
 
-	if linearPO in [:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace]
+	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
 		if linearPO == :FullLU
 			jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
 		elseif linearPO == :FullSparseInplace
@@ -793,21 +807,14 @@ end
 """
 $(SIGNATURES)
 
-This is the Newton-Krylov Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
+This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
 # Arguments:
 - `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N,M` in `prob`.
+- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular `newton` method
-- `linearPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-    - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
-    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
-    - For `:BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
-    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+$DocStrLinearPO
 
 # Output:
 - solution
@@ -822,11 +829,10 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; li
 
 This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}; linearPO::Symbol = :FullLU, kwargs...) where {T, Tf, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{Tp, Tdot, T, vectype}; linearPO::Symbol = :FullLU, kwargs...) where {Tp, Tdot, T, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
 
 ####################################################################################################
 # continuation wrapper
-
 """
 	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), kwargs...)
 
@@ -838,21 +844,14 @@ This is the continuation routine for computing a periodic orbit using a function
 - `p0` set of parameters passed to the vector field
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
-- `linearPO = :BorderedLU`. Same as `newton` when applied to `PeriodicOrbitTrapProblem`. More precisely:
-    - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
-    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver.
-    - For `:BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
-    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
+$DocStrLinearPO
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, recordFromSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive."
-	@assert linearPO in [:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace]
+	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
 
 	M, N = size(prob)
 	options = contParams.newtonOptions
@@ -875,7 +874,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 				_finsol(z, tau, step, contResult; prob = prob, k2...)
 			end
 
-	if linearPO in [:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace]
+	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
 
 		if linearPO == :FullLU
 			jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
@@ -948,13 +947,7 @@ This is the continuation routine for computing a periodic orbit using a function
 - `p0` set of parameters passed to the vector field
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
-- `linearPO = :BorderedLU`. Same as `newton` when applied to a `PeriodicOrbitTrapProblem`. More precisely:
-    - For `:FullLU`, we use the default linear solver on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration.
-    - For `:FullSparseInplace`, this is the same as `:FullLU` but the sparse matrix `dG` is updated inplace. This method thus allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use LU decomposition to invert `dG` using a bordered linear solver. This is the default algorithm.
-    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
-    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+$DocStrLinearPO
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
@@ -1012,13 +1005,14 @@ Branch switching at a Branch point of periodic orbits specified by a [`PeriodicO
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 """
 function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, recordFromSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
+
+	@assert br.functional isa PeriodicOrbitTrapProblem
+	@assert abs(br.specialpoint[ind_bif].δ[1]) == 1 "Only simple bifurcation points are handled"
+
 	verbose = get(kwargs, :verbosity, 0) > 0
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 
-	@assert br.functional isa PeriodicOrbitTrapProblem
-	@assert abs(br.bifpoint[ind_bif].δ[1]) == 1
-
-	bifpt = br.bifpoint[ind_bif]
+	bifpt = br.specialpoint[ind_bif]
 
 	# let us compute the kernel
 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -1029,6 +1023,7 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 	ζ0 ./= norm(ζ0, Inf)
 
 	pb = br.functional
+	M, N = size(pb)
 
 	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ0))
 	ζ = reduce(vcat, ζ_a)
@@ -1047,7 +1042,7 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 		sol0, _, flag, _ = newton(pb, bifpt.x, setParam(br, newp), optn; linearPO = linearPO, kwargs...)
 
 		# find the bifurcated branch using deflation
-		deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 		verbose && println("\n--> Compute point on bifurcated branch...")
 		solbif, _, flag, _ = newton(pb, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
 		@assert flag "Deflated newton did not converge"
@@ -1061,7 +1056,7 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 	# perform continuation
 	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, recordFromSolution = recordFromSolution, linearAlgo = _linearAlgo, kwargs...)
 
-	#create a branch
+	# create a branch
 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
