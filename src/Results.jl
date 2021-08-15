@@ -1,6 +1,7 @@
 abstract type AbstractBranchResult end
 
 ####################################################################################################
+# functions used in RecordFromSol
 namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
@@ -75,7 +76,6 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
-
 
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.specialpoint))

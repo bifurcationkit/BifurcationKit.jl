@@ -44,7 +44,7 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
 	M::Int64 = 0						# number of Poincaré sections
 	flow::Tf = Flow()					# should be a Flow
 	section::Tsection = SectionPS(M)	# Poincaré sections
@@ -53,6 +53,11 @@ A functional, hereby called `G` encodes this shooting problem. You can then call
 end
 
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
+function Base.show(io::IO, pb::PoincareShootingProblem)
+	println(io, "┌─ Poincaré shooting problem")
+	println(io, "├─ # sections : ", getM(pb))
+	println(io, "└─ parallel   : ", isParallel(pb))
+end
 
 function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,

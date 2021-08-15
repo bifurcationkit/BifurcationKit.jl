@@ -57,7 +57,7 @@ or
 	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
 """
-@with_kw struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
+@with_kw_noshow struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
 	M::Int64 = 0							# number of sections
 	flow::Tf = Flow()						# should be a Flow
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
@@ -103,6 +103,12 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers:
 # this function extracts the last component of the periodic orbit
 @inline extractPeriodShooting(x::AbstractVector) = x[end]
 @inline extractPeriodShooting(x::BorderedArray)  = x.p
+
+function Base.show(io::IO, pb::ShootingProblem)
+	println(io, "┌─ Standard shooting problem")
+	println(io, "├─ # sections : ", getM(pb))
+	println(io, "└─ parallel   : ", isParallel(pb))
+end
 
 # this function updates the section during the continuation run
 function updateSection!(prob::ShootingProblem, x, par)

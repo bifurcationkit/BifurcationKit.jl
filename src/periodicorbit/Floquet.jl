@@ -51,7 +51,9 @@ struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 		eigls2 = checkFloquetOptions(eigls)
 		return new{typeof(eigls2)}(eigls2)
 	end
+	FloquetQaD(eigls::FloquetQaD) = eigls
 end
+geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig

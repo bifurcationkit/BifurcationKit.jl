@@ -37,8 +37,8 @@ function applyJ(pb::AbstractPOFDProblem, dest, x, p, dx)
 	dest
 end
 
-# function too extract trajectories from branch
-getTrajectory(br::AbstractBranchResult, ind::Int) = getTrajectory(br.functional, br.sol[ind].x, br.sol[ind].p)
+# function to extract trajectories from branch
+getTrajectory(br::AbstractBranchResult, ind::Int) = getTrajectory(br.functional, br.sol[ind].x, setParam(br, br.sol[ind].p))
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -72,6 +72,22 @@ LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 
 ####################################################################################################
 # newton wrapper
+function buildJacobian(prob::AbstractShootingProblem, orbitguess, par, linearPO = :MatrixFree)
+	@warn "mettre solver Floquet pour newton"
+	@assert linearPO in (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense)
+	if linearPO == :autodiffDense
+		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
+		_J = prob(Val(:JacobianMatrix), orbitguess, par)
+		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J);
+	elseif linearPO == :autodiffMF
+		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
+	elseif linearPO == :FiniteDifferencesDense
+		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = 1e-8)
+	else
+		jac = (x, p) -> (dx -> prob(x, p, dx))
+	end
+end
+
 """
 $(SIGNATURES)
 
@@ -101,18 +117,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - number of iterations
 """
 function newton(prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar; linearPO = :MatrixFree, δ = 1e-8, kwargs...)
-	@assert linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
-	if linearPO == :autodiffDense
-		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
-		_J = prob(Val(:JacobianMatrix), orbitguess, par)
-		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J);
-	elseif linearPO == :autodiffMF
-		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
-	elseif linearPO == :FiniteDifferencesDense
-		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = 1e-8)
-	else
-		jac = (x, p) -> (dx -> prob(x, p, dx))
-	end
+	jac = buildJacobian(prob, orbitguess, par, linearPO)
 	return newton(prob, jac, orbitguess, par, options; kwargs...)
 end
 
@@ -139,19 +144,8 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton(prob::AbstractShootingProblem, orbitguess::vectype, par, options::NewtonPar{T, S, E}, defOp::DeflationOperator{T, Tf, vectype}; linearPO = :MatrixFree, kwargs...) where {T, Tf, vectype, S, E}
-	@assert linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
-	if linearPO == :autodiffDense
-		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
-		_J = prob(Val(:JacobianMatrix), orbitguess, par)
-		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J);
-	elseif linearPO == :autodiffMF
-		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
-	elseif linearPO == :FiniteDifferencesDense
-		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = 1e-8)
-	else
-		jac = (x, p) -> (dx -> prob(x, p, dx))
-	end
+function newton(prob::AbstractShootingProblem, orbitguess::vectype, par, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}; linearPO = :MatrixFree, kwargs...) where {T, Tp, Tdot, vectype, S, E}
+	jac = buildJacobian(prob, orbitguess, par, linearPO)
 	return newton(prob, jac, orbitguess, par, options, defOp; kwargs...)
 end
 
@@ -177,7 +171,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 """
 
 function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :MatrixFree, updateSectionEveryStep = 0, kwargs...)
-	@assert linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
+	@assert linearPO in (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense)
 
 	options = contParams.newtonOptions
 
