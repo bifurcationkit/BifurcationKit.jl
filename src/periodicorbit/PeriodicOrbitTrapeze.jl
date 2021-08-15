@@ -159,41 +159,31 @@ extractTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
 # extractTimeSlices(x::BorderedArray,  N, M) = x.u
 extractTimeSlices(pb::PeriodicOrbitTrapProblem, x) = extractTimeSlices(x, pb.N, pb.M)
 
-function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true)
+function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h::Number, tmp, linear::Bool = true; applyf::Bool = true)
 	# this function implements the basic implicit scheme used for the time integration
 	# because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call
 	# basically tmp is F(u2)
 	if linear
 		dest .= tmp
+		if applyf
 		# tmp <- pb.F(u1, par)
 		applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
-		if hasmassmatrix(pb)
-			dest .= pb.massmatrix * (u1 .- u2) .- h .* (dest .+ tmp)
 		else
-			dest .= (u1 .- u2) .- h .* (dest .+ tmp)
+			applyJ(pb, tmp, u1, par, du1)
+		end
+		if hasmassmatrix(pb)
+			dest .= pb.massmatrix * (du1 .- du2) .- h .* (dest .+ tmp)
+		else
+			dest .= @. (du1 - du2) - h * (dest + tmp)
 		end
 	else
-		@assert 1==0
 		dest .-= h .* tmp
 		# tmp <- pb.F(u1, par)
 		applyF(pb, tmp, u1, par)
 		dest .-= h .* tmp
 	end
 end
-
-function POTrapSchemeJac!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h::Number, tmp)
-	# this function implements the basic implicit scheme used for the time integration
-	# useful for the matrix-free jacobian
-	# basically tmp is dF(u2).du2 (see above for explanation)
-	dest .= tmp
-	# tmp <- apply(pb.J(u1, par), du1)
-	applyJ(pb, tmp, u1, par, du1)
-	if hasmassmatrix(pb)
-		dest .= pb.massmatrix * (du1 .- du2) .- h .* (dest .+ tmp)
-	else
-		dest .= du1 .- du2 .- h .* (dest .+ tmp)
-	end
-end
+POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tmp, linear::Bool = true; applyf::Bool = true) = POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, u1, u2, par, h::Number, tmp, linear; applyf = applyf)
 
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
@@ -224,7 +214,7 @@ function POTrapFunctional!(pb::AbstractPOFDProblem, out, u, par)
 	if onGpu(pb)
 		return @views vcat(out[1:end-1], dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
 	else
-		out[end] = @views dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(uc[:, 1] .- pb.xπ, pb.ϕ)
+			out[end] = @views dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
 		return out
 	end
 end
@@ -248,8 +238,6 @@ function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u, par, du)
 	tmp = @view outc[:, M]
 
 	# we now compute the partial derivative w.r.t. the period T
-	# the .+ is for the GPU
-	# out .+= @views (pb(vcat(u[1:end-1], T .+ δ)) .- pb(u)) ./ δ .* dT
 	@views applyF(pb, tmp, uc[:, M-1], par)
 
 	h = dT * getTimeStep(pb, 1)
@@ -311,13 +299,13 @@ function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVect
 	@views applyJ(pb, tmp, u0c[:, M-1], par, duc[:, M-1])
 
 	h = T * getTimeStep(pb, 1)
-	@views POTrapSchemeJac!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1],
-											duc[:, 1], duc[:, M-1], par, h/2, tmp)
+	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1],
+										 duc[:, 1], duc[:, M-1], par, h/2, tmp, true; applyf = false)
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
-		@views POTrapSchemeJac!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1],
-												 duc[:, ii], duc[:, ii-1], par, h/2, tmp)
+		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1],
+											  duc[:, ii], duc[:, ii-1], par, h/2, tmp, true; applyf = false)
 	end
 
 	# we also return a Vector version of outc
@@ -368,7 +356,6 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	h = T * getTimeStep(pb, 1)
 	Jn = In - (h/2) .* tmpJ
 	Jc[Block(1, 1)] = Jn
-	@show typeof(In) typeof(Jn)
 
 	# we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
 	Jn = @views -In - (h/2) .* pb.J(u0c[:, M-1], par)
