@@ -63,7 +63,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extractPeriodFDTrap` won't be well defined because it is a scalar operation. One may have to redefine it like `extractPeriodFDTrap(x::CuArray) = x[end:end]` or something else. Also, note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tm} <: AbstractPOFDProblem
+@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
 	# Function F(x, par)
 	F::TF = nothing
 
@@ -85,7 +85,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 
 	# discretisation of the time interval
 	M::Int = 0
-	mesh::Tm = TimeMesh(M)
+	mesh::Tmesh = TimeMesh(M)
 
 	# dimension of the problem in case of an AbstractVector
 	N::Int = 0
@@ -101,27 +101,34 @@ You will see below that you can evaluate the residual of the functional (and oth
 
 	# whether the time discretisation is adaptive
 	adaptmesh::Bool = false
+
+	# whether the problem is nonautonomous
+	isnonautonomous::Bool = false
+
+	# mass mastrix
+	massmatrix::Tmass = nothing
 end
 
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
 getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
+@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls, Tmesh, Tmass}) where {TF, TJ, TJt, Td2F, Td3F, vectype, Tls, Tmesh, Tmass} = Tmass != Nothing
 
 # for a dummy constructor, useful for specifying the "algorithm" to look for periodic orbits,
 # just call PeriodicOrbitTrapProblem()
 
-function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
+function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector}
 	_length = ϕ isa AbstractVector ? length(ϕ) : 0
 	M = m isa Number ? m : length(m) + 1
 
-	return PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	return PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh, massmatrix = massmatrix)
 end
 
-PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh, massmatrix = massmatrix)
 
-function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector}
+function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector}
 	M = m isa Number ? m : length(m) + 1
 	# we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = similar(ϕ, N*M), xπ = similar(xπ, N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+	prob = PeriodicOrbitTrapProblem(F = F, J = J, d2F = d2F, ϕ = similar(ϕ, N*M), xπ = similar(xπ, N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh, massmatrix = massmatrix)
 
 	prob.xπ .= 0
 	prob.ϕ .= 0
@@ -131,9 +138,9 @@ function PeriodicOrbitTrapProblem(F, J, d2F, ϕ::vectype, xπ::vectype, m::Union
 	return prob
 end
 
-PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh, massmatrix = massmatrix)
 
-PeriodicOrbitTrapProblem(F, J, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh)
+PeriodicOrbitTrapProblem(F, J, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; isinplace = isinplace, ongpu = ongpu, adaptmesh = adaptmesh, massmatrix = massmatrix)
 
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(x::AbstractVector) = x[end]
@@ -150,10 +157,15 @@ function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tm
 	# basically tmp is F(u2)
 	if linear
 		dest .= tmp
-			# tmp <- pb.F(u1, par)
-			applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
-		dest .= u1 .- u2 .- h .* (dest .+ tmp)
+		# tmp <- pb.F(u1, par)
+		applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
+		if hasmassmatrix(pb)
+			dest .= pb.massmatrix * (u1 .- u2) .- h .* (dest .+ tmp)
+		else
+			dest .= (u1 .- u2) .- h .* (dest .+ tmp)
+		end
 	else
+		@assert 1==0
 		dest .-= h .* tmp
 		# tmp <- pb.F(u1, par)
 		applyF(pb, tmp, u1, par)
@@ -168,41 +180,45 @@ function POTrapSchemeJac!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, 
 	dest .= tmp
 	# tmp <- apply(pb.J(u1, par), du1)
 	applyJ(pb, tmp, u1, par, du1)
-	dest .= du1 .- du2 .- h .* (dest .+ tmp)
+	if hasmassmatrix(pb)
+		dest .= pb.massmatrix * (du1 .- du2) .- h .* (dest .+ tmp)
+	else
+		dest .= du1 .- du2 .- h .* (dest .+ tmp)
+	end
 end
 
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 function POTrapFunctional!(pb::AbstractPOFDProblem, out, u0, par)
-		M, N = size(pb)
+	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
 	u0c  = extractTimeSlices(pb, u0)
-		outc = extractTimeSlices(pb, out)
+	outc = extractTimeSlices(pb, out)
 
-		# outc[:, M] plays the role of tmp until it is used just after the for-loop
+	# outc[:, M] plays the role of tmp until it is used just after the for-loop
 	@views applyF(pb, outc[:, M], u0c[:, M-1], par)
 
-		h = T * getTimeStep(pb, 1)
+	h = T * getTimeStep(pb, 1)
 	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], par, h/2, outc[:, M])
 
-		for ii in 2:M-1
-			h = T * getTimeStep(pb, ii)
+	for ii in 2:M-1
+		h = T * getTimeStep(pb, ii)
 		# this function avoids computing F(u0c[:, ii]) twice
 		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], par, h/2, outc[:, M])
-		end
+	end
 
-		# closure condition ensuring a periodic orbit
+	# closure condition ensuring a periodic orbit
 	outc[:, M] .= @views u0c[:, M] .- u0c[:, 1]
 
-		# this is for CuArrays.jl to work in the mode allowscalar(false)
-		if onGpu(pb)
+	# this is for CuArrays.jl to work in the mode allowscalar(false)
+	if onGpu(pb)
 		return @views vcat(out[1:end-1], dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
-		else
+	else
 		out[end] = @views dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
-			return out
-		end
+		return out
+	end
 end
 
 """
@@ -334,7 +350,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
-	In = spdiagm( 0 => ones(N))
+	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
 
 	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
@@ -400,7 +416,11 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		M, N = size(pb)
 		T = extractPeriodFDTrap(u0)
 
-		In = Tj == SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
+		if hasmassmatrix(pb)
+			In = pb.massmatrix
+		else
+			In = Tj == SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
+		end
 
 		u0c = extractTimeSlices(pb, u0)
 		outc = similar(u0c)
@@ -452,7 +472,7 @@ end
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
-	In = spdiagm( 0 => ones(N))
+	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
 
 	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
@@ -519,7 +539,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 
 	A_diagBlock = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 
-	In = spdiagm( 0 => ones(N))
+	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
 
 	u0c = reshape(u0[1:end-1], N, M)
 	outc = similar(u0c)
@@ -811,7 +831,7 @@ This is the Krylov-Newton Solver for computing a periodic orbit using a function
 
 # Arguments:
 - `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
+- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N,M` in `prob`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular `newton` method
 $DocStrLinearPO
@@ -1056,7 +1076,7 @@ function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _con
 	# perform continuation
 	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, recordFromSolution = recordFromSolution, linearAlgo = _linearAlgo, kwargs...)
 
-	# create a branch
+	#create a branch
 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
 
 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
