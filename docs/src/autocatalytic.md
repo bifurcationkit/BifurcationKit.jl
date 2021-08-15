@@ -21,7 +21,7 @@ const BK = BifurcationKit
 
 # supremum norm
 norminf(x) = norm(x, Inf)
-f(u) = u^9 #* (u >= 0)
+f(u) = u^9 # solution are positive, so remove the  heaviside
 
 # helper function to plot solutions
 function plotsol!(x; k...)
@@ -104,7 +104,7 @@ X = LinRange(-lx,lx, N)
 par_cat = (N = N, a = 0.18, h = 2lx/N)
 
 u0 = @. (tanh(2X)+1)/2
-U0 = vcat(u0, 1 .-u0)
+U0 = vcat(u0, 1 .- u0)
 nothing #hide
 ```
 
@@ -207,8 +207,8 @@ which can be written with a PDE $M_aU_t = G(u)$ with mass matrix $M_a = (Id, Id,
 jet = BK.getJet(FcatWave, JcatWave)
 
 # we compute the periodic solutions using Mt time steps and a Trapezoidal time stepper
-# note that we pass the parameter massmatrix which 
-# allows to solver the DAE 
+# note that we pass the parameter massmatrix which
+# allows to solver the DAE
 Mt = 30
 probTP = PeriodicOrbitTrapProblem(M = Mt ; massmatrix = spdiagm(0 => vcat(ones(2N),0.)),)
 
@@ -225,7 +225,8 @@ br_po, = continuation(
 	# this is how we pass the method to compute the periodic
 	probTP ;
 	# OPTIONAL parameters
-	# we want to jump on the new branch at phopf + δp	δp = 0.0025,
+	# we want to jump on the new branch at phopf + δp
+	δp = 0.0025,
 	# tangent predictor
 	tangentAlgo = BorderedPred(),
 	# linear solver for the periodic orbit problem
