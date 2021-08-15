@@ -35,14 +35,15 @@ This composite type implements Finite Differences based on a Trapezoidal rule to
 - `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers.
 - `isinplace::Bool` whether `F` and `J` are inplace functions (Experimental). In this case, the functions `F` and `J` must have the following definitions `(o, x, p) ->  F(o, x, p)` and `(o, x, p, dx) -> J(o, x, p, dx)`.
 - `ongpu::Bool` whether the computation takes place on the gpu (Experimental)
+- `massmatrix` a mass matrix. You can pass for example a sparse matrix. Default: identity matrix.
 
 The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one looks for `T = x[end]` such that
 
- ``\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
+ ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
 
 with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
 
-where ``h_1 = s_i-s_{i-1}``. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
+where ``h_1 = s_i-s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
 
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
 
@@ -111,7 +112,14 @@ end
 
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
 getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
-@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls, Tmesh, Tmass}) where {TF, TJ, TJt, Td2F, Td3F, vectype, Tls, Tmesh, Tmass} = Tmass != Nothing
+@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)
+@inline function getMassMatrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
+	if returnArray == false
+		return hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(pb.N))
+	else
+		return hasmassmatrix(pb) ? pb.massmatrix : LinearAlgebra.I(pb.N)
+	end
+end
 
 # for a dummy constructor, useful for specifying the "algorithm" to look for periodic orbits,
 # just call PeriodicOrbitTrapProblem()
@@ -190,65 +198,65 @@ end
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
-function POTrapFunctional!(pb::AbstractPOFDProblem, out, u0, par)
+function POTrapFunctional!(pb::AbstractPOFDProblem, out, u, par)
 	M, N = size(pb)
-	T = extractPeriodFDTrap(u0)
+	T = extractPeriodFDTrap(u)
 
-	u0c  = extractTimeSlices(pb, u0)
+	uc  = extractTimeSlices(pb, u)
 	outc = extractTimeSlices(pb, out)
 
 	# outc[:, M] plays the role of tmp until it is used just after the for-loop
-	@views applyF(pb, outc[:, M], u0c[:, M-1], par)
+	@views applyF(pb, outc[:, M], uc[:, M-1], par)
 
 	h = T * getTimeStep(pb, 1)
-	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], par, h/2, outc[:, M])
+	@views POTrapScheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
-		# this function avoids computing F(u0c[:, ii]) twice
-		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], par, h/2, outc[:, M])
+		# this function avoids computing F(uc[:, ii]) twice
+		@views POTrapScheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
 	end
 
 	# closure condition ensuring a periodic orbit
-	outc[:, M] .= @views u0c[:, M] .- u0c[:, 1]
+	outc[:, M] .= @views uc[:, M] .- uc[:, 1]
 
 	# this is for CuArrays.jl to work in the mode allowscalar(false)
 	if onGpu(pb)
-		return @views vcat(out[1:end-1], dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
+		return @views vcat(out[1:end-1], dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
 	else
-		out[end] = @views dot(u0[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
+		out[end] = @views dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(uc[:, 1] .- pb.xπ, pb.ϕ)
 		return out
 	end
 end
 
 """
-Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u0` and applied to `du`.
+Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
 """
-function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u0, par, du)
+function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u, par, du)
 	M, N = size(pb)
-	T  = extractPeriodFDTrap(u0)
+	T  = extractPeriodFDTrap(u)
 	dT = extractPeriodFDTrap(du)
 
-	u0c = extractTimeSlices(pb, u0)
+	uc = extractTimeSlices(pb, u)
 	outc = extractTimeSlices(pb, out)
 	duc = extractTimeSlices(pb, du)
 
 	# compute the cyclic part
-	@views Jc(pb, outc, u0[1:end-1-N], par, T, du[1:end-N-1], outc[:, M])
+	@views Jc(pb, outc, u[1:end-1-N], par, T, du[1:end-N-1], outc[:, M])
 
 	# outc[:, M] plays the role of tmp until it is used just after the for-loop
 	tmp = @view outc[:, M]
 
 	# we now compute the partial derivative w.r.t. the period T
 	# the .+ is for the GPU
-	# out .+= @views (pb(vcat(u0[1:end-1], T .+ δ)) .- pb(u0)) ./ δ .* dT
-	@views applyF(pb, tmp, u0c[:, M-1], par)
+	# out .+= @views (pb(vcat(u[1:end-1], T .+ δ)) .- pb(u)) ./ δ .* dT
+	@views applyF(pb, tmp, uc[:, M-1], par)
 
 	h = dT * getTimeStep(pb, 1)
-	@views POTrapScheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1], par, h/2, tmp, false)
+	@views POTrapScheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, tmp, false)
 	for ii in 2:M-1
 		h = dT * getTimeStep(pb, ii)
-		@views POTrapScheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1], par, h/2, tmp, false)
+		@views POTrapScheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, tmp, false)
 	end
 
 	# closure condition ensuring a periodic orbit
@@ -263,8 +271,8 @@ function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u0, par, du)
 	end
 end
 
-(pb::PeriodicOrbitTrapProblem)(u0::AbstractVector, par) = POTrapFunctional!(pb, similar(u0), u0, par)
-(pb::PeriodicOrbitTrapProblem)(u0::AbstractVector, par, du) = POTrapFunctionalJac!(pb, similar(du), u0, par, du)
+(pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par) = POTrapFunctional!(pb, similar(u), u, par)
+(pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par, du) = POTrapFunctionalJac!(pb, similar(du), u, par, du)
 
 ####################################################################################################
 # Matrix free expression of matrices related to the Jacobian Matrix of the PO functional
@@ -350,7 +358,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
-	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
+	In = getMassMatrix(pb)
 
 	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
@@ -358,21 +366,22 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	tmpJ = @views pb.J(u0c[:, 1], par)
 
 	h = T * getTimeStep(pb, 1)
-	Jn = In - h/2 .* tmpJ
+	Jn = In - (h/2) .* tmpJ
 	Jc[Block(1, 1)] = Jn
+	@show typeof(In) typeof(Jn)
 
 	# we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
-	Jn = @views -In - h/2 .* pb.J(u0c[:, M-1], par)
+	Jn = @views -In - (h/2) .* pb.J(u0c[:, M-1], par)
 	Jc[Block(1, M-1)] = Jn
 
 	for ii in 2:M-1
 		h = T * getTimeStep(pb, ii)
-		Jn = -In - h/2 .* tmpJ
+		Jn = -In - (h/2) .* tmpJ
 		Jc[Block(ii, ii-1)] = Jn
 
 		tmpJ = @views pb.J(u0c[:, ii], par)
 
-		Jn = In - h/2 .* tmpJ
+		Jn = In - (h/2) .* tmpJ
 		Jc[Block(ii, ii)] = Jn
 	end
 	return Jc
@@ -416,11 +425,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 		M, N = size(pb)
 		T = extractPeriodFDTrap(u0)
 
-		if hasmassmatrix(pb)
-			In = pb.massmatrix
-		else
-			In = Tj == SparseMatrixCSC ? spdiagm( 0 => ones(N)) : LinearAlgebra.I(N)
-		end
+		In = getMassMatrix(pb, ~(Tj <: SparseMatrixCSC))
 
 		u0c = extractTimeSlices(pb, u0)
 		outc = similar(u0c)
@@ -472,7 +477,7 @@ end
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
 
-	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
+	In = getMassMatrix(pb)
 
 	u0c = extractTimeSlices(pb, u0)
 	outc = similar(u0c)
@@ -529,6 +534,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacCyclicSparse}, u0::AbstractVec
 
 	# this is bad for performance. Get converted to SparseMatrix at the next line
 	Aγ = blockToSparse(AγBlock) # most of the computing time is here!!
+	# the following line is bad but still less costly than the previous one
 	return Aγ[1:end-N, 1:end-N]
 end
 
@@ -539,7 +545,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 
 	A_diagBlock = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 
-	In = hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(N))
+	In = getMassMatrix(pb)
 
 	u0c = reshape(u0[1:end-1], N, M)
 	outc = similar(u0c)
@@ -989,13 +995,9 @@ function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::A
 
 	# update the problem
 	probPO = setproperties(prob, N = N, F = F, J = dF, ϕ = zeros(N*M), xπ = zeros(N*M))
-	# updateSection!(probPO, orbitguess, par)
 
-	# probPO.ϕ .= 0
 	probPO.ϕ[1:N] .= ζr
-	# probPO.xπ .= 0
 	probPO.xπ[1:N] .= hopfpt.x0
-
 
 	return probPO, orbitguess
 end
