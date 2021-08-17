@@ -5,8 +5,8 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 const BK = BifurcationKit
 
 # define the sup norm and a L2 norm
-norminf = x -&gt; norm(x, Inf)
-normbratu = x -&gt; norm(x .* w) / sqrt(length(x)) # the weight w is defined below
+norminf(x) = norm(x, Inf)
+normbratu(x) = norm(x .* w) / sqrt(length(x)) # the weight w is defined below
 
 # some plotting functions to simplify our life
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(reshape(x, nx, ny); color = :viridis, kwargs...)
@@ -42,7 +42,7 @@ function Fmit!(f, u, p)
 	return f
 end
 
-Fmit(u, p) = Fmit!(similar(u), u, p)</code></pre><p>It will also prove useful to have the derivatives of our functional: </p><pre><code class="language-julia hljs">function JFmit(x,p)
+Fmit(u, p) = Fmit!(similar(u), u, p)</code></pre><p>It will also prove useful to have the derivatives of our functional:</p><pre><code class="language-julia hljs">function JFmit(x,p)
 	J = p.Δ
 	dg = dϕ.(x, p.λ)
 	return J + spdiagm(0 =&gt; dg)
@@ -67,11 +67,11 @@ opt_newton = BK.NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter
 # options for continuation
 opts_br = ContinuationPar(pMax = 3.5, pMin = 0.025,
 	# for a good looking curve
-	dsmin = 0.001, dsmax = 0.05, ds = 0.01, 
+	dsmin = 0.001, dsmax = 0.05, ds = 0.01,
 	# number of eigenvalues to compute
-	nev = 30, 
-	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true), 
-	maxSteps = 100, precisionStability = 1e-6, 
+	nev = 30,
+	plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = true),
+	maxSteps = 100, precisionStability = 1e-6,
 	# detect codim 1 bifurcations
 	detectBifurcation = 3,
 	# Optional: bisection options for locating bifurcations
@@ -89,10 +89,10 @@ Bifurcation points:
 - #  1,    bp at λ ≈ +0.36787944 ∈ (+0.36787944, +0.36787944), |δp|=2e-10, [converged], δ = ( 1,  0), step =  18, eigenelements in eig[ 19], ind_ev =   1
 - #  2,    nd at λ ≈ +0.27255474 ∈ (+0.27255474, +0.27255937), |δp|=5e-06, [converged], δ = ( 2,  0), step =  33, eigenelements in eig[ 34], ind_ev =   3
 - #  3,    bp at λ ≈ +0.15215124 ∈ (+0.15215124, +0.15215818), |δp|=7e-06, [converged], δ = ( 1,  0), step =  48, eigenelements in eig[ 49], ind_ev =   4
-- #  4,    nd at λ ≈ +0.03551852 ∈ (+0.03551852, +0.03554981), |δp|=3e-05, [converged], δ = ( 2,  0), step =  76, eigenelements in eig[ 77], ind_ev =   6</code></pre><p>We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, <code>δ = ( 1,  0)</code> gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.</p><h2 id="Automatic-branch-switching-at-simple-branch-points"><a class="docs-heading-anchor" href="#Automatic-branch-switching-at-simple-branch-points">Automatic branch switching at simple branch points</a><a id="Automatic-branch-switching-at-simple-branch-points-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-branch-switching-at-simple-branch-points" title="Permalink"></a></h2><p>We can compute the branch off the third bifurcation point:</p><pre><code class="language-julia hljs">br1, = continuation(jet..., br, 3, 
-	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)</code></pre><p>and you should see:</p><p><img src="../mittlemann2.png" alt/></p><p>You can also plot the two branches together <code>plot(br,br1,plotfold=false)</code> and get</p><p><img src="../mittlemann3.png" alt/></p><p>We continue our journey and compute the branch bifurcating of the first bifurcation point from the last branch we computed:</p><pre><code class="language-julia hljs">br2, = continuation(jet..., br1, 1, 
+- #  4,    nd at λ ≈ +0.03551852 ∈ (+0.03551852, +0.03554981), |δp|=3e-05, [converged], δ = ( 2,  0), step =  76, eigenelements in eig[ 77], ind_ev =   6</code></pre><p>We notice several simple bifurcation points for which the dimension of the kernel of the jacobian is one dimensional. In the above box, <code>δ = ( 1,  0)</code> gives the change in the stability. In this case, there is one vector in the kernel which is real. The bifurcation point 2 has a 2d kernel and is thus not amenable to automatic branch switching.</p><h2 id="Automatic-branch-switching-at-simple-branch-points"><a class="docs-heading-anchor" href="#Automatic-branch-switching-at-simple-branch-points">Automatic branch switching at simple branch points</a><a id="Automatic-branch-switching-at-simple-branch-points-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-branch-switching-at-simple-branch-points" title="Permalink"></a></h2><p>We can compute the branch off the third bifurcation point:</p><pre><code class="language-julia hljs">br1, = continuation(jet..., br, 3,
+	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)</code></pre><p>and you should see:</p><p><img src="../mittlemann2.png" alt/></p><p>You can also plot the two branches together <code>plot(br,br1,plotfold=false)</code> and get</p><p><img src="../mittlemann3.png" alt/></p><p>We continue our journey and compute the branch bifurcating of the first bifurcation point from the last branch we computed:</p><pre><code class="language-julia hljs">br2, = continuation(jet..., br1, 1,
 	setproperties(opts_br;ds = 0.001, maxSteps = 40); kwargsC...)</code></pre><p><img src="../mittlemann4.png" alt/></p><h2 id="Analysis-at-the-2d-branch-points-(manual)"><a class="docs-heading-anchor" href="#Analysis-at-the-2d-branch-points-(manual)">Analysis at the 2d-branch points (manual)</a><a id="Analysis-at-the-2d-branch-points-(manual)-1"></a><a class="docs-heading-anchor-permalink" href="#Analysis-at-the-2d-branch-points-(manual)" title="Permalink"></a></h2><p>The second bifurcation point on the branch <code>br</code> of homogenous solutions has a 2d kernel. we provide two methods to deal with such case</p><ul><li>automatic local bifurcation diagram (see below)</li><li>branch switching with deflation (see next section)</li></ul><p>We provide a generic way to study branch points of arbitrary dimensions by computing a reduced equation. The general method is based on a Lyapunov-Schmidt reduction. We can compute the information about the branch point using the generic function (valid for simple branch points, Hopf bifurcation points,...)</p><pre><code class="language-julia hljs">bp2d = computeNormalForm(jet..., br, 2;  verbose=true, nev = 50)</code></pre><p>You can print the 2d reduced equation as follows. Note that this is a multivariate polynomials. For more information, see <a href="../nonsimplebp/#Non-simple-branch-point">Non-simple branch point</a>.</p><pre><code class="language-julia hljs">julia&gt; bp2d
-Non simple bifurcation point at p ≈ 0.27255473583423123. 
+Non simple bifurcation point at p ≈ 0.27255473583423123.
 Kernel dimension = 2
 Normal form :
  + -73.8978 * x1 ⋅ p + 0.0071 ⋅ x1³ + 0.0231 ⋅ x1² ⋅ x2 + -0.0273 ⋅ x1 ⋅ x2² + -0.0076 ⋅ x2³
@@ -119,7 +119,7 @@ resp = Float64[]; resx = Vector{Float64}[]; resnrm = Float64[]
 plot(
 	scatter(1e4resp, map(x-&gt;x[1], resx), map(x-&gt;x[2], resx); label = &quot;&quot;, markerstrokewidth=0, xlabel = L&quot;10^4 \cdot \lambda&quot;, ylabel = L&quot;x_1&quot;, zlabel = L&quot;x_2&quot;, zcolor = resnrm, color = :viridis,colorbar=false),
 	scatter(1e4resp, resnrm; label = &quot;&quot;, markersize =2, markerstrokewidth=0, xlabel = L&quot;10^4 \cdot \lambda&quot;, ylabel = L&quot;\|x\|&quot;))</code></pre><p><img src="../mittlemann4a.png" alt/></p><blockquote><p>This looks like a Pitchfork bifurcation with D4 symmetry</p></blockquote><p>We can see that there are two types of solutions. After the bifurcation point, the solutions are of the form <span>$(x_1,x_2) = (\pm x,\pm x)$</span> for some real <span>$x$</span>. Before the bifurcation point, the solutions are of the form <span>$(x_1,x_2) = (\pm x,0), (0, \pm x)$</span> for some real <span>$x$</span>. Here is an example <code>plotsol(bp2d(resx[10], resp[10]))</code></p><p><img src="../mittlemann4b.png" alt/></p><p>We could use the solutions saved in <code>resp, resx</code> as initial guesses for a call to <code>continuation</code> but we turn to a different method.</p><div class="admonition is-success"><header class="admonition-header">Solutions</header><div class="admonition-body"><p>The brute force method provided all solutions in a neighborhood of the bifurcation point.</p></div></div><div class="admonition is-info"><header class="admonition-header">Advanced computation</header><div class="admonition-body"><p>Instead of using brute force and computing the vector field on a grid. One can rely on <code>IntervalConstraintProgramming.jl</code> to do better using bisection. See also this <a href="https://discourse.julialang.org/t/nd-level-sets/38532/13">discourse post</a> where the same example is treated by D. P. Sanders.    </p></div></div><h2 id="Branch-switching-with-deflated-newton-(manual)"><a class="docs-heading-anchor" href="#Branch-switching-with-deflated-newton-(manual)">Branch switching with deflated newton (manual)</a><a id="Branch-switching-with-deflated-newton-(manual)-1"></a><a class="docs-heading-anchor-permalink" href="#Branch-switching-with-deflated-newton-(manual)" title="Permalink"></a></h2><p>At this stage, we know what happens at the 2d bifurcation point of the curve of homogenous solutions. We chose another method based on <a href="../deflatedproblem/#Deflated-problems">Deflated problems</a>. We want to find all nearby solutions of the problem close to this bifurcation point. This is readily done by trying several initial guesses in a brute force manner:</p><pre><code class="language-julia hljs">out = zeros(Nx*Ny)
-# deflation operator to 
+# deflation operator to
 deflationOp = DeflationOperator(2, 1.0, [zeros(Nx*Ny)])
 
 # options for the newton solver
@@ -213,4 +213,4 @@ Parameters λ from 0.27255473583423384 to 0.09945404935297063
 Bifurcation points:
  (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
 - #  1,    bp at λ ≈ +0.27255724 ∈ (+0.27255724, +0.27255724), |δp|=9e-10, [converged], δ = (-1,  0), step =   1, eigenelements in eig[  2], ind_ev =   3
-- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Monday 26 July 2021 11:59">Monday 26 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+- #  2,    bp at λ ≈ +0.27868730 ∈ (+0.27868728, +0.27868730), |δp|=3e-08, [converged], δ = (-1,  0), step =  15, eigenelements in eig[ 16], ind_ev =   2</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Tuesday 17 August 2021 10:37">Tuesday 17 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

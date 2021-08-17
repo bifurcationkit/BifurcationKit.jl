@@ -53,7 +53,7 @@ end
 function (sh::SHLinearOp)(J, rhs; shift = 0., tol =  1e-9)
 	u, l, ν = J
 	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-	res, info = KrylovKit.linsolve( du -&gt; -du .+ sh \ (udiag .* du), sh \ rhs, 
+	res, info = KrylovKit.linsolve( du -&gt; -du .+ sh \ (udiag .* du), sh \ rhs,
 	tol = tol, maxiter = 6)
 	return res, true, info.numops
 end</code></pre><p>Now that we have our operator <code>L</code>, we can encode our functional:</p><pre><code class="language-julia hljs">function F_shfft(u, p)
@@ -91,22 +91,24 @@ par = (l = -0.15, ν = 1.3, L = L)</code></pre><h2 id="Newton-iterations-and-def
 		F_shfft, J_shfft,
 		AF(sol0), par,
 		opt_new, normN = norminf)
-				
-	println(&quot;--&gt; norm(sol) = &quot;, maximum(abs.(sol_hexa)))
-	plotsol(sol_hexa)</code></pre><p>You should see this:</p><pre><code class="language-julia hljs">Newton Iterations      f(x)      Linear Iterations
 
-          0          3.3758e-01             0
-          1          8.0152e+01            12
-          2          2.3716e+01            27
-          3          6.7353e+00            22
-          4          1.9498e+00            17
-          5          5.5893e-01            14
-          6          1.0998e-01            12
-          7          1.1381e-02            11
-          8          1.6393e-04            11
-          9          6.7459e-08            10
+	println(&quot;--&gt; norm(sol) = &quot;, maximum(abs.(sol_hexa)))
+	plotsol(sol_hexa)</code></pre><p>You should see this:</p><pre><code class="language-julia hljs">┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       3.3758e-01     │        0       │
+│       1     │       8.0152e+01     │       12       │
+│       2     │       2.3716e+01     │       28       │
+│       3     │       6.7353e+00     │       22       │
+│       4     │       1.9498e+00     │       17       │
+│       5     │       5.5893e-01     │       14       │
+│       6     │       1.0998e-01     │       12       │
+│       7     │       1.1381e-02     │       11       │
+│       8     │       1.6393e-04     │       11       │
+│       9     │       7.3277e-08     │       10       │
+└─────────────┴──────────────────────┴────────────────┘
   0.317790 seconds (42.67 k allocations: 1.256 MiB)
---&gt; norm(sol) = 1.26017611779702</code></pre><p><strong>Note that this is about the 10x faster than Example 2 but for a problem almost 100x larger! (On a V100 GPU)</strong></p><p>The solution is:</p><p><img src="../SH-GPU.png" alt/></p><p>We can also use the deflation technique (see <a href="../library/#BifurcationKit.DeflationOperator"><code>DeflationOperator</code></a> and <a href="../library/#BifurcationKit.DeflatedProblem"><code>DeflatedProblem</code></a> for more information) on the GPU as follows</p><pre><code class="language-julia hljs">deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+--&gt; norm(sol) = 1.26017611779702</code></pre><p><strong>Note that this is about the 10x faster than Example 2 but for a problem almost 100x larger! (On a V100 GPU)</strong></p><p>The solution is:</p><p><img src="../SH-GPU.png" alt/></p><p>We can also use the deflation technique (see <a href="../library/#BifurcationKit.DeflationOperator"><code>DeflationOperator</code></a> and <a href="../library/#BifurcationKit.DeflatedProblem"><code>DeflatedProblem</code></a> for more information) on the GPU as follows</p><pre><code class="language-julia hljs">deflationOp = DeflationOperator(2, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(
@@ -115,14 +117,14 @@ outdef, _, flag, _ = @time newton(
 		par, opt_new, deflationOp, normN = x-&gt; maximum(abs.(x)))
 	println(&quot;--&gt; norm(sol) = &quot;, norm(outdef))
 	plotsol(outdef) |&gt; display
-	flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h2 id="Computation-of-the-branches"><a class="docs-heading-anchor" href="#Computation-of-the-branches">Computation of the branches</a><a id="Computation-of-the-branches-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branches" title="Permalink"></a></h2><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia hljs">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, 
-	pMax = 0., pMin = -1.0, theta = 0.5, plotEveryStep = 5, 
+	flag &amp;&amp; push!(deflationOp, outdef)</code></pre><p>and get:</p><p><img src="../SH-GPU-deflation.png" alt/></p><h2 id="Computation-of-the-branches"><a class="docs-heading-anchor" href="#Computation-of-the-branches">Computation of the branches</a><a id="Computation-of-the-branches-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branches" title="Permalink"></a></h2><p>Finally, we can perform continuation of the branches on the GPU:</p><pre><code class="language-julia hljs">opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005,
+	pMax = 0., pMin = -1.0, theta = 0.5, plotEveryStep = 5,
 	newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 100)
 
 	br, = @time continuation(F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l), opts_cont;
 		plot = true, verbosity = 3,
-		plotSolution = (x, p; kwargs...)-&gt;plotsol!(x; color=:viridis, kwargs...), 
+		plotSolution = (x, p; kwargs...)-&gt;plotsol!(x; color=:viridis, kwargs...),
 		normC = x -&gt; maximum(abs.(x))
 		)</code></pre><p>We did not detail how to compute the eigenvalues on the GPU and detect the bifurcations. It is based on a simple Shift-Invert strategy, please look at <code>examples/SH2d-fronts-cuda.jl</code>.</p><p><img src="../GPU-branch.png" alt/></p><p>We have the following information about the branch of hexagons</p><pre><code class="language-julia hljs">julia&gt; br
 Branch number of points: 67
@@ -149,4 +151,4 @@ Bifurcation points:
 - # 18,    nd at p ≈ +0.00057801 ∈ (-0.00122418, +0.00057801), |δp|=2e-03, [converged], δ = ( 5,  0), step =  64, eigenelements in eig[ 65], ind_ev =   6
 - # 19,    nd at p ≈ +0.00320921 ∈ (+0.00141327, +0.00320921), |δp|=2e-03, [converged], δ = (10,  0), step =  65, eigenelements in eig[ 66], ind_ev =  16
 Fold points:
-- #  1, fold at p ≈ -0.21528694 ∈ (-0.21528694, -0.21528694), |δp|=-1e+00, [    guess], δ = ( 0,  0), step =  24, eigenelements in eig[ 24], ind_ev =   0</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Monday 26 July 2021 11:59">Monday 26 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+- #  1, fold at p ≈ -0.21528694 ∈ (-0.21528694, -0.21528694), |δp|=-1e+00, [    guess], δ = ( 0,  0), step =  24, eigenelements in eig[ 24], ind_ev =   0</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Tuesday 17 August 2021 10:37">Tuesday 17 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

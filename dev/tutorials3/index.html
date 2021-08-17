@@ -4,13 +4,12 @@ using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
 const BK = BifurcationKit
 
 f1(u, v) = u * u * v
-norminf = x -&gt; norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
-function Fbru(x, p)
+function Fbru!(f, x, p, t = 0)
 	@unpack α, β, D1, D2, l = p
-	f = similar(x)
 	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
+	h2 = 1.0 / n^2
 	c1 = D1 / l^2 / h2
 	c2 = D2 / l^2 / h2
 
@@ -18,10 +17,10 @@ function Fbru(x, p)
 	v = @view x[n+1:2n]
 
 	# Dirichlet boundary conditions
-	f[1]   = c1 * (α      - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
+	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
 	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
 
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α  )  + α - (β + 1) * u[n] + f1(u[n], v[n])
+	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
 	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
 
 	for i=2:n-1
@@ -29,7 +28,9 @@ function Fbru(x, p)
 		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
 	end
 	return f
-end</code></pre><p>For computing periodic orbits, we will need a Sparse representation of the Jacobian:</p><pre><code class="language-julia hljs">function Jbru_sp(x, p)
+end
+
+Fbru(x, p, t = 0) = Fbru!(similar(x), x, p, t)</code></pre><p>For computing periodic orbits, we will need a Sparse representation of the Jacobian:</p><pre><code class="language-julia hljs">function Jbru_sp(x, p)
 	@unpack α, β, D1, D2, l = p
 	# compute the Jacobian using a sparse representation
 	n = div(length(x), 2)
@@ -60,7 +61,7 @@ end</code></pre><p>For computing periodic orbits, we will need a Sparse represen
 
 	@. diagpn = u * u
 	return spdiagm(0 =&gt; diag, 1 =&gt; diagp1, -1 =&gt; diagm1, n =&gt; diagpn, -n =&gt; diagmn)
-end</code></pre><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>We could have used <code>DiffEqOperators.jl</code> like for the Swift-Hohenberg tutorial.</p></div></div><p>Finally, it will prove useful to have access to the hessian and third derivative</p><pre><code class="language-julia hljs"># we group the differentials together
+end</code></pre><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>We could have used <code>DiffEqOperators.jl</code> like for the Swift-Hohenberg tutorial instead of writing our laplacian ourselves.</p></div></div><p>Finally, it will prove useful to have access to the hessian and third derivative</p><pre><code class="language-julia hljs"># we group the differentials together
 jet  = BK.getJet(Fbru, Jbru_sp)</code></pre><p>We shall now compute the equilibria and their stability.</p><pre><code class="language-julia hljs">n = 300
 
 # parameters of the Brusselator model and guess for the stationary solution
@@ -78,7 +79,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
 		recordFromSolution = (x,p) -&gt; x[n÷2], normC = norminf)</code></pre><p>We obtain the following bifurcation diagram with 3 Hopf bifurcation points</p><p><img src="../bru-sol-hopf.png" alt/></p><h2 id="Normal-form-computation"><a class="docs-heading-anchor" href="#Normal-form-computation">Normal form computation</a><a id="Normal-form-computation-1"></a><a class="docs-heading-anchor-permalink" href="#Normal-form-computation" title="Permalink"></a></h2><p>We can compute the normal form of the Hopf points as follows</p><pre><code class="language-julia hljs">hopfpt = BK.computeNormalForm(jet..., br, 1)</code></pre><p>and you should get</p><pre><code class="language-julia hljs">julia&gt; hopfpt
 SuperCritical - Hopf bifurcation point at l ≈ 0.5113310149554013.
 Period of the periodic orbit ≈ 2.9367552006841753
-Normal form z⋅(a⋅δp + b⋅|z|²): 
+Normal form z⋅(a⋅δp + b⋅|z|²):
 (a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)</code></pre><h2 id="Continuation-of-Hopf-points"><a class="docs-heading-anchor" href="#Continuation-of-Hopf-points">Continuation of Hopf points</a><a id="Continuation-of-Hopf-points-1"></a><a class="docs-heading-anchor-permalink" href="#Continuation-of-Hopf-points" title="Permalink"></a></h2><p>We use the bifurcation points guesses located in <code>br.specialpoint</code> to turn them into precise bifurcation points. For the second one, we have</p><pre><code class="language-julia hljs"># index of the Hopf point in br.specialpoint
 ind_hopf = 2
 hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
@@ -86,7 +87,13 @@ hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
 flag &amp;&amp; printstyled(color=:red, &quot;--&gt; We found a Hopf Point at l = &quot;, hopfpoint.p[1], &quot;, ω = &quot;, hopfpoint.p[2], &quot;, from l = &quot;, br.specialpoint[ind_hopf].param, &quot;\n&quot;)</code></pre><p>which produces</p><pre><code class="language-julia hljs">--&gt; We found a Hopf Point at l = 1.0239851696548035, ω = 2.1395092895339842, from l = 1.0353910524340078</code></pre><p>We now perform a Hopf continuation with respect to the parameters <code>l, β</code></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>You don&#39;t need to call <code>newton</code> first in order to use <code>continuation</code>.</p></div></div><pre><code class="language-julia hljs">optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
 br_hopf, = @time continuation(Fbru, Jbru_sp,
 	br, ind_hopf, (@lens _.β),
-	optcdim2, verbosity = 2, 
+	optcdim2, verbosity = 2,
+	# detection of codim 2 bifurcations with bisection
+	detectCodim2Bifurcation = 2,
+	# this is required to detect the bifurcations
+	d2F = jet[3], d3F = jet[4],
+	# we update the Fold problem at every continuation step
+	updateMinAugEveryStep = 1,
 	normC = norminf)</code></pre><p>which gives using <code>plot(br_hopf)</code></p><p><img src="../bru-hopf-cont.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Finite-differences)"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Finite-differences)">Computation of the branch of periodic orbits (Finite differences)</a><a id="Computation-of-the-branch-of-periodic-orbits-(Finite-differences)-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Finite-differences)" title="Permalink"></a></h2><p>We now compute the bifurcated branches of periodic solutions from the Hopf points using <a href="../periodicOrbitTrapeze/#Periodic-orbits-based-on-trapezoidal-rule">Periodic orbits based on trapezoidal rule</a>. One has just to pass a <a href="../library/#BifurcationKit.PeriodicOrbitTrapProblem"><code>PeriodicOrbitTrapProblem</code></a>.</p><p>We start by providing a linear solver and some options for the continuation to work</p><pre><code class="language-julia hljs"># automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
@@ -119,31 +126,7 @@ br_po, = continuation(
 	ampfactor = 1., δp = 0.01,
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -&gt; heatmap!(reshape(x[1:end-1], 2*n, M)&#39;; ylabel=&quot;time&quot;, color=:viridis, kwargs...),
-	normC = norminf)</code></pre><p>It is now straightforward to get the full following diagram</p><p><img src="../bru-po-cont-3br.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)">Computation of the branch of periodic orbits (Standard Shooting)</a><a id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)" title="Permalink"></a></h2><blockquote><p>Note that what follows is not really optimized on the <code>DifferentialEquations.jl</code> side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern, ...</p></blockquote><p>We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field <code>Fbru</code>. We will show how to do this with an implicit method <code>Rodas4P</code> from <code>DifferentialEquations.jl</code>. Note that the user can pass its own time stepper but for convenience, we use the ones in <code>DifferentialEquations.jl</code>. More information regarding the shooting method is contained in <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method">Periodic orbits based on the shooting method</a>. To define the flow, it is better to have an <strong>inplace</strong> version of the vector field:</p><pre><code class="language-julia hljs">function Fbru!(f, x, p)
-	@unpack α, β, D1, D2, l = p
-	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
-	c1 = D1 / l^2 / h2
-	c2 = D2 / l^2 / h2
-
-	u = @view x[1:n]
-	v = @view x[n+1:2n]
-
-	# Dirichlet boundary conditions
-	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
-	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
-
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
-	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
-
-	for i=2:n-1
-		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
-		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
-	end
-	return f
-end
-
-Fbru(x, p) = Fbru!(similar(x), x, p)</code></pre><p>We then recompute the locus of the Hopf bifurcation points using the same method as above.</p><pre><code class="language-julia hljs">n = 100
+	normC = norminf)</code></pre><p>It is now straightforward to get the following diagram</p><p><img src="../bru-po-cont-3br.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)">Computation of the branch of periodic orbits (Standard Shooting)</a><a id="Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Standard-Shooting)" title="Permalink"></a></h2><blockquote><p>Note that what follows is not really optimized on the <code>DifferentialEquations.jl</code> side. Indeed, we do not use automatic differentiation, we do not pass the sparsity pattern, ...</p></blockquote><p>We now turn to a different method based on the flow of the Brusselator. To compute this flow (time stepper), we need to be able to solve the differential equation (actually a PDE) associated to the vector field <code>Fbru</code>. We will show how to do this with an implicit method <code>Rodas4P</code> from <code>DifferentialEquations.jl</code>. Note that the user can pass its own time stepper but for convenience, we use the ones in <code>DifferentialEquations.jl</code>. More information regarding the shooting method is contained in <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method">Periodic orbits based on the shooting method</a>.</p><p>We then recompute the locus of the Hopf bifurcation points using the same method as above.</p><pre><code class="language-julia hljs">n = 100
 
 # different parameters to define the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
@@ -159,28 +142,20 @@ br, = @time continuation(Fbru, Jbru_sp,
 	plot = false,
 	recordFromSolution = (x, p)-&gt;x[n÷2], normC = norminf)</code></pre><p>We need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper:</p><pre><code class="language-julia hljs">using DifferentialEquations, DiffEqOperators
 
-FOde(f, x, p, t) = Fbru!(f, x, p)
+FOde(f, x, p, t) = Fbru!(f, x, p, t)
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 
 # this is the ODE time stepper when used with `solve`
-probsundials = ODEProblem(FOde, u0, (0., 1000.), par_bru;
-	atol = 1e-10, rtol = 1e-8, jac = (J,u,p,t) -&gt; J .= Jbru_sp(u,p), jac_prototype = Jbru_sp(u0, par_bru))</code></pre><div class="admonition is-success"><header class="admonition-header">Performance</header><div class="admonition-body"><p>You can really speed this up by using the improved <code>ODEProblem</code></p><pre><code class="language-julia hljs">using SparseDiffTools, SparseArrays, DiffEqDiffTools
+prob = ODEProblem(FOde, u0, (0., 1000.), par_bru;
+	atol = 1e-10, rtol = 1e-8, jac = (J,u,p,t) -&gt; J .= Jbru_sp(u, p), jac_prototype = Jbru_sp(u0, par_bru))</code></pre><div class="admonition is-success"><header class="admonition-header">Performance</header><div class="admonition-body"><p>You can really speed this up by using the improved <code>ODEProblem</code></p><pre><code class="language-julia hljs">using SparseDiffTools, SparseArrays, DiffEqDiffTools
 jac_prototype = Jbru_sp(ones(2n), par_bru)
 jac_prototype.nzval .= ones(length(jac_prototype.nzval))
 _colors = matrix_colors(jac_prototype)
 vf = ODEFunction(FOde; jac_prototype = jac_prototype, colorvec = _colors)
-probsundials = ODEProblem(vf,  u0, (0.0, 520.), par_bru) # gives 0.22s</code></pre></div></div><p>We also compute with automatic differentiation, the differentials of the vector field. This is is needed for branch switching as it is based on the computation of the Hopf normal form:</p><pre><code class="language-julia hljs">using ForwardDiff
-function D(f, x, p, dx)
-	return ForwardDiff.derivative(t-&gt;f(x .+ t .* dx, p), 0.)
-end
-d1Fbru(x,p,dx1) = D((z, p0) -&gt; Fbru(z, p0), x, p, dx1)
-d2Fbru(x,p,dx1,dx2) = D((z, p0) -&gt; d1Fbru(z, p0, dx1), x, p, dx2)
-d3Fbru(x,p,dx1,dx2,dx3) = D((z, p0) -&gt; d2Fbru(z, p0, dx1, dx2), x, p, dx3)
-
-jet  = (Fbru, Jbru_sp, d2Fbru, d3Fbru)</code></pre><p>We are now ready to call the automatic branch switching. Note how similar it is to the previous section based on finite differences. This case is more deeply studied in the tutorial <a href="../tutorials3b/#d-Brusselator-(advanced-user)">1d Brusselator (advanced user)</a>. We use a parallel Shooting.</p><pre><code class="language-julia hljs"># linear solvers
-ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
-eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
+probsundials = ODEProblem(vf,  u0, (0.0, 520.), par_bru) # gives 0.22s</code></pre></div></div><p>We also compute with automatic differentiation, the differentials of the vector field. This is is needed for branch switching as it is based on the computation of the Hopf normal form:</p><pre><code class="language-julia hljs">jet  = BK.getJet(Fbru, Jbru_sp)</code></pre><p>We are now ready to call the automatic branch switching. Note how similar it is to the previous section based on finite differences. This case is more deeply studied in the tutorial <a href="../tutorials3b/#d-Brusselator-(advanced-user)">1d Brusselator (advanced user)</a>. We use a parallel Shooting.</p><pre><code class="language-julia hljs"># linear solvers
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100)
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
@@ -194,7 +169,7 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Parallel Standard Shooting
-	ShootingProblem(Mt, par_bru, probsundials, Rodas4P(), abstol = 1e-10, retol = 1e-8, parallel = true);
+	ShootingProblem(Mt, par_bru, prob, Rodas4P(), abstol = 1e-10, reltol = 1e-8, parallel = true);
 	ampfactor = 1.0, δp = 0.0075,
 	# the next option is not necessary
 	# it speeds up the newton iterations
@@ -204,18 +179,18 @@ br_po, = continuation(
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)</code></pre><p>and you should see</p><p><img src="../brus-sh-cont.png" alt/></p><h2 id="Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)"><a class="docs-heading-anchor" href="#Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)">Computation of the branch of periodic orbits (Poincaré Shooting)</a><a id="Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-branch-of-periodic-orbits-(Poincaré-Shooting)" title="Permalink"></a></h2><p>We now turn to another Shooting method, namely the Poincaré one. We can provide this method thanks to the unique functionalities of <code>DifferentialEquations.jl</code>. More information is provided at <a href="../library/#BifurcationKit.PoincareShootingProblem"><code>PoincareShootingProblem</code></a> and <a href="../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method">Periodic orbits based on the shooting method</a> but basically, it is a shooting method between Poincaré sections <span>$\Sigma_i$</span> (along the orbit) defined by hyperplanes. As a consequence, the dimension of the unknowns is <span>$M_{sh}\cdot(N-1)$</span> where <span>$N$</span> is the dimension of the phase space. Indeed, each time slice lives in an hyperplane <span>$\Sigma_i$</span>. Additionally, the period <span>$T$</span> is not an unknown of the method but rather a by-product. However, the method requires the time stepper to find when the flow hits an hyperplane <span>$\Sigma_i$</span>, something called <strong>event detection</strong>.</p><p>We show how to use this method, the code is very similar to the case of the Parallel Standard Shooting:</p><pre><code class="language-julia hljs"># linear solvers
 ls = GMRESIterativeSolvers(reltol = 1e-8, maxiter = 100)
-eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50)
+eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), dim = 50)
 # newton parameters
-optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig)
+optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 15, linsolver = ls, eigsolver = eig)
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 2)
 
 # number of time slices
-Mt = 1
+Mt = 2
 br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, par_bru, probsundials, Rodas4P(); abstol = 1e-10, retol = 1e-8, parallel = true);
+	opts_po_cont, PoincareShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
 	# the next option is not necessary
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
@@ -224,4 +199,4 @@ br_po, = continuation(
 	verbosity = 3,	plot = true,
 	updateSectionEveryStep = 1,
 	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
-	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Monday 26 July 2021 11:59">Monday 26 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	normC = norminf)</code></pre><p>and you should see:</p><p><img src="../brus-psh-cont.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Tuesday 17 August 2021 10:37">Tuesday 17 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
