@@ -73,7 +73,6 @@ LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 ####################################################################################################
 # newton wrapper
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par, linearPO = :MatrixFree)
-	@warn "mettre solver Floquet pour newton"
 	if linearPO == :autodiffDense
 		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
