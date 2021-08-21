@@ -4,13 +4,13 @@
 
 Plotting is provided by calling `Plots.jl`. It means that to plot a branch `br`, you just need to call
 
-```
+```julia
 plot(br)
 ```
 
 where `br` is a branch computed after a call to `br, = continuation(...)`. You can use the keywords provided by `Plots.jl` and the different backends. You can thus call
 
-```
+```julia
 scatter(br)
 plot!(br, label = "continuous line")
 ```
@@ -31,13 +31,13 @@ The available arguments specific to our plotting methods are
 
 If you have severals branches `br1, br2`, you can plot them in the same figure by doing
 
-```
+```julia
 plot(br1, br2)
 ```
 
 in place of
 
-```
+```julia
 plot(br1)
 plot!(br2)
 ```
@@ -49,7 +49,7 @@ plot!(br2)
 
 You can select which variables to plot using the keyword argument `vars`:
 
-```
+```julia
 plot(br, vars = (:param, :x))
 ```
 The available symbols are `:param, :sol, :itnewton, :ds, :theta, :step` and:
@@ -62,13 +62,13 @@ The available symbols are `:param, :sol, :itnewton, :ds, :theta, :step` and:
 
 You can define your own plotting functions using the internal fields of `br` which is of type [`ContResult`](@ref). For example, the previous plot can be done as follows:
 
-```
+```julia
 plot(br.branch.param, br.branch.x)
 ```
 
 You can also plot the spectrum at a specific continuation `step::Int` by calling
 
-```
+```julia
 # get the eigenvalues
 eigvals = br.eig[step].eigenvals
 
@@ -80,7 +80,7 @@ scatter(real.(eigvals), imag.(eigvals))
 
 To do this, you just need to call
 
-```
+```julia
 plot(diagram)
 ```
 
