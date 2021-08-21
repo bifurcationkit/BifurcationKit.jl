@@ -15,8 +15,10 @@ function Laplacian(N, lx, bc = :Dirichlet)
 		Qx = Neumann0BC(hx)
 	elseif bc == :Dirichlet
 		Qx = Dirichlet0BC(typeof(hx))
+	elseif bc == :Periodic
+		Qx = PeriodicBC(typeof(hx))
 	end
-	D2xsp = sparse(D2x * Qx)[1]
+	D2xsp = sparse(D2x * Qx)[1] |> sparse
 end
 
 function NL!(dest, u, p, t = 0.)
@@ -35,12 +37,7 @@ function Fbr!(f, u, p, t = 0.)
 	f .= f .+ NL(u, p)
 end
 
-function NL(u, p)
-	out = similar(u)
-	NL!(out, u, p)
-	out
-end
-
+NL(u, p) = NL!(similar(u), u, p)
 Fbr(x, p, t = 0.) = Fbr!(similar(x), x, p)
 dNL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 

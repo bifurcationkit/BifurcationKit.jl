@@ -68,7 +68,6 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
-	# Base.display(logvals)
 	I = sortperm(logvals, by = real, rev = true)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end

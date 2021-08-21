@@ -113,8 +113,8 @@ nothing #hide
 The problem may feature fronts, that is solution of the form $u(x,t) = U(x-st)$ (same for $v$) for a fixed value of the profile $U$ and the speed $s$. The equation for the front profile are, up to an abuse of notations
 
 $$\begin{array}{l}
-0=a u_{\xi\xi}-su_{\xi}-u f(v)\\
-0=v_{\xi\xi}-sv_{\xi}+u f(v)
+0=a u_{\xi\xi}+su_{\xi}-u f(v)\\
+0=v_{\xi\xi}+sv_{\xi}+u f(v)
 \end{array}$$
 
 with unknowns $u,v,s$. The front is solution of these equations but it is not uniquely determined because of the phase invariance. Hence, we add the phase condition (see [^Beyn])
@@ -153,7 +153,7 @@ Let us find the front using `newton`
 
 ```@example TUTAUTOCAT
 front, = newton(FcatWave, JcatWave, vcat(U0, -1.), par_cat_wave, NewtonPar())
-println("norm front = ", front[1:end-1] |> norminf, ", speed s = ", front[end])
+println("front speed s = ", front[end], ", norm = ", front[1:end-1] |> norminf)
 ```
 
 ```@example TUTAUTOCAT
@@ -162,13 +162,28 @@ plotsol(front[1:end-1], title="front solution")
 
 ## Continuation of front solutions
 
-Having found a front, we can continue it as function of the parameter $a$ and detect instabilities. However, to this, we need a specific eigensolver:
+Following [^Malham], the modulated fronts are solutions of the following DAE
+
+$$\begin{array}{l}\tag{DAE}
+u_{t}=a u_{x x}+su_x-u f(v)\\
+v_{t}=v_{x x}+s v_x+u f(v)\\
+0 = \left\langle U, \partial_\xi U_0	\right\rangle
+\end{array}$$
+
+which can be written with a PDE $M_aU_t = G(u)$ with mass matrix $M_a = (Id, Id, 0)$. We have already written the vector field of (MF) in the function `FcatWave`. 
+
+Having found a front $U^f$, we can continue it as function of the parameter $a$ and detect instabilities. The stability of the front is linked to the eigenelements $(\lambda, V)$ solution of the generalized eigenvalue problem:
+
+$$\lambda M_a\cdot V = dG(U^f)\cdot V.$$
+
+
+However `BifurcationKit` does not provide a generalized eigenvalue solver for now, so we devise one:
 
 ```@example TUTAUTOCAT
 # we need  a specific eigensolver
 struct EigenWave <: BK.AbstractEigenSolver end
 
-# implementation of the eigensolver which solves a generalized Eigen problem
+# implementation of the solver for the generalized Eigen problem
 function (eig::EigenWave)(J, nev; k...)
 	N = size(J,1)
 	B = diagm(vcat(ones(N-1),0))
@@ -192,15 +207,7 @@ We have detected a Hopf instability in front dynamics, this will give rise of mo
 
 ## Branch of modulated fronts
 
-Following [^Malham], the modulated fronts are solutions of the following DAE
-
-$$\begin{array}{l}\tag{DAE}
-u_{t}=a u_{x x}-su_x-u f(v)\\
-v_{t}=v_{x x}-s v_x+u f(v)\\
-0 = \left\langle U, \partial_\xi U_0	\right\rangle
-\end{array}$$
-
-which can be written with a PDE $M_aU_t = G(u)$ with mass matrix $M_a = (Id, Id, 0)$. We have already written the vector field of (MF) in the function `FcatWave`. To branch from the Hopf bifurcation point, we just have to pass the mass matrix as follows:
+To branch from the Hopf bifurcation point, we just have to pass the mass matrix as follows:
 
 ```@example TUTAUTOCAT
 # we group the differential together
@@ -260,7 +267,7 @@ Let us plot one modulated front:
 ```@example TUTAUTOCAT
 modfront = BK.getTrajectory(br_po, length(br_po))
 plot(plot(modfront.t, modfront.u[end,:], xlabel = "t", ylabel = "s", label = ""),
-	contour(modfront.t, X, modfront.u[1:N,:], color = :viridis, xlabel = "t", title = "u for a = $(round(br_po.sol[15].p,digits=4))", fill = true, ylims=(-10,10)))
+	contour(modfront.t, X, modfront.u[1:N,:], color = :viridis, xlabel = "t", title = "u for a = $(round(br_po.sol[length(br_po)].p,digits=4))", fill = true, ylims=(-10,10)))
 ```
 
 

@@ -74,11 +74,10 @@ LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 # newton wrapper
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par, linearPO = :MatrixFree)
 	@warn "mettre solver Floquet pour newton"
-	@assert linearPO in (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense)
 	if linearPO == :autodiffDense
 		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
-		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J);
+        jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J)
 	elseif linearPO == :autodiffMF
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
 	elseif linearPO == :FiniteDifferencesDense
@@ -116,7 +115,15 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton(prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar; linearPO = :MatrixFree, δ = 1e-8, kwargs...)
+function newton(
+    prob::AbstractShootingProblem,
+    orbitguess,
+    par,
+    options::NewtonPar;
+    linearPO = :MatrixFree,
+    δ = 1e-8,
+    kwargs...,
+)
 	jac = buildJacobian(prob, orbitguess, par, linearPO)
 	return newton(prob, jac, orbitguess, par, options; kwargs...)
 end
@@ -144,7 +151,15 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton(prob::AbstractShootingProblem, orbitguess::vectype, par, options::NewtonPar{T, S, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}; linearPO = :MatrixFree, kwargs...) where {T, Tp, Tdot, vectype, S, E}
+function newton(
+    prob::AbstractShootingProblem,
+    orbitguess::vectype,
+    par,
+    options::NewtonPar{T,S,E},
+    defOp::DeflationOperator{Tp,Tdot,T,vectype};
+    linearPO = :MatrixFree,
+    kwargs...,
+) where {T,Tp,Tdot,vectype,S,E}
 	jac = buildJacobian(prob, orbitguess, par, linearPO)
 	return newton(prob, jac, orbitguess, par, options, defOp; kwargs...)
 end
@@ -162,22 +177,36 @@ This is the continuation method for computing a periodic orbit using a (Standard
 Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 
 # Optional argument
+- `δ = 1e-8` used for finite differences
 - `linearPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
     - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
     - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+	- For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 """
 
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :MatrixFree, updateSectionEveryStep = 0, kwargs...)
-	@assert linearPO in (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense)
-
-	options = contParams.newtonOptions
+function continuation(
+    prob::AbstractShootingProblem,
+    orbitguess,
+    par,
+    lens::Lens,
+    contParams::ContinuationPar,
+    linearAlgo::AbstractBorderedLinearSolver;
+    linearPO = :MatrixFree,
+    updateSectionEveryStep = 0,
+    δ = 1e-8,
+    kwargs...,
+)
+    @assert linearPO in
+            (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense, :FiniteDifferences)
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
 	end
+
+	options = contParams.newtonOptions
 
 	_finsol = get(kwargs, :finaliseSolution, nothing)
 	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
@@ -294,7 +323,8 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 
 	# we compute a phase so that the constraint equation
 	# < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
-	ζr = real.(hopfpt.ζ); ζi = imag.(hopfpt.ζ)
+	ζr = real.(hopfpt.ζ)
+	ζi = imag.(hopfpt.ζ)
 	# this phase is for POTrap problem constraint to be satisfied
 	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
 	verbose && printstyled(color = :green,"----> phase ϕ = ", ϕ/pi, "⋅π\n")
@@ -315,7 +345,7 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 
 	if :recordFromSolution in keys(kwargs)
 		_printsol = get(kwargs, :recordFromSolution, nothing)
- 		kwargs = @set kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
+        @set! kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
 	end
 
 	# perform continuation

@@ -39,7 +39,7 @@ Pages = ["tutorials3.md","tutorials3b.md", "BrusselatorFF.md", "tutorialsPD.md",
 Depth = 1
 ```
 
-## Freezing, waves, fronts
+## Symmetries, freezing, waves, fronts
 
 ```@contents
 Pages = ["autocatalytic.md"]

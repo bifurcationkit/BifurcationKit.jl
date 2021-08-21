@@ -100,10 +100,6 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 
 		$(TYPEDFIELDS)
 
-		## Associated methods
-
-		You can call `istranscritical(bp::AbstractSimpleBranchPoint), type(bp::AbstractSimpleBranchPoint)`
-
 		## Predictor
 
 		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
@@ -265,6 +261,6 @@ Hopf(x0, p, ω, params, lens, ζ, ζstar, nf) = Hopf(x0, p, ω, params, lens, ζ
 function Base.show(io::IO, bp::Hopf)
 	print(io, bp.type, " - ")
 	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
-	println(io, "Period of the periodic orbit ≈ ", (2pi/bp.ω))
+	println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
 	println(io, "Normal form z⋅(a⋅δp + b⋅|z|²): \n", bp.nf)
 end

@@ -145,7 +145,7 @@ jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
 # vf = ODEFunction(FOde; jac = (J,u,p,t) -> J .= Jbru_sp(u,p), jac_prototype = jac_prototype)
 	# prob = ODEProblem(vf,  u0, (0.0, 520.), @set par_bru.l = br.specialpoint[1].param) # gives .37s
 
-using SparseDiffTools, SparseArrays, DiffEqDiffTools
+using SparseDiffTools, SparseArrays
 _colors = matrix_colors(jac_prototype)
 # JlgvfColorsAD(J, u, p, colors = _colors) =  SparseDiffTools.forwarddiff_color_jacobian!(J, (out, x) -> Fbru!(out,x,p), u, colorvec = colors)
 vf = ODEFunction(FOde; jac_prototype = jac_prototype, colorvec = _colors)

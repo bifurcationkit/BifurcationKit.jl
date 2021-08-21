@@ -104,7 +104,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 	adaptmesh::Bool = false
 
 	# whether the problem is nonautonomous
-	isnonautonomous::Bool = false
+	isautonomous::Bool = true
 
 	# mass mastrix
 	massmatrix::Tmass = nothing
@@ -578,10 +578,10 @@ $(SIGNATURES)
 
 Compute `norm(du/dt)`
 """
-function getTimeDiff(pb::PeriodicOrbitTrapProblem, u)
+@views function getTimeDiff(pb::PeriodicOrbitTrapProblem, u)
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u)
-	uc = @views reshape(u[1:end-1], N, M)
+	uc = reshape(u[1:end-1], N, M)
 	return [norm(uc[:,ii+1].-uc[:,ii]) * T/M for ii in 1:M-1]
 end
 
@@ -590,7 +590,7 @@ $(SIGNATURES)
 
 Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
 """
-function getAmplitude(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
+@views function getAmplitude(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
 	n = div(length(x)-1, ratio)
 	_max = maximum(x[1:n])
 	_min = minimum(x[1:n])
@@ -602,7 +602,7 @@ $(SIGNATURES)
 
 Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
 """
-function getMaximum(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
+@views function getMaximum(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
 	n = div(length(x)-1, ratio)
 	return maximum(x[1:n])
 end

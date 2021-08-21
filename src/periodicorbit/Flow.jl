@@ -99,7 +99,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 
 """
 @with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs}
-	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem,"
+	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
 	F::TF = nothing
 
 	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned."

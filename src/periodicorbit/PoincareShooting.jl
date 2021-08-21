@@ -122,7 +122,6 @@ end
 R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
 E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xbar, k)
 
-
 """
 	update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
 
@@ -317,7 +316,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 end
 
 """
-This function compute the derivative of the Poincare return map Π(x) = ϕ(t(x),x)
+This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x),x) where t(x) is the return time of x to the section.
 """
 function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 	normal = psh.section.normals[ii]
@@ -412,7 +411,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 		# computation of the derivative of the return map
 		F .= psh.flow.F(solΣ, par)
 		normal .= psh.section.normals[ii]
-		dflow(Jtmp, xc[:, im1], tΣ)
+		@views dflow(Jtmp, xc[:, im1], tΣ)
 		Jtmp .= Jtmp .- F * normal' * Jtmp ./ dot(F, normal)
 		# projection with Rm, Em
 		ForwardDiff.jacobian!(Rm, x->R(psh.section, x, ii), zeros(N))
