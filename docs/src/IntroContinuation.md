@@ -24,7 +24,7 @@ This continuation method is set by the option `tangentAlgo = NaturalPred()` in `
 
 ## Step size control
 
-As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disadvantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`. Further tuning is performed by using `doArcLengthScaling=true` in `ContinuationPar`. This adjusts internally $\theta$ so that the relative contributions of ``x`` and ``p`` are balanced in the constraint $N$.
+As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disadvantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`.
 
 
 ### References
