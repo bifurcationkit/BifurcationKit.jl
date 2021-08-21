@@ -185,7 +185,6 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 	- For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 """
-
 function continuation(
     prob::AbstractShootingProblem,
     orbitguess,

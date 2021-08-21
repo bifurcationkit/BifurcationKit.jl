@@ -67,7 +67,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Continuation written as an [iterator](https://rveltz.github.io/BifurcationKit.jl/dev/iterator/)
 - Monitoring user functions along curves computed by continuation, see [events](https://rveltz.github.io/BifurcationKit.jl/dev/EventCallback/)
 - Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
-- Deflated continuation
+- Continuation methods: PALC, Moore Spence, Deflated continuation
 - Bifurcation points are located using a bisection algorithm
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)
@@ -87,7 +87,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |
 |---|---|---|---|---|
 | (Deflated) Krylov-Newton| Yes| Yes| All| :heavy_check_mark:|
-| Continuation (Natural, Secant, Tangent, Polynomial) | Yes| Yes| All |:heavy_check_mark:  |
+| Continuation PALC (Natural, Secant, Tangent, Polynomial) | Yes| Yes| All |:heavy_check_mark:  |
 | Deflated Continuation | Yes| Yes| [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1) |:heavy_check_mark:  |
 | Branching / Fold / Hopf point detection | Yes| Yes| All / All / [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
 | Fold Point continuation | Yes| Yes| [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |

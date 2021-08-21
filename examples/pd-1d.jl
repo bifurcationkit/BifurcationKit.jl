@@ -21,10 +21,10 @@ function Laplacian(N, lx, bc = :Dirichlet)
 	D2xsp = sparse(D2x * Qx)[1] |> sparse
 end
 
-function NL!(dest, u, p, t = 0.)
+@views function NL!(dest, u, p, t = 0.)
 	N = div(length(u), 2)
-	u1 =  @view (u[1:N])
-	u2 =  @view (u[N+1:end])
+	u1 =  u[1:N]
+	u2 =  u[N+1:end]
 
 	dest[1:N]     .= f.(u1, u2, Ref(p))
 	dest[N+1:end] .= g.(u1, u2, Ref(p))
@@ -167,9 +167,9 @@ probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
 probSh(initpo, par_br_hopf)
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
-	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
-	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
-	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+	# ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
+	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
+	# deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh, _, flag = @time newton(probSh, initpo, par_br_hopf, optn;
 		callbackN = (x, f, J, res, iteration; kw...) -> (@show x[end];true),
 		normN = norminf)
@@ -216,9 +216,9 @@ initpo_pd = vcat(vec(orbitsectionpd), 6.2)
 BK.plotPeriodicShooting(initpo_pd[1:end-1], 1);title!("")
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
-	# ls = GMRESKrylovKit{Float64}(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
+	# ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
-	# deflationOp = BK.DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+	# deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd, optn;
 		callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (@show x[end];true),
 		normN = norminf)

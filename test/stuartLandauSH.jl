@@ -19,7 +19,6 @@ function Fsl!(f, u, p, t)
 end
 
 Fsl(x, p) = Fsl!(similar(x), x, p, 0.)
-
 Fode(f, x, p, t) = Fsl!(f, x, p, t)
 dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 
@@ -110,10 +109,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 ####################################################################################################
 # test automatic branch switching
 JFsl(x, p) = FD.jacobian(t -> Fsl(t, p), x)
-d1Fsl(x, p, dx) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
-d2Fsl(x, p, dx1, dx2) = FD.derivative(t -> d1Fsl(x .+ t .* dx2, p, dx1), 0.)
-d3Fsl(x, p, dx1, dx2, dx3) = FD.derivative(t -> d2Fsl(x .+ t .* dx3, p, dx1, dx2), 0.)
-jet = (Fsl, JFsl, d2Fsl, d3Fsl)
+jet = BK.getJet(Fsl, JFsl)
 
 br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf, prob, KenCarp4());recordFromSolution = (u, p) -> norm(u[1:2]), normC = norminf)
 
