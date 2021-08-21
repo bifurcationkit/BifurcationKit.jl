@@ -3,11 +3,11 @@
 !!! unknown "References"
     Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. **The Computation of Disconnected Bifurcation Diagrams.** ArXiv:1603.00809 [Math], March 2, 2016. http://arxiv.org/abs/1603.00809.
 
-Deflated continuation allows to compute branches of solutions to the equation $F(x,p)=0$. It is based on the Deflated Newton (see [Deflated problems](@ref)).
+Deflated continuation allows to compute branches of solutions to the equation $F(x,p)=0$. It is based on the Deflated Newton (see [Deflated problems](@ref)) algorithm.
 
-However, unlike the regular continuation method, deflated continuation allows to compute **disconnected** bifurcation diagrams, something that is impossible to our Automatic Bifurcation diagram computation method.
+However, unlike the regular continuation method, deflated continuation allows to compute **disconnected** bifurcation diagrams, something that is impossible for our [Automatic Bifurcation diagram computation](@ref) which is limited to the connected component of the initial point.
 
-You can find an example of use in the [Deflated Continuation in the Carrier Problem](@ref). We reproduce below the result of the computation:
+You can find an example of use of the method in [Deflated Continuation in the Carrier Problem](@ref). We reproduce below the result of the computation which shows various disconnected components arising form Fold bifurcations that  are found seemingly by the method.
 
 ![](carrier.png)
 

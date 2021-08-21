@@ -536,54 +536,6 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 You can also use the following call for which the jacobian **matrix** (beware of large systems of equations!) is computed internally using Finite Differences
 
 	continuation(Fhandle, x0, par, lens, contParams::ContinuationPar; kwargs...)
-
-# Method
-
-## Bordered system of equations
-
-In what follows, we abuse of notations, `p` refers to the scalar value of the parameter we perform continuation with. Hence, it should be `p = get(par, lens)`.
-
-The pseudo-arclength continuation method solves the equation ``F(x, p) = 0`` (of dimension N) together with the pseudo-arclength constraint ``N(x, p) = \\frac{\\theta}{length(x)} \\langle x - x_0, dx_0\\rangle + (1 - \\theta)\\cdot(p - p_0)\\cdot dp_0 - ds = 0`` and ``\\theta\\in[0,1]`` (see Keller, Herbert B. Lectures on Numerical Methods in Bifurcation Problems. Springer, 1988). In practice, a curve ``\\gamma`` of solutions is sought and is parametrised by ``s``: ``\\gamma(s) = (x(s), p(s))`` is a curve of solutions to ``F(x, p)``. This formulation allows to pass turning points (where the implicit theorem fails). In the previous formula, ``(x_0, p_0)`` is a solution for a given ``s_0``, ``\\tau_0\\equiv(dx_0, dp_0)`` is the tangent to the curve ``\\gamma`` at ``s_0``. Hence, to compute the curve of solutions, we need to solve an equation of dimension N+1 which is called a Bordered system.
-
-!!! warning "Parameter `theta`"
-    The parameter `theta` in the struct `ContinuationPar`is very important. It should be tuned for the continuation to work properly especially in the case of large problems where the ``\\langle x - x_0, dx_0\\rangle`` component in the constraint might be favoured too much. Also, large `theta`s favour `p` as the corresponding term in ``N`` involves the term ``1-\\theta``.
-
-The parameter ds is adjusted internally depending on the number of Newton iterations and other factors. See the function `stepSizeControl` for more information. An important parameter to adjust the magnitude of this adaptation is the parameter `a` in the struct `ContinuationPar`.
-
-## Algorithm
-
-The algorithm works as follows:
-0. Start from a known solution ``(x_0, p_0)`` with tangent to the curve of solutions: ``(dx_0 ,dp_0)``
-1. **Predictor:** set ``(x_1, p_1) = (x_0, p_0) + ds\\cdot (dx_0, dp_0)``. Note that a different predictor can be used.
-2. **Corrector:** solve ``F(x, p)=0,\\ N(x, p)=0`` with a (Bordered) Newton Solver with initial guess ``(x_1, p_1)``.
-    - if Newton in 3. did not converge, update ds/2 ⟶ ds in ``N`` and go to 1.
-3. **New tangent:** Compute a new tangent (see below) ``(dx_1, dp_1)`` and update ``N`` with it. Set ``(x_0, p_0, dx_0, dp_0) = (x_1, p_1, dx_1, dp_1)`` and return to step 2
-
-## Natural continuation
-
-> More information is available at [Predictors - Correctors](@ref)
-
-We speak of *natural* continuation when we do not consider the constraint ``N(x, p)=0``. Knowing ``(x_0, p_0)``, we use ``x_0`` as a guess for solving ``F(x, p_1)=0`` with ``p_1`` close to ``p_0``. Again, this fails at Turning points but it can be faster to compute than the constrained case. This is set by the option `tangentAlgo = NaturalPred()` in `continuation`.
-
-## Tangent computation (step 4)
-
-> More information is available at [Predictors - Correctors](@ref)
-
-There are various ways to compute ``(dx_1, dp_1)``. The first one is called secant and is parametrised by the option `tangentAlgo = SecantPred()`. It is computed by ``(dx_1, dp_1) = (z_1, p_1) - (z_0, p_0)`` and normalised by the norm ``\\|(x, p)\\|^2_\\theta = \\frac{\\theta}{length(x)} \\langle x,x\\rangle + (1 - \\theta)\\cdot p^2``. Another method is to compute ``(dx_1, dp_1)`` by solving solving the bordered linear system ``\\begin{bmatrix} F_x & F_p	; \\ \\frac{\\theta}{length(x)}dx_0 & (1-\\theta)dp_0\\end{bmatrix}\\begin{bmatrix}dx_1 ;  dp_1\\end{bmatrix} =\\begin{bmatrix}0 ; 1\\end{bmatrix}`` ; it is set by the option `tangentAlgo = BorderedPred()`.
-
-## Bordered linear solver
-
-> More information is available at [Bordered linear solvers (BLS)](@ref)
-
-When solving the Bordered system ``F(x, p) = 0,\\ N(x, p)=0``, one faces the issue of solving the Bordered linear system ``\\begin{bmatrix} J & a	; b^T & c\\end{bmatrix}\\begin{bmatrix}X ;  y\\end{bmatrix} =\\begin{bmatrix}R ; n\\end{bmatrix}``. This can be solved in many ways via bordering (which requires two Jacobian inverses), by forming the bordered matrix (which works well for sparse matrices) or by using a full Matrix Free formulation. The choice of method is set by the argument `linearAlgo`. Have a look at the struct `linearBorderedSolver` for more information.
-
-## Linear Algebra
-
-Let us discuss here more about the norm and dot product. First, the option `normC` gives a norm that is used to evaluate the residual in the following way: ``max(normC(F(x,p)), \\|N(x,p)\\|)<tol``. It is thus used as a stopping criterion for a Newton algorithm. The dot product (resp. norm) used in ``N`` and in the (iterative) linear solvers is `LinearAlgebra.dot` (resp. `LinearAlgebra.norm`). It can be changed by importing these functions and redefining it. Not that by default, the ``L^2`` norm is used. These details are important because of the constraint ``N`` which incorporates the factor `length`. For some custom composite type implementing a Vector space, the dot product could already incorporates the `length` factor in which case you should either redefine the dot product or change ``\\theta``.
-
-## Step size control
-
-As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disadvantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`. Further tuning is performed by using `doArcLengthScaling=true` in `ContinuationPar`. This adjusts internally ``\\theta`` so that the relative contributions of ``x`` and ``p`` are balanced in the constraint ``N``.
 """
 function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar;
 					linearAlgo = nothing, kwargs...)

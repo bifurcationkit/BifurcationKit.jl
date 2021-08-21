@@ -4,7 +4,7 @@ using OrdinaryDiffEq, ForwardDiff, Test
 	const BK = BifurcationKit
 	const FD = ForwardDiff
 
-norminf(x) = norm(x, Inf)
+norminf = x -> norm(x, Inf)
 
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ν, c3, c5 = p
