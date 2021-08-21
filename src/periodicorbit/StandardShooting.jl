@@ -106,7 +106,7 @@ ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers:
 
 function Base.show(io::IO, pb::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
-	println(io, "├─ # sections : ", getM(pb))
+	println(io, "├─ sections : ", getM(pb))
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 

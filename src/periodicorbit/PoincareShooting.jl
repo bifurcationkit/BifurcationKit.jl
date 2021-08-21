@@ -55,7 +55,7 @@ end
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
 function Base.show(io::IO, pb::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting problem")
-	println(io, "├─ # sections : ", getM(pb))
+	println(io, "├─ sections : ", getM(pb))
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 
@@ -63,13 +63,13 @@ function PoincareShootingProblem(F, p,
 			prob::ODEProblem, alg,
 			hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
+	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
 	# change the ODEProblem -> EnsembleProblem for the parallel case
 	_M = hyp.M
-	parallel = _M==1 ? false : parallel
+	parallel = _M == 1 ? false : parallel
 	_pb = parallel ? EnsembleProblem(prob) : prob
 	return PoincareShootingProblem(flow = Flow(F, p, _pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
 end
@@ -96,7 +96,7 @@ function PoincareShootingProblem(F, p,
 				prob2::ODEProblem, alg2,
 				hyp::SectionPS;
 				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	pSection(out, u, t, integrator) = (hyp(out, u); out .= out .* (integrator.iter > 1))
+	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)

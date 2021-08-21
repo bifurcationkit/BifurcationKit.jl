@@ -156,7 +156,7 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
-	deflationOp = BK.DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
+	deflationOp = BK.DeflationOperator(2, dot, 1.0, [zero(initpo_bar)])
 	outpo, _, flag, = newton(probPsh,
 			initpo_bar, par_hopf,
 			optn; normN = norminf)
@@ -172,7 +172,13 @@ probPsh = PoincareShootingProblem(Fsl, par_hopf,
 		# probMono, Rodas4(autodiff=false),
 		normals, centers; rtol = 1e-8)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn;tol = 1e-9, eigsolver = eil), detectBifurcation = 1)
+probPsh(outpo, par_hopf)
+probPsh(outpo, par_hopf, outpo)
+# probPsh([0.30429879744900434], par_hopf)
+# probPsh([0.30429879744900434], (r = 0.09243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0))
+# probPsh.flow([0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
+
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 50, newtonOptions = setproperties(optn;tol = 1e-9, eigsolver = eil), detectBifurcation = 1)
 	br_pok2, = continuation(
 		probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
