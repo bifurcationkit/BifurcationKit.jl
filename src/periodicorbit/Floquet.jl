@@ -134,8 +134,10 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	sh = JacSH.pb
 	M = getM(sh)
 	N = div(length(JacSH.x) - 1, M)
-
 	mono = copy(J[1:N, 1:N])
+	if M == 1
+		return mono + I
+	end
 	tmp = similar(mono)
 	r = N
 	for ii = 1:M-1
