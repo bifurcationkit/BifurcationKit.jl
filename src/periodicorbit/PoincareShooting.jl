@@ -160,13 +160,13 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 	# we extend the state space to be able to call the flow, so we fill xc
 	if ~isParallel(psh)
 		for ii in 1:M
-			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 			# We need the callback to be active here!!!
 			period += @views psh.flow(Val(:TimeSol), xc[:, ii], par, Inf64).t
 		end
 	else
 		for ii in 1:M
-			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 		end
 		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf64], M))
 		period = sum(x->x.t, solOde)
@@ -187,15 +187,15 @@ function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 	x_barc = reshape(x_bar, Nm1, M)
 	xc = similar(x_bar, Nm1 + 1, M)
 
+	T = getPeriod(prob, x_bar, p)
+
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		T = getPeriod(prob, x_bar, p)
 		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		# We need the callback to be active here!!!
 		sol1 =  @views prob.flow(Val(:Full), xc[:, 1], p, T; callback = nothing)
 		return sol1
 	else # threaded version
-		T = getPeriod(prob, x_bar, p)
 		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		sol = @views prob.flow(Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
 		return sol[1]

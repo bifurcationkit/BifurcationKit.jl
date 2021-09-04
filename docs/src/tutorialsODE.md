@@ -49,7 +49,7 @@ jet = BK.getJet(TMvf, dTMvf)
 par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF = 1.5, τS = 0.007)
 
 # initial condition
-z0 = [0.238616, 0.982747, 0.367876 ]
+z0 = [0.238616, 0.982747, 0.367876]
 nothing #hide
 ```
 
@@ -60,8 +60,8 @@ We first compute the branch of equilibria
 opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9,
 	# parameters to have a smooth result
 	ds = 0.04, dsmax = 0.05,
-		# this is to detect bifurcation points precisely
-		detectBifurcation = 3,
+	# this is to detect bifurcation points precisely with bisection
+	detectBifurcation = 3,
 	# Optional: bisection options for locating bifurcations
 	nInversion = 8, maxBisectionSteps = 25, nev = 3)
 
@@ -108,7 +108,7 @@ Mt = 200 # number of time sections
 	# we want to use the Trapeze method to locate PO
 	PeriodicOrbitTrapProblem(M = Mt);
 	# this jacobian is specific to ODEs
-	# it is computed using AD of the flow and
+	# it is computed using AD and
 	# updated inplace
 	linearPO = :Dense,
 	# regular continuation options

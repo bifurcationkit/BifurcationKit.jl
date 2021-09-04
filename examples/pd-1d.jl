@@ -98,7 +98,7 @@ M = 100
 		# OPTIONAL parameters
 		# we want to jump on the new branch at phopf + δp
 		# ampfactor is a factor to increase the amplitude of the guess
-		verbosity = 3,
+		verbosity = 2,
 		plot = true,
 		linearPO = :FullSparseInplace,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),

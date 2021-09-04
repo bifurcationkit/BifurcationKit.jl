@@ -265,7 +265,7 @@ br_psh, = continuation(jet..., br,1, (@set opts_po_cont.ds = 0.005), PoincareSho
 
 
 opts_po_cont = @set opts_po_cont.detectBifurcation = 0
-for M in [1,2], linearPO in [:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense]
+for M in [1,2], linearPO in (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense)
 	@show M, linearPO
 	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, par_hopf, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO == :autodiffMF ? :FiniteDifferencesDense : linearPO, verbosity = 0)
 

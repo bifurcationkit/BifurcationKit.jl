@@ -18,13 +18,13 @@ For the sequel, it is convenient to use the following formalism [^Kuz]
 > More information is available at [Predictors - Correctors](@ref)
 
 We just use this simple continuation method to exemplify the  formalism.
-Knowing $(x_0, p_0)$, we form the predictor $(x_0, p_0+ds)$ for some $ds$ and use it as a guess for a Newton corrector applied to $x\to F(x, p_0+ds)	$. The corrector is thus the newton algorithm.
+Knowing $(x_0, p_0)$, we form the predictor $(x_0, p_0+ds)$ for some $ds$ and use it as a guess for a Newton corrector applied to $x\to F(x, p_0+ds)$. The corrector is thus the newton algorithm.
 
 This continuation method is set by the option `tangentAlgo = NaturalPred()` in `continuation`.
 
 ## Step size control
 
-As explained above, each time the corrector phased failed, the step size ``ds`` is halved. This has the disadvantage of having lost Newton iterations (which costs time) and impose small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`.
+As explained above, each time the corrector phase failed, the step size ``ds`` is halved. This has the disadvantage of having lost Newton iterations (which costs time) and imposing small steps (which can be slow as well). To prevent this, the step size is controlled internally with the idea of having a constant number of Newton iterations per point. This is in part controlled by the aggressiveness factor `a` in `ContinuationPar`.
 
 
 ### References

@@ -106,7 +106,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 	# whether the problem is nonautonomous
 	isautonomous::Bool = true
 
-	# mass mastrix
+	# mass matrix
 	massmatrix::Tmass = nothing
 end
 
@@ -863,7 +863,7 @@ $DocStrLinearPO
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, recordFromSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
-	@assert orbitguess[end] >= 0 "The guess for the period should be positive."
+	@assert orbitguess[end] >= 0 "The guess for the period should be positive. We found T = $(orbitguess[end])"
 	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
 
 	M, N = size(prob)

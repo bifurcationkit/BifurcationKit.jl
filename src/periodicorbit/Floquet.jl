@@ -71,7 +71,6 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 	I = sortperm(logvals, by = real, rev = true)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
-
 ##############################################
 # ShootingProblem
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
@@ -136,7 +135,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	M = getM(sh)
 	N = div(length(JacSH.x) - 1, M)
 
-	mono = J[1:N, 1:N]
+	mono = copy(J[1:N, 1:N])
 	tmp = similar(mono)
 	r = N
 	for ii = 1:M-1

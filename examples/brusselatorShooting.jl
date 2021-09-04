@@ -302,7 +302,8 @@ br_po2, upo2, = BK.continuationBifFromShooting(br_po, 3, setproperties(br_po.con
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = 0.01,
 	# usedeflation = false,
-	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p)),),
+	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
+	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p.p)),),
 	plotSolution = (x, p; kwargs...) -> begin
 		BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...)
 		plot!(br_po; subplot = 1)

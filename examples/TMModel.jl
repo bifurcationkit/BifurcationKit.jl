@@ -2,7 +2,6 @@ using Revise, Test, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
 
-D(f, x, p, dx) = ForwardDiff.derivative(t->f(x .+ t .* dx, p), 0.)
 norminf(x) = norm(x, Inf)
 ####################################################################################################
 function TMvf!(dz, z, p, t)

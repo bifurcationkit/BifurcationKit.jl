@@ -80,12 +80,6 @@ $$\begin{aligned}
 \end{aligned}$$
 
 
-### Computation of Floquet exponents
-The (non trivial) Floquet exponents are eigenvalues of the Poincare return map $\Pi:\Sigma_1\to\Sigma_1$. We have $\Pi = \Pi_M\circ\Pi_{M-1}\circ\cdots\circ\Pi_2\circ\Pi_1$. Its differential is thus
-
-$$d\Pi(x)\cdot h = d\Pi_M(x_{M})d\Pi_{M-1}(x_{M-1})\cdots d\Pi_1(x_1)\cdot h$$
-
-
 
 ### Encoding of the functional
 
@@ -93,9 +87,18 @@ The functional is encoded in the composite type [`PoincareShootingProblem`](@ref
 
 ## Floquet multipliers computation
 
+
+### Standard shooting
 These are the eigenvalues of $M_M\cdots M_1$.
 
 > Unlike the case with Finite differences, the matrices $M_i$ are not sparse.
+
+### Poincaré shooting
+The (non trivial) Floquet exponents are eigenvalues of the Poincare return map $\Pi:\Sigma_1\to\Sigma_1$. We have $\Pi = \Pi_M\circ\Pi_{M-1}\circ\cdots\circ\Pi_2\circ\Pi_1$. Its differential is thus
+
+$$d\Pi(x)\cdot h = d\Pi_M(x_{M})d\Pi_{M-1}(x_{M-1})\cdots d\Pi_1(x_1)\cdot h$$
+
+### Numerical method
 
 A **not very precise** algorithm for computing the Floquet multipliers is provided. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations of periodic orbits. It seems to work reasonably well for the tutorials considered here. For more information, have a look at [`FloquetQaD`](@ref).
 

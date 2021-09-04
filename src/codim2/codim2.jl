@@ -1,4 +1,5 @@
 abstract type ProblemMinimallyAugmented end
+@inline getLens(pb::ProblemMinimallyAugmented) = pb.lens
 
 """
 $(SIGNATURES)

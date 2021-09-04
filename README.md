@@ -77,11 +77,11 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - detection of Bogdanov-Takens, Bautin and Cusp bifurcations
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
-- Computation and Continuation of Fold of periodic orbits
+- Continuation of Fold of periodic orbits
 
 Custom state means, we can use something else than `AbstractArray`, for example your own `struct`.
 
-**Note that you can combine most of the solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
+**Note that you can combine most solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
 
 
 |Features|Matrix Free|Custom state| [Tutorial](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/) | GPU |

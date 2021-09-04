@@ -225,7 +225,7 @@ function continuation(
 	elseif linearPO == :FiniteDifferencesDense
 		jac = (x, p) -> FloquetWrapper(prob, finiteDifferences(z -> prob(z, p), x), x, p)
 	elseif linearPO == :autodiffMF
-		jac = (x, p) -> FloquetWrapper(prob, (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0)), x, p)
+		jac = (x, p) -> FloquetWrapper(prob, (dx -> ForwardDiff.derivative(z -> prob(x .+ z .* dx, p), 0)), x, p)
 	elseif linearPO == :FiniteDifferences
 		jac = (x, p) -> FloquetWrapper(prob, dx -> (prob(x .+ δ .* dx, p) .- prob(x, p)) ./ δ, x, p)
 	else
