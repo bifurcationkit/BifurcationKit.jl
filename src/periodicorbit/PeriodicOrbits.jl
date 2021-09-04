@@ -73,10 +73,11 @@ LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 ####################################################################################################
 # newton wrapper
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par, linearPO = :MatrixFree)
-	if linearPO == :autodiffDense
-		# jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
+	if linearPO == :autodiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
-        jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); _J)
+		jac = (x, p) -> prob(Val(:JacobianMatrixInplace), _J, x, p)
+	elseif linearPO == :autodiffDense
+		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
 	elseif linearPO == :autodiffMF
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
 	elseif linearPO == :FiniteDifferencesDense
@@ -102,10 +103,11 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-- `linearPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
+- `linearPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
     - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
     - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
+	- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 
 # Output:
@@ -141,6 +143,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
     - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
     - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
+	- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 
 
@@ -182,6 +185,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
     - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+	- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
 	- For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 """
@@ -198,7 +202,7 @@ function continuation(
     kwargs...,
 )
     @assert linearPO in
-            (:autodiffMF, :MatrixFree, :autodiffDense, :FiniteDifferencesDense, :FiniteDifferences)
+            (:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences)
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
@@ -218,10 +222,11 @@ function continuation(
 				_finsol(z, tau, step, contResult; prob = prob, kwargs...)
 			end
 
-	if linearPO == :autodiffDense
-		# jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
+    if linearPO == :autodiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
 		jac = (x, p) -> (prob(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
+	elseif linearPO == :autodiffDense
+		jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
 	elseif linearPO == :FiniteDifferencesDense
 		jac = (x, p) -> FloquetWrapper(prob, finiteDifferences(z -> prob(z, p), x), x, p)
 	elseif linearPO == :autodiffMF
