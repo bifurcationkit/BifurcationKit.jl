@@ -193,7 +193,6 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	mono .*= sgn
 	return mono
 end
-end
 
 ####################################################################################################
 # PeriodicOrbitTrapProblem
