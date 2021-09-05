@@ -11,7 +11,14 @@ There are three levels of tutorials:
 We present examples of the use of the package in the case of ODEs. Although `BifurcationKit.jl` is not geared towards them, we provide some specific methods which allow to study the bifurcations of ODE in a relatively efficient way.
 
 ```@contents
-Pages = ["tutorialsODE.md", "tutorialCO.md", "tutorialPP2.md"]
+Pages = ["tutorialsODE.md", "tutorialCO.md", "tutorialPP2.md","tutorialsODE-PD.md"]
+Depth = 1
+```
+
+## DAE examples
+
+```@contents
+Pages = ["Colpitts.md"]
 Depth = 1
 ```
 

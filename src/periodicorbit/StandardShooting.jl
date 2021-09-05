@@ -109,7 +109,7 @@ ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, centers::Abstr
 function Base.show(io::IO, pb::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
 	println(io, "├─ sections : ", getM(pb))
-	println(io, "└─ parallel   : ", isParallel(pb))
+	println(io, "└─ parallel : ", isParallel(pb))
 end
 
 # this function updates the section during the continuation run
@@ -368,5 +368,5 @@ function problemForBS(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess
 	# be sure that the vector field is correctly inplace in the Flow structure
 	probSh = @set probSh.flow.F = F
 
-	return probSh, 	orbitguess
+	return probSh, orbitguess
 end

@@ -25,7 +25,7 @@ The corrector is the Gauss Newton algorithm applied to (MS).
 
 ## Linear Algebra
 
-Let us discuss more about the norm and dot product. First, the option `normC` [`continuation`](@ref) specifies norm that is used to evaluate the distance in (MS). The dot product (resp. norm) used in the (iterative) linear solvers is `LinearAlgebra.dot` (resp. `LinearAlgebra.norm`). It can be changed by importing these functions and redefining it. Not that by default, the ``L^2`` norm is used.
+Let us discuss more about the norm and dot product. First, the option `normC` [`continuation`](@ref) specifies the norm used to evaluate the distance in (MS). The dot product (resp. norm) used in the (iterative) linear solvers is `LinearAlgebra.dot` (resp. `LinearAlgebra.norm`). It can be changed by importing these functions and redefining it. Note that by default, the ``L^2`` norm is used.
 
 The linear solver for the linear problem associated to (MS) is set by the option `linearAlgo` in [`continuation`](@ref): it is one of [Bordered linear solvers (BLS)](@ref).
 

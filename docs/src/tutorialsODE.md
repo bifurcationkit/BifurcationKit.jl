@@ -74,25 +74,17 @@ br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
 scene = plot(br, plotfold=false, markersize=3, legend=:topleft)
 ```
 
-```julia
-julia> br
-Branch number of points: 72
-Branch of Equilibrium
-Type of vectors: Vector{Float64}
-Parameters E0 from -2.0 to -0.9
-Special points:
- (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
-- #  1,    bp at E0 ≈ -1.46302733 ∈ (-1.46302733, -1.46302733), |δp|=4e-14, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
-- #  2,  hopf at E0 ≈ -1.85012460 ∈ (-1.85012460, -1.85012447), |δp|=1e-07, [converged], δ = ( 2,  2), step =  32, eigenelements in eig[ 33], ind_ev =   3
-- #  3,    bp at E0 ≈ -1.86522391 ∈ (-1.86522391, -1.86522391), |δp|=2e-15, [converged], δ = (-1,  0), step =  36, eigenelements in eig[ 37], ind_ev =   3
-- #  4,  hopf at E0 ≈ -1.15105934 ∈ (-1.15105942, -1.15105934), |δp|=8e-08, [converged], δ = (-2, -2), step =  65, eigenelements in eig[ 66], ind_ev =   2
+With detailed information:
+
+```@example TUTODE
+br
 ```
 
 ## Branch of periodic orbits with finite differences
 
 We then compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite differences to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
 
-```julia
+```@example TUTODE
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10)
 
@@ -128,7 +120,6 @@ scene = plot(br, br_potrap, markersize = 3)
 plot!(scene, br_potrap.param, br_potrap.min, label = "")
 ```
 
-![](ex1ODE1a.png)
 
 We plot the maximum (resp. minimum) of the limit cycle. We can see that the min converges to the smallest equilibrium indicating a homoclinic orbit.
 
@@ -136,7 +127,7 @@ We plot the maximum (resp. minimum) of the limit cycle. We can see that the min 
 
 We use a different method to compute periodic orbits: we rely on a fixed point of the flow. To compute the flow, we use `DifferentialEquations.jl`. This way of computing periodic orbits should be more precise than the previous one. We use a particular instance called multiple shooting which is computed in parallel. This is an additional advantage compared to the previous method.
 
-```julia
+```@example TUTODE
 using DifferentialEquations
 
 # this is the ODEProblem used with `DiffEqBase.solve`
@@ -169,8 +160,9 @@ br_posh, = @time continuation(jet...,
 			plot!(br, subplot=1, putbifptlegend = false)
 		end,
 	normC = norminf)
+
+Scene = title!("")	
 ```
-![](ex1ODE3.png)
 
 ## References
 

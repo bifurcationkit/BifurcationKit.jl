@@ -105,7 +105,7 @@ plot!(scene, br, xlims=(0.8,1.8))
 
 We tell the solver to consider `br.bifpint[1]` and continue it.
 
-```Julia
+```@example TUTCO
 hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k),
 	ContinuationPar(opts_br, pMin = 0., pMax = 2.8,
 		ds = -0.001, dsmax = 0.05) ;
@@ -131,8 +131,6 @@ scene = plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(scene, hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 plot!(scene, br, xlims=(0.6,1.5))
 ```
-
-![](com-fig3.png)
 
 ## References
 
