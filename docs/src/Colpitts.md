@@ -156,14 +156,25 @@ br_po, = continuation(jet..., br, 1, opts_po_cont, probSH; plot = true, verbosit
 	# this is to avoid numerical instabilities from DE.jl
 	callbackN = BK.cbMaxNorm(1.0),
 	normC = norminf)
-
-scene = title!("")
 ```
+
+![](Colpitts1.png)
 
 with detailed information
 
-```@example TUTDAE1
-br_po
+```julia
+ ┌─ Branch number of points: 125
+ ├─ Branch of PeriodicOrbit from Hopf bifurcation point.
+ ├─ Type of vectors: Vector{Float64}
+ ├─ Parameter μ starts at 0.7640482828951152, ends at 0.2
+ └─ Special points:
+
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+
+- #  1,    pd at μ ≈ +0.72603451 ∈ (+0.72603451, +0.73184970), |δp|=6e-03, [    guess], δ = ( 1,  1), step =  18, eigenelements in eig[ 19], ind_ev =   1
+- #  2,    pd at μ ≈ +0.67290724 ∈ (+0.67290724, +0.67883206), |δp|=6e-03, [    guess], δ = (-1, -1), step =  27, eigenelements in eig[ 28], ind_ev =   1
+- #  3,    bp at μ ≈ +0.62294985 ∈ (+0.62237946, +0.62294985), |δp|=6e-04, [    guess], δ = ( 1,  0), step =  37, eigenelements in eig[ 38], ind_ev =   1
+- #  4,    bp at μ ≈ +0.63758469 ∈ (+0.63758469, +0.63761073), |δp|=3e-05, [    guess], δ = (-1,  0), step =  43, eigenelements in eig[ 44], ind_ev =   1
 ```
 
 Let us show that this bifurcation diagram is valid by showing evidences for the period doubling bifurcation.
