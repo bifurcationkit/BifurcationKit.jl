@@ -346,9 +346,185 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
         @set! kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
 	end
 
-	# perform continuation
-	branch, u, τ = continuation(probPO, orbitguess, setParam(br, pred.p), br.lens, _contParams; kwargs..., plotSolution = _plotsol2, updateSectionEveryStep = updateSectionEveryStep)
+	if usedeflation
+		verbose &&
+			println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
+		prob isa PoincareShootingProblem &&
+			@warn "Poincaré Shooting does not work very well with stationary states."
+		optn = _contParams.newtonOptions
+
+		# we start with the case of zero amplitude
+		orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
+		# this factor prevent shooting jacobian from being singular at fixed points
+		Tfactor = (prob isa AbstractPOFDProblem) || (prob isa PoincareShootingProblem) ? 0 : 0.001
+		_, orbitzeroamp = problemForBS(prob, F, dF, br.params,
+			hopfpt, ζr, orbitzeroamp_a,	Tfactor * abs(2pi / pred.ω))
+		sol0, _, flag, _ = newton(probPO, orbitzeroamp, setParam(br, pred.p), optn; callback = cb, kwargs...)
+
+		# find the bifurcated branch using deflation
+		if ~(probPO isa PoincareShootingProblem)
+			deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+		else
+			deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, 1.0, [sol0])
+		end
+
+		verbose && println("\n--> Compute point on bifurcated branch...")
+		# @assert 1==9 "Mauvais dispatch ICI. Va en L199 Deflation.jl"
+		solbif, _, flag, _ = newton(
+			probPO, orbitguess, setParam(br, pred.p), (@set optn.maxIter = 10 * optn.maxIter), deflationOp; callback = cb, kwargs...)
+		@assert flag "Deflated newton did not converge"
+		orbitguess .= solbif
+
+		# @assert 1==09
+
+		# having to points, we call the specific method
+		# branch, u, tau = continuation(probPO,
+		# 	orbitzeroamp, br.params,
+		# 	orbitguess, pred.p,
+		# 	br.lens, _contParams; kwargs...)
+
+
+		branch, u, τ = continuation(
+			probPO, orbitguess,
+			setParam(br, pred.p), br.lens,
+			_contParams;
+			kwargs...,
+			plotSolution = _plotsol2,
+			updateSectionEveryStep = updateSectionEveryStep,
+		)
 
 	return Branch(branch, hopfpt), u, τ
+	end
 
+	# perform continuation
+	branch, u, τ = continuation(
+		probPO, orbitguess, setParam(br, pred.p),
+		br.lens, _contParams;
+		kwargs..., # put this first to be overwritten just below!
+		plotSolution = _plotsol2,
+		updateSectionEveryStep = updateSectionEveryStep,
+	)
+	return Branch(branch, hopfpt), u, τ
+end
+
+####################################################################################################
+# Branch switching from Bifs of PO
+"""
+$(SIGNATURES)
+
+Branch switching at a Bifurcation point of a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional used to compute the PO is `br.functional`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
+
+# Arguments
+- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `ind_bif` index of the branch point
+- `_contParams` parameters to be used by a regular [`continuation`](@ref)
+
+# Optional arguments
+- `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
+- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
+- `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
+- `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
+- `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to POs.
+"""
+function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar;
+			δp = 0.1, ampfactor = 1,
+			usedeflation = false,
+			linearAlgo = nothing,
+			kwargs...)
+
+	bppt = br.specialpoint[ind_bif]
+	bptype = bppt.type
+	@assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
+
+	# @assert br.functional isa AbstractShootingProblem
+	@assert abs(bppt.δ[1]) == 1 "Only simple bifurcation points are handled"
+
+	verbose = get(kwargs, :verbosity, 0) > 0
+
+	verbose && printstyled(color = :green, "#"^61*
+			"\n--> Start branching from $(bptype) point to periodic orbits.
+			 \n--> Bifurcation type = ", bppt.type,
+			"\n----> bif. param     = ", bppt.param,
+			"\n----> period at bif. = ", getPeriod(br.functional, bppt.x, setParam(br, bppt.param)),
+			"\n----> newp           = ", bppt.param + δp, ", δp = ", δp,
+			"\n----> amplitude      = ", ampfactor,
+			"\n")
+
+	_linearAlgo = isnothing(linearAlgo) ? BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
+
+	bifpt = br.specialpoint[ind_bif]
+
+	# we copy the problem for not mutating the one passed by the user
+	pb = deepcopy(br.functional)
+
+	# let us compute the kernel
+	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
+	verbose && print("--> computing nullspace of Periodic orbit problem...")
+	ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+	# we normalize it by the sup norm because it could be too small/big in L2 norm
+	# TODO: user defined scaleζ
+	ζ ./= norm(ζ, Inf)
+	verbose && println("Done!")
+
+	# compute the full eigenvector
+	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+	ζs = reduce(vcat, ζ_a)
+
+	## predictor
+	pbnew, orbitguess = predictor(pb, bifpt, ampfactor, real.(ζs), bifpt.type)
+	newp = bifpt.param + δp
+
+	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
+
+	# a priori, the following do not overwrite the options in br
+	# hence the results / parameters in br are kept intact
+	if pb isa AbstractShootingProblem
+		if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
+			@set! _contParams.newtonOptions.linsolver.N = length(orbitguess)
+		elseif _contParams.newtonOptions.linsolver isa FloquetWrapperLS
+			if _contParams.newtonOptions.linsolver.solver isa GMRESIterativeSolvers
+				@set! _contParams.newtonOptions.linsolver.solver.N = length(orbitguess)
+			end
+		end
+	end
+
+	# pass the problem to the plotting and recordFromSolution functions
+	_plotsol = get(kwargs, :plotSolution, nothing)
+	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing :
+		(x, p; k...) -> _plotsol(x, (prob = pbnew, p = p); k...)
+
+	if :recordFromSolution in keys(kwargs)
+		_printsol = get(kwargs, :recordFromSolution, nothing)
+		@set! kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = pbnew, p = p); k...)
+	end
+
+	if usedeflation
+		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
+		optn = _contParams.newtonOptions
+		# find point on the first branch
+		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; kwargs...)
+
+		# find the bifurcated branch using deflation
+		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+		verbose && println("\n--> Compute point on bifurcated branch...")
+		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp),
+			(@set optn.maxIter = 10 * optn.maxIter),
+			deflationOp; kwargs...,)
+		@assert flag "Deflated newton did not converge"
+		orbitguess .= solbif
+	end
+
+	# perform continuation
+	branch, u, τ = continuation( pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
+		kwargs..., # put this first to be overwritten just below!
+		plotSolution = _plotsol2,
+		linearAlgo = _linearAlgo,
+	)
+
+	# create a branch
+	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
+
+	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, τ
 end
