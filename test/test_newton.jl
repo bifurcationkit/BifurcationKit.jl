@@ -9,7 +9,7 @@ function test_newton(x0)
 	Jac(x, p) = diagm(0 => 3 .* x.^2)
 
 	opts = NewtonPar( tol = Ty(1e-8), verbose = true)
-	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = cbMaxNorm(100.0))
+	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = BK.cbMaxNorm(100.0))
 end
 ####################################################################################################
 # we test the regular newton algorithm
