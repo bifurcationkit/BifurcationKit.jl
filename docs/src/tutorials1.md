@@ -87,7 +87,10 @@ The parameter axis `lens = @lens _.α` is used to extract the component of `par`
     We don't need to call `newton` first in order to use `continuation`.
 
 You should see
-![](chan-ex.png)
+
+```@example TUT1
+scene = title!("") #hide		
+```
 
 The left figure is the norm of the solution as function of the parameter $p=\alpha$, the *y-axis* can be changed by passing a different `recordFromSolution` to `continuation`. The top right figure is the value of $\alpha$ as function of the iteration number. The bottom right is the solution for the current value of the parameter. This last plot can be modified by changing the argument `plotSolution` to `continuation`.
 
