@@ -69,7 +69,7 @@ For example, in one of the simplest tutorials, [Temperature model (Simplest exam
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)
 - Automatic branch switching at simple Hopf points to periodic orbits
-- **Automatic bifurcation diagram computation**
+- **Automatic bifurcation diagram computation of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - detection of Bogdanov-Takens, Bautin and Cusp bifurcations
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
@@ -90,7 +90,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Fold Point continuation | Yes| Yes| [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | Y |
 | Hopf continuation | Yes| `AbstractArray` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Continuation-of-Hopf-points-1) | |
 | Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | Y |
-| **Automatic bifurcation diagram computation** | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
+| **Automatic bifurcation diagram computation of equilibria** | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
 | Periodic Orbit (FD) Newton / continuation | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | Y|
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [Link](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |

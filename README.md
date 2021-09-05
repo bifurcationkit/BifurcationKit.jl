@@ -64,15 +64,15 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 ## Main features
 
 - Newton-Krylov solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
+- Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
 - Continuation written as an [iterator](https://rveltz.github.io/BifurcationKit.jl/dev/iterator/)
 - Monitoring user functions along curves computed by continuation, see [events](https://rveltz.github.io/BifurcationKit.jl/dev/EventCallback/)
-- Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
 - Continuation methods: PALC, Moore Spence, Deflated continuation
 - Bifurcation points are located using a bisection algorithm
 - Branch, Fold, Hopf bifurcation point detection of stationary solutions.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)
 - Automatic branch switching at simple Hopf points to periodic orbits
-- **Automatic bifurcation diagram computation**
+- **Automatic bifurcation diagram computation of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - detection of Bogdanov-Takens, Bautin and Cusp bifurcations
 - Periodic orbit computation and continuation using Shooting or Finite Differences.
@@ -93,7 +93,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Fold Point continuation | Yes| Yes| [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
 | Hopf continuation | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Continuation-of-Hopf-points-1) | |
 | Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
-| <span style="color:red">**Automatic bifurcation diagram computation**</span> | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
+| <span style="color:red">**Automatic bifurcation diagram computation of equilibria**</span> | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
 | Periodic Orbit (FD) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark:|
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |

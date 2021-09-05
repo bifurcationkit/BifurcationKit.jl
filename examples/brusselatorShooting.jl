@@ -121,7 +121,7 @@ ind_hopf = 1
 		br, ind_hopf;
 		normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
-####################################################################################################Continuation of Periodic Orbit
+#################################################################################################### Continuation of Periodic Orbit
 M = 10
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 22*0.075)
 #
@@ -212,7 +212,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 10
 
 Mt = 2
 br_po, = continuation(
-	jet...,	br, 2,
+	jet...,	br, 1,
 	# arguments for continuation
 	opts_po_cont, ShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = false);
 	ampfactor = 1., δp = 0.005,
@@ -226,6 +226,18 @@ br_po, = continuation(
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; label = "", kwargs...),
 	normC = norminf)
 
+br_po2, = BK.continuation(br_po, 3, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 300, ds = -0.01);
+	verbosity = 3, plot = true,
+	ampfactor = .1, δp = 0.01,
+	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
+	# usedeflation = false,
+	plotSolution = (x, p; kwargs...) -> begin
+		BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...)
+		plot!(br_po; subplot = 1)
+	end,
+	)
+
+plot(br_po, br_po2, legend=false)
 ####################################################################################################
 # Multiple Poincare Shooting with Hyperplane parametrization
 dM = 5
@@ -263,7 +275,7 @@ br_po, = @time continuation(
 	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	verbosity = 3,
 	plot = true,
-	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label="", kwargs...),
+	plotSolution = (x, p; kwargs...) -> BK.plot!(x; label = "", kwargs...),
 	updateSectionEveryStep = 2,
 	finaliseSolution = (z, tau, step, contResult; k...) -> begin
 		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
@@ -280,7 +292,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, e
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 2)
 
-Mt = 1
+Mt = 2
 	br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
@@ -298,10 +310,10 @@ Mt = 1
 
 plot(br_po)
 
-br_po2, upo2, = BK.continuationBifFromShooting(br_po, 3, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 300, saveSolEveryStep = 1);
+br_po2, upo2, = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 10, saveSolEveryStep = 1);
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = 0.01,
-	# usedeflation = false,
+	usedeflation = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p.p)),),
 	plotSolution = (x, p; kwargs...) -> begin

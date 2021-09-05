@@ -39,5 +39,6 @@ using Test
 		include("poincareMap.jl")
 		include("stuartLandauSH.jl")
 		include("stuartLandauTrap.jl")
+		include("testLure.jl")
 	end
 end

@@ -62,7 +62,8 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
 	solver::T
 end
-
+# this constructor prevents from having FloquetWrapperLS(FloquetWrapperLS(ls))
+FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 (ls::FloquetWrapperLS)(J, rhs; kwargs...) = ls.solver(J, rhs; kwargs...)
 (ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.solver(J.jacpb, rhs; kwargs...)
 (ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.solver(J.jacpb, rhs1, rhs2)
@@ -116,15 +117,8 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton(
-    prob::AbstractShootingProblem,
-    orbitguess,
-    par,
-    options::NewtonPar;
-    linearPO = :MatrixFree,
-    δ = 1e-8,
-    kwargs...,
-)
+function newton( prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar;
+		linearPO = :MatrixFree, δ = 1e-8, kwargs...)
 	jac = buildJacobian(prob, orbitguess, par, linearPO)
 	return newton(prob, jac, orbitguess, par, options; kwargs...)
 end

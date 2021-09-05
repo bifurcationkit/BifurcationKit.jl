@@ -101,33 +101,30 @@ M = 100
 		verbosity = 2,
 		plot = true,
 		linearPO = :FullSparseInplace,
-		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x, n, M));true),
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
 plot(br, br_po, label = "")
 ####################################################################################################
-# branching from Hopf PD using aBS
-br_po_pd, = @time BK.continuationPOTrapFromPD(
+# branching from PD using aBS
+br_po_pd, = @time BK.continuation(
 		# arguments for branch switching from the first
 		# Hopf bifurcation point
-		br_po_pd, 2, setproperties(br_po.contparams; detectBifurcation = 3, plotEveryStep = 1, ds = 0.01);
+		br_po, 1, setproperties(br_po.contparams; detectBifurcation = 3, plotEveryStep = 1, ds = 0.01);
 		# OPTIONAL parameters
 		# we want to jump on the new branch at phopf + δp
 		# ampfactor is a factor to increase the amplitude of the guess
-		ampfactor = 0.1, δp = -0.01,
+		ampfactor = 0.9, δp = -0.01,
 		verbosity = 3,
-		usedeflation = false,
 		plot = true,
 		# linearPO = :FullSparseInplace,
 		linearPO = :BorderedSparseInplace,
-		# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", x[end]);true),
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
-plot(br, br_po, br_po_pd, br_po_pd2, label = "")
+plot(br, br_po, br_po_pd, label = "")
 ####################################################################################################
 # Period doubling
 ind_pd = 1
@@ -241,3 +238,55 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 		recordFromSolution = (u, p; k...) -> BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)
 
 plot(br_po_sh_pd, br, label = "");title!("")
+####################################################################################################
+# branching from Hopf bp using aBS
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 50, verbose = false)
+eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
+eig = DefaultEig()
+
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120, linsolver  = ls)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set opt_po.eigsolver = eig), nev = 20, precisionStability = 1e-2, detectBifurcation = 3)
+
+probPO = ShootingProblem(1, par_br, prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+	br_po, = @time continuation(
+		# arguments for branch switching from the first
+		# Hopf bifurcation point
+		jet..., br, 1,
+		# arguments for continuation
+		optcontpo, probPO;
+		# OPTIONAL parameters
+		# we want to jump on the new branch at phopf + δp
+		# ampfactor is a factor to increase the amplitude of the guess
+		δp = 0.005,
+		verbosity = 3,
+		plot = true,
+		linearAlgo = MatrixFreeBLS(@set ls.N = probPO.M*n+2),
+		finaliseSolution = (z, tau, step, contResult; kw...) ->
+			(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
+		plotSolution = (x, p; kwargs...) -> (BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
+		recordFromSolution = (u, p) -> BK.getMaximum(probPO, u, (@set par_br.C = p.p); ratio = 2), normC = norminf)
+
+plot(br, br_po, label = "")
+
+# aBS from PD
+@set! br_po.contparams.newtonOptions.tol = 1e-7
+br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 5, ds = 0.01, plotEveryStep = 1);
+	verbosity = 3, plot = true,
+	ampfactor = .2, δp = -0.01,
+	usedeflation = false,
+	# for aBS from period doubling, we double the sections
+	linearAlgo = MatrixFreeBLS(@set ls.N = 2probPO.M*n+2),
+	plotSolution = (x, p; kwargs...) -> begin
+		outt = BK.getTrajectory(p.prob, x, (@set par_br_hopf.C = p.p))
+		heatmap!(outt[:,:]'; color = :viridis, subplot = 3)
+		plot!(br_po; legend=false, subplot=1)
+	end,
+	recordFromSolution = (u, p) -> (BK.getMaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
+	)
+
+plot(br_po, br_po2, legend=false)
+
+br_po.contparams.newtonOptions.linsolver.solver.N
+br_po_pd.contparams.newtonOptions.linsolver.solver.N
+
+####################################################################################################

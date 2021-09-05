@@ -370,3 +370,30 @@ function problemForBS(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess
 
 	return probSh, orbitguess
 end
+
+function predictor(pb::ShootingProblem, bifpt, ampfactor, ζs, bptype::Symbol)
+	@assert bptype in (:bp, :pd)
+	Mv = getM(pb)
+	# plot(reshape(orbitguess[1:end-1],2,Mv)')
+	if bptype == :bp
+		orbitguess = copy(bifpt.x)
+		orbitguess[1:length(ζs)] .+= ampfactor .* ζs
+
+		# plot(cumsum(pb.ds) .* orbitguess[end], reshape(orbitguess[1:end-1],3, pb.M)') |> display
+
+		# plot!(cumsum(pb.ds) .* orbitguess[end], reshape(bifpt.x[1:end-1],3, pb.M)', linewidth = 4) |> display
+	elseif bptype == :pd
+		orbitguess = copy(bifpt.x)[1:end-1] .+ ampfactor .* ζs
+		orbitguess =
+			vcat(orbitguess, copy(bifpt.x)[1:end-1] .- ampfactor .* ζs, bifpt.x[end])
+		if 	pb isa ShootingProblem
+			@set! pb.M = 2pb.M
+			@show pb.ds cumsum(pb.ds)
+			@set! pb.ds = _duplicate(pb.ds) ./ 2
+			@show pb.ds cumsum(pb.ds)
+			orbitguess[end] *= 2
+			# plot(cumsum(pb.ds) .* orbitguess[end], reshape(orbitguess[1:end-1],3, pb.M)', marker = :d) |> display
+		end
+	end
+	return pb, orbitguess
+end

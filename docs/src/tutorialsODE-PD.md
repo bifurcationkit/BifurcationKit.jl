@@ -190,8 +190,6 @@ We do not provide Automatic Branch Switching as we do not have the PD normal for
 br_po_pd, = BK.continuationBifFromShooting(br_po, 2, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 100, ds = -0.01, plotEveryStep = 1);
 	verbosity = 3, plot = true,
 	ampfactor = .3, δp = 0.01,
-	# usedeflation = true,
-	# linearPO = :autodiffDenseAnalytical,
 	linearPO = :autodiffDense,
 	plotSolution = (x, p; k...) -> begin
 		plotSH(x, p; k...)

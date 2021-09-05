@@ -166,8 +166,8 @@ function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h::
 	if linear
 		dest .= tmp
 		if applyf
-		# tmp <- pb.F(u1, par)
-		applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
+			# tmp <- pb.F(u1, par)
+			applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
 		else
 			applyJ(pb, tmp, u1, par, du1)
 		end
@@ -189,34 +189,34 @@ POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h::Number, tmp, linear
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 function POTrapFunctional!(pb::AbstractPOFDProblem, out, u, par)
-	M, N = size(pb)
-	T = extractPeriodFDTrap(u)
+		M, N = size(pb)
+		T = extractPeriodFDTrap(u)
 
-	uc  = extractTimeSlices(pb, u)
-	outc = extractTimeSlices(pb, out)
+		uc = extractTimeSlices(pb, u)
+		outc = extractTimeSlices(pb, out)
 
-	# outc[:, M] plays the role of tmp until it is used just after the for-loop
-	@views applyF(pb, outc[:, M], uc[:, M-1], par)
+		# outc[:, M] plays the role of tmp until it is used just after the for-loop
+		@views applyF(pb, outc[:, M], uc[:, M-1], par)
 
-	h = T * getTimeStep(pb, 1)
-	@views POTrapScheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
+		h = T * getTimeStep(pb, 1)
+		@views POTrapScheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
 
-	for ii in 2:M-1
-		h = T * getTimeStep(pb, ii)
-		# this function avoids computing F(uc[:, ii]) twice
-		@views POTrapScheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
-	end
+		for ii in 2:M-1
+			h = T * getTimeStep(pb, ii)
+			# this function avoids computing F(uc[:, ii]) twice
+			@views POTrapScheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
+		end
 
-	# closure condition ensuring a periodic orbit
-	outc[:, M] .= @views uc[:, M] .- uc[:, 1]
+		# closure condition ensuring a periodic orbit
+		outc[:, M] .= @views uc[:, M] .- uc[:, 1]
 
-	# this is for CuArrays.jl to work in the mode allowscalar(false)
-	if onGpu(pb)
-		return @views vcat(out[1:end-1], dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
-	else
+		# this is for CuArrays.jl to work in the mode allowscalar(false)
+		if onGpu(pb)
+			return @views vcat(out[1:end-1], dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
+		else
 			out[end] = @views dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
-		return out
-	end
+			return out
+		end
 end
 
 """
@@ -824,7 +824,7 @@ This is the Krylov-Newton Solver for computing a periodic orbit using a function
 
 # Arguments:
 - `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N,M` in `prob`.
+- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular `newton` method
 $DocStrLinearPO
@@ -990,83 +990,23 @@ function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::A
 end
 
 ####################################################################################################
-# Branch switching from BP of PO
-"""
-$(SIGNATURES)
+# predictor function close to bifurcations of PO
+function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::Symbol)
+	@assert bptype in (:bp, :pd)
+	if bptype == :bp
+		orbitguess = copy(bifpt.x)
+		orbitguess[1:end-1] .+= ampfactor .*  ζ
+	elseif bptype == :pd
+		M, N = size(pb)
+		orbitguess0 = copy(bifpt.x)[1:end-1]
+		orbitguess0c = extractTimeSlices(pb, copy(bifpt.x))
+		ζc = reshape(ζ, N, M)
+		orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
+		orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
+		orbitguess = vec(orbitguess_c[:,1:2:end])
 
-Branch switching at a Branch point of periodic orbits specified by a [`PeriodicOrbitTrapProblem`](@ref). This is still experimental. A deflated Newton-Krylov solver is used to improve the branch switching capabilities.
-
-# Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
-- `ind_bif` index of the branch point
-- `_contParams` parameters to be used by a regular [`continuation`](@ref)
-
-# Optional arguments
-- `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
-- `δ` used internally to compute derivatives w.r.t the parameter `p`.
-- `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
-- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
-- `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
-- `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
-- `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
-- `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
-"""
-function continuationPOTrapBPFromPO(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar ; Jᵗ = nothing, δ = 1e-8, δp = 0.1, ampfactor = 1, usedeflation = true, linearPO = :BorderedLU, recordFromSolution = (u,p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 1, kwargs...)
-
-	@assert br.functional isa PeriodicOrbitTrapProblem
-	@assert abs(br.specialpoint[ind_bif].δ[1]) == 1 "Only simple bifurcation points are handled"
-
-	verbose = get(kwargs, :verbosity, 0) > 0
-	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
-
-	bifpt = br.specialpoint[ind_bif]
-
-	# let us compute the kernel
-	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-	verbose && print("--> computing nullspace...")
-	ζ0 = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-	verbose && println("Done!")
-	# we normalize it by the sup norm because it could be too small/big in L2 norm
-	ζ0 ./= norm(ζ0, Inf)
-
-	pb = br.functional
-	M, N = size(pb)
-
-	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ0))
-	ζ = reduce(vcat, ζ_a)
-
-	orbitguess = copy(bifpt.x)
-	orbitguess[1:end-1] .+= ampfactor .*  ζ
-
-	newp = bifpt.param + δp
-
-	pb(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
-
-	if usedeflation
-		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
-		optn = _contParams.newtonOptions
-		# find point on the first branch
-		sol0, _, flag, _ = newton(pb, bifpt.x, setParam(br, newp), optn; linearPO = linearPO, kwargs...)
-
-		# find the bifurcated branch using deflation
-		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
-		verbose && println("\n--> Compute point on bifurcated branch...")
-		solbif, _, flag, _ = newton(pb, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
-		@assert flag "Deflated newton did not converge"
-		orbitguess .= solbif
+		@debug size(orbitguess0) size(orbitguess) size(ζ) size(orbitguess_c)
+		orbitguess = vcat(orbitguess, 2bifpt.x[end])
 	end
-
-	# TODO
-	# we have to adjust the phase constraint.
-	# Right now, it can be quite large.
-
-	# perform continuation
-	branch, u, tau = continuation(br.functional, orbitguess, setParam(br, newp), br.lens, _contParams; linearPO = linearPO, recordFromSolution = recordFromSolution, linearAlgo = _linearAlgo, kwargs...)
-
-	#create a branch
-	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
-
-	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, tau
+	return pb, orbitguess
 end

@@ -86,23 +86,35 @@ perturbsol(-deflationOp[1],0,0) |> plot
 # bifurcation diagram with deflated continuation
 # empty!(deflationOp)
 
-br, _ = @time continuation(
+brdc, it, = @time continuation(
 	F_carr, Jac_carr,
-	par_def, (@lens _.ϵ),
-	setproperties(optcont; ds = -0.00021, dsmin=1e-5, maxSteps = 20000, pMax = 0.7, pMin = 0.05, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 40),
-	deflationOp;
-	verbosity = 1,
-	maxBranches = 100,
+	(@set par_def.ϵ = 0.6), (@lens _.ϵ),
+	setproperties(optcont; ds = -0.005, dsmin=1e-5, maxSteps = 180, pMax = 0.7, pMin = 0.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 20, saveSolEveryStep = 30),
+	# (@set deflationOp.roots = deflationOp.roots[1:1])
+	deflationOp
+	;verbosity = 1,
+	maxBranches = 40,
 	# tangentAlgo = BorderedPred(),
 	perturbSolution = perturbsol,
 	recordFromSolution = recordFromSolution,
 	normN = norminf,
 	)
 
-plot(br..., branchlabel = 1:length(br), legend=true)#, marker=:d)
+plot(brdc..., legend=true)#, marker=:d)
+scatter!([b.branch[end].param for b in brdc], [b.branch[end][1] for b in brdc], marker = :circle, color=:red, markeralpha=0.5,label = "")
+	scatter!([b.branch[1].param for b in brdc], [b.branch[1][1] for b in brdc], marker = :cross, color=:green,  label = "")
+
+br2 = [deepcopy(b) for b in brdc[1:8] if length(b) > 1]
+	BifurcationKit.mergeBranches!(br2, it; iterbrsmax = 4)
+
+plot(br2...)
+	# scatter!(br2[6])
+scatter!([b.branch[end].param for b in brdc], [b.branch[end][1] for b in brdc], marker = :circle, color=:red, markeralpha=0.5,label = "")
+	scatter!([b.branch[1].param for b in brdc], [b.branch[1][1] for b in brdc], marker = :cross, color=:green,  label = "")
 
 
-BifurcationKit.mergeBranches(br)
+BifurcationKit.mergeBranches!(brdc, it)
+
 ####################################################################################################
 # bifurcation diagram
 diagram = bifurcationdiagram(jet...,

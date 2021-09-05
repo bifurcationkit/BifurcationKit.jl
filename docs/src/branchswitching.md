@@ -51,14 +51,17 @@ Several examples are provided like [1d Brusselator (automatic)](@ref) or [2d Gin
 !!! tip "Precise options"
     Although very convenient, the automatic branch switching does not allow the very fine tuning of parameters. It must be used as a first attempt before recurring to manual branch switching
     
-## Branch switching from Branch point of curve of periodic orbits
+## Branch switching from Branch / Period-doubling point of curve of periodic orbits
 
-We only provide (for now) this method for the case of [`PeriodicOrbitTrapProblem`](@ref). The call is as follows. Please note that a deflation is included in this method to simplify branch switching. 
+We do not provide (for now) the associated normal forms to these bifurcations of periodic orbits. As a consequence, the user is asked to provide the amplitude of the bifurcated solution.
 
-An example of use is provided in [1d Brusselator (automatic)](@ref).
+We provide the branching method for all methods to compute periodic orbits, *i.e.* for [`PeriodicOrbitTrapProblem`](@ref),[`ShootingProblem`](@ref),[`PoincareShootingProblem`](@ref). The call is as follows. Please note that a deflation is included in this method to simplify branch switching. 
 
-```@docs
-continuationPOTrapBPFromPO
+An example of use is provided in [Period doubling in Lur'e problem (PD aBS)](@ref).
+
+```julia
+continuation(br::AbstractBranchResult, ind_bif::Int, contParams::ContinuationPar; 
+	δp = 0.1, ampfactor = 1, usedeflation = false, kwargs...)
 ```
 
 

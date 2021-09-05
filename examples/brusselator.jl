@@ -265,7 +265,7 @@ br_po, _ = continuation(
 	# arguments for continuation
 	opts_po_cont, probFD;
 	δp = 0.01,
-	verbosity = 3,	plot = true, linearPO = :FullSparseInplace,
+	verbosity = 3,	plot = true, linearPO = :BorderedSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
@@ -274,13 +274,14 @@ br_po, _ = continuation(
 
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO
-br_po2, _ = BK.continuationPOTrapBPFromPO(
+br_po2, _ = BK.continuation(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont;
 	δp = 0.01,
-	verbosity = 3,	plot = true, linearPO = :FullSparseInplace,
+	usedeflation = true,
+	verbosity = 3,	plot = true, linearPO = :BorderedSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> (plot!(br_po,legend = :bottomright, subplot=1)),

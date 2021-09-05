@@ -87,6 +87,18 @@ end
 (hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tn == Nothing)
 
+# ==================================================================================================
+function _duplicate!(x::AbstractVector)
+	n = length(x)
+	for ii=1:n
+		push!(x, copy(x[ii]))
+	end
+	x
+end
+_duplicate(x::AbstractVector) = _duplicate!(copy(x))
+_duplicate(hyp::SectionPS) = SectionPS(_duplicate(hyp.normals), _duplicate(hyp.centers))
+_duplicate(hyp::SectionSS) = SectionSS(_duplicate(hyp.normals), _duplicate(hyp.centers))
+# ==================================================================================================
 """
 	update!(hyp::SectionPS, normals, centers)
 
