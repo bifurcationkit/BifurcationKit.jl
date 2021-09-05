@@ -139,7 +139,7 @@ computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = comp
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the Transcritical bifurcation point.
+This function provides prediction for the zeros of the Transcritical bifurcation point.
 
 # Arguments
 - `bp::Transcritical` the bifurcation point
@@ -164,7 +164,7 @@ end
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the Pitchfork bifurcation point.
+This function provides prediction for the zeros of the Pitchfork bifurcation point.
 
 # Arguments
 - `bp::Pitchfork` the bifurcation point
@@ -744,6 +744,19 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end
 
+"""
+$(SIGNATURES)
+
+This function provides prediction for the orbits of the Hopf bifurcation point.
+
+# Arguments
+- `bp::Hopf` the bifurcation point
+- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
+
+# Optional arguments
+- `verbose`	display information
+- `ampfactor = 1` factor multiplying prediction
+"""
 function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	# get the normal form
 	nf = hp.nf

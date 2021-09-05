@@ -74,8 +74,8 @@ out, = @time newton(Fbr, Jbr, solc0, par_br, optnewton, normN = norminf)
 
 optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370, nInversion = 10, maxBisectionSteps = 25)
 
-	br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), optcont;
-		plot = true, verbosity = 3,
+	br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), (@set optcont.newtonOptions.verbose = false);
+		plot = true, verbosity = 2,
 		recordFromSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 
@@ -109,8 +109,7 @@ M = 100
 plot(br, br_po, label = "")
 ####################################################################################################
 # branching from Hopf PD using aBS
-
-br_po_pd2, = @time BK.continuationPOTrapFromPD(
+br_po_pd, = @time BK.continuationPOTrapFromPD(
 		# arguments for branch switching from the first
 		# Hopf bifurcation point
 		br_po_pd, 2, setproperties(br_po.contparams; detectBifurcation = 3, plotEveryStep = 1, ds = 0.01);
@@ -123,8 +122,8 @@ br_po_pd2, = @time BK.continuationPOTrapFromPD(
 		plot = true,
 		# linearPO = :FullSparseInplace,
 		linearPO = :BorderedSparseInplace,
-		callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", x[end]);true),
-		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, br_po_pd, subplot=1)),
+		# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", x[end]);true),
+		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
 
@@ -152,7 +151,10 @@ f1 = DiffEqArrayOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
 
-sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
+
+prob_ode = ODEProblem(Fbr, solc0, (0.0, 280.0), par_br_hopf)
+sol = @time solve(prob_ode, Rodas4P2(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
 orbitsection = Array(sol[:,[end]])
 # orbitsection = orbitguess[:, 1]
 

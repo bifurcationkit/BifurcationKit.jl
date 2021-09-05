@@ -37,6 +37,8 @@ poTrap = PeriodicOrbitTrapProblem(
 	zeros(2),
 	20, 2)
 
+BK.hasHessian(poTrap)
+
 # guess for the periodic orbit
 orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
 	push!(orbitguess_f, 2pi)
@@ -72,6 +74,12 @@ _Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f)
 @test norm(_Jfd - Array(_J1), Inf) < 1e-7
 
 ####################################################################################################
+# tests for constructor of Floquet routines
+BK.checkFloquetOptions(EigArpack())
+BK.checkFloquetOptions(EigArnoldiMethod())
+BK.checkFloquetOptions(EigKrylovKit())
+FloquetQaD(EigKrylovKit()) |> FloquetQaD
+
 # comparison of Floquet computation
 # case of :FullLU
 # lspo = BK.PeriodicOrbitTrapLS(DefaultLS())
