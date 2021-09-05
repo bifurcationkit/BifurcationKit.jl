@@ -101,12 +101,12 @@ Mt = 90 # number of time sections
 		plot!(br, subplot=1, putbifptlegend = false)
 		end,
 	finaliseSolution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
-		# limit the period 
+		# limit the period
 			return z.u[end] < 30
 			true
 		end,
 	normC = norminf)
-	
+
 scene = plot(br, br_po)
 ```
 
@@ -114,12 +114,11 @@ Two period doubling bifurcations were detected. We shall now compute the branch 
 
 ```@example TUTLURE
 # aBS from PD
-br_po_pd, = BK.continuationPOTrapFromPD(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 51, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
+br_po_pd, = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 51, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = -0.005,
 	usedeflation = false,
 	linearPO = :Dense,
-	# tangentAlgo = BorderedPred(),
 	updateSectionEveryStep = 1,
 	plotSolution = (x, p; k...) -> begin
 		xtt = BK.getTrajectory(br_po.functional, x, (@set par_lur.β = p))
@@ -167,7 +166,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.01, ds= -0.001, dsmin = 1e-4, maxSteps 
 br_po, = continuation(
 	jet..., br, 1, opts_po_cont,
 	# parallel shooting functional with 10 sections
-	ShootingProblem(10, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
+	ShootingProblem(15, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
 	# first parameter value on the branch
 	δp = 0.0051,
 	# method for solving newton linear system
@@ -180,16 +179,16 @@ br_po, = continuation(
 	callbackN = BK.cbMaxNorm(10),
 	normC = norminf)
 
-scene = title!("")	
+scene = title!("")
 ```
 
 We do not provide Automatic Branch Switching as we do not have the PD normal form computed in `BifurcationKit`. Hence, it takes some trial and error to find the `ampfactor` of the PD branch.
 
 ```@example TUTLURE
 # aBS from PD
-br_po_pd, = BK.continuationBifFromShooting(br_po, 2, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 100, ds = -0.01, plotEveryStep = 1);
+br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);
 	verbosity = 3, plot = true,
-	ampfactor = .3, δp = 0.01,
+	ampfactor = .3, δp = -0.005,
 	linearPO = :autodiffDense,
 	plotSolution = (x, p; k...) -> begin
 		plotSH(x, p; k...)

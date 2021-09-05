@@ -20,7 +20,7 @@ These equations have been introduced to reproduce an oscillating chemical reacti
 
 We start by writing the PDE
 
-```julia
+```@example TUTBRUaut
 using Revise
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
 const BK = BifurcationKit
@@ -53,11 +53,12 @@ function Fbru!(f, x, p, t = 0)
 end
 
 Fbru(x, p, t = 0) = Fbru!(similar(x), x, p, t)
+nothing #hide
 ```
 
 For computing periodic orbits, we will need a Sparse representation of the Jacobian:
 
-```julia
+```@example TUTBRUaut
 function Jbru_sp(x, p)
 	@unpack α, β, D1, D2, l = p
 	# compute the Jacobian using a sparse representation
@@ -90,6 +91,10 @@ function Jbru_sp(x, p)
 	@. diagpn = u * u
 	return spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
 end
+
+# we group the (higher) differentials together
+jet  = BK.getJet(Fbru, Jbru_sp)
+nothing #hide
 ```
 
 !!! tip "Tip"
@@ -97,80 +102,64 @@ end
 
 Finally, it will prove useful to have access to the hessian and third derivative
 
-```julia
-# we group the differentials together
-jet  = BK.getJet(Fbru, Jbru_sp)
-```
-
 We shall now compute the equilibria and their stability.
 
-```julia
+```@example TUTBRUaut
 n = 300
 
 # parameters of the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
+nothing #hide
 ```
 
 For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers (Eig)](@ref))
 
-```julia
+```@example TUTBRUaut
 eigls = EigArpack(1.1, :LM)
+nothing #hide
 ```
 
 We continue the trivial equilibrium to find the Hopf points
 
-```julia
-opt_newton = NewtonPar(eigsolver = eigls, verbose = false)
+```@example TUTBRUaut
+opt_newton = NewtonPar(eigsolver = eigls, tol = 1e-9)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
-	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50,
-	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060,
+	pMax = 1.9, detectBifurcation = 3, nev = 21,
+	newtonOptions = opt_newton, maxSteps = 1000,
 	# specific options for precise localization of Hopf points
 	nInversion = 6)
 
-	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
-		opts_br_eq, verbosity = 0,
-		plot = true,
-		recordFromSolution = (x,p) -> x[n÷2], normC = norminf)
+br, = continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
+	opts_br_eq, verbosity = 0,
+	recordFromSolution = (x,p) -> x[n÷2], normC = norminf)
 ```
 
 We obtain the following bifurcation diagram with 3 Hopf bifurcation points
 
-![](bru-sol-hopf.png)
+```@example TUTBRUaut
+scene = plot(br)
+```
 
 ## Normal form computation
 
 We can compute the normal form of the Hopf points as follows
 
-```julia
+```@example TUTBRUaut
 hopfpt = BK.computeNormalForm(jet..., br, 1)
-```
-and you should get
-
-```julia
-julia> hopfpt
-SuperCritical - Hopf bifurcation point at l ≈ 0.5113310149554013.
-Period of the periodic orbit ≈ 2.9367552006841753
-Normal form z⋅(a⋅δp + b⋅|z|²):
-(a = 0.8799941318427783 + 0.5689746667563035im, b = -0.0015608102901479592 + 0.0015634810970084371im)
 ```
 
 ## Continuation of Hopf points
 
 We use the bifurcation points guesses located in `br.specialpoint` to turn them into precise bifurcation points. For the second one, we have
 
-```julia
+```@example TUTBRUaut
 # index of the Hopf point in br.specialpoint
 ind_hopf = 2
-hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
-	br, ind_hopf; normN = norminf)
+
+# newton iterations to compute the Hopf point
+hopfpoint, _, flag = newton(Fbru, Jbru_sp, br, ind_hopf; normN = norminf)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
-```
-
-which produces
-
-```julia
---> We found a Hopf Point at l = 1.0239851696548035, ω = 2.1395092895339842, from l = 1.0353910524340078
 ```
 
 We now perform a Hopf continuation with respect to the parameters `l, β`
@@ -178,10 +167,10 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 !!! tip "Tip"
     You don't need to call `newton` first in order to use `continuation`.
 
-```julia
+```@example TUTBRUaut
 optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
-br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.β),
+
+br_hopf, = continuation(Fbru, Jbru_sp, br, ind_hopf, (@lens _.β),
 	optcdim2, verbosity = 2,
 	# detection of codim 2 bifurcations with bisection
 	detectCodim2Bifurcation = 2,
@@ -190,11 +179,9 @@ br_hopf, = @time continuation(Fbru, Jbru_sp,
 	# we update the Fold problem at every continuation step
 	updateMinAugEveryStep = 1,
 	normC = norminf)
+
+scene = plot(br_hopf) 	
 ```
-
-which gives using `plot(br_hopf)`
-
-![](bru-hopf-cont.png)
 
 ## Computation of the branch of periodic orbits (Finite differences)
 
@@ -202,15 +189,17 @@ We now compute the bifurcated branches of periodic solutions from the Hopf point
 
 We start by providing a linear solver and some options for the continuation to work
 
-```julia
+```@example TUTBRUaut
 # automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
+
+nothing #hide	
 ```
 
-```julia
+```@example TUTBRUaut
 # number of time slices for the periodic orbit
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
@@ -232,9 +221,9 @@ br_po, = continuation(
 	verbosity = 3,	plot = true,
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
-```
 
-![](bru-po-cont-br0.png)
+Scene = title!("")	
+```
 
 Using the above call, it is very easy to find the first branches:
 
@@ -245,7 +234,7 @@ We note that there are several branch points (blue points) on the above diagram.
 Let's say we want to branch from the first branch point of the first curve pink branch. The syntax is very similar to the previous one:
 
 ```julia
-br_po2, = BK.continuationPOTrapBPFromPO(
+br_po2, = continuation(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
@@ -280,7 +269,7 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.00615, ds = 0.0061, pMax =
 	detectBifurcation = 3, nev = 21, plotEveryStep = 50,
 	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 200)
 
-br, = @time continuation(Fbru, Jbru_sp,
+br, = continuation(Fbru, Jbru_sp,
 	sol0, par_bru, (@lens _.l), opts_br_eq, verbosity = 0,
 	plot = false,
 	recordFromSolution = (x, p)->x[n÷2], normC = norminf)

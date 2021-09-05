@@ -23,7 +23,7 @@ These equations have been introduced to reproduce an oscillating chemical reacti
 
 We start by writing the PDE
 
-```julia
+```@example TUTBRUmanual
 using Revise
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
 const BK = BifurcationKit
@@ -56,11 +56,12 @@ function Fbru!(f, x, p, t = 0)
 end
 
 Fbru(x, p, t = 0) = Fbru!(similar(x), x, p, t)
+nothing #hide
 ```
 
 For computing periodic orbits, we will need a Sparse representation of the Jacobian:
 
-```julia
+```@example TUTBRUmanual
 function Jbru_sp(x, p)
 	@unpack α, β, D1, D2, l = p
 	# compute the Jacobian using a sparse representation
@@ -93,6 +94,10 @@ function Jbru_sp(x, p)
 	@. diagpn = u * u
 	return spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
 end
+
+# we group the (higher) differentials together
+jet  = BK.getJet(Fbru, Jbru_sp)
+nothing #hide
 ```
 
 !!! tip "Tip"
@@ -100,73 +105,62 @@ end
 
 We shall now compute the equilibria and their stability.
 
-```julia
+```@example TUTBRUmanual
 n = 500
 
 # parameters of the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
+nothing #hide
 ```
 
 For the eigensolver, we use a Shift-Invert algorithm (see [Eigen solvers (Eig)](@ref))
 
-```julia
+```@example TUTBRUmanual
 eigls = EigArpack(1.1, :LM)
+nothing #hide
 ```
 
 We continue the trivial equilibrium to find the Hopf points
 
-```julia
-opt_newton = NewtonPar(eigsolver = eigls)
+```@example TUTBRUmanual
+opt_newton = NewtonPar(eigsolver = eigls, tol = 1e-9)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.001,
-	pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50,
-	newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060)
+	pMax = 1.9, detectBifurcation = 3, nev = 21,
+	newtonOptions = opt_newton, maxSteps = 1000,
+	# specific options for precise localization of Hopf points
+	nInversion = 6)
 
-	br, = @time continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
-		opts_br_eq, plot = true,
-		recordFromSolution = (x,p) -> x[div(n,2)], normC = norminf)
+br, = continuation(Fbru, Jbru_sp, sol0, par_bru, (@lens _.l),
+	opts_br_eq, verbosity = 0,
+	recordFromSolution = (x,p) -> x[n÷2], normC = norminf)
 ```
 
 We obtain the following bifurcation diagram with 3 Hopf bifurcation points
 
-![](bru-sol-hopf.png)
+```@example TUTBRUmanual
+scene = plot(br)
+```
 
 ## Normal form computation
 
 We can compute the normal form of the Hopf points as follows
 
-```julia
-# we group the differentials together
-jet  = BK.getJet(Fbru, Jbru_sp)
-
+```@example TUTBRUmanual
 hopfpt = computeNormalForm(jet..., br, 1)
-```
-and you should get
-
-```julia
-julia> hopfpt
-SuperCritical - Hopf bifurcation point at l ≈ 0.512353005225085.
-Period of the periodic orbit ≈ 2.9370202332411925
-Normal form z⋅(a⋅δp + b⋅|z|²):
-(a = 0.8770732861140638 + 0.5671547647542317im, b = -0.0009380187660555578 + 0.0009391565464102912im)
 ```
 
 ## Continuation of Hopf points
 
 We use the bifurcation points guesses located in `br.specialpoint` to turn them into precise bifurcation points. For the second one, we have
 
-```julia
+```@example TUTBRUmanual
 # index of the Hopf point in br.specialpoint
 ind_hopf = 2
-hopfpoint, _, flag = @time newton(Fbru, Jbru_sp,
-	br, ind_hopf; normN = norminf)
+
+# newton iterations to compute the Hopf point
+hopfpoint, _, flag = newton(Fbru, Jbru_sp, br, ind_hopf; normN = norminf)
 flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
-```
-
-which produces
-
-```julia
---> We found a Hopf Point at l = 1.0239851696548035, ω = 2.1395092895339842, from l = 1.0353910524340078
 ```
 
 We now perform a Hopf continuation with respect to the parameters `l, β`
@@ -174,35 +168,34 @@ We now perform a Hopf continuation with respect to the parameters `l, β`
 !!! tip "Tip"
     You don't need to call `newton` first in order to use `continuation`.
 
-```julia
+```@example TUTBRUmanual
 optcdim2 = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = opt_newton)
-br_hopf, = @time continuation(Fbru, Jbru_sp,
-	br, ind_hopf, (@lens _.β), optcdim2,
-	normC = norminf)
+br_hopf, = continuation(Fbru, Jbru_sp, br, ind_hopf, (@lens _.β), optcdim2, normC = norminf)
+scene = plot(br_hopf)
 ```
-
-which gives using `plot(br_hopf)`
-
-![](bru-hopf-cont.png)
 
 ## Continuation of periodic orbits (Finite differences)
 
 Here, we perform continuation of periodic orbits branching from the Hopf bifurcation points.We need an educated guess for the periodic orbit which is given by `guessFromHopf`:
 
-```julia
+```@example TUTBRUmanual
 # number of time slices
 M = 51
 
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf,
 	opts_br_eq.newtonOptions.eigsolver,
 	M, 2.7; phase = 0.25)
+
+nothing #hide	
 ```
 We wish to make two remarks at this point. The first is that an initial guess is composed of a space time solution and of the guess for the period `Th` of the solution. Note that the argument `2.7` is a guess for the amplitude of the orbit.
 
-```julia
+```@example TUTBRUmanual
 # orbit initial guess from guessFromHopf, is not a vector, so we reshape it
 orbitguess_f2 = reduce(vcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
+
+nothing #hide	
 ```
 
 The second remark concerns the phase `0.25` written above. To account for the additional unknown (*i.e.* the period), periodic orbit localisation using Finite Differences requires an additional constraint (see [Periodic orbits based on trapezoidal rule](@ref) for more details). In the present case, this constraint is
@@ -215,13 +208,15 @@ The phase of the periodic orbit is set so that the above constraint is satisfied
 
 Given our initial guess, we create a (family of) problem which encodes the functional associated to finding Periodic orbits based on trapezoidal rule (see [Periodic orbits based on trapezoidal rule](@ref) for more information):
 
-```julia
+```@example TUTBRUmanual
 poTrap = PeriodicOrbitTrapProblem(
 	Fbru,    				# pass the vector field
 	Jbru_sp, 				# pass the jacobian of the vector field
 	real.(vec_hopf),		# used to set ϕ, see the phase constraint
 	hopfpt.u,           # used to set uhopf, see the phase constraint
-	M, 2n)			          # number of time slices
+	M, 2n)			         # number of time slices
+
+nothing #hide 	
 ```
 
 To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)` for the parameter `par`.
@@ -231,7 +226,7 @@ To evaluate the functional at `x`, you call it like a function: `poTrap(x, par)`
 
 For convenience, we provide a simplified newton / continuation methods for periodic orbits. One has just to pass a [`PeriodicOrbitTrapProblem`](@ref).
 
-```julia
+```@example TUTBRUmanual
 # we use the linear solver LSFromBLS to speed up the computations
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
 	outpo_f, _, flag = @time newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), 		opt_po, normN = norminf,
@@ -259,30 +254,24 @@ and obtain
   3.210008 seconds (77.85 k allocations: 2.497 GiB, 5.42% gc time)
 ```
 
-and
-
-![](PO-newton.png)
-
 Finally, we can perform continuation of this periodic orbit using the specialized call `continuationPOTrap`
 
-```julia
+```@example TUTBRUmanual
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01,
-	pMax = 3.0, maxSteps = 30,
+	pMax = 3.0, maxSteps = 20,
 	newtonOptions = opt_po, nev = 5, precisionStability = 1e-8, detectBifurcation = 0)
-br_po, = @time continuation(poTrap,
+
+br_po, = continuation(poTrap,
 	outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 	opts_po_cont;
 	linearPO = :FullSparseInplace,
 	verbosity = 2,	plot = true,
 	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
+
+Scene = title!("")	
 ```
-
-to obtain the period of the orbit as function of `l`
-
-![](bru-po-cont.png)
-
 
 ## Deflation for periodic orbit problems
 Looking for periodic orbits branching of bifurcation points, it is very useful to use `newton` algorithm with deflation. We thus define a deflation operator (see previous example)
