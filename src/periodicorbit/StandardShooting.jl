@@ -1,4 +1,4 @@
-using DiffEqBase: EnsembleProblem, ODEProblem
+using DiffEqBase: EnsembleProblem, ODEProblem, DAEProblem
 
 """
 $(SIGNATURES)
@@ -65,9 +65,11 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
+const ODEType = Union{ODEProblem, DAEProblem}
+
 # this constructor takes into accound a parameter passed to the vector field
 # if M = 1, we disable parallel processing
-function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; parallel = false, kwargs...)
+function ShootingProblem(F, p, prob::ODEType, alg, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
 	parallel = _M == 1 ? false : parallel
 	_pb = parallel ? EnsembleProblem(prob) : prob
@@ -75,17 +77,17 @@ function ShootingProblem(F, p, prob::ODEProblem, alg, ds, section; parallel = fa
 			ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob::ODEProblem, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
+ShootingProblem(F, p, prob::ODEType, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob::ODEProblem, alg, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+ShootingProblem(F, p, prob::ODEType, alg, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
-ShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; parallel = parallel, kwargs...)
+ShootingProblem(M::Int, par, prob::ODEType, alg; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; parallel = parallel, kwargs...)
 
-ShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
+ShootingProblem(M::Int, par, prob1::ODEType, alg1, prob2::ODEType, alg2; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
 
 # idem but with an ODEproblem to define the derivative of the flow
-function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, ds, section; parallel = false, kwargs...)
+function ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
 	parallel = _M == 1 ? false : parallel
 	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
@@ -93,9 +95,9 @@ function ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2,
 	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
+ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 
 @inline isSimple(sh::ShootingProblem) = sh.M == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
@@ -133,7 +135,6 @@ extractTimeSlices(x::BorderedArray, M::Int) = x.u
 
 @inline extractTimeSlice(x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline extractTimeSlice(x::AbstractVector, ii::Int) = xc[ii]
-
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
