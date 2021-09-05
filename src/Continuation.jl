@@ -512,7 +512,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners
 - `tangentAlgo = SecantPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`. See below for more information.
 - `linearAlgo = BorderingBLS()`. Used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS` or `MatrixFreeBLS`.
-- `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
+- `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events

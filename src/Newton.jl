@@ -158,4 +158,4 @@ Create a callback used to reject residals larger than `cb.maxres` in the Newton 
 struct cbMaxNorm{T}
 	maxres::T
 end
-(cb::cbMaxNorm)(x, f, J, res, it, itlinear, options; k...) = (return norm(x) < cb.maxres)
+(cb::cbMaxNorm)(x, f, J, res, it, itlinear, options; k...) = (return res < cb.maxres)
