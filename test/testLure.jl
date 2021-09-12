@@ -119,3 +119,12 @@ br_po, = continuation(jet..., br, 1, opts_po_cont,
 	linearPO = :autodiffDenseAnalytical,
 	callbackN = BK.cbMaxNorm(10),
 	normC = norminf)
+
+# aBS from PD
+br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);
+	# verbosity = 3, plot = true,
+	ampfactor = .3, δp = -0.005,
+	linearPO = :autodiffDenseAnalytical,
+	normC = norminf,
+	callbackN = BK.cbMaxNorm(10),
+	)

@@ -201,7 +201,3 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 
 scene = plot(br_po, br_po_pd)
 ```
-
-## References
-
-[^Cortes]:> Cortes, Jesus M., Mathieu Desroches, Serafim Rodrigues, Romain Veltz, Miguel A. Muñoz, and Terrence J. Sejnowski. **Short-Term Synaptic Plasticity in the Deterministic Tsodyks–Markram Model Leads to Unpredictable Network Dynamics.**” Proceedings of the National Academy of Sciences 110, no. 41 (October 8, 2013): 16610–15. https://doi.org/10.1073/pnas.1316071110.

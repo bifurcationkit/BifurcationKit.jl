@@ -312,8 +312,8 @@ plot(br_po)
 
 br_po2, upo2, = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 10, saveSolEveryStep = 1);
 	verbosity = 3, plot = true,
-	ampfactor = .1, δp = 0.01,
-	usedeflation = true,
+	ampfactor = .2, δp = 0.01,
+	# usedeflation = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p.p)),),
 	plotSolution = (x, p; kwargs...) -> begin
