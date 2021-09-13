@@ -467,8 +467,7 @@ function predictor(pb::PoincareShootingProblem, bifpt, ampfactor, ζs, bptype::S
 
 		orbitguess = copy(bifpt.x) .+ ampfactor .* ζs
 		orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
-
-		@show size(orbitguess) pb.M pb.section.M size(pb.section.normals)
+		# @show size(orbitguess) pb.M pb.section.M size(pb.section.normals)
 	else
 		orbitguess = copy(bifpt.x)
 		orbitguess .+= ampfactor .* ζs

@@ -111,10 +111,13 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 
 # plot(br_po, br_po_pd)
 #######################################
-br_po, = continuation(jet..., br, 1, opts_po_cont,
-	PoincareShootingProblem(6, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
+opts_po_cont_ps = @set opts_po_cont.newtonOptions.tol = 1e-7
+@set opts_po_cont_ps.dsmax = 0.0025
+br_po, = continuation(jet..., br, 1, opts_po_cont_ps,
+	PoincareShootingProblem(2, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-6);
 	# pair donne le bon resultat
-	ampfactor = 1., δp = 0.0051,
+	ampfactor = 1., δp = 0.0051, verbosity = 3,plot=true,
+	tangentAlgo = BorderedPred(),
 	updateSectionEveryStep = 1,
 	linearPO = :autodiffDenseAnalytical,
 	callbackN = BK.cbMaxNorm(10),

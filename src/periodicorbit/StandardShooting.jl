@@ -388,9 +388,9 @@ function predictor(pb::ShootingProblem, bifpt, ampfactor, ζs, bptype::Symbol)
 			vcat(orbitguess, copy(bifpt.x)[1:end-1] .- ampfactor .* ζs, bifpt.x[end])
 		if 	pb isa ShootingProblem
 			@set! pb.M = 2pb.M
-			@show pb.ds cumsum(pb.ds)
+			# @show pb.ds cumsum(pb.ds)
 			@set! pb.ds = _duplicate(pb.ds) ./ 2
-			@show pb.ds cumsum(pb.ds)
+			# @show pb.ds cumsum(pb.ds)
 			orbitguess[end] *= 2
 			# plot(cumsum(pb.ds) .* orbitguess[end], reshape(orbitguess[1:end-1],3, pb.M)', marker = :d) |> display
 		end
