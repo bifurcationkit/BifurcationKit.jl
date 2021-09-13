@@ -185,11 +185,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 """
 function continuation(
     prob::AbstractShootingProblem,
-    orbitguess,
-    par,
-    lens::Lens,
-    contParams::ContinuationPar,
-    linearAlgo::AbstractBorderedLinearSolver;
+	orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver;
     linearPO = :MatrixFree,
     updateSectionEveryStep = 0,
     δ = 1e-8,
@@ -317,7 +313,7 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 			"\n----> Hopf param = ", br.specialpoint[ind_bif].param,
 			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,
-			"\n----> period = ", abs(2pi/pred.ω), "\n")
+			"\n----> period         = ", pred.period, "\n")
 
 	# we compute a phase so that the constraint equation
 	# < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.

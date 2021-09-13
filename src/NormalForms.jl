@@ -730,14 +730,10 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	ζstar ./= dot(ζ, ζstar)
 	@assert dot(ζ, ζstar) ≈ 1
 
-	hopfpt = Hopf(
-		bifpt.x,
-		bifpt.param,
+	hopfpt = Hopf(bifpt.x, bifpt.param,
 		ω,
-		parbif,
-		lens,
-		ζ,
-		ζstar,
+		parbif, lens,
+		ζ, ζstar,
 		(a = 0. + 0im, b = 0. + 0im),
 		:SuperCritical
 	)
@@ -776,6 +772,7 @@ function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
 			amp = 2amp,
 			ω = ω,
+			period = abs(2pi/ω),
 			p = pnew,
 			dsfactor = dsfactor)
 end
