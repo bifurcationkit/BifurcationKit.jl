@@ -1,6 +1,6 @@
 # Pseudo arclength continuation
 
-This is one of the various continuation methods implemented in `BifurcationKit.jl`. it is set by the option `tangentAlgo = BorderedPred()` in [`continuation`](@ref).
+This is one of the various continuation methods implemented in `BifurcationKit.jl`. It is set by the option `tangentAlgo = BorderedPred()` in [`continuation`](@ref).
 
 For solving 
 

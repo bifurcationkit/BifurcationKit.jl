@@ -3,7 +3,7 @@
 !!! warning "WIP"
     This is work in progress. The available options are limited.
 
-This is one of the various continuation methods implemented in `BifurcationKit.jl`. it is set by the option `tangentAlgo = MooreSpence()` in [`continuation`](@ref).
+This is one of the various continuation methods implemented in `BifurcationKit.jl`. It is set by the option `tangentAlgo = MooreSpence()` in [`continuation`](@ref).
 
 For solving 
 
