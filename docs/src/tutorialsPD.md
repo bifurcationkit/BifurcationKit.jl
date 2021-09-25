@@ -94,7 +94,7 @@ which yields
 
 ![](br_pd1.png)
 
-## Periodic orbits from the Hopf point (Shooting)
+## Periodic orbits from the Hopf point (Standard Shooting)
 
 We continue the periodic orbit form the first Hopf point around $C\approx -0.8598$ using a Standard Simple Shooting method (see [Periodic orbits based on the shooting method](@ref)). To this end, we define a `SplitODEProblem` from `DifferentialEquations.jl` which is convenient for solving semilinear problems of the form
 
@@ -159,7 +159,7 @@ We plot the result using `plot(br_po_sh, br, label = "")`:
 !!! tip "Numerical precision for stability"
     The Floquet multipliers are not very precisely computed here using the Shooting method. We know that `1=exp(0)` should be a Floquet multiplier but this is only true here at precision ~1e-3. In order to prevent spurious bifurcation detection, there is a threshold `precisionStability` in `ContinuationPar` for declaring an unstable eigenvalue. Another way would be to use Poincaré Shooting so that this issue does not show up.
 
-## Periodic orbits from the PD point (Shooting)
+## Periodic orbits from the PD point (Standard Shooting)
 
 We now compute the periodic orbits branching of the first Period-Doubling bifurcation point. It is straightforward to obtain an initial guess using the flow around the bifurcation point:
 

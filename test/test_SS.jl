@@ -19,6 +19,8 @@ probSh = BK.ShootingProblem(M, fl,
 	LinRange(0, 1, M+1) |> diff,
 	section, false)
 
+show(probSh)
+
 poguess = VectorOfArray([rand(N) for ii=1:M])
 	po = BorderedArray(poguess, 1.)
 
