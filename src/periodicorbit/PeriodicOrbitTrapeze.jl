@@ -112,6 +112,13 @@ You will see below that you can evaluate the residual of the functional (and oth
 	massmatrix::Tmass = nothing
 end
 
+function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
+	println(io, "┌─ Trapezoid problem")
+	println(io, "├─ time slices  : ", pb.M)
+	println(io, "├─ dimension : ", pb.N)
+	println(io, "└─ inplace   : ", pb.isinplace)
+end
+
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
 getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)

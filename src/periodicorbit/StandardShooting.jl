@@ -107,39 +107,30 @@ function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::Ab
 	ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 end
 
-@inline isSimple(sh::ShootingProblem) = sh.M == 1
+@inline isSimple(sh::ShootingProblem) = getM(M) == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 
-# this function extracts the last component of the periodic orbit
-@inline extractPeriodShooting(x::AbstractVector) = x[end]
-@inline extractPeriodShooting(x::BorderedArray)  = x.p
-
-function Base.show(io::IO, pb::ShootingProblem)
+function Base.show(io::IO, sh::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
-	println(io, "├─ sections : ", getM(pb))
-	println(io, "└─ parallel : ", isParallel(pb))
+	println(io, "├─ time slices : ", getM(sh))
+	println(io, "└─ parallel : ", isParallel(sh))
 end
 
 # this function updates the section during the continuation run
-function updateSection!(prob::ShootingProblem, x, par)
-	xt = extractTimeSlices(x, getM(prob))
-	@views update!(prob.section, prob.flow.F(xt[:, 1], par), xt[:, 1])
-	prob.section.normal ./= norm(prob.section.normal)
+function updateSection!(sh::ShootingProblem, x, par)
+	xt = extractTimeSlices(sh, x)
+	@views update!(sh.section, sh.flow.F(xt[:, 1], par), xt[:, 1])
+	sh.section.normal ./= norm(sh.section.normal)
 	return true
 end
 
-"""
-$(SIGNATURES)
-
-Compute the period of the periodic orbit associated to `x`.
-"""
-@inline getPeriod(sh::ShootingProblem, x, par = nothing) = extractPeriodShooting(x)
-
-function extractTimeSlices(x::AbstractVector, M::Int)
+@views function extractTimeSlices(sh::ShootingProblem, x::AbstractVector)
+	M = getM(sh)
 	N = div(length(x) - 1, M)
-	return @views reshape(x[1:end-1], N, M)
+	return reshape(x[1:end-1], N, M)
 end
-extractTimeSlices(x::BorderedArray, M::Int) = x.u
+extractTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
+
 
 @inline extractTimeSlice(x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline extractTimeSlice(x::AbstractVector, ii::Int) = xc[ii]
@@ -147,16 +138,16 @@ extractTimeSlices(x::BorderedArray, M::Int) = x.u
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
 	# Sundials does not like @views :(
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 	M = getM(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(x, M)
+	xc = extractTimeSlices(sh, x)
 
 	# variable to hold the computed result
 	out = similar(x)
-	outc = extractTimeSlices(out, M)
+	outc = extractTimeSlices(sh, out)
 
 	if ~isParallel(sh)
 		for ii in 1:M
@@ -182,11 +173,11 @@ end
 # shooting functional, this allows for AbstractArray state space
 function (sh::ShootingProblem)(x::BorderedArray, par)
 	# period of the cycle
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 	M = getM(sh)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(x, M)
+	xc = extractTimeSlices(sh, x)
 
 	# variable to hold the computed result
 	out = similar(x)
@@ -211,21 +202,16 @@ end
 function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 1e-9)
 	# period of the cycle
 	# Sundials does not like @views :(
-	dT = extractPeriodShooting(dx)
-	T  = extractPeriodShooting(x)
+	dT = getPeriod(sh, dx)
+	T  = getPeriod(sh, x)
 	M = getM(sh)
-	N = div(length(x) - 1, M)
 
-	xv = @view x[1:end-1]
-	xc = reshape(xv, N, M)
-
-	dxv = @view dx[1:end-1]
-	dxc = reshape(dxv, N, M)
+	xc = extractTimeSlices(sh, x)
+	dxc = extractTimeSlices(sh, dx)
 
 	# variable to hold the computed result
 	out = similar(x)
-	outv = @view out[1:end-1]
-	outc = reshape(outv, N, M)
+	outc = extractTimeSlices(sh, out)
 
 	if ~isParallel(sh)
 		for ii in 1:M
@@ -244,6 +230,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	end
 
 	# add constraint
+	N = div(length(x) - 1, M)
 	out[end] = @views (sh.section(x[1:N] .+ δ .* dx[1:N], T + δ * dT ) - sh.section(x[1:N], T)) / δ
 
 	return out
@@ -251,8 +238,8 @@ end
 
 # jacobian of the shooting functional, this allows for Array state space
 function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e-9)
-	dT = extractPeriodShooting(dx)
-	T  = extractPeriodShooting(x)
+	dT = getPeriod(sh, dx)
+	T  = getPeriod(sh, x)
 	M = getM(sh)
 
 	# variable to hold the computed result
@@ -279,7 +266,7 @@ end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 	M = getM(sh)
 	N = div(length(x) - 1, M)
 
@@ -318,7 +305,7 @@ end
 
 function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
-	T = extractPeriodShooting(x)
+	T = getPeriod(prob, x)
 	M = getM(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
@@ -346,7 +333,7 @@ $(SIGNATURES)
 Compute the full trajectory associated to `x`. Mainly for plotting purposes.
 """
 function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
-	T = extractPeriodShooting(x)
+	T = getPeriod(prob, x)
 	M = getM(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]

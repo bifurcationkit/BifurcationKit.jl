@@ -55,7 +55,7 @@ end
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
 function Base.show(io::IO, pb::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting problem")
-	println(io, "├─ sections : ", getM(pb))
+	println(io, "├─ time slices : ", getM(pb))
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 
