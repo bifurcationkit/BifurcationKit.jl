@@ -122,10 +122,7 @@ hopfpt = computeNormalForm(jet..., br, 1; verbose = true)
 ind_hopf = 1
 	# hopfpt = BK.HopfPoint(br, ind_hopf)
 	optnew = opts_br_eq.newtonOptions
-	hopfpoint, _, flag = @time newton(
-		Fbru, Jbru_sp,
-		br, ind_hopf;
-		d2F = jet[3],
+	hopfpoint, _, flag = @time newton(Fbru, Jbru_sp, br, ind_hopf; d2F = jet[3],
 		options = (@set optnew.verbose=true), normN = norminf)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 

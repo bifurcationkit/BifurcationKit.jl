@@ -139,7 +139,7 @@ br_posh, = @time continuation(jet...,
 	br, 4, opts_po_cont,
 	# this is where we tell that we want Standard Shooting
 	# with 15 time sections
-	ShootingProblem(15, par_tm, probsh, Rodas4(), parallel = true);
+	ShootingProblem(15, probsh, Rodas4(), parallel = true);
 	# this to help branching
 	ampfactor = 1.0, δp = 0.0005,
 	# deflation helps not converging to an equilibrium instead of a PO
@@ -161,7 +161,7 @@ br_posh, = @time continuation(jet...,
 		end,
 	normC = norminf)
 
-Scene = title!("")	
+Scene = title!("")
 ```
 
 ## References

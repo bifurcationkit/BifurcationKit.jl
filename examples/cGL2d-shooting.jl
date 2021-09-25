@@ -130,12 +130,8 @@ end
 ####################################################################################################
 # this encodes the functional for the Shooting problem
 probSh = ShootingProblem(
-	# pass the vector field and parameter (to be passed to the vector field)
-	Fcgl, par_cgl,
-
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
-
 	[sol[:, end]], atol = 1e-10, rtol = 1e-8)
 
 initpo = vcat(sol(116.), 4.9) |> vec
@@ -174,12 +170,14 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# probSh;
-	ShootingProblem(Mt, par_cgl, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
+	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
-	finaliseSolution = (z, tau, step, contResult; k...) ->
-		(Base.display(contResult.eig[end].eigenvals) ;true),
+	finaliseSolution = (z, tau, step, contResult; k...) ->begin
+		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
+		return true
+	end,
 	recordFromSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
 	normC = norminf)
 

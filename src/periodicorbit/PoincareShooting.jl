@@ -18,17 +18,17 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 ## Simplified constructors
 - A simpler way is to create a functional is
 
-`pb = PoincareShootingProblem(F, p, prob::ODEProblem, alg, section; kwargs...)`
+`pb = PoincareShootingProblem(prob::ODEProblem, alg, section; kwargs...)`
 
 for simple shooting or
 
-`pb = PoincareShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; kwargs...)`
+`pb = PoincareShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; kwargs...)`
 
-for multiple shooting . Here `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector and the flow), `prob` is an `Union{ODEProblem, EnsembleProblem}` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. We refer to `DifferentialEquations.jl` for more information.
+for multiple shooting . Here `prob` is an `Union{ODEProblem, EnsembleProblem}` which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. We refer to `DifferentialEquations.jl` for more information.
 
 - Another convenient call is
 
-`pb = PoincareShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)`
+`pb = PoincareShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, normals::AbstractVector, centers::AbstractVector; δ = 1e-8, kwargs...)`
 
 where `normals` (resp. `centers`) is a list of normals (resp. centers) which defines a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps.
 
@@ -59,10 +59,11 @@ function Base.show(io::IO, pb::PoincareShootingProblem)
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 
-function PoincareShootingProblem(F, p,
-			prob::ODEProblem, alg,
+function PoincareShootingProblem(prob::ODEProblem, alg,
 			hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
+	F = getVectorField(prob)
+	p = prob.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
@@ -71,31 +72,30 @@ function PoincareShootingProblem(F, p,
 	_M = hyp.M
 	parallel = _M == 1 ? false : parallel
 	_pb = parallel ? EnsembleProblem(prob) : prob
-	return PoincareShootingProblem(flow = Flow(F, p, _pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
+	return PoincareShootingProblem(flow = Flow(_pb, alg; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
 end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, par, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob = prob, alg = alg, kwargs = kwargs), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = prob.p, prob = prob, alg = alg, kwargs = kwargs), parallel = parallel, section = section)
 
-PoincareShootingProblem(M::Int, par, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = par, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargs), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargs), parallel = parallel, section = section)
 
-function PoincareShootingProblem(F, p,
-			prob::ODEProblem, alg,
+function PoincareShootingProblem(prob::ODEProblem, alg,
 			normals::AbstractVector, centers::AbstractVector;
 			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	return PoincareShootingProblem(F, p,
-					prob, alg,
+	return PoincareShootingProblem(prob, alg,
 					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
 
-function PoincareShootingProblem(F, p,
-				prob1::ODEProblem, alg1,
+function PoincareShootingProblem(prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
 				hyp::SectionPS;
 				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
+	F = getVectorField(prob1)
+	p = prob1.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
@@ -105,16 +105,14 @@ function PoincareShootingProblem(F, p,
 	parallel = _M == 1 ? false : parallel
 	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
-	return PoincareShootingProblem(flow = Flow(F, p, _pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
+	return PoincareShootingProblem(flow = Flow(_pb1, alg1, _pb2, alg2; callback = cb, kwargs...), M = hyp.M, section = hyp, δ = δ, parallel = parallel)
 end
 
-function PoincareShootingProblem(F, p,
-				prob1::ODEProblem, alg1,
+function PoincareShootingProblem(prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
 				normals::AbstractVector, centers::AbstractVector;
 				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	return PoincareShootingProblem(F, p,
-					prob1, alg2, prob2, alg2,
+	return PoincareShootingProblem(prob1, alg2, prob2, alg2,
 					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 end
@@ -132,7 +130,6 @@ This function updates the normals and centers of the hyperplanes defining the Po
 	centers_barc = reshape(centers_bar, Nm1, M)
 	centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
 	normals = [pb.flow.F(c, par) for c in centers]
-
 	for ii in eachindex(normals)
 		normals[ii] ./= _norm(normals[ii])
 	end
@@ -433,8 +430,13 @@ end
 function problemForBS(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers, period)
 
 	# create the section
+	if isEmpty(prob.section)
 	normals = [F(u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
+	else
+		normals = prob.section.normals
+		centers = prob.section.centers
+	end
 
 	@assert isEmpty(prob.section) "Specifying its own section for aBS from a Hopf point is not allowed yet."
 
@@ -442,9 +444,9 @@ function problemForBS(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, ce
 
 	# update the problem
 	if length(prob.flow) == 4
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
 	else
-		probPSh = PoincareShootingProblem(F, prob.flow.par, prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
 	end
 
 	# create initial guess. We have to pass it through the projection R
@@ -464,10 +466,8 @@ function predictor(pb::PoincareShootingProblem, bifpt, ampfactor, ζs, bptype::S
 	if bptype == :pd
 		@set! pb.section = _duplicate(pb.section)
 		@set! pb.M = pb.section.M
-
 		orbitguess = copy(bifpt.x) .+ ampfactor .* ζs
 		orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
-		# @show size(orbitguess) pb.M pb.section.M size(pb.section.normals)
 	else
 		orbitguess = copy(bifpt.x)
 		orbitguess .+= ampfactor .* ζs

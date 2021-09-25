@@ -196,7 +196,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.03, pMax = 2.
 	plotEveryStep = 1, nev = 11, precisionStability = 1e-6,
 	detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, tolBisectionEigenvalue = 0.)
 
-nothing #hide	
+nothing #hide
 ```
 
 ```@example TUTBRUaut
@@ -222,7 +222,7 @@ br_po, = continuation(
 	plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 
-Scene = title!("")	
+Scene = title!("")
 ```
 
 Using the above call, it is very easy to find the first branches:
@@ -292,7 +292,7 @@ prob = ODEProblem(FOde, u0, (0., 1000.), par_bru;
 !!! tip "Performance"
     You can really speed this up by using the improved `ODEProblem`
     ```julia
-    using SparseDiffTools, SparseArrays, DiffEqDiffTools
+    using SparseDiffTools, SparseArrays
     jac_prototype = Jbru_sp(ones(2n), par_bru)
     jac_prototype.nzval .= ones(length(jac_prototype.nzval))
     _colors = matrix_colors(jac_prototype)
@@ -325,7 +325,7 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Parallel Standard Shooting
-	ShootingProblem(Mt, par_bru, prob, Rodas4P(), abstol = 1e-10, reltol = 1e-8, parallel = true);
+	ShootingProblem(Mt, prob, Rodas4P(), abstol = 1e-10, reltol = 1e-8, parallel = true);
 	ampfactor = 1.0, δp = 0.0075,
 	# the next option is not necessary
 	# it speeds up the newton iterations
@@ -353,21 +353,21 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), dim = 50)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 15, linsolver = ls, eigsolver = eig)
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 2)
 
 # number of time slices
 Mt = 2
 br_po, = continuation(
 	jet..., br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
+	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8);
 	# the next option is not necessary
 	# it speeds up the newton iterations
 	# by combining the linear solves of the bordered linear system
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true,
-	updateSectionEveryStep = 1,
+	updateSectionEveryStep = 0,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)
 ```

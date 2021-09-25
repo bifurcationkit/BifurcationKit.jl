@@ -149,8 +149,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 """
 function newton(
     prob::AbstractShootingProblem,
-    orbitguess::vectype,
-    par,
+	orbitguess::vectype, par,
     options::NewtonPar{T,S,E},
     defOp::DeflationOperator{Tp,Tdot,T,vectype};
     linearPO = :MatrixFree,
@@ -309,7 +308,8 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 
 	verbose && printstyled(color = :green, "#"^61*
 			"\n--> Start branching from Hopf bif. point to periodic orbits.
-			 \n--> Bifurcation type = ", hopfpt.type,
+			 \n--> Method = \n", prob,
+			"\n--> Bifurcation type = ", hopfpt.type,
 			"\n----> Hopf param = ", br.specialpoint[ind_bif].param,
 			"\n----> newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param,
 			"\n----> amplitude = ", pred.amp,

@@ -1,4 +1,4 @@
-using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads
+using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 
 ####################################################################################################
 # this function takes into accound a parameter passed to the vector field
@@ -98,7 +98,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	fl = Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs}
+@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs, Tcb}
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
 	F::TF = nothing
 
@@ -125,6 +125,9 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 
 	"[Internal] Serial version of the flow"
 	flowSerial::Tfs = nothing
+
+	"[Internal] Store possible callback"
+	callback::Tcb = nothing
 end
 
 # constructors
@@ -138,13 +141,23 @@ Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
 (fl::Flow)(::Val{:SerialTimeSol}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
 (fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfSerial(x, p, dx, t; k...)
 
+
+function getVectorField(prob::Union{ODEProblem, DAEProblem})
+	if isinplace(prob)
+		return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
+	else
+		return (x, p) -> prob.f(x, p, prob.tspan[1])
+	end
+end
+getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
+
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
 """
 # this constructor takes into accound a parameter passed to the vector field
-function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
+function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
 	probserial = prob isa EnsembleProblem ? prob.prob : prob
-	return Flow(F = F,
+	return Flow(F = getVectorField(prob),
 		flow = (x, p, t; kw2...) -> flow(x, p, t, prob; alg = alg, kwargs..., kw2...),
 
 		flowTimeSol = (x, p, t; kw2...) -> flowTimeSol(x, p, t, prob; alg = alg, kwargs..., kw2...),
@@ -158,14 +171,14 @@ function Flow(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 
 		flowSerial = (x, p, t; kw2...) -> flowTimeSol(x, p, t, probserial; alg = alg, kwargs..., kw2...),
 
-		prob = prob, probMono = nothing,
+		prob = prob, probMono = nothing, callback = get(kwargs, :callback, nothing)
 		)
 end
 
 function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
 	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
-	return Flow(F = F,
+	return Flow(F = getVectorField(prob1),
 		flow = (x, p, t; kw2...) -> flow(x, p, t, prob1, alg = alg1; kwargs..., kw2...),
 
 		flowTimeSol = (x, p, t; kw2...) -> flowTimeSol(x, p, t, prob1; alg = alg1, kwargs..., kw2...),
@@ -179,6 +192,6 @@ function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Unio
 
 		flowSerial = (x, p, t; kw2...) -> flowTimeSol(x, p, t, probserial1; alg = alg1, kwargs..., kw2...),
 
-		prob = prob1, probMono = prob2,
+		prob = prob1, probMono = prob2, callback = get(kwargs, :callback, nothing)
 		)
 end

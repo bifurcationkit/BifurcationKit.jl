@@ -42,19 +42,19 @@ You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note
 
 ## Simplified constructors
 - A simpler way to build the functional is to use
-	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
-where `F(x,p)` is the vector field, `p` is a parameter (to be passed to the vector field and the flow), `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `parallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
+	pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
+where `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `parallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 
 - Another way to create a Shooting problem with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase
 	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; parallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; parallel = false, kwargs...)
+	pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; parallel = false, kwargs...)
 - The next way is an elaboration of the previous one
-	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; parallel = false, kwargs...)
+	pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; parallel = false, kwargs...)
 or
 
-	pb = ShootingProblem(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
+	pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
 """
 @with_kw_noshow struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
@@ -69,35 +69,43 @@ const ODEType = Union{ODEProblem, DAEProblem}
 
 # this constructor takes into accound a parameter passed to the vector field
 # if M = 1, we disable parallel processing
-function ShootingProblem(F, p, prob::ODEType, alg, ds, section; parallel = false, kwargs...)
+function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
 	parallel = _M == 1 ? false : parallel
 	_pb = parallel ? EnsembleProblem(prob) : prob
-	return ShootingProblem(M = _M, flow = Flow(F, p, _pb, alg; kwargs...),
+	return ShootingProblem(M = _M, flow = Flow(_pb, alg; kwargs...),
 			ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob::ODEType, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
+ShootingProblem(prob::ODEType, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob::ODEType, alg, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, kwargs...)
+	F = getVectorField(prob)
+	p = prob.p # parameters
+	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
-ShootingProblem(M::Int, par, prob::ODEType, alg; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob, alg, M, nothing; parallel = parallel, kwargs...)
+ShootingProblem(M::Int, prob::ODEType, alg; parallel = false, kwargs...) = ShootingProblem(prob, alg, M, nothing; parallel = parallel, kwargs...)
 
-ShootingProblem(M::Int, par, prob1::ODEType, alg1, prob2::ODEType, alg2; parallel = false, kwargs...) = ShootingProblem(nothing, par, prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
+ShootingProblem(M::Int, prob1::ODEType, alg1, prob2::ODEType, alg2; parallel = false, kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
 
 # idem but with an ODEproblem to define the derivative of the flow
-function ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, kwargs...)
+function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, kwargs...)
 	_M = length(ds)
 	parallel = _M == 1 ? false : parallel
 	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
-	return ShootingProblem(M = _M, flow = Flow(F, p, _pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
+	return ShootingProblem(M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
 end
 
-ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
+ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
-ShootingProblem(F, p, prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; parallel = false, kwargs...) = ShootingProblem(F, p, prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; parallel = false, kwargs...)
+	F = getVectorField(prob1)
+	p = prob1.p # parameters
+	ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
+end
 
 @inline isSimple(sh::ShootingProblem) = sh.M == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
@@ -366,7 +374,7 @@ function problemForBS(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess
 	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure
-	probSh = @set probSh.flow.F = F
+	@set! probSh.flow.F = F
 
 	return probSh, orbitguess
 end

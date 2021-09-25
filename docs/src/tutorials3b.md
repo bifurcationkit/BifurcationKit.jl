@@ -186,7 +186,7 @@ l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf,
 	opts_br_eq.newtonOptions.eigsolver,
 	M, 2.7; phase = 0.25)
 
-nothing #hide	
+nothing #hide
 ```
 We wish to make two remarks at this point. The first is that an initial guess is composed of a space time solution and of the guess for the period `Th` of the solution. Note that the argument `2.7` is a guess for the amplitude of the orbit.
 
@@ -195,7 +195,7 @@ We wish to make two remarks at this point. The first is that an initial guess is
 orbitguess_f2 = reduce(vcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-nothing #hide	
+nothing #hide
 ```
 
 The second remark concerns the phase `0.25` written above. To account for the additional unknown (*i.e.* the period), periodic orbit localisation using Finite Differences requires an additional constraint (see [Periodic orbits based on trapezoidal rule](@ref) for more details). In the present case, this constraint is
@@ -270,7 +270,7 @@ br_po, = continuation(poTrap,
 	plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 
-Scene = title!("")	
+Scene = title!("")
 ```
 
 ## Deflation for periodic orbit problems
@@ -364,7 +364,7 @@ initpo = vcat(vec(orbitsection), 3.0)
 Finally, we need to build a problem which encodes the Shooting functional. This done as follows where we first create the time stepper. For performance reasons, we rely on `SparseDiffTools `
 
 ```julia
-using DifferentialEquations, DiffEqOperators, SparseDiffTools, SparseArrays, DiffEqDiffTools
+using DifferentialEquations, DiffEqOperators, SparseDiffTools, SparseArrays
 
 FOde(f, x, p, t) = Fbru!(f, x, p)
 
@@ -385,9 +385,6 @@ We create the parallel standard shooting problem:
 ```julia
 # this encodes the functional for the Shooting problem
 probSh = ShootingProblem(
-	# pass the vector field and parameter (to be passed to the vector field)
-	Fbru, par_hopf,
-
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob, Rodas4P(),
 
@@ -508,9 +505,6 @@ centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
 # functional to hold the Poincare Shooting Problem
 probHPsh = PoincareShootingProblem(
-	# vector field and parameter
-	Fbru, par_hopf,
-
 	# ODEProblem, ODE solver used to compute the flow
 	prob, Rodas4P(),
 

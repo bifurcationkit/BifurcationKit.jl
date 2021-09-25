@@ -78,7 +78,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.01, ds= -0.001, dsmin = 1e-4, maxSteps 
 
 br_po, = continuation(
 	jet..., br, 1, opts_po_cont,
-	ShootingProblem(15, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
+	ShootingProblem(15, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
 	ampfactor = 1., δp = 0.0051,
 	updateSectionEveryStep = 1,
 	linearPO = :autodiffDense,
@@ -113,7 +113,7 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 opts_po_cont_ps = @set opts_po_cont.newtonOptions.tol = 1e-7
 @set opts_po_cont_ps.dsmax = 0.0025
 br_po, = continuation(jet..., br, 1, opts_po_cont_ps,
-	PoincareShootingProblem(2, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-6);
+	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = true, reltol = 1e-6);
 	ampfactor = 1., δp = 0.0051, #verbosity = 3,plot=true,
 	updateSectionEveryStep = 1,
 	linearPO = :autodiffDenseAnalytical,

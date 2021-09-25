@@ -74,10 +74,12 @@ br_posh, = @time continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Standard Shooting
-	ShootingProblem(15, par_tm, probsh, Rodas4(), parallel = true);
+	ShootingProblem(15, probsh, Rodas4(), parallel = true);
+	# ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
 	ampfactor = 1.0, δp = 0.0005,
 	usedeflation = true,
 	linearPO = :autodiffDense,
+	# linearPO = :FiniteDifferencesDense,
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
@@ -109,7 +111,7 @@ br_popsh, = @time continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Poincaré Shooting
-	PoincareShootingProblem(9, par_tm, probsh, Rodas4P(), probmono, Rosenbrock23(), parallel = false);
+	PoincareShootingProblem(3, probsh, Rodas4P(), probmono, Rosenbrock23(), parallel = false);
 	ampfactor = 1.0, δp = 0.0005,
 	usedeflation = false,
 	linearPO = :autodiffDense,

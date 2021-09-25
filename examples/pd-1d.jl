@@ -81,7 +81,7 @@ optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurca
 
 plot(br)
 ####################################################################################################
-# branching from Hopf bp using aBS
+# branching from Hopf bp using aBS-Trapezoid
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
@@ -160,8 +160,8 @@ initpo = vcat(vec(orbitsection), 3.)
 BK.plotPeriodicShooting(initpo[1:end-1], 1);title!("")
 
 
-probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
-		[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true)
+probSh = ShootingProblem(prob_sp, ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true)
+# probSh = ShootingProblem(prob_ode, Rodas4P(), [sol(280.0)]; abstol=1e-10, reltol=1e-4, parallel = true)
 
 probSh(initpo, par_br_hopf)
 
@@ -239,7 +239,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1
 
 plot(br_po_sh_pd, br, label = "");title!("")
 ####################################################################################################
-# branching from Hopf bp using aBS
+# branching from Hopf bp using aBS- Shooting
 ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
@@ -247,7 +247,7 @@ eig = DefaultEig()
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120, linsolver  = ls)
 optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set opt_po.eigsolver = eig), nev = 20, precisionStability = 1e-2, detectBifurcation = 3)
 
-probPO = ShootingProblem(1, par_br, prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
+probPO = ShootingProblem(1, prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
 	br_po, = @time continuation(
 		# arguments for branch switching from the first
 		# Hopf bifurcation point
@@ -284,7 +284,9 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 	recordFromSolution = (u, p) -> (BK.getMaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
 	)
 
-plot(br_po, br_po2, legend=false)
+plot(br_po, br_po_pd, legend=false)
+####################################################################################################
+# aBS Poincare Shooting
 
 br_po.contparams.newtonOptions.linsolver.solver.N
 br_po_pd.contparams.newtonOptions.linsolver.solver.N

@@ -131,7 +131,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.0001, pMin 
 
 # Shooting functional. Note the  stringent tolerances used to cope with
 # the extreme parameters of the model
-probSH = ShootingProblem(5, par_Colpitts, probFreez_ode, Rodas4(); reltol = 1e-10, abstol = 1e-13)
+probSH = ShootingProblem(5, probFreez_ode, Rodas4(); reltol = 1e-10, abstol = 1e-13)
 
 # automatic branching from the Hopf point
 br_po, = continuation(jet..., br, 1, opts_po_cont, probSH; plot = true, verbosity = 3,

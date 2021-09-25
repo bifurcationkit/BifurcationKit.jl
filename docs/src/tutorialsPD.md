@@ -122,7 +122,7 @@ initpo = vcat(vec(orbitsection), 3.)
 
 # define the functional for the standard simple shooting based on the
 # ODE solver ETDRK2. SectionShooting implements an appropriate phase condition
-probSh = ShootingProblem(Fbr, par_br_hopf, prob_sp, ETDRK2(krylov=true),
+probSh = ShootingProblem(prob_sp, ETDRK2(krylov=true),
 	[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
 
 # parameters for the Newton-Krylov solver

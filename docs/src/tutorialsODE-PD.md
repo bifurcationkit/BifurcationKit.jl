@@ -166,7 +166,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.01, ds= -0.001, dsmin = 1e-4, maxSteps 
 br_po, = continuation(
 	jet..., br, 1, opts_po_cont,
 	# parallel shooting functional with 10 sections
-	ShootingProblem(15, par_lur, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
+	ShootingProblem(15, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
 	# first parameter value on the branch
 	δp = 0.0051,
 	# method for solving newton linear system

@@ -7,7 +7,7 @@ In this example, we study the following singular perturbation problem:
 
 $$\epsilon^{2} y^{\prime \prime}+2\left(1-x^{2}\right) y+y^{2}=1, \quad y(-1)=y(1)=0\tag{E}.$$
 
-It is a remarkably difficult problem which present many disconnected branches which are not amenable to the continuation method. We thus use the recently developed deflated continuation method which builds upon the Deflated Newton (see [Deflated problems](@ref)) technics to find solutions which are different from a set of already known solutions.
+It is a remarkably difficult problem which presents many disconnected branches which are not amenable to the classical continuation methods. We thus use the recently developed *deflated continuation method* which builds upon the Deflated Newton (see [Deflated problems](@ref)) technics to find solutions which are different from a set of already known solutions.
 
 We start with some import
 

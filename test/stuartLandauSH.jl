@@ -6,7 +6,7 @@ using OrdinaryDiffEq, ForwardDiff, Test
 
 norminf = x -> norm(x, Inf)
 
-function Fsl!(f, u, p, t)
+function Fsl!(f, u, p, t = 0)
 	@unpack r, μ, ν, c3, c5 = p
 	u1 = u[1]
 	u2 = u[2]
@@ -18,8 +18,8 @@ function Fsl!(f, u, p, t)
 	return f
 end
 
-Fsl(x, p) = Fsl!(similar(x), x, p, 0.)
-Fode(f, x, p, t) = Fsl!(f, x, p, t)
+Fsl(x, p) = Fsl!(similar(x), x, p)
+# Fode(f, x, p, t) = Fsl!(f, x, p, t)
 dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 JFsl(x, p) = FD.jacobian(t -> Fsl(t, p), x)
 jet = BK.getJet(Fsl, JFsl)
@@ -39,7 +39,7 @@ end
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
 br, = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
-prob = ODEProblem(Fode, u0, (0., 100.), par_hopf)
+prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 ####################################################################################################
 sol = solve(probMono, KenCarp4(), abstol =1e-9, reltol=1e-6)
@@ -50,7 +50,7 @@ section(x, T) = x[1] #* x[end]
 # standard simple shooting
 M = 1
 dM = 1
-_pb = ShootingProblem(Fsl, par_hopf, prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9)
+_pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
@@ -65,7 +65,7 @@ resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
 @test norm(resAN - resAD, Inf) < 4e-6
 ####################################################################################################
 # test shooting interface M = 1
-_pb = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), [initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
+_pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
 
@@ -74,7 +74,7 @@ _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 
-_pb2 = ShootingProblem(Fsl, par_hopf, prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
+_pb2 = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
 res = _pb2(initpo, par_hopf)
 res = _pb2(initpo, par_hopf, initpo)
 BK.isSimple(_pb2)
@@ -106,20 +106,20 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 # plot(br_pok2)
 ####################################################################################################
 # test automatic branch switching
-br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, par_hopf, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
+br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
 
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detectBifurcation = 0
-br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, par_hopf, prob, Rodas4(); abstol = 1e-10, reltol = 1e-9); linearPO = :autodiffDense, normC = norminf, plot=false)
+br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, prob, Rodas4(); abstol = 1e-10, reltol = 1e-9); linearPO = :autodiffDense, normC = norminf, plot=false)
 
 # case with 2 sections
-br_pok2_s2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(2, par_hopf, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
+br_pok2_s2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
 
 ####################################################################################################
 # test shooting interface M > 1
-_pb = ShootingProblem(Fsl, par_hopf, prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
+_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
@@ -132,11 +132,10 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 normals = [[-1., 0.]]
 centers = [zeros(2)]
 
-probPsh = PoincareShootingProblem(2, par_hopf,prob, Rodas4(), probMono, Rodas4(); abstol=1e-10, reltol=1e-9)
-probPsh = PoincareShootingProblem(2, par_hopf,prob, Rodas4(); rtol = abstol=1e-10, reltol=1e-9)
+probPsh = PoincareShootingProblem(2, prob, Rodas4(), probMono, Rodas4(); abstol=1e-10, reltol=1e-9)
+probPsh = PoincareShootingProblem(2, prob, Rodas4(); rtol = abstol=1e-10, reltol=1e-9)
 
-probPsh = PoincareShootingProblem(Fsl, par_hopf,
-		prob, Rodas4(),
+probPsh = PoincareShootingProblem(prob, Rodas4(),
 		probMono, Rodas4(),
 		normals, centers; abstol = 1e-10, reltol = 1e-9)
 
@@ -166,8 +165,7 @@ BK.getAmplitude(probPsh, outpo, par_hopf)
 BK.getMaximum(probPsh, outpo, par_hopf)
 BK.getTrajectory(probPsh, outpo, par_hopf)
 
-probPsh = PoincareShootingProblem(Fsl, par_hopf,
-		prob, Rodas4(),
+probPsh = PoincareShootingProblem(prob, Rodas4(),
 		# probMono, Rodas4(autodiff=false),
 		normals, centers; abstol = 1e-10, reltol = 1e-9)
 
@@ -194,9 +192,9 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probPsh = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
+probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
 # version with analytical jacobian
-probPsh2 = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0)
+probPsh2 = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0)
 
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
@@ -225,7 +223,7 @@ normals = [[-1., 0.], [1, 0], [0, 1]]
 centers = [zeros(2), zeros(2), zeros(2)]
 initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
 
-probPsh = PoincareShootingProblem(Fsl, par_hopf, prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
+probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9)
 
 initpo_bar = reduce(vcat, [BK.R(probPsh, initpo[ii], ii) for ii in eachindex(centers)])
 # same with projection function
@@ -257,15 +255,15 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax =
 ####################################################################################################
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, par_hopf, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, linearPO = :autodiffDenseAnalytical)
+br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, linearPO = :autodiffDenseAnalytical)
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 @set! opts_po_cont.detectBifurcation = 0
 @set! opts_po_cont.newtonOptions.linsolver = ls
 
 for M in [1,2], linearPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
-	@show M, linearPO
-	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, par_hopf, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO == :autodiffMF ? :FiniteDifferencesDense : linearPO, verbosity = 0)
+	@info M, linearPO
+	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO == :autodiffMF ? :FiniteDifferencesDense : linearPO, verbosity = 0)
 
-	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, par_hopf, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO, verbosity = 0)
+	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO, verbosity = 0)
 end

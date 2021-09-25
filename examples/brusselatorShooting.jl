@@ -154,16 +154,15 @@ prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 sol = @time solve(prob, Rodas4P(); abstol = 1e-10, retol = 1e-8, tspan = (0., 520.), progress = true)
 ####################################################################################################
 M = 10
-dM = 3
+dM = 10
 orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.0)
 
 BK.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
-probSh = ShootingProblem(Fbru, par_hopf,
-	prob, Rodas4P(),
-	[orbitguess_f2[:,ii] for ii=1:dM:M]; abstol = 1e-10, reltol = 1e-8, parallel = false)
+probSh = ShootingProblem(prob, Rodas4P(),
+	[orbitguess_f2[:,ii] for ii=1:dM:M]; abstol = 1e-10, reltol = 1e-8, parallel = true)
 
 res = @time probSh(initpo, par_hopf)
 norminf(res)
@@ -195,8 +194,8 @@ br_po, = @time continuation(probSh,
 		updateSectionEveryStep = 2,
 		verbosity = 3,
 		plot = true,
-		finaliseSolution = (z, tau, step, contResult; k...) ->
-			(Base.display(contResult.eig[end].eigenvals) ;true),
+		# finaliseSolution = (z, tau, step, contResult; k...) ->
+			# (Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),
 		recordFromSolution = (u, p) -> u[end], normC = norminf)
 
@@ -208,14 +207,14 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls, eigsolver = eig)
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 2.5, maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-7), nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 2, saveSolEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.01, pMax = 1.5, maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-7), nev = 15, precisionStability = 1e-3, detectBifurcation = 3, plotEveryStep = 2, saveSolEveryStep = 2)
 
 Mt = 2
 br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
-	opts_po_cont, ShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = false);
-	ampfactor = 1., δp = 0.005,
+	opts_po_cont, ShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
+	ampfactor = 1., δp = 0.0075,
 	verbosity = 3,	plot = true,
 	updateSectionEveryStep = 1,
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
@@ -226,7 +225,8 @@ br_po, = continuation(
 	plotSolution = (x, p; kwargs...) -> plot!(x[1:end-1]; label = "", kwargs...),
 	normC = norminf)
 
-br_po2, = BK.continuation(br_po, 3, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 300, ds = -0.01);
+# ca marche:
+br_po2, = BK.continuation(br_po, 2, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 300, ds = -0.01);
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = 0.01,
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
@@ -244,7 +244,7 @@ dM = 5
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
-probHPsh = PoincareShootingProblem(Fbru, par_hopf, prob, Rodas4P(), normals, centers; abstol = 1e-10, reltol = 1e-8, parallel = false, δ = 1e-8)
+probHPsh = PoincareShootingProblem(prob, Rodas4P(), normals, centers; abstol = 1e-10, reltol = 1e-8, parallel = false, δ = 1e-8)
 
 initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 
@@ -290,13 +290,13 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 100, verbose = false)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-7,  maxIter = 25, linsolver = ls, eigsolver = eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50))
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 2.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, pMax = 1.5, maxSteps = 100, newtonOptions = optn_po, nev = 10, precisionStability = 1e-5, detectBifurcation = 3, plotEveryStep = 2)
 
 Mt = 2
 	br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, par_bru, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
+	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true, printPeriod = true,
@@ -304,15 +304,15 @@ Mt = 2
 		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
 		return true
 	end,
-	updateSectionEveryStep = 1,
+	updateSectionEveryStep = 0,
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], Mt; kwargs...),
 	normC = norminf)
 
-plot(br_po)
+plot(br_po, legend = :bottomright)
 
 br_po2, upo2, = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 10, saveSolEveryStep = 1);
 	verbosity = 3, plot = true,
-	ampfactor = .2, δp = 0.01,
+	ampfactor = .1, δp = 0.01,
 	# usedeflation = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p.p)),),
