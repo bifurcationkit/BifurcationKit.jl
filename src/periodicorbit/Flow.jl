@@ -108,13 +108,13 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side. Please use `nothing` as default."
 	flowTimeSol::Tts = nothing
 
-	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, mainly used for plotting on the user side. Please use `nothing` as default."
+	"[Optional] The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, mainly used for plotting on the user side. Please use `nothing` as default."
 	flowFull::Tff = nothing
 
 	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
 	dflow::Td = nothing
 
-	"Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
+	"[Optional] Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
 	dfSerial::Tse = nothing
 
 	"[Internal] store the ODEProblem associated to the flow of the Cauchy problem"

@@ -1,5 +1,7 @@
 using DiffEqBase: EnsembleProblem, ODEProblem, DAEProblem
 
+const ODEType = Union{ODEProblem, DAEProblem}
+
 """
 $(SIGNATURES)
 
@@ -65,8 +67,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
-const ODEType = Union{ODEProblem, DAEProblem}
-
+#####################################
 # this constructor takes into accound a parameter passed to the vector field
 # if M = 1, we disable parallel processing
 function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, kwargs...)
@@ -107,7 +108,8 @@ function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::Ab
 	ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 end
 
-@inline isSimple(sh::ShootingProblem) = getM(M) == 1
+#####################################
+@inline isSimple(sh::ShootingProblem) = getM(sh) == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 
 function Base.show(io::IO, sh::ShootingProblem)
@@ -130,7 +132,6 @@ end
 	return reshape(x[1:end-1], N, M)
 end
 getTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
-
 
 @inline getTimeSlice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline getTimeSlice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
@@ -271,7 +272,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = getTimeSlices(x, M)
+	xc = getTimeSlices(sh, x)
 
 	# jacobian of the flow
 	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialTimeSol), z, par, _T).u, _x)

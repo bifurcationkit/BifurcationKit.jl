@@ -5,14 +5,14 @@ using DiffEqBase: ODEProblem, terminate!, VectorContinuousCallback, EnsembleProb
 
 """
 
-`pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, parallel = false)`
+`pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, parallel = false)`
 
-This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitShooting/#Poincar%C3%A9-shooting). The arguments are as follows
+This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `M`: the number of Poincaré sections. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `sections(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
+- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
 - `δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
-- `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplane section) when the flow is based on `DifferentialEquations.jl`.
+- `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplane section)
 - `parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
 
 ## Simplified constructors
@@ -33,41 +33,32 @@ for multiple shooting . Here `prob` is an `Union{ODEProblem, EnsembleProblem}` w
 where `normals` (resp. `centers`) is a list of normals (resp. centers) which defines a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps.
 
 ## Computing the functionals
-A functional, hereby called `G` encodes this shooting problem. You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N` where `N` is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+A functional, hereby called `G` encodes this shooting problem. You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
-- `pb(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
+- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
-
-## Computing the initial guess
-Computing an initial guess or a vector to feed the functional is a bit tricky here because projections are used in the background (see [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitShooting/#Poincar%C3%A9-shooting)). Let us say that you have a `guess` which is a vector such that `guess[i]` is a guess for a point being close to hyperplane ``\\Sigma_i``, you can use `BifurcationKit.projection` to apply the projection operator `R`. For example you can generate the guess for the functional using `reduce(vcat, BK.projection(probHPsh, guess))`
 
 
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS, T} <: AbstractShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
 	M::Int64 = 0						# number of Poincaré sections
 	flow::Tf = Flow()					# should be a Flow
 	section::Tsection = SectionPS(M)	# Poincaré sections
+	δ::Float64 = 0e-8					# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
-	δ::T = 0e-8							# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 end
 
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
-
 function Base.show(io::IO, pb::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting problem")
 	println(io, "├─ time slices : ", getM(pb))
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 
-# fairly general constructor
-PoincareShootingProblem(fl::Flow, M::Int, section; δ = 1e-8, interp_points = 50, parallel = false) = PoincareShootingProblem(M, fl, section, parallel, δ)
-
-#######
-# constructors based on DifferentialEquations.jl
 function PoincareShootingProblem(prob::ODEProblem, alg,
 			hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)

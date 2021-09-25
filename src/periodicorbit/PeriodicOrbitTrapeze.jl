@@ -66,7 +66,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extractPeriodFDTrap` won't be well defined because it is a scalar operation. One may have to redefine it like `extractPeriodFDTrap(x::CuArray) = x[end:end]` or something else. Also, note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
+@with_kw_noshow struct PeriodicOrbitTrapProblem{TF, TJ, TJt, Td2F, Td3F, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
 	# Function F(x, par)
 	F::TF = nothing
 
@@ -164,9 +164,9 @@ PeriodicOrbitTrapProblem(F, J, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinea
 # @inline extractPeriodFDTrap(x::BorderedArray)  = x.T
 
 # these functions extract the time slices components
-extractTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
-# extractTimeSlices(x::BorderedArray,  N, M) = x.u
-extractTimeSlices(pb::PeriodicOrbitTrapProblem, x) = extractTimeSlices(x, pb.N, pb.M)
+getTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
+# getTimeSlices(x::BorderedArray,  N, M) = x.u
+getTimeSlices(pb::PeriodicOrbitTrapProblem, x) = getTimeSlices(x, pb.N, pb.M)
 
 function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h::Number, tmp, linear::Bool = true; applyf::Bool = true)
 	# this function implements the basic implicit scheme used for the time integration
@@ -201,8 +201,8 @@ function POTrapFunctional!(pb::AbstractPOFDProblem, out, u, par)
 		M, N = size(pb)
 		T = extractPeriodFDTrap(u)
 
-		uc = extractTimeSlices(pb, u)
-		outc = extractTimeSlices(pb, out)
+		uc = getTimeSlices(pb, u)
+		outc = getTimeSlices(pb, out)
 
 		# outc[:, M] plays the role of tmp until it is used just after the for-loop
 		@views applyF(pb, outc[:, M], uc[:, M-1], par)
@@ -236,9 +236,9 @@ function POTrapFunctionalJac!(pb::AbstractPOFDProblem, out, u, par, du)
 	T  = extractPeriodFDTrap(u)
 	dT = extractPeriodFDTrap(du)
 
-	uc = extractTimeSlices(pb, u)
-	outc = extractTimeSlices(pb, out)
-	duc = extractTimeSlices(pb, du)
+	uc = getTimeSlices(pb, u)
+	outc = getTimeSlices(pb, out)
+	duc = getTimeSlices(pb, du)
 
 	# compute the cyclic part
 	@views Jc(pb, outc, u[1:end-1-N], par, T, du[1:end-N-1], outc[:, M])
@@ -281,7 +281,7 @@ function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du
 	# du of size N * M
 	M, N = size(pb)
 	T = extractPeriodFDTrap(u0)
-	u0c = extractTimeSlices(pb, u0)
+	u0c = getTimeSlices(pb, u0)
 
 	# compute the cyclic part
 	@views Jc(pb, outc, u0[1:end-1-N], par, T, du[1:end-N], outc[:, M])
@@ -357,7 +357,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 
 	In = getMassMatrix(pb)
 
-	u0c = extractTimeSlices(pb, u0)
+	u0c = getTimeSlices(pb, u0)
 	outc = similar(u0c)
 
 	tmpJ = @views pb.J(u0c[:, 1], par)
@@ -423,7 +423,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 
 		In = getMassMatrix(pb, ~(Tj <: SparseMatrixCSC))
 
-		u0c = extractTimeSlices(pb, u0)
+		u0c = getTimeSlices(pb, u0)
 		outc = similar(u0c)
 
 		tmpJ = pb.J(u0c[:, 1], par)
@@ -475,7 +475,7 @@ end
 
 	In = getMassMatrix(pb)
 
-	u0c = extractTimeSlices(pb, u0)
+	u0c = getTimeSlices(pb, u0)
 	outc = similar(u0c)
 
 	tmpJ = pb.J(u0c[:, 1], par)
@@ -619,7 +619,7 @@ end
 # this function updates the section during the continuation run
 @views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
 	M, N = size(prob)
-	xc = extractTimeSlices(prob, x)
+	xc = getTimeSlices(prob, x)
 	T = extractPeriodFDTrap(x)
 
 	# update the reference
@@ -1008,7 +1008,7 @@ function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::S
 	elseif bptype == :pd
 		M, N = size(pb)
 		orbitguess0 = copy(bifpt.x)[1:end-1]
-		orbitguess0c = extractTimeSlices(pb, copy(bifpt.x))
+		orbitguess0c = getTimeSlices(pb, copy(bifpt.x))
 		ζc = reshape(ζ, N, M)
 		orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
 		orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)

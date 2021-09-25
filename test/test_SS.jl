@@ -81,17 +81,17 @@ dres = probSh(po, par, dpo; δ = δ)
 @test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the hyperplane projections for Poincare Shooting
-M = 3
-normals = [rand(50) for ii=1:M]
+M = 1
+normals = [rand(2) for ii=1:M]
 for ii=1:M
 	normals[ii] /= norm(normals[ii])
 end
-centers = [rand(50) for ii=1:M]
+centers = [rand(2) for ii=1:M]
 
 hyper = BK.SectionPS(normals, centers)
 
 x = 1:50 |>collect .|> Float64 |> vec
-x = rand(50)
+x = rand(2)
 xb = BK.R(hyper, x, 1)
 # test
 for ii=1:M
@@ -103,14 +103,14 @@ for ii=1:M
 end
 
 # test of the derivatives of E and R
-dx = rand(50)
+dx = rand(2)
 _out1 = (BK.R(hyper, x .+ δ .* dx, 1) - BK.R(hyper, x, 1)) ./ δ
 _out2 = zero(_out1)
 _out2 = BK.dR!(hyper, _out2, dx, 1)
 
 @test norm(_out2 - _out1, Inf) < 1e-5
 
-dx = rand(49)
+dx = rand(2-1)
 _out1 = ForwardDiff.derivative(t -> BK.E(hyper, xb .+ t .* dx,1), 0.)
 _out2 = BK.dE(hyper, dx, 1)
 @test norm(_out2 - _out1, Inf) < 1e-12

@@ -14,7 +14,7 @@ end
 """
 $(TYPEDEF)
 
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point `center` and a `normal`.
+This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point `center` and a `normal`.
 
 $(TYPEDFIELDS)
 
