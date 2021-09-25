@@ -29,7 +29,7 @@ Create a problem to implement the Standard Simple / Parallel Multiple Standard S
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** the periodic orbit and `T` is the period of the guess. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
-- `parallel` whether the shooting are computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem`.
+- `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically  set up for you).
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
@@ -38,7 +38,7 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 - `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 
-You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N + 1 where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which accepts only `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
+You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
 ## Simplified constructors
 - A simpler way to build the functional is to use
@@ -113,27 +113,27 @@ end
 function Base.show(io::IO, sh::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
 	println(io, "├─ time slices : ", getM(sh))
-	println(io, "└─ parallel : ", isParallel(sh))
+	println(io, "└─ parallel    : ", isParallel(sh))
 end
 
 # this function updates the section during the continuation run
 function updateSection!(sh::ShootingProblem, x, par)
-	xt = extractTimeSlices(sh, x)
+	xt = getTimeSlices(sh, x)
 	@views update!(sh.section, sh.flow.F(xt[:, 1], par), xt[:, 1])
 	sh.section.normal ./= norm(sh.section.normal)
 	return true
 end
 
-@views function extractTimeSlices(sh::ShootingProblem, x::AbstractVector)
+@views function getTimeSlices(sh::ShootingProblem, x::AbstractVector)
 	M = getM(sh)
 	N = div(length(x) - 1, M)
 	return reshape(x[1:end-1], N, M)
 end
-extractTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
+getTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
 
 
-@inline extractTimeSlice(x::AbstractMatrix, ii::Int) = @view x[:, ii]
-@inline extractTimeSlice(x::AbstractVector, ii::Int) = xc[ii]
+@inline getTimeSlice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
+@inline getTimeSlice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
@@ -143,11 +143,11 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(sh, x)
+	xc = getTimeSlices(sh, x)
 
 	# variable to hold the computed result
 	out = similar(x)
-	outc = extractTimeSlices(sh, out)
+	outc = getTimeSlices(sh, out)
 
 	if ~isParallel(sh)
 		for ii in 1:M
@@ -165,7 +165,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 	end
 
 	# add constraint
-	out[end] = @views sh.section(xc[:, 1], T)
+	out[end] = @views sh.section(getTimeSlice(sh, xc, 1), T)
 
 	return out
 end
@@ -177,7 +177,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 	M = getM(sh)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(sh, x)
+	xc = getTimeSlices(sh, x)
 
 	# variable to hold the computed result
 	out = similar(x)
@@ -193,7 +193,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 	end
 
 	# add constraint
-	out.p = sh.section(xc[1], T)
+	out.p = sh.section(getTimeSlice(sh, xc, 1), T)
 
 	return out
 end
@@ -206,12 +206,12 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	T  = getPeriod(sh, x)
 	M = getM(sh)
 
-	xc = extractTimeSlices(sh, x)
-	dxc = extractTimeSlices(sh, dx)
+	xc = getTimeSlices(sh, x)
+	dxc = getTimeSlices(sh, dx)
 
 	# variable to hold the computed result
 	out = similar(x)
-	outc = extractTimeSlices(sh, out)
+	outc = getTimeSlices(sh, out)
 
 	if ~isParallel(sh)
 		for ii in 1:M
@@ -271,7 +271,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-	xc = extractTimeSlices(x, M)
+	xc = getTimeSlices(x, M)
 
 	# jacobian of the flow
 	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialTimeSol), z, par, _T).u, _x)

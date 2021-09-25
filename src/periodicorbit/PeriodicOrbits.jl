@@ -8,6 +8,16 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 # get the number of time slices
 @inline getM(pb::AbstractPeriodicOrbitProblem) = pb.M
 
+# get the period
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x`.
+"""
+@inline getPeriod(sh::AbstractPeriodicOrbitProblem, x, par = nothing) = extractPeriod(x)
+@inline extractPeriod(x::AbstractVector) = x[end]
+@inline extractPeriod(x::BorderedArray)  = x.p
+
 # update a problem with arguments
 function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
 
