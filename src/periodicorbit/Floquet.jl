@@ -140,7 +140,7 @@ end
 @views function MonodromyQaD(::Val{:ExtractEigenVector}, sh::ShootingProblem, x::AbstractVector, par, ζ::AbstractVector)
 
 	# period of the cycle
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 
 	# extract parameters
 	M = getM(sh)
@@ -272,7 +272,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 
 	out = copy(du)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
@@ -306,7 +306,7 @@ function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem
 
 	out = copy(ζ)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
@@ -344,7 +344,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 	# time step
 	h =  T * getTimeStep(poPb, 1)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
 	temp = similar(mono)

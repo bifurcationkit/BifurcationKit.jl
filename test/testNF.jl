@@ -98,7 +98,7 @@ bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par_pf,  (@lens _.μ), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 30, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
 	recordFromSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
-	plot = false, verbosity = 2, normC = norminf)
+	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 function Fbp2d(x, p)
 	return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
