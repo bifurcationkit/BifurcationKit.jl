@@ -175,7 +175,7 @@ function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs.
 		)
 end
 
-function Flow(F, p, prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
+function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
 	probserial1 = prob1 isa EnsembleProblem ? prob1.prob : prob1
 	probserial2 = prob2 isa EnsembleProblem ? prob2.prob : prob2
 	return Flow(F = getVectorField(prob1),

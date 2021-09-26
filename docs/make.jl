@@ -18,6 +18,9 @@ makedocs(doctest = false,
 				"Finite Differences" => "periodicOrbitTrapeze.md",
 				"Shooting" => "periodicOrbitShooting.md",
 				],
+			"Symmetries / Waves" => [
+				"Introduction" => "intro_wave.md",
+				],	
 			"Continuation methods" => [
 					"Introduction" => "IntroContinuation.md",
 			"Predictors / correctors" => "Predictors.md",

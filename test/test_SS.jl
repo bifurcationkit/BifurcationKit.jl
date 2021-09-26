@@ -1,3 +1,4 @@
+# using Revise
 using Test, BifurcationKit, ForwardDiff, RecursiveArrayTools, LinearAlgebra
 const BK = BifurcationKit
 N = 10
@@ -151,6 +152,8 @@ z0 = rand(2)
 dz0 = rand(2)
 _out0 = BK.diffPoincareMap(probPSh, z0, par, dz0, 1)
 _out1 = ForwardDiff.derivative(z -> Π(z0 .+ z .* dz0, par), 0)
+display(_out0)
+display(_out1)
 
 # test the analytical version of the functional
 _out0 = probPSh(ci, par, dci)

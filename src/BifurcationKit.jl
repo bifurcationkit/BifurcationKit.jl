@@ -54,6 +54,8 @@ module BifurcationKit
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/Floquet.jl")
 
+	include("wave/WaveProblem.jl")
+
 	include("plotting/Recipes.jl")
 	include("Diffeqwrap.jl")
 

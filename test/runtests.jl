@@ -41,4 +41,8 @@ using Test
 		include("stuartLandauTrap.jl")
 		include("testLure.jl")
 	end
+	
+	@testset "Wave" begin
+		include("test_wave.jl")
+	end
 end

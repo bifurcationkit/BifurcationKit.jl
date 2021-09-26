@@ -97,7 +97,7 @@ function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section
 	parallel = _M == 1 ? false : parallel
 	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
 	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
-	return ShootingProblem(M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
+	ShootingProblem(M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
 end
 
 ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
