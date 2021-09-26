@@ -1,6 +1,6 @@
 # Modulated fronts in 1d autocatalytic model
 
-We consider the following model [^Balmforth][^Malham] which is also treated in [^Beyn] along with
+We consider the following model [^Balmforth][^Malham] which is also treated in [^Beyn]
 
 $$\begin{array}{l}
 u_{t}=a u_{x x}-u f(v), \quad a>0, u, v: \mathbb{R} \rightarrow \mathbb{R} \\
@@ -9,7 +9,7 @@ v_{t}=v_{x x}+u f(v)
 
 where $f(u) = u^m 1_{u\geq 0}$. We chose the boundary conditions
 
-$$\left(u_{-}, v_{-}\right)=(0,1),\left(u_{+}, v_{+}\right)=(1,0)\tag{BC}.$$
+$$\left(u_{-}, v_{-}\right)=(0,1),\quad \left(u_{+}, v_{+}\right)=(1,0)\tag{BC}.$$
 
 It is straightforward to implement this problem as follows:
 
@@ -21,7 +21,7 @@ const BK = BifurcationKit
 
 # supremum norm
 norminf(x) = norm(x, Inf)
-f(u) = u^9 # solution are positive, so remove the  heaviside
+f(u) = u^9 # solution are positive, so remove the heaviside
 
 # helper function to plot solutions
 function plotsol!(x; k...)
@@ -110,7 +110,7 @@ nothing #hide
 
 ## Freezing method
 
-The problem may feature fronts, that is solution of the form $u(x,t) = U(x-st)$ (same for $v$) for a fixed value of the profile $U$ and the speed $s$. The equation for the front profile are, up to an abuse of notations
+The problem may feature fronts, that is solutions of the form $u(x,t) = U(x-st)$ (same for $v$) for a fixed value of the profile $U$ and the speed $s$. The equation for the front profile is, up to an abuse of notations
 
 $$\begin{array}{l}
 0=a u_{\xi\xi}+su_{\xi}-u f(v)\\
@@ -170,7 +170,7 @@ v_{t}=v_{x x}+s v_x+u f(v)\\
 0 = \left\langle U, \partial_\xi U_0	\right\rangle
 \end{array}$$
 
-which can be written with a PDE $M_aU_t = G(u)$ with mass matrix $M_a = (Id, Id, 0)$. We have already written the vector field of (MF) in the function `FcatWave`. 
+which can be written with a PDE $M_aU_t = G(u)$ with mass matrix $M_a = (Id, Id, 0)$. We have already written the vector field of (MF) in the function `FcatWave`.
 
 Having found a front $U^f$, we can continue it as function of the parameter $a$ and detect instabilities. The stability of the front is linked to the eigenelements $(\lambda, V)$ solution of the generalized eigenvalue problem:
 

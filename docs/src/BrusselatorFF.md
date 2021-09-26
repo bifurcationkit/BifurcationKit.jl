@@ -196,7 +196,7 @@ probSh = ShootingProblem(M = 1, flow = flow, ds = diff(LinRange(0, 1, 1 + 1)), s
 
 ```julia
 # linear solver for the Shooting problem
-ls = GMRESIterativeSolvers(N = 2nx+1)
+ls = GMRESIterativeSolvers(N = 2nx+1, reltol = 1e-4)
 
 # parameters for Krylov-Newton
 optn = NewtonPar(tol = 1e-9, verbose = true,
@@ -214,19 +214,21 @@ solp, = @time newton(probSh, initpo, par_bru, optn,
 and you should see (the guess was not that good)
 
 ```julia
-Newton Iterations      f(x)      Linear Iterations
-
-          0          1.6216e+03             0
-          1          4.4373e+01             6
-          2          9.0135e-01            15
-          3          4.9086e-02            32
-          4          4.1158e-03            27
-          5          6.0755e-03            33
-          6          2.4727e-04            33
-          7          3.7843e-05            34
-          8          1.9161e-07            31
-          9          4.3243e-09            40
-         10          2.3175e-13            27
+┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       1.6216e+03     │        0       │
+│       1     │       4.4376e+01     │        6       │
+│       2     │       9.0109e-01     │       15       │
+│       3     │       4.9044e-02     │       32       │
+│       4     │       4.1139e-03     │       27       │
+│       5     │       6.0704e-03     │       33       │
+│       6     │       2.4721e-04     │       33       │
+│       7     │       3.7889e-05     │       34       │
+│       8     │       6.6836e-07     │       31       │
+│       9     │       2.0295e-09     │       39       │
+│      10     │       2.1685e-12     │       41       │
+└─────────────┴──────────────────────┴────────────────┘
  83.615047 seconds (284.31 M allocations: 24.250 GiB, 6.28% gc time)
 ```
 
@@ -235,13 +237,13 @@ Newton Iterations      f(x)      Linear Iterations
 ```julia
 # you can detect bifurcations with the option detectBifurcation = 3
 optc = ContinuationPar(newtonOptions = optn, ds = -1e-3, dsmin = 1e-7, dsmax = 2e-3, pMax = 0.295, plotEveryStep = 2, maxSteps = 1000)
-	bd, = continuation(probSh,
-		solp, par_bru, (@lens _.D), optc;
-		linearAlgo = MatrixFreeBLS(@set ls.N = 2nx+2),
-		plot = true,
-		verbosity = 3,
-		plotSolution = (x,p ; kw...) -> plot!(x[1:nx];kw...),
-		normC = x->norm(x,Inf))
+bd, = continuation(probSh,
+	solp, par_bru, (@lens _.D), optc;
+	linearAlgo = MatrixFreeBLS(@set ls.N = 2nx+2),
+	plot = true,
+	verbosity = 3,
+	plotSolution = (x,p ; kw...) -> plot!(x[1:nx];kw...),
+	normC = x->norm(x,Inf))
 ```
 
 which leads to

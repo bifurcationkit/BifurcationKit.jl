@@ -18,7 +18,7 @@ We start by defining the associated functional to encode (E).
 
 ```julia
 using Revise, Parameters, KrylovKit
-using GLMakie
+using GLMakie # must be imported before BifurcationKit to trigger some imports
 using BifurcationKit
 using LinearAlgebra, SparseArrays, LinearMaps, DiffEqOperators, Setfield
 const BK = BifurcationKit
@@ -63,13 +63,13 @@ AF = Array{TY}
 In most tutorials, we have used `Plots.jl` for the figures. However, it appears that `Makie.jl` is more convenient for 3d plots. We thus define the following convenience functions to display the solutions of (E).
 
 ```julia
-contour3dMakie(x; k...) = AbstractPlotting.contour(x;  k...)
+contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
 
-contour3dMakie(ax, x; k...) = (AbstractPlotting.contour(ax, x;  k...))
+contour3dMakie(ax, x; k...) = (GLMakie.contour(ax, x;  k...))
 contour3dMakie(ax, x::AbstractVector; k...) = contour3dMakie(ax, reshape(x,Nx,Ny,Nz); k...)
 
-contour3dMakie!(ax, x; k...) = (AbstractPlotting.contour!(ax, x;  k...))
+contour3dMakie!(ax, x; k...) = (GLMakie.contour!(ax, x;  k...))
 contour3dMakie!(ax, x::AbstractVector; k...) = contour3dMakie!(ax, reshape(x,Nx,Ny,Nz); k...)
 ```
 ## Setting up the problem
