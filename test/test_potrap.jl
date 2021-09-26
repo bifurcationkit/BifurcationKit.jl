@@ -91,7 +91,7 @@ function _functional(poPb, u0, p)
 	h = T * BK.getTimeStep(poPb, 1)
 	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
-	u0c = BK.extractTimeSlices(poPb, u0)
+	u0c = BK.getTimeSlices(poPb, u0)
 	outc = similar(u0c)
 
 	outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
@@ -118,8 +118,8 @@ function _dfunctional(poPb, u0, p, du)
 	dh = dT * BK.getTimeStep(poPb, 1)
 	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
-	u0c = BK.extractTimeSlices(poPb, u0)
-	duc = BK.extractTimeSlices(poPb, du)
+	u0c = BK.getTimeSlices(poPb, u0)
+	duc = BK.getTimeSlices(poPb, du)
 	outc = similar(u0c)
 
 	outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))

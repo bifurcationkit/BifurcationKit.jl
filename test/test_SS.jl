@@ -114,3 +114,35 @@ dx = rand(2-1)
 _out1 = ForwardDiff.derivative(t -> BK.E(hyper, xb .+ t .* dx,1), 0.)
 _out2 = BK.dE(hyper, dx, 1)
 @test norm(_out2 - _out1, Inf) < 1e-12
+
+# flow for Poincare return map
+# we consider the ODE dr = r⋅(1-r), dθ = 1 [2π]
+# the flow is given by Φ(r0,θ0,t) = (r0 e^{t}/(1-r0+r0 e^{t}),θ+t)
+vf(x, p) = x
+flow(x, p, t) = (exp(t) .* x[1] / (1-x[1]+x[1]*exp(t)),x[2]+t)
+Π(x, p, t) = (exp(2pi-x[1]) .* x[1] / (1-x[1]+x[1]*exp(2pi-x[1])), 0) # return map
+# dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = exp(t) .* dx)
+section(x, T) = dot(x[1:2], [1, 0])
+# section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
+par = nothing
+
+fl = BK.Flow(F = vf, flow = Π, flowSerial = flow)
+sectionps = SectionPS(normals, centers)
+
+probPSh = PoincareShootingProblem(fl, M, sectionps; δ = 1e-8)
+
+show(probPSh)
+
+poguess = VectorOfArray([rand(2) for ii=1:M])
+	po = BorderedArray(poguess, 1.)
+
+dpoguess = VectorOfArray([rand(2) for ii=1:M])
+	dpo = BorderedArray(dpoguess, 2.)
+
+ci = reduce(vcat, BK.projection(probPSh, poguess.u))
+probPSh(ci, par)
+probPSh(ci, par, ci)
+
+probPSh = PoincareShootingProblem(fl, M, sectionps)
+probPSh(ci, par)
+probPSh(ci, par, ci)

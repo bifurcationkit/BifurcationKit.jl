@@ -235,7 +235,7 @@ BK.projection(probPsh, reduce(hcat, initpo)')
 probPsh(initpo_bar, par_hopf; verbose = true)
 
 # test of the analytical formula for jacobian of the functional
-_Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
+_Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
