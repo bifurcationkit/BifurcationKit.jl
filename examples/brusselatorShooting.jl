@@ -139,6 +139,8 @@ u0 = sol0 .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
 # prob = ODEProblem(FOde, u0, (0., 520.), par_hopf) # gives 0.68s
 
+
+#####
 jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
 	jac_prototype.nzval .= ones(length(jac_prototype.nzval))
 
@@ -296,7 +298,7 @@ Mt = 2
 	br_po, = continuation(
 	jet...,	br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true);
+	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = false);
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true, printPeriod = true,

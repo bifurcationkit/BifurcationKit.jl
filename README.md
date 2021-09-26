@@ -4,7 +4,7 @@
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
 | [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rveltz.github.io/BifurcationKit.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/rveltz/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rveltz/BifurcationKit.jl) |
 
-This Julia package aims at performing **automatic bifurcation analysis** of large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, sparse formulation and specific hardwares (*e.g.* GPU).
+This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, sparse formulation and specific hardwares (*e.g.* GPU).
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) which provide a *predictor* (u1, λ1) from a known solution (u0, λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 

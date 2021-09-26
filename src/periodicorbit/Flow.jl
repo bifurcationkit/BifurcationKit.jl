@@ -102,16 +102,16 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
 	F::TF = nothing
 
-	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned."
+	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned in the form (u = ...)"
 	flow::Tf = nothing
 
 	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side. Please use `nothing` as default."
 	flowTimeSol::Tts = nothing
 
-	"[Optional] The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, mainly used for plotting on the user side. Please use `nothing` as default."
+	"[Optional] The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. Please use `nothing` as default."
 	flowFull::Tff = nothing
 
-	"The differential `dflow` of the flow w.r.t. `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
+	"The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
 	dflow::Td = nothing
 
 	"[Optional] Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."

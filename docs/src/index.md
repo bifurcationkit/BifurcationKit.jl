@@ -1,4 +1,4 @@
-Â# BifurcationKit.jl
+# BifurcationKit.jl
 
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u,λ)=0 where λ∈ℝ.  
 

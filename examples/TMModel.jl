@@ -39,7 +39,7 @@ hopfpt = computeNormalForm(jet..., br, 4)
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 8)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 110, newtonOptions = (@set optn_po.tol = 1e-7), nev = 2, precisionStability = 1e-8, detectBifurcation = 3, plotEveryStep = 10, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 110, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, precisionStability = 1e-8, detectBifurcation = 3, plotEveryStep = 10, saveSolEveryStep=1)
 
 Mt = 200 # number of sections
 	br_potrap, utrap = continuation(
@@ -68,13 +68,18 @@ using DifferentialEquations
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; atol = 1e-10, rtol = 1e-9)
 
 opts_po_cont = ContinuationPar(dsmax = 0.05, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 210, newtonOptions = (@set optn_po.tol = 1e-6), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=0)
+function plotSolutionSh(x, p; k...)
+	xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
+	plot!(xtt; legend = false, k...);
+	plot!(br, subplot=1, putspecialptlegend = false)
+end
 
 br_posh, = @time continuation(
 	jet..., br, 4,
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Standard Shooting
-	ShootingProblem(15, probsh, Rodas4(), parallel = true);
+	ShootingProblem(15, probsh, Rodas4P(), parallel = true);
 	# ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
 	ampfactor = 1.0, δp = 0.0005,
 	usedeflation = true,
@@ -83,12 +88,7 @@ br_posh, = @time continuation(
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
-	plotSolution = (x, p; k...) ->
-		begin
-			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
-			plot!(xtt; legend = false, k...);
-			plot!(br, subplot=1, putspecialptlegend = false)
-		end,
+	plotSolution = plotSolutionSh,
 	normC = norminf)
 
 plot(br_posh, br, markersize=3)
@@ -102,9 +102,9 @@ function TMvfExtended!(dz, z, p, t)
 	dz[4:end] .= @views ForwardDiff.derivative(t -> TMvf(z[1:3] .+ t .* z[4:end], p), 0)
 end
 
-probmono = ODEProblem(TMvfExtended!, vcat(z0, z0), (0., 1000.), par_tm; atol = 1e-10, rtol = 1e-9)
+probmono = ODEProblem(TMvfExtended!, vcat(z0, z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-5, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=15), nev = 25, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 5, saveSolEveryStep = 2)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-6, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=35), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 2)
 
 br_popsh, = @time continuation(
 	jet..., br, 4,
@@ -117,22 +117,16 @@ br_popsh, = @time continuation(
 	linearPO = :autodiffDense,
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
-	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
-	plotSolution = (x, p; k...) ->
-		begin
-			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
-			plot!(xtt; legend = false, k...);
-			plot!(br,subplot=1, putspecialptlegend = false)
-			# plot!(br_potrap,subplot=1, putspecialptlegend = false)
-		end,
-	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (return res<1e16),
-	finaliseSolution = (z, tau, step, contResult; prob=nothing, k...) ->
-		begin
-			isnothing(prob) && return true
-			T = getPeriod(prob, z.u, @set par_tm.E0 = z.p)
-			@show T
-			T < 20.
-		end,
+	# recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_tm.E0 = p.p), period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))),
+	plotSolution = plotSolutionSh,
+	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (return res<1e2),
+	# finaliseSolution = (z, tau, step, contResult; prob=nothing, k...) ->
+	# 	begin
+	# 		isnothing(prob) && return true
+	# 		T = getPeriod(prob, z.u, @set par_tm.E0 = z.p)
+	# 		@show T
+	# 		T < 20.
+	# 	end,
 	normC = norminf)
 
 plot(br, br_popsh, markersize=3)

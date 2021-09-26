@@ -159,13 +159,13 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 		for ii in 1:M
 			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 			# We need the callback to be active here!!!
-			period += @views psh.flow(Val(:TimeSol), xc[:, ii], par, Inf64).t
+			period += @views psh.flow(Val(:TimeSol), xc[:, ii], par, Inf).t
 		end
 	else
 		for ii in 1:M
 			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 		end
-		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf64], M))
+		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf], M))
 		period = sum(x->x.t, solOde)
 	end
 	return period
@@ -214,19 +214,19 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
 	if ~isParallel(psh)
 		E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		# We need the callback to be active here!!!
-		sol = @views psh.flow(Val(:Full), xc[:, 1], par, Inf64)
+		sol = @views psh.flow(Val(:Full), xc[:, 1], par, Inf)
 		mx = op[2](sol[1:n, :])
 		for ii in 2:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
-			sol = @views psh.flow(Val(:Full), xc[:, ii], par, Inf64)
+			sol = @views psh.flow(Val(:Full), xc[:, ii], par, Inf)
 			mx = op[1](mx, op[2](sol[1:n, :]))
 		end
 	else
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
-		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf64], M) )
+		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf], M) )
 		mx = op[2](solOde[1][1:n, :])
 		for ii in 1:M
 			mx = op[1](mx, op[2](solOde[ii][1:n, :]))
@@ -292,7 +292,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 		for ii in 1:M
 			im1 = ii == 1 ? M : ii - 1
 			# We need the callback to be active here!!!
-			outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf64)
+			outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf)
 		end
 	else
 		solOde = psh.flow(xc, par, repeat([Inf64], M))
@@ -404,7 +404,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 	for ii=1:M
 		im1 = ii == 1 ? M : ii - 1
 		# we find the point on the next section
-		tΣ, solΣ = psh.flow(Val(:SerialTimeSol), view(xc,:,im1), par, Inf64)
+		tΣ, solΣ = psh.flow(Val(:SerialTimeSol), view(xc,:,im1), par, Inf)
 		# computation of the derivative of the return map
 		F .= psh.flow.F(solΣ, par)
 		normal .= psh.section.normals[ii]
