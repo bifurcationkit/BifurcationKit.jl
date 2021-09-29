@@ -1,4 +1,4 @@
-using Revise, Plots
+# using Revise, Plots
 using Test
 	using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
 	const BK = BifurcationKit
@@ -80,42 +80,3 @@ BK.checkFloquetOptions(EigArpack())
 BK.checkFloquetOptions(EigArnoldiMethod())
 BK.checkFloquetOptions(EigKrylovKit())
 FloquetQaD(EigKrylovKit()) |> FloquetQaD
-
-# comparison of Floquet computation
-# case of :FullLU
-# lspo = BK.PeriodicOrbitTrapLS(DefaultLS())
-# continuation(
-# 	poTrap,
-# 	(x, p) -> BK.PeriodicOrbitTrapJacobianFull(poTrap, (x, p) -> poTrap(Val(:JacFullSparse), x, p), x, p),
-# 	outpo_f, par_hopf, (@lens _.r),
-# 	(@set opts_po_cont.newtonOptions.linsolver = lspo);
-# 	# printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1),
-# 	normC = norminf)
-
-#################################################################################################### Same with Orthogonal collocation
-M = 20; degree = 3
-poColl = BK.PeriodicOrbitOCollProblem(
-	F = Fsl, J = (x, p) -> (ForwardDiff.jacobian(z -> Fsl(z, p), x)),
-	ϕ = [1., 0], xπ = zeros(2),
-	M = M, degree = degree, N = 2,
-	cache = BK.POOrthogonalCollocationCache(M, degree))
-
-cache = poColl.cache
-
-size(poColl)
-ncoll = prod(size(poColl)) + 1
-poColl(rand(ncoll), par_sl)
-
-
-z = LinRange(0,1,100)
-fz = @. exp(3z)*sin(16z)
-plot(z, fz)
-
-zc = z[1:10:end]
-fzc = fz[1:10:end]
-plot!(zc,fzc,marker=:d)
-
-collMat = BK.POOrthogonalCollocationCache(length(zc), 3)
-ζ_, = BK.gauss(10)
-ζ = (ζ_ .+ 1) ./ 2 .* 1  # Gauss nodes
-L = [BK.lagrange(k, ζᵢ, zc) for ζᵢ in ζ, k in 1:degree+1]
