@@ -352,7 +352,7 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function problemForBS(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess_a, period)
+function reMake(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess_a, period; k...)
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
