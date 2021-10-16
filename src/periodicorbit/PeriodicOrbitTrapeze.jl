@@ -208,6 +208,8 @@ function POTrapFunctional!(pb::AbstractPOFDProblem, out, u, par)
 		@views applyF(pb, outc[:, M], uc[:, M-1], par)
 
 		h = T * getTimeStep(pb, 1)
+		# https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major
+		# fastest is to do out[:, i] = x
 		@views POTrapScheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
 
 		for ii in 2:M-1

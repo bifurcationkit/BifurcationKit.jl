@@ -264,7 +264,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 - `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
 """
-function continuation(prob::AbstractShootingProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
+function continuation(prob::AbstractPeriodicOrbitProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 	return continuation(prob, orbitguess, par, lens, _contParams, _linearAlgo; kwargs...)
 end
