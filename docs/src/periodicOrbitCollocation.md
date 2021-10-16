@@ -48,6 +48,10 @@ The **collocation nodes** $(z_l)$ are associated with a Gauss–Legendre quadrat
 
 In order to have a unique solution, we need to remove the phase freedom. This is done by imposing a *phase* condition.
 
+## Mesh adaptation
+
+The mesh adaptation method is based on [^Russell]. It can be triggered by passing the option `adaptMeshEveryStep = nb` where `nb` is a positive integer which sets the continuation steps for which the mesh adaptation occurs.
+
 ## Encoding of the functional
 
 The functional is encoded in the composite type [`PeriodicOrbitOCollProblem`](@ref). See the link for more information, in particular on how to access the underlying functional, its jacobian...
@@ -80,3 +84,5 @@ We refer to [`continuation`](@ref) for more information regarding the arguments.
 [^Doedel]:> Doedel, Eusebius, Herbert B. Keller, and Jean Pierre Kernevez. “NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS.” International Journal of Bifurcation and Chaos 01, no. 04 (December 1991): 745–72.
 
 [^Fairgrieve]:> Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+
+[^Russell]:> Russell, R. D., and J. Christiansen. “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems.” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80. https://doi.org/10.1137/0715004.

@@ -52,13 +52,13 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/mittlemannBD-1.png) |
 |:-------------:|:-------------:|
-| [Automatic Bif. Diagram in 1D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/Swift-Hohenberg1d/#Swift-Hohenberg-equation-1d-1) |  [Automatic Bif. Diagram in 2D Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1) |
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/bru-po-cont-3br.png) |
-| [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2) |  [Periodic orbits in 1D Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/) |  
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/cgl-sh-br.png) |
-| [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsPD)  |  [Periodic orbits in 2D Ginzburg-Landau](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/)  |
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | ![](https://rveltz.github.io/BifurcationKit.jl/dev/GPU-branch.png) |
-| [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1)  |  [2D Swift Hohenberg on GPU](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2b/#The-Swift-Hohenberg-equation-(non-local)-on-the-GPU-(Advanced)-1)  |
+| [Automatic Bif. Diagram in 1D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/Swift-Hohenberg1d/#d-Swift-Hohenberg-equation-(Automatic)) |  [Automatic Bif. Diagram in 2D Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)) |
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/bru-po-cont-3br.png) |
+| [Snaking in 2D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorials2/#d-Swift-Hohenberg-equation:-snaking,-Finite-Differences) |  [Periodic orbits in 1D Brusselator](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorials3/#d-Brusselator-(automatic)) 
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/br_pd3.png) |![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/cgl-sh-br.png) |
+| [Period doubling BVAM Model](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorialsPD/#Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model)  |  [Periodic orbits in 2D Ginzburg-Landau](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorialsCGL/#d-Ginzburg-Landau-equation-(finite-differences))  |
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/carrier.png) | ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/GPU-branch.png) |
+| [Deflated Continuation in Carrier problem](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem)  |  [2D Swift Hohenberg on GPU](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/tutorials2b/#d-Swift-Hohenberg-equation-(non-local)-on-the-GPU,-periodic-BC-(Advanced))  |
 
 
 ## Main features

@@ -14,7 +14,7 @@ $$\left\{\begin{array}{l}
 \end{array}\right.$$
 
 
-The model is interesting because the branch of periodic solutions converges to an homoclinic orbit which is challenging to compute with our methods. We provide three different ways to compute this periodic orbits and highlight their pro / cons.
+The model is interesting because the branch of periodic solutions converges to an homoclinic orbit which is challenging to compute with our methods. We provide three different ways to compute these periodic orbits and highlight their pro / cons.
 
 It is easy to encode the ODE as follows
 

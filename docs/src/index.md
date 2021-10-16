@@ -109,4 +109,4 @@ We make the same requirements as `KrylovKit.jl`. Hence, we refer to its [docs](h
 - `Base.copyto!(dest, in)` this is required to reduce the allocations by avoiding too many copies
 
 ## Citations
-See [here](https://scholar.google.fr/scholar?hl=fr&as_sdt=2005&cites=159498619004863176%2C8662907770106865595&scipsc=&as_ylo=&as_yhi=)
+The papers citing this work are collected on [google scholar](https://scholar.google.fr/scholar?hl=fr&as_sdt=2005&cites=159498619004863176%2C8662907770106865595&scipsc=&as_ylo=&as_yhi=).

@@ -14,7 +14,7 @@ The Trapezoid method is usually faster than the ones based on Shooting but it re
 
 ### Collocation method
 
-The Collocation method is (for now) the slowest of the 3 provided methods for computing periodic orbits. However, it is by far the most precise one. The implementation will be improved for its use for large dimensional systems like the Trapezoid method.
+The Collocation method is (for now) the slowest of the 3 provided methods for computing periodic orbits. However, it is by far the most precise one. Additionally, the mesh can be automatically adapted during the continuation. The implementation will be improved for its use for large dimensional systems like the Trapezoid method.
 
 ### Shooting method
 The methods based on Shooting do not share the same drawbacks because the associated linear system is usually well conditioned, at least in the simple shooting case. There are thus often used **without preconditioner at all**. Even in the case of multiple shooting, this can be alleviated by a simple generic preconditioner based on deflation of eigenvalues (see [Linear solvers (LS)](@ref)). Also, the time stepper will automatically adapt to the stiffness of the problem, putting more time points where needed unlike the method based on finite differences which requires an adaptive (time) meshing to provide a similar property. The main drawback of the method is to find a fast time stepper, at least to compete with the method based on finite differences.
