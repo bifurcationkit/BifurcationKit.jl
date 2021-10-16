@@ -69,7 +69,7 @@ opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9,
 br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
 	recordFromSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),
 	tangentAlgo = BorderedPred(),
-	plot = true, verbosity = 0, normC = norminf)
+	plot = true, normC = norminf)
 
 scene = plot(br, plotfold=false, markersize=3, legend=:topleft)
 ```
@@ -93,6 +93,20 @@ opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0.
 	maxSteps = 110, newtonOptions = (@set optn_po.tol = 1e-7),
 	nev = 3, precisionStability = 1e-8, detectBifurcation = 3, plotEveryStep = 10, saveSolEveryStep=1)
 
+# arguments for periodic orbits
+args_po = (	recordFromSolution = (x, p) -> (xtt = BK.getTrajectory(p.prob, x, p.p);
+		return (max = maximum(xtt.u[1,:]),
+				min = minimum(xtt.u[1,:]),
+				period = x[end])),
+	plotSolution = (x, p; k...) -> begin
+		xtt = BK.getTrajectory(p.prob, x, p.p)
+		plot!(xtt.t, xtt.u[1,:]; label = "E", k...)
+		plot!(xtt.t, xtt.u[2,:]; label = "x", k...)
+		plot!(xtt.t, xtt.u[3,:]; label = "u", k...)
+		plot!(br,subplot=1, putbifptlegend = false)
+		end,
+	normC = norminf)
+
 Mt = 200 # number of time sections
 	br_potrap, utrap = continuation(jet...,
 	# we want to branch form the 4th bif. point
@@ -105,16 +119,7 @@ Mt = 200 # number of time sections
 	linearPO = :Dense,
 	# regular continuation options
 	verbosity = 2,	plot = true,
-	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
-	plotSolution = (x, p; k...) -> begin
-		# the problem prob is passed back in p:
-		xtt = BK.getTrajectory(p.prob, x, p.p)
-		plot!(xtt.t, xtt.u[1,:]; label = "E", k...)
-		plot!(xtt.t, xtt.u[2,:]; label = "x", k...)
-		plot!(xtt.t, xtt.u[3,:]; label = "u", k...)
-		plot!(br,subplot=1, putbifptlegend = false)
-		end,
-	normC = norminf)
+	args_po...)
 
 scene = plot(br, br_potrap, markersize = 3)
 plot!(scene, br_potrap.param, br_potrap.min, label = "")
@@ -133,7 +138,7 @@ using DifferentialEquations
 # this is the ODEProblem used with `DiffEqBase.solve`
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.05, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 210, newtonOptions = (@set optn_po.tol = 1e-6), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=0)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-6), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=0)
 
 br_posh, = @time continuation(jet...,
 	br, 4, opts_po_cont,
@@ -157,7 +162,7 @@ br_posh, = @time continuation(jet...,
 		begin
 			xtt = BK.getTrajectory(p.prob, x, @set par_tm.E0 = p.p)
 			plot!(xtt; legend = false, k...);
-			plot!(br, subplot=1, putbifptlegend = false)
+			plot!(br, subplot=1, putspecialptlegend = false)
 		end,
 	normC = norminf)
 
