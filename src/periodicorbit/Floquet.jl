@@ -358,3 +358,45 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 	end
 	return mono
 end
+####################################################################################################
+# simplified version of
+# Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+struct FloquetLUColl{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
+	eigsolver::E		# not really needed
+	B::Tb
+	"""
+	## Arguments
+	- `eigls` an eigensolver
+	- `ntot` total number of unknowns (without countinig the period)
+	- `n` space dimension
+	"""
+	function FloquetLUColl(eigls::AbstractEigenSolver, ntot::Int, n::Int)
+		eigls2 = checkFloquetOptions(eigls)
+		# build the mass matrix
+		B = zeros(ntot, ntot)
+		B[end-n+1:end, end-n+1:end] .= I(n)
+		return new{typeof(eigls2), typeof(B)}(eigls2, B)
+	end
+	FloquetLUColl(eigls::FloquetLUColl) = eigls
+end
+
+# based on Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+@views function (fl::FloquetLUColl)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+	prob = JacColl.pb
+	_J = JacColl.jacpb
+	n, m, Ntst = size(prob)
+	J = _J[1:end-1, 1:end-1]
+	# case of v(0)
+	J[end-n+1:end, 1:n] .= I(n)
+	# case of v(1)
+	J[end-n+1:end, end-n+1:end] .= -I(n)
+	# solve generalized eigenvalue problem
+	values, vecs = eigen(J, fl.B)
+	# remove infinite eigenvalues
+	ind = isinf.(values)
+	indvalid = ind .== false
+	vals = values[indvalid]
+	# this are the Floquet multipliers
+	μ = @. Complex(1 / (1 + vals))
+	return log.(μ), Complex.(vecs[indvalid, :]), true
+end
