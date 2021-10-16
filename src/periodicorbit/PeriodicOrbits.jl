@@ -57,7 +57,7 @@ This function generates an initial guess for the solution of the problem `pb` ba
 """
 function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 	M = getM(pb)
-	orbitguess_a = [orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
+	orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	if pb  isa PoincareShootingProblem
