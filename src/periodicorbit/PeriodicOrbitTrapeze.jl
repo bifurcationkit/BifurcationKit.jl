@@ -888,7 +888,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 
 	# change the user provided finalise function by passing prob in its parameters
 	_finsol = modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
-	_recordsol = modifyPORecord(prob, kwargs, 0)
+	_recordsol = modifyPORecord(prob, kwargs, par, lens)
 	_plotsol = modifyPOPlot(prob, kwargs)
 
 	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)

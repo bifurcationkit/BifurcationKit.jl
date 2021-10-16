@@ -42,7 +42,7 @@ $$\mathcal p_j(\sigma)\equiv \sum\limits_{k=1}^{m+1}\mathcal L_k(\sigma)x_{j,k}$
 
 and the problem to be solved at the **collocation nodes** $z_l$, $l=1,\cdots,m$:
 
-$$\forall 1\leq l\leq m,\quad, 1\leq j\leq N_{tst},\quad \dot p_j(z_l) = \frac{\tau_{j+1}-\tau_j}{2}\cdot F(p_j(z_l))\tag{$E_j^2$}.$$
+$$\forall 1\leq l\leq m,\quad, 1\leq j\leq N_{tst},\quad \dot p_j(z_l) = T\frac{\tau_{j+1}-\tau_j}{2}\cdot F(p_j(z_l))\tag{$E_j^2$}.$$
 
 The **collocation nodes** $(z_l)$ are associated with a Gauss–Legendre quadrature.
 

@@ -10,17 +10,18 @@ makedocs(doctest = false,
 	pages = Any[
 		"Home" => "index.md",
 		"Overview" => "guidelines.md",
-		"Tutorials" => "tutorials.md",
+		"Tutorials" => "tutorials/tutorials.md",
 		"Functionalities" => [
 			"Plotting" => "plotting.md",
 			"Periodic Orbits" => [
 				"Introduction" => "periodicOrbit.md",
 				"Finite Differences" => "periodicOrbitTrapeze.md",
+				"Collocation" => "periodicOrbitCollocation.md",
 				"Shooting" => "periodicOrbitShooting.md",
 				],
 			"Symmetries / Waves" => [
 				"Introduction" => "intro_wave.md",
-				],	
+				],
 			"Continuation methods" => [
 					"Introduction" => "IntroContinuation.md",
 			"Predictors / correctors" => "Predictors.md",

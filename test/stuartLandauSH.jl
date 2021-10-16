@@ -19,10 +19,8 @@ function Fsl!(f, u, p, t = 0)
 end
 
 Fsl(x, p) = Fsl!(similar(x), x, p)
-# Fode(f, x, p, t) = Fsl!(f, x, p, t)
 dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
-JFsl(x, p) = FD.jacobian(t -> Fsl(t, p), x)
-jet = BK.getJet(Fsl, JFsl)
+jet = BK.getJet(Fsl; matrixfree = false)
 
 par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
 par_hopf = (@set par_sl.r = 0.1)

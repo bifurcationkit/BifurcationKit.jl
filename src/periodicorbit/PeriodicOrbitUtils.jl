@@ -1,7 +1,7 @@
 abstract type PeriodicOrbitAlgorithm end
 
 """
-	guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
+$(SIGNATURES)
 
 This function returns several useful quantities regarding a Hopf bifurcation point. More precisely, it returns:
 - the parameter value at which a Hopf bifurcation occurs
@@ -50,7 +50,6 @@ function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
 end
 ####################################################################################################
 # functions to insert the problem into the user passed parameters
-
 function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 	_finsol = get(kwargs, :finaliseSolution, nothing)
 	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
@@ -66,18 +65,13 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 	return _finsol2
 end
 
-function modifyPORecord(probPO, kwargs, br)
+function modifyPORecord(probPO, kwargs, par, lens)
 	if :recordFromSolution in keys(kwargs)
 		_recordsol0 = get(kwargs, :recordFromSolution, nothing)
-		_recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
+		return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
 	else
-		if probPO isa PeriodicOrbitTrapProblem || probPO isa PeriodicOrbitOCollProblem
-			_recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, 0),)
-		else
-			_recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, setParam(br, p)),)
-		end
+		return _recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, set(par, lens, p)),)
 	end
-	return _recordsol
 end
 
 function modifyPOPlot(probPO, kwargs)

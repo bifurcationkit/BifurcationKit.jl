@@ -232,7 +232,7 @@ function continuation(
 
 	# change the user provided finalise function by passing prob in its parameters
 	_finsol = modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
-	_recordsol = modifyPORecord(prob, kwargs, 0)
+	_recordsol = modifyPORecord(prob, kwargs, par, lens)
 	_plotsol = modifyPOPlot(prob, kwargs)
 
 	if linearPO == :autodiffDenseAnalytical
@@ -370,7 +370,7 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
 		# this factor prevent shooting jacobian from being singular at fixed points
 		# Tfactor = (prob isa AbstractPOFDProblem) || (prob isa PoincareShootingProblem) ? 0 : 0.001
-		if prob isa PoincareShootingProblem
+		if probPO isa PoincareShootingProblem
 			Tfactor = 0
 		elseif prob isa AbstractPOFDProblem
 			Tfactor = 100 / abs(2pi / pred.ω)
