@@ -213,17 +213,10 @@ function continuation(
 
 	options = contParams.newtonOptions
 
-	_finsol = get(kwargs, :finaliseSolution, nothing)
-	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
-		begin
-			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-			true
-		end :
-		(z, tau, step, contResult; prob = prob, kwargs...) ->
-			begin
-				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-			_finsol(z, tau, step, contResult; prob = prob, kwargs...)
-		end
+	# change the user provided finalise function by passing prob in its parameters
+	_finsol = modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
+	_recordsol = modifyPORecord(prob, kwargs, 0)
+	_plotsol = modifyPOPlot(prob, kwargs)
 
 	if linearPO == :autodiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -247,9 +240,11 @@ function continuation(
 		prob, jac,
 		orbitguess, par, lens,
 		(@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)), linearAlgo;
-		recordFromSolution = (x, p) -> (period = getPeriod(prob, x, set(par, lens, p)),),
-		finaliseSolution = _finsol2,
-		kwargs...,)
+		kwargs...,
+		recordFromSolution = _recordsol,
+		finaliseSolution = _finsol,
+		plotSolution = _plotsol
+		)
 	return setproperties(branch; type = :PeriodicOrbit, functional = prob), u, τ
 end
 
@@ -347,15 +342,6 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
 	end
 
-	# pass the problem to the plotting and recordFromSolution functions
-	_plotsol = get(kwargs, :plotSolution, nothing)
-	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
-
-	if :recordFromSolution in keys(kwargs)
-		_printsol = get(kwargs, :recordFromSolution, nothing)
-		@set! kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = probPO, p = p); k...)
-	end
-
 	if usedeflation
 		verbose &&
 			println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
@@ -397,7 +383,6 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 			setParam(br, pred.p), br.lens,
 			_contParams;
 			kwargs...,
-			plotSolution = _plotsol2,
 			updateSectionEveryStep = updateSectionEveryStep,
 		)
 
@@ -409,7 +394,6 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		probPO, orbitguess, setParam(br, pred.p),
 		br.lens, _contParams;
 		kwargs..., # put this first to be overwritten just below!
-		plotSolution = _plotsol2,
 		updateSectionEveryStep = updateSectionEveryStep,
 	)
 	return Branch(branch, hopfpt), u, τ
@@ -498,16 +482,6 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 		end
 	end
 
-	# pass the problem to the plotting and recordFromSolution functions
-	_plotsol = get(kwargs, :plotSolution, nothing)
-	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing :
-		(x, p; k...) -> _plotsol(x, (prob = pbnew, p = p); k...)
-
-	if :recordFromSolution in keys(kwargs)
-		_printsol = get(kwargs, :recordFromSolution, nothing)
-		@set! kwargs[:recordFromSolution] = (x, p; k...) -> _printsol(x, (prob = pbnew, p = p); k...)
-	end
-
 	if usedeflation
 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
 		optn = _contParams.newtonOptions
@@ -527,7 +501,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 	# perform continuation
 	branch, u, τ = continuation( pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
 		kwargs..., # put this first to be overwritten just below!
-		plotSolution = _plotsol2,
+		# plotSolution = _plotsol2,
 		linearAlgo = _linearAlgo,
 	)
 

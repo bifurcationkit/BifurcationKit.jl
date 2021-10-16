@@ -47,3 +47,40 @@ function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
 	xc = reshape(x[1:end-1], ratio * n, M)
 	maximum(x[1:n, :])
 end
+####################################################################################################
+# functions to insert the problem into the user passed parameters
+
+function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
+	_finsol = get(kwargs, :finaliseSolution, nothing)
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
+		begin
+			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			true
+		end :
+		(z, tau, step, contResult; prob = prob, kwargs...) ->
+			begin
+				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+			_finsol(z, tau, step, contResult; prob = prob, kwargs...)
+		end
+	return _finsol2
+end
+
+function modifyPORecord(probPO, kwargs, br)
+	if :recordFromSolution in keys(kwargs)
+		_recordsol0 = get(kwargs, :recordFromSolution, nothing)
+		_recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
+	else
+		if probPO isa PeriodicOrbitTrapProblem || probPO isa PeriodicOrbitOCollProblem
+			_recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, 0),)
+		else
+			_recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, setParam(br, p)),)
+		end
+	end
+	return _recordsol
+end
+
+function modifyPOPlot(probPO, kwargs)
+	_plotsol = get(kwargs, :plotSolution, nothing)
+	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
+end
+

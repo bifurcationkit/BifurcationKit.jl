@@ -873,7 +873,7 @@ $DocStrLinearPO
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, recordFromSolution = (u, p) -> (period = u[end],), updateSectionEveryStep = 0, kwargs...)
+function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, updateSectionEveryStep = 0, kwargs...)
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive. We found T = $(orbitguess[end])"
 	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
 
@@ -883,20 +883,12 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver =
 		 FloquetQaD(contParams.newtonOptions.eigsolver)
-		 # FloquetLU(N,M)
 	end
 
-	_finsol = get(kwargs, :finaliseSolution, nothing)
-	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; k2...) ->
-		begin
-			modCounter(step, updateSectionEveryStep) && updateSection!(prob, z.u, setParam(contResult, z.p))
-			true
-		end :
-		(z, tau, step, contResult; prob = prob, k2...) ->
-			begin
-				modCounter(step, updateSectionEveryStep) && updateSection!(prob, z.u, setParam(contResult, z.p))
-				_finsol(z, tau, step, contResult; prob = prob, k2...)
-			end
+	# change the user provided finalise function by passing prob in its parameters
+	_finsol = modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
+	_recordsol = modifyPORecord(prob, kwargs, 0)
+	_plotsol = modifyPOPlot(prob, kwargs)
 
 	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
 
@@ -922,8 +914,9 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 			prob, jac,
 			orbitguess, par, lens,
 			(@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)), linearAlgo; kwargs...,
-			recordFromSolution = recordFromSolution,
-			finaliseSolution = _finsol2,)
+			recordFromSolution = _recordsol,
+			finaliseSolution = _finsol,
+			plotSolution = _plotsol)
 	else
 		if linearPO == :BorderedLU
 			Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
@@ -954,8 +947,9 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		br, z, τ = continuation(prob, jacPO, orbitguess, par, lens,
 			contParams, linearAlgo;
 			kwargs...,
-			recordFromSolution = recordFromSolution,
-			finaliseSolution = _finsol2,)
+			recordFromSolution = _recordsol,
+			finaliseSolution = _finsol,
+			plotSolution = _plotsol)
 	end
 	return setproperties(br; type = :PeriodicOrbit, functional = prob), z, τ
 end
