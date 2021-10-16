@@ -8,7 +8,7 @@ This Julia package aims at performing **automatic bifurcation analysis** of poss
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) which provide a *predictor* (u1, λ1) from a known solution (u0, λ0). A Newton-Krylov method is then used to correct this predictor and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
-By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems by casting them into an equation F(u, λ)=0 of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences to compute periodic orbits.**
+By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems by casting them into an equation F(u, λ)=0 of high dimension. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences or collocation to compute periodic orbits.**
 
 The current package focuses on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
 
@@ -75,7 +75,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - **Automatic bifurcation diagram computation of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - detection of Bogdanov-Takens, Bautin and Cusp bifurcations
-- Periodic orbit computation and continuation using Shooting or Finite Differences.
+- Periodic orbit computation and continuation using Shooting, Finite Differences or Orthogonal Collocation.
 - Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point detection of periodic orbits.
 - Continuation of Fold of periodic orbits
 
@@ -94,7 +94,8 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Hopf continuation | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Continuation-of-Hopf-points-1) | |
 | Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
 | <span style="color:red">**Automatic bifurcation diagram computation of equilibria**</span> | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Automatic-bifurcation-diagram-1) | |
-| Periodic Orbit (FD) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark:|
+| Periodic Orbit (Trapezoid) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials3/#Brusselator-1d-(automatic)-1), [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark:|
+| Periodic Orbit (Collocation) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/ode/tutorialsODE/#Neural-mass-equation-(Hopf-aBS)) | |
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
 | Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://rveltz.github.io/BifurcationKit.jl/dev/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |

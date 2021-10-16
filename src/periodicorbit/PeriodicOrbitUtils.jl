@@ -58,8 +58,8 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 			true
 		end :
 		(z, tau, step, contResult; prob = prob, kwargs...) ->
-			begin
-				modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
+		begin
+			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
 			_finsol(z, tau, step, contResult; prob = prob, kwargs...)
 		end
 	return _finsol2
@@ -78,4 +78,3 @@ function modifyPOPlot(probPO, kwargs)
 	_plotsol = get(kwargs, :plotSolution, nothing)
 	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 end
-

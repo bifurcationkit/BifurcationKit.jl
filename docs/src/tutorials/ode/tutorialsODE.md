@@ -80,7 +80,7 @@ With detailed information:
 br
 ```
 
-## Branch of periodic orbits with finite differences
+## Branch of periodic orbits with Trapezoid method
 
 We then compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use finite differences to discretize the problem of finding periodic orbits. Obviously, this will be problematic when the period of the limit cycle grows unbounded close to the homoclinic orbit.
 
@@ -123,6 +123,30 @@ Mt = 200 # number of time sections
 
 scene = plot(br, br_potrap, markersize = 3)
 plot!(scene, br_potrap.param, br_potrap.min, label = "")
+```
+
+
+We plot the maximum (resp. minimum) of the limit cycle. We can see that the min converges to the smallest equilibrium indicating a homoclinic orbit.
+
+## Branch of periodic orbits with Orthogonal Collocation
+
+We compute the branch of periodic orbits from the last Hopf bifurcation point (on the right). We use Orthogonal Collocation to discretize the problem of finding periodic orbits. This is vastly more precise than the previous method.
+
+```@example TUTODE
+# continuation parameters
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5.,
+	maxSteps = 110, newtonOptions = (@set optn_po.tol = 1e-7),
+	nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 30, saveSolEveryStep=1)
+
+Mt = 30 # number of time sections
+	br_pocoll, ucoll, = @time continuation(jet...,
+	# we want to branch form the 4th bif. point
+	br, 4, opts_po_cont,
+	# we want to use the Collocation method to locate PO, with polynomial degree 5
+	PeriodicOrbitOCollProblem(Mt, 5, 3);
+	# regular continuation options
+	verbosity = 2,	plot = true,
+	args_po...)
 ```
 
 

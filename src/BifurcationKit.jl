@@ -46,6 +46,7 @@ module BifurcationKit
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitTrapeze.jl")
+	include("periodicorbit/PeriodicOrbitCollocation.jl")
 	# include("periodicorbit/PeriodicOrbitMIRK.jl")
 	# include("periodicorbit/PeriodicOrbitFDAdapt.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
@@ -154,13 +155,16 @@ module BifurcationKit
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
 	# Periodic orbit computation
-	export getPeriod, getAmplitude, getMaximum, getTrajectory, sectionSS, sectionPS
+	export generateSolution, getPeriod, getAmplitude, getMaximum, getTrajectory, sectionSS, sectionPS
 
 	# Periodic orbit computation based on Trapeze method
 	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
 	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem, SectionPS, SectionSS
+
+	# Periodic orbit computation based on Collocation
+	export PeriodicOrbitOCollProblem
 
 	# Floquet multipliers computation
 	export FloquetQaD

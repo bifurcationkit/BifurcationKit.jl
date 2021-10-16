@@ -31,6 +31,10 @@ PeriodicOrbitTrapProblem
 ```
 
 ```@docs
+PeriodicOrbitOCollProblem
+```
+
+```@docs
 ShootingProblem
 ```
 
