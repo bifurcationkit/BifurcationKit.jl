@@ -23,7 +23,7 @@ Depth = 1
 
 ## Bifurcation of Equilibria
 ```@contents
-Pages = ["tutorials1.md", "tutorials2.md", "mittelmann.md", "tutorials1b.md", "tutorials2b.md", "tutorialsSH3d.md", "Langmuir2d.md"]
+Pages = ["tutorials1.md", "tutorials2.md", "mittelmann.md", "tutorials1b.md", "tutorials2b.md", "tutorialsSH3d.md"]
 Depth = 1
 ```
 
