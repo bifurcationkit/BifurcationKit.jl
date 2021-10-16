@@ -50,7 +50,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 ## Examples of bifurcation diagrams
 
 
-| ![](https://rveltz.github.io/BifurcationKit.jl/dev/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/mittlemannBD-1.png) |
+| ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/BDSH1d.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/mittlemannBD-1.png) |
 |:-------------:|:-------------:|
 | [Automatic Bif. Diagram in 1D Swift Hohenberg](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/Swift-Hohenberg1d/#d-Swift-Hohenberg-equation-(Automatic)) |  [Automatic Bif. Diagram in 2D Bratu](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)) |
 | ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/sh2dbranches.png)   |  ![](https://rveltz.github.io/BifurcationKit.jl/dev/tutorials/bru-po-cont-3br.png) |
