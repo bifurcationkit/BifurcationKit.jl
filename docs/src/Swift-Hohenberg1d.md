@@ -158,7 +158,7 @@ Special points:
 We can access the different branches with `BK.getBranch(diagram, (1,))`. Alternatively, you can plot a specific branch:
 
 ```julia
-	plot(diagram; code = (1,), plotfold = false,  markersize = 2, putspecialptlegend = false, xlims=(-1,1))
+plot(diagram; code = (1,), plotfold = false,  markersize = 2, putspecialptlegend = false, xlims=(-1,1))
 ```
 
 ![](BDSH1d-1.png)

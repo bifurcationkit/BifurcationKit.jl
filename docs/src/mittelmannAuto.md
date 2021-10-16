@@ -243,7 +243,7 @@ bifurcationdiagram!(jet...,
 	# this improves the first branch on the violet curve. Note that
 	# for symmetry reasons, the first bifurcation point
 	# has 8 branches
-	getBranch(diagram, (1,)), (current = 3, maxlevel = 6), optionsCont;
+	getBranch(diagram, (1,)), 6, optionsCont;
 	verbosity = 0, plot = true,
 	recordFromSolution = (x, p) -> (n2 = norm2(x), nw = normbratu(x), n∞ = norminf(x)),
 	callbackN = cb,

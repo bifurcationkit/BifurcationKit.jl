@@ -385,15 +385,6 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		@assert flag "Deflated newton did not converge"
 		orbitguess .= solbif
 
-		# @assert 1==09
-
-		# having to points, we call the specific method
-		# branch, u, tau = continuation(probPO,
-		# 	orbitzeroamp, br.params,
-		# 	orbitguess, pred.p,
-		# 	br.lens, _contParams; kwargs...)
-
-
 		branch, u, τ = continuation(
 			probPO, orbitguess,
 			setParam(br, pred.p), br.lens,

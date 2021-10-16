@@ -106,7 +106,7 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
 
 # Optional arguments
-- `code = "0"`
+- `code = "0"` code used to display iterations
 - `usedeflation = false`
 - `halfbranch = false` for Pitchfork/Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://rveltz.github.io/BifurcationKit.jl/dev/library/#Continuation-1).

@@ -4,6 +4,12 @@ using Test, Random, Setfield
 using BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
+# test Bordered Arrays
+_a = BorderedArray(zeros(2), zeros(2))
+_b = BorderedArray(zeros(2), zeros(2))
+BK.mul!(_a, 1., _b)
+BK.axpby!(1., _a, 1., _b)
+####################################################################################################
 # We start with a simple Fold problem
 using LinearAlgebra
 function F0(x::Vector, r)
@@ -14,6 +20,8 @@ opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
 	out0, hist, flag = newton(F0, [0.8], 1., opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
+
+BK.isStable(opts_br0, nothing)
 
 br0, u1 = continuation(F0, out0, 1.0, (@lens _), opts_br0, recordFromSolution = (x, p) -> x[1])
 
@@ -67,7 +75,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pM
 		opts_br; recordFromSolution = (x,p) -> x.u[1])
 
 BK.getSolx(br,1)
-BK.getSolp(br,1)		
+BK.getSolp(br,1)
 
 # plot(br);title!("")
 

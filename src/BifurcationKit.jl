@@ -72,6 +72,12 @@ module BifurcationKit
 			include("plotting/RecipesMakie.jl")
 		end
 
+		@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
+			@info "Loading GLMakie code"
+			using .GLMakie: @recipe, inline!, layoutscene, Figure, Axis, lines!, PointBased, Point2f0, scatter!
+			include("plotting/RecipesMakie.jl")
+		end
+
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
 			using .JLD2
 			"""

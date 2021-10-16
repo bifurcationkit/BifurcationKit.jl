@@ -1,8 +1,5 @@
 # Automatic Bifurcation diagram computation
-
-!!! info "Experimental"
-    This feature is still experimental. It has not been tested thoroughly.
-    
+ 
 Thanks to the functionality presented in this part, we can compute the bifurcation diagram of a system recursively and **fully automatically**. More precisely, the function `bifurcationdiagram` allows to:
 
 - compute a branch $\gamma$ of equilibria

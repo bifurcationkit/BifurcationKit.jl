@@ -142,13 +142,13 @@ type(bp::Transcritical) = :Transcritical
 type(::Nothing) = nothing
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
-	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
-	println(io, "Normal form: ", bp.nf)
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+	println(io, "Normal form: \n", bp.nf)
 end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
 	println(io, "Normal form x⋅(b1⋅δp + b3⋅x²/6): \n", bp.nf)
 end
 
@@ -261,6 +261,7 @@ Hopf(x0, p, ω, params, lens, ζ, ζstar, nf) = Hopf(x0, p, ω, params, lens, ζ
 function Base.show(io::IO, bp::Hopf)
 	print(io, bp.type, " - ")
 	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+	println(io, "Frequency ω ≈ ", abs(bp.ω))
 	println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
-	println(io, "Normal form z⋅(a⋅δp + b⋅|z|²): \n", bp.nf)
+	println(io, "Normal form z⋅(iω + a⋅δp + b⋅|z|²): \n", bp.nf)
 end
