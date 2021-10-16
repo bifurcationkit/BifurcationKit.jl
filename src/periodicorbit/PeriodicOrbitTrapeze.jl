@@ -115,8 +115,8 @@ end
 function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
 	println(io, "┌─ Trapezoid problem")
 	println(io, "├─ time slices  : ", pb.M)
-	println(io, "├─ dimension : ", pb.N)
-	println(io, "└─ inplace   : ", pb.isinplace)
+	println(io, "├─ dimension    : ", pb.N)
+	println(io, "└─ inplace      : ", pb.isinplace)
 end
 
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
@@ -624,7 +624,7 @@ end
 	xc = getTimeSlices(prob, x)
 	T = extractPeriodFDTrap(x)
 
-	# update the reference
+	# update the reference point
 	prob.xπ .= x[1:end-1]
 
 	# update the normals
@@ -651,7 +651,7 @@ end
 @with_kw mutable struct AγOperatorLU{Tjc, Tpb} <: AbstractPOTrapAγOperator
 	N::Int64 = 0							# dimension of time slice
 	Jc::Tjc	= lu(spdiagm(0 => ones(1)))	    # lu factorisation of the cyclic matrix
-	prob::Tpb = nothing		# PO functional
+	prob::Tpb = nothing						# PO functional
 end
 
 @with_kw struct AγOperatorSparseInplace{Tjc, Tjcf, Tind, Tpb} <: AbstractPOTrapAγOperator
@@ -983,7 +983,7 @@ end
 
 ####################################################################################################
 # function needed for automatic Branch switching from Hopf bifurcation point
-function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::AbstractVector, orbitguess_a, period)
+function reMake(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::AbstractVector, orbitguess_a, period; kwargs...)
 	M = length(orbitguess_a)
 	N = length(ζr)
 
@@ -1001,6 +1001,99 @@ function problemForBS(prob::PeriodicOrbitTrapProblem, F, dF, par, hopfpt, ζr::A
 end
 
 ####################################################################################################
+# Branch switching from Bifs of PO
+# """
+# $(SIGNATURES)
+#
+# Branch switching at a Bifurcation point of periodic orbits specified by a [`PeriodicOrbitTrapProblem`](@ref). This is still experimental. A deflated Newton-Krylov solver is used to improve the branch switching capabilities.
+#
+# # Arguments
+# - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+# - `ind_bif` index of the branch point
+# - `_contParams` parameters to be used by a regular [`continuation`](@ref)
+#
+# # Optional arguments
+# - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
+# - `δ` used internally to compute derivatives w.r.t the parameter `p`.
+# - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
+# - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+# - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+# - `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
+# - `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
+# - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
+# - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
+# - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
+# """
+# function continuationPOTrapFromBif(br::AbstractBranchResult, ind_bif::Int,
+# 	_contParams::ContinuationPar;
+# 	Jᵗ = nothing,
+# 	δ = 1e-8, δp = 0.1,
+# 	ampfactor = 1,
+# 	usedeflation = true,
+# 	linearPO = :BorderedLU,
+# 	recordFromSolution = (u,p) -> (period = u[end],),
+# 	linearAlgo = nothing,
+# 	updateSectionEveryStep = 1,
+# 	kwargs...)
+#
+# 	@assert br.functional isa PeriodicOrbitTrapProblem
+# 	@assert abs(br.specialpoint[ind_bif].δ[1]) == 1 "Only simple bifurcation points are handled"
+#
+# 	verbose = get(kwargs, :verbosity, 0) > 0
+# 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
+#
+# 	bifpt = br.specialpoint[ind_bif]
+#
+# 	# let us compute the kernel
+# 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
+# 	verbose && print("--> computing nullspace...")
+# 	ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
+# 	# we normalize it by the sup norm because it could be too small/big in L2 norm
+# 	ζ ./= norm(ζ, Inf)
+# 	verbose && println("Done!")
+#
+# 	pb = br.functional
+#
+# 	# compute the full eigenvector
+# 	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+# 	ζs = reduce(vcat, ζ_a)
+#
+# 	## predictor
+# 	pbnew, orbitguess = predictor(pb, bifpt, ampfactor, ζs, bifpt.type)
+# 	newp = bifpt.param + δp
+#
+# 	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
+#
+# 	if usedeflation
+# 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
+# 		optn = _contParams.newtonOptions
+# 		# find point on the first branch
+# 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; linearPO = linearPO, kwargs...)
+#
+# 		# find the bifurcated branch using deflation
+# 		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+# 		verbose && println("\n--> Compute point on bifurcated branch...")
+# 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
+# 		@assert flag "Deflated newton did not converge"
+# 		orbitguess .= solbif
+# 	end
+#
+# 	# TODO
+# 	# we have to adjust the phase constraint.
+# 	# Right now, it can be quite large.
+#
+# 	# perform continuation
+# 	branch, u, τ = continuation(pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
+# 		linearPO = linearPO,
+# 		recordFromSolution = recordFromSolution,
+# 		linearAlgo = _linearAlgo, kwargs...)
+#
+# 	# create a branch
+# 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
+#
+# 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, τ
+# end
+
 # predictor function close to bifurcations of PO
 function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::Symbol)
 	@assert bptype in (:bp, :pd)

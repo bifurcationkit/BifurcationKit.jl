@@ -1,5 +1,8 @@
 # Freezing problems, symmetries and waves
 
+!!! warning "WIP"
+    This is work in progress. The available options are limited if any.
+
 This section is dedicated to the study of an equation (in `x`) `F(x,p)=0` where one wishes to freeze a continuous symmetry. When the equation $F(x, p) = 0$ has a continuous symmetry described by a Lie group $G$ and action $g\cdot x$ for $g\in G$, one can reduce the symmetry of the problem by considering the constrained problem:
 
 $$\left\{

@@ -366,9 +366,16 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 		# we start with the case of zero amplitude
 		orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
 		# this factor prevent shooting jacobian from being singular at fixed points
-		Tfactor = (prob isa AbstractPOFDProblem) || (prob isa PoincareShootingProblem) ? 0 : 0.001
-		_, orbitzeroamp = problemForBS(prob, F, dF, br.params,
-			hopfpt, ζr, orbitzeroamp_a,	Tfactor * abs(2pi / pred.ω))
+		# Tfactor = (prob isa AbstractPOFDProblem) || (prob isa PoincareShootingProblem) ? 0 : 0.001
+		if prob isa PoincareShootingProblem
+			Tfactor = 0
+		elseif prob isa AbstractPOFDProblem
+			Tfactor = 100 / abs(2pi / pred.ω)
+		else
+			Tfactor = 0.001
+		end
+
+		_, orbitzeroamp = reMake(prob, F, dF, br.params, hopfpt, ζr, orbitzeroamp_a,	Tfactor * abs(2pi / pred.ω))
 		sol0, _, flag, _ = newton(probPO, orbitzeroamp, setParam(br, pred.p), optn; callback = cb, kwargs...)
 
 		# find the bifurcated branch using deflation

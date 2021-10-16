@@ -2,9 +2,7 @@
 
 We have implemented a method where we compute `M` slices of a periodic orbit. This is done by the structure `PeriodicOrbitTrapProblem` for which the problem of finding periodic orbits is discretized using Finite Differences based on a trapezoidal rule.
 
-!!! unknown "References"
-    The general method is very well exposed in **Hopf Bifurcation and Time Periodic Orbits with Pde2path – Algorithms and Applications.**, Uecker, Hannes, Communications in Computational Physics 25, no. 3 (2019) and in the PhD thesis **Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations**, *Lust, Kurt*, 1997. We adopt the notations of the first reference.
-
+The general method is very well exposed in [^Uecker],[^Lust] We adopt the notations of the first reference.
 
 We look for periodic orbits as solutions $(x(0),T)$ of
 
@@ -63,7 +61,13 @@ We strongly advise you to use a preconditioner to deal with the above linear pro
 
 ## Floquet multipliers computation
 
-A **not very precise** algorithm for computing the Floquet multipliers is provided. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations of periodic orbits. It seems to work reasonably well for the tutorials considered here. For more information, have a look at [`FloquetQaD`](@ref).
+A **not very precise** algorithm for computing the Floquet multipliers is provided. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents.
+
+It amounts to computing the eigenvalues of 
+
+$$\mathcal{M}=M_{1}^{-1} H_{1} M_{m-1}^{-1} H_{m-1} \cdots M_{2}^{-1} H_{2}.$$
+
+The method allows, nevertheless, to detect bifurcations of periodic orbits. It seems to work reasonably well for the tutorials considered here. For more information, have a look at [`FloquetQaD`](@ref).
 
 
 !!! note "Algorithm"
@@ -90,3 +94,9 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::
 ## Continuation
 
 Have a look at the [Continuation of periodic orbits (Finite differences)](@ref) example for the Brusselator. We refer to [`continuation`](@ref) for more information regarding the arguments.
+
+## References
+
+[^Uecker]:> Uecker, Hannes. Hopf Bifurcation and Time Periodic Orbits with Pde2path – Algorithms and Applications. Communications in Computational Physics 25, no. 3 (2019) 
+
+[^Lust]:> Lust, Kurt, Numerical Bifurcation Analysis of Periodic Solutions of Partial Differential Equations, PhD thesis, 1997. 

@@ -29,7 +29,7 @@ opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.125, n
 	br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
 	printSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),
 	tangentAlgo = BorderedPred(),
-	plot = true, verbosity = 0, normC = norminf)
+	plot = true, normC = norminf)
 
 plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################
