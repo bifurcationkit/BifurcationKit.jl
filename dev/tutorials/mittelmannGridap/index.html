@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2d Bratu–Gelfand problem with Gridap.jl (Intermediate) · Bifurcation Analysis in Julia</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/indigo.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="Bifurcation Analysis in Julia logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Bifurcation Analysis in Julia</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../guidelines/">Overview</a></li><li><a class="tocitem" href="../tutorials/">Tutorials</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Functionalities</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../plotting/">Plotting</a></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Periodic Orbits</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../periodicOrbit/">Introduction</a></li><li><a class="tocitem" href="../../periodicOrbitTrapeze/">Finite Differences</a></li><li><a class="tocitem" href="../../periodicOrbitCollocation/">Collocation</a></li><li><a class="tocitem" href="../../periodicOrbitShooting/">Shooting</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Symmetries / Waves</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../intro_wave/">Introduction</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox"/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Continuation methods</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../IntroContinuation/">Introduction</a></li><li><a class="tocitem" href="../../Predictors/">Predictors / correctors</a></li><li><a class="tocitem" href="../../PALC/">PALC</a></li><li><a class="tocitem" href="../../MooreSpence/">Moore Spence Continuation</a></li><li><a class="tocitem" href="../../DeflatedContinuation/">Deflated Continuation</a></li></ul></li><li><a class="tocitem" href="../../EventCallback/">Event Handling and Callback</a></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Bifurcations</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../detectionBifurcation/">Bifurcation detection (codim 1)</a></li><li><a class="tocitem" href="../../codim2Continuation/">Fold / Hopf Continuation (codim 2)</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-7" type="checkbox"/><label class="tocitem" for="menuitem-4-7"><span class="docs-label">Normal form</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../simplebp/">Simple branch point</a></li><li><a class="tocitem" href="../../nonsimplebp/">Non-simple branch point</a></li><li><a class="tocitem" href="../../simplehopf/">Simple Hopf point</a></li></ul></li><li><a class="tocitem" href="../../branchswitching/">Branch switching</a></li><li><a class="tocitem" href="../../BifurcationDiagram/">Bifurcation diagram</a></li><li><a class="tocitem" href="../../deflatedproblem/">Deflated problems</a></li><li><a class="tocitem" href="../../constrainedproblem/">Constrained problem</a></li><li><a class="tocitem" href="../../diffeq/">DiffEq wrapper</a></li><li><a class="tocitem" href="../../iterator/">Iterator Interface</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Options</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../linearsolver/">Linear Solvers</a></li><li><a class="tocitem" href="../../borderedlinearsolver/">Bordered linear solvers</a></li><li><a class="tocitem" href="../../eigensolver/">Eigen Solvers</a></li><li><a class="tocitem" href="../../Borderedarrays/">Bordered arrays</a></li></ul></li><li><a class="tocitem" href="../../faq/">Frequently Asked Questions</a></li><li><a class="tocitem" href="../../library/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>2d Bratu–Gelfand problem with Gridap.jl (Intermediate)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2d Bratu–Gelfand problem with Gridap.jl (Intermediate)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/tutorials/mittelmannGridap.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="d-Bratu–Gelfand-problem-with-[Gridap.jl](https://github.com/gridap/Gridap.jl)-(Intermediate)"><a class="docs-heading-anchor" href="#d-Bratu–Gelfand-problem-with-[Gridap.jl](https://github.com/gridap/Gridap.jl)-(Intermediate)">2d Bratu–Gelfand problem with <a href="https://github.com/gridap/Gridap.jl">Gridap.jl</a> (Intermediate)</a><a id="d-Bratu–Gelfand-problem-with-[Gridap.jl](https://github.com/gridap/Gridap.jl)-(Intermediate)-1"></a><a class="docs-heading-anchor-permalink" href="#d-Bratu–Gelfand-problem-with-[Gridap.jl](https://github.com/gridap/Gridap.jl)-(Intermediate)" title="Permalink"></a></h1><ul><li><a href="#d-Bratu–Gelfand-problem-with-[Gridap.jl](https://github.com/gridap/Gridap.jl)-(Intermediate)">2d Bratu–Gelfand problem with Gridap.jl (Intermediate)</a></li><li class="no-marker"><ul><li><a href="#Computation-of-the-first-branches">Computation of the first branches</a></li></ul></li></ul><p>We re-consider the problem of Mittelmann treated in the previous <a href="https://rveltz.github.io/BifurcationKit.jl/dev/mittelmannAuto/#Automatic-diagram-of-2d-Bratu–Gelfand-problem-(Intermediate)-1">tutorial</a> but using a finite elements method (FEM) implemented in the package <a href="https://github.com/gridap/Gridap.jl">Gridap.jl</a>.</p><p>Recall that the problem is defined by solving</p><p class="math-container">\[\Delta u +NL(\lambda,u) = 0\]</p><p>with Neumann boundary condition on <span>$\Omega = (0,1)^2$</span> and where <span>$NL(\lambda,u)\equiv-10(u-\lambda e^u)$</span>.</p><p>We start by installing the package <a href="https://github.com/rveltz/GridapBifurcationKit">GridapBifurcationKit.jl</a>. Then, we can import the different packages:</p><pre><code class="language-julia hljs">using Revise
+using Plots, Gridap,Setfield
+using Gridap.FESpaces
+using GridapBifurcationKit, BifurcationKit
+
+# custom plot function to deal with Gridap
+plotgridap!(x; k...) = (n=Int(sqrt(length(x)));heatmap!(reshape(x,n,n); color=:viridis, k...))
+plotgridap(x; k...) =( plot();plotgridap!(x; k...))</code></pre><p>We are now ready to specify the problem using the setting of <strong>Gridap.jl</strong>: it allows to write the equations very closely to the mathematical formulation:</p><pre><code class="language-julia hljs"># discretisation
+n = 40
+domain = (0,1,0,1)
+cells = (n,n)
+model = CartesianDiscreteModel(domain,cells)
+
+# function spaces
+order = 1
+reffe = ReferenceFE(lagrangian,Float64,order)
+V = TestFESpace(model,reffe,conformity=:H1,)#dirichlet_tags=&quot;boundary&quot;)
+U = TrialFESpace(V)
+
+Ω = Triangulation(model)
+degree = 2*order
+dΩ = Measure(Ω,degree)
+
+# nonlinearity
+NL(u) = exp(u)
+
+# residual
+res(u,p,v) = ∫( -∇(v)⋅∇(u) -  v ⋅ (u - p.λ ⋅ (NL ∘ u)) * 10 )*dΩ
+
+# jacobian of the residual
+jac(u,p,du,v) = ∫( -∇(v)⋅∇(du) - v ⋅ du ⋅ (1 - p.λ * ( NL ∘ u)) * 10 )*dΩ
+
+# 3rd and 4th derivatives, used for aBS
+d2res(u,p,du1,du2,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
+d3res(u,p,du1,du2,du3,v) = ∫( v ⋅ du1 ⋅ du2 ⋅ du3 ⋅ (NL ∘ u) * 10 * p.λ )*dΩ
+
+# example of initial guess
+uh = zero(U)
+
+# model parameter
+par_bratu = (λ = 0.01,)
+
+# problem definition
+prob = GridapProblem(res, jac, d2res, d3res, V, U)</code></pre><p>We can call then the newton solver:</p><pre><code class="language-julia hljs">optn = NewtonPar(eigsolver = EigArpack())
+sol, = newton(prob, uh, par_bratu, NewtonPar(optn; verbose = true))</code></pre><p>which gives</p><pre><code class="language-julia hljs">┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       2.4687e-03     │        0       │
+│       1     │       1.2637e-07     │        1       │
+│       2     │       3.3833e-16     │        1       │
+└─────────────┴──────────────────────┴────────────────┘</code></pre><p>In the same vein, we can continue this solution as function of <span>$\lambda$</span>:</p><pre><code class="language-julia hljs">opts = ContinuationPar(pMax = 40., pMin = 0.01, ds = 0.01,
+	maxSteps = 1000, detectBifurcation = 3, newtonOptions = optn, nev = 20)
+br, = continuation(prob, uh, par_bratu, (@lens _.λ), opts;
+	plot = true, verbosity = 2,
+	plotSolution = (x, p; k...) -&gt; plotgridap!(x;  k...))</code></pre><p>We obtain:</p><pre><code class="language-julia hljs">julia&gt; br
+ ┌─ Branch number of points: 53
+ ├─ Branch of Equilibrium
+ ├─ Type of vectors: Vector{Float64}
+ ├─ Parameter λ starts at 0.01, ends at 0.01
+ └─ Special points:
+
+ (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)
+
+- #  1,    bp at λ ≈ +0.36782970 ∈ (+0.36782970, +0.36787920), |δp|=5e-05, [converged], δ = ( 1,  0), step =  12, eigenelements in eig[ 13], ind_ev =   1
+- #  2,    nd at λ ≈ +0.27168226 ∈ (+0.27168226, +0.27286757), |δp|=1e-03, [converged], δ = ( 2,  0), step =  19, eigenelements in eig[ 20], ind_ev =   3
+- #  3,    bp at λ ≈ +0.15186464 ∈ (+0.15186464, +0.15187849), |δp|=1e-05, [converged], δ = ( 1,  0), step =  26, eigenelements in eig[ 27], ind_ev =   4
+- #  4,    nd at λ ≈ +0.03484879 ∈ (+0.03484879, +0.03491029), |δp|=6e-05, [converged], δ = ( 2,  0), step =  41, eigenelements in eig[ 42], ind_ev =   6
+- #  5,    nd at λ ≈ +0.01556655 ∈ (+0.01556655, +0.01559518), |δp|=3e-05, [converged], δ = ( 2,  0), step =  48, eigenelements in eig[ 49], ind_ev =   8</code></pre><p><img src="../fig1gridap.png" alt/></p><h2 id="Computation-of-the-first-branches"><a class="docs-heading-anchor" href="#Computation-of-the-first-branches">Computation of the first branches</a><a id="Computation-of-the-first-branches-1"></a><a class="docs-heading-anchor-permalink" href="#Computation-of-the-first-branches" title="Permalink"></a></h2><p>Let us now compute the first branches from the bifurcation points. We start with the one with 1d kernel:</p><pre><code class="language-julia hljs">br1, = continuation(prob, br, 3,
+	setproperties(opts;ds = 0.001, dsmax = 0.05, maxSteps = 140, detectBifurcation = 3);
+	verbosity = 0, plot = true, nev = 10,
+	tangentAlgo = BorderedPred(),
+	usedeflation = true,
+	plotSolution = (x, p; k...) -&gt; plotgridap!(x;  k...))</code></pre><p>We also compute the branch from the first bifurcation point on this branch <code>br1</code>:</p><pre><code class="language-julia hljs">br2, = continuation(prob, br1, 1,
+	setproperties(opts;ds = 0.005, dsmax = 0.05, maxSteps = 140, detectBifurcation = 0);
+	verbosity = 0, plot = true, nev = 10,
+	tangentAlgo = BorderedPred(),
+	usedeflation = true,
+	plotSolution = (x, p; k...) -&gt; plotgridap!(x;  k...))
+
+plot(br, br1, br2)</code></pre><p>We get:</p><p><img src="../fig2gridap.png" alt/></p><p>Finally, we compute the branches from the 2d bifurcation point:</p><pre><code class="language-julia hljs">br3, = continuation(prob, br, 2,
+	setproperties(opts;ds = 0.005, dsmax = 0.05, maxSteps = 140, detectBifurcation = 3);
+	verbosity = 0, plot = true, nev = 10,
+	usedeflation = true,
+	plotSolution = (x, p; k...) -&gt; plotgridap!(x;  k...))
+
+plot(br, br1, br2, br3...)</code></pre><p><img src="../fig3gridap.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.8 on <span class="colophon-date" title="Sunday 17 October 2021 20:14">Sunday 17 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

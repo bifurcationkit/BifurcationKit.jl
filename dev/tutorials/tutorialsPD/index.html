@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Period doubling in the Barrio-Varea-Aragon-Maini model · Bifurcation Analysis in Julia</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/indigo.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="Bifurcation Analysis in Julia logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Bifurcation Analysis in Julia</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../guidelines/">Overview</a></li><li><a class="tocitem" href="../tutorials/">Tutorials</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox"/><label class="tocitem" for="menuitem-4"><span class="docs-label">Functionalities</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../plotting/">Plotting</a></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Periodic Orbits</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../periodicOrbit/">Introduction</a></li><li><a class="tocitem" href="../../periodicOrbitTrapeze/">Finite Differences</a></li><li><a class="tocitem" href="../../periodicOrbitCollocation/">Collocation</a></li><li><a class="tocitem" href="../../periodicOrbitShooting/">Shooting</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Symmetries / Waves</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../intro_wave/">Introduction</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox"/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Continuation methods</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../IntroContinuation/">Introduction</a></li><li><a class="tocitem" href="../../Predictors/">Predictors / correctors</a></li><li><a class="tocitem" href="../../PALC/">PALC</a></li><li><a class="tocitem" href="../../MooreSpence/">Moore Spence Continuation</a></li><li><a class="tocitem" href="../../DeflatedContinuation/">Deflated Continuation</a></li></ul></li><li><a class="tocitem" href="../../EventCallback/">Event Handling and Callback</a></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Bifurcations</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../detectionBifurcation/">Bifurcation detection (codim 1)</a></li><li><a class="tocitem" href="../../codim2Continuation/">Fold / Hopf Continuation (codim 2)</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-7" type="checkbox"/><label class="tocitem" for="menuitem-4-7"><span class="docs-label">Normal form</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../simplebp/">Simple branch point</a></li><li><a class="tocitem" href="../../nonsimplebp/">Non-simple branch point</a></li><li><a class="tocitem" href="../../simplehopf/">Simple Hopf point</a></li></ul></li><li><a class="tocitem" href="../../branchswitching/">Branch switching</a></li><li><a class="tocitem" href="../../BifurcationDiagram/">Bifurcation diagram</a></li><li><a class="tocitem" href="../../deflatedproblem/">Deflated problems</a></li><li><a class="tocitem" href="../../constrainedproblem/">Constrained problem</a></li><li><a class="tocitem" href="../../diffeq/">DiffEq wrapper</a></li><li><a class="tocitem" href="../../iterator/">Iterator Interface</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5" type="checkbox"/><label class="tocitem" for="menuitem-5"><span class="docs-label">Options</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../linearsolver/">Linear Solvers</a></li><li><a class="tocitem" href="../../borderedlinearsolver/">Bordered linear solvers</a></li><li><a class="tocitem" href="../../eigensolver/">Eigen Solvers</a></li><li><a class="tocitem" href="../../Borderedarrays/">Bordered arrays</a></li></ul></li><li><a class="tocitem" href="../../faq/">Frequently Asked Questions</a></li><li><a class="tocitem" href="../../library/">Library</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Period doubling in the Barrio-Varea-Aragon-Maini model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Period doubling in the Barrio-Varea-Aragon-Maini model</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/rveltz/BifurcationKit.jl/blob/master/docs/src/tutorials/tutorialsPD.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model"><a class="docs-heading-anchor" href="#Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model">Period doubling in the Barrio-Varea-Aragon-Maini model</a><a id="Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model-1"></a><a class="docs-heading-anchor-permalink" href="#Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model" title="Permalink"></a></h1><ul><li><a href="#Period-doubling-in-the-Barrio-Varea-Aragon-Maini-model">Period doubling in the Barrio-Varea-Aragon-Maini model</a></li><li class="no-marker"><ul><li><a href="#Periodic-orbits-from-the-Hopf-point-(Standard-Shooting)">Periodic orbits from the Hopf point (Standard Shooting)</a></li><li><a href="#Periodic-orbits-from-the-PD-point-(Standard-Shooting)">Periodic orbits from the PD point (Standard Shooting)</a></li></ul></li></ul><p>The purpose of this example is to show how to handle period doubling bifurcations of periodic orbits. Note that we do not use automatic branch switching here although this is possible (but not yet for branching from period doubling points).</p><div class="admonition is-category-unknown"><header class="admonition-header">References</header><div class="admonition-body"><p>This example is taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (2012)</p></div></div><div class="admonition is-info"><header class="admonition-header">Method and performance</header><div class="admonition-body"><p>We focus on the Shooting method but we could have based the computation of periodic orbits on finite differences instead. Performances of the current tutorial are directly linked to the ones of <code>DifferentialEquations.jl</code>.     </p></div></div><p>We focus on the following 1D model:</p><p class="math-container">\[\tag{E}\begin{aligned}
+&amp;\frac{\partial u}{\partial t}=D \nabla^{2} u+\eta\left(u+a v-C u v-u v^{2}\right)\\
+&amp;\frac{\partial v}{\partial t}=\nabla^{2} v+\eta\left(b v+H u+C u v+u v^{2}\right)
+\end{aligned}\]</p><p>with Neumann boundary conditions. We start by encoding the model</p><pre><code class="language-julia hljs">using Revise
+using DiffEqOperators, ForwardDiff, DifferentialEquations, SparseArrays
+using BifurcationKit, LinearAlgebra, Plots, Setfield
+const BK = BifurcationKit
+
+norminf(x) = norm(x, Inf)
+f(u, v, p) = p.η * (      u + p.a * v - p.C * u * v - u * v^2)
+g(u, v, p) = p.η * (p.H * u + p.b * v + p.C * u * v + u * v^2)
+
+function Laplacian(N, lx, bc = :Dirichlet)
+	hx = 2lx/N
+	D2x = CenteredDifference(2, 2, hx, N)
+	if bc == :Neumann
+		Qx = Neumann0BC(hx)
+	elseif bc == :Dirichlet
+		Qx = Dirichlet0BC(typeof(hx))
+	end
+	D2xsp = sparse(D2x * Qx)[1]
+end
+
+function NL!(dest, u, p, t = 0.)
+	N = div(length(u), 2)
+	u1 =  @view (u[1:N])
+	u2 =  @view (u[N+1:end])
+	dest[1:N]     .= f.(u1, u2, Ref(p))
+	dest[N+1:end] .= g.(u1, u2, Ref(p))
+	return dest
+end
+
+function Fbr!(f, u, p)
+	mul!(f, p.Δ, u)
+	f .= f .+ NL(u, p)
+end
+
+NL(u, p) = NL!(similar(u), u, p)
+Fbr(x, p, t = 0.) = Fbr!(similar(x), x, p)
+
+# this is not very efficient but simple enough ;)
+Jbr(x,p) = sparse(ForwardDiff.jacobian(x -&gt; Fbr(x, p), x))</code></pre><p>We can now perform bifurcation of the following Turing solution:</p><pre><code class="language-julia hljs">N = 100
+n = 2N
+lx = 3pi /2
+X = LinRange(-lx,lx, N)
+
+Δ = Laplacian(N, lx, :Neumann)
+D = 0.08
+par_br = (η = 1.0, a = -1., b = -3/2., H = 3.0, D = D, C = -0.6, Δ = blockdiag(D*Δ, Δ))
+
+u0 = 1.0 * cos.(2X)
+solc0 = vcat(u0, u0)
+
+# parameters for continuation
+eigls = EigArpack(0.5, :LM)
+opt_newton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9)
+opts_br = ContinuationPar(dsmax = 0.04, ds = -0.01, pMin = -1.8,
+	detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = opt_newton, maxSteps = 400)
+
+br, = @time continuation(Fbr, Jbr, solc0, (@set par_br.C = -0.2), (@lens _.C), opts_br;
+	plot = true, verbosity = 3,
+	recordFromSolution = (x, p) -&gt; norm(x, Inf),
+	plotSolution = (x, p; kwargs...) -&gt; plot!(x[1:end÷2];label=&quot;&quot;,ylabel =&quot;u&quot;, kwargs...))</code></pre><p>which yields</p><p><img src="../br_pd1.png" alt/></p><h2 id="Periodic-orbits-from-the-Hopf-point-(Standard-Shooting)"><a class="docs-heading-anchor" href="#Periodic-orbits-from-the-Hopf-point-(Standard-Shooting)">Periodic orbits from the Hopf point (Standard Shooting)</a><a id="Periodic-orbits-from-the-Hopf-point-(Standard-Shooting)-1"></a><a class="docs-heading-anchor-permalink" href="#Periodic-orbits-from-the-Hopf-point-(Standard-Shooting)" title="Permalink"></a></h2><p>We continue the periodic orbit form the first Hopf point around <span>$C\approx -0.8598$</span> using a Standard Simple Shooting method (see <a href="../../periodicOrbitShooting/#Periodic-orbits-based-on-the-shooting-method">Periodic orbits based on the shooting method</a>). To this end, we define a <code>SplitODEProblem</code> from <code>DifferentialEquations.jl</code> which is convenient for solving semilinear problems of the form</p><p class="math-container">\[\dot x = Ax+g(x)\]</p><p>where <span>$A$</span> is the infinitesimal generator of a <span>$C_0$</span>-semigroup. We use the exponential-RK scheme <code>ETDRK2</code> ODE solver to compute the solution of (E) just after the Hopf point.</p><pre><code class="language-julia hljs"># parameters close to the Hopf bifurcation
+par_br_hopf = @set par_br.C = -0.86
+# parameters for the ODEProblem
+f1 = DiffEqArrayOperator(par_br.Δ)
+f2 = NL!
+prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), @set par_br.C = -0.86)
+
+sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)</code></pre><p>We estimate the period of the limit cycle to be around <span>$T\approx 3$</span>. We then use this as a guess for the shooting method:</p><pre><code class="language-julia hljs"># compute the guess for the shooting method
+orbitsection = Array(sol[:, end])
+initpo = vcat(vec(orbitsection), 3.)
+
+# define the functional for the standard simple shooting based on the
+# ODE solver ETDRK2. SectionShooting implements an appropriate phase condition
+probSh = ShootingProblem(prob_sp, ETDRK2(krylov=true),
+	[sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1)
+
+# parameters for the Newton-Krylov solver
+ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
+optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
+# Newton-Krylov solver
+out_po_sh, _, flag = @time newton(probSh , initpo, par_br_hopf, optn; normN = norminf)
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, out_po_sh[end], &quot;, amplitude = &quot;, BK.getAmplitude(probSh, out_po_sh, par_br_hopf; ratio = 2),&quot;\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia hljs">--&gt; T = 2.94557883943451, amplitude = 0.05791350025709674</code></pre><p>We can now continue this periodic orbit:</p><pre><code class="language-julia hljs">eig = DefaultEig()
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= 0.005, pMin = -1.8, maxSteps = 170, newtonOptions = (@set optn.eigsolver = eig),
+	nev = 10, precisionStability = 1e-2, detectBifurcation = 3)
+br_po_sh, = @time continuation(probSh, out_po_sh, par_br_hopf, (@lens _.C), opts_po_cont; verbosity = 3,
+	plot = true,
+	linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
+	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	recordFromSolution = (u, p) -&gt; BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)</code></pre><p>We plot the result using <code>plot(br_po_sh, br, label = &quot;&quot;)</code>:</p><p><img src="../br_pd2.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Numerical precision for stability</header><div class="admonition-body"><p>The Floquet multipliers are not very precisely computed here using the Shooting method. We know that <code>1=exp(0)</code> should be a Floquet multiplier but this is only true here at precision ~1e-3. In order to prevent spurious bifurcation detection, there is a threshold <code>precisionStability</code> in <code>ContinuationPar</code> for declaring an unstable eigenvalue. Another way would be to use Poincaré Shooting so that this issue does not show up.</p></div></div><h2 id="Periodic-orbits-from-the-PD-point-(Standard-Shooting)"><a class="docs-heading-anchor" href="#Periodic-orbits-from-the-PD-point-(Standard-Shooting)">Periodic orbits from the PD point (Standard Shooting)</a><a id="Periodic-orbits-from-the-PD-point-(Standard-Shooting)-1"></a><a class="docs-heading-anchor-permalink" href="#Periodic-orbits-from-the-PD-point-(Standard-Shooting)" title="Permalink"></a></h2><p>We now compute the periodic orbits branching of the first Period-Doubling bifurcation point. It is straightforward to obtain an initial guess using the flow around the bifurcation point:</p><pre><code class="language-julia hljs">par_br_pd = @set par_br.C = -1.32
+prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd)
+# solution close to the PD point.
+solpd = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)</code></pre><p>The estimated period is <span>$T_{pd}=6.2$</span>:</p><pre><code class="language-julia hljs">orbitsectionpd = Array(solpd[:,end-100])
+initpo_pd = vcat(vec(orbitsectionpd), 6.2)</code></pre><p>For educational purposes, we show the newton outputs:</p><pre><code class="language-julia hljs">out_po_sh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd , optn; normN = norminf)
+flag &amp;&amp; printstyled(color=:red, &quot;--&gt; T = &quot;, out_po_sh_pd[end], &quot;, amplitude = &quot;, BK.getAmplitude(probSh, out_po_sh_pd, par_br_pd; ratio = 2),&quot;\n&quot;)</code></pre><p>which gives</p><pre><code class="language-julia hljs">┌─────────────────────────────────────────────────────┐
+│ Newton Iterations      f(x)      Linear Iterations  │
+├─────────────┬──────────────────────┬────────────────┤
+│       0     │       4.3061e+00     │        0       │
+│       1     │       5.3254e-02     │       10       │
+│       2     │       5.5053e-03     │       12       │
+│       3     │       1.6203e-03     │       13       │
+│       4     │       5.6236e-05     │       12       │
+│       5     │       7.6290e-07     │       12       │
+│       6     │       3.0634e-08     │       13       │
+│       7     │       1.2282e-09     │       12       │
+│       8     │       4.9233e-11     │       13       │
+└─────────────┴──────────────────────┴────────────────┘
+  4.249150 seconds (497.85 k allocations: 2.030 GiB, 11.13% gc time)
+--&gt; T = 6.126399996979465, amplitude = 1.410164896740365</code></pre><p>We also compute the branch of periodic orbits using the following command:</p><pre><code class="language-julia hljs">opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= 0.001, pMin = -1.8, maxSteps = 100, newtonOptions = (@set optn.eigsolver = eig), nev = 5, precisionStability = 1e-3, detectBifurcation = 2)
+br_po_sh_pd, = @time continuation(probSh, out_po_sh_pd, par_br_pd, (@lens _.C),
+	opts_po_cont; verbosity = 2, plot = true,
+	plotSolution = (x, p; kwargs...) -&gt; BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
+	recordFromSolution = (u, p) -&gt; BK.getMaximum(probSh, u, (@set par_br_pd.C = p); ratio = 2), normC = norminf)</code></pre><p>and plot it using <code>plot(br_po_sh, br, br_po_sh_pd, label = &quot;&quot;)</code>:</p><p><img src="../br_pd3.png" alt/></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.8 on <span class="colophon-date" title="Sunday 17 October 2021 20:14">Sunday 17 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
