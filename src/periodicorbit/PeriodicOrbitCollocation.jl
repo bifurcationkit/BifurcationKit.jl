@@ -103,7 +103,7 @@ end
 """
 	pb = PeriodicOrbitOCollProblem(kwargs...)
 
-This composite type implements an orthogonal collocation (at Guass points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://rveltz.github.io/BifurcationKit.jl/dev/periodicOrbitCollocation/).
+This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
 
 ## Arguments
 - `F` vector field specified as a function of two arguments `F(x,p)`

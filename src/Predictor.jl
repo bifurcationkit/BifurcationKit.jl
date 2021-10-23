@@ -151,7 +151,7 @@ $(TYPEDFIELDS)
 
 # Constructor(s)
 
-	MultiplePred(algo, x0, α, n)
+	MultiplePred(pred, x0, α, n)
 
 	MultiplePred(x0, α, n)
 
@@ -184,7 +184,7 @@ $(TYPEDFIELDS)
 	"Factor to increase ds upon successful step"
 	dsfact::T = 1.5
 end
-MultiplePred(algo::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo = algo, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
+MultiplePred(pred::AbstractTangentPredictor, x0, α::T, nb) where T = MultiplePred(tangentalgo = pred, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
 MultiplePred(x0, α, nb) = MultiplePred(SecantPred(), x0, α, nb)
 Base.empty!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 
@@ -282,7 +282,7 @@ $(TYPEDFIELDS)
 
 # Constructor(s)
 
-	PolynomialPred(algo, n, k, v0)
+	PolynomialPred(pred, n, k, v0)
 
 	PolynomialPred(n, k, v0)
 
@@ -322,9 +322,9 @@ mutable struct PolynomialPred{T <: Real, Tvec, Talgo} <: AbstractTangentPredicto
 	update::Bool
 end
 
-function PolynomialPred(algo, n, k, v0)
+function PolynomialPred(pred, n, k, v0)
 	@assert n<k "k must be larger than the degree of the polynomial"
-	PolynomialPred(n,k,zeros(eltype(v0), k, n+1), algo,
+	PolynomialPred(n,k,zeros(eltype(v0), k, n+1), pred,
 		CircularBuffer{typeof(v0)}(k),  # solutions
 		CircularBuffer{eltype(v0)}(k),  # parameters
 		CircularBuffer{eltype(v0)}(k),  # arclengths

@@ -194,7 +194,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
-	@info "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
+	@info "It seems the point is a Saddle-Node bifurcation.\nThe normal form is aδμ + b1⋅x + b2⋅x^2 + b3⋅x^3\n with coefficients \n$(bp.nf)."
 	return nothing
 end
 ####################################################################################################
