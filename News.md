@@ -3,11 +3,43 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2021-10-23
+- remove documentation from package, it is now located in BifurcationKitDocs.jl
+
+## [0.1.5] - 2021-10-16
+- change function name problemForBS into reMake for aBS of periodic orbits
+- add function `generateSolution` to generate guess for computing orbits from a function solution `t -> orbit(t)`
+- ⛳️ add orthogonal collocation method for periodic orbits
+- add additional method for computing Floquet multipliers based on generalized eigenvalue problem
+
+## [0.1.5] - 2021-09-26
+- add new problem for symmetries `TWProblem`
+
+## [0.1.5] - 2021-09-25
+- add example for wave computation
+
+## [0.1.5] - 2021-09-25
+- refactoring, extractTimeSlices becomes getTimeSlices
+
+## [0.1.5] - 2021-09-05
+- add a simple callback to limit residuals in Newton iterations `cbMaxNorm`
+- ⛳️ add branch switching for branches of PO at BP / PD
+- auto generate more tutorials
+
+## [0.1.5] - 2021-07-18
+- rename `get3Jet` into `getJet`
+- remove `BlockArrays.setblock!` occurrences which are deprecated
+
+## [0.1.5] - 2021-07-10
+- add `perturbGuess` option to `multicontinuation`
+- change option `printSolution` to `recordFromSolution` in continuation and similar functions
+
 ## [0.1.5] - 2021-06-26
 - add new function getFirstPointsOnBranch to allow fine grained control of aBS
+- add full automatic differentiation for Deflated Problems
 
 ## [0.1.5] - 2021-06-20
-- add computing full transcritical/pitchfork branch (not half) in `bifurcationDiagram`
+- ⛳️ add computing full transcritical/pitchfork branch (not half) in `bifurcationDiagram`
 
 ## [0.1.4] - 2021-06-06
 - move toward automatic generation of docs with figures
@@ -37,7 +69,7 @@ All notable changes to this project will be documented in this file.
 - correct bug in the interval locating the bifurcation point (in bisection method)
 
 ## [0.0.1] - 2021-01-24
-- add `bothside` kwargs to continuation to compute a branch on both sides of initial guess
+- ⛳️ add `bothside` kwargs to continuation to compute a branch on both sides of initial guess
 - update the Minimally augmented problem during the continuation. This is helpful otherwise the codim 2 continuation fails.
 - [WIP] detection of Bogdanov-takens and Fold-Hopf bifurcations
 - remove field `foldpoint` from ContResult
@@ -46,8 +78,8 @@ All notable changes to this project will be documented in this file.
 - improve bordered solvers for POTrap based on the cyclic matrix
 
 ## [0.0.1] - 2020-11-7
-- update phase condition during continuation for shooting problems and Trapezoid method
-	
+- ⛳️ update phase condition during continuation for shooting problems and Trapezoid method
+
 ## [0.0.1] - 2020-11-7
 - remove fields `n_unstable`, `n_imag` and `stability` from `ContResult` and put it in the field `branch`.
 
@@ -72,18 +104,18 @@ All notable changes to this project will be documented in this file.
 - put arrow at the end of the branch (plotting)
 
 ## [0.0.1] - 2020-9-6
-- add eta parameter in ContinuationPar 
+- add eta parameter in ContinuationPar
 - change name `PALCStateVariables` into `ContState` and `PALCIterable` into `ContIterable`
-- add Deflated Continuation
+- ⛳️ add Deflated Continuation
 
 ## [0.0.1] - 2020-8-21
-- add Multiple predictor (this is needed to implement the `pmcont` algorithm from `pde2path` (Matlab)
+- ⛳️ add Multiple predictor (this is needed to implement the `pmcont` algorithm from `pde2path` (Matlab)
 
 ## [0.0.1] - 2020-7-26
-- add Polynomial predictor
+- ⛳️ add Polynomial predictor
 
 ## [0.0.1] - 2020-7-19
-- add Branch switching for non-simple branch points
+- ⛳️ add Branch switching for non-simple branch points
 
 ## [0.0.1] - 2020-7-9
 The package is registered.
@@ -94,7 +126,7 @@ The package is registered.
 
 - Rename option `ContinuationPar`: `saveSolEveryNsteps` --> `saveSolEveryStep`
 - Rename option `ContinuationPar`: `saveEigEveryNsteps` --> `saveEigEveryStep`
-- Rename option `ContinuationPar`: `plotEveryNsteps` --> `plotEveryStep` 
+- Rename option `ContinuationPar`: `plotEveryNsteps` --> `plotEveryStep`
 
 ## [0.0.1] - 2020-6-10
 
@@ -109,8 +141,8 @@ The package is registered.
 
 ### Added
 
-- automatic branch switching from simple Hopf points 
-- automatic normal form computation for any kernel dimension
+- ⛳️ automatic branch switching from simple Hopf points
+- ⛳️ automatic normal form computation for any kernel dimension
 
 
 ## [0.0.1] - 2020-4-27
@@ -118,6 +150,5 @@ The package is registered.
 
 ### Added
 
-- automatic branch switching from simple branch points (equilibrium)
-- automatic normal form computation 
-
+- ⛳️ automatic branch switching from simple branch points (equilibrium)
+- ⛳️ automatic normal form computation
