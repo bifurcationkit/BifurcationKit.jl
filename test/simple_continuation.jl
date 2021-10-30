@@ -11,7 +11,7 @@ Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 # test creation of specific scalar product
 _dt = BK.DotTheta()
 # tests for the predictors
-BK.emptypredictor!(nothing)
+BK.empty!(nothing)
 BK.mergefromuser(1., (a=1,))
 BK.mergefromuser(rand(2), (a=1,))
 BK.mergefromuser((1,2), (a=1,))
@@ -28,6 +28,8 @@ BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.computeEigenvalues(opts)
 BK.computeEigenvectors(opts)
+BK.from(br0)
+br0[1]
 
 # test with callbacks
 br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(true))
@@ -63,7 +65,7 @@ BK.getvectoreltype(br1)
 br1.param
 br1.params
 
-br2, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
+br2, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, recordFromSolution = (x,p) -> norm(x,2))
 
 # test for different norms
 br3, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, normC = normInf)
@@ -87,19 +89,19 @@ br5a, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, finaliseSolution = finalis
 br6, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = SecantPred())
 
 optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
-br7, = continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPred(),printSolution = (x,p)->x[1])
+br7, = continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPred(),recordFromSolution = (x,p)->x[1])
 
 # tangent prediction with Bordered predictor
-br8, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BorderedPred(),printSolution = (x,p)->x[1])
+br8, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = BorderedPred(),recordFromSolution = (x,p)->x[1])
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts9,
-	printSolution = (x,p)->x[1],
+	recordFromSolution = (x,p)->x[1],
 	tangentAlgo = MultiplePred(copy(x0), 0.01,13)
 	)
-	BK.emptypredictor!(BK.MultiplePred(copy(x0), 0.01,13))
+	BK.empty!(BK.MultiplePred(copy(x0), 0.01,13))
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 
 # tangent prediction with Polynomial predictor
@@ -108,11 +110,11 @@ polpred = PolynomialPred(BorderedPred(),2,6,x0)
 	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
 	br10, = continuation(F, Jac_m, x0, -1.5, (@lens _), opts9,
 	tangentAlgo = polpred, plot=false,
-	printSolution = (x,p)->x[1],
+	recordFromSolution = (x,p)->x[1],
 	)
 	# plot(br10) |> display
 	polpred(0.1)
-	BK.emptypredictor!(polpred)
+	BK.empty!(polpred)
 	# plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
 	# plot!(br9)
 
@@ -154,7 +156,7 @@ polpred = PolynomialPred(BorderedPred(),2,6,x0)
 # further testing with sparse Jacobian operator
 Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
 brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts)
-brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts, printSolution = (x,p) -> norm(x,2))
+brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts, recordFromSolution = (x,p) -> norm(x,2))
 brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.BorderingBLS())
 brsp, = continuation(F,Jac_sp_simple,x0,-1.5, (@lens _),opts,linearAlgo = BK.MatrixBLS())
 # plotBranch(br1,marker=:d);title!("")
@@ -189,6 +191,6 @@ br3, = continuation(F,Jac_m,x0, -1.5, (@lens _), opts; tangentAlgo = BorderedPre
 # test for deflated continuation
 brdc, = continuation(F,Jac_m, 0.5, (@lens _),
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
-	DeflationOperator(2, .001, [[0.]]); showplot=false, verbosity = 0,
+	DeflationOperator(2, .001, [[0.]]); plot=false, verbosity = 0,
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> res <1e3)

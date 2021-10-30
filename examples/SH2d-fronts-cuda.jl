@@ -98,11 +98,10 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 	u, l, ν = J
 	sh = sheig.sh
 	σ = sheig.σ
-	udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
 	A = du -> sh(J, du; shift = σ)[1]
 
 	# we adapt the krylov dimension as function of the requested eigenvalue number
-	vals, vec, info = KrylovKit.eigsolve(A, AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(40, nev + 10))
+	vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(30, nev + 10))
 	@show 1 ./vals .+ σ
 	return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -115,14 +114,14 @@ end
 J_shfft(u, p) = (u, p.l, p.ν)
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
-Leig = SHEigOp(L, 0.3) # for eigenvalues computation
+Leig = SHEigOp(L, 0.1) # for eigenvalues computation
 # Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
 
 par = (l = -0.1, ν = 1.3, L = L)
 
 @time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-opt_new = NewtonPar(verbose = true, tol = 1e-7, linsolver = L, eigsolver = Leig)
+opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 	sol_hexa, hist, flag = @time newton(
 				F_shfft, J_shfft,
 				AF(sol0), par,
@@ -140,7 +139,7 @@ plotsol(sol_hexa)
 # 	return res, true, info.numops
 # end
 ####################################################################################################
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+	deflationOp = DeflationOperator(2, dot, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(F_shfft, J_shfft,
@@ -164,6 +163,6 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.0
 		opts_cont;
 		# linearAlgo = MatrixFreeBLS(L),
 		plot = true, verbosity = 3,
-		plotSolution = (x, p;kwargs...)->plotsol!(x; color=:viridis, kwargs...),
-		printSolution = (x, p) -> norm(x), normC = norminf,
+		plotSolution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
+		recordFromSolution = (x, p) -> norm(x), normC = norminf,
 		)

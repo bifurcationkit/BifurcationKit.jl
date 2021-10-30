@@ -12,32 +12,15 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 	end
 end
 
-####################################################################################################
-# Computation of Floquet Coefficients for periodic orbits problems based on Finite Differences
-"""
-bla
-"""
-struct FloquetTrap <: AbstractFloquetSolver; end
+# see https://discourse.julialang.org/t/uniform-scaling-inplace-addition-with-matrix/59928/5
 
-function (fl::FloquetTrap)(J::AbstractMatrix, nev; kwargs...)
-	# we build the monodromy matrix and compute the spectrum
-	Aγ = J[1:end-1,1:end-1]
-
-	# we extract the eigenvalues
-	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
-	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
-	logvals = log.(complex.(vals))
-	I = sortperm(logvals, by = x-> real(x), rev = true)
-	# Base.display(logvals)
-	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
-end
 ####################################################################################################
 # Computation of Floquet Coefficients for periodic orbit problems
 
 """
 	floquet = FloquetQaD(eigsolver::AbstractEigenSolver)
 
-This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems (based on the Shooting method or Finite Differences (Trapeze method)), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
+This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems (based on the Shooting method or Finite Differences (Trapeze method)), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents when the number of time sections is large because of many matrix products. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
 - `eigsolver::AbstractEigenSolver` solver used to compute the eigenvalues.
 
 If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eigenvalues are computed. Otherwise, a Matrix-Free version of the monodromy is used.
@@ -51,7 +34,9 @@ struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 		eigls2 = checkFloquetOptions(eigls)
 		return new{typeof(eigls2)}(eigls2)
 	end
+	FloquetQaD(eigls::FloquetQaD) = eigls
 end
+geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
 	if fl.eigsolver isa DefaultEig
@@ -66,13 +51,12 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
-	# Base.display(logvals)
 	I = sortperm(logvals, by = real, rev = true)
 	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
-
-##############################################
+####################################################################################################
 # ShootingProblem
+# Matrix free monodromy operator
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
 	sh = JacSH.pb
 	x = JacSH.x
@@ -109,7 +93,6 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 
 	# extract parameters
 	M = getM(sh)
-
 	N = div(length(x) - 1, M)
 
 	Mono = zeros(N, N)
@@ -129,13 +112,18 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	return Mono
 end
 
+# Compute the monodromy matrix at `x` explicitely, not suitable for large systems
+# it is based on a matrix expression of the Jacobian of the shooting functional. We thus
+# just extract the blocks needed to compute the monodromy
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
 	J = JacSH.jacpb
 	sh = JacSH.pb
 	M = getM(sh)
 	N = div(length(JacSH.x) - 1, M)
-
-	mono = J[1:N, 1:N]
+	mono = copy(J[1:N, 1:N])
+	if M == 1
+		return mono + I
+	end
 	tmp = similar(mono)
 	r = N
 	for ii = 1:M-1
@@ -147,8 +135,35 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	return mono
 end
 
-##############################################
+# This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
+# at position x from the Floquet eigenvector ζ
+@views function MonodromyQaD(::Val{:ExtractEigenVector}, sh::ShootingProblem, x::AbstractVector, par, ζ::AbstractVector)
+
+	# period of the cycle
+	T = getPeriod(sh, x)
+
+	# extract parameters
+	M = getM(sh)
+	N = div(length(x) - 1, M)
+
+	# extract the time slices
+	xv = x[1:end-1]
+	xc = reshape(xv, N, M)
+
+	out = sh.flow(Val(:SerialdFlow), xc[:, 1], par, ζ, sh.ds[1] * T).du
+	out_a = [copy(out)]
+
+	for ii in 2:M
+		# call the jacobian of the flow
+		out .= sh.flow(Val(:SerialdFlow), xc[:, ii], par, out, sh.ds[ii] * T).du
+		push!(out_a, copy(out))
+	end
+	return out_a
+end
+####################################################################################################
 # PoincareShooting
+
+# matrix free evaluation of monodromy operator
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_bar::AbstractVector) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
 	psh = JacSH.pb
 	x_bar = JacSH.x
@@ -177,13 +192,69 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
 
 end
 
-function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb, Torbitguess, Tp}
-	@assert 1==0 "WIP, no done yet! Please use an iterative eigensolver for the computation of Floquet coefficients using Poincaré shooting."
+# matrix based formulation of monodromy operator, not suitable for large systems
+# it is based on a matrix expression of the Jacobian of the shooting functional. We thus
+# just extract the blocks needed to compute the monodromy
+function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+	J = JacSH.jacpb
+	sh = JacSH.pb
+	T = eltype(J)
+
+	M = getM(sh)
+	Nj = length(JacSH.x)
+	N = div(Nj, M)
+
+	if M == 1
+		return I-J
+	end
+
+	mono = copy(J[N+1:2N, 1:N])
+	tmp = similar(mono)
+	r1 = mod(2N, Nj)
+	r2 = N
+	for ii = 1:M-1
+		# mono .= J[r+1:r+N, r+1:r+N] * mono
+		@views mul!(tmp, J[r1+1:r1+N, r2+1:r2+N], mono)
+		mono .= tmp
+		r1 = mod(r1 + N, Nj)
+		r2 += N
+	end
+	# the structure of the functional imposes to take into account the sign
+	sgn = iseven(M) ? one(T) : -one(T)
+	mono .*= sgn
+	return mono
 end
 
-##############################################
+# This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
+# at position x from the Floquet eigenvector ζ
+@views function MonodromyQaD(::Val{:ExtractEigenVector}, psh::PoincareShootingProblem, x_bar::AbstractVector, p, ζ::AbstractVector)
+	#  ζ is of size (N-1)
+	M = getM(psh)
+	Nm1 = length(ζ)
+	dx = similar(x_bar, length(ζ) + 1)
+
+	x_barc = reshape(x_bar, Nm1, M)
+	xc = similar(x_bar, Nm1 + 1)
+	dx_bar = similar(x_bar, Nm1)
+	outbar = copy(dx_bar)
+	outc = similar(dx_bar, Nm1 + 1)
+	out_a = typeof(xc)[]
+
+	for ii in 1:M
+		E!(psh.section,  xc,  view(x_barc, :, ii), ii)
+		dE!(psh.section, outc, outbar, ii)
+		outc .= diffPoincareMap(psh, xc, p, outc, ii)
+		# check to <outc, normals[ii]> = 0
+		# println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
+		dR!(psh.section, outbar, outc, ii)
+		push!(out_a, copy(outbar))
+	end
+	return out_a
+end
+####################################################################################################
 # PeriodicOrbitTrapProblem
-# Matrix-Free version
+
+# Matrix-Free version of the monodromy operator
 function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
 	poPb = JacFW.pb
 	u0 = JacFW.x
@@ -201,7 +272,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 
 	out = copy(du)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
@@ -219,7 +290,9 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 	return out
 end
 
-function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+# This function is used to reconstruct the spatio-temporal eigenvector of the Trapezoid functional
+# at position x from the Floquet eigenvector ζ
+function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, ζ::AbstractVector)
 	# extraction of various constants
 	M = poPb.M
 	N = poPb.N
@@ -231,9 +304,9 @@ function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem
 	h =  T * getTimeStep(poPb, 1)
 	Typeh = typeof(h)
 
-	out = copy(du)
+	out = copy(ζ)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
@@ -250,7 +323,7 @@ function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem
 		out .= res
 		push!(out_a, copy(out))
 	end
-	push!(out_a, copy(du))
+	push!(out_a, copy(ζ))
 
 	return out_a
 end
@@ -271,7 +344,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 	# time step
 	h =  T * getTimeStep(poPb, 1)
 
-	u0c = extractTimeSlices(u0, N, M)
+	u0c = getTimeSlices(u0, N, M)
 
 	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
 	temp = similar(mono)
@@ -284,4 +357,46 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 		mono .= temp * mono
 	end
 	return mono
+end
+####################################################################################################
+# simplified version of
+# Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+struct FloquetLUColl{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
+	eigsolver::E		# not really needed
+	B::Tb
+	"""
+	## Arguments
+	- `eigls` an eigensolver
+	- `ntot` total number of unknowns (without countinig the period)
+	- `n` space dimension
+	"""
+	function FloquetLUColl(eigls::AbstractEigenSolver, ntot::Int, n::Int)
+		eigls2 = checkFloquetOptions(eigls)
+		# build the mass matrix
+		B = zeros(ntot, ntot)
+		B[end-n+1:end, end-n+1:end] .= I(n)
+		return new{typeof(eigls2), typeof(B)}(eigls2, B)
+	end
+	FloquetLUColl(eigls::FloquetLUColl) = eigls
+end
+
+# based on Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+@views function (fl::FloquetLUColl)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+	prob = JacColl.pb
+	_J = JacColl.jacpb
+	n, m, Ntst = size(prob)
+	J = _J[1:end-1, 1:end-1]
+	# case of v(0)
+	J[end-n+1:end, 1:n] .= I(n)
+	# case of v(1)
+	J[end-n+1:end, end-n+1:end] .= -I(n)
+	# solve generalized eigenvalue problem
+	values, vecs = eigen(J, fl.B)
+	# remove infinite eigenvalues
+	ind = isinf.(values)
+	indvalid = ind .== false
+	vals = values[indvalid]
+	# this are the Floquet multipliers
+	μ = @. Complex(1 / (1 + vals))
+	return log.(μ), Complex.(vecs[indvalid, :]), true
 end

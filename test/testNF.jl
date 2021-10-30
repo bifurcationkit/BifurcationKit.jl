@@ -11,16 +11,16 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pM
 
 br, = continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
-	opts_br; plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> x[1])
+	opts_br; plot = false, verbosity = 0, normC = norminf, recordFromSolution = (x, p) -> x[1])
 
 ####################################################################################################
 # normal form computation
-jet = BK.get3Jet(Fbp, (x, p) -> ForwardDiff.jacobian(z -> Fbp(z, p), x))
+jet = BK.getJet(Fbp, (x, p) -> ForwardDiff.jacobian(z -> Fbp(z, p), x))
 
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 
-jet = BK.get3Jet(Fbp, (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x))
+jet = BK.getJet(Fbp, (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x))
 bp = BK.computeNormalForm(jet..., br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 show(bp)
@@ -29,7 +29,7 @@ show(bp)
 nf = bp.nf
 
 @test norm(nf.a) < 1e-10
-	@test norm(nf.b1 - 3.23) < 1e-8
+	@test norm(nf.b1 - 3.23) < 1e-10
 	@test norm(nf.b2/2 - -1.12) < 1e-10
 	@test norm(nf.b3/6 - 0.234) < 1e-10
 
@@ -37,17 +37,17 @@ nf = bp.nf
 # same but when the eigenvalues are not saved in the branch but computed on the fly
 br_noev, = BK.continuation(
 	Fbp, [0.1, 0.1], par, (@lens _.μ),
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	(@set opts_br.saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 bp = BK.computeNormalForm(jet..., br_noev, 1; verbose=false)
 nf = bp.nf
 @test norm(nf[1]) < 1e-10
-	@test norm(nf[2] - 3.23) < 1e-8
+	@test norm(nf[2] - 3.23) < 1e-10
 	@test norm(nf[3]/2 - -1.12) < 1e-10
 	@test norm(nf[4]/6 - 0.234) < 1e-10
 ####################################################################################################
 # Automatic branch switching
-br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); printSolution = (x, p) -> x[1], verbosity = 0)
+br2, = continuation(jet..., br, 1, setproperties(opts_br; pMax = 0.2, ds = 0.01, maxSteps = 14); recordFromSolution = (x, p) -> x[1], verbosity = 0)
 @test br2 isa Branch
 @test BK.haseigenvalues(br2) == true
 @test BK.haseigenvector(br2) == true
@@ -56,13 +56,13 @@ BK.getfirstusertype(br2)
 @test length(br2) == 12
 # plot(br,br2)
 
-br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); printSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
+br3, = continuation(jet..., br, 1, setproperties(opts_br; ds = -0.01); recordFromSolution = (x, p) -> x[1], verbosity = 0, usedeflation = true)
 # plot(br,br3)
 
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par,  (@lens _.μ), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 30, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
@@ -71,7 +71,7 @@ par_pf = @set par.x2 = 0.0
 par_pf = @set par_pf.x3 = -1.0
 brp, = BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
 bpp = BK.computeNormalForm(jet..., brp, 1; verbose=false)
 show(bpp)
@@ -83,7 +83,7 @@ nf = bpp.nf
 	@test norm(nf[4]/6 + 0.234) < 1e-9
 
 # test automatic branch switching
-br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax = 0.01, ds = 0.001, detectBifurcation = 2, newtonOptions = (@set opt_newton.verbose=false)); printSolution = (x, p) -> x[1], verbosity = 0, ampfactor = 1)
+br2, = continuation(jet..., brp, 1, setproperties(opts_br; maxSteps = 19, dsmax = 0.01, ds = 0.001, detectBifurcation = 2, newtonOptions = (@set opt_newton.verbose=false)); recordFromSolution = (x, p) -> x[1], verbosity = 0, ampfactor = 1)
 	# plot(brp,br2, marker=:d)
 
 # test methods for aBS
@@ -96,9 +96,9 @@ BK.propertynames(br2)
 # automatic bifurcation diagram (Pitchfork)
 bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par_pf,  (@lens _.μ), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .5, ds = 0.01, dsmax = 0.05, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 30, newtonOptions = (@set opt_newton.verbose=false), maxSteps = 15);
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
-	plot = false, verbosity = 2, normC = norminf)
+	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 function Fbp2d(x, p)
 	return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
@@ -106,7 +106,7 @@ function Fbp2d(x, p)
 			 -x[3]]
 end
 
-jet = BK.get3Jet(Fbp2d, (x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, p), x))
+jet = BK.getJet(Fbp2d, (x, p) -> ForwardDiff.jacobian(z -> Fbp2d(z, p), x))
 
 par = (μ = -0.2, ν = 0, α = -1)
 
@@ -114,7 +114,7 @@ for α in (1,1)
 	global par = @set par.α = α
 	br, = BK.continuation(
 		Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
-		printSolution = (x, p) -> norminf(x),
+		recordFromSolution = (x, p) -> norminf(x),
 		setproperties(opts_br; nInversion = 2); plot = false, verbosity = 0, normC = norminf)
 	# we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 	bp2d = BK.computeNormalForm(jet..., br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
@@ -138,7 +138,7 @@ end
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
 br_noev, = BK.continuation(
 	Fbp2d, [0.01, 0.01, 0.01], par, (@lens _.μ),
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 2, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 bp2d = BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -0.123) < 1e-15
@@ -152,11 +152,11 @@ bp2d = BK.computeNormalForm(jet..., br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 # vector field to test nearby secondary bifurcations
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
 dFbpSecBif(x,p)=  ForwardDiff.jacobian( z-> FbpSecBif(z,p), x)
-jet = BK.get3Jet(FbpSecBif, dFbpSecBif)
+jet = BK.getJet(FbpSecBif, dFbpSecBif)
 
 br_snd1, = BK.continuation(
 	FbpSecBif, [0.0], -0.2, (@lens _),
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
 	setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation=3); plot = false, verbosity = 0, normC = norminf)
 
@@ -164,7 +164,7 @@ br_snd1, = BK.continuation(
 
 br_snd2, = BK.continuation(
 	jet..., br_snd1, 1,
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	setproperties(opts_br; pMin = -1.2, pMax = 0.2, ds = 0.001, detectBifurcation = 3, maxSteps=19, nInversion = 8, newtonOptions = NewtonPar(opts_br.newtonOptions),dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20); plot = false, verbosity = 0, normC = norminf,
 	# tangentAlgo = BorderedPred(),
 	# finaliseSolution = (z, tau, step, contResult) ->
@@ -176,7 +176,7 @@ br_snd2, = BK.continuation(
 
 bdiag = bifurcationdiagram(jet..., [0.0], -0.2, (@lens _), 2,
 	(args...) -> setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation = 3,dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
-	printSolution = (x, p) -> x[1],
+	recordFromSolution = (x, p) -> x[1],
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
 
@@ -199,13 +199,13 @@ function FbpD6(x, p)
 			 p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c*(x[3]^2 + x[1]^2) * x[2]),
 			 p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c*(x[2]^2 + x[1]^2) * x[3])]
 end
-jet = BK.get3Jet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
+jet = BK.getJet(FbpD6, (x, p) -> ForwardDiff.jacobian(z -> FbpD6(z, p), x))
 
 pard6 = (μ = -0.2, a = 0.3, b = 1.5, c = 2.9)
 
 br, = BK.continuation(
 	FbpD6, zeros(3), pard6, (@lens _.μ),
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	setproperties(opts_br; nInversion = 6, ds = 0.001); plot = false, verbosity = 0, normC = norminf)
 
 # plot(br;  plotfold = false)
@@ -222,16 +222,16 @@ x0 = rand(3); @test norm(FbpD6(x0, set(pard6, br.lens, 0.001))  - bp2d(Val(:redu
 
 br1, = BK.continuation(
 	jet..., br, 1,
-	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 300, pMax = 1.); plot = false, verbosity = 0, normC = norminf, printSolution = (x, p) -> norminf(x))
+	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 300, pMax = 1.); plot = false, verbosity = 0, normC = norminf, recordFromSolution = (x, p) -> norminf(x))
 	# plot(br1..., br, plotfold=false, putbifptlegend=false)
 
 bdiag = bifurcationdiagram(jet..., zeros(3), pard6, (@lens _.μ), 3,
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	# tangentAlgo = BorderedPred(),
 	plot = false, verbosity = 0, normC = norminf)
 
-# plot(bdiag; putbifptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
+# plot(bdiag; putspecialptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
 
 ####################################################################################################
 # test of the Hopf normal form
@@ -249,14 +249,14 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
 par_sl = (r = 0.5, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
-jet = BK.get3Jet(Fsl2, (x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x))
+jet = BK.getJet(Fsl2, (x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x))
 
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 3, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
 br, = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	opts_br; plot = false, verbosity = 0, normC = norminf)
 
 hp = BK.computeNormalForm(jet..., br, 1)
@@ -271,7 +271,7 @@ BK.type(hp)
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
 br, _ = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
-	printSolution = (x, p) -> norminf(x),
+	recordFromSolution = (x, p) -> norminf(x),
 	setproperties(opts_br, saveEigenvectors = false); plot = false, verbosity = 0, normC = norminf)
 
 hp = BK.computeNormalForm(jet..., br, 1)

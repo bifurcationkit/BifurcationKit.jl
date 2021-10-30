@@ -1,5 +1,5 @@
 """
-	pb = BorderedProblem(;F, dxF, dpF, g, ∇g, dpg)
+	pb = BorderedProblem(;F, dxF, dpF, g, dg, dpg)
 
 This composite type encodes a bordered problem, one by which we add a scalar constraint `g(x, p) = 0` to an equation `F(x, p) = 0`. This composite type thus allows to define the functional `G((x, p)) = [F(x, p) g(x, p)]` and solve `G = 0`.
 
@@ -21,7 +21,7 @@ You can create such functional as `pb = BorderedProblem(F, g)`.
 	dxF::Tdf = (x0, p0) -> finiteDifferences(x -> F(x, p0), x0)	# partial Derivative w.r.t. first variable
 	dpF::TdpF = (x0, p0) -> (F(x0, p0 + 1e-8) .- F(x0, p0)) .* 1e8	# partial Derivative w.r.t. first variable
 	g::Tg		# scalar constraint
-	∇g::Tdg = (x0, p0) -> finiteDifferences(x -> g(x, p0), x0)		# partial Derivative w.r.t. first variable
+	dg::Tdg = (x0, p0) -> finiteDifferences(x -> g(x, p0), x0)		# partial Derivative w.r.t. first variable
 	dpg::Tdpg = (x0, p0) -> (g(x0, p0 + 1e-8) - g(x0, p0)) .* 1e8	# partial Derivative w.r.t. first variable
 	npar::Int = 1													# number of parameters, equals length(g(x,p))
 	lens::Tlens = @lens _[1]
@@ -42,14 +42,14 @@ end
 extractVector(pb::BorderedProblem, x::AbstractVector) = @view x[1:end-getParameterDim(pb)]
 setVector!(pb::BorderedProblem, out::AbstractVector, x::AbstractVector) = out[1:end-getParameterDim(pb)] .= x
 
-etParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out[end] = p
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out[end] = p
 setParameter!(pb::BorderedProblem, out::AbstractVector, p) = out[end-getParameterDim(pb)+1:end] .= p
 
-extractParameter(pb::BorderedProblem, x::BorderedArray) = x.p
-extractVector(pb::BorderedProblem, x::BorderedArray) = x.u
-setVector!(pb::BorderedProblem, out::BorderedArray, x) = copyto!(out.u, x)
-setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out.p = p
-setParameter!(pb::BorderedProblem, out::BorderedArray, p) = copyto!(out.p, p)
+# extractParameter(pb::BorderedProblem, x::BorderedArray) = x.p
+# extractVector(pb::BorderedProblem, x::BorderedArray) = x.u
+# setVector!(pb::BorderedProblem, out::BorderedArray, x) = copyto!(out.u, x)
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p::Number) = out.p = p
+# setParameter!(pb::BorderedProblem, out::BorderedArray, p) = copyto!(out.p, p)
 
 function (pb::BorderedProblem)(xe, par)
 	out = similar(xe)

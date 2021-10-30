@@ -6,7 +6,7 @@ const BK = BifurcationKit
 using GLMakie
 AbstractPlotting.inline!(true)
 
-contour3dMakie(x; k...) = AbstractPlotting.contour(x;  k...)
+contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
 contour3dMakie(ax, x; k...) = (AbstractPlotting.contour(ax, x;  k...))
 contour3dMakie(ax, x::AbstractVector; k...) = contour3dMakie(ax, reshape(x,Nx,Ny,Nz); k...)
@@ -111,8 +111,10 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 		AF(zeros(N)), par, (@lens _.l), optcont;
 		plot = true, verbosity = 3,
 		plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
-		printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
-		normC = x -> norm(x, Inf))
+		recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+		normC = x -> norm(x, Inf),
+		event = BK.FoldDetectEvent,
+		tangentAlgo = BorderedPred(),
 
 BK.plotBranch(br)
 contour3dMakie(u1.u)
@@ -126,7 +128,7 @@ br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep
 	tangentAlgo = BorderedPred(),
 	issymmetric = true,
 	plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
-	printSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+	recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 	finaliseSolution = (z, tau, step, contResult; k...) -> begin
 		if isnothing(br.eig) == true
 			Base.display(contResult.eig[end].eigenvals)

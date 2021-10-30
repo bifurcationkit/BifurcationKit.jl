@@ -126,7 +126,18 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 		applytoX = identity)
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
-	bp = unique(x -> x.type, [(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if pt.type != :none])
+	# handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
+	bptps = Any[(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if pt.type != :none]
+	for ii=2:length(brs)
+		_ind1, _ind2 = getPlotVars(brs[ii], vars)
+		for pt in brs[ii].specialpoint
+			if pt.type != :none
+				push!(bptps, (type = pt.type, param = getproperty(pt, _ind1), printsol = getproperty(pt.printsol, _ind2)))
+			end
+		end
+	end
+	bp = unique(x -> x.type, bptps)
+
 	# add legend for bifurcation points
 	if putspecialptlegend && length(bp) > 0
 		for pt in unique(x -> x.type, bp)
@@ -143,7 +154,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 
 	for (id, res) in pairs(brs)
 		@series begin
-			putspecialptlegend --> putspecialptlegend
+			putspecialptlegend --> false
 			plotfold --> plotfold
 			plotspecialpoints --> plotspecialpoints
 			plotstability --> plotstability

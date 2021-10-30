@@ -33,7 +33,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	branch = contres.branch
 	# Fold point detection based on continuation parameter monotony
 	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
-		(verbosity > 0) && printstyled(color=:red, "!! Fold bifurcation point in", getinterval(branch[end-1].param, branch[end].param), "\n")
+		(verbosity > 0) && printstyled(color=:red, "--> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
 		npar = length( branch[1]) - 9
 		push!(contres.specialpoint, SpecialPoint(
 			type = :fold,
@@ -55,7 +55,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	end
 end
 
-locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, solution(state), state.tau, iter.normC, iter.printSolution, iter.verbosity)
+locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, getSolution(state), state.tau, iter.normC, iter.recordFromSolution, iter.verbosity)
 ####################################################################################################
 """
 Function for coarse detection of bifurcation points.
@@ -121,7 +121,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 			δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
 			idx = state.step + 1,
 			ind_ev = ind_ev)
-		(verbosity>0) && printstyled(color=:red, "!! ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
+		(verbosity>0) && printstyled(color=:red, "--> ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
 	end
 	return detected, specialpoint
 end
@@ -196,7 +196,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	# emulate a do-while
 	while true
 		if ~state.isconverged
-			@error "----> Newton failed when locating bifurcation point using bisection method!"
+			@error "Newton failed when locating bifurcation point using bisection method!"
 			break
 		 end
 

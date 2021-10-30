@@ -46,6 +46,7 @@ module BifurcationKit
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitTrapeze.jl")
+	include("periodicorbit/PeriodicOrbitCollocation.jl")
 	# include("periodicorbit/PeriodicOrbitMIRK.jl")
 	# include("periodicorbit/PeriodicOrbitFDAdapt.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
@@ -53,6 +54,8 @@ module BifurcationKit
 	include("periodicorbit/StandardShooting.jl")
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/Floquet.jl")
+
+	include("wave/WaveProblem.jl")
 
 	include("plotting/Recipes.jl")
 	include("Diffeqwrap.jl")
@@ -67,6 +70,12 @@ module BifurcationKit
 		end
 		@require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
 			using .AbstractPlotting: @recipe, inline!, layoutscene, Figure, Axis, lines!
+			include("plotting/RecipesMakie.jl")
+		end
+
+		@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
+			@info "Loading GLMakie code"
+			using .GLMakie: @recipe, inline!, layoutscene, Figure, Axis, lines!, PointBased, Point2f0, scatter!
 			include("plotting/RecipesMakie.jl")
 		end
 
@@ -146,13 +155,16 @@ module BifurcationKit
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
 	# Periodic orbit computation
-	export getPeriod, getAmplitude, getMaximum, getTrajectory, sectionSS, sectionPS
+	export generateSolution, getPeriod, getAmplitude, getMaximum, getTrajectory, sectionSS, sectionPS
 
 	# Periodic orbit computation based on Trapeze method
 	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
 
 	# Periodic orbit computation based on Shooting
 	export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem, SectionPS, SectionSS
+
+	# Periodic orbit computation based on Collocation
+	export PeriodicOrbitOCollProblem
 
 	# Floquet multipliers computation
 	export FloquetQaD

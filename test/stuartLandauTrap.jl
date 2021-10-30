@@ -1,4 +1,4 @@
-# using Revise
+# using Revise, Plots
 using Test
 	using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
 	const BK = BifurcationKit
@@ -37,11 +37,14 @@ poTrap = PeriodicOrbitTrapProblem(
 	zeros(2),
 	20, 2)
 
+BK.hasHessian(poTrap)
+show(poTrap)
+
 # guess for the periodic orbit
 orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
 	push!(orbitguess_f, 2pi)
 optn_po = NewtonPar()
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 25, newtonOptions = optn_po)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 25, newtonOptions = optn_po, saveSolEveryStep = 1)
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
@@ -59,6 +62,8 @@ for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInpla
 		verbosity = 0,	plot = false,
 		# plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
 		printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
+
+	BK.getTrajectory(br_po, 1)
 end
 
 outpo_f, = newton(poTrap, orbitguess_f, par_hopf, optn_po; linearPO = :Dense)
@@ -70,15 +75,14 @@ _Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f)
 
 # test of the jacobian againt automatic differentiation
 @test norm(_Jfd - Array(_J1), Inf) < 1e-7
-
 ####################################################################################################
-# comparison of Floquet computation
-# case of :FullLU
-# lspo = BK.PeriodicOrbitTrapLS(DefaultLS())
-# continuation(
-# 	poTrap,
-# 	(x, p) -> BK.PeriodicOrbitTrapJacobianFull(poTrap, (x, p) -> poTrap(Val(:JacFullSparse), x, p), x, p),
-# 	outpo_f, par_hopf, (@lens _.r),
-# 	(@set opts_po_cont.newtonOptions.linsolver = lspo);
-# 	# printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1),
-# 	normC = norminf)
+# test PeriodicUtils
+BK.amplitude(rand(10,10),3)
+BK.amplitude(rand(101), 4, 25)
+BK.maximumPOTrap(rand(101), 4, 25)
+####################################################################################################
+# tests for constructor of Floquet routines
+BK.checkFloquetOptions(EigArpack())
+BK.checkFloquetOptions(EigArnoldiMethod())
+BK.checkFloquetOptions(EigKrylovKit())
+FloquetQaD(EigKrylovKit()) |> FloquetQaD

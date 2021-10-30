@@ -2,12 +2,9 @@
 $(TYPEDEF)
 
 It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
-``F(u) \\cdot Π_i(dot(u - roots_i, u - roots_i)^{-p} + shift) := F(u) \\cdot M(u)``. The fields of the struct `DeflationOperator` are as follows:
+``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u,u)``. The fields of the struct `DeflationOperator` are as follows:
 
 $(TYPEDFIELDS)
-
-The deflation operator is is ``M(u) = \\prod_{i=1}^{n_{roots}}(shift + norm(u-roots_i)^{-p})``
-where ``norm(u) = dot(u,u)``.
 
 Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 """
@@ -31,6 +28,7 @@ end
 # constructors
 DeflationOperator(p::Real, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dot, α, roots, _copy(roots[1]))
 DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]))
+DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype) where vectype = DeflationOperator(p, dot, α, roots, v)
 
 # methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
@@ -44,24 +42,28 @@ Base.firstindex(df::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
 Base.show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
 
-# Compute M(u)
-function (df::DeflationOperator{Tp, Tdot, T, vectype})(u::vectype) where {Tp, Tdot, T, vectype}
+# Compute M(u),
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot, T, vectype}
 	if length(df.roots) == 0
 		return T(1)
 	end
-	ρ = u -> T(1) / df.dot(u, u)^df.power + df.α
+	M = u -> T(1) / df.dot(u, u)^df.power + df.α
 	# compute u - df.roots[1]
-	copyto!(df.tmp, u);	axpy!(T(-1), df.roots[1], df.tmp)
-	out::T = ρ(df.tmp)
+	copyto!(tmp, u);	axpy!(T(-1), df.roots[1], tmp)
+	out = M(tmp)
 	for ii in 2:length(df.roots)
-		copyto!(df.tmp, u); axpy!(T(-1), df.roots[ii], df.tmp)
-		out *= ρ(df.tmp)
+		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
+		out *= M(tmp)
 	end
 	return out
 end
 
+# Compute M(u), efficient and do not allocate
+(df::DeflationOperator{Tp, Tdot, T, vectype})(u::vectype) where {Tp, Tdot, T, vectype} = df(Val(:inplace), u, df.tmp)
+(df::DeflationOperator{Tp, Tdot, T, vectype})(u) where {Tp, Tdot, T, vectype} = df(Val(:inplace), u, similar(u))
+
 # Compute dM(u)⋅du. We use a tmp for storing
-function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u::vectype, du) where {Tp, Tdot, T, vectype}
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
 	if length(df) == 0
 		return T(0)
 	end
@@ -87,7 +89,7 @@ end
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
-function (df::DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ})(u::vectype, par) where {Tp, Tdot, T, vectype, TF, TJ}
+function (df::DeflatedProblem{Tp, Tdot, T, vectype, TF, TJ})(u, par) where {Tp, Tdot, T, vectype, TF, TJ}
 	out = df.F(u, par)
 	rmul!(out, df.M(u))
 	return out
@@ -176,7 +178,10 @@ This is the deflated version of the Krylov-Newton Solver for `F(x, p0) = 0` with
 # Arguments
 Compared to [`newton`](@ref), the only different arguments are
 - `defOp::DeflationOperator` deflation operator
-- `linsolver` linear solver used to invert the Jacobian of the deflated functional. We have a custom solver `DeflatedLinearSolver()` with requires solving two linear systems `J⋅x = rhs`. For other linear solvers, a matrix free method is used for the deflated functional.
+- `linsolver` linear solver used to invert the Jacobian of the deflated functional.
+    - We have a custom solver `DeflatedLinearSolver()` with requires solving two linear systems `J⋅x = rhs`.
+    - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
+    - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian of the deflated problem
 
 # Output:
 - solution:
@@ -212,6 +217,16 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::Defla
 	return newton(deflatedPb, (x,p) -> (dx -> deflatedPb(x,p,dx)), x0, p0, opt_def; kwargs...)
 end
 
+function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, ::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
+	# we create the new functional
+	deflatedPb = DeflatedProblem(F, J, defOp)
+
+	# we create the jacobian
+	Jac = (x, p) -> ForwardDiff.jacobian(z -> deflatedPb(z, p), x)
+
+	return newton(deflatedPb, Jac, x0, p0, options; kwargs...)
+end
+
 # simplified call when no Jacobian is given
 function newton(F, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, linsolver = DeflatedLinearSolver(); kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	J = (u, p) -> finiteDifferences(z -> F(z,p), u)
@@ -221,9 +236,9 @@ end
 """
 $(TYPEDEF)
 
-This specific Newton-Kyrlov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge to the guess `x1` while avoiding the previous solution `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
+This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous coonverged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
-function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, dot, 1.0, Vector{vectype}(), _copy(x0)); kwargs...) where {T, vectype, L, E}
+function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, dot, 1.0, Vector{vectype}(), _copy(x0)), linsolver = DeflatedLinearSolver(); kwargs...) where {T, vectype, L, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)
 	@assert res0[3] "Newton did not converge to the trivial solution x0."
 	push!(defOp, res0[1])

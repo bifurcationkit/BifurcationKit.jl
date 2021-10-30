@@ -8,8 +8,8 @@ $(TYPEDFIELDS)
 
 # Arguments for line search (Armijo)
 - `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
-- `α = 1.0`: alpha (damping) parameter for line search algorithm
-- `αmin  = 0.001 `: minimal vslue of the damping `alpha`
+- `α = 1.0`: initial value of α (damping) parameter for line search algorithm
+- `αmin  = 0.001 `: minimal value of the damping `alpha`
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
@@ -28,6 +28,7 @@ $(TYPEDFIELDS)
 	linesearch::Bool = false
 	α::T             = convert(typeof(tol), 1.0)        # damping
 	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
+	@assert 0 <= α <= 1
 end
 
 ####################################################################################################
@@ -42,7 +43,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault(x, f, J, res, it, itlinear, options; k...) = true`. Can be used to update a preconditionner for example. The arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault(x, f, J, res, it, itlinear, options; k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
     - `x` current solution
     - `f` current residual
     - `J` current jacobian
@@ -114,7 +115,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 
 	# Main loop
-	while (res > tol) & (it < maxIter) & compute
+	while (res > tol) && (it < maxIter) && compute
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
 		itlineartot += sum(itlinear)
@@ -147,3 +148,14 @@ end
 
 # default callback
 cbDefault(x, f, J, res, it, itlinear, options; k...) = true
+
+# newton callback to limit residual
+"""
+    cb = cbMaxNorm(maxres)
+
+Create a callback used to reject residals larger than `cb.maxres` in the Newton iterations. See docs for [`newton`](@ref).
+"""
+struct cbMaxNorm{T}
+	maxres::T
+end
+(cb::cbMaxNorm)(x, f, J, res, it, itlinear, options; k...) = (return res < cb.maxres)

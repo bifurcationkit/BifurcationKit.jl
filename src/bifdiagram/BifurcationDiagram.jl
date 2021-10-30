@@ -22,7 +22,14 @@ add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::
 add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
-Base.show(io::IO, tree::BifDiagNode) = (println(io, "Bifurcation diagram. Root branch (level $(tree.level)) has $(length(tree.child)) children and is such that:"); show(io, tree.γ))
+
+function Base.show(io::IO, tree::BifDiagNode)
+	println(io, "[Bifurcation diagram]")
+	println(io, " ┌─ From $(tree.code)-th bifurcation point.")
+	println(io, " ├─ Children number: $(length(tree.child))" );
+	println(io, " └─ Root (recursion level $(tree.level))")
+	show(io, tree.γ; prefix = "      ")
+end
 
 # total size of the tree
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
@@ -99,10 +106,10 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
 
 # Optional arguments
-- `code = "0"`
+- `code = "0"` code used to display iterations
 - `usedeflation = false`
 - `halfbranch = false` for Pitchfork/Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
-- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://rveltz.github.io/BifurcationKit.jl/dev/library/#Continuation-1).
+- `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(F, dF, d2F, d3F,
 		node::BifDiagNode,

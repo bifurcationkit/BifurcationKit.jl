@@ -2,20 +2,20 @@ using Revise, Test, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 ####################################################################################################
 function COm(u, p)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
 	x, y, s = u
 	z = 1-x-y-s
-	out = similar(u)
-	out[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
-	out[2] = q2 * z - q6 * y - q3 * x * y
-	out[3] = q4 * z - k * q4 * s
-	out
+	[
+		2q1 * z^2 - 2q5 * x^2 - q3 * x * y,
+		q2 * z - q6 * y - q3 * x * y,
+		q4 * z - k * q4 * s
+	]
 end
-dCOm = (z, p) -> ForwardDiff.jacobian(x -> COm(x, p), z)
-jet = BK.get3Jet(COm, dCOm)
+dCOm(z, p) = ForwardDiff.jacobian(x -> COm(x, p), z)
+jet = BK.getJet(COm, dCOm)
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
@@ -24,12 +24,12 @@ z0 = [0.001137, 0.891483, 0.062345]
 opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
 	@set! opts_br.newtonOptions.verbose = true
 	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
-	printSolution = (x, p) -> (x = x[1], y = x[2]),
-	# tangentAlgo = BorderedPred(),
-	plot = true, verbosity = 3, normC = norminf,
+		recordFromSolution = (x, p) -> (x = x[1], y = x[2]),
+		plot = false, verbosity = 3, normC = norminf,
 	bothside = true)
 	show(br)
 
+	
 plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
 ####################################################################################################
 @set! opts_br.newtonOptions.verbose = true
@@ -48,7 +48,7 @@ sn_codim2, = continuationFold(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(o
 	normC = norminf,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-	printSolution = (u,p; kw...) -> (x = u.u[1] ),
+	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	bothside=true,
 	bdlinsolver = MatrixBLS()
 	)
@@ -69,7 +69,7 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_
 	tangentAlgo = BorderedPred(),
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-	printSolution = (u,p; kw...) -> (x = u.u[1] ),
+	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	d2F = jet[3], d3F = jet[4],
 	bothside = true,
 	bdlinsolver = MatrixBLS())

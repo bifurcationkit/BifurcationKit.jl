@@ -66,7 +66,7 @@ function Jbru_sp(x, p)
 end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
-jet = BK.get3Jet(Fbru, Jbru_ana)
+jet = BK.getJet(Fbru, Jbru_ana)
 
 n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
@@ -79,7 +79,7 @@ opt_newton = NewtonPar(tol = 1e-11, verbose = false)
 	out, hist, flag = newton(jet[1], jet[2], sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, newtonOptions = opt_newton, detectBifurcation = 3, nev = 16, nInversion = 4)
-	br, = continuation(jet[1], jet[2], out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, printSolution = (x, p) -> norm(x, Inf64))
+	br, = continuation(jet[1], jet[2], out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, recordFromSolution = (x, p) -> norm(x, Inf64))
 ###################################################################################################
 # Hopf continuation with automatic procedure
 outhopf, = newton(jet[1], jet[2], br, 1; startWithEigen = true, d2F = jet[3])

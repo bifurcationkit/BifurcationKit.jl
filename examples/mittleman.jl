@@ -3,8 +3,8 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
-normbratu = x -> norm(x .* w) / sqrt(length(x))
+norminf(x) = norm(x, Inf)
+normbratu(x) = norm(x .* w) / sqrt(length(x))
 ##########################################################################################
 # plotting function
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
@@ -66,7 +66,7 @@ end
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
 # compute 3-Jet
-jet = BK.get3Jet(Fmit, JFmit)
+jet = BK.getJet(Fmit, JFmit)
 ####################################################################################################
 Nx = 30
 	Ny = 30
@@ -108,7 +108,7 @@ end
 # optional parameters for continuation
 kwargsC = (verbosity = 3,
 	plot = true,
-	printSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+	recordFromSolution = (x, p) -> (x = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
 	plotSolution = (x, p; k...) -> plotsol!(x ; k...),
 	callbackN = cb,
 	finaliseSolution = finSol,
@@ -153,8 +153,7 @@ bifurcationdiagram!(jet..., getBranch(diagram, (14,)), (current = 3, maxlevel = 
 	kwargsC..., usedeflation = true, halfbranch = true,)
 
 code = ()
-	plot()
-	plot!(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
+	plot(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, vars = (:param, :x))
 	# plot!(br)
 	# xlims!(0.01, 0.4)
 	title!("#branches = $(size(getBranch(diagram, code)))")
@@ -235,7 +234,7 @@ solbif, flag, _ = newton(Fmit, JFmit, bp2d.x0, bp2d(deflationOp[3], δp), (@set 
 plotsol(solbif-0*bp2d(deflationOp[2], δp))
 
 brnf1, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 
@@ -245,7 +244,7 @@ push!(branches2, brnf1)
 # plot!(brnf1)
 
 brnf2, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
-	printSolution = (x, p) -> norm(x),
+	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	plot = true, verbosity = 3, normC = norminf)
 
@@ -287,7 +286,7 @@ brdef1, _ = @time BK.continuation(
 	# bp2d([0.6,0.6], -0.01), br.specialpoint[2].param - 0.005,
 	setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br,br1,br2, brdef1,plotfold=false)
@@ -298,7 +297,7 @@ brdef2, _ = @time BK.continuation(
 	deflationOp[5], (@set par_mit.λ = br.specialpoint[2].param + 0.005), (@lens _.λ),
 	setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
 	verbosity = 3, plot = true,
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
@@ -310,9 +309,9 @@ brdef2, _ = @time BK.continuation(
 	Fmit, JFmit, (@set par_mit.λ = 0.367), (@lens _.λ),
 	ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
 	DeflationOperator(2.0, dot, 1., ([sol0]));
-	showplot=true, verbosity = 2,
+	plot=true, verbosity = 2,
 	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),
-	printSolution = (x, p) ->  normbratu(x),
+	recordFromSolution = (x, p) ->  normbratu(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
 	normN = norminf)
 

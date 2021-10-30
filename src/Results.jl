@@ -1,6 +1,7 @@
 abstract type AbstractBranchResult end
 
 ####################################################################################################
+# functions used in RecordFromSol
 namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
@@ -24,9 +25,11 @@ $(TYPEDFIELDS)
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 - `br[k+1]` gives information about the k-th step
+- `getSolx(br, k)` returns the k-th solution on the branch
+- `getSolp(br, k)` returns the parameter  value associated with k-th solution on the branch
 """
 @with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
-	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(printSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
@@ -74,12 +77,13 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 
 @inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
 
-
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.specialpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
+getSolx(br::ContResult, ind::Int) = br.sol[ind].x
+getSolp(br::ContResult, ind::Int) = br.sol[ind].p
 
 function Base.getproperty(br::ContResult, s::Symbol)
 	if s in (:specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
@@ -122,17 +126,17 @@ function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
 	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
 end
 
-function Base.show(io::IO, br::ContResult, comment = "")
-	println(io, " ┌─ Branch number of points: ", length(br.branch))
-	print(io, " ├─ Branch of ")
+function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
+	println(io, prefix * "┌─ Branch number of points: ", length(br.branch))
+	print(io, prefix * "├─ Branch of ")
 	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
-	print(io, "\n ├─ Type of vectors: ")
+	print(io, "\n" * prefix * "├─ Type of vectors: ")
 	printstyled(io, getvectortype(br), color=:light_cyan, bold = true)
-	print(io, "\n ├─ Parameter ")
+	print(io, "\n" * prefix * "├─ Parameter ")
 	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
-	println(io, " from ", br.branch[1].param, " to ", br.branch[end].param,)
+	println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
 	if length(br.specialpoint) > 0
-		println(io, " └─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
+		println(io, prefix * "└─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
 		for ii in eachindex(br.specialpoint)
 			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br.lens)))
 		end
@@ -204,7 +208,7 @@ from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
-Base.show(io::IO, br::Branch{T, Tbp}) where {T <: ContResult, Tbp} = show(io, br.γ, " from $(type(br.bp)) bifurcation point.")
+Base.show(io::IO, br::Branch{T, Tbp}; k...) where {T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is

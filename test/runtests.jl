@@ -39,5 +39,11 @@ using Test
 		include("poincareMap.jl")
 		include("stuartLandauSH.jl")
 		include("stuartLandauTrap.jl")
+		include("stuartLandauCollocation.jl")
+		include("testLure.jl")
+	end
+
+	@testset "Wave" begin
+		include("test_wave.jl")
 	end
 end

@@ -139,7 +139,7 @@ computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = comp
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the Transcritical bifurcation point.
+This function provides prediction for the zeros of the Transcritical bifurcation point.
 
 # Arguments
 - `bp::Transcritical` the bifurcation point
@@ -158,13 +158,13 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
 	dsfactor = T(1)
 
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the Pitchfork bifurcation point.
+This function provides prediction for the zeros of the Pitchfork bifurcation point.
 
 # Arguments
 - `bp::Pitchfork` the bifurcation point
@@ -190,11 +190,11 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 	# 	pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
 	end
 	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor)
+	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
-	@info "It seems the point is a Saddle-Node bifurcation. The normal form is $(bp.nf)."
+	@info "It seems the point is a Saddle-Node bifurcation.\nThe normal form is aδμ + b1⋅x + b2⋅x^2 + b3⋅x^3\n with coefficients \n$(bp.nf)."
 	return nothing
 end
 ####################################################################################################
@@ -225,6 +225,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
 	nf = bp.nf
 	# coefficient p
 	out .= p .* nf.a
+
 	# factor to account for factorials
 	factor = T(1)
 
@@ -330,7 +331,7 @@ function biorthogonalise(ζs, ζstars, verbose)
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
 	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
-	@assert abs(det(G)) >1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
+	@assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
 	# save those in case the first algo fails
 	_ζs = deepcopy(ζs)
@@ -447,7 +448,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
 			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[1:length(rightEv)])))
 			if norm(_λ[1:length(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
-			@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
+				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
 			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
@@ -578,16 +579,16 @@ function predictor(bp::NdBranchPoint, δp::T;
 
 	# find zeros for the normal on each side of the bifurcation point
 	function getRootsNf(_ds)
-		deflationOp = DeflationOperator(2.0, dot, 1.0, [zeros(n)])
+		deflationOp = DeflationOperator(2, 1.0, [zeros(n)])
 		failures = 0
 		# we allow for 10 failures of nonlinear deflation
 		outdef1 = rand(n)
 		while failures < nbfailures
 			if isnothing(J)
-				jac = (x,p) -> ForwardDiff.jacobian( z->perturb(bp(Val(:reducedForm), z, p)), x)
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
+				jac = (x,p) -> ForwardDiff.jacobian(z -> perturb(bp(Val(:reducedForm), z, p)), x)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
 			else
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp; normN = normN)
+				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
 			end
 			flag && push!(deflationOp, ampfactor .* outdef1)
 			~flag && (failures += 1)
@@ -597,7 +598,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 	rootsNFm =  getRootsNf(-abs(δp))
 	rootsNFp =  getRootsNf(abs(δp))
 	println("\n--> BS from Non simple branch point")
-	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots on the left (resp. right) of the bifurcation point counting the trivial solution (Reduced equation).\n")
+	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
 	return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################
@@ -607,7 +608,7 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `pt::Hopf` Hopf bifurcation point
 - `ls` linear solver
 
@@ -674,7 +675,7 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x,p) -> F(x,p)` and its differentials `(x,p,dx) -> d1F(x,p,dx)`, `(x,p,dx1,dx2) -> d2F(x,p,dx1,dx2)`...
+- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_hopf` index of the bifurcation point in `br`
 - `options` options for the Newton solver
@@ -729,20 +730,29 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	ζstar ./= dot(ζ, ζstar)
 	@assert dot(ζ, ζstar) ≈ 1
 
-	hopfpt = Hopf(
-		bifpt.x,
-		bifpt.param,
+	hopfpt = Hopf(bifpt.x, bifpt.param,
 		ω,
-		parbif,
-		lens,
-		ζ,
-		ζstar,
+		parbif, lens,
+		ζ, ζstar,
 		(a = 0. + 0im, b = 0. + 0im),
 		:SuperCritical
 	)
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
 end
 
+"""
+$(SIGNATURES)
+
+This function provides prediction for the orbits of the Hopf bifurcation point.
+
+# Arguments
+- `bp::Hopf` the bifurcation point
+- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
+
+# Optional arguments
+- `verbose`	display information
+- `ampfactor = 1` factor multiplying prediction
+"""
 function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	# get the normal form
 	nf = hp.nf
@@ -762,6 +772,7 @@ function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
 			amp = 2amp,
 			ω = ω,
+			period = abs(2pi/ω),
 			p = pnew,
 			dsfactor = dsfactor)
 end

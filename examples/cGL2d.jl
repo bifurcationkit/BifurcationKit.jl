@@ -3,7 +3,7 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 	hx = 2lx/Nx
@@ -122,7 +122,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, d
 	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
-jet  = BK.get3Jet(Fcgl, Jcgl)
+jet  = BK.getJet(Fcgl, Jcgl)
 hopfpt = computeNormalForm(jet..., br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
@@ -146,7 +146,7 @@ br_hopf, u1_hopf = @time continuation(
 	updateMinAugEveryStep = 1,
 	d2F = jet[3], d3F = jet[4],
 	startWithEigen = true, bothside = true,
-	detectCodim2Bifurcation = 1,
+	detectCodim2Bifurcation = 2,
 	verbosity = 3, normC = norminf)
 
 plot(br_hopf, title = "Hopf continuation")
@@ -199,7 +199,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			opts_po_cont; linearPO = :FullLU
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
-			printSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
+			recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
 ####################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
@@ -235,7 +235,7 @@ br_po, = @time continuation(
 		opts_po_cont; linearPO = :FullMatrixFree,
 		verbosity = 3,	plot = true,
 		plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-		printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+		recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 branches = Any[br_pok2]
 # push!(branches, br_po)
@@ -251,9 +251,9 @@ br_po, _ = continuation(
 	verbosity = 3,	plot = true,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
-	(Base.display(contResult.eig[end].eigenvals) ;true),
+	(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-	printSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+	recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
 # preconditioner not taking into account the constraint
@@ -297,7 +297,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			verbosity = 2,	plot = true,
 			plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			callbackN = callbackPO,
-			printSolution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
+			recordFromSolution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
 			normC = norminf)
 
 
@@ -442,7 +442,7 @@ outfold, hist, flag = @time BK.newtonFold(
 		br_po , indfold; #index of the fold point
 		options = (@set opt_po.linsolver = ls),
 		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.foldpoint[indfold].param,"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
 
@@ -608,4 +608,4 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 		orbitguess_cu, r_hopf - 0.01,
 		opts_po_cont, :FullMatrixFree;
 		verbosity = 2,
-		printSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = x -> maximum(abs.(x)))
+		recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = x -> maximum(abs.(x)))

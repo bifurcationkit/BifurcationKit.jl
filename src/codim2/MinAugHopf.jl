@@ -472,7 +472,7 @@ function continuationHopf(F, J,
 	end
 
 	# it allows to append information specific to the codim 2 continuation to the user data
-	_printsol = get(kwargs, :printSolution, nothing)
+	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
 		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = dot(hopfPb.a, hopfPb.b)) :
 		(u, p; kw...) -> begin
@@ -489,7 +489,7 @@ function continuationHopf(F, J,
 		(@set opt_hopf_cont.newtonOptions.eigsolver = eigsolver);
 		kwargs...,
 		normC = normC,
-		printSolution = _printsol2,
+		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
 		event = ContinuousEvent(2, computeL1, ("gh","bt"))
 	)

@@ -3,7 +3,7 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
 	const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
 	hx = 2lx/Nx
@@ -130,12 +130,8 @@ end
 ####################################################################################################
 # this encodes the functional for the Shooting problem
 probSh = ShootingProblem(
-	# pass the vector field and parameter (to be passed to the vector field)
-	Fcgl, par_cgl,
-
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
-
 	[sol[:, end]], atol = 1e-10, rtol = 1e-8)
 
 initpo = vcat(sol(116.), 4.9) |> vec
@@ -157,11 +153,11 @@ br_po, upo, = @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _
 		linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
 		# callbackN = cb_ss,
 		plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-		printSolution = (u, p; k...) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p; k...) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
 
 ####################################################################################################
 # automatic branch switching
-jet  = BK.get3Jet(Fcgl, Jcgl)
+jet  = BK.getJet(Fcgl, Jcgl)
 
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
@@ -174,13 +170,15 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# probSh;
-	ShootingProblem(Mt, par_cgl, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
+	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
-	finaliseSolution = (z, tau, step, contResult; k...) ->
-		(Base.display(contResult.eig[end].eigenvals) ;true),
-	printSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
+	finaliseSolution = (z, tau, step, contResult; k...) ->begin
+		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
+		return true
+	end,
+	recordFromSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
 	normC = norminf)
 
 #ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;

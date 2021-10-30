@@ -40,7 +40,7 @@ end
 """
 $(SIGNATURES)
 
-Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref Branch-switching-page). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref Branch-switching-page). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
 # Arguments
 - `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
@@ -120,7 +120,7 @@ continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, optionsCon
 """
 $(SIGNATURES)
 
-Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [A generalized Bratu–Gelfand problem in two dimensions](@ref).
+Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
 # Arguments
 - `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
@@ -139,6 +139,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `scaleζ` norm used to normalize eigenbasis when computing the reduced equation
 - `Teigvec` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `ζs` basis of the kernel
+- `perturbGuess = identity` perturb the guess from the predictor just before the deflated-newton correction
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
@@ -155,6 +156,7 @@ function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::I
 		ζs = nothing,
 		verbosedeflation::Bool = false,
 		scaleζ = norm,
+		perturbGuess = identity,
 		kwargs...)
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -165,7 +167,7 @@ function multicontinuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::I
 end
 
 # for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing
-multicontinuation(F, dF, br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, optionsCont::ContinuationPar ; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...) = nothing
+multicontinuation(F, dF, br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, optionsCont::ContinuationPar; kwargs...) = nothing
 
 # general function for branching from Nd bifurcation points
 function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, optionsCont::ContinuationPar = br.contparams; δp = nothing, ampfactor = getvectoreltype(br)(1), perturb = identity, kwargs...)
@@ -181,7 +183,21 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 	return multicontinuation(F, dF, br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, kwargs...)
 end
 
-function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+"""
+$(SIGNATURES)
+
+Function to transform predictors `solfromRE` in the normal form coordinates of `bpnf` into solutions. Note that `solfromRE = (before = Vector{vectype}, after = Vector{vectype})`.
+"""
+function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, solfromRE,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		perturbGuess = identity,
+		kwargs...)
 	# compute predictor for point on new branch
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -191,29 +207,76 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult, bpnf::NdBranchP
 
 	# attempting now to convert the guesses from the normal form into true zeros of F
 	optn = optionsCont.newtonOptions
+
+	# options for newton
 	cbnewton = get(kwargs, :callbackN, cbDefault)
+	normn = get(kwargs, :normN, norm)
 
 	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
-	defOpp = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
-	for xsol in rootsNFp
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton)
+	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	for (ind, xsol) in pairs(rootsNFp)
+		# print("\n--> attempt to converge zero #$ind")
+		solbif, _, flag, _ = newton(F, dF, perturbGuess(bpnf(xsol, ds)), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpp, solbif)
 	end
 
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
-	defOpm = DeflationOperator(2, dot, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
-	for xsol in rootsNFm
-		solbif, _, flag, _ = newton(F, dF, bpnf(xsol, ds), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton)
+	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	for (ind, xsol) in pairs(rootsNFm)
+		# print("\n--> attempt to converge zero #$ind")
+		solbif, _, flag, _ = newton(F, dF, perturbGuess(bpnf(xsol, ds)), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton, normN = normn)
 		flag && push!(defOpm, solbif)
 	end
-	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots on the left (resp. right) of the bifurcation point.\n")
+	printstyled(color=:magenta, "--> we find $(length(defOpm)) (resp. $(length(defOpp))) roots after (resp. before) the bifurcation point.\n")
 	return (before = defOpm, after = defOpp, bpm = bpnf.p - ds, bpp = bpnf.p + ds)
 end
 
 # In this function, I keep usedeflation although it is not used to simplify the calls
-function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint, solfromRE, optionsCont::ContinuationPar = br.contparams ; δp = nothing, Teigvec = getvectortype(br), verbosedeflation = false, maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter), lsdefop = DeflatedLinearSolver(), kwargs...)
+function multicontinuation(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, solfromRE,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		perturbGuess = identity,
+		kwargs...)
 
-	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, kwargs...)
+	defOpm, defOpp, _, _ = getFirstPointsOnBranch(F, dF, br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, perturbGuess = perturbGuess, kwargs...)
+
+	multicontinuation(F, dF, br,
+			bpnf, defOpm, defOpp, optionsCont;
+			δp = δp,
+			Teigvec = Teigvec,
+			verbosedeflation = verbosedeflation,
+			maxIterDeflation = maxIterDeflation,
+			lsdefop = lsdefop,
+			kwargs...)
+end
+
+"""
+$(SIGNATURES)
+
+Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
+
+# Arguments
+- `F, dF`: function `(x, p) -> F(x, p)` and its differential `(x, p, dx) -> d1F(x, p, dx)`
+- `br` branch result from a call to [`continuation`](@ref)
+- `bpnf` normal form
+- `defOpm::DeflationOperator, defOpp::DeflationOperator` to specify converged points on nonn-trivial branches before/after the bifurcation points.
+
+The rest is as the regular `multicontinuation` function.
+"""
+function multicontinuation(F, dF, br::AbstractBranchResult,
+		bpnf::NdBranchPoint, defOpm::DeflationOperator, defOpp::DeflationOperator,
+		optionsCont::ContinuationPar = br.contparams ;
+		δp = nothing,
+		Teigvec = getvectortype(br),
+		verbosedeflation = false,
+		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+		lsdefop = DeflatedLinearSolver(),
+		kwargs...)
 
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
 	dscont = abs(optionsCont.ds)
@@ -222,7 +285,7 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 	# compute the different branches
 	function _continue(_sol, _dp, _ds)
 		# needed to reset the tangent algorithm in case fields are used
-		emptypredictor!(get(kwargs, :tangentAlgo, nothing))
+		empty!(get(kwargs, :tangentAlgo, nothing))
 		println("#"^50)
 		continuation(F, dF,
 			bpnf.x0, par,		# first point on the branch
@@ -242,7 +305,7 @@ function multicontinuation(F, dF, br::AbstractBranchResult, bpnf::NdBranchPoint,
 		# br, = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
 	end
 
-	return branches, (before = defOpm, after = defOpp), (before = solfromRE.before, after = solfromRE.after)
+	return branches, (before = defOpm, after = defOpp)
 end
 
 # same but for a Branch

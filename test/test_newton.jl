@@ -1,4 +1,4 @@
-#using Revise, Test
+# using Revise, Test
 using BifurcationKit, LinearAlgebra, Setfield
 const BK = BifurcationKit
 
@@ -8,8 +8,8 @@ function test_newton(x0)
 	F(x, p) = x.^3 .- 1
 	Jac(x, p) = diagm(0 => 3 .* x.^2)
 
-	opts = NewtonPar( tol = Ty(1e-8))
-	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf))
+	opts = NewtonPar( tol = Ty(1e-8), verbose = true)
+	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = BK.cbMaxNorm(100.0))
 end
 ####################################################################################################
 # we test the regular newton algorithm
@@ -46,7 +46,11 @@ sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.1), Float32(1.))
 ####################################################################################################
 # test of  deflated problems
 _T = Float32
-F4def = (x,p) -> (x-1) * (x-2)
+F4def = (x,p) -> @. (x-1) * (x-2)
+J4def = (x,p) -> BK.finiteDifferences(z->F4def(z,p), x)
 deflationOp = DeflationOperator(_T(2), dot, _T(1), [[_T(1)]])
 @test eltype(deflationOp) == _T
 @test deflationOp(rand(_T,1)) isa _T
+defpb = DeflatedProblem(F4def, J4def, deflationOp)
+@test defpb(rand(_T, 1), nothing) |> eltype == _T
+@test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T

@@ -94,10 +94,10 @@ using ForwardDiff
 F = (x, p; k = 3) -> (@. p * x -  x^k/k)
 Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
-opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, maxSteps = 130, pMin = -3., pMax = 0.1, saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3, nInversion=4)
+opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, maxSteps = 130, pMin = -3., pMax = 0.1, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3, nInversion=4)
 
 br4, = continuation(F, Jac_m, zeros(1), -0.1, (@lens _), opts; verbosity = 0, plot=false,
-	printSolution = (x,p)->x[1])
+	recordFromSolution = (x,p)->x[1])
 testBranch(br4)
 ####################################################################################################
 using ForwardDiff
@@ -117,7 +117,7 @@ opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 135, pMin = -3., pMax
 
 br, = continuation(Ftb, Jtb2, -2ones(2), par, (@lens _.p1), (@set opts.detectBifurcation = 3);
 	plot = false, verbosity = 0,
-	printSolution = (x, p) -> x[1],)
+	recordFromSolution = (x, p) -> x[1],)
 	show(br)
 testBranch(br)
 
