@@ -267,7 +267,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 	ts = getTimes(prob)
 	uc = getTimeSlices(prob, u)
 	n, m, Ntst = size(prob)
-	return (t = ts .* T, u = uc)
+	return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point

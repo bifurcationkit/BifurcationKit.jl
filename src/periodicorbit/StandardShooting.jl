@@ -335,7 +335,7 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, p)
+function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 	T = getPeriod(prob, x)
 	M = getM(prob)
 	N = div(length(x) - 1, M)
@@ -345,10 +345,22 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, p)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		return prob.flow(Val(:Full), xc[:, 1], p, T)
+		sol = [prob.flow(Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii=1:M]
+		time = sol[1].t; u = sol[1][:,:]
+		for ii=2:M
+			append!(time, sol[ii].t .+ time[end])
+			u = hcat(u, sol[ii][:,:])
+		end
+		return SolPeriodicOrbit(t = time, u = u)
+
 	else # threaded version
-		sol = prob.flow(Val(:Full), xc[:, 1:1], p, [T])
-		return sol[1]
+		sol = prob.flow(Val(:Full), xc, par, prob.ds .* T)
+		time = sol[1].t; u = sol[1][:,:]
+		for ii=2:M
+			append!(time, sol[ii].t .+ time[end])
+			u = hcat(u, sol[ii][:,:])
+		end
+		return SolPeriodicOrbit(t = time, u = u)
 	end
 end
 

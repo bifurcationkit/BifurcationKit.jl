@@ -67,6 +67,13 @@ function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 	end
 end
 ####################################################################################################
+# this struct allows to have a unified interface with Shooting methods in term of plotting
+@with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
+	t::Ts
+	u::Tu
+end
+Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
+####################################################################################################
 """
 $(TYPEDEF)
 

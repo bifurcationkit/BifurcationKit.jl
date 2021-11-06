@@ -575,7 +575,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 	M, N = size(prob)
 	uv = u[1:end-1]
 	uc = reshape(uv, N, M)
-	return (t = cumsum(T .* collect(prob.mesh)), u = uc)
+	return SolPeriodicOrbit(t = cumsum(T .* collect(prob.mesh)), u = uc)
 end
 
 """
