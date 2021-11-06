@@ -134,7 +134,7 @@ module BifurcationKit
 	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
 
 	# continuation methods
-	export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals
+	export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals, getSolx, getSolp
 
 	# events
 	export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
@@ -155,7 +155,7 @@ module BifurcationKit
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
 	# Periodic orbit computation
-	export generateSolution, getPeriod, getAmplitude, getMaximum, getPeriodicOrbit, sectionSS, sectionPS
+	export generateSolution, getPeriod, getAmplitude, getMaximum, getPeriodicOrbit, sectionSS, sectionPS, guessFromHopf
 
 	# Periodic orbit computation based on Trapeze method
 	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
@@ -169,6 +169,6 @@ module BifurcationKit
 	# Floquet multipliers computation
 	export FloquetQaD
 
-	# guess for periodic orbit from Hopf bifurcation point
-	export guessFromHopf
+	# waves
+	export TWProblem
 end

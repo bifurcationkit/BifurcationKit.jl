@@ -324,7 +324,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	if verbose
 		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
 		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))
-		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, state.z_pred.p)
+		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, clampPredp(state.z_pred.p, it))
 	end
 
 	# Corrector, ie newton correction. This does not mutate the arguments
