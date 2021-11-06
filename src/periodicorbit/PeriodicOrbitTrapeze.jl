@@ -629,7 +629,7 @@ end
 	prob.xπ .= x[1:end-1]
 
 	# update the normals
-	for ii=0:M-1
+	for ii in 0:M-1
 		# ii2 = (ii+1)<= M ? ii+1 : ii+1-M
 		prob.ϕ[ii*N+1:ii*N+N] .= prob.F(xc[:, ii+1], par) ./ M
 	end

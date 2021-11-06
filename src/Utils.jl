@@ -71,7 +71,7 @@ Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(
 function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 	f = F(x)
 	x1 = copy(x)
-	@inbounds for i ∈ eachindex(x)
+	@inbounds for i in eachindex(x)
 		x1[i] += δ
 		J[:, i] .= F(x1)
 		x1[i] -= 2δ
@@ -206,3 +206,26 @@ function getJet(f, J = nothing; matrixfree = true)
 		return (f, J, d2f, d3f)
 	end
 end
+####################################################################################################
+"""
+$(SIGNATURES)
+
+Function to detect continuation branches which loop on themselve.
+"""
+function detectLoop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
+	verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detectLoop, rtol = $rtol\n")
+	N = length(br)
+	out = false
+	for bp in br.specialpoint[1:end-1]
+		verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ",norm(minus(bp.x, x), Inf),", norm(δp) = ",abs(bp.param - p)," \n")
+		if (norm(minus(bp.x, x), Inf) / norm(x, Inf) < rtol) && isapprox(bp.param , p ; rtol = rtol)
+			out = true
+			verbose && printstyled(color = :magenta, "    └─ Loop detected!, n = $N\n")
+			break
+		end
+	end
+	verbose && printstyled(color = :magenta, "    └─ Loop detected = $out\n")
+	return out
+end
+detectLoop(br::ContResult, u; rtol = 1e-3, verbose = true) = detectLoop(br, u.x, u.param; rtol = rtol, verbose = verbose)
+detectLoop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detectLoop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)

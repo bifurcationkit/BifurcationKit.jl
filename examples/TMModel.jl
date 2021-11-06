@@ -108,7 +108,7 @@ plot(br, br_pocoll, markersize = 3)
 
 ####################################################################################################
 # idem with Standard shooting
-using DifferentialEquations
+using DifferentialEquations#, TaylorIntegration
 
 # this is the ODEProblem used with `DiffEqBase.solve`
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)

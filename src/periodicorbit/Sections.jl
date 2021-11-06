@@ -42,7 +42,7 @@ end
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
 function sectionHyp!(out, x, normals, centers)
-	for ii = 1:length(normals)
+	for ii in 1:length(normals)
 		out[ii] = dot(normals[ii], x) - dot(normals[ii], centers[ii])
 	end
 	out
@@ -75,8 +75,8 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 		for ii in 1:M
 			indices[ii] = argmax(abs.(normals[ii]))
 		end
-		nbar = [R(normals[ii], indices[ii]) for ii=1:M]
-		cbar = [R(centers[ii], indices[ii]) for ii=1:M]
+		nbar = [R(normals[ii], indices[ii]) for ii in 1:M]
+		cbar = [R(centers[ii], indices[ii]) for ii in 1:M]
 
 		return new{typeof(normals), typeof(centers), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
 	end
@@ -90,7 +90,7 @@ isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Not
 # ==================================================================================================
 function _duplicate!(x::AbstractVector)
 	n = length(x)
-	for ii=1:n
+	for ii in 1:n
 		push!(x, copy(x[ii]))
 	end
 	x

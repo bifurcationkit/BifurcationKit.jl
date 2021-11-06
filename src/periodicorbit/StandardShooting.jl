@@ -281,7 +281,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 
 	# put the matrices by blocks
 	In = I(N)
-	for ii=1:M
+	for ii in 1:M
 		@views dflow(J[(ii-1)*N+1:(ii-1)*N+N, (ii-1)*N+1:(ii-1)*N+N], xc[:, ii], sh.ds[ii] * T)
 		# we put the identity matrices
 		ip1 = (ii == M) ? 1 : ii+1
@@ -323,7 +323,7 @@ function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op
 	else # threaded version
 		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
 		mx = op[2](sol[1][1:n, :] , dims = 2)
-		for ii = 2:M
+		for ii in 2:M
 			mx = op[1].(mx, op[2](sol[ii][1:n, :], dims = 2))
 		end
 	end
@@ -345,9 +345,9 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		sol = [prob.flow(Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii=1:M]
+		sol = [prob.flow(Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii in 1:M]
 		time = sol[1].t; u = sol[1][:,:]
-		for ii=2:M
+		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
 			u = hcat(u, sol[ii][:,:])
 		end
@@ -356,7 +356,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 	else # threaded version
 		sol = prob.flow(Val(:Full), xc, par, prob.ds .* T)
 		time = sol[1].t; u = sol[1][:,:]
-		for ii=2:M
+		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
 			u = hcat(u, sol[ii][:,:])
 		end

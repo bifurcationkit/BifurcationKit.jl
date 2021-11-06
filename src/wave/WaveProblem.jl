@@ -99,7 +99,7 @@ VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VFplusD(pb, u, parsFreez.s, 
 	# apply the vector field
 	outu .= VFplusD(pb, u, s, pars)
 	# we put the constraints
-	for ii=0:nc-1
+	for ii in 0:nc-1
 		out[end-ii] = dot(u, pb.∂u₀[ii+1])
 		if pb.DAE == 0
 			out[end-ii] -= dot(pb.u₀, pb.∂u₀[ii+1])
@@ -127,7 +127,7 @@ end
 	applyD(pb, outu, s, du)
 	applyD(pb, outu, ds, u)
 	# we put the constraints
-	for ii=0:nc-1
+	for ii in 0:nc-1
 		out[end-ii] = dot(du, pb.∂u₀[ii+1])
 	end
 	return out
@@ -147,12 +147,12 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
 	J1 = pb.J(u, par)
 	# we add the Lie algebra generators
 	rightpart = zeros(N, nc)
-	for ii = 1:nc
+	for ii in 1:nc
 		J1 = J1 - s[ii] * pb.∂[ii]
 		mul!(view(rightpart, :, ii), pb.∂[ii], u, -1, 0)
 	end
 	J2 = hcat(J1, rightpart)
-	for ii = 1:nc
+	for ii in 1:nc
 		J2 = vcat(J2, vcat(pb.∂u₀[ii], zeros(nc))')
 	end
 	return J2

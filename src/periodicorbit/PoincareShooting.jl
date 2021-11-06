@@ -456,7 +456,7 @@ function reMake(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers,
 	M = getM(probPSh)
 	@assert length(normals) == M
 	orbitguess_bar = zeros(length(centers[1])-1, M)
-	for ii=1:length(normals)
+	for ii in 1:length(normals)
 		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)
 	end
 

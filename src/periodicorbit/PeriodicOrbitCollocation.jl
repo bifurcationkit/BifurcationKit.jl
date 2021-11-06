@@ -48,10 +48,10 @@ getMaxTimeStep(pb::POOrthogonalCollocationCache) = maximum(diff(getMesh(pb)))
 function lagrange(i, x, z)
     nz = length(z)
     l = one(z[1])
-	for k = 1:(i-1)
+	for k in 1:(i-1)
         l = l * (x - z[k]) / (z[i] - z[k])
     end
-    for k = (i+1):nz
+    for k in (i+1):nz
         l = l * (x - z[k]) / (z[i] - z[k])
     end
     return l
@@ -64,8 +64,8 @@ function getL(σs::AbstractVector)
 	m = length(σs) - 1
 	zs, = gausslegendre(m)
 	L = zeros(m, m+1); ∂L = zeros(m, m + 1)
-	for j = 1:m+1
-		for i=1:m
+	for j in 1:m+1
+		for i in 1:m
 			L[i, j]  =  lagrange(j, zs[i], σs)
 			∂L[i, j] = dlagrange(j, zs[i], σs)
 		end
@@ -85,8 +85,8 @@ function getTimes(pb::POOrthogonalCollocationCache)
 	tsvec = Ty[0]
 	τs = pb.mesh
 	σs = pb.mesh_coll
-	for j=1:Ntst
-		for l=1:m+1
+	for j in 1:Ntst
+		for l in 1:m+1
 			ts[j, l] = τj(σs[l], τs, j)
 			l>1 && push!(tsvec, τj(σs[l], τs, j))
 		end
@@ -241,14 +241,14 @@ end
 	uj = zeros(Ty, n, m+1)
 	mesh = getMesh(pb)
 	rg = 1:m+1
-	for j=1:Ntst
+	for j in 1:Ntst
 		uj .= u[:, rg]
 		gj 	.=  uj * L'
 		∂gj .=  uj * ∂L'
 		# mul!(gj, uj, L')
 		# mul!(∂gj, uj, ∂L')
 		# compute the collocation residual
-		for l=1:m
+		for l in 1:m
 			out[:, rg[l]] .= ∂gj[:, l] .- (period * (mesh[j+1]-mesh[j]) / (2)) .* pb.F(gj[:, l], pars)
 		end
 		rg = rg .+ m
@@ -412,12 +412,14 @@ end
 
 	# update the normals
 	ϕc = @views reshape(prob.ϕ, n, (m) * Ntst + 1)
-	for ii = 1: (m) * Ntst + 1
+	for ii in 1: (m) * Ntst + 1
 		ϕc[:, ii] .= prob.F(xc[:, ii], par) ./ (m*Ntst)
 	end
 	return true
 end
 ####################################################################################################
+# mesh adaptation routine
+
 # iterated derivatives
 ∂(f) = x -> ForwardDiff.derivative(f, x)
 ∂(f, n) = n == 0 ? f : ∂(∂(f), n-1)
@@ -448,7 +450,7 @@ end
 	σs = getMeshColl(sol.pb)
 	out = zeros(typeof(t), sol.pb.N)
 	rg = (1:m+1) .+ (indτ-1)*m
-	for l = 1:m+1
+	for l in 1:m+1
 		out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
 	end
 	out

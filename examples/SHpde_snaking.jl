@@ -68,7 +68,6 @@ brflat, = @time continuation(
 plot(brflat, putspecialptlegend = false)
 ####################################################################################################
 # branch switching
-
 function optrec(x, p, l; opt = opts)
 	level =  l
 	if level <= 2

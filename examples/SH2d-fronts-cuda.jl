@@ -38,7 +38,7 @@ import Base: *, \
 
 # Making the linear operator a subtype of BK.LinearSolver is handy as we will use it
 # in the Newton iterations.
-struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractLinearSolver
+struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractIterativeLinearSolver
 	tmp_real::Treal         # temporary
 	tmp_complex::Tcomp      # temporary
 	l1::Tl1
