@@ -258,12 +258,12 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# Converge initial guess
 	verbose && printstyled("────────── CONVERGE INITIAL GUESS ──────────────", bold = true, color = :magenta)
 	# we pass additional kwargs to newton so that it is sent to the newton callback
-	u0, fval, isconverged, itnewton, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
+	u0, _, isconverged, _, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess on the branch."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = ", p0, ", initial step")
 	verbose && printstyled("\n─────── COMPUTING INITIAL TANGENT ─────────────", bold = true, color = :magenta)
-	u_pred, fval, isconverged, itnewton, _ = newton(it.F, it.J,
+	u_pred, _, isconverged, _, _ = newton(it.F, it.J,
 			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))

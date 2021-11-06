@@ -4,7 +4,12 @@ abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
 """
 	pb = TWProblem(F, J, ∂::Tuple, u₀; DAE = 0)
 
-This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators.
+This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
+
+					┌                  ┐
+					│ f(x, par) - s⋅∂x │
+					│   <x - u₀, ∂u₀>  │
+					└                  ┘
 
 ## Arguments
 - `(x, p) -> F(x, p)` function with continuous symmetries
@@ -56,9 +61,9 @@ TWProblem(F, J, ∂, u₀; kw...) = TWProblem(F, J, (∂,), u₀; kw...)
 function updateSection!(pb::TWProblem{Tf, TJf, Tu0, TDu0, TD}, u₀::Tu0) where {Tf, TJf, Tu0, TDu0, TD}
 	copyto!(pb.u₀, u₀)
 	for ∂u₀ in pb.∂u₀
+		# pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
 		copyto!(∂u₀, pb.∂ * u₀)
 	end
-	# pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
 end
 
 """
@@ -72,6 +77,7 @@ function applyD(pb::TWProblem, out, ss, u)
 	end
 	out
 end
+applyD(pb::TWProblem, u) = applyD(pb, zero(u), 1, u)
 
 # s is the speed.
 # Return F(u, p) - s * D * u
@@ -165,14 +171,13 @@ function newton(prob::TWProblem, orbitguess, par, optn::NewtonPar;
 	if jacobian == :AutoDiff
 		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
 	elseif jacobian == :MatrixFreeAD
-		jac = (x, p, dx) -> ForwardDiff.jacobian(t -> prob(z .+ t .* dx, p), 0)
+		jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
 	elseif jacobian == :FullLU
 		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
 	# elseif jacobian == :FullSparseInplace
 	elseif jacobian == :MatrixFree
-		jac = (x, p, dx) -> prob(x, p, dx)
+		jac = (x, p) -> (dx ->  prob(x, p, dx))
 	end
-
 	return newton(prob, jac, orbitguess, par, optn; kwargs...,)
 end
 function continuation(prob::TWProblem,
@@ -183,15 +188,16 @@ function continuation(prob::TWProblem,
 	if jacobian == :AutoDiff
 		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
 	elseif jacobian == :MatrixFreeAD
-		jac = (x, p, dx) -> ForwardDiff.jacobian(t -> prob(z .+ t .* dx, p), 0)
-	elseif jacobian == :MatrixFree
-		jac = (x, p, dx) -> prob(x, p, dx)
+		jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
 	elseif jacobian == :FullLU
 		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
+	# elseif jacobian == :FullSparseInplace
+	elseif jacobian == :MatrixFree
+		jac = (x, p) -> (dx ->  prob(x, p, dx))
 	end
 	# define the mass matrix for the eigensolver
 	N = length(orbitguess)
-	B = diagm(vcat(ones(N-1),0))
+	B = spdiagm(vcat(ones(N-1),0))
 	# convert eigsolver to generalised one
 	old_eigsolver = contParams.newtonOptions.eigsolver
 	contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)

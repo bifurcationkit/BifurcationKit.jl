@@ -15,6 +15,10 @@ BK.empty!(nothing)
 BK.mergefromuser(1., (a=1,))
 BK.mergefromuser(rand(2), (a=1,))
 BK.mergefromuser((1,2), (a=1,))
+
+BK.Fold(rand(2),0.1,0.1,(@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
+BK._displayLine(1, 1, (1,1))
+BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
 
 normInf = x -> norm(x, Inf)
@@ -181,6 +185,7 @@ x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
 
 br0, = continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
 BK.getEigenelements(br0, br0.specialpoint[1])
+BK.detectLoop(br0, x0, -1.45)
 
 br1, = continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001))
 

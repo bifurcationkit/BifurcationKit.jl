@@ -149,6 +149,9 @@ _dsol0 = rand(2n+1)
 _out1 = FD.derivative(t -> probTW(_sol0 .+ t .* _dsol0, par_cgl), 0)
 _out0 = probTW(_sol0, par_cgl, _dsol0)
 @test _out0 ≈ _out1
+
+# we test the ∂
+BK.applyD(probTW, rand(2n))
 ####################################################################################################
 # test newton method, not meant to converge
 newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :AutoDiff)

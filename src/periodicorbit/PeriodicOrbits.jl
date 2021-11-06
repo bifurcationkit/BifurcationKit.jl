@@ -513,6 +513,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; kwargs...)
 
 		# find the bifurcated branch using deflation
+		@assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method of ShootingProblem"
 		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 		verbose && println("\n--> Compute point on bifurcated branch...")
 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp),
@@ -525,7 +526,6 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 	# perform continuation
 	branch, u, τ = continuation( pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
 		kwargs..., # put this first to be overwritten just below!
-		# plotSolution = _plotsol2,
 		linearAlgo = _linearAlgo,
 	)
 
