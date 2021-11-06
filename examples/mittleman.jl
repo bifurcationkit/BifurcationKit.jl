@@ -83,9 +83,9 @@ eigls = EigArpack(20.5, :LM)
 # eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
 	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
+	sol, = newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
-plotsol(out)
+plotsol(sol)
 ####################################################################################################
 function finSol(z, tau, step, br; k...)
 	if length(br.specialpoint)>0

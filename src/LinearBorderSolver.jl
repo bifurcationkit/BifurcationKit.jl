@@ -17,8 +17,10 @@ $(TYPEDFIELDS)
 @with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
 	"Linear solver used for the Bordering method."
 	solver::S = nothing
+
 	"Tolerance for checking precision"
 	tol::Ttol = 1e-12
+	
 	"Check precision of the linear solve?"
 	checkPrecision::Bool = false
 end
@@ -27,8 +29,10 @@ end
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
-# (shift⋅I + J) * dX +       dR   * dl = R
-# xiu * dz.u' * dX + xip * dz.p * dl = n
+# ┌                           ┐┌  ┐   ┌   ┐
+# │ (shift⋅I + J)     dR      ││dX│ = │ R │
+# │  xiu * dz.u    xip * dz.p ││dl│   │ n │
+# └                           ┘└  ┘   └   ┘
 function (lbs::BorderingBLS{S, Ttol})(  J, dR,
 								dzu, dzp::T, R, n::T,
 								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, S, Ts, Ttol}

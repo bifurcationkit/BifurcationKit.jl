@@ -509,7 +509,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 
 	# Main loop
 	while (res > tol) && (it < maxIter) && line_step && compute
-		# dFdp = (F(x, p + epsi) - F(x, p)) / epsi)
+		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
 		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
 			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
 

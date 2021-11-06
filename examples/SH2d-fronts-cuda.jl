@@ -151,7 +151,7 @@ outdef, _, flag, _ = @time newton(F_shfft, J_shfft,
 		flag && push!(deflationOp, outdef)
 
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.005, pMin = -1.0, theta = 0.5, plotEveryStep = 10, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.005, pMin = -1.0, plotEveryStep = 10, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
 	detectBifurcation = 0,
 	precisionStability = 1e-5,
 	saveEigenvectors = false,

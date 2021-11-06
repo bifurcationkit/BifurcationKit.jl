@@ -3,6 +3,8 @@ using IterativeSolvers, KrylovKit, LinearAlgebra
 # In this file, we provide linear solvers for the Package
 
 abstract type AbstractLinearSolver end
+abstract type AbstractDirectLinearSolver <: AbstractLinearSolver end
+abstract type AbstractIterativeLinearSolver <: AbstractLinearSolver end
 
 # The function linsolve(J, x; kwargs...) must return whether the solve was successfull and how many steps were required for the solve.
 
@@ -63,11 +65,10 @@ This struct is used to provide the backslash operator. Can be used to solve `(a�
 
 $(TYPEDFIELDS)
 """
-@with_kw struct DefaultLS <: AbstractLinearSolver
+@with_kw struct DefaultLS <: AbstractDirectLinearSolver
 	"Whether to catch a factorization for multiple solves. Some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides. Some matrices do not have `factorize` like `StaticArrays.MMatrix`."
 	useFactorization::Bool = true
 end
-
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
@@ -95,7 +96,7 @@ $(TYPEDEF)
 Linear solver based on gmres from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 $(TYPEDFIELDS)
 """
-@with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractLinearSolver
+@with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractIterativeLinearSolver
 	"Absolute tolerance for solver"
 	abstol::T = 0.0
 
@@ -156,7 +157,7 @@ $(TYPEDFIELDS)
 !!! tip "Different linear solvers"
     By tuning the options, you can select CG, GMRES... see [here](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve)
 """
-@with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractLinearSolver
+@with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractIterativeLinearSolver
 	"Krylov Dimension"
 	dim::Int64 = KrylovDefaults.krylovdim
 
