@@ -10,18 +10,15 @@ function displayIteration(i, residual, itlinear = 0, lastRow = false)
 			  println("│ Newton Iterations      f(x)      Linear Iterations  │")
 			  println("├─────────────┬──────────────────────┬────────────────┤")
 		end
-		if length(itlinear) == 1
-			@printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear);
-		else
-			if itlinear isa Tuple{Int64, Int64}
-				@printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", i, residual, itlinear[1], itlinear[2]);
-			else
-				# used for nested linear solves
-				@printf("%11d %19.4e  ", i, residual); println(itlinear);
-			end
-		end
+		_displayLine(i, residual, itlinear)
 	end
 end
+
+@inline _displayLine(i::Int, residual::Real, itlinear::Tuple{Int64, Int64}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", i, residual, itlinear[1], itlinear[2])
+
+@inline _displayLine(i::Int, residual::Real, itlinear::Int64) = @printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear)
+
+@inline _displayLine(i::Int, residual::Nothing, itlinear::Tuple{Int64, Int64}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", i, itlinear[1], itlinear[2])
 ####################################################################################################
 function computeEigenvalues(it::ContIterable, u0, par, nev = it.contParams.nev; kwargs...)
 	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; kwargs...)
