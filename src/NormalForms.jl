@@ -761,10 +761,11 @@ function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 
 	# we need to find the type, supercritical or subcritical
 	dsfactor = real(a) * real(b) < 0 ? T(1) : T(-1)
-	pnew = hp.p + abs(ds) * dsfactor
+	dsnew = abs(ds) * dsfactor
+	pnew = hp.p + dsnew
 
 	# we solve a * ds + b * amp^2 = 0
-	amp = ampfactor * sqrt(-abs(ds) * dsfactor * real(a) / real(b))
+	amp = ampfactor * sqrt(-dsnew * real(a) / real(b))
 
 	# o(1) correction to Hopf Frequency
 	ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
