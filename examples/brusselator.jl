@@ -265,7 +265,7 @@ br_po, _ = continuation(
 	verbosity = 3,	plot = true, linearPO = :BorderedSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> heatmap!(getTrajectory(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
+	plotSolution = (x, p; kwargs...) -> heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 
 

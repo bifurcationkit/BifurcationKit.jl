@@ -63,7 +63,7 @@ for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInpla
 		# plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
 		printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 
-	BK.getTrajectory(br_po, 1)
+	BK.getPeriodicOrbit(br_po, 1)
 end
 
 outpo_f, = newton(poTrap, orbitguess_f, par_hopf, optn_po; linearPO = :Dense)

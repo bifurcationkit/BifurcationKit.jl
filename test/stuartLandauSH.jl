@@ -90,7 +90,7 @@ outpo, _, flag,_ = newton(_pb,
 BK.getPeriod(_pb, outpo, par_hopf)
 BK.getAmplitude(_pb, outpo, par_hopf)
 BK.getMaximum(_pb, outpo, par_hopf)
-BK.getTrajectory(_pb, outpo, par_hopf)
+BK.getPeriodicOrbit(_pb, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), precisionStability = 1e-5)
 	br_pok2, = continuation(_pb,
@@ -161,7 +161,7 @@ ls = DefaultLS()
 BK.getPeriod(probPsh, outpo, par_hopf)
 BK.getAmplitude(probPsh, outpo, par_hopf)
 BK.getMaximum(probPsh, outpo, par_hopf)
-BK.getTrajectory(probPsh, outpo, par_hopf)
+BK.getPeriodicOrbit(probPsh, outpo, par_hopf)
 
 probPsh = PoincareShootingProblem(prob, Rodas4(),
 		# probMono, Rodas4(autodiff=false),

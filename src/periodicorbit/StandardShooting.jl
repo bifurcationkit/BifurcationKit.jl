@@ -333,9 +333,9 @@ end
 """
 $(SIGNATURES)
 
-Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getTrajectory(prob::ShootingProblem, x::AbstractVector, p)
+function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, p)
 	T = getPeriod(prob, x)
 	M = getM(prob)
 	N = div(length(x) - 1, M)

@@ -568,9 +568,9 @@ end
 """
 $(SIGNATURES)
 
-Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function getTrajectory(prob::AbstractPOFDProblem, u::AbstractVector, p)
+@views function getPeriodicOrbit(prob::AbstractPOFDProblem, u::AbstractVector, p)
 	T = getPeriod(prob, u, p)
 	M, N = size(prob)
 	uv = u[1:end-1]
@@ -777,7 +777,7 @@ const DocStrLinearPO = """
 # newton wrappers
 function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive, I get $(orbitguess[end])"
-	@assert linearPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
+	@assert linearPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is oot defined. Please chose another one."
 	M, N = size(probPO)
 
 	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
@@ -876,7 +876,7 @@ Note that by default, the method prints the period of the periodic orbit as func
 """
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, updateSectionEveryStep = 0, kwargs...)
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive. We found T = $(orbitguess[end])"
-	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace)
+	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please chose another one."
 
 	M, N = size(prob)
 	options = contParams.newtonOptions

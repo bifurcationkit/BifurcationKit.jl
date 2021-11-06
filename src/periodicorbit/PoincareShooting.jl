@@ -176,9 +176,9 @@ end
 """
 $(SIGNATURES)
 
-Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getTrajectory(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
+function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 	# this function extracts the amplitude of the cycle
 	M = getM(prob); Nm1 = length(x_bar) ÷ M
 

@@ -260,9 +260,9 @@ end
 """
 $(SIGNATURES)
 
-Compute the full trajectory associated to `x`. Mainly for plotting purposes.
+Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function getTrajectory(prob::PeriodicOrbitOCollProblem, u::AbstractVector, p)
+@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, u::AbstractVector, p)
 	T = getPeriod(prob, u, p)
 	ts = getTimes(prob)
 	uc = getTimeSlices(prob, u)
@@ -323,7 +323,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 function newton(prob::PeriodicOrbitOCollProblem, orbitguess, par, options::NewtonPar;
 		linearPO = :autodiffDense, δ = 1e-8, kwargs...)
 	@assert linearPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffSparse, )
+			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffSparse, ) "This jacobian is not defined. Please chose another one."
 
 	if linearPO == :autodiffDense
 		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
@@ -361,7 +361,7 @@ function continuation(
 	linearPO = :autodiffDense,
 	updateSectionEveryStep = 0, kwargs...)
 	@assert linearPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences, :Dense)
+			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences, :Dense) "This jacobian is oot defined. Please chose another one."
 
 	jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
 
@@ -397,7 +397,7 @@ $(SIGNATURES)
 Compute the maximum of the periodic orbit associated to `x`.
 """
 function getMaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
-	sol = getTrajectory(prob, x, p).u
+	sol = getPeriodicOrbit(prob, x, p).u
 	return maximum(sol)
 end
 

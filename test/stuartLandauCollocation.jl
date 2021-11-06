@@ -77,7 +77,7 @@ args = (tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),
 	recordFromSolution = (x,p) -> (norminf(x[1:end-1])),
 	plotSolution = (x,p; k...) -> begin
-		outt = getTrajectory(prob_col, x, p)
+		outt = getPeriodicOrbit(prob_col, x, p)
 		plot!(vec(outt.t), outt.u[1,:]; k...)
 	end,
 	finaliseSolution = (z, tau, step, contResult; k...) -> begin

@@ -48,7 +48,7 @@ function applyJ(pb::AbstractPOFDProblem, dest, x, p, dx)
 end
 
 # function to extract trajectories from branch
-getTrajectory(br::AbstractBranchResult, ind::Int) = getTrajectory(br.functional, br.sol[ind].x, setParam(br, br.sol[ind].p))
+getPeriodicOrbit(br::AbstractBranchResult, ind::Int) = getPeriodicOrbit(br.functional, br.sol[ind].x, setParam(br, br.sol[ind].p))
 
 """
 $(SIGNATURES)
@@ -222,7 +222,7 @@ function continuation(
 	kwargs...,
 )
 	@assert linearPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences)
+			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences) "This jacobian is oot defined. Please chose another one."
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)

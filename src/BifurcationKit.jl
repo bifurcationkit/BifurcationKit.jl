@@ -155,7 +155,7 @@ module BifurcationKit
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
 	# Periodic orbit computation
-	export generateSolution, getPeriod, getAmplitude, getMaximum, getTrajectory, sectionSS, sectionPS
+	export generateSolution, getPeriod, getAmplitude, getMaximum, getPeriodicOrbit, sectionSS, sectionPS
 
 	# Periodic orbit computation based on Trapeze method
 	export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO

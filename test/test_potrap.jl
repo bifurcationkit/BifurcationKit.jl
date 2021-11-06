@@ -311,7 +311,7 @@ orbitguess_f = rand(2n*10+1)
 BK.getAmplitude(pbspti, orbitguess_f, par)
 BK.getMaximum(pbspti, orbitguess_f, par)
 BK.getPeriod(pbspti, orbitguess_f, par)
-BK.getTrajectory(pbspti, orbitguess_f, par)
+BK.getPeriodicOrbit(pbspti, orbitguess_f, par)
 
 @test pbspti.xπ ≈ pbsp.xπ
 @test pbspti.ϕ ≈ pbsp.ϕ
