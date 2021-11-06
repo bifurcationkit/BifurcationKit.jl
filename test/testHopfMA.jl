@@ -215,7 +215,7 @@ opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 150)
 	# println("--> T = ", outpo_f[end])
 # flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
-newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; linearPO = :FullLU)
+newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; jacobianPO = :FullLU)
 
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -229,7 +229,7 @@ floquetES = FloquetQaD(DefaultEig())
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
 	br_pok2, = continuation(
-		poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :BorderedLU,
+		poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; jacobianPO = :BorderedLU,
 		plot = false, verbosity = 0)
 
 # test of simple calls to newton / continuation
@@ -247,7 +247,7 @@ for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	# continuation
 	br_pok2, = @time continuation(poTrap,
 			copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
-			opts_po_cont; linearPO = linalgo, verbosity = 0,
+			opts_po_cont; jacobianPO = linalgo, verbosity = 0,
 			plot = false, normC = norminf)
 end
 
@@ -257,4 +257,4 @@ ls = GMRESKrylovKit()
 ls = DefaultLS()
 opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 10, linsolver = ls, eigsolver = eil)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 2)
-br_pok2, upo, = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; linearPO = :FullLU, normC = norminf, verbosity = 0)
+br_pok2, upo, = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; jacobianPO = :FullLU, normC = norminf, verbosity = 0)

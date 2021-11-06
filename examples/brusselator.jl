@@ -182,9 +182,9 @@ outpo_f, _, flag = @time newton(poTrap,
 		orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
 		opt_po;
 		# deflationOp,
-		linearPO = :BorderedSparseInplace, #  3.428727 seconds (874.14 k allocations: 2.376 GiB, 5.56% gc time, 8.77% compilation time)
-		# linearPO = :BorderedLU,
-		# linearPO = :FullSparseInplace,
+		jacobianPO = :BorderedSparseInplace, #  3.428727 seconds (874.14 k allocations: 2.376 GiB, 5.56% gc time, 8.77% compilation time)
+		# jacobianPO = :BorderedLU,
+		# jacobianPO = :FullSparseInplace,
 		normN = norminf,
 		callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
 		)
@@ -198,10 +198,10 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0,
 	br_po, = @time continuation(poTrap,
 		outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 		opts_po_cont;
-		# linearPO = :FullLU,
+		# jacobianPO = :FullLU,
 		updateSectionEveryStep = 1,
-		# linearPO = :FullSparseInplace,
-		linearPO = :BorderedSparseInplace,
+		# jacobianPO = :FullSparseInplace,
+		jacobianPO = :BorderedSparseInplace,
 		# tangentAlgo = BorderedPred(),
 		verbosity = 3,	plot = true,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
@@ -231,7 +231,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo,1), rest
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 	outpo_f, = @time newton(poTrap,
 		orbitguess_f, (@set par_bru.l = l_hopf + 0.01),
-		(@set opt_po.linsolver = ls); linearPO = :BorderedMatrixFree,
+		(@set opt_po.linsolver = ls); jacobianPO = :BorderedMatrixFree,
 		normN = norminf,
 		# callback = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", amplitude(x), " T = ", x[end], ", T0 = ",orbitguess_f[end]);true)
 		)
@@ -241,7 +241,7 @@ opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
 	br_pok, = @time continuation(poTrap,
 		outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
-		opts_po_cont; linearPO = :BorderedMatrixFree,
+		opts_po_cont; jacobianPO = :BorderedMatrixFree,
 		verbosity = 2,
 		plot = true,
 		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
@@ -262,7 +262,7 @@ br_po, _ = continuation(
 	# arguments for continuation
 	opts_po_cont, probFD;
 	δp = 0.01,
-	verbosity = 3,	plot = true, linearPO = :BorderedSparseInplace,
+	verbosity = 3,	plot = true, jacobianPO = :BorderedSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
@@ -278,7 +278,7 @@ br_po2, _ = BK.continuation(
 	opts_po_cont;
 	δp = 0.01,
 	usedeflation = true,
-	verbosity = 3,	plot = true, linearPO = :BorderedSparseInplace,
+	verbosity = 3,	plot = true, jacobianPO = :BorderedSparseInplace,
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> (plot!(br_po,legend = :bottomright, subplot=1)),

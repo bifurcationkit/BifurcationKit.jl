@@ -48,17 +48,17 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
-for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree])
-	@show linearPO, ind
+for (ind, jacobianPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree])
+	@show jacobianPO, ind
 	_ls = ind > 5 ? lsit : lsdef
 	outpo_f, _, flag = newton(poTrap,
 		orbitguess_f, par_hopf, (@set optn_po.linsolver = _ls);
-		linearPO = linearPO,
+		jacobianPO = jacobianPO,
 		normN = norminf)
 	@test flag
 
 	br_po, = continuation(poTrap, outpo_f,
-		par_hopf, (@lens _.r),	(@set opts_po_cont.newtonOptions.linsolver = _ls), linearPO = linearPO;
+		par_hopf, (@lens _.r),	(@set opts_po_cont.newtonOptions.linsolver = _ls), jacobianPO = jacobianPO;
 		verbosity = 0,	plot = false,
 		# plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
 		printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
@@ -66,7 +66,7 @@ for (ind, linearPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInpla
 	BK.getPeriodicOrbit(br_po, 1)
 end
 
-outpo_f, = newton(poTrap, orbitguess_f, par_hopf, optn_po; linearPO = :Dense)
+outpo_f, = newton(poTrap, orbitguess_f, par_hopf, optn_po; jacobianPO = :Dense)
 outpo = reshape(outpo_f[1:end-1], 2, poTrap.M)
 
 # computation of the Jacobian at out_pof

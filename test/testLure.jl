@@ -42,7 +42,7 @@ Mt = 90 # number of time sections
 	PeriodicOrbitTrapProblem(M = Mt);
 	ampfactor = 1., δp = 0.01,
 	updateSectionEveryStep = 1,
-	linearPO = :Dense,
+	jacobianPO = :Dense,
 	verbosity = 0,	plot = false,
 	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	finaliseSolution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
@@ -59,7 +59,7 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 	verbosity = 0, plot = false,
 	ampfactor = .1, δp = -0.005,
 	usedeflation = false,
-	linearPO = :Dense,
+	jacobianPO = :Dense,
 	updateSectionEveryStep = 1,
 	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	normC = norminf
@@ -81,7 +81,7 @@ br_po, = continuation(
 	ShootingProblem(15, probsh, Rodas4P(); parallel = true, reltol = 1e-9);
 	ampfactor = 1., δp = 0.0051,
 	updateSectionEveryStep = 1,
-	linearPO = :autodiffDense,
+	jacobianPO = :autodiffDense,
 	# verbosity = 3,	plot = true,
 	# recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
 	# plotSolution = plotSH,
@@ -103,7 +103,7 @@ br_po, = continuation(
 br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);
 	# verbosity = 3, plot = true,
 	ampfactor = .3, δp = -0.005,
-	linearPO = :autodiffDense,
+	jacobianPO = :autodiffDense,
 	normC = norminf,
 	callbackN = BK.cbMaxNorm(10),
 	)
@@ -116,7 +116,7 @@ br_po, = continuation(jet..., br, 1, opts_po_cont_ps,
 	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = true, reltol = 1e-6);
 	ampfactor = 1., δp = 0.0051, #verbosity = 3,plot=true,
 	updateSectionEveryStep = 1,
-	linearPO = :autodiffDenseAnalytical,
+	jacobianPO = :autodiffDenseAnalytical,
 	callbackN = BK.cbMaxNorm(10),
 	normC = norminf)
 
@@ -124,7 +124,7 @@ br_po, = continuation(jet..., br, 1, opts_po_cont_ps,
 br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);
 	# verbosity = 3, plot = true,
 	ampfactor = .3, δp = -0.005,
-	linearPO = :autodiffDenseAnalytical,
+	jacobianPO = :autodiffDenseAnalytical,
 	normC = norminf,
 	callbackN = BK.cbMaxNorm(10),
 	)

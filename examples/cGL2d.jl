@@ -196,7 +196,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 	@assert 1==0 "Too much memory will be used!"
 	br_pok2, upo , _= @time BK.continuation(
 			poTrap, orbitguess_f, (@set par_cgl.r = p), (@lens _.r),
-			opts_po_cont; linearPO = :FullLU
+			opts_po_cont; jacobianPO = :FullLU
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
@@ -218,7 +218,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 opt_po = @set opt_newton.verbose = true
 	outpo_f, _, flag = @time newton(poTrapMF,
 			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-			(@set opt_po.linsolver = ls); linearPO = :FullMatrixFree,
+			(@set opt_po.linsolver = ls); jacobianPO = :FullMatrixFree,
 			normN = norminf,
 			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M; ratio = 2));true)
 			)
@@ -232,7 +232,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 
 
 br_po, = @time continuation(
 		poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
-		opts_po_cont; linearPO = :FullMatrixFree,
+		opts_po_cont; jacobianPO = :FullMatrixFree,
 		verbosity = 3,	plot = true,
 		plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 		recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
@@ -247,7 +247,7 @@ br_po, _ = continuation(
 	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont, poTrapMF;
-	ampfactor = 3., linearPO = :FullMatrixFree,
+	ampfactor = 3., jacobianPO = :FullMatrixFree,
 	verbosity = 3,	plot = true,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
@@ -272,7 +272,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 opt_po = @set opt_newton.verbose = true
 	outpo_f, hist, flag = @time newton(poTrapMF,
 			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
-			(@set opt_po.linsolver = ls); linearPO = :BorderedMatrixFree,
+			(@set opt_po.linsolver = ls); jacobianPO = :BorderedMatrixFree,
 			normN = norminf)
 
 function callbackPO(x, f, J, res, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
@@ -293,7 +293,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 # opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls))
 	br_pok2, upo , _= @time continuation(
 			poTrap, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
-			opts_po_cont; linearPO = :BorderedMatrixFree,
+			opts_po_cont; jacobianPO = :BorderedMatrixFree,
 			verbosity = 2,	plot = true,
 			plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			callbackN = callbackPO,
@@ -395,7 +395,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 @time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls); normN = norminf, linearPO = :FullMatrixFree)
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = ls); normN = norminf, jacobianPO = :FullMatrixFree)
 
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
 @assert 1==0 "tester code_warntype dans POTrapFunctionalJac! st POTrapFunctional!"
@@ -403,7 +403,7 @@ outpo_f, _, flag = @time newton(poTrapMFi,
 lsi = GMRESIterativeSolvers(verbose = false, N = length(orbitguess_f), reltol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true, ismutating = true)
 
 outpo_f, _, flag = @time newton(poTrapMFi,
-	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi); normN = norminf, linearPO = :FullMatrixFree)
+	orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), (@set opt_po.linsolver = lsi); normN = norminf, jacobianPO = :FullMatrixFree)
 
 ####################################################################################################
 # Computation of Fold of limit cycle

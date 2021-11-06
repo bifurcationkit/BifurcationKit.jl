@@ -83,7 +83,7 @@ optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20)
 outpo, _, flag,_ = newton(_pb,
 	initpo, par_hopf,
 	optn;
-	linearPO = :autodiffDense,
+	jacobianPO = :autodiffDense,
 	normN = norminf)
 	@test flag
 
@@ -98,22 +98,22 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 		opts_po_cont;
 		tangentAlgo = BorderedPred(),
 		verbosity = 0, plot = false,
-		linearPO = :autodiffDense,
+		jacobianPO = :autodiffDense,
 		recordFromSolution = (u, p) -> norm(u[1:2]),
 		normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
 # test automatic branch switching
-br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
+br_pok2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, jacobianPO = :autodiffDense)
 
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detectBifurcation = 0
-br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, prob, Rodas4(); abstol = 1e-10, reltol = 1e-9); linearPO = :autodiffDense, normC = norminf, plot=false)
+br_pok2, = continuation(jet...,br,1, opts_po_contMF, ShootingProblem(1, prob, Rodas4(); abstol = 1e-10, reltol = 1e-9); jacobianPO = :autodiffDense, normC = norminf, plot=false)
 
 # case with 2 sections
-br_pok2_s2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, linearPO = :autodiffDense)
+br_pok2_s2, = continuation(jet..., br, 1, opts_po_cont, ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9); normC = norminf, jacobianPO = :autodiffDense)
 
 ####################################################################################################
 # test shooting interface M > 1
@@ -155,7 +155,7 @@ ls = DefaultLS()
 	deflationOp = BK.DeflationOperator(2, dot, 1.0, [zero(initpo_bar)])
 	outpo, _, flag, = newton(probPsh,
 			initpo_bar, par_hopf,
-			optn; normN = norminf, linearPO = :autodiffDenseAnalytical)
+			optn; normN = norminf, jacobianPO = :autodiffDenseAnalytical)
 	@test flag
 
 BK.getPeriod(probPsh, outpo, par_hopf)
@@ -178,7 +178,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.
 	# 	probPsh, outpo, par_hopf, (@lens _.r),
 	# 	opts_po_cont; verbosity = 2,
 	# 	tangentAlgo = BorderedPred(),
-	# 	linearPO = :autodiffDenseAnalytical,
+	# 	jacobianPO = :autodiffDenseAnalytical,
 	# 	plot = false, normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
@@ -204,8 +204,8 @@ ls = DefaultLS()
 	eil = EigKrylovKit(dim = 1, x₀=rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls, eigsolver = eil)
 	deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
-	outpo, = newton(probPsh2, initpo_bar, par_hopf, optn; normN = norminf, linearPO = :autodiffDenseAnalytical)
-	outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf, linearPO = :autodiffDenseAnalytical)
+	outpo, = newton(probPsh2, initpo_bar, par_hopf, optn; normN = norminf, jacobianPO = :autodiffDenseAnalytical)
+	outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf, jacobianPO = :autodiffDenseAnalytical)
 
 getPeriod(probPsh, outpo, par_hopf)
 
@@ -213,7 +213,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 	br_pok2, = continuation(probPsh, outpo, par_hopf, (@lens _.r),
 		opts_po_cont; verbosity = 0,
 		tangentAlgo = BorderedPred(),
-		linearPO = :autodiffDenseAnalytical,
+		jacobianPO = :autodiffDenseAnalytical,
 		plot = false, normC = norminf)
 
 ####################################################################################################
@@ -238,7 +238,7 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
 
-outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf, linearPO = :autodiffDenseAnalytical)
+outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf, jacobianPO = :autodiffDenseAnalytical)
 
 for ii=1:length(normals)
 	@show BK.E(probPsh	, [outpo[ii]], ii)
@@ -248,20 +248,20 @@ getPeriod(probPsh, outpo, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 10, newtonOptions = setproperties(optn; tol = 1e-8), detectBifurcation = 3)
 	br_hpsh, upo , _= continuation(probPsh, outpo, par_hopf, (@lens _.r),
-		opts_po_cont; normC = norminf, linearPO = :autodiffDenseAnalytical)
+		opts_po_cont; normC = norminf, jacobianPO = :autodiffDenseAnalytical)
 # plot(br_hpsh)
 ####################################################################################################
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, linearPO = :autodiffDenseAnalytical)
+br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, jacobianPO = :autodiffDenseAnalytical)
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 @set! opts_po_cont.detectBifurcation = 0
 @set! opts_po_cont.newtonOptions.linsolver = ls
 
-for M in [1,2], linearPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
-	@info M, linearPO
-	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO == :autodiffMF ? :FiniteDifferencesDense : linearPO, verbosity = 0)
+for M in [1,2], jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
+	@info M, jacobianPO
+	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO, verbosity = 0)
 
-	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearPO = linearPO, verbosity = 0)
+	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO, verbosity = 0)
 end

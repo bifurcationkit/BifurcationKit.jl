@@ -763,8 +763,8 @@ end
 # One could think that by implementing (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBLS, rhs1, rhs2), we could speed up the computation of the linear Bordered system arising in the continuation process. However, we can note that this speed up would be observed only if a factorization of J.Aγ is available like an LU one. When such factorization is available, it is automatically stored as such in J.Aγ and so no speed up would be gained by implementing (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBLS, rhs1, rhs2)
 
 ####################################################################################################
-const DocStrLinearPO = """
-- `linearPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
+const DocStrjacobianPO = """
+- `jacobianPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
     - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
     - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
     - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
@@ -775,21 +775,21 @@ const DocStrLinearPO = """
 """
 ##########################
 # newton wrappers
-function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, linearPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
+function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, jacobianPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive, I get $(orbitguess[end])"
-	@assert linearPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is oot defined. Please chose another one."
+	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is oot defined. Please chose another one."
 	M, N = size(probPO)
 
-	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
-		if linearPO == :FullLU
+	if jacobianPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
+		if jacobianPO == :FullLU
 			jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
-		elseif linearPO == :FullSparseInplace
+		elseif jacobianPO == :FullSparseInplace
 			# sparse matrix to hold the jacobian
 			_J =  probPO(Val(:JacFullSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
 			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p, _indx)
-		elseif linearPO == :Dense
+		elseif jacobianPO == :Dense
 			_J =  probPO(Val(:JacFullSparse), orbitguess, par) |> Array
 			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
 		else
@@ -802,11 +802,11 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 			return newton(probPO, jac, orbitguess, par, options, defOp; kwargs...)
 		end
 	else
-		if linearPO == :BorderedLU
+		if jacobianPO == :BorderedLU
 			Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = probPO)
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
-		elseif linearPO == :BorderedSparseInplace
+		elseif jacobianPO == :BorderedSparseInplace
 			_J =  probPO(Val(:JacCyclicSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M-1)
 			# inplace modification of the jacobian _J
@@ -839,7 +839,7 @@ This is the Krylov-Newton Solver for computing a periodic orbit using a function
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular `newton` method
-$DocStrLinearPO
+$DocStrjacobianPO
 
 # Output:
 - solution
@@ -847,19 +847,19 @@ $DocStrLinearPO
 - flag of convergence
 - number of iterations
 """
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; linearPO::Symbol = :FullLU, kwargs...) = _newton(probPO, orbitguess, par, options, linearPO; defOp = nothing, kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; jacobianPO::Symbol = :FullLU, kwargs...) = _newton(probPO, orbitguess, par, options, jacobianPO; defOp = nothing, kwargs...)
 
 """
-	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, linearPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
+	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, jacobianPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
 
-This function is similar to `newton(probPO, orbitguess, options, linearPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
+This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{Tp, Tdot, T, vectype}; linearPO::Symbol = :FullLU, kwargs...) where {Tp, Tdot, T, vectype} = _newton(probPO, orbitguess, par, options, linearPO; defOp = defOp, kwargs...)
+newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::NewtonPar, defOp::DeflationOperator{Tp, Tdot, T, vectype}; jacobianPO::Symbol = :FullLU, kwargs...) where {Tp, Tdot, T, vectype} = _newton(probPO, orbitguess, par, options, jacobianPO; defOp = defOp, kwargs...)
 
 ####################################################################################################
 # continuation wrapper
 """
-	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), kwargs...)
+	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; jacobianPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), kwargs...)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -870,13 +870,13 @@ This is the continuation routine for computing a periodic orbit using a function
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
-$DocStrLinearPO
+$DocStrjacobianPO
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; linearPO = :FullLU, updateSectionEveryStep = 0, kwargs...)
+function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; jacobianPO = :FullLU, updateSectionEveryStep = 0, kwargs...)
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive. We found T = $(orbitguess[end])"
-	@assert linearPO in (:Dense, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please chose another one."
+	@assert jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please chose another one."
 
 	M, N = size(prob)
 	options = contParams.newtonOptions
@@ -891,17 +891,17 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 	_recordsol = modifyPORecord(prob, kwargs, par, lens)
 	_plotsol = modifyPOPlot(prob, kwargs)
 
-	if linearPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
+	if jacobianPO in (:Dense, :denseAD, :FullLU, :FullMatrixFree, :FullSparseInplace)
 
-		if linearPO == :FullLU
+		if jacobianPO == :FullLU
 			jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
-		elseif linearPO == :FullSparseInplace
+		elseif jacobianPO == :FullSparseInplace
 			# sparse matrix to hold the jacobian
 			_J =  prob(Val(:JacFullSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M)
 			# inplace modification of the jacobian _J
 			jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p, _indx); FloquetWrapper(prob, _J, x, p));
-		elseif linearPO == :Dense
+		elseif jacobianPO == :Dense
 			_J =  prob(Val(:JacFullSparse), orbitguess, par) |> Array
 			jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
 		else
@@ -919,11 +919,11 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 			finaliseSolution = _finsol,
 			plotSolution = _plotsol)
 	else
-		if linearPO == :BorderedLU
+		if jacobianPO == :BorderedLU
 			Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
 			# linear solver
 			lspo = PeriodicOrbitTrapBLS()
-		elseif linearPO == :BorderedSparseInplace
+		elseif jacobianPO == :BorderedSparseInplace
 			_J =  prob(Val(:JacCyclicSparse), orbitguess, par)
 			_indx = getBlocks(_J, N, M-1)
 			# inplace modification of the jacobian _J
@@ -966,14 +966,14 @@ This is the continuation routine for computing a periodic orbit using a function
 - `p0` set of parameters passed to the vector field
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
-$DocStrLinearPO
+$DocStrjacobianPO
 - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; jacobianPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
-	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; linearPO = linearPO, recordFromSolution = recordFromSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
+	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; jacobianPO = jacobianPO, recordFromSolution = recordFromSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
 end
 
 ####################################################################################################
@@ -1013,7 +1013,7 @@ end
 # - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 # - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 # - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-# - `linearPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
+# - `jacobianPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
 # - `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 # - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 # - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
@@ -1025,7 +1025,7 @@ end
 # 	δ = 1e-8, δp = 0.1,
 # 	ampfactor = 1,
 # 	usedeflation = true,
-# 	linearPO = :BorderedLU,
+# 	jacobianPO = :BorderedLU,
 # 	recordFromSolution = (u,p) -> (period = u[end],),
 # 	linearAlgo = nothing,
 # 	updateSectionEveryStep = 1,
@@ -1063,12 +1063,12 @@ end
 # 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
 # 		optn = _contParams.newtonOptions
 # 		# find point on the first branch
-# 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; linearPO = linearPO, kwargs...)
+# 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; jacobianPO = jacobianPO, kwargs...)
 #
 # 		# find the bifurcated branch using deflation
 # 		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
 # 		verbose && println("\n--> Compute point on bifurcated branch...")
-# 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; linearPO = linearPO, kwargs...)
+# 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; jacobianPO = jacobianPO, kwargs...)
 # 		@assert flag "Deflated newton did not converge"
 # 		orbitguess .= solbif
 # 	end
@@ -1079,7 +1079,7 @@ end
 #
 # 	# perform continuation
 # 	branch, u, τ = continuation(pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
-# 		linearPO = linearPO,
+# 		jacobianPO = jacobianPO,
 # 		recordFromSolution = recordFromSolution,
 # 		linearAlgo = _linearAlgo, kwargs...)
 #

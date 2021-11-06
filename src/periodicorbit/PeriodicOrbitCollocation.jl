@@ -307,7 +307,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-- `linearPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
+- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
 	- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
 	- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
 	- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
@@ -321,11 +321,11 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - number of iterations
 """
 function newton(prob::PeriodicOrbitOCollProblem, orbitguess, par, options::NewtonPar;
-		linearPO = :autodiffDense, δ = 1e-8, kwargs...)
-	@assert linearPO in
+		jacobianPO = :autodiffDense, δ = 1e-8, kwargs...)
+	@assert jacobianPO in
 			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffSparse, ) "This jacobian is not defined. Please chose another one."
 
-	if linearPO == :autodiffDense
+	if jacobianPO == :autodiffDense
 		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
 	end
 
@@ -343,10 +343,10 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 # Optional argument
 - `δ = 1e-8` used for finite differences
-- `linearPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
+- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 
-## Choices for `linearPO`
+## Choices for `jacobianPO`
 - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
 - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
 - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
@@ -358,9 +358,9 @@ function continuation(
 	prob::PeriodicOrbitOCollProblem,
 	orbitguess, par, lens::Lens, _contParams::ContinuationPar,
 	_linearAlgo::AbstractBorderedLinearSolver;
-	linearPO = :autodiffDense,
+	jacobianPO = :autodiffDense,
 	updateSectionEveryStep = 0, kwargs...)
-	@assert linearPO in
+	@assert jacobianPO in
 			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences, :Dense) "This jacobian is oot defined. Please chose another one."
 
 	jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)

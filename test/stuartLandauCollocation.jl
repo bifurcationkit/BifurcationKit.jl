@@ -73,7 +73,7 @@ prob_col(_ci, par_sl)
 # 	heatmap(_J .!=0, yflip = true)
 
 args = (tangentAlgo = BorderedPred(),
-	# linearPO = :autodifSparse,
+	# jacobianPO = :autodifSparse,
 	# linearAlgo = MatrixBLS(),
 	recordFromSolution = (x,p) -> (norminf(x[1:end-1])),
 	plotSolution = (x,p; k...) -> begin

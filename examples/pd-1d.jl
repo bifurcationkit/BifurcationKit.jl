@@ -100,7 +100,7 @@ M = 100
 		# ampfactor is a factor to increase the amplitude of the guess
 		verbosity = 2,
 		plot = true,
-		linearPO = :FullSparseInplace,
+		jacobianPO = :FullSparseInplace,
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
@@ -118,8 +118,8 @@ br_po_pd, = @time BK.continuation(
 		ampfactor = 0.9, δp = -0.01,
 		verbosity = 3,
 		plot = true,
-		# linearPO = :FullSparseInplace,
-		linearPO = :BorderedSparseInplace,
+		# jacobianPO = :FullSparseInplace,
+		jacobianPO = :BorderedSparseInplace,
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)

@@ -62,7 +62,7 @@ Mt = 200 # number of sections
 	br_potrap, utrap = continuation(
 	jet..., br, 4, opts_po_cont,
 	PeriodicOrbitTrapProblem(M = Mt);
-	linearPO = :Dense,
+	jacobianPO = :Dense,
 	verbosity = 2,	plot = true,
 	args_po...,
 	)
@@ -124,7 +124,7 @@ br_posh, = @time continuation(
 	# ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
 	ampfactor = 1.0, δp = 0.0005,
 	usedeflation = true,
-	linearPO = :autodiffDense,
+	jacobianPO = :autodiffDense,
 	linearAlgo = MatrixBLS(),
 	updateSectionEveryStep = 1,
 	verbosity = 2,	plot = true,
@@ -157,7 +157,7 @@ br_popsh, = @time continuation(
 	# PoincareShootingProblem(Mt, probsh, RadauIIA3(); parallel = false, abstol = 1e-10, reltol = 1e-9);
 	ampfactor = 1.0, δp = 0.005,
 	# usedeflation = true,
-	linearPO = :autodiffDenseAnalytical,
+	jacobianPO = :autodiffDenseAnalytical,
 	linearAlgo = MatrixBLS(),
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,
