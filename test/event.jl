@@ -4,6 +4,24 @@ using BifurcationKit, Setfield, ForwardDiff
 
 const BK = BifurcationKit
 
+
+####################################################################################################
+_eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
+_eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
+@test BK.hasCustomLabels(_eve) == false
+@test BK.computeEigenElements(_eve) == false
+BK.labels(_eve, 1)
+
+_eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1), ("event1", "event2"))
+BK.labels(_eve, 1)
+BK.labels(_eve, [])
+
+SetOfEvents()
+SetOfEvents(nothing)
+SetOfEvents(_eve)
+SetOfEvents(_eved)
+BK.split_events(_eve, _eved, nothing)
+####################################################################################################
 function testBranch(br)
 	# test if stability works
 	# test that stability corresponds

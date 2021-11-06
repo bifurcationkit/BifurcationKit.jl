@@ -60,9 +60,9 @@ TWProblem(F, J, ∂, u₀; kw...) = TWProblem(F, J, (∂,), u₀; kw...)
 # we put type information to ensure the user pass a correct u0
 function updateSection!(pb::TWProblem{Tf, TJf, Tu0, TDu0, TD}, u₀::Tu0) where {Tf, TJf, Tu0, TDu0, TD}
 	copyto!(pb.u₀, u₀)
-	for ∂u₀ in pb.∂u₀
+	for (∂, ∂u₀) in zip(pb.∂, pb.∂u₀)
 		# pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
-		copyto!(∂u₀, pb.∂ * u₀)
+		copyto!(∂u₀, ∂ * u₀)
 	end
 end
 

@@ -150,8 +150,13 @@ _out1 = FD.derivative(t -> probTW(_sol0 .+ t .* _dsol0, par_cgl), 0)
 _out0 = probTW(_sol0, par_cgl, _dsol0)
 @test _out0 ≈ _out1
 
+BK.VFtw(probTW, uold, (user=par_cgl, s=Tuple(0.,)))
+
 # we test the ∂
 BK.applyD(probTW, rand(2n))
+
+# we test update section
+BK.updateSection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
 newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :AutoDiff)
