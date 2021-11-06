@@ -87,7 +87,7 @@ eigls = EigArpack(1.0, :LM)
 	out, hist, flag = @time newton(jet[1], jet[2], sol0, par_cgl, opt_newton, normN = norminf)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 8, maxBisectionSteps=20)
-br, = @time continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br, = continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 
 ####################################################################################################
 # we test the jacobian
@@ -150,3 +150,13 @@ _out1 = FD.derivative(t -> probTW(_sol0 .+ t .* _dsol0, par_cgl), 0)
 _out0 = probTW(_sol0, par_cgl, _dsol0)
 @test _out0 ≈ _out1
 ####################################################################################################
+# test newton method, not meant to converge
+newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :AutoDiff)
+newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :FullLU)
+####################################################################################################
+# test continuation method witth different Generalised eigensolvers
+optn = NewtonPar(tol = 1e-8)
+opt_cont_br = ContinuationPar(pMin = -1., pMax = 1., newtonOptions = optn, maxSteps = 3, detectBifurcation = 2)
+continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :FullLU, verbosity = 0)
+@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 30, which = :LM, sigma = 0.2)
+continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :AutoDiff, verbosity = 0)

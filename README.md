@@ -8,6 +8,8 @@ This Julia package aims at performing **automatic bifurcation analysis** of poss
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
 
+> The idea is to be able to seemingly switch the continuation algorithm a bit like changing the time stepper (Euler, RK4,...) for ODEs.
+
 By leveraging on the above method, it can also seek for periodic orbits of Cauchy problems. **It is by now, one of the only softwares which provides shooting methods AND methods based on finite differences or collocation to compute periodic orbits.**
 
 The current focus is on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...

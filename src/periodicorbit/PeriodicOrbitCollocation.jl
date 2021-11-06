@@ -323,7 +323,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 function newton(prob::PeriodicOrbitOCollProblem, orbitguess, par, options::NewtonPar;
 		jacobianPO = :autodiffDense, δ = 1e-8, kwargs...)
 	@assert jacobianPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffSparse, ) "This jacobian is not defined. Please chose another one."
+			(:autodiffDense, ) "This jacobian is not defined. Please chose another one."
 
 	if jacobianPO == :autodiffDense
 		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
@@ -361,7 +361,7 @@ function continuation(
 	jacobianPO = :autodiffDense,
 	updateSectionEveryStep = 0, kwargs...)
 	@assert jacobianPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences, :Dense) "This jacobian is oot defined. Please chose another one."
+			(:autodiffDense,) "This jacobian is oot defined. Please chose another one."
 
 	jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
 

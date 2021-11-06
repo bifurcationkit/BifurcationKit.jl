@@ -4,23 +4,24 @@ abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
 """
 	pb = TWProblem(F, J, ∂::Tuple, u₀; DAE = 0)
 
-This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW).
+This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators.
 
 ## Arguments
 - `(x, p) -> F(x, p)` function with continuous symmetries
 - `J` jacobian of `F`. Can be matrix based or matrix-free. The requirements are same as for [`newton`](@ref)
-- `∂::Tuple = (T1, T2, ⋯)` tuple of Lie generators. In effect, each of these is a differential operator which can be specified as a (sparse) matrix or as an operator impolementing `LinearAlgebra.mul!`.
+- `∂::Tuple = (T1, T2, ⋯)` tuple of Lie generators. In effect, each of these is an (differential) operator which can be specified as a (sparse) matrix or as an operator implementing `LinearAlgebra.mul!`.
 - `u₀` reference solution
 
-## Constructors
+## Additional Constructor(s)
 
 	pb = TWProblem(F, J, ∂, u₀; kw...)
 
-This is to handle the case where a single symmetry needs to be frozen.
+This simplified call handles the case where a single symmetry needs to be frozen.
 
 ## Useful function
 
-- `updateSection!(pb::TWProblem, u0)` this call update the reference solution of the problem using `u0`.
+- `updateSection!(pb::TWProblem, u0)` updates the reference solution of the problem using `u0`.
+- `nbConstraints(::TWProblem)` number of constraints (or Lie generators)
 
 """
 @with_kw struct TWProblem{Tf, TJf, Tu0, TDu0, TD}
@@ -156,4 +157,45 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
 		J2 = vcat(J2, vcat(pb.∂u₀[ii], zeros(nc))')
 	end
 	return J2
+end
+
+function newton(prob::TWProblem, orbitguess, par, optn::NewtonPar;
+		jacobian = :MatrixFree, kwargs...)
+	@assert jacobian in  (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
+	if jacobian == :AutoDiff
+		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
+	elseif jacobian == :MatrixFreeAD
+		jac = (x, p, dx) -> ForwardDiff.jacobian(t -> prob(z .+ t .* dx, p), 0)
+	elseif jacobian == :FullLU
+		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
+	# elseif jacobian == :FullSparseInplace
+	elseif jacobian == :MatrixFree
+		jac = (x, p, dx) -> prob(x, p, dx)
+	end
+
+	return newton(prob, jac, orbitguess, par, optn; kwargs...,)
+end
+function continuation(prob::TWProblem,
+		orbitguess, par, lens::Lens, contParams::ContinuationPar;
+		jacobian = :MatrixFree, kwargs...)
+	@assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
+
+	if jacobian == :AutoDiff
+		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
+	elseif jacobian == :MatrixFreeAD
+		jac = (x, p, dx) -> ForwardDiff.jacobian(t -> prob(z .+ t .* dx, p), 0)
+	elseif jacobian == :MatrixFree
+		jac = (x, p, dx) -> prob(x, p, dx)
+	elseif jacobian == :FullLU
+		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
+	end
+	# define the mass matrix for the eigensolver
+	N = length(orbitguess)
+	B = diagm(vcat(ones(N-1),0))
+	# convert eigsolver to generalised one
+	old_eigsolver = contParams.newtonOptions.eigsolver
+	contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)
+	# call continuation
+	branch, u, τ = continuation(prob, jac, orbitguess, par, lens, contParamsWave; kwargs...,)
+	return setproperties(branch; type = :TravellingWave, functional = prob), u, τ
 end

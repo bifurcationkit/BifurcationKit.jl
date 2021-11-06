@@ -56,6 +56,7 @@ module BifurcationKit
 	include("periodicorbit/Floquet.jl")
 
 	include("wave/WaveProblem.jl")
+	include("wave/EigSolver.jl")
 
 	include("plotting/Recipes.jl")
 	include("Diffeqwrap.jl")
