@@ -71,6 +71,10 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvalues(br::ContResult) = hasstability(br)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
+# check whether the solution are saved in the branch
+@inline hassolution(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ts != Nothing
+@inline hassolution(br::AbstractBranchResult) = hassolution(br.γ)
+
 # check whether the eigenvectors are saved in the branch
 @inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
@@ -82,8 +86,14 @@ getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
-getSolx(br::ContResult, ind::Int) = br.sol[ind].x
-getSolp(br::ContResult, ind::Int) = br.sol[ind].p
+@inline function getSolx(br::ContResult, ind::Int)
+	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+	return br.sol[ind].x
+end
+@inline function getSolp(br::ContResult, ind::Int)
+	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+	return br.sol[ind].p
+end
 
 function Base.getproperty(br::ContResult, s::Symbol)
 	if s in (:specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)

@@ -62,6 +62,7 @@ BK.eigenvec(br1,20,1)
 BK.haseigenvector(br1)
 BK.getvectortype(br1)
 BK.getvectoreltype(br1)
+BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
 br1.params
 
