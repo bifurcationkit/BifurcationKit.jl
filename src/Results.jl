@@ -86,6 +86,7 @@ getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
 setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
+Base.lastindex(br::ContResult) = length(br)
 @inline function getSolx(br::ContResult, ind::Int)
 	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
 	return br.sol[ind].x
@@ -219,6 +220,7 @@ from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{T, Tbp}; k...) where {T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
+Base.lastindex(br::Branch) = lastindex(br.γ)
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is

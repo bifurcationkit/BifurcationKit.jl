@@ -34,6 +34,7 @@ BK.computeEigenvalues(opts)
 BK.computeEigenvectors(opts)
 BK.from(br0)
 br0[1]
+br0[end]
 
 # test with callbacks
 br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (x, f, J, res, iteration, itlinear, optionsN; kwargs...)->(true))
