@@ -361,7 +361,7 @@ function continuation(
 	jacobianPO = :autodiffDense,
 	updateSectionEveryStep = 0, kwargs...)
 	@assert jacobianPO in
-			(:autodiffDense,) "This jacobian is oot defined. Please chose another one."
+			(:autodiffDense,) "This jacobian is not defined. Please chose another one."
 
 	jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
 

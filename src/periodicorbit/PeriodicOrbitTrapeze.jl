@@ -777,7 +777,7 @@ const DocStrjacobianPO = """
 # newton wrappers
 function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar, jacobianPO::Symbol = :FullLU; defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing, kwargs...) where {T, Tf, vectype}
 	@assert orbitguess[end] >= 0 "The guess for the period should be positive, I get $(orbitguess[end])"
-	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is oot defined. Please chose another one."
+	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please chose another one."
 	M, N = size(probPO)
 
 	if jacobianPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)

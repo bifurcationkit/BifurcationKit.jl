@@ -21,7 +21,7 @@ function Fsl!(f, u, p, t)
 end
 
 Fsl(x, p) = Fsl!(similar(x), x, p, 0.)
-
+jet = BK.getJet(Fsl; matrixfree=false)
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
@@ -29,7 +29,7 @@ par_hopf = (@set par_sl.r = 0.1)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
-br, = continuation(Fsl, u0, par_hopf, (@lens _.r), optconteq)
+br, = continuation(jet[1], jet[2], u0, par_hopf, (@lens _.r), optconteq)
 ####################################################################################################
 Ntst = 3
 m = 4
@@ -40,10 +40,18 @@ prob_col = BK.PeriodicOrbitOCollProblem(F = (x,p) -> Mf * x.^2, N = N, coll_cach
 size(prob_col)
 length(prob_col)
 BK.getTimes(prob_col)
+BK.getMaxTimeStep(prob_col)
 size(coll_cache)
+BK.updateMesh!(prob_col, prob_col.coll_cache.mesh)
+PeriodicOrbitOCollProblem(10,2) |> BK.getM
+BK.getLs(prob_col)
+show(prob_col)
 
 _orbit(t) = [cos(2pi*t)] * sqrt(par_sl.r/par_sl.c3)
 _ci = BK.generateSolution(prob_col, _orbit, 1.)
+BK.getPeriodicOrbit(prob_col, _ci, par_sl)
+BK.getMaximum(prob_col, _ci, par_sl)
+BK.∂(sin, 2)(0.)
 prob_col(_ci, par_sl) #|> scatter
 BK.getTimeSlices(prob_col, _ci)
 # interpolate solution
@@ -89,7 +97,21 @@ optcontpo = setproperties(optconteq; detectBifurcation = 2, precisionStability =
 @set! optcontpo.ds = -0.01
 @set! optcontpo.newtonOptions.verbose = false
 
+newton(prob_col, _ci, par_sl, optcontpo.newtonOptions)
+
 br_po, = @time continuation(prob_col, _ci, par_sl, (@lens _.r), optcontpo;
 	verbosity = 0, plot = false,
-	args...
+	args...,
+	updateSectionEveryStep = 1,
+	)
+####################################################################################################
+# test  Hopf aBS
+br_po, = continuation(jet..., br, 1, ContinuationPar(optcontpo; ds = 0.01),
+	PeriodicOrbitOCollProblem(20, 5);
+	jacobianPO = :autodiffDense,
+	δp = 0.1,
+	usedeflation = true,
+	# regular continuation options
+	verbosity = 0,	plot = false,
+	updateSectionEveryStep = 1,
 	)

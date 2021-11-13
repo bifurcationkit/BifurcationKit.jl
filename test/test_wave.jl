@@ -166,5 +166,15 @@ newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), j
 optn = NewtonPar(tol = 1e-8)
 opt_cont_br = ContinuationPar(pMin = -1., pMax = 1., newtonOptions = optn, maxSteps = 3, detectBifurcation = 2)
 continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :FullLU, verbosity = 0)
-@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 30, which = :LM, sigma = 0.2)
+
+@set! opt_cont_br.newtonOptions.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
+continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :FullLU, verbosity = 0)
+
+BK.GEigArpack(nothing, :LR)
+@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
 continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :AutoDiff, verbosity = 0)
+
+@set! opt_cont_br.newtonOptions.linsolver = GMRESIterativeSolvers(N = 2n+1)
+@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+@set! opt_cont_br.detectBifurcation = 0
+continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :MatrixFreeAD, verbosity = 0)
