@@ -63,7 +63,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 	p = JacSH.par
 
 	# period of the cycle
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 
 	# extract parameters
 	M = getM(sh)
@@ -89,7 +89,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	p = JacSH.par
 
 	# period of the cycle
-	T = extractPeriodShooting(x)
+	T = getPeriod(sh, x)
 
 	# extract parameters
 	M = getM(sh)

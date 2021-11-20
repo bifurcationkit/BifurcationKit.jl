@@ -180,6 +180,7 @@ function newton(prob::TWProblem, orbitguess, par, optn::NewtonPar;
 	end
 	return newton(prob, jac, orbitguess, par, optn; kwargs...,)
 end
+
 function continuation(prob::TWProblem,
 		orbitguess, par, lens::Lens, contParams::ContinuationPar;
 		jacobian = :MatrixFree, kwargs...)

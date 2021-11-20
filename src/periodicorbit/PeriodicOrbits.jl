@@ -229,7 +229,7 @@ function continuation(
 	kwargs...,
 )
 	@assert jacobianPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences) "This jacobian is oot defined. Please chose another one."
+			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences) "This jacobian is not defined. Please chose another one."
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
