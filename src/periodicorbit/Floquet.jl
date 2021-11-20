@@ -66,7 +66,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 	T = getPeriod(sh, x)
 
 	# extract parameters
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the time slices
@@ -92,7 +92,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	T = getPeriod(sh, x)
 
 	# extract parameters
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 
 	Mono = zeros(N, N)
@@ -118,7 +118,7 @@ end
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
 	J = JacSH.jacpb
 	sh = JacSH.pb
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(JacSH.x) - 1, M)
 	mono = copy(J[1:N, 1:N])
 	if M == 1
@@ -143,7 +143,7 @@ end
 	T = getPeriod(sh, x)
 
 	# extract parameters
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the time slices
@@ -169,7 +169,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
 	x_bar = JacSH.x
 	p = JacSH.par
 
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess into a Matrix
@@ -200,7 +200,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	sh = JacSH.pb
 	T = eltype(J)
 
-	M = getM(sh)
+	M = getMeshSize(sh)
 	Nj = length(JacSH.x)
 	N = div(Nj, M)
 
@@ -229,7 +229,7 @@ end
 # at position x from the Floquet eigenvector ζ
 @views function MonodromyQaD(::Val{:ExtractEigenVector}, psh::PoincareShootingProblem, x_bar::AbstractVector, p, ζ::AbstractVector)
 	#  ζ is of size (N-1)
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = length(ζ)
 	dx = similar(x_bar, length(ζ) + 1)
 

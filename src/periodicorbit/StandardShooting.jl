@@ -111,12 +111,12 @@ function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::Ab
 end
 
 #####################################
-@inline isSimple(sh::ShootingProblem) = getM(sh) == 1
+@inline isSimple(sh::ShootingProblem) = getMeshSize(sh) == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 
 function Base.show(io::IO, sh::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
-	println(io, "├─ time slices : ", getM(sh))
+	println(io, "├─ time slices : ", getMeshSize(sh))
 	println(io, "└─ parallel    : ", isParallel(sh))
 end
 
@@ -129,7 +129,7 @@ function updateSection!(sh::ShootingProblem, x, par)
 end
 
 @views function getTimeSlices(sh::ShootingProblem, x::AbstractVector)
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 	return reshape(x[1:end-1], N, M)
 end
@@ -142,7 +142,7 @@ getTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
 function (sh::ShootingProblem)(x::AbstractVector, par)
 	# Sundials does not like @views :(
 	T = getPeriod(sh, x)
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
@@ -177,7 +177,7 @@ end
 function (sh::ShootingProblem)(x::BorderedArray, par)
 	# period of the cycle
 	T = getPeriod(sh, x)
-	M = getM(sh)
+	M = getMeshSize(sh)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
 	xc = getTimeSlices(sh, x)
@@ -207,7 +207,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	# Sundials does not like @views :(
 	dT = getPeriod(sh, dx)
 	T  = getPeriod(sh, x)
-	M = getM(sh)
+	M = getMeshSize(sh)
 
 	xc = getTimeSlices(sh, x)
 	dxc = getTimeSlices(sh, dx)
@@ -243,7 +243,7 @@ end
 function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e-9)
 	dT = getPeriod(sh, dx)
 	T  = getPeriod(sh, x)
-	M = getM(sh)
+	M = getMeshSize(sh)
 
 	# variable to hold the computed result
 	out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
@@ -270,7 +270,7 @@ end
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
 	T = getPeriod(sh, x)
-	M = getM(sh)
+	M = getMeshSize(sh)
 	N = div(length(x) - 1, M)
 
 	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
@@ -309,7 +309,7 @@ end
 function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
 	T = getPeriod(prob, x)
-	M = getM(prob)
+	M = getMeshSize(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
@@ -337,7 +337,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
 function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 	T = getPeriod(prob, x)
-	M = getM(prob)
+	M = getMeshSize(prob)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
@@ -383,7 +383,7 @@ end
 
 function predictor(pb::ShootingProblem, bifpt, ampfactor, ζs, bptype::Symbol)
 	@assert bptype in (:bp, :pd)
-	Mv = getM(pb)
+	Mv = getMeshSize(pb)
 	# plot(reshape(orbitguess[1:end-1],2,Mv)')
 	if bptype == :bp
 		orbitguess = copy(bifpt.x)

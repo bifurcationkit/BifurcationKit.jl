@@ -306,7 +306,7 @@ pbspti = PeriodicOrbitTrapProblem(
 			pbsp.xπ,
 			ones(9) ./ 10)
 
-BK.getM(pbspti)
+BK.getMeshSize(pbspti)
 orbitguess_f = rand(2n*10+1)
 BK.getAmplitude(pbspti, orbitguess_f, par)
 BK.getMaximum(pbspti, orbitguess_f, par)

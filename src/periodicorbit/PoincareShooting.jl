@@ -57,7 +57,7 @@ end
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
 function Base.show(io::IO, pb::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting problem")
-	println(io, "├─ time slices : ", getM(pb))
+	println(io, "├─ time slices : ", getMeshSize(pb))
 	println(io, "└─ parallel   : ", isParallel(pb))
 end
 
@@ -128,7 +128,7 @@ E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xba
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
 @views function updateSection!(pb::PoincareShootingProblem, centers_bar, par; _norm = norm)
-	M = getM(pb); Nm1 = div(length(centers_bar), M)
+	M = getMeshSize(pb); Nm1 = div(length(centers_bar), M)
 	centers_barc = reshape(centers_bar, Nm1, M)
 	centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
 	normals = [pb.flow.F(c, par) for c in centers]
@@ -144,7 +144,7 @@ $(SIGNATURES)
 Compute the period of the periodic orbit associated to `x_bar`.
 """
 function getPeriod(psh::PoincareShootingProblem, x_bar, par)
-	M = getM(psh); Nm1 = div(length(x_bar), M)
+	M = getMeshSize(psh); Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
 	x_barc = reshape(x_bar, Nm1, M)
@@ -180,7 +180,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
 function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
 	# this function extracts the amplitude of the cycle
-	M = getM(prob); Nm1 = length(x_bar) ÷ M
+	M = getMeshSize(prob); Nm1 = length(x_bar) ÷ M
 
 	# reshape the period orbit guess
 	x_barc = reshape(x_bar, Nm1, M)
@@ -203,7 +203,7 @@ end
 
 function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
@@ -244,7 +244,7 @@ Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré se
 """
 function projection(psh::PoincareShootingProblem, x::AbstractVector)
 	# create initial guess. We have to pass it through the projection R
-	M = getM(psh)
+	M = getMeshSize(psh)
 	orbitguess_bar = Vector{eltype(x)}(undef, 0)
 	@assert M == length(psh.section.normals)
 	for ii=1:M
@@ -260,7 +260,7 @@ Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré
 """
 function projection(psh::PoincareShootingProblem, x::AbstractMatrix)
 	# create initial guess. We have to pass it through the projection R
-	M = getM(psh)
+	M = getMeshSize(psh)
 	m, n = size(x)
 	orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
 	@assert M == length(psh.section.normals)
@@ -272,7 +272,7 @@ end
 ####################################################################################################
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = false)
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
@@ -338,7 +338,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
 	end
 
 	# otherwise analytical Jacobian
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = div(length(x_bar), M)
 
 	# reshape the period orbit guess
@@ -376,7 +376,7 @@ end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x_bar::AbstractVector, par)
-	M = getM(psh)
+	M = getMeshSize(psh)
 	Nm1 = div(length(x_bar), M)
 	N = Nm1 + 1
 
@@ -453,7 +453,7 @@ function reMake(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers,
 
 	# create initial guess. We have to pass it through the projection R
 	hyper = probPSh.section
-	M = getM(probPSh)
+	M = getMeshSize(probPSh)
 	@assert length(normals) == M
 	orbitguess_bar = zeros(length(centers[1])-1, M)
 	for ii in 1:length(normals)

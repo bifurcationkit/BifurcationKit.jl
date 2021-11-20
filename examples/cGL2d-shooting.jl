@@ -112,7 +112,7 @@ plot(br)
 # Look for periodic orbits
 f1 = DiffEqArrayOperator(par_cgl.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; atol = 1e-14, rtol = 1e-14, dt = 0.1)
+prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; reltol = 1e-8, dt = 0.1)
 prob = ODEProblem(Fcgl, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
 ####################################################################################################
 # sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
@@ -132,7 +132,7 @@ end
 probSh = ShootingProblem(
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
-	[sol[:, end]], atol = 1e-10, rtol = 1e-8)
+	[sol[:, end]], abstol = 1e-10, reltol = 1e-8)
 
 initpo = vcat(sol(116.), 4.9) |> vec
 	probSh(initpo, @set par_cgl.r = 1.2) |> norminf
@@ -170,7 +170,7 @@ br_po, = continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# probSh;
-	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); atol = 1e-10, rtol = 1e-8) ;
+	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),

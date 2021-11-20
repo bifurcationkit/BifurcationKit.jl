@@ -5,8 +5,9 @@ abstract type AbstractPOFDProblem <: AbstractPeriodicOrbitProblem end
 # Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
+
 # get the number of time slices
-@inline getM(pb::AbstractPeriodicOrbitProblem) = pb.M
+@inline getMeshSize(pb::AbstractPeriodicOrbitProblem) = pb.M
 
 # get the period
 """
@@ -56,7 +57,7 @@ $(SIGNATURES)
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,1] and the period `period`.
 """
 function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
-	M = getM(pb)
+	M = getMeshSize(pb)
 	orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
@@ -77,7 +78,7 @@ Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 """
 $(TYPEDEF)
 
-Define a type to interface the Jacobian of the Shooting Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) in `continuation`, it is difficult to tell the eigensolver not to use the jacobian but instead the monodromy matrix.
+Define a structure to interface the Jacobian of the Shooting Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver not to use the jacobian but the monodromy matrix instead.
 
 $(TYPEDFIELDS)
 """
@@ -356,7 +357,7 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
 	verbose && printstyled(color = :green, "----> phase ϕ        = ", ϕ / pi, "⋅π\n")
 
-	M = getM(prob)
+	M = getMeshSize(prob)
 	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
 
 	# build the variable to hold the functional for computing PO based on finite differences

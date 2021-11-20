@@ -174,7 +174,7 @@ function PeriodicOrbitOCollProblem(Ntst, m, N = 0)
 end
 
 # TODO rename this in num_mesh? or meshSize
-@inline getM(pb::PeriodicOrbitOCollProblem) = pb.coll_cache.Ntst
+@inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.coll_cache.Ntst
 
 @inline length(pb::PeriodicOrbitOCollProblem) = ( (n, m, Ntst) = size(pb); return n * (1 + m * Ntst) )
 # the size is (n, m, Ntst)
