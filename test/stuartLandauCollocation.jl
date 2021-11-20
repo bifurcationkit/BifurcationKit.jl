@@ -43,7 +43,7 @@ BK.getTimes(prob_col)
 BK.getMaxTimeStep(prob_col)
 size(coll_cache)
 BK.updateMesh!(prob_col, prob_col.coll_cache.mesh)
-PeriodicOrbitOCollProblem(10,2) |> BK.getM
+PeriodicOrbitOCollProblem(10,2) |> BK.getMeshSize
 BK.getLs(prob_col)
 show(prob_col)
 
