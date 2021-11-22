@@ -255,6 +255,14 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax =
 # calls with analytical jacobians
 br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, jacobianPO = :autodiffDenseAnalytical)
 
+# test Iterative Floquet eigen solver
+@set! opts_po_cont.newtonOptions.eigsolver.dim = 20
+@set! opts_po_cont.newtonOptions.eigsolver.x₀ = rand(2)
+br_sh, = continuation(jet..., br, 1, ContinuationPar(opts_po_cont; ds = 0.005, saveSolEveryStep = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9); normC = norminf, jacobianPO = :autodiffDenseAnalytical)
+
+# test MonodromyQaD
+# BK.MonodromyQaD(br_sh.functional, br.sol)
+
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 @set! opts_po_cont.detectBifurcation = 0
 @set! opts_po_cont.newtonOptions.linsolver = ls
@@ -263,5 +271,6 @@ for M in [1,2], jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytica
 	@info M, jacobianPO
 	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO, verbosity = 0)
 
-	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO, verbosity = 0)
+	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005),
+	ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO, verbosity = 0)
 end
