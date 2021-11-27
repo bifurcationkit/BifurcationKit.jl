@@ -1069,7 +1069,7 @@ end
 # 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; jacobianPO = jacobianPO, kwargs...)
 #
 # 		# find the bifurcated branch using deflation
-# 		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+# 		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0]; autodiff = true)
 # 		verbose && println("\n--> Compute point on bifurcated branch...")
 # 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; jacobianPO = jacobianPO, kwargs...)
 # 		@assert flag "Deflated newton did not converge"

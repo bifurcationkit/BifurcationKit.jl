@@ -285,7 +285,7 @@ $(TYPEDEF)
 
 This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous coonverged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
-function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, dot, 1.0, Vector{vectype}(), _copy(x0)), linsolver = DeflatedLinearSolver(); kwargs...) where {T, vectype, L, E}
+function newton(F, J, x0::vectype, x1::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator = DeflationOperator(2, dot, 1.0, Vector{vectype}(), _copy(x0), true), linsolver = DeflatedLinearSolver(); kwargs...) where {T, vectype, L, E}
 	res0 = newton(F, J, x0, p0, options; kwargs...)
 	@assert res0[3] "Newton did not converge to the trivial solution x0."
 	push!(defOp, res0[1])

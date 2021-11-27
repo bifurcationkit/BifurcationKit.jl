@@ -213,7 +213,7 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
 	normn = get(kwargs, :normN, norm)
 
 	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
-	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 	for (ind, xsol) in pairs(rootsNFp)
 		# print("\n--> attempt to converge zero #$ind")
 		solbif, _, flag, _ = newton(F, dF, perturbGuess(bpnf(xsol, ds)), setParam(br, bpnf.p + ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpp, lsdefop; callback = cbnewton, normN = normn)
@@ -221,7 +221,7 @@ function getFirstPointsOnBranch(F, dF, br::AbstractBranchResult,
 	end
 
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
-	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0))
+	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 	for (ind, xsol) in pairs(rootsNFm)
 		# print("\n--> attempt to converge zero #$ind")
 		solbif, _, flag, _ = newton(F, dF, perturbGuess(bpnf(xsol, ds)), setParam(br, bpnf.p - ds), setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation), defOpm, lsdefop; callback = cbnewton, normN = normn)

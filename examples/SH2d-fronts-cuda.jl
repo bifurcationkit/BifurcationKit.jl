@@ -12,7 +12,7 @@ AF = Array{TY}
 # 	using Plots
 # 	using SixelTerm
 # else
-# 	using GR
+# 	using Plots
 # 	GR.inline("iterm")
 # end
 ####################################################################################################

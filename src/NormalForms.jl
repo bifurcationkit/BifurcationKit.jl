@@ -579,7 +579,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 
 	# find zeros for the normal on each side of the bifurcation point
 	function getRootsNf(_ds)
-		deflationOp = DeflationOperator(2, 1.0, [zeros(n)])
+		deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
 		failures = 0
 		# we allow for 10 failures of nonlinear deflation
 		outdef1 = rand(n)

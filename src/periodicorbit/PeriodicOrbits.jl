@@ -391,9 +391,9 @@ function continuation(F, dF, d2F, d3F, br::AbstractBranchResult, ind_bif::Int, _
 
 		# find the bifurcated branch using deflation
 		if ~(probPO isa PoincareShootingProblem)
-			deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+			deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0]; autodiff = true)
 		else
-			deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, 1.0, [sol0])
+			deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, 1.0, [sol0]; autodiff = true)
 		end
 
 		verbose && println("\n--> Compute point on bifurcated branch...")
@@ -515,7 +515,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 
 		# find the bifurcated branch using deflation
 		@assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method of ShootingProblem"
-		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0])
+		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0]; autodiff = true)
 		verbose && println("\n--> Compute point on bifurcated branch...")
 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp),
 			(@set optn.maxIter = 10 * optn.maxIter),
