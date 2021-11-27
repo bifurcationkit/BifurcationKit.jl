@@ -218,7 +218,7 @@ plot(res..., br ;plotfold= false)
 
 
 δp = 0.005
-	deflationOp = DeflationOperator(2, dot, 1.0, [zeros(2)])
+	deflationOp = DeflationOperator(2, 1.0, [zeros(2)])
 		success = [0]
 while sum(success) < 10
 	outdef1, _, flag, _ = newton((x, p) -> bp2d(Val(:reducedForm), x, p[1]), rand(2), [δp], NewtonPar(maxIter = 50), deflationOp)
@@ -308,7 +308,7 @@ plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)
 brdef2, _ = @time BK.continuation(
 	Fmit, JFmit, (@set par_mit.λ = 0.367), (@lens _.λ),
 	ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
-	DeflationOperator(2.0, dot, 1., ([sol0]));
+	DeflationOperator(2, 1., ([sol0]));
 	plot=true, verbosity = 2,
 	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),
 	recordFromSolution = (x, p) ->  normbratu(x),

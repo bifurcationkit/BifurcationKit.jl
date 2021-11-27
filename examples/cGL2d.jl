@@ -169,7 +169,7 @@ poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 
 
 plot();BK.plotPeriodicPOTrap(orbitguess_f, M, Nx, Ny; ratio = 2);title!("")
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [zero(orbitguess_f)])
 
 ####################################################################################################
 # circulant pre-conditioner
@@ -461,7 +461,7 @@ plot(outfoldco, label="", xlabel="c5", ylabel="r")
 
 ####################################################################################################
 # Continuation of periodic orbits on the GPU
-using CUDA
+using CUDA, Test
 CUDA.allowscalar(false)
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
@@ -493,9 +493,7 @@ function LinearAlgebra.ldiv!(_lu::LUperso, rhs::CuArray)
 	rhs
 end
 
-import BifurcationKit: extractPeriodFDTrap
-extractPeriodFDTrap(x::CuArray) = x[end:end]
-
+# test if we can run Fcgl on GPU
 sol0_f = vec(sol0)
 	sol0gpu = CuArray(sol0_f)
 	_dxh = rand(length(sol0_f))
@@ -503,11 +501,11 @@ sol0_f = vec(sol0)
 
 	outh = Fcgl(sol0_f, par_cgl);
 	outd = Fcgl(sol0gpu, par_cgl_gpu);
-	@assert norm(outh-Array(outd), Inf) < 1e-12
+	@test norm(outh-Array(outd), Inf) < 1e-12
 
 	outh = dFcgl(sol0_f, par_cgl, _dxh);
 	outd = dFcgl(sol0gpu, par_cgl_gpu, _dxd);
-	@assert norm(outh-Array(outd), Inf) < 1e-12
+	@test norm(outh-Array(outd), Inf) < 1e-12
 
 
 orbitguess_cu = CuArray(orbitguess_f)
@@ -548,7 +546,7 @@ sol_0 = ldiv!(Precilu_gpu, copy(CuArray(rhs)));
 # matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
 poTrapMFGPU = PeriodicOrbitTrapProblem(
-	Fcgl, dFcgl,
+	Fcgl, (x,p) -> (dx -> dFcgl(x,p,dx)),
 	CuArray(real.(vec_hopf)),
 	CuArray(hopfpt.u),
 	M, 2n, ls0gpu; ongpu = true)
@@ -563,11 +561,11 @@ lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
 	Jpo_gpu = CUDA.CUSPARSE.CuSparseMatrixCSR(Jpo);
 	outd, = @time lsgpu(Jpo_gpu, orbitguess_cu)
 
-@assert norm(outh-Array(outd), Inf) < 1e-12
+@test norm(outh-Array(outd), Inf) < 1e-12
 
 
 outh = @time pb(orbitguess_f);
-	outd = @time pbgpu(orbitguess_cu);
+	outd = @time poTrapMFGPU(orbitguess_cu);
 	norm(outh-Array(outd), Inf)
 
 _dxh = rand(length(orbitguess_f));
@@ -578,9 +576,8 @@ _dxh = rand(length(orbitguess_f));
 
 
 outpo_f, hist, flag = @time newton(
-		poTrapMF(@set par_cgl.r = r_hopf - 0.01),
-		orbitguess_f,
-		(@set opt_po.linsolver = ls), :FullMatrixFree;
+		poTrapMF, orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
+		(@set opt_po.linsolver = ls); jacobianPO = :FullMatrixFree,
 		normN = x -> maximum(abs.(x)),
 		# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", amplitude(x));true)
 		) #14s
@@ -589,9 +586,9 @@ flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", ampl
 
 opt_po = @set opt_newton.verbose = true
 	outpo_f, hist, flag = @time newton(
-			poTrapMFGPU(@set par_cgl_gpu.r = r_hopf - 0.01),
-			orbitguess_cu,
-			(@set opt_po.linsolver = lsgpu), :FullMatrixFree;
+			poTrapMFGPU,
+			orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01),
+			(@set opt_po.linsolver = lsgpu); jacobianPO = :FullMatrixFree,
 			normN = x -> maximum(abs.(x)),
 			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M));true)
 			) #7s
@@ -599,9 +596,10 @@ opt_po = @set opt_newton.verbose = true
 
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.2, maxSteps = 35, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
-	br_pok2, upo , _= @time BK.continuationPOTrap(
-		p -> poTrapMFGPU(@set par_cgl_gpu.r = p),
-		orbitguess_cu, r_hopf - 0.01,
-		opts_po_cont, :FullMatrixFree;
+	br_pok2, upo , _= @time BK.continuation(
+		poTrapMFGPU,
+		orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r),
+		opts_po_cont; jacobianPO = :FullMatrixFree,
 		verbosity = 2,
-		recordFromSolution = (u,p) -> BK.amplitude(u, Nx*Ny, M), normC = x -> maximum(abs.(x)))
+		recordFromSolution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])), 
+		normC = x -> maximum(abs.(x)))

@@ -46,11 +46,24 @@ sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.1), Float32(1.))
 ####################################################################################################
 # test of  deflated problems
 _T = Float32
-F4def = (x,p) -> @. (x-1) * (x-2)
-J4def = (x,p) -> BK.finiteDifferences(z->F4def(z,p), x)
+F4def = (x, p) -> @. (x-1) * (x-2)
+J4def = (x, p) -> BK.finiteDifferences(z->F4def(z,p), x)
 deflationOp = DeflationOperator(_T(2), dot, _T(1), [[_T(1)]])
+@test firstindex(deflationOp) == 1
+@test lastindex(deflationOp) == 1
 @test eltype(deflationOp) == _T
 @test deflationOp(rand(_T,1)) isa _T
 defpb = DeflatedProblem(F4def, J4def, deflationOp)
 @test defpb(rand(_T, 1), nothing) |> eltype == _T
 @test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T
+
+push!(deflationOp, rand(_T,1))
+@test deflationOp(zeros(_T, 1)) isa _T
+@test deflationOp(rand(_T, 1), rand(_T, 1)) isa _T
+copy(deflationOp)
+
+#  test custom distance
+deflationOp2 = DeflationOperator(_T(2), BifurcationKit.CustomDist((u,v)->norm(u-v)), _T(1), deflationOp.roots)
+@test deflationOp2(zeros(_T, 1)) isa _T
+length(deflationOp2)
+deflationOp2(rand(_T, 1), rand(_T, 1))

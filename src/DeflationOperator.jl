@@ -1,15 +1,40 @@
+abstract type abstractDeflationFactor end
+
+struct CustomDist{T}
+	dist::T
+end
+@inline (cd::CustomDist)(u, v) = cd.dist(u, v)
+
 """
 $(TYPEDEF)
 
-It is used to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can use `DeflationOperator` to define a function `M(u)` used to find, with Newton iterations, the zeros of the following function
-``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u,u)``. The fields of the struct `DeflationOperator` are as follows:
+This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots ; the algorithm works very well despite its simplicity. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
+``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
 $(TYPEDFIELDS)
 
-Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
+Given `defOp::DeflationOperator`, one can access its roots as `defOp[n]` as a shortcut for `defOp.roots[n]`. Note that you can also use `defOp[end]`.
+
+Also, one can add (resp.remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
+
+## Constructors
+
+- `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}; autodiff = false)`
+- `DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false)`
+- `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype; autodiff = false)`
+
+The option `autodiff` triggers the use of automatic differentiation for the computation of the gradient of the scalar function `M`. This works only on `AbstractVector` for now.
+
+## Custom distance
+
+You are asked to pass a scalar product like `dot` to build a `DeflationOperator`. However, in some cases, you may want to pass a custom distance `dist(u,v)`. You can do this using
+
+	`DeflationOperator(p, CustomDist(dist), α, roots)`
+
+Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 """
-struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype}
-	"power `p`. You can use an  `Int` for example"
+struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: abstractDeflationFactor
+	"power `p`. You can use an `Int` for example"
 	power::Tp
 
 	"function, this function has to be bilinear and symmetric for the linear solver to work well"
@@ -23,12 +48,15 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype}
 
 	# internal, to reduce allocations during computation
 	tmp::vectype
+
+	# internal, to reduce allocations during computation
+	autodiff::Bool
 end
 
 # constructors
-DeflationOperator(p::Real, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dot, α, roots, _copy(roots[1]))
-DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]))
-DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype) where vectype = DeflationOperator(p, dot, α, roots, v)
+DeflationOperator(p::Real, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dot, α, roots, _copy(roots[1]), autodiff)
+DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff)
+DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype; autodiff = false) where vectype = DeflationOperator(p, dot, α, roots, v, autodiff)
 
 # methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
@@ -40,16 +68,23 @@ Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
 Base.firstindex(df::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
-Base.show(io::IO, df::DeflationOperator) = println(io, "Deflation operator with ", length(df.roots)," roots")
+Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff)
 
-# Compute M(u),
+function Base.show(io::IO, df::DeflationOperator)
+	println(io, "┌─ Deflation operator with ", length(df.roots)," root(s)")
+	println(io, "├─ power    = ", df.power)
+	println(io, "├─ α        = ", df.α)
+	println(io, "├─ dist     = ", df.dot)
+	println(io, "└─ autodiff = ", df.autodiff)
+end
+
+# Compute M(u)
+# optimised version which does not allocate much
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot, T, vectype}
-	if length(df.roots) == 0
-		return T(1)
-	end
-	M = u -> T(1) / df.dot(u, u)^df.power + df.α
+	length(df.roots) == 0 && return T(1)
+	M(u) = T(1) / df.dot(u, u)^df.power + df.α
 	# compute u - df.roots[1]
-	copyto!(tmp, u);	axpy!(T(-1), df.roots[1], tmp)
+	copyto!(tmp, u); axpy!(T(-1), df.roots[1], tmp)
 	out = M(tmp)
 	for ii in 2:length(df.roots)
 		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
@@ -62,16 +97,28 @@ end
 (df::DeflationOperator{Tp, Tdot, T, vectype})(u::vectype) where {Tp, Tdot, T, vectype} = df(Val(:inplace), u, df.tmp)
 (df::DeflationOperator{Tp, Tdot, T, vectype})(u) where {Tp, Tdot, T, vectype} = df(Val(:inplace), u, similar(u))
 
-# Compute dM(u)⋅du. We use a tmp for storing
-function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
-	if length(df) == 0
-		return T(0)
+# version when a custom distance is passed
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot <: CustomDist, T, vectype}
+	length(df.roots) == 0 && return T(1)
+	M(u, v) = T(1) / df.dot(u, v)^df.power + df.α
+	out = M(u, df.roots[1])
+	for ii in 2:length(df.roots)
+		out *= M(u, df.roots[ii])
 	end
-	δ = T(1e-8)
-	copyto!(tmp, u); axpy!(δ, du, tmp)
-	return (df(tmp) - df(u)) / δ
+	return out
 end
 
+# Compute dM(u)⋅du. We use a tmp for storing
+function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
+	length(df) == 0 && return T(0)
+	if df.autodiff
+		return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
+	else
+		δ = T(1e-8)
+		copyto!(tmp, u); axpy!(δ, du, tmp)
+		return (df(tmp) - df(u)) / δ
+	end
+end
 (df::DeflationOperator)(u, du) = df(Val(:dMwithTmp), similar(u), u, du)
 
 """
@@ -214,7 +261,7 @@ function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::Defla
 	# change the linear solver
 	opt_def = @set options.linsolver = linsolver
 
-	return newton(deflatedPb, (x,p) -> (dx -> deflatedPb(x,p,dx)), x0, p0, opt_def; kwargs...)
+	return newton(deflatedPb, (x, p) -> (dx -> deflatedPb(x, p, dx)), x0, p0, opt_def; kwargs...)
 end
 
 function newton(F, J, x0::vectype, p0, options::NewtonPar{T, L, E}, defOp::DeflationOperator{Tp, Tdot, T, vectype}, ::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}

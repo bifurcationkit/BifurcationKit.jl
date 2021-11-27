@@ -139,7 +139,12 @@ plotsol(sol_hexa)
 # 	return res, true, info.numops
 # end
 ####################################################################################################
-	deflationOp = DeflationOperator(2, dot, 1.0, [sol_hexa])
+# computation of normal form
+# we collect the matrix-free derivatives
+jet = BK.getJet(F_shfft)
+nf = computeNormalForm(jet..., br, 2)
+####################################################################################################
+deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
 
 opt_new = @set opt_new.maxIter = 250
 outdef, _, flag, _ = @time newton(F_shfft, J_shfft,

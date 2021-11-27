@@ -58,7 +58,7 @@ plot(br)
 
 ####################################################################################################
 # Example with deflation technics
-deflationOp = DeflationOperator(2, dot, 1.0, empty([out]), copy(out))
+deflationOp = DeflationOperator(2, 1.0, empty([out]), copy(out))
 par_def = @set par_car.ϵ = 0.6
 
 optdef = setproperties(optnew; tol = 1e-7, maxIter = 200)

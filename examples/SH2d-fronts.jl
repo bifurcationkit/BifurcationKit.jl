@@ -200,7 +200,7 @@ plot(diagram; code = (), legend = false, plotfold = false)
 # BK.add!(diagram, br2, 2)
 
 ###################################################################################################
-deflationOp = DeflationOperator(2.0, dot, 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
 optcontdf = @set optcont.newtonOptions.verbose = true
 brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
 	deflationOp;

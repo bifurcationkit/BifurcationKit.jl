@@ -47,7 +47,7 @@ optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev =
 		)
 ###################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
+deflationOp = DeflationOperator(2, 1.0, [out])
 
 optdef = setproperties(optnewton; tol = 1e-10, maxIter = 1000)
 

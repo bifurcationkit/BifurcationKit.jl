@@ -150,7 +150,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 	@assert length(defOp) > 0 "You must provide at least one guess"
 
 	# we make a copy of the deflation operator
-	deflationOp = DeflationOperator(defOp.power, defOp.dot, defOp.α, deepcopy(defOp.roots))
+	deflationOp = copy(defOp)
 
 	verbosity > 0 && printstyled(color=:magenta, "#"^51*"\n")
 	verbosity > 0 && printstyled(color=:magenta, "--> There are $(length(deflationOp)) branches\n")
@@ -202,7 +202,7 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 			# it also updates deflationOp
 			flag, itnewton = updatebranch!(iter, state, branches[idb], deflationOp;
 					current_param = current_param, step = nstep)
-			(verbosity>=2 && isActive(state)) && println("----> Continuation for branch $idb in $itnewton iterations")
+			(verbosity>=2 && isActive(state)) && println("----> Continuation of branch $idb in $itnewton iterations")
 			verbosity>=1 && ~flag && itnewton>0 && printstyled(color=:red, "--> Fold for branch $idb ?\n")
 		end
 
