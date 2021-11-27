@@ -41,7 +41,7 @@ function computeEigenvalues!(iter::ContIterable, state::ContState; saveEigenVec 
 	if isnothing(state.eigvals) == false
 		state.eigvals = eiginfo[1]
 	end
-	if saveEigenVec && iter.contParams.saveEigenvectors
+	if saveEigenVec && saveEigenvectors(iter)
 		state.eigvecs = eiginfo[2]
 	end
 	# iteration number in eigen-solver

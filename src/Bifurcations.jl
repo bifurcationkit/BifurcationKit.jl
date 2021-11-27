@@ -275,7 +275,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		copyto!(_state.tau, state.tau)
 
 		_state.eigvals = state.eigvals
-		if contParams.saveEigenvectors
+		if saveEigenvectors(contParams)
 			_state.eigvecs = state.eigvecs
 		end
 

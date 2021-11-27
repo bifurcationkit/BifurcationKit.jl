@@ -75,6 +75,7 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 
 @inline isEventActive(it::ContIterable) = !isnothing(it.event) && it.contParams.detectEvent > 0
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (isEventActive(it) && computeEigenElements(it.event))
+@inline saveEigenvectors(it::ContIterable) = saveEigenvectors(it.contParams)
 
 @inline getParams(it::ContIterable) = it.contParams
 Base.length(it::ContIterable) = it.contParams.maxSteps
@@ -287,7 +288,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
 		eigvals, eigvecs, = computeEigenvalues(it, u0, it.par, it.contParams.nev)
-		if ~it.contParams.saveEigenvectors
+		if ~saveEigenvectors(it)
 			eigvecs = nothing
 		end
 	else

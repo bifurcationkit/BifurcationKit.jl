@@ -178,7 +178,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		if computeEigenElements(iter.event)
 			# save eigen-elements
 			_state.eigvals = state.eigvals
-			if contParams.saveEigenvectors
+			if saveEigenvectors(contParams)
 				_state.eigvecs = state.eigvecs
 			end
 			# to prevent spurious event detection, update the following numbers carefully

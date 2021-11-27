@@ -16,8 +16,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
-- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
-- `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
+- `saveEigEveryStep = 1` record eigen vectors every specified steps. Set to zero to prevent from saving the eigenvectors. **Important** for memory limited resource, *e.g.* GPU.
 
 ## Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
@@ -80,7 +79,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	# parameters for eigenvalues
 	nev::Int64 = 3 							# number of eigenvalues
 	saveEigEveryStep::Int64 = 1				# what steps do we keep the eigenvectors
-	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
 	plotEveryStep::Int64 = 10
 
@@ -109,4 +107,4 @@ end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
 @inline computeEigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
-@inline computeEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * cp.saveEigenvectors
+@inline saveEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * (cp.saveEigEveryStep > 0)

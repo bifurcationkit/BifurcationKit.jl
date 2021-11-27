@@ -175,7 +175,7 @@ Function is used to initialize the composite type `ContResult` according to the 
 	n_unstable = 0; n_imag = 0; stability = true
 
 	if computeEigElements
-		evvectors = contParams.saveEigenvectors ? eiginfo[2] : nothing
+		evvectors = saveEigenvectors(contParams) ? eiginfo[2] : nothing
 		_evvectors = (eigenvals = eiginfo[1], eigenvec = evvectors, step = 0)
 	else
 		_evvectors = (eigenvals = nothing, eigenvec = nothing, step = 0)
