@@ -46,15 +46,15 @@ Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 
 # this function only mutates z_pred
 # the nrm argument allows to just increment z_pred.p by ds
-function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
-	# we perform z_pred = z_old + ds * tau
+function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
+	# we perform z_pred = z_old + ds * τ
 	copyto!(z_pred, z_old) # z_pred .= z_old
-	nrm ? axpy!(ds / tau.p, tau, z_pred) : axpy!(ds, tau, z_pred)
+	nrm ? axpy!(ds / τ.p, τ, z_pred) : axpy!(ds, τ, z_pred)
 end
 
 # generic corrector based on Bordered formulation
 function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			algo::Talgo, linearalgo = MatrixFreeBLS();
+			pred::Talgo, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	if z_pred.p <= it.contParams.pMin || z_pred.p >= it.contParams.pMax
@@ -70,7 +70,7 @@ end
 """
 struct NaturalPred <: AbstractTangentPredictor end
 
-function getPredictor!(z_pred::M, z_old::M, τ::M, ds, algo::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do z_pred .= z_old
 	copyto!(z_pred, z_old) # z_pred .= z_old
 	z_pred.p += ds
@@ -78,14 +78,14 @@ end
 
 # corrector based on natural formulation
 function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			algo::NaturalPred, linearalgo = MatrixFreeBLS();
+			pred::NaturalPred, linearalgo = MatrixFreeBLS();
 			normC = norm, callback = cbDefault, kwargs...) where
 			{T, vectype, M <: BorderedArray{vectype, T}}
 	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPredp(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
 	return BorderedArray(res[1], z_pred.p), res[2:end]...
 end
 
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: ", algo)
 	# we do nothing here, the predictor will just copy z_old into z_pred
 end
@@ -97,12 +97,12 @@ struct SecantPred <: AbstractSecantPredictor end
 
 # tangent computation using Secant predictor
 # tau is the tangent prediction
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: ", algo)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(τ, z_new)
 	minus!(τ, z_old)
-	α = algo isa SecantPred ? sign(ds) / it.dottheta(τ, θ) : sign(ds) / abs(τ.p)
+	α = sign(ds) / it.dottheta(τ, θ)
 	rmul!(τ, α)
 end
 ####################################################################################################
@@ -113,7 +113,7 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
 # tau is the tangent prediction
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: Bordered")
 	# tangent predictor
 	ϵ = it.contParams.finDiffEps
@@ -191,37 +191,37 @@ function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwarg
 	return true
 end
 
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, algo::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	# compute tangent and store it
 	(verbosity > 0) && print("Predictor: MultiplePred\n--")
-	getTangent!(τ, z_new, z_old, it, ds, θ, algo.tangentalgo, verbosity)
+	getTangent!(τ, z_new, z_old, it, ds, θ, pred.tangentalgo, verbosity)
 	# record the tangent for later use
-	copyto!(algo.τ, τ)
+	copyto!(pred.τ, τ)
 end
 
-function getPredictor!(z_pred::M, z_old::M, τ::M, ds, algo::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do nothing!
 	# empty!(algo)
 	return nothing
 end
 
 function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
-		algo::MultiplePred, linearalgo = MatrixFreeBLS(); normC = norm,
+		mpred::MultiplePred, linearalgo = MatrixFreeBLS(); normC = norm,
 		callback = cbDefault, kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}}
 	verbose = it.verbosity
 	(verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─MultiplePred tangent predictor\n")
 	# we combine the callbacks for the newton iterations
-	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & algo(x, f, J, res, iteration, itlinear, options; k...)
+	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & mpred(x, f, J, res, iteration, itlinear, options; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
-	for ii in algo.nb:-1:1
+	for ii in mpred.nb:-1:1
 		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
 		# record the current index
-		algo.currentind = ii
+		mpred.currentind = ii
 		zpred = _copy(z_pred)
-		axpy!(ii * ds, algo.τ, zpred)
+		axpy!(ii * ds, mpred.τ, zpred)
 		# we restore the original callback if it reaches the usual case ii == 0
 		zold, res, flag, itnewton, itlinear = corrector(it, z_old, tau, zpred, ds, θ,
-				algo.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
+				mpred.tangentalgo, linearalgo; normC = normC, callback = cb, kwargs...)
 		if verbose > 1
 			if flag
 				printstyled("YES", color=:green)
@@ -417,7 +417,7 @@ function arcLengthScaling(θ, contparams, tau::M, verbosity) where {M <: Bordere
 	return thetanew
 end
 ####################################################################################################
-function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, algo::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
+function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, pred::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
 			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
