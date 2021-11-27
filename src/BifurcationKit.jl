@@ -51,6 +51,7 @@ module BifurcationKit
 	# include("periodicorbit/PeriodicOrbitFDAdapt.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
+	include("periodicorbit/FlowDE.jl")
 	include("periodicorbit/StandardShooting.jl")
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/ShootingDE.jl")
