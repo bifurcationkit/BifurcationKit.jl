@@ -31,7 +31,7 @@ br0, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocat
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.computeEigenvalues(opts)
-BK.computeEigenvectors(opts)
+BK.saveEigenvectors(opts)
 BK.from(br0)
 br0[1]
 br0[end]
