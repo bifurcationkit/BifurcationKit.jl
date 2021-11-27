@@ -83,7 +83,6 @@ function continuation(F, J,
 		_options_cont = options_cont
 	end
 
-
 	if br.specialpoint[ind_bif].type == :hopf
 		# redefine the multilinear form to accept complex arguments
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)

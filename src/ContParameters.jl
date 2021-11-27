@@ -1,4 +1,4 @@
-"""
+	"""
 	options = ContinuationPar(dsmin = 1e-4,...)
 
 Returns a variable containing parameters to affect the `continuation` algorithm used to solve `F(x,p) = 0`.
@@ -16,7 +16,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
-- `saveEigEveryStep = 1` record eigen vectors every specified steps. Set to zero to prevent from saving the eigenvectors. **Important** for memory limited resource, *e.g.* GPU.
+- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
+- `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
 
 ## Handling bifurcation detection
 - `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
@@ -79,6 +80,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	# parameters for eigenvalues
 	nev::Int64 = 3 							# number of eigenvalues
 	saveEigEveryStep::Int64 = 1				# what steps do we keep the eigenvectors
+	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
 
 	plotEveryStep::Int64 = 10
 
@@ -103,8 +105,9 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	detectLoop::Bool = false				# detect if the branch loops
 	@assert 0 <= theta <=1 "theta must belong to [0, 1]"
 	@assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
+	@assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
 @inline computeEigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
-@inline saveEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * (cp.saveEigEveryStep > 0)
+@inline saveEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * (cp.saveEigenvectors)
