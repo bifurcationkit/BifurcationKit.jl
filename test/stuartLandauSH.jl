@@ -269,7 +269,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500,
 @set! opts_po_cont.newtonOptions.linsolver = ls
 
 for M in [1,2], jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
-	@info M, jacobianPO
+	@info M, jacobianPO, "PS"
 	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO, verbosity = 0)
 
 	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005),

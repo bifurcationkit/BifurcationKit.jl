@@ -1,5 +1,6 @@
-# using Revise, Plots, Test
-using OrdinaryDiffEq, ForwardDiff
+# using Revise, Test
+# using Plots
+using BifurcationKit, OrdinaryDiffEq, ForwardDiff
 	# using Zygote, DiffEqSensitivity
 	using LinearAlgebra, Parameters
 
