@@ -87,25 +87,25 @@ We provide a simple constructor where you only pass the vector field `F`, the fl
 
 These are some simple constructors for which you only have to pass a `prob::ODEProblem` or `prob::EnsembleProblem` (for parallel computation) from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 
-	fl = Flow(F, prob, Tsit5(); kwargs...)
+	fl = Flow(prob, Tsit5(); kwargs...)
 
 where `kwargs` is passed to `DiffEqBase::solve`. If your vector field depends on parameters `p`, you can define a `Flow` using
 
-	fl = Flow(F, p, prob, Tsit5(); kwargs...)
+	fl = Flow(prob, Tsit5(); kwargs...)
 
 Finally, you can pass two `ODEProblem` where the second one is used to compute the variational equation:
 
-	fl = Flow(F, p, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
+	fl = Flow(prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
 @with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs, Tcb}
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
 	F::TF = nothing
 
-	"The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. Only the last time point must be returned in the form (u = ...)"
+	"The flow (or semigroup) `(x, p, t) -> flow(x, p, t)` associated to the Cauchy problem. Only the last time point must be returned in the form (u = ...)"
 	flow::Tf = nothing
 
-	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side. Please use `nothing` as default."
+	"Flow which returns the tuple (t, u(t)). Optional, mainly used for plotting on the user side."
 	flowTimeSol::Tts = nothing
 
 	"[Optional] The flow (or semigroup) associated to the Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. Please use `nothing` as default."
@@ -140,7 +140,6 @@ Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
 (fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
 (fl::Flow)(::Val{:SerialTimeSol}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
 (fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfSerial(x, p, dx, t; k...)
-
 
 function getVectorField(prob::Union{ODEProblem, DAEProblem})
 	if isinplace(prob)

@@ -113,7 +113,7 @@ using DifferentialEquations#, TaylorIntegration
 # this is the ODEProblem used with `DiffEqBase.solve`
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.09, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-6), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.09, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = NewtonPar(optn_po; tol = 1e-6, maxIter = 7), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=1)
 
 br_posh, = @time continuation(
 	jet..., br, 4,

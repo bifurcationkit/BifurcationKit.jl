@@ -69,48 +69,6 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 end
 
-#####################################
-# this constructor takes into accound a parameter passed to the vector field
-# if M = 1, we disable parallel processing
-function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, kwargs...)
-	_M = length(ds)
-	parallel = _M == 1 ? false : parallel
-	_pb = parallel ? EnsembleProblem(prob) : prob
-	return ShootingProblem(M = _M, flow = Flow(_pb, alg; kwargs...),
-			ds = ds, section = section, parallel = parallel)
-end
-
-ShootingProblem(prob::ODEType, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
-
-function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, kwargs...)
-	F = getVectorField(prob)
-	p = prob.p # parameters
-	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
-end
-
-# this is the "simplest" constructor to use in automatic branching from Hopf
-ShootingProblem(M::Int, prob::ODEType, alg; parallel = false, kwargs...) = ShootingProblem(prob, alg, M, nothing; parallel = parallel, kwargs...)
-
-ShootingProblem(M::Int, prob1::ODEType, alg1, prob2::ODEType, alg2; parallel = false, kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, M, nothing; parallel = parallel, kwargs...)
-
-# idem but with an ODEproblem to define the derivative of the flow
-function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, kwargs...)
-	_M = length(ds)
-	parallel = _M == 1 ? false : parallel
-	_pb1 = parallel ? EnsembleProblem(prob1) : prob1
-	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
-	ShootingProblem(M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargs...), ds = ds, section = section, parallel = parallel)
-end
-
-ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
-
-function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; parallel = false, kwargs...)
-	F = getVectorField(prob1)
-	p = prob1.p # parameters
-	ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
-end
-
-#####################################
 @inline isSimple(sh::ShootingProblem) = getMeshSize(sh) == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 
@@ -205,7 +163,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 	# Sundials does not like @views :(
 	dT = getPeriod(sh, dx)
 	T  = getPeriod(sh, x)
-	M = getMeshSize(sh)
+	M  = getMeshSize(sh)
 
 	xc = getTimeSlices(sh, x)
 	dxc = getTimeSlices(sh, dx)
@@ -240,7 +198,7 @@ end
 function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = 1e-9)
 	dT = getPeriod(sh, dx)
 	T  = getPeriod(sh, x)
-	M = getMeshSize(sh)
+	M  = getMeshSize(sh)
 
 	# variable to hold the computed result
 	out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))

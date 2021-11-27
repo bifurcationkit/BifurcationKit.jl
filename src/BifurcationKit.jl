@@ -53,6 +53,7 @@ module BifurcationKit
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/StandardShooting.jl")
 	include("periodicorbit/PoincareShooting.jl")
+	include("periodicorbit/ShootingDE.jl")
 	include("periodicorbit/Floquet.jl")
 
 	include("wave/WaveProblem.jl")
