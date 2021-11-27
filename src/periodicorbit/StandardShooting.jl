@@ -29,14 +29,14 @@ end
 
 Create a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
-- `ds`: vector of time differences for each shooting. Its length is written `M`. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
+- `ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
-- `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically  set up for you).
+- `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you).
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
+- `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
 - `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 

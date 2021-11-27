@@ -85,7 +85,7 @@ We provide a simple constructor where you only pass the vector field `F`, the fl
 
 # Simplified constructors for DifferentialEquations.jl
 
-There are some simple constructors for which you only have to pass a `prob::ODEProblem` or `prob::EnsembleProblem` (for parallel computation) from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
+These are some simple constructors for which you only have to pass a `prob::ODEProblem` or `prob::EnsembleProblem` (for parallel computation) from `DifferentialEquations.jl` and an ODE time stepper like `Tsit5()`. Hence, you can do for example
 
 	fl = Flow(F, prob, Tsit5(); kwargs...)
 
