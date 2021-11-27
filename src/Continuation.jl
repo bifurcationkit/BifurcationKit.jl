@@ -81,7 +81,8 @@ setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tpl
 Base.length(it::ContIterable) = it.contParams.maxSteps
 @inline isInDomain(it::ContIterable, p) = it.contParams.pMin < p < it.contParams.pMax
 @inline isOnBoundary(it::ContIterable, p) = (it.contParams.pMin == p) || (p == it.contParams.pMax)
-
+# clamp p value
+clampPredp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
 ####################################################################################################
 """
 	state = ContState(ds = 1e-4,...)

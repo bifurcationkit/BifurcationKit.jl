@@ -111,3 +111,6 @@ end
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
 @inline computeEigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
 @inline saveEigenvectors(cp::ContinuationPar) = computeEigenvalues(cp) * (cp.saveEigenvectors)
+
+# clamp ds value
+clampDs(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)

@@ -44,12 +44,6 @@ getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, 
 # reset the predictor
 Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 
-# clamp p value
-clampPredp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contParams.pMin, it.contParams.pMax)
-
-# clamp ds value
-clampDs(dsnew, contparams::ContinuationPar) = sign(dsnew) * clamp(abs(dsnew), contparams.dsmin, contparams.dsmax)
-
 # this function only mutates z_pred
 # the nrm argument allows to just increment z_pred.p by ds
 function getPredictor!(z_pred::M, z_old::M, tau::M, ds, algo::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
