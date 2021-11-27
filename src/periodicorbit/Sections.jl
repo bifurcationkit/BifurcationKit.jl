@@ -29,6 +29,11 @@ end
 
 (sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
 
+# matrix-free jacobian
+function (sect::SectionSS)(u, T::Ty, du, dT::Ty) where Ty
+	return sect(u, one(Ty)) * dT + dot(du, sect.normal) * T
+end
+
 isEmpty(sect::SectionSS{Tn, Tc}) where {Tn, Tc} = (Tn == Nothing) || (Tn == Nothing)
 
 # we update the field of Section, useful during continuation procedure for updating the section

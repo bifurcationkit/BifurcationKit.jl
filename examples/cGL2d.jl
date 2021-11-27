@@ -477,7 +477,6 @@ struct LUperso{Tl, Tu}
 	Ut::Tu	# transpose of U in LU decomposition
 end
 
-import Base: ldiv!
 # https://github.com/JuliaDiffEq/DiffEqBase.jl/blob/master/src/init.jl#L146-L150
 function LinearAlgebra.ldiv!(_lu::LUperso, rhs::Array)
 	@show "bla"
@@ -552,13 +551,10 @@ poTrapMFGPU = PeriodicOrbitTrapProblem(
 	Fcgl, dFcgl,
 	CuArray(real.(vec_hopf)),
 	CuArray(hopfpt.u),
-	M, 2n, ls0gpu)
+	M, 2n, ls0gpu; ongpu = true)
 
-pb = poTrapMF(@set par_cgl.r = r_hopf - 0.1);
-pbgpu = poTrapMFGPU(@set par_cgl_gpu.r = r_hopf - 0.1);
-
-pbgpu(orbitguess_cu);
-pbgpu(orbitguess_cu, orbitguess_cu);
+poTrapMFGPU(orbitguess_cu, @set par_cgl_gpu.r = r_hopf - 0.1);
+poTrapMFGPU(orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.1), orbitguess_cu);
 
 ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
 	outh, = @time ls((Jpo), orbitguess_f) #0.4s
