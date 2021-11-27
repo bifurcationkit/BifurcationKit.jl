@@ -172,7 +172,7 @@ probPsh(outpo, par_hopf)
 probPsh(outpo, par_hopf, outpo)
 probPsh([0.30429879744900434], par_hopf)
 probPsh([0.30429879744900434], (r = 0.09243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0))
-probPsh.flow([0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
+BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 30, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
 	# br_pok2, = continuation(

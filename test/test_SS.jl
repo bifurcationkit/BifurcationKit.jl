@@ -8,8 +8,8 @@ M = 5
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)
 vf(x, p) = x
-flow(x, p, t) = exp(t) .* x
-dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = exp(t) .* dx)
+flow(x, p, t) = (u=exp(t) .* x, t=t)
+dflow(x, p, dx, t) = (flow(x, p, t)..., du = exp(t) .* dx)
 section(x, T) = dot(x[1:N], ones(N))
 section(x, T, dx, dT) = dot(dx[1:N], ones(N)) * T
 section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
@@ -50,8 +50,8 @@ dres = probSh(po, par, dpo; δ = δ)
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using nonLinear flow
 vf(x, p) = x.^2
-flow(x, p, t) = x ./ (1 .- t .* x)
-dflow(x, p, dx, t) = (t = t, u = flow(x, p, t), du = dx ./ (1 .- t .* x).^2)
+flow(x, p, t) = (u=x ./ (1 .- t .* x),t=t)
+dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 
 fl = BK.Flow(vf, flow, dflow)
 
@@ -124,7 +124,7 @@ _out2 = BK.dE(hyper, dx, 1)
 vf(x, p) = [x[1]*(1-x[1]), 1.]
 flow(x, p, t; k...) = (t = t, u = [exp(t) .* x[1] / (1-x[1]+x[1]*exp(t)),x[2]+t])
 Π2(x, p, t = 0) = (t = 2pi -x[2], u = flow(x, p, 2pi-x[2]).u)
-Π(x, p, t = 0) = flow(x, p, 2pi-x[2]).u	# return map
+Π(x, p, t = 0) = flow(x, p, 2pi-x[2])	# return map
 dflow(x, p, dx, t; k...) = (t = t, u = flow(x, p, t).u, du = ForwardDiff.derivative( z -> flow(x .+ z .* dx, p, t).u, 0),)
 section(x, T) = dot(x[1:2], [1, 0])
 # section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
@@ -153,7 +153,7 @@ probPSh(ci, par, dci)
 z0 = rand(2)
 dz0 = rand(2)
 _out0 = BK.diffPoincareMap(probPSh, z0, par, dz0, 1)
-_out1 = ForwardDiff.derivative(z -> Π(z0 .+ z .* dz0, par), 0)
+_out1 = ForwardDiff.derivative(z -> Π(z0 .+ z .* dz0, par).u, 0)
 display(_out0)
 display(_out1)
 

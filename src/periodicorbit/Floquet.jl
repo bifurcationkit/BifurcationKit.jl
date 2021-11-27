@@ -77,7 +77,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 
 	for ii in 1:M
 		# call the jacobian of the flow
-		@views out .= sh.flow(Val(:SerialdFlow), xc[:, ii], p, out, sh.ds[ii] * T).du
+		@views out .= evolve(sh.flow, Val(:SerialdFlow), xc[:, ii], p, out, sh.ds[ii] * T).du
 	end
 	return out
 end
@@ -105,7 +105,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	for ii in 1:N
 		du[ii] = 1
 		# call jacobian of the flow
-		@views Mono[:, ii] .= sh.flow(Val(:SerialdFlow), xc[:, 1], p, du, T).du
+		@views Mono[:, ii] .= evolve(sh.flow, Val(:SerialdFlow), xc[:, 1], p, du, T).du
 		du[ii] = 0
 	end
 
@@ -150,12 +150,12 @@ end
 	xv = x[1:end-1]
 	xc = reshape(xv, N, M)
 
-	out = sh.flow(Val(:SerialdFlow), xc[:, 1], par, ζ, sh.ds[1] * T).du
+	out = evolve(sh.flow, Val(:SerialdFlow), xc[:, 1], par, ζ, sh.ds[1] * T).du
 	out_a = [copy(out)]
 
 	for ii in 2:M
 		# call the jacobian of the flow
-		out .= sh.flow(Val(:SerialdFlow), xc[:, ii], par, out, sh.ds[ii] * T).du
+		out .= evolve(sh.flow, Val(:SerialdFlow), xc[:, ii], par, out, sh.ds[ii] * T).du
 		push!(out_a, copy(out))
 	end
 	return out_a

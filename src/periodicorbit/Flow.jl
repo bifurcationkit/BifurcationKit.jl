@@ -1,6 +1,28 @@
 using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 abstract type AbstractFlow end
 
+# The vector field `F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
+function vf(::AbstractFlow, x, par; k...) end
+
+# these functions are used in the Standard Shooting method
+# the function implements the flow (or semigroup) `(x, p, t) -> flow(x, p, t)` associated to an autonomous Cauchy problem. Only the last time point must be returned in the form Named Tuple `(u = ..., t = t)`. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, x, par, Inf)`.
+function evolve(::AbstractFlow, x, par, δt; k...) end
+
+# The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
+function evolve(::AbstractFlow, x, par, dx, δt; k...) end
+
+# [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
+function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
+
+# [Optional / Internal] Serial version of the flow. Used for Matrix based jacobian (Shooting and Poincaré Shooting) and diffPoincareMap. Must return a Named Tuple `(u = ..., t = t)`
+function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, δt; k...) end
+
+# [Optional] Flow which returns the tuple `(t, u(t))`. Optional, mainly used for plotting on the user side.
+function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, δt = Inf; k...) end
+
+# [Optional] Serial version of `dflow`. Used internally when using parallel multiple shooting. Named Tuple `(u = ..., du = ..., t = t)`
+function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, tΣ; kwargs...) end
+
 ####################################################################################################
 # Structures related to computing ODE/PDE Flows
 """
@@ -62,19 +84,12 @@ end
 # constructors
 Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
 
-# callable struct
-(fl::Flow)(x, p, t; k...)     			  			= fl.flow(x, p, t; k...)
-(fl::Flow)(x, p, dx, t; k...) 	  					= fl.dflow(x, p, dx, t; k...)
-(fl::Flow)(::Val{:Full}, x, p, t; k...) 	  		= fl.flowFull(x, p, t; k...)
-(fl::Flow)(::Val{:TimeSol}, x, p, t; k...)  		= fl.flowTimeSol(x, p, t; k...)
-(fl::Flow)(::Val{:SerialTimeSol}, x, p, t; k...)   	= fl.flowSerial(x, p, t; k...)
-(fl::Flow)(::Val{:SerialdFlow}, x, p, dx, t; k...)  = fl.dfSerial(x, p, dx, t; k...)
+vf(fl::Flow, x, p) = fl.F(x, p)
 
-function getVectorField(prob::Union{ODEProblem, DAEProblem})
-	if isinplace(prob)
-		return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
-	else
-		return (x, p) -> prob.f(x, p, prob.tspan[1])
-	end
-end
-getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
+evolve(fl::Flow, x, p, t; k...)                        = fl.flow(x, p, t; k...)
+evolve(fl::Flow, x, p, dx, t; k...)                    = fl.dflow(x, p, dx, t; k...)
+evolve(fl::Flow, ::Val{:Full}, x, p, t; k...)          = fl.flowFull(x, p, t; k...)
+
+# for Poincaré Shooting
+evolve(fl::Flow, ::Val{:SerialTimeSol}, x, p, t; k...)   = fl.flowSerial(x, p, t; k...)
+evolve(fl::Flow, ::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.dfSerial(x, p, dx, t; k...)

@@ -98,7 +98,7 @@ struct SecantPred <: AbstractSecantPredictor end
 # tangent computation using Secant predictor
 # tau is the tangent prediction
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("Predictor: ", algo)
+	(verbosity > 0) && println("Predictor: ", pred)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(τ, z_new)
 	minus!(τ, z_old)

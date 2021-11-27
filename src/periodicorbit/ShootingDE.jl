@@ -1,3 +1,11 @@
+function getVectorField(prob::Union{ODEProblem, DAEProblem})
+	if isinplace(prob)
+		return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
+	else
+		return (x, p) -> prob.f(x, p, prob.tspan[1])
+	end
+end
+getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
 ####################################################################################################
 ### 									STANDARD SHOOTING
 ####################################################################################################
@@ -14,8 +22,8 @@ end
 ShootingProblem(prob::ODEType, alg, M::Int, section; parallel = false, kwargs...) = ShootingProblem(prob, alg, diff(LinRange(0, 1, M + 1)), section; parallel = parallel, kwargs...)
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, kwargs...)
-	F = getVectorField(prob)
 	p = prob.p # parameters
+	F = getVectorField(prob)
 	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); parallel = parallel, kwargs...)
 end
 
@@ -46,7 +54,6 @@ end
 function PoincareShootingProblem(prob::ODEProblem, alg,
 			hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	F = getVectorField(prob)
 	p = prob.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
@@ -62,7 +69,7 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = prob.p, prob = prob, alg = alg, kwargs = kwargs), parallel = parallel, section = section)
+PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = prob.p, prob = prob, alg = alg, kwargs = kwargs), parallel = (M == 1 ? false : parallel), section = section)
 
 PoincareShootingProblem(M::Int, prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; parallel = false, section = SectionPS(M), kwargs...) = PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargs), parallel = parallel, section = section)
 
@@ -78,7 +85,6 @@ function PoincareShootingProblem(prob1::ODEProblem, alg1,
 				prob2::ODEProblem, alg2,
 				hyp::SectionPS;
 				δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
-	F = getVectorField(prob1)
 	p = prob1.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)

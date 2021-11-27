@@ -61,7 +61,7 @@ or
 	pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
 """
-@with_kw_noshow struct ShootingProblem{Tf <: Flow, Ts, Tsection} <: AbstractShootingProblem
+@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Ts, Tsection} <: AbstractShootingProblem
 	M::Int64 = 0							# number of sections
 	flow::Tf = Flow()						# should be a Flow
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
@@ -81,7 +81,7 @@ end
 # this function updates the section during the continuation run
 function updateSection!(sh::ShootingProblem, x, par)
 	xt = getTimeSlices(sh, x)
-	@views update!(sh.section, sh.flow.F(xt[:, 1], par), xt[:, 1])
+	@views update!(sh.section, vf(sh.flow, xt[:, 1], par), xt[:, 1])
 	sh.section.normal ./= norm(sh.section.normal)
 	return true
 end
@@ -114,10 +114,10 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# we can use views but Sundials will complain
-			outc[:, ii] .= sh.flow(xc[:, ii], par, sh.ds[ii] * T) .- xc[:, ip1]
+			outc[:, ii] .= evolve(sh.flow, xc[:, ii], par, sh.ds[ii] * T).u .- xc[:, ip1]
 		end
 	else
-		solOde = sh.flow(xc, par, sh.ds .* T)
+		solOde = evolve(sh.flow, xc, par, sh.ds .* T)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# we can use views but Sundials will complain
@@ -146,7 +146,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 		for ii in 1:M
 			# we can use views but Sundials will complain
 			ip1 = (ii == M) ? 1 : ii+1
-			out.u[ii] .= sh.flow(xc[ii], par, sh.ds[ii] * T) .- xc[ip1]
+			out.u[ii] .= evolve(sh.flow, xc[ii], par, sh.ds[ii] * T).u .- xc[ip1]
 		end
 	else
 		@assert 1==0 "Not implemented yet. Try to use an AbstractVector instead"
@@ -176,15 +176,15 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =c
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
-			tmp = sh.flow(xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
-			outc[:, ii] .= @views tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+			tmp = evolve(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
+			outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	else
 		# call jacobian of the flow
-		solOde = sh.flow(xc, par, dxc, sh.ds .* T)
+		solOde = evolve(sh.flow, xc, par, dxc, sh.ds .* T)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
-			outc[:, ii] .= solOde[ii].du .+ sh.flow.F(solOde[ii].u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+			outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	end
 
@@ -207,7 +207,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
-			tmp = sh.flow(x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
+			tmp = evolve(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
 			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
 		end
 	else
@@ -229,7 +229,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 	xc = getTimeSlices(sh, x)
 
 	# jacobian of the flow
-	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> sh.flow(Val(:SerialTimeSol), z, par, _T).u, _x)
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, par, _T).u, _x)
 
 	# put the matrices by blocks
 	In = I(N)
@@ -240,11 +240,11 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 		if M == 1
 			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= -In
 		else
-			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .= -In
+			J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N]  .= -In
 		end
 		# we fill the last column
-		tmp = @views sh.flow(Val(:SerialTimeSol), xc[:, ii], par, sh.ds[ii] * T).u
-		J[(ii-1)*N+1:(ii-1)*N+N, end] .= sh.flow.F(tmp, par) .* sh.ds[ii]
+		tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], par, sh.ds[ii] * T).u
+		J[(ii-1)*N+1:(ii-1)*N+N, end] .= vf(sh.flow, tmp, par) .* sh.ds[ii]
 	end
 
 	# we fill the last row
@@ -270,10 +270,10 @@ function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		sol = prob.flow(Val(:Full), xc[:, 1], p, T)
+		sol = evolve(prob.flow, Val(:Full), xc[:, 1], p, T)
 		mx = @views op[2](sol[1:n, :], dims = 1)
 	else # threaded version
-		sol = prob.flow(Val(:Full), xc, p, prob.ds .* T)
+		sol = evolve(prob.flow, Val(:Full), xc, p, prob.ds .* T)
 		mx = op[2](sol[1][1:n, :] , dims = 2)
 		for ii in 2:M
 			mx = op[1].(mx, op[2](sol[ii][1:n, :], dims = 2))
@@ -297,7 +297,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		sol = [prob.flow(Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii in 1:M]
+		sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii in 1:M]
 		time = sol[1].t; u = sol[1][:,:]
 		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
@@ -306,7 +306,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 		return SolPeriodicOrbit(t = time, u = u)
 
 	else # threaded version
-		sol = prob.flow(Val(:Full), xc, par, prob.ds .* T)
+		sol = evolve(prob.flow, Val(:Full), xc, par, prob.ds .* T)
 		time = sol[1].t; u = sol[1][:,:]
 		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
@@ -328,7 +328,7 @@ function reMake(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess_a, pe
 	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure
-	@set! probSh.flow.F = F
+	# @set! probSh.flow.F = F
 
 	return probSh, orbitguess
 end

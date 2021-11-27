@@ -73,7 +73,7 @@ This function updates the normals and centers of the hyperplanes defining the Po
 	M = getMeshSize(pb); Nm1 = div(length(centers_bar), M)
 	centers_barc = reshape(centers_bar, Nm1, M)
 	centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
-	normals = [pb.flow.F(c, par) for c in centers]
+	normals = [vf(pb.flow, c, par) for c in centers]
 	for ii in eachindex(normals)
 		normals[ii] ./= _norm(normals[ii])
 	end
@@ -103,13 +103,13 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 		for ii in 1:M
 			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 			# We need the callback to be active here!!!
-			period += @views psh.flow(Val(:TimeSol), xc[:, ii], par, Inf).t
+			period += @views evolve(psh.flow, xc[:, ii], par, Inf).t
 		end
 	else
 		for ii in 1:M
 			@views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
 		end
-		solOde =  psh.flow(Val(:TimeSol), xc, par, repeat([Inf], M))
+		solOde =  evolve(psh.flow, xc, par, repeat([Inf], M))
 		period = sum(x->x.t, solOde)
 	end
 	return period
@@ -134,11 +134,11 @@ function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, 
 	if ~isParallel(prob)
 		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		# We need the callback to be active here!!!
-		sol1 =  @views prob.flow(Val(:Full), xc[:, 1], p, T; callback = nothing)
+		sol1 = @views evolve(prob.flow, Val(:Full), xc[:, 1], p, T; callback = nothing)
 		return sol1
 	else # threaded version
 		E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
-		sol = @views prob.flow(Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
+		sol = @views evolve(prob.flow, Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
 		return sol[1]
 	end
 end
@@ -158,19 +158,19 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
 	if ~isParallel(psh)
 		E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
 		# We need the callback to be active here!!!
-		sol = @views psh.flow(Val(:Full), xc[:, 1], par, Inf)
+		sol = @views evolve(psh.flow, Val(:Full), xc[:, 1], par, Inf)
 		mx = op[2](sol[1:n, :])
 		for ii in 2:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 			# We need the callback to be active here!!!
-			sol = @views psh.flow(Val(:Full), xc[:, ii], par, Inf)
+			sol = @views evolve(psh.flow, Val(:Full), xc[:, ii], par, Inf)
 			mx = op[1](mx, op[2](sol[1:n, :]))
 		end
 	else
 		for ii in 1:M
 			E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
 		end
-		solOde =  psh.flow(Val(:Full), xc, par, repeat([Inf], M) )
+		solOde =  evolve(psh.flow, Val(:Full), xc, par, repeat([Inf], M) )
 		mx = op[2](solOde[1][1:n, :])
 		for ii in 1:M
 			mx = op[1](mx, op[2](solOde[ii][1:n, :]))
@@ -236,10 +236,10 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 		for ii in 1:M
 			im1 = ii == 1 ? M : ii - 1
 			# We need the callback to be active here!!!
-			outc[:, ii] .= xc[:, ii] .- psh.flow(xc[:, im1], par, Inf)
+			outc[:, ii] .= xc[:, ii] .- evolve(psh.flow, xc[:, im1], par, Inf).u
 		end
 	else
-		solOde = psh.flow(xc, par, repeat([Inf64], M))
+		solOde = evolve(psh.flow, xc, par, repeat([Inf64], M))
 		for ii in 1:M
 			im1 = ii == 1 ? M : ii - 1
 			# We need the callback to be active here!!!
@@ -263,11 +263,11 @@ function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 	normal = psh.section.normals[ii]
 	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
 	# compute the Poincare map from x
-	tΣ, solΣ = psh.flow(Val(:SerialTimeSol), x, par, Inf)
-	z = psh.flow.F(solΣ, par)
+	tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), x, par, Inf)
+	z = vf(psh.flow, solΣ, par)
 	# solution of the variational equation at time tΣ
 	# We need the callback to be INACTIVE here!!!
-	y = psh.flow(Val(:SerialdFlow), x, par, dx, tΣ; callback = nothing).du
+	y = evolve(psh.flow, Val(:SerialdFlow), x, par, dx, tΣ; callback = nothing).du
 	out = y .- (dot(normal, y) / dot(normal, z)) .* z
 end
 
@@ -334,7 +334,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 	end
 
 	# jacobian of the flow
-	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> psh.flow(Val(:SerialTimeSol), z, par, _T; callback = nothing).u, _x)
+	dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(psh.flow, Val(:SerialTimeSol), z, par, _T; callback = nothing).u, _x)
 
 	# initialize some temporaries
 	Jtmp = zeros(N, N)
@@ -348,9 +348,9 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 	for ii=1:M
 		im1 = ii == 1 ? M : ii - 1
 		# we find the point on the next section
-		tΣ, solΣ = psh.flow(Val(:SerialTimeSol), view(xc,:,im1), par, Inf)
+		tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), view(xc,:,im1), par, Inf)
 		# computation of the derivative of the return map
-		F .= psh.flow.F(solΣ, par)
+		F .= vf(psh.flow, solΣ, par) #vector field
 		normal .= psh.section.normals[ii]
 		@views dflow(Jtmp, xc[:, im1], tΣ)
 		Jtmp .= Jtmp .- F * normal' * Jtmp ./ dot(F, normal)

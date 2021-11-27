@@ -186,7 +186,7 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.
 		finaliseSolution = (z, tau, step, contResult; kw...) ->
 			(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], 1; kwargs...),
-		recordFromSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p) -> BK.getMaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
