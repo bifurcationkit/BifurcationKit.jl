@@ -2,7 +2,7 @@
 Plot the branch of solutions during the continuation
 """
 function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
-	l = computeEigenElements(contparms) ? @layout([a{0.5w} [b; c]; e{0.2h}]) : @layout([a{0.5w} [b; c]])
+	l = computeEigenElements(contparms) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
 	plot(layout = l )
 
 	plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
