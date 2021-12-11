@@ -1,7 +1,3 @@
-using DiffEqBase: EnsembleProblem, ODEProblem, DAEProblem
-
-const ODEType = Union{ODEProblem, DAEProblem}
-
 """
 $(SIGNATURES)
 

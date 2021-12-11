@@ -1,3 +1,6 @@
+using DiffEqBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback
+const ODEType = Union{ODEProblem, DAEProblem}
+
 function getVectorField(prob::Union{ODEProblem, DAEProblem})
 	if isinplace(prob)
 		return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)

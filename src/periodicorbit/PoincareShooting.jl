@@ -1,5 +1,3 @@
-using DiffEqBase: ODEProblem, terminate!, VectorContinuousCallback, EnsembleProblem
-
 ####################################################################################################
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 

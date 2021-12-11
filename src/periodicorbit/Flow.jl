@@ -1,4 +1,3 @@
-using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 abstract type AbstractFlow end
 
 # The vector field `F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
@@ -40,7 +39,7 @@ These are some simple constructors for which you only have to pass a `prob::ODEP
 
 	fl = Flow(prob, Tsit5(); kwargs...)
 
-where `kwargs` is passed to `DiffEqBase::solve`. If your vector field depends on parameters `p`, you can define a `Flow` using
+where `kwargs` is passed to `SciMLBase::solve`. If your vector field depends on parameters `p`, you can define a `Flow` using
 
 	fl = Flow(prob, Tsit5(); kwargs...)
 
