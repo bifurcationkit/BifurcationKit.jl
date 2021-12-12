@@ -498,8 +498,8 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 # Arguments:
 - `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` which represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
 - `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
-    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contParams::ContinuationPar` will make `continuation` work.
-    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contParams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
+    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, you can use the default arguments of `contParams::ContinuationPar` for `continuation`.
+    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, you cannot use the default parameters of `contParams::ContinuationPar` for `continuation` and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
     3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself is passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
 - `x0` initial guess,
 - `par` initial set of parameters,

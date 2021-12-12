@@ -39,7 +39,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 
 # Arguments:
 - `F` is a function with input arguments `(x, p)` returning a vector `r` that represents the functional and for type stability, the types of `x` and `r` should match. In particular, it is not **inplace**.
-- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `NewtonPar` will make `newton` work. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `NewtonPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
+- `J` is the jacobian of `F` at `(x, p)`. It can assume two forms. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, you can use the default arguments of `NewtonPar`. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returns `dr` of the same type of `dx`. In our notation, `dr = J * dx`. In this case, you cannot use the default parameters of `NewtonPar` and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`.
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method

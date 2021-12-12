@@ -14,8 +14,7 @@ function COm(u, p)
 		q4 * z - k * q4 * s
 	]
 end
-dCOm(z, p) = ForwardDiff.jacobian(x -> COm(x, p), z)
-jet = BK.getJet(COm, dCOm)
+jet = BK.getJet(CO; matrixfree=fslse)
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
@@ -67,6 +66,7 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_
 	verbosity = 3,
 	normC = norminf,
 	tangentAlgo = BorderedPred(),
+	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
 	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
@@ -89,3 +89,4 @@ plot(sn_codim2, vars=(:k, :q2), branchlabel = "Fold")
 	plot!(hp_codim2, vars=(:k, :q2), branchlabel = "Hopf",)
 
 plot(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
+####################################################################################################

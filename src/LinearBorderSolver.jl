@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
 
 	"Tolerance for checking precision"
 	tol::Ttol = 1e-12
-	
+
 	"Check precision of the linear solve?"
 	checkPrecision::Bool = false
 end

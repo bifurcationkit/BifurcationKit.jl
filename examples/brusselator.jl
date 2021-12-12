@@ -145,11 +145,14 @@ if 1==1
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
 		br, ind_hopf, (@lens _.β),
-		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew); plot = true,
+		ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew); plot = true,
 		updateMinAugEveryStep = 1,
-		d2F = jet[3],
+		d2F = jet[3], d3F = jet[4],
+		startWithEigen = true,
+		detectCodim2Bifurcation = 2,
 		verbosity = 2, normC = norminf, bothside = true)
 end
+
 plot(br_hopf)
 #################################################################################################### Continuation of Periodic Orbit
 # number of time slices

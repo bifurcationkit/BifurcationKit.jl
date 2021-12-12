@@ -56,20 +56,12 @@ function Fcgl!(f, u, p)
 	f .= f .+ NL(u, p)
 end
 
-Fcgl(u, p) = Fcgl!(similar(u), u, p)
-# computation of the first derivative
-d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
-d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
-
 function dFcgl(x, p, dx)
 	f = similar(dx)
 	mul!(f, p.Δ, dx)
 	nl = d1NL(x, p, dx)
 	f .= f .+ nl
 end
-
-# computation of the second derivative
-d2Fcgl(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> Fcgl(x .+ t1 .* dx1 .+ t2 .* dx2, p), 0.), 0.)
 
 # remark: I checked this against finite differences
 @views function Jcgl(u, p)
@@ -96,6 +88,9 @@ d2Fcgl(x, p, dx1, dx2) = ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1
 	Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
 end
 
+# we group the differentials together
+jet = BK.getJet(Fcgl, Jcgl)
+
 ####################################################################################################
 Nx = 41*1
 	Ny = 21*1
@@ -110,7 +105,7 @@ Nx = 41*1
 eigls = EigArpack(1.0, :LM)
 	# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 	opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time newton(Fcgl, Jcgl, vec(sol0), par_cgl, opt_newton, normN = norminf)
+	out, hist, flag = @time newton(jet[1], jet[2], vec(sol0), par_cgl, opt_newton, normN = norminf)
 ####################################################################################################
 # test for the Jacobian expression
 # sol0 = rand(2Nx*Ny)
@@ -119,10 +114,9 @@ eigls = EigArpack(1.0, :LM)
 # norm(J0 - J1, Inf)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 6)
-	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
+	br, = @time continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
 ####################################################################################################
 # normal form computation
-jet  = BK.getJet(Fcgl, Jcgl)
 hopfpt = computeNormalForm(jet..., br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
@@ -133,15 +127,15 @@ ind_hopf = 1
 	# hopfpt = BK.HopfPoint(br, ind_hopf)
 	optnew = NewtonPar(opts_br.newtonOptions, verbose=true)
 	hopfpoint, _, flag = @time newton(
-		Fcgl, Jcgl,
+		jet[1], jet[2],
 		br, ind_hopf;
 		d2F = jet[3],
 		options = optnew, normN = norminf, startWithEigen = true)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf, u1_hopf = @time continuation(
-	Fcgl, Jcgl,
-	br, ind_hopf, (@lens _.γ),
+	jet[1], jet[2],
+	br, 1, (@lens _.γ),
 	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 0, newtonOptions = optnew, plotEveryStep = 5, precisionStability = 1e-7, nev = 15); plot = true,
 	updateMinAugEveryStep = 1,
 	d2F = jet[3], d3F = jet[4],
@@ -149,7 +143,7 @@ br_hopf, u1_hopf = @time continuation(
 	detectCodim2Bifurcation = 2,
 	verbosity = 3, normC = norminf)
 
-plot(br_hopf, title = "Hopf continuation")
+plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -159,7 +153,7 @@ r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_n
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = PeriodicOrbitTrapProblem(Fcgl, Jcgl, real.(vec_hopf), hopfpt.u, M, 2n)
+poTrap = PeriodicOrbitTrapProblem(jet[1], jet[2], real.(vec_hopf), hopfpt.u, M, 2n)
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; J = (x, p) ->  (dx -> d1Fcgl(x, p, dx)), linsolver = ls0)
@@ -601,5 +595,5 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 		orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r),
 		opts_po_cont; jacobianPO = :FullMatrixFree,
 		verbosity = 2,
-		recordFromSolution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])), 
+		recordFromSolution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])),
 		normC = x -> maximum(abs.(x)))

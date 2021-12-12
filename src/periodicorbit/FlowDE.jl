@@ -17,7 +17,20 @@ struct FlowDE{Tprob, Talg, TprobMono, TalgMono, Tkwde, Tcb} <: AbstractFlow
 	"Store possible callback"
 	callback::Tcb
 end
+####################################################################################################
+# constructors
+"""
+Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
+"""
+# this constructor takes into accound a parameter passed to the vector field
+function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
+	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing))
+end
 
+function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
+	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing))
+end
+####################################################################################################
 _getVectorField(prob::ODEProblem, o,x,p) = prob.f(o,x,p, prob.tspan[1])
 _getVectorField(prob::ODEProblem, x,p) = prob.f(x,p, prob.tspan[1])
 
@@ -44,7 +57,7 @@ function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
 	return (t = sol.t[end], u = sol[end])
 end
 
-######### mthods for the flow
+######### methods for the flow
 # this function takes into accound a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
 function evolve(fl::FlowDE{T1,T2,T3,T4,T5,T6}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem,T2,T3,T4,T5,T6}
@@ -141,16 +154,4 @@ end
 
 function evolve(fl::FlowDE{T1,T2,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x),1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6}
 	dflow_fdSerial(x, par, dx, tm, fl.prob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
-end
-####################################################################################################
-"""
-Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
-"""
-# this constructor takes into accound a parameter passed to the vector field
-function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
-	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing))
-end
-
-function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing))
 end

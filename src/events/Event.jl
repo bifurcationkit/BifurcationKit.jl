@@ -96,7 +96,7 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
 	"number of events, ie the length of the result returned by the callback function"
 	nb::Int64
 
-	", ` (iter, state) -> NTuple{nb, Int64}` callback function which at each continuation state, returns a tuple. For example, to detect a value change."
+	"= ` (iter, state) -> NTuple{nb, Int64}` callback function which at each continuation state, returns a tuple. For example, to detect a value change."
 	condition::Tcb
 
 	"whether the event requires to compute eigen elements"
