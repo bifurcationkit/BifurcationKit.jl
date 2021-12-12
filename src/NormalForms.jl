@@ -104,6 +104,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	# coefficient of p
 	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζstar)
+	verbose && println("--> Normal form:   aδμ + b1⋅x + b2⋅x^2/2 + b3⋅x^3/6")
 	verbose && println("--> a = ", a)
 
 	# coefficient of x*p

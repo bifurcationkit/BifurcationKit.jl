@@ -3,6 +3,26 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2021-12-12
+- switch from `DiffEqBase` to `SciMLBase`
+- change function name `closesttozero` to `rightmost`
+
+## [0.1.8] - 2021-11-27
+- ⛳️ add a new interface for Flows
+- add custom distance for `DeflationOperator`
+- add possibility to use forward diff (AD) with deflation operator
+
+## [0.1.8] - 2021-11-20
+- the method for periodic orbits `getM` becomes `getMeshSize`
+
+## [0.1.7] - 2021-11-6
+- add abstract types `AbstractDirectLinearSolver` and `AbstractIterativeLinearSolver`
+- the function `getTrajectory` becomes `getPeriodicOrbit`
+- add struct `SolPeriodicOrbit` to allow for unified plotting interface with all methods for computing periodic orbits
+- ⛳️ the keyword argument 	`linearPO` is renamed into `jacobianPO`
+- add newton / continuation methods for `TWProblem`
+- add `GEigArpack` generalized eigensolver
+
 ## [0.1.5] - 2021-10-23
 - remove documentation from package, it is now located in BifurcationKitDocs.jl
 

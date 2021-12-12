@@ -122,6 +122,8 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 			idx = state.step + 1,
 			ind_ev = ind_ev)
 		(verbosity>0) && printstyled(color=:red, "--> ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
+	else
+		throw("We could not detect/identify the bifurcation point. (δn_unstable, δn_imag) = ($δn_unstable, $δn_imag)")
 	end
 	return detected, specialpoint
 end
