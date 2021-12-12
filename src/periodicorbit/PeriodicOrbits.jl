@@ -82,7 +82,7 @@ Define a structure to interface the Jacobian of the Shooting Problem with the Fl
 
 $(TYPEDFIELDS)
 """
-struct FloquetWrapper{Tpb,Tjacpb,Torbitguess,Tp}
+struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
 	pb::Tpb
 	jacpb::Tjacpb
 	x::Torbitguess
@@ -107,6 +107,16 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 
 ####################################################################################################
+const DocStrjacobianPOSh = """
+- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
+    - For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
+    - For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
+    - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
+    - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+    - For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
+    - For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+"""
+##########################
 # newton wrapper
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par, jacobianPO = :MatrixFree)
 	if jacobianPO == :autodiffDenseAnalytical
@@ -139,12 +149,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
-	- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
-	- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
-	- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
-	- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
-	- For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+$DocStrjacobianPOSh
 
 # Output:
 - solution
@@ -152,8 +157,8 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - flag of convergence
 - number of iterations
 """
-function newton( prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar;
-		jacobianPO = :MatrixFree, δ = 1e-8, kwargs...)
+function newton(prob::AbstractShootingProblem, orbitguess, par, options::NewtonPar;
+		jacobianPO = :MatrixFree, kwargs...)
 	jac = buildJacobian(prob, orbitguess, par, jacobianPO)
 	return newton(prob, jac, orbitguess, par, options; kwargs...)
 end
@@ -168,15 +173,7 @@ This is the deflated Newton-Krylov Solver for computing a periodic orbit using a
 Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
 
 # Optional argument
-- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
-
-## Choices for `jacobianPO`
-- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
-- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
-- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
-- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
-- For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
-
+$DocStrjacobianPOSh
 
 # Output:
 - solution
@@ -210,16 +207,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 # Optional argument
 - `δ = 1e-8` used for finite differences
-- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
-- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
-
-## Choices for `jacobianPO`
-- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
-- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
-- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
-- For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
-- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
-- For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+$DocStrjacobianPOSh
 """
 function continuation(
 	prob::AbstractShootingProblem,
@@ -280,9 +268,12 @@ This is the continuation routine for computing a periodic orbit using a (Standar
 
 # Arguments
 
-Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
+Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 
-- `printPeriod` boolean to print the period of the solution. This is useful for `prob::PoincareShootingProblem` as this information is not easily available.
+# Optional argument
+- `δ = 1e-8` used for finite differences
+$DocStrjacobianPOSh
+
 """
 function continuation(prob::AbstractPeriodicOrbitProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
@@ -305,14 +296,13 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 
 # Optional arguments
 
-- `jacobianPO` linear algorithm used for the computation of periodic orbits when `prob` is [`PeriodicOrbitTrapProblem`](@ref))
 - `Jᵗ` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector for the Hopf normal form. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of Matrix / Sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
 - `δ = 1e-8` used for finite differences
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
-- `jacobianPO` specify the way the jacobian is computed.
+- `jacobianPO` specify the way the jacobian is computed. See corresponding options (online docs) in the regular call `continuation` for the problem `prob` used to define the periodic orbit.
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plotSolution` and `finaliseSolution`.
@@ -443,7 +433,7 @@ Branch switching at a Bifurcation point of a branch of periodic orbits (PO) spec
 - `jacobianPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
 - `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
-- `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to POs.
+- `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
 function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::ContinuationPar;
 			δp = 0.1, ampfactor = 1,

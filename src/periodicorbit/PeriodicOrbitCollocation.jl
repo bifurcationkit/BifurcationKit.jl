@@ -291,6 +291,12 @@ function reMake(prob::PeriodicOrbitOCollProblem, F, dF, par, hopfpt, ζr::Abstra
 end
 
 ####################################################################################################
+const DocStrjacobianPOColl = """
+- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffDense, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
+    - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
+    - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+"""
+
 """
 $(SIGNATURES)
 
@@ -307,12 +313,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences)`. This is used to select a way of inverting the jacobian dG
-	- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
-	- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
-	- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
-	- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
-	- For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+$DocStrjacobianPOColl
 
 # Output:
 - solution
@@ -321,7 +322,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - number of iterations
 """
 function newton(prob::PeriodicOrbitOCollProblem, orbitguess, par, options::NewtonPar;
-		jacobianPO = :autodiffDense, δ = 1e-8, kwargs...)
+		jacobianPO = :autodiffDense, kwargs...)
 	@assert jacobianPO in
 			(:autodiffDense, ) "This jacobian is not defined. Please chose another one."
 
@@ -346,13 +347,8 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 - `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
 - `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
 
-## Choices for `jacobianPO`
-- For `:MatrixFree`, we use an iterative solver (e.g. GMRES) to solve the linear system. The jacobian was specified by the user in `prob`.
-- For `:autodiffMF`, we use iterative solver (e.g. GMRES) to solve the linear system. We use Automatic Differentiation to compute the (matrix-free) derivative of `x -> prob(x, p)`.
-- For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
-- For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
-- For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is using a mix of AD and analytical formula.
-- For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+# Choices for `jacobianPO`
+$DocStrjacobianPOColl
 """
 function continuation(
 	prob::PeriodicOrbitOCollProblem,
