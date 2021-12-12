@@ -1,5 +1,5 @@
-closesttozero(ev) = ev[sortperm(ev, by = abs∘real)]
-getinterval(a,b) = (min(a,b), max(a,b))
+rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
+getinterval(a, b) = (min(a, b), max(a, b))
 ####################################################################################################
 function displayIteration(i, residual, itlinear = 0, lastRow = false)
 	if lastRow

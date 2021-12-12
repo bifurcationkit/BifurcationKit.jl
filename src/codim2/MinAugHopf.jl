@@ -394,6 +394,8 @@ function continuationHopf(F, J,
 	l1 = Complex{eltype(Tb)}(0,0)
 
 	# this function is used as a Finalizer
+	# it is called to update the Minimally Augmented prooblem
+	# by updating the vectors a, b
 	function updateMinAugHopf(z, tau, step, contResult; k...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u		# hopf point
@@ -536,7 +538,7 @@ function continuationHopf(F, J,
 end
 
 # structure to compute the eigenvalues along the Hopf branch
-struct HopfEig{S} <: AbstractEigenSolver
+struct HopfEig{S} <: AbstractCodim2EigenSolver
 	eigsolver::S
 end
 

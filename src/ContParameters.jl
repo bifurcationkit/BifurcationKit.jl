@@ -11,7 +11,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `maxSteps` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
 - `saveToFile = false`: save to file. A name is automatically generated.
-- `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution`
+- `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution
 - `plotEveryStep = 3`
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)

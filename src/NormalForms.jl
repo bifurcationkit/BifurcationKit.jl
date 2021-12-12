@@ -403,7 +403,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 			Teigvec = getvectortype(br),
 			scaleζ = norm)
 	bifpt = br.specialpoint[id_bif]
-	if abs(bifpt.δ[2]) > 0 # we try a Hopf point
+	if bifpt.type == :hopf
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)

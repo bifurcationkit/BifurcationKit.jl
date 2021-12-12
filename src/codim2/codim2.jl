@@ -1,5 +1,6 @@
 abstract type ProblemMinimallyAugmented end
 @inline getLens(pb::ProblemMinimallyAugmented) = pb.lens
+abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 """
 $(SIGNATURES)
@@ -79,6 +80,9 @@ function continuation(F, J,
 	# options to detect codim2 bifurcations
 	if detectCodim2Bifurcation > 0
 		_options_cont = setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
+			if get(kwargs, :updateMinAugEveryStep, 0) == 0
+			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. This bifurcation detection will not work. Please use `updateMinAugEveryStep > 0`."
+		end
 	else
 		_options_cont = options_cont
 	end

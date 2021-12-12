@@ -234,7 +234,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 		# iter.finaliseSolution(state.z_old, state.tau, state.step, nothing; bisection = true)
 
 		if verbose
-			ct0 = closesttozero(state.eigvals)
+			ct0 = rightmost(state.eigvals)
 			printstyled(color=:blue,
 				"----> $(state.step) - [Bisection] (n1, n_current, n2) = ", (n1, nunstbls[end], n2),
 				", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
@@ -244,7 +244,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 			verbose && Base.display(ct0[1:min(5, length(ct0))])
 		end
 
-		biflocated = abs(real.(closesttozero(state.eigvals))[1]) < contParams.tolBisectionEigenvalue
+		biflocated = abs(real.(rightmost(state.eigvals))[1]) < contParams.tolBisectionEigenvalue
 
 		if (isnothing(next) == false &&
 				abs(state.ds) >= contParams.dsminBisection &&

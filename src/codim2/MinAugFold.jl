@@ -94,7 +94,6 @@ function (fp::FoldProblemMinimallyAugmented)(x, p::T, _par) where {T}
 	n = T(1)
 	J = fp.J(x, par)
 	σ1 = fp.linbdsolver(J, a, b, T(0), fp.zero, n)[2]
-
 	return fp.F(x, par), σ1
 end
 
@@ -113,7 +112,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	################################################################################################
 	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
 	################################################################################################
-	# recall that the functional we want to solve is [F(x,p), σ(x,p)] where  σ(x,p) is computed in the previous function.
+	# Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the above function.
 	# The jacobian has to be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# We solve here Jfold⋅res = rhs := [rhsu, rhsp]
@@ -389,6 +388,8 @@ function continuationFold(F, J,
 	lenses = getLensSymbol(lens1, lens2)
 
 	# this function is used as a Finalizer
+	# it is called to update the Minimally Augmented prooblem
+	# by updating the vectors a, b
 	function updateMinAugFold(z, tau, step, contResult; kwargs...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u	# fold point
@@ -511,7 +512,7 @@ function continuationFold(F, J,
 end
 
 # structure to compute eigen-elements along branch of Fold points
-struct FoldEig{S} <: AbstractEigenSolver
+struct FoldEig{S} <: AbstractCodim2EigenSolver
 	eigsolver::S
 end
 

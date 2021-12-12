@@ -36,27 +36,27 @@ n = 101
 	sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 	optnewton = NewtonPar(tol = 1e-8, verbose = true)
 	# ca fait dans les 63.59k Allocations
-	sol, hist, flag = @time newton( F_chan,	Jac_mat, sol, par, optnewton)
+	sol, hist, flag = @time newton( F_chan,	Jac_mat, sol0, par, optnewton)
 
 optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9), maxSteps = 150)
 	br, = @time continuation(
-		F_chan, Jac_mat,
-		optscont; plot = true, verbosity = 0,
+		F_chan, #Jac_mat,
 		sol, par, (@lens _.α),
+		optscont; plot = true, verbosity = 0,
 		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...))
 		)
 ###################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2, 1.0, [out])
+deflationOp = DeflationOperator(2, 1.0, [sol])
 
 optdef = setproperties(optnewton; tol = 1e-10, maxIter = 1000)
 
 outdef1, = @time newton(
 	F_chan, Jac_mat,
-	out .* (1 .+ 0.01*rand(n)), par,
+	sol .* (1 .+ 0.01*rand(n)), par,
 	optdef, deflationOp)
 
-plot(out, label="newton")
+plot(sol, label="newton")
 	plot!(sol, label="init guess")
 	plot!(outdef1, label="deflation-1")
 
@@ -75,13 +75,13 @@ indfold = 2
 outfold, _, flag = @time newton(
 	F_chan, Jac_mat,
 	#index of the fold point
-	br, indfold, (@lens _.α))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
+	br, indfold)
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300)
 	foldbranch, = @time continuation(
 		F_chan, Jac_mat,
-		br, indfold, (@lens _.α), (@lens _.β),
+		br, indfold, (@lens _.β),
 		plot = true, verbosity = 2,
 		optcontfold)
 plot(foldbranch, label = "");title!("")
@@ -90,16 +90,16 @@ d2F(x, p, u, v; b = 0.01) = p.α .* d2N.(x; b = b) .* u .* v
 
 outfold, _, flag = @time newton(
 		F_chan, Jac_mat,
-		br, indfold, (@lens _.α);
+		br, indfold;
 		d2F = d2F
 		)
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.foldpoint[indfold].param,"\n")
+	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
 
 outfoldco, = @time continuation(
 		F_chan, Jac_mat,
-		br, indfold, (@lens _.α), (@lens _.β), optcontfold;
+		br, indfold, (@lens _.β), optcontfold;
 		# Jt = (x, p) -> transpose(Jac_mat(x, p)),
 		d2F = d2F,
 		plot = true)
@@ -128,7 +128,7 @@ opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.1, ds= 0.01, pMax = 4.1,
 	brmf, _ = @time continuation(
 		F_chan,
 		(x, p) -> (dx -> dF_chan(x, dx, p)),
-		out, par, (@lens _.α), opts_cont_mf,
+		out_mf, par, (@lens _.α), opts_cont_mf,
 		linearAlgo = MatrixFreeBLS(),
 		)
 
@@ -151,7 +151,7 @@ plot(brmf,color=:red)
 brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
-	out, par, (@lens _.α), (@set opts_cont_mf.newtonOptions = optnewton_mf),
+	out_mf, par, (@lens _.α), (@set opts_cont_mf.newtonOptions = optnewton_mf),
 	tangentAlgo = BorderedPred(),
 	)
 
@@ -160,7 +160,7 @@ plot(brmf,color=:blue)
 brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
-	out, par, (@lens _.α), opts_cont_mf,
+	out_mf, par, (@lens _.α), opts_cont_mf,
 	tangentAlgo = SecantPred(),
 	linearAlgo = MatrixFreeBLS()
 	)
@@ -170,7 +170,7 @@ plot(brmf,color=:green)
 brmf, = @time continuation(
 	F_chan,
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
-	out, par, (@lens _.α), opts_cont_mf,
+	out_mf, par, (@lens _.α), opts_cont_mf,
 	tangentAlgo = BorderedPred(),
 	linearAlgo = MatrixFreeBLS())
 
