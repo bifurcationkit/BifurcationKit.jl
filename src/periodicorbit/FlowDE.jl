@@ -1,4 +1,4 @@
-using DiffEqBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
+using SciMLBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 
 struct FlowDE{Tprob, Talg, TprobMono, TalgMono, Tkwde, Tcb} <: AbstractFlow
 	"Store the ODEProblem associated to the flow of the Cauchy problem"

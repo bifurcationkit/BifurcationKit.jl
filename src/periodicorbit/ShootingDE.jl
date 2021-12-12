@@ -1,4 +1,4 @@
-using DiffEqBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback
+using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback
 const ODEType = Union{ODEProblem, DAEProblem}
 
 function getVectorField(prob::Union{ODEProblem, DAEProblem})
