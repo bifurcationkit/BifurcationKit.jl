@@ -396,7 +396,7 @@ function continuationHopf(F, J,
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented prooblem
 	# by updating the vectors a, b
-	function updateMinAugHopf(z, tau, step, contResult; k...)
+	function updateMinAugHopf(z, tau, step, contResult; kUP...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u		# hopf point
 		p1 = z.u.p[1]	# first parameter
@@ -482,7 +482,7 @@ function continuationHopf(F, J,
 		end
 
 	# eigen solver
-	eigsolver = HopfEig(opt_hopf_cont.newtonOptions.eigsolver)
+	eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver))
 
 	# solve the hopf equations
 	branch, u, tau = continuation(

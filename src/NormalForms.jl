@@ -34,7 +34,7 @@ function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	ζstar = geteigenvector(eigsolver ,evstar, I)
 	return copy(ζstar), λstar[I]
 end
-
+####################################################################################################
 """
 $(SIGNATURES)
 
@@ -391,6 +391,11 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
+
+# Available method
+
+Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating periodic orbit.v
+
 """
 function computeNormalForm(F, dF, d2F, d3F,
 			br::ContResult, id_bif::Int ;
@@ -404,6 +409,9 @@ function computeNormalForm(F, dF, d2F, d3F,
 			Teigvec = getvectortype(br),
 			scaleζ = norm)
 	bifpt = br.specialpoint[id_bif]
+
+	@assert !(bifpt.type in [:cusp, :zh, :hh]) "Normal form for $(bifpt.type) not implemented"
+
 	if bifpt.type == :hopf
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
@@ -411,6 +419,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 	end
 	# kernel dimension:
 	N = abs(bifpt.δ[1])
+
 	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
 	nev = max(2N, nev)
 	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
@@ -564,7 +573,7 @@ computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = compute
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm to find these zeros is based on deflated newton.
+This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding	 these zeros is based on deflated newton.
 """
 function predictor(bp::NdBranchPoint, δp::T;
 		verbose::Bool = false,
@@ -686,6 +695,11 @@ Compute the Hopf normal form.
 - `δ = 1e-8` used for finite differences
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
+
+# Available method
+
+Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf, ds)` to obtain an estimate of the bifurcating periodic orbit.
+
 """
 function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose::Bool = false, lens = br.lens, Teigvec = getvectortype(br), scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
@@ -752,7 +766,7 @@ This function provides prediction for the orbits of the Hopf bifurcation point.
 
 # Optional arguments
 - `verbose`	display information
-- `ampfactor = 1` factor multiplying prediction
+- `ampfactor = 1` factor multiplied to the amplitude of the periodic orbit.
 """
 function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 	# get the normal form

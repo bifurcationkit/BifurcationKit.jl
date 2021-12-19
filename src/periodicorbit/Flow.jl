@@ -1,6 +1,6 @@
 abstract type AbstractFlow end
 
-# The vector field `F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
+# The vector field `F(x, p)` associated to a Cauchy problem ẋ = F(x, p). Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
 function vf(::AbstractFlow, x, par; k...) end
 
 # these functions are used in the Standard Shooting method

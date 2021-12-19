@@ -2,6 +2,8 @@ abstract type AbstractProblemMinimallyAugmented end
 @inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
+getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
+
 function applyJacobian(pb::AbstractProblemMinimallyAugmented, x, par, dx, transposeJac = false)
 	if issymmetric(pb)
 		return apply(pb.J(x, par), dx)

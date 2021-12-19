@@ -88,7 +88,7 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	ds = isnothing(δp) ? optionsCont.ds : δp
 	Ty = typeof(ds)
 
-	# compute the normal form of the branch point
+	# compute the normal form of the bifurcation point
 	specialpoint = computeNormalForm1d(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 
 	# compute predictor for a point on new branch

@@ -64,7 +64,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 	# parameters bound
 	pMin::T	= -1.0
-	pMax::T	=  1.0; 			@assert pMax >= pMin
+	pMax::T	=  1.0; 			@assert pMax >= pMin "You must provide a valid interval [pMin, pMax]"
 
 	# maximum number of continuation steps
 	maxSteps::Int64  = 100
@@ -87,7 +87,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	# handling bifurcation points
 	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
 	detectFold::Bool = true 				# detect fold points?
-	detectBifurcation::Int64 = 0			# detect bifurcation points?
+	detectBifurcation::Int64 = 0			# detect other bifurcation points?
 	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps

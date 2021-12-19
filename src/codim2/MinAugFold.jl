@@ -160,7 +160,6 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
-
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
 		# !!! Carefull, this method makes the linear system singular
 		x1, x2, _, it = pb.linsolver(J_at_xp, rhsu, dpF)
@@ -374,7 +373,7 @@ function continuationFold(F, J,
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented prooblem
 	# by updating the vectors a, b
-	function updateMinAugFold(z, tau, step, contResult; kwargs...)
+	function updateMinAugFold(z, tau, step, contResult; kUP...)
 		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u	# fold point
 		p1 = z.u.p	# first parameter
@@ -400,12 +399,12 @@ function continuationFold(F, J,
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 
 		copyto!(foldPb.a, newa); rmul!(foldPb.a, 1/normC(newa))
-		# do not normalize with dot(newb, foldPb.a), it prevents BT  detection
+		# do not normalize with dot(newb, foldPb.a), it prevents from BT detection
 		copyto!(foldPb.b, newb); rmul!(foldPb.b, 1/normC(newb))
 		return true
 	end
 
-	function testForBifurcations(iter, state)
+	function testForBT_CP(iter, state)
 		z = getx(state)
 		x = z.u				# fold point
 		p1 = z.p			# first parameter
@@ -440,7 +439,7 @@ function continuationFold(F, J,
 		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
 
 	# eigen solver
-	eigsolver = FoldEig(opt_fold_cont.newtonOptions.eigsolver)
+	eigsolver = FoldEig(getsolver(opt_fold_cont.newtonOptions.eigsolver))
 
 	# solve the Fold equations
 	br, u, tau = continuation(
@@ -451,7 +450,7 @@ function continuationFold(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
-		event = ContinuousEvent(2, testForBifurcations, ("bt", "cusp")),
+		event = ContinuousEvent(2, testForBT_CP, ("bt", "cusp")),
 		)
 
 	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau

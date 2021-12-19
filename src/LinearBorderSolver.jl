@@ -5,7 +5,11 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, xiu, xip; shift = nothing) must be provided
 
 # call for using BorderedArray input, specific to Arclength Continuation
-(lbs::AbstractBorderedLinearSolver)(J, dR::vec1, dz::vec2, R, n::T, theta::T; shift::Ts = nothing) where {vec1, vec2, T, Ts} = (lbs)(J, dR, dz.u, dz.p, R, n, theta / length(dz.u), one(T) - theta; shift = shift)
+(lbs::AbstractBorderedLinearSolver)(J, dR, dz::BorderedArray, R, n::T, theta::T; shift::Ts = nothing) where {T, Ts} = (lbs)(J, dR,
+										dz.u, dz.p,
+										R, n,
+										theta / length(dz.u), one(T) - theta;
+										shift = shift)
 
 ####################################################################################################
 """
@@ -33,9 +37,9 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # │ (shift⋅I + J)     dR      ││dX│ = │ R │
 # │  xiu * dz.u    xip * dz.p ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
-function (lbs::BorderingBLS{S, Ttol})(  J, dR,
+function (lbs::BorderingBLS)(  J, dR,
 								dzu, dzp::T, R, n::T,
-								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, S, Ts, Ttol}
+								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, Ts}
 	# the following parameters are used for the pseudo arc length continuation
 	# xiu = theta / length(dz.u)
 	# xip = one(T) - theta

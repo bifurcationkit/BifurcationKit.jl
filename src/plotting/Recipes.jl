@@ -22,7 +22,7 @@ function getPlotVars(contres, vars)
 end
 
 # https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
-const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :gray, :cusp => :sienna1, :gh => :brown, :zh => :pink, :hh => :gray, :user => :darkgoldenrod)
+const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :gray, :cusp => :sienna1, :gh => :brown, :zh => :burlywood2, :hh => :gray, :user => :darkgoldenrod)
 
 function getColor(sp)
 	if sp in keys(colorbif)

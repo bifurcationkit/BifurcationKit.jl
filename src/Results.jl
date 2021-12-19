@@ -41,7 +41,7 @@ $(TYPEDFIELDS)
 	"A vector with eigen-elements at each continuation step."
 	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
-	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryNsteps::Int64` (default 0) in [`ContinuationPar`](@ref)."
+	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Ts
 
 	"The parameters used for the call to `continuation` which produced this branch."
@@ -114,6 +114,7 @@ Return the eigenvalues of the ind-th continuation step. `verbose` is used to tel
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
 	if verbose
+		println("--> For ", getLensSymbol(br.lens), " = ", br.branch[ind].param)
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
 	println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
 	end
