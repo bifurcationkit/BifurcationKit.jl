@@ -16,9 +16,9 @@ $(TYPEDFIELDS)
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	"absolute tolerance for `F(x)`"
-	tol::T           = 1e-10
+	tol::T			= 1e-12
 	"number of Newton iterations"
-	maxIter::Int64 	 = 50
+	maxIter::Int64 	 = 25
 	"display Newton iterations?"
 	verbose::Bool    = false
 	"linear solver, must be `<: AbstractLinearSolver`"

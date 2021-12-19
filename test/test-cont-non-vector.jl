@@ -62,16 +62,16 @@ function (l::linsolveBd)(J, dx)
 	out, true, 1
 end
 
-sol = BorderedArray([0.8], 0.0)
+sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-out, hist, flag = newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol, (1., 1.), opt_newton)
+sol, hist, flag = newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol0, (1., 1.), opt_newton)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, saveSolEveryStep = 1)
 
 	br, u1 = continuation(
 		Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-		out,  (1., 1.), (@lens _[1]),
+		sol,  (1., 1.), (@lens _[1]),
 		opts_br; recordFromSolution = (x,p) -> x.u[1])
 
 BK.getSolx(br,1)
@@ -161,7 +161,7 @@ function (l::linsolveBd_r)(J, dx)
 	out, true, 1
 end
 
-opt_newton0 = NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd_r())
+opt_newton0 = NewtonPar(tol = 1e-10, maxIter = 50, verbose = false, linsolver = linsolveBd_r())
 	out0, hist, flag = newton(
 		Fr, (x, p) -> JacobianR(x, p[1]),
 		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),

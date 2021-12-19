@@ -20,6 +20,18 @@ function applyJacobian(pb::AbstractProblemMinimallyAugmented, x, par, dx, transp
 	end
 end
 
+function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+	if detectCodim2Bifurcation > 0
+		_options_cont = setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
+			if get(kwargs, :updateMinAugEveryStep, 0) == 0
+			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. This bifurcation detection will not work. Please use `updateMinAugEveryStep > 0`."
+		end
+	else
+		_options_cont = options_cont
+	end
+	return _options_cont
+end
+
 """
 $(SIGNATURES)
 
@@ -42,7 +54,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to use the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 """
 function newton(F, J, br::AbstractBranchResult, ind_bif::Int64; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, issymmetric::Bool = false, kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
@@ -96,14 +108,7 @@ function continuation(F, J,
 				kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	# options to detect codim2 bifurcations
-	if detectCodim2Bifurcation > 0
-		_options_cont = setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
-			if get(kwargs, :updateMinAugEveryStep, 0) == 0
-			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. This bifurcation detection will not work. Please use `updateMinAugEveryStep > 0`."
-		end
-	else
-		_options_cont = options_cont
-	end
+	_options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
 	if br.specialpoint[ind_bif].type == :hopf
 		# redefine the multilinear form to accept complex arguments

@@ -73,7 +73,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Monitoring user functions along curves computed by continuation, see [events](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/)
 - Continuation methods: PALC, Deflated continuation
 - Bifurcation points are located using a bisection algorithm
-- detection of Branch, Fold, Hopf bifurcation point of stationary solutions.
+- detection of Branch, Fold, Hopf bifurcation point of stationary solutions and computation of their normal form.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic bifurcation diagram computation of equilibria**

@@ -75,7 +75,7 @@ struct ContinuousEvent{Tcb, Tl} <: AbstractContinuousEvent
 	"whether the event requires to compute eigen elements"
 	computeEigenElements::Bool
 
-	"Labels used to display information. For example `labels[1]` is used top qualify an event of the type `(0,1.3213,3.434)`. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+	"Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0,1.3213,3.434)`. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
 end
 
@@ -88,7 +88,7 @@ ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothin
 $(TYPEDEF)
 
 Structure to pass a DiscreteEvent function to the continuation algorithm.
-A continuous call back returns a discrete value and we seek when it changes.
+A discrete call back returns a discrete value and we seek when it changes.
 
 $(TYPEDFIELDS)
 """
@@ -102,7 +102,7 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
 	"whether the event requires to compute eigen elements"
 	computeEigenElements::Bool
 
-	"Labels used to display information. For example `labels[1]` is used top qualify an event occuring in the first component. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+	"Labels used to display information. For example `labels[1]` is used to qualify an event occuring in the first component. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
 end
 DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; DiscreteEvent(nb, fct, false, labels))
