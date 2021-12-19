@@ -56,22 +56,6 @@ FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLine
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-function applyJacobian(pb::ProblemMinimallyAugmented, x, par, dx, transposeJac = false)
-	if issymmetric(pb)
-		return apply(pb.J(x, par), dx)
-	else
-		if transposeJac == false
-			return apply(pb.J(x, par), dx)
-		else
-			if hasAdjoint(pb)
-				return apply(pb.Jᵗ(x, par), dx)
-			else
-				return apply(transpose(pb.J(x, par)), dx)
-			end
-		end
-	end
-end
-
 function (fp::FoldProblemMinimallyAugmented)(x, p::T, _par) where {T}
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
@@ -522,6 +506,8 @@ function (eig::FoldEig)(Jma, nev; kwargs...)
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end
+
+geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
 
 """
 $(SIGNATURES)

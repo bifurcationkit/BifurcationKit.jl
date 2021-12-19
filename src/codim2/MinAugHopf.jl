@@ -542,6 +542,8 @@ struct HopfEig{S} <: AbstractCodim2EigenSolver
 	eigsolver::S
 end
 
+geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
+
 function (eig::HopfEig)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
 	J = Jma.hopfpb.J(Jma.x.u, set(Jma.params,Jma.hopfpb.lens,Jma.x.p[1]))
