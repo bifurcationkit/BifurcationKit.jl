@@ -12,7 +12,7 @@ mutable struct BorderedArray{vectype1, vectype2}
 	p::vectype2
 end
 
-eltype(b::BorderedArray{vectype, T}) where {T, vectype} = eltype(b.p)
+eltype(::Type{BorderedArray{vectype, T}}) where {vectype, T} = eltype(T)
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
 

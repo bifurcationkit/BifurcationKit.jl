@@ -147,7 +147,7 @@ function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
 	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
 	println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
 	if length(br.specialpoint) > 0
-		println(io, prefix * "└─ Special points:\n\n (ind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`)\n")
+		println(io, prefix * "└─ Special points:\n\nIf `br` is the name of the branch,\nind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`\n")
 		for ii in eachindex(br.specialpoint)
 			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br.lens)))
 		end

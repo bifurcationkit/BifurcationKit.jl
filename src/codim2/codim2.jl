@@ -1,5 +1,5 @@
-abstract type ProblemMinimallyAugmented end
-@inline getLens(pb::ProblemMinimallyAugmented) = pb.lens
+abstract type AbstractProblemMinimallyAugmented end
+@inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 """

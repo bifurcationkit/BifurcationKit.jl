@@ -19,7 +19,7 @@ Structure to encode Hopf functional based on a Minimally Augmented (MA) formulat
 
 $(FIELDS)
 """
-struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: ProblemMinimallyAugmented
+struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
 	"Function F(x, p) = 0"
 	F::TF
 	"Jacobian of F w.r.t. x"

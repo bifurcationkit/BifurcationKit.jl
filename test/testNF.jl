@@ -267,7 +267,7 @@ BK.type(hp)
 @test abs(nf.a - 1) < 1e-9
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
 
-##############################
+####################################################################################################
 # same but when the eigenvalues are not saved in the branch but computed on the fly instead
 br, _ = BK.continuation(
 	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),

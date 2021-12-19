@@ -735,7 +735,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 		ω,
 		parbif, lens,
 		ζ, ζstar,
-		(a = 0. + 0im, b = 0. + 0im),
+		(a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
 		:SuperCritical
 	)
 	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)

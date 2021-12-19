@@ -17,7 +17,7 @@ Structure to encode Fold functional based on a Minimally Augmented formulation.
 
 $(FIELDS)
 """
-struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: ProblemMinimallyAugmented
+struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
 	"Function F(x, p) = 0"
 	F::TF
 	"Jacobian of F w.r.t. x"
