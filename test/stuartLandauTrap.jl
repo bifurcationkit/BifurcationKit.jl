@@ -35,7 +35,7 @@ poTrap = PeriodicOrbitTrapProblem(
 	Fsl, (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)), # we put sparse to try the different linear solvers
 	[1., 0.],
 	zeros(2),
-	20, 2)
+	10, 2)
 
 BK.hasHessian(poTrap)
 show(poTrap)

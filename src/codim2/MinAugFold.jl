@@ -453,7 +453,7 @@ function continuationFold(F, J,
 		event = ContinuousEvent(2, testForBT_CP, ("bt", "cusp")),
 		)
 		@assert ~isnothing(br) "Empty branch!"
-	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
+	return correctBifurcation(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
 end
 
 function continuationFold(F, J,
@@ -513,11 +513,17 @@ $(SIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
-function codim2FoldBifurcationPoints(contres::AbstractBranchResult)
-	if contres.functional isa FoldProblemMinimallyAugmented == false
+function correctBifurcation(contres::ContResult)
+	if contres.functional isa AbstractProblemMinimallyAugmented == false
 		return contres
 	end
+	if contres.functional isa FoldProblemMinimallyAugmented
 	conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
+	elseif contres.functional isa HopfProblemMinimallyAugmented
+		conversion = Dict(:bp => :zt, :hopf => :hh, :fold => :nd, :nd => :nd)
+	else
+		throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
+	end
 	for (ind, bp) in pairs(contres.specialpoint)
 		if bp.type in keys(conversion)
 			@set! contres.specialpoint[ind].type = conversion[bp.type]

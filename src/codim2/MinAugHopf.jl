@@ -423,13 +423,15 @@ function continuationHopf(F, J,
 		# do not normalize with dot(newb, hopfPb.a), it prevents BT detection
 		hopfPb.b .= newb ./ normC(newb)
 
-		# if the frequency is null, this is not a Hopf point, we halt the process
-		if abs(ω) < options_newton.tol
-			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2)"
-		end
 		# we stop continuation at Bogdanov-Takens points
 		isbt = isnothing(contResult) ? true : isnothing(findfirst(x->x.type == :bt, contResult.specialpoint))
-		return abs(ω) >= 100options_newton.tol && isbt
+
+		# if the frequency is null, this is not a Hopf point, we halt the process
+		threshBT = 100options_newton.tol
+		if abs(ω) < threshBT
+			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, trying lowering Newton tolerance."
+		end
+		return abs(ω) >= threshBT && isbt
 	end
 
 	function computeL1(iter, state)
@@ -495,7 +497,7 @@ function continuationHopf(F, J,
 		event = ContinuousEvent(2, computeL1, ("gh","bt"))
 	)
 	@assert ~isnothing(branch) "Empty branch!"
-	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
+	return correctBifurcation(setproperties(branch; type = :HopfCodim2, functional = hopfPb)), u, tau
 end
 
 function continuationHopf(F, J,
