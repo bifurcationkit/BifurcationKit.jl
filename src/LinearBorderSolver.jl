@@ -43,10 +43,10 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # └                           ┘└  ┘   └   ┘
 function (lbs::BorderingBLS)(  J, dR,
 								dzu, dzp::T, R, n::T,
-								ξu::T = T(1), ξp::T = T(1); shift::Ts = nothing)  where {T, Ts}
+								ξu::Tξ = 1, ξp::Tξ = 1; shift::Ts = nothing)  where {T, Tξ, Ts}
 	# the following parameters are used for the pseudo arc length continuation
-	# ξu = theta / length(dz.u)
-	# ξp = one(T) - theta
+	# ξu = θ / length(dz.u)
+	# ξp = 1 - θ
 
 	# we make this branching to avoid applying a zero shift
 	if isnothing(shift)
@@ -92,7 +92,8 @@ MatrixBLS() = MatrixBLS(nothing)
 # case of a scalar additional linear equation
 function (lbs::MatrixBLS)(J, dR,
 						dzu, dzp::T, R::AbstractVecOrMat, n::T,
-						ξu::T = T(1), ξp::T = T(1); shift::Ts = nothing)  where {T <: Number, S, Ts}
+						ξu::T = T(1), ξp::T = T(1);
+						shift::Ts = nothing)  where {T <: Number, S, Ts}
 
 	if isnothing(shift)
 		A = J
@@ -101,7 +102,7 @@ function (lbs::MatrixBLS)(J, dR,
 	end
 
 	A = hcat(A, dR)
-	A = vcat(A, vcat(vec(dzu) .* ξu, dzp * ξp)')
+	A = vcat(A, hcat((dzu .* ξu)', dzp * ξp))
 
 	# solve the equations and return the result
 	rhs = vcat(R, n)
@@ -182,7 +183,7 @@ extractParBLS(x::BorderedArray)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
-								ξu::T = T(1), ξp::T = T(1); shift = nothing) where {T <: Number, S}
+								ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing) where {T <: Number, Tξ, S}
 	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift)
 	# what is the vector type used?
