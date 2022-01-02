@@ -307,3 +307,80 @@ sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opt
 ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
 cuspnf = computeNormalForm(jet..., sn_codim2, ind[1])
 @test cuspnf.nf.c == par.c
+
+####################################################################################################
+# test for the Bogdanov-Takens normal form
+Fbt(x, p) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
+par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
+jet  = BK.getJet(Fbt; matrixfree=false)
+opt_newton = NewtonPar(tol = 1e-9, maxIter = 40, verbose = false)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, pMax = 0.5, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 8, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9, saveSolEveryStep = 1)
+
+br, = continuation(
+	jet[1], jet[2], [0.01, 0.01], par, (@lens _.β1),
+	opts_br;
+	plot = false, verbosity = 0,
+	recordFromSolution = (x, p) -> (x1 = x[1], x2 = x[2]),
+	bothside = true)
+
+# plot(br)
+
+sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
+	plot = false, verbosity = 0,
+	# normC = norminf,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	# bothside = true,
+	d2F = jet[3], d3F = jet[4],
+	bdlinsolver = MatrixBLS(),
+	callbackN = BK.cbMaxNorm(1e5)
+	)
+
+hopf_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
+	plot = false, verbosity = 0,
+	# normC = norminf,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	bothside = true,
+	d2F = jet[3], d3F = jet[4],
+	bdlinsolver = MatrixBLS(),
+	callbackN = BK.cbMaxNorm(1e5)
+	)
+
+# plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
+
+btpt = computeNormalForm(jet..., sn_codim2, 1; nev = 2)
+
+@test norm(btpt.nf.b * sign(sum(btpt.ζ[1])) - par.b, Inf) < 1e-5
+@test norm(btpt.nf.a * sign(sum(btpt.ζ[1])) - par.a, Inf) < 1e-5
+@test isapprox(abs.(btpt.ζ[1]), [1, 0])
+@test isapprox(abs.(btpt.ζ[2]), [0, 1];rtol = 1e-6)
+@test isapprox(abs.(btpt.ζstar[1]), [1, 0];rtol = 1e-6)
+
+@test isapprox(btpt.nfsupp.K2, [0, 0]; atol = 1e-5)
+@test isapprox(btpt.nfsupp.d, 0; atol = 1e-3)
+@test isapprox(btpt.nfsupp.e, 0; atol = 1e-3)
+@test isapprox(btpt.nfsupp.a1, 0; atol = 1e-3)
+@test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
+
+HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
+	HC.hopf(0.)
+SN = BK.predictor(btpt, Val(:FoldCurve), 0.)
+Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
+	Hom.orbit(0,0)
+
+# plot(sn_codim2, branchlabel = ["Fold"], vars = (:β1, :β2))
+# 	_S = LinRange(-0.06, 0.06, 1000)
+# 	plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=5, label = "Hpred")
+# 	plot!([SN.fold(s)[1] for s in _S], [SN.fold(s)[2] for s in _S], linewidth=5, label = "SNpred")
+# 	_S = LinRange(-0.25, 0.25, 1000)
+# 	plot!([Hom.α(s)[1] for s in _S], [Hom.α(s)[2] for s in _S], linewidth=5, label = "Hom")
+#
+# 	plot!(hopf_codim2, branchlabel = ["Hopf"], vars = (:β1, :β2), color = :black)
+# 	xlims!(-0.001, 0.05)
+
+
+# plot of the homoclinic orbit
+hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
+hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
+# plot(hom1, hom2)

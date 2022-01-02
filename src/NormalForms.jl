@@ -389,6 +389,8 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
+- `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
+- `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
@@ -407,13 +409,19 @@ function computeNormalForm(F, dF, d2F, d3F,
 			lens = br.lens,
 			issymmetric = false,
 			Teigvec = getvectortype(br),
-			scaleζ = norm)
+			scaleζ = norm,
+			detailed = true,
+			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 
-	@assert !(bifpt.type in [:cusp, :zh, :hh]) "Normal form for $(bifpt.type) not implemented"
+	@assert !(bifpt.type in [ :zh, :hh]) "Normal form for $(bifpt.type) not implemented"
 
 	if bifpt.type == :hopf
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+	elseif bifpt.type == :cusp
+		return cuspNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+	elseif bifpt.type == :bt
+		return bogdanovTakensNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ, detailed = detailed, autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 	end
