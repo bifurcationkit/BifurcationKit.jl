@@ -2,20 +2,24 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
 # the following stuctures, say `struct BDLS;...;end` rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
-# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, xiu, xip; shift = nothing) must be provided
+# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing) must be provided
 
 # call for using BorderedArray input, specific to Arclength Continuation
-(lbs::AbstractBorderedLinearSolver)(J, dR, dz::BorderedArray, R, n::T, theta::T; shift::Ts = nothing) where {T, Ts} = (lbs)(J, dR,
-										dz.u, dz.p,
-										R, n,
-										theta / length(dz.u), one(T) - theta;
-										shift = shift)
+(lbs::AbstractBorderedLinearSolver)(J, dR,
+							dz::BorderedArray, R,
+							n::T, theta::T;
+							shift::Ts = nothing) where {T, Ts} = (lbs)(J, dR,
+																	dz.u, dz.p,
+																	R, n,
+																	theta / length(dz.u), one(T) - theta;
+																	shift = shift)
 
 ####################################################################################################
 """
 $(TYPEDEF)
 
-This struct is used to  provide the bordered linear solver based on the Bordering Method. It works
+This struct is used to provide the bordered linear solver based on the Bordering Method.
+
 $(TYPEDFIELDS)
 """
 @with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
@@ -35,14 +39,14 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
 # │ (shift⋅I + J)     dR      ││dX│ = │ R │
-# │  xiu * dz.u    xip * dz.p ││dl│   │ n │
+# │  ξu * dz.u'    ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (lbs::BorderingBLS)(  J, dR,
 								dzu, dzp::T, R, n::T,
-								xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T, Ts}
+								ξu::T = T(1), ξp::T = T(1); shift::Ts = nothing)  where {T, Ts}
 	# the following parameters are used for the pseudo arc length continuation
-	# xiu = theta / length(dz.u)
-	# xip = one(T) - theta
+	# ξu = theta / length(dz.u)
+	# ξp = one(T) - theta
 
 	# we make this branching to avoid applying a zero shift
 	if isnothing(shift)
@@ -51,12 +55,12 @@ function (lbs::BorderingBLS)(  J, dR,
 		x1, x2, _, (it1, it2) = lbs.solver(J, R, dR; a₀ = shift)
 	end
 
-	dl = (n - dot(dzu, x1) * xiu) / (dzp * xip - dot(dzu, x2) * xiu)
+	dl = (n - dot(dzu, x1) * ξu) / (dzp * ξp - dot(dzu, x2) * ξu)
 
 	# dX = x1 .- dl .* x2
 	axpy!(-dl, x2, x1)
 
-	# we check the precision of the solution by the bordering algorithm
+	# we check the precision of the solution from the bordering algorithm
 	# mainly for debugging purposes
 	if lbs.checkPrecision
 		# at this point, x2 is not used anymore, we can use it for computing the residual
@@ -64,7 +68,7 @@ function (lbs::BorderingBLS)(  J, dR,
 		x2 = apply(J, x1)
 		axpy!(dl, dR, x2)
 		axpy!(-1, R, x2)
-		if norm(x2) > lbs.tol || abs(n - xip*dzp*dl -xiu* dot(dzu, x1)) > lbs.tol
+		if norm(x2) > lbs.tol || abs(n - ξp * dzp * dl -ξu * dot(dzu, x1)) > lbs.tol
 			@warn "BorderingBLS did not achieve tolerance"
 		end
 	end
@@ -87,8 +91,8 @@ MatrixBLS() = MatrixBLS(nothing)
 
 # case of a scalar additional linear equation
 function (lbs::MatrixBLS)(J, dR,
-						dzu, dzp::T, R::vectype, n::T,
-						xiu::T = T(1), xip::T = T(1); shift::Ts = nothing)  where {T <: Number, vectype <: AbstractVector, S, Ts}
+						dzu, dzp::T, R::AbstractVecOrMat, n::T,
+						ξu::T = T(1), ξp::T = T(1); shift::Ts = nothing)  where {T <: Number, S, Ts}
 
 	if isnothing(shift)
 		A = J
@@ -97,7 +101,7 @@ function (lbs::MatrixBLS)(J, dR,
 	end
 
 	A = hcat(A, dR)
-	A = vcat(A, vcat(vec(dzu) .* xiu, dzp * xip)')
+	A = vcat(A, vcat(vec(dzu) .* ξu, dzp * ξp)')
 
 	# solve the equations and return the result
 	rhs = vcat(R, n)
@@ -107,8 +111,10 @@ end
 
 ####################################################################################################
 # composite type to save the bordered linear system with expression
-# [ J	a]
-# [b'	c]
+# ┌         ┐
+# │  J    a │
+# │  b'   c │
+# └         ┘
 # It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
 #
 struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts}
@@ -176,9 +182,9 @@ extractParBLS(x::BorderedArray)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
-								xiu::T = T(1), xip::T = T(1); shift = nothing) where {T <: Number, S}
+								ξu::T = T(1), ξp::T = T(1); shift = nothing) where {T <: Number, S}
 	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
-	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), xiu), dzp * xip, shift)
+	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift)
 	# what is the vector type used?
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)

@@ -73,7 +73,7 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J - iω
 	#       a should be a null vector of J'+ iω
-	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
+	# we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = n
 	n = T(1)
 	# note that the shift argument only affect J in this call:
 	σ1 = hp.linbdsolver(hp.J(x, par), a, b, T(0), hp.zero, n; shift = Complex{T}(0, -ω))[2]

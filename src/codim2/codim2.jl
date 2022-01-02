@@ -1,7 +1,6 @@
 abstract type AbstractProblemMinimallyAugmented end
 @inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
-
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 
 function applyJacobian(pb::AbstractProblemMinimallyAugmented, x, par, dx, transposeJac = false)
@@ -22,14 +21,13 @@ end
 
 function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 	if detectCodim2Bifurcation > 0
-		_options_cont = setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
 			if get(kwargs, :updateMinAugEveryStep, 0) == 0
 			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. This bifurcation detection will not work. Please use `updateMinAugEveryStep > 0`."
 		end
+		return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
 	else
-		_options_cont = options_cont
+		return options_cont
 	end
-	return _options_cont
 end
 
 """

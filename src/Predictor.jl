@@ -112,10 +112,14 @@ end
 struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
-# tau is the tangent prediction
+# τ is the tangent prediction found by solving
+# it is updated inplace
+# ┌                           ┐┌  ┐   ┌   ┐
+# │      J            dFdl    ││τu│ = │ 0 │
+# │  θ/N * τu       (1-θ)⋅τp  ││τp│   │ 1 │
+# └                           ┘└  ┘   └   ┘
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: Bordered")
-	# tangent predictor
 	ϵ = it.contParams.finDiffEps
 	# dFdl = (F(z_new.u, z_new.p + ϵ) - F(z_new.u, z_new.p)) / ϵ
 	dFdl = it.F(z_new.u, setParam(it, z_new.p + ϵ))
@@ -123,18 +127,18 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	tau_normed = copy(τ)#copyto!(similar(tau), tau) #copy(tau_old)
-	rmul!(tau_normed, θ / length(τ.u), 1 - θ)
+	τ_normed = copy(τ)#copyto!(similar(tau), tau) #copy(tau_old)
+	rmul!(τ_normed, θ / length(τ.u), 1 - θ)
 	# extract tangent as solution of bordered linear system, using zero(z_new.u)
-	tauu, taup, flag, itl = it.linearAlgo( it.J(z_new.u, setParam(it, z_new.p)), dFdl,
-			tau_normed, 0*z_new.u, T(1), θ)
+	τu, τp, flag, itl = it.linearAlgo( it.J(z_new.u, setParam(it, z_new.p)), dFdl,
+			τ_normed, 0*z_new.u, T(1), θ)
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / it.dottheta(tauu, τ.u, taup, τ.p, θ)
+	α = T(1) / it.dottheta(τu, τ.u, τp, τ.p, θ)
 
 	# tau_new = α * tau
-	copyto!(τ.u, tauu)
-	τ.p = taup
+	copyto!(τ.u, τu)
+	τ.p = τp
 	rmul!(τ, α)
 end
 ####################################################################################################

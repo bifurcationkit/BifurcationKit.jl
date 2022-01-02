@@ -14,7 +14,7 @@ end
 
 eltype(::Type{BorderedArray{vectype, T}}) where {vectype, T} = eltype(T)
 similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
-similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Real, vectype} = BorderedArray(similar(b.u, S), S(0))
+similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Number, vectype} = BorderedArray(similar(b.u, S), S(0))
 
 Base.:*(a::S, b::BorderedArray{vectype, T}) where {vectype, T, S <: Number} = BorderedArray(*(a, b.u),*(a, b.p))
 

@@ -18,7 +18,9 @@ end
 ####################################################################################################
 # The following functions are used for the Continuation of Hopf points and the computation of Floquet multipliers
 
-# this function returns a₀ * I + a₁ .* J and ensures that we don't do unnecessary computations like 0*I + 1*J
+"""
+This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+"""
 function _axpy(J, a₀, a₁)
 	if a₀ == 0
 		if a₁ == 1
@@ -37,6 +39,9 @@ function _axpy(J, a₀, a₁)
 	end
 end
 
+"""
+This function implements the operator a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+"""
 function _axpy_op(J, v::AbstractArray, a₀, a₁)
 	if a₀ == 0
 		if a₁ == 1
