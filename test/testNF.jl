@@ -294,7 +294,7 @@ br, = continuation(
 	)
 
 sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
-	plot = true, verbosity = 0,
+	plot = false, verbosity = 0,
 	normC = norminf,
 	# detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
