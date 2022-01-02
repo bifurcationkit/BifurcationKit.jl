@@ -573,3 +573,169 @@ function bogdanovTakensNormalForm(F, dF, d2F, d3F,
 	)
 	return bogdanovTakensNormalForm(prob, L, d2F, d3F, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff)
 end
+####################################################################################################
+function bautinNormalForm(F, dF, d2F, d3F,
+		br::AbstractBranchResult, ind_bif::Int;
+		δ = 1e-8,
+		nev = length(eigenvalsfrombif(br, ind_bif)),
+		Jᵗ = nothing,
+		verbose = false,
+		ζs = nothing,
+		lens = br.lens,
+		Teigvec = getvectortype(br),
+		scaleζ = norm)
+	@assert getvectortype(br) <: BorderedArray
+	@assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
+
+	verbose && println("#"^53*"\n--> Bautin Normal form computation")
+
+	# scalar type
+	T = eltype(Teigvec)
+	ϵ2 = T(δ)
+
+	# functional
+	prob = br.functional
+	@assert prob isa HopfProblemMinimallyAugmented
+	ls = prob.linsolver
+	bls = prob.linbdsolver
+
+	# ``kernel'' dimension
+	N = 2
+
+	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
+	nev = max(N, nev)
+
+	# Newton parameters
+	optionsN = br.contparams.newtonOptions
+
+	# bifurcation point
+	bifpt = br.specialpoint[ind_bif]
+	eigRes = br.eig
+
+	# eigenvalue
+	ω = abs(bifpt.x.p[2])
+	λ = Complex(0, ω)
+
+	# parameter for vector field
+	p = bifpt.param
+	parbif = set(br.params, lens, p)
+	parbif = set(parbif, prob.lens, get(bifpt.printsol, prob.lens))
+
+	# jacobian at bifurcation point
+	x0 = convert(Teigvec.parameters[1], bifpt.x.u)
+	L = dF(x0, parbif)
+
+	# right eigenvector
+	if haseigenvector(br) == false
+		# we recompute the eigen-elements if there were not saved during the computation of the branch
+		@info "Recomputing eigenvector on the fly"
+		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+		_ind = argmin(abs.(_λ .- λ))
+		@info "The eigenvalue is $(_λ[_ind])"
+		@assert abs(_λ[_ind] - λ)<br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+		ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
+	else
+		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+	end
+	ζ ./= scaleζ(ζ)
+
+	# left eigen-elements
+	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x, p)
+	ζstar, λstar = getAdjointBasis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+
+	# check that λstar ≈ conj(λ)
+	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+
+	# normalise left eigenvector
+	ζstar ./= dot(ζ, ζstar)
+	@assert dot(ζ, ζstar) ≈ 1
+
+	# parameters for vector field
+	p = bifpt.param
+	parbif = set(br.params, lens, p)
+	parbif = set(parbif, prob.lens, get(bifpt.printsol, prob.lens))
+
+	# second order differential, to be in agreement with Kuznetsov et al.
+	B = BilinearMap( (dx1, dx2) -> d2F(x0, parbif, dx1, dx2) )
+	C = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3) )
+
+	q0 = ζ; p0 = ζstar
+	cq0 = conj.(q0)
+
+	H20, = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+	H11, = ls(L, -B(q0, cq0))
+	H30, = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+
+	h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
+	G21 = dot(p0, h21)
+	h21 .= G21 .* q0 .- h21
+	H21, = bls(L, q0, p0, zero(T), h21, zero(T); shift = Complex{T}(0, -ω))
+	# sol = [L-λ*I q0; p0' 0] \ [h21..., 0]
+
+	# 4-th order coefficient
+	d4F(x0, dx1, dx2, dx3, dx4) = (d3F(x0 .+ ϵ2 .* dx4, parbif, dx1, dx2, dx3) .-
+								   d3F(x0 .- ϵ2 .* dx4, parbif, dx1, dx2, dx3)) ./(2ϵ2)
+
+	# implement 4th order differential with finite differences
+	function D(x0, dx1, dx2, dx3, dx4)
+		dx4r = real.(dx4); dx4i = imag.(dx4);
+		# C(dx, dx4r) + i * C(dx, dx4i)
+		trilin_r = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4r) )
+		out1 = trilin_r(dx1, dx2, dx3)
+		trilin_i = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4i) )
+		out2 = trilin_i(dx1, dx2, dx3)
+		return out1 .+ im .* out2
+	end
+
+	h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
+	h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
+	H31, = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
+
+	h22 = D(x0, q0, q0, cq0, cq0) .+
+		4 .* C(q0, cq0, H11) .+ C(cq0, cq0, H20) .+ C(q0, q0, conj.(H20)) .+
+		2 .* B(H11, H11) .+ 2 .* B(q0, conj.(H21)) .+ 2 .* B(cq0, H21) .+ B(conj.(H20), H20) .-
+		(2G21 + 2conj(G21)) .* H11
+	H22, = ls(L, h22)
+	H22 .*= -1
+
+	# 5-th order coefficient
+	# implement 5th order differential with finite differences
+	function E(dx1, dx2, dx3, dx4, dx5)
+		dx5r = real.(dx5); dx5i = imag.(dx5);
+		out1 = (D(x0 .+ ϵ2 .* dx5r, dx1, dx2, dx3, dx4) .-
+			    D(x0 .- ϵ2 .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ2)
+	    out2 = (D(x0 .+ ϵ2 .* dx5i, dx1, dx2, dx3, dx4) .-
+			    D(x0 .- ϵ2 .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ2)
+		return out1 .+ im .* out2
+	end
+
+	G32 = dot(p0, E(q0, q0, q0, cq0, cq0))
+	G32 += dot(p0, D(x0, q0, q0, q0, conj.(H20))) +
+		  3dot(p0, D(x0, q0, cq0, cq0, H20)) +
+		  6dot(p0, D(x0, q0, q0, cq0, H11))
+
+	G32 += dot(p0, C(cq0, cq0, H30)) +
+		  3dot(p0, C(q0, q0, conj.(H21))) +
+		  6dot(p0, C(q0, cq0, H21)) +
+		  3dot(p0, C(q0, conj.(H20), H20)) +
+		  6dot(p0, C(q0, H11, H11)) +
+		  6dot(p0, C(cq0, H20, H11))
+
+	G32 += 2dot(p0, B(cq0, H31)) +
+		   3dot(p0, B(q0, H22)) +
+		    dot(p0, B(conj(H20), H30)) +
+		   3dot(p0, B(conj(H21), H20)) +
+		   6dot(p0, B(H11, H21))
+
+	# second Lyapunov coefficient
+	l2 = real(G32) / 12
+
+	pt = Bautin(
+		x0, parbif,
+		(lens, prob.lens),
+		ζ, ζstar,
+		(;ω, G21, G32, l2 ),
+		:none
+	)
+end
+####################################################################################################

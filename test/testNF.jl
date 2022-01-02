@@ -384,3 +384,36 @@ Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
 hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
 hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
 # plot(hom1, hom2)
+####################################################################################################
+# test of the Bautin normal form
+function Fsl2!(f, u, p, t)
+	@unpack r, μ, ν, c3, c5 = p
+	u1, u2 = u
+	ua = u1^2 + u2^2
+	f[1] = r * u1 - ν * u2 + ua * (c3 * u1 - μ * u2) + c5 * ua^2 * u1
+	f[2] = r * u2 + ν * u1 + ua * (c3 * u2 + μ * u1) + c5 * ua^2 * u2
+	return f
+end
+
+Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
+par_sl = (r = -0.5, μ = 0., ν = 1.0, c3 = 0.1, c5 = 0.3)
+jet = BK.getJet(Fsl2, matrixfree=false)
+
+@set! opts_br.newtonOptions.verbose = false
+@set! opts_br.newtonOptions.tol = 1e-12
+opts_br = setproperties(opts_br;nInversion = 10, maxBisectionSteps = 25)
+
+br, = continuation( jet[1], jet[2], [0.01, 0.01], par_sl, (@lens _.r), opts_br)
+
+hopf_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.c3), ContinuationPar(opts_br, detectBifurcation = 0, saveSolEveryStep = 1, maxSteps = 40, pMin = -2., pMax = 2., ds = -0.001) ;
+	detectCodim2Bifurcation = 2,
+	startWithEigen = true,
+	updateMinAugEveryStep = 1,
+	d2F = jet[3], d3F = jet[4],
+	bdlinsolver = MatrixBLS(),
+	)
+
+bautin = computeNormalForm(jet..., hopf_codim2, 1)
+	show(bautin)
+
+@test bautin.nf.l2 ≈ par_sl.c5 * 4

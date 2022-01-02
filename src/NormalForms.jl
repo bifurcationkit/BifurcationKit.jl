@@ -125,7 +125,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	b3 = dot(b3v, ζstar)
 	verbose && println("--> b3/6 = ", b3/6)
 
-	bp = (x0, p, parbif, lens, ζ, ζstar, (a=a, b1=b1, b2=b2, b3=b3), :NA)
+	bp = (x0, p, parbif, lens, ζ, ζstar, (a = a, b1 = b1, b2 = b2, b3 = b3), :NA)
 	if abs(a) < tolFold
 		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else
@@ -422,6 +422,8 @@ function computeNormalForm(F, dF, d2F, d3F,
 		return cuspNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif bifpt.type == :bt
 		return bogdanovTakensNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ, detailed = detailed, autodiff = autodiff)
+	elseif bifpt.type == :gh
+		return bautinNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 	end
