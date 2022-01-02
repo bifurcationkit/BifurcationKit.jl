@@ -39,6 +39,8 @@ module BifurcationKit
 
 	include("bifdiagram/BranchSwitching.jl")
 	include("NormalForms.jl")
+	include("codim2/BifurcationPoints.jl")
+	include("codim2/NormalForms.jl")
 	include("bifdiagram/BifurcationDiagram.jl")
 
 	include("DeflatedContinuation.jl")

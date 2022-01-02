@@ -255,7 +255,7 @@ jet = BK.getJet(Fsl2, (x, p) -> ForwardDiff.jacobian(z -> Fsl2(z, p), x))
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 3, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
 
 br, = BK.continuation(
-	Fsl2, [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
+	jet[1], jet[2], [0.0, 0.0], (@set par_sl.r = -0.1), (@lens _.r),
 	recordFromSolution = (x, p) -> norminf(x),
 	opts_br; plot = false, verbosity = 0, normC = norminf)
 
@@ -282,3 +282,28 @@ nf = hp.nf
 @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
 
 show(hp)
+####################################################################################################
+# test for the Cusp normal form
+Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
+par = (β1 = 0.0, β2 = -0.01, c = 3.)
+jet  = BK.getJet(Fcusp; matrixfree=false)
+br, = continuation(
+	jet[1], jet[2], [0.01], par, (@lens _.β1),
+	opts_br;
+	plot = false, verbosity = 0,
+	)
+
+sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
+	plot = true, verbosity = 0,
+	normC = norminf,
+	# detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	bothside = true,
+	d2F = jet[3], d3F = jet[4],
+	bdlinsolver = MatrixBLS(),
+	callbackN = BK.cbMaxNorm(1e5)
+	)
+# find the cusp point
+ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
+cuspnf = computeNormalForm(jet..., sn_codim2, ind[1])
+@test cuspnf.nf.c == par.c
