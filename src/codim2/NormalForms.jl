@@ -499,12 +499,12 @@ function bogdanovTakensNormalForm(F, dF, d2F, d3F,
 	bifpt = br.specialpoint[ind_bif]
 	eigRes = br.eig
 
-	# eigenvalue
-	if bifpt.ind_ev > 0
-		λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
-	else
-		λ = rightmost(eigRes[bifpt.idx].eigenvals)[1]
-	end
+	# # eigenvalue
+	# if bifpt.ind_ev > 0
+	# 	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+	# else
+	# 	λ = rightmost(eigRes[bifpt.idx].eigenvals)[1]
+	# end
 
 	# parameters for vector field
 	p = bifpt.param

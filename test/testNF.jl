@@ -287,27 +287,17 @@ show(hp)
 Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
 par = (β1 = 0.0, β2 = -0.01, c = 3.)
 jet  = BK.getJet(Fcusp; matrixfree=false)
-br, = continuation(
-	jet[1], jet[2], [0.01], par, (@lens _.β1),
-	opts_br;
-	plot = false, verbosity = 0,
-	)
+br, = continuation(jet[1], jet[2], [0.01], par, (@lens _.β1), opts_br;)
 
 sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
-	plot = false, verbosity = 0,
-	normC = norminf,
-	# detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
-	bothside = true,
 	d2F = jet[3], d3F = jet[4],
-	bdlinsolver = MatrixBLS(),
-	callbackN = BK.cbMaxNorm(1e5)
+	bdlinsolver = MatrixBLS()
 	)
 # find the cusp point
 ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
 cuspnf = computeNormalForm(jet..., sn_codim2, ind[1])
 @test cuspnf.nf.c == par.c
-
 ####################################################################################################
 # test for the Bogdanov-Takens normal form
 Fbt(x, p) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
@@ -316,35 +306,21 @@ jet  = BK.getJet(Fbt; matrixfree=false)
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 40, verbose = false)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, pMax = 0.5, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 8, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9, saveSolEveryStep = 1)
 
-br, = continuation(
-	jet[1], jet[2], [0.01, 0.01], par, (@lens _.β1),
-	opts_br;
-	plot = false, verbosity = 0,
-	recordFromSolution = (x, p) -> (x1 = x[1], x2 = x[2]),
-	bothside = true)
-
-# plot(br)
+br, = continuation(jet[1], jet[2], [0.01, 0.01], par, (@lens _.β1), opts_br; bothside = true)
 
 sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
-	plot = false, verbosity = 0,
-	# normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
-	# bothside = true,
 	d2F = jet[3], d3F = jet[4],
-	bdlinsolver = MatrixBLS(),
-	callbackN = BK.cbMaxNorm(1e5)
+	bdlinsolver = MatrixBLS()
 	)
 
 hopf_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40) ;
-	plot = false, verbosity = 0,
-	# normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	bothside = true,
 	d2F = jet[3], d3F = jet[4],
 	bdlinsolver = MatrixBLS(),
-	callbackN = BK.cbMaxNorm(1e5)
 	)
 
 # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
@@ -413,7 +389,7 @@ hopf_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.c3), ContinuationPar(op
 	bdlinsolver = MatrixBLS(),
 	)
 
-bautin = computeNormalForm(jet..., hopf_codim2, 1)
+bautin = BifurcationKit.computeNormalForm(jet..., hopf_codim2, 1; nev = 2)
 	show(bautin)
 
 @test bautin.nf.l2 ≈ par_sl.c5 * 4
