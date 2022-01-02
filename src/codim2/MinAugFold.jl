@@ -56,7 +56,8 @@ FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLine
 
 @inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
-function (fp::FoldProblemMinimallyAugmented)(x, p::T, _par) where {T}
+function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
+	# https://docs.trilinos.org/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MinimallyAugmented_1_1Constraint.html
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
@@ -65,7 +66,7 @@ function (fp::FoldProblemMinimallyAugmented)(x, p::T, _par) where {T}
 	a = fp.a
 	b = fp.b
 	# update parameter
-	par = set(_par, fp.lens, p)
+	par = set(params, fp.lens, p)
 	# ┌      ┐┌  ┐ ┌ ┐
 	# │ J  a ││v │=│0│
 	# │ b  0 ││σ1│ │1│
@@ -321,11 +322,10 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call
-The call is as follows
 
 	continuationFold(F, J, br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
 
-where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` you want to continue.
+where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` that you want to continue.
 
 !!! tip "Jacobian tranpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
@@ -371,7 +371,7 @@ function continuationFold(F, J,
 	lenses = getLensSymbol(lens1, lens2)
 
 	# this function is used as a Finalizer
-	# it is called to update the Minimally Augmented prooblem
+	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
 	function updateMinAugFold(z, tau, step, contResult; kUP...)
 		~modCounter(step, updateMinAugEveryStep) && return true
@@ -432,14 +432,14 @@ function continuationFold(F, J,
 		return BT, CP
 	end
 
-	# it allows to append information specific to the codim 2 continuation to the user data
+	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
 		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) :
 		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
 
 	# eigen solver
-	eigsolver = FoldEig(getsolver(opt_fold_cont.newtonOptions.eigsolver))
+	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))
 
 	# solve the Fold equations
 	br, u, tau = continuation(
@@ -452,7 +452,7 @@ function continuationFold(F, J,
 		finaliseSolution = updateMinAugFold,
 		event = ContinuousEvent(2, testForBT_CP, ("bt", "cusp")),
 		)
-
+		@assert ~isnothing(br) "Empty branch!"
 	return codim2FoldBifurcationPoints(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
 end
 
@@ -495,18 +495,18 @@ function continuationFold(F, J,
 end
 
 # structure to compute eigen-elements along branch of Fold points
-struct FoldEig{S} <: AbstractCodim2EigenSolver
+struct FoldEigsolver{S} <: AbstractCodim2EigenSolver
 	eigsolver::S
 end
 
-function (eig::FoldEig)(Jma, nev; kwargs...)
+function (eig::FoldEigsolver)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
 	J = Jma.fldpb.J(Jma.x.u, set(Jma.params, Jma.fldpb.lens, Jma.x.p))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end
 
-geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
+geteigenvector(eig::FoldEigsolver, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
 
 """
 $(SIGNATURES)

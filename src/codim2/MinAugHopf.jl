@@ -56,7 +56,7 @@ HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLine
 @inline issymmetric(pb::HopfProblemMinimallyAugmented) = false
 
 # this function encodes the functional
-function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
+function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian has a purely imaginary eigenvalue
@@ -65,7 +65,7 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, _par) where {T}
 	a = hp.a
 	b = hp.b
 	# update parameter
-	par = set(_par, hp.lens, p)
+	par = set(params, hp.lens, p)
 	# ┌         ┐┌  ┐ ┌ ┐
 	# │ J-iω  a ││v │=│0│
 	# │  b    0 ││σ1│ │1│
@@ -196,7 +196,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	if debugArray isa AbstractVector
 		debugArray .= vcat(σp, σω, σx)
 	end
-	return x1 - dp * x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
+	return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
 function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...)  where {vectype, T}
@@ -336,11 +336,10 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
-The call is as follows
 
 	continuationHopf(F, J, br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  kwargs...)
 
-where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
+where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` that you want to refine.
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
@@ -390,11 +389,11 @@ function continuationHopf(F, J,
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
 
-	# current lypunov coefficient
-	l1 = Complex{eltype(Tb)}(0,0)
+	# current lyapunov coefficient
+	l1 = Complex{eltype(Tb)}(0, 0)
 
 	# this function is used as a Finalizer
-	# it is called to update the Minimally Augmented prooblem
+	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
 	function updateMinAugHopf(z, tau, step, contResult; kUP...)
 		~modCounter(step, updateMinAugEveryStep) && return true
@@ -426,7 +425,7 @@ function continuationHopf(F, J,
 
 		# if the frequency is null, this is not a Hopf point, we halt the process
 		if abs(ω) < options_newton.tol
-			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at $p1, $p2"
+			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seem to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2)"
 		end
 		# we stop continuation at Bogdanov-Takens points
 		isbt = isnothing(contResult) ? true : isnothing(findfirst(x->x.type == :bt, contResult.specialpoint))
@@ -461,7 +460,7 @@ function continuationHopf(F, J,
 		BT = dot(ζstar ./ normC(ζstar), ζ)
 		ζstar ./= dot(ζ, ζstar)
 
-		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex(0., 0.), b = Complex(0.,0.)), :hopf)
+		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex{T}(0, 0), b = Complex{T}(0,0)), :hopf)
 		hopfNormalForm(F, J, d2F, d3F, hp, options_newton.linsolver, verbose=false)
 
 		# lyapunov coefficient
@@ -473,7 +472,7 @@ function continuationHopf(F, J,
 		return GH, real(BT)
 	end
 
-	# it allows to append information specific to the codim 2 continuation to the user data
+	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
 		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = dot(hopfPb.a, hopfPb.b)) :
@@ -495,7 +494,7 @@ function continuationHopf(F, J,
 		finaliseSolution = updateMinAugHopf,
 		event = ContinuousEvent(2, computeL1, ("gh","bt"))
 	)
-
+	@assert ~isnothing(branch) "Empty branch!"
 	return setproperties(branch; type = :HopfCodim2, functional = hopfPb), u, tau
 end
 
@@ -546,7 +545,14 @@ geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, ve
 
 function (eig::HopfEig)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
-	J = Jma.hopfpb.J(Jma.x.u, set(Jma.params,Jma.hopfpb.lens,Jma.x.p[1]))
+
+	x = Jma.x.u		# hopf point
+	p1, ω = Jma.x.p	# first parameter
+	newpar = set(Jma.params, getLens(Jma.hopfpb), p1)
+
+	J = Jma.hopfpb.J(x, newpar)
+
 	eigenelts = eig.eigsolver(J, n; kwargs...)
+	# @assert 1==0 "Mettre les 2 params a jour"
 	return eigenelts
 end

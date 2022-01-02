@@ -22,7 +22,8 @@ function getPlotVars(contres, vars)
 end
 
 # https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
-const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :gray, :cusp => :sienna1, :gh => :brown, :zh => :burlywood2, :hh => :gray, :user => :darkgoldenrod)
+# we don't need to have different colors. Indeed, some bifurcations never occurs together codim1 ∩ codim2 = ∅
+const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :red, :cusp => :sienna1, :gh => :brown, :zh => :burlywood2, :hh => :green, :user => :darkgoldenrod)
 
 function getColor(sp)
 	if sp in keys(colorbif)
