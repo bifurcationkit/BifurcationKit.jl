@@ -44,7 +44,7 @@ $(TYPEDFIELDS)
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Ts
 
-	"The parameters used for the call to `continuation` which produced this branch."
+	"The parameters used for the call to `continuation` which produced this branch. Must be a ContinatioPar"
 	contparams::Tparc
 
 	"Type of solutions computed in this branch."
