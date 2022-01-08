@@ -28,7 +28,7 @@ $(TYPEDFIELDS)
 - `getSolx(br, k)` returns the k-th solution on the branch
 - `getSolp(br, k)` returns the parameter  value associated with k-th solution on the branch
 """
-@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
+@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
@@ -45,7 +45,7 @@ $(TYPEDFIELDS)
 	sol::Ts
 
 	"The parameters used for the call to `continuation` which produced this branch."
-	contparams::ContinuationPar
+	contparams::Tparc
 
 	"Type of solutions computed in this branch."
 	type::Symbol = :Equilibrium
@@ -72,11 +72,11 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the solution are saved in the branch
-@inline hassolution(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Ts != Nothing
+@inline hassolution(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl } = Ts != Nothing
 @inline hassolution(br::AbstractBranchResult) = hassolution(br.γ)
 
 # check whether the eigenvectors are saved in the branch
-@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl } = Teigvec != Nothing
+@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
@@ -120,7 +120,6 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	end
 	br.eig[ind+1].eigenvals
 end
-
 """
 $(SIGNATURES)
 
@@ -156,7 +155,7 @@ function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
-getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tfunc, Tpar, Tl} = br.eig[bp.idx]
+getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} = br.eig[bp.idx]
 
 """
 $(SIGNATURES)

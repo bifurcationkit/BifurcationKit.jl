@@ -72,7 +72,7 @@ end
 function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 	if detectCodim2Bifurcation > 0
 			if get(kwargs, :updateMinAugEveryStep, 0) == 0
-			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. This bifurcation detection will not work. Please use `updateMinAugEveryStep > 0`."
+			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
 		end
 		return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
 	else
@@ -165,7 +165,13 @@ function continuation(F, J,
 		d3Fc = isnothing(d3F) ? nothing : (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)
 		return continuationHopf(F, J, br, ind_bif, lens2, _options_cont; Jᵗ = Jᵗ, d2F = d2Fc, d3F = d3Fc, startWithEigen = startWithEigen, computeEigenElements = computeEigenElements, kwargs...)
 	else
-		return continuationFold(F, J, br, ind_bif, lens2, _options_cont; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, computeEigenElements = computeEigenElements, kwargs...)
+		return continuationFold(F, J, br, ind_bif, lens2, _options_cont;
+			issymmetric = issymmetric,
+			Jᵗ = Jᵗ,
+			d2F = d2F,
+			startWithEigen = startWithEigen,
+			computeEigenElements = computeEigenElements,
+			kwargs...)
 	end
 end
 """

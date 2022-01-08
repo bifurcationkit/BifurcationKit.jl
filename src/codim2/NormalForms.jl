@@ -370,7 +370,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 		hopfvec = F.vectors[:, ind]
 		return bt.ζstar[1] .* hopfvec[1] .+ bt.ζstar[2] .* hopfvec[2]
 	end
-	# compute point on the Fold curve
+	# compute point on the Hopf curve
 	x0 = getx(ds)
 
 	return (hopf = t->HopfCurve(t).pars,

@@ -414,7 +414,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 
-	@assert !(bifpt.type in [ :zh, :hh]) "Normal form for $(bifpt.type) not implemented"
+	@assert !(bifpt.type in (:zh, :hh)) "Normal form for $(bifpt.type) not implemented"
 
 	if bifpt.type == :hopf
 		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
