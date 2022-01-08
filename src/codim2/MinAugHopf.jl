@@ -391,6 +391,8 @@ function continuationHopf(F, J,
 
 	# current lyapunov coefficient
 	l1 = Complex{eltype(Tb)}(0, 0)
+	BT = one(eltype(Tb))
+	GH = one(eltype(Tb))
 
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented problem
@@ -431,7 +433,10 @@ function continuationHopf(F, J,
 		if abs(ω) < threshBT
 			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, trying lowering Newton tolerance."
 		end
-		return abs(ω) >= threshBT && isbt
+		# call the user-passed finalizer
+		finaliseUser = get(kwargs, :finaliseSolution, nothing)
+		resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; kUP...)
+		return abs(ω) >= threshBT && isbt && resFinal
 	end
 
 	function computeL1(iter, state)
@@ -459,7 +464,7 @@ function continuationHopf(F, J,
 		JAd_at_xp = hasAdjoint(hopfPb) ? hopfPb.Jᵗ(x, newpar) : transpose(J_at_xp)
 		ζstar = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 		# test function for Bogdanov-Takens
-		BT = dot(ζstar ./ normC(ζstar), ζ)
+		BT = real( dot(ζstar ./ normC(ζstar), ζ) )
 		ζstar ./= dot(ζ, ζstar)
 
 		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex{T}(0, 0), b = Complex{T}(0,0)), :hopf)
@@ -471,15 +476,15 @@ function continuationHopf(F, J,
 		# If GH is too large, we take the previous value to avoid spurious detection
 		# GH will be large close to BR points
 		GH = abs(real(hp.nf.b))<1e10 ? real(hp.nf.b) : state.eventValue[2][1]
-		return GH, real(BT)
+		return GH, BT
 	end
 
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = dot(hopfPb.a, hopfPb.b)) :
+		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = BT, GH = GH) :
 		(u, p; kw...) -> begin
-			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = l1, BT = dot(hopfPb.a, hopfPb.b))
+			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = l1, BT = BT, GH = GH)
 		end
 
 	# eigen solver

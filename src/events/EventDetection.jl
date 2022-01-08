@@ -287,7 +287,7 @@ function getEventType(event::PairOfEvents, iter::AbstractContinuationIterable, s
 	elseif isEventCrossed(event.eventD, iter, state, nC+1:n)
 		return getEventType(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
 	else
-		@assert 1==0 "Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen."
+		throw("Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen.")
 	end
 end
 

@@ -111,14 +111,14 @@ DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing)
 @inline hasCustomLabels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 
 function labels(eve::Union{ContinuousEvent{Tcb, Nothing}, DiscreteEvent{Tcb, Nothing}}, ind) where Tcb
-	return "userC" * mapreduce(x->"-$x", *, ind)
+	return "userC" * mapreduce(x -> "-$x", *, ind)
 end
 
 function labels(eve::Union{ContinuousEvent{Tcb, Tl}, DiscreteEvent{Tcb, Tl}}, ind) where {Tcb, Tl}
 	if isempty(ind)
 		return "user"
 	end
-	return mapreduce(x->eve.labels[x], *, ind)
+	return mapreduce(x -> eve.labels[x], *, ind)
 end
 ####################################################################################################
 """
@@ -164,7 +164,7 @@ is constructed by passing the constructor `ContinuousEvent`, `DiscreteEvent` or 
 
 # Example
 
-	 BK.SetOfEvents(BK.FoldDetectCB, BK.BifDetectCB)
+	 BifurcationKit.SetOfEvents(BK.FoldDetectCB, BK.BifDetectCB)
 
 You can pass as many events as you like.
 

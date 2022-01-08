@@ -370,6 +370,11 @@ function continuationFold(F, J,
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
 
+	# global variables to save call back
+	BT::T = one(T)
+	CP::T = one(T)
+	ZH::Int = 1
+
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
@@ -401,6 +406,12 @@ function continuationFold(F, J,
 		copyto!(foldPb.a, newa); rmul!(foldPb.a, 1/normC(newa))
 		# do not normalize with dot(newb, foldPb.a), it prevents from BT detection
 		copyto!(foldPb.b, newb); rmul!(foldPb.b, 1/normC(newb))
+
+		# call the user-passed finalizer
+		finaliseUser = get(kwargs, :finaliseSolution, nothing)
+		if isnothing(finaliseUser) == false
+			return finaliseUser(z, tau, step, contResult; kUP...)
+		end
 		return true
 	end
 
@@ -435,8 +446,8 @@ function continuationFold(F, J,
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b)) :
-		(u, p; kw...) -> (namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = dot(foldPb.a, foldPb.b),)
+		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = BT) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = BT,)
 
 	# eigen solver
 	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))

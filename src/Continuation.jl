@@ -3,6 +3,19 @@ abstract type AbstractContinuationIterable end
 abstract type AbstractContinuationState end
 ####################################################################################################
 # Iterator interface
+"""
+$(TYPEDEF)
+
+# Useful functions
+- `setParam(iter, p)` set parameter with lens `iter.lens` to `p`
+- `isEventActive(iter)` whether the event detection is active
+- `computeEigenElements(iter)` whether to compute eigen elements
+- `saveEigenvectors(iter)` whether to save eigen vectors
+- `getParams(iter)` get full list of params
+- `length(iter)`
+- `isInDomain(iter, p)` whether `p` in is domain [pMin, pMax]. (See [`ContinuationPar`](@ref))
+- `isOnBoundary(iter, p)` whether `p` in is {pMin, pMax}
+"""
 @with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} <: AbstractContinuationIterable
 	F::TF
 	J::TJ
@@ -102,6 +115,7 @@ Returns a variable containing the state of the continuation procedure. The field
 
 # Useful functions
 - `copy(state)` returns a copy of `state`
+- `copyto!(dest, state)` returns a copy of `state`
 - `getSolution(state)` returns the current solution (x, p)
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
@@ -509,7 +523,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution while computing
-- `recordFromSolution = (x, p; kwargs...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
+- `recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution. For example, you can pass something like `(x, p; kwargs...) -> plot(x; kwargs...)`.
 - `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners
