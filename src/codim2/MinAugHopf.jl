@@ -15,6 +15,10 @@ HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::Abstrac
 
 HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 ####################################################################################################
+getVec(x::BorderedArray, ::HopfProblemMinimallyAugmented) = x.u
+getVec(x::AbstractVector, ::HopfProblemMinimallyAugmented) = @view x[1:end-2]
+getP(x::BorderedArray, ::HopfProblemMinimallyAugmented) = x.p
+getP(x::AbstractVector, ::HopfProblemMinimallyAugmented) = @view x[end-1:end]
 
 # this function encodes the functional
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
