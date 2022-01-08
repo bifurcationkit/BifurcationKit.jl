@@ -21,7 +21,7 @@ hasCustomLabels(::AbstractEvent) = false
 
 # general condition for detecting a continuous event.
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
-# the ind is used to specify which par of the event is tested
+# the ind is used to specify which part of the event is tested
 function isEventCrossed(::AbstractContinuousEvent, iter, state, ind = :)
 	test(x, y) = x * y < 0
 	if state.eventValue[1] isa Real
@@ -75,7 +75,7 @@ struct ContinuousEvent{Tcb, Tl} <: AbstractContinuousEvent
 	"whether the event requires to compute eigen elements"
 	computeEigenElements::Bool
 
-	"Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0,1.3213,3.434)`. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+	"Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0,1.3213,3.434)`. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
 end
 
@@ -102,7 +102,7 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
 	"whether the event requires to compute eigen elements"
 	computeEigenElements::Bool
 
-	"Labels used to display information. For example `labels[1]` is used to qualify an event occuring in the first component. For example, you can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+	"Labels used to display information. For example `labels[1]` is used to qualify an event occuring in the first component. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
 end
 DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; DiscreteEvent(nb, fct, false, labels))

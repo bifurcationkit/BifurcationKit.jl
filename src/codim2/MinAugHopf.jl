@@ -294,6 +294,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `d3F = (x, p, v1, v2, v3) -> d3F(x, p, v1, v2, v3)` this is the third derivative of `F` computed at `(x, p)` and evaluated at `(v1, v2, v3)`. This is used to detect **Bautin** bifurcation.
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
+- `computeEigenElements = false` whether to compute eigenelements. If `options_cont.detecttEvent>0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
@@ -305,7 +306,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
-!!! tip "Jacobian tranpose"
+!!! tip "Jacobian transpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! tip "Detection of Bogdanov-Takens and Bautin bifurcations"
@@ -452,6 +453,13 @@ function continuationHopf(F, J,
 	# eigen solver
 	eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver))
 
+	# event for detecting codim 2 points
+	if computeEigenElements
+		event = PairOfEvents(ContinuousEvent(2, testGH_BT, computeEigenElements, ("gh", "bt")), BifDetectEvent)
+	else
+		event = ContinuousEvent(2, testGH_BT, false, ("gh", "bt"))
+	end
+
 	# solve the hopf equations
 	branch, u, tau = continuation(
 		hopfPb, Jac_hopf_MA,
@@ -461,8 +469,7 @@ function continuationHopf(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
-		# event = ContinuousEvent(2, testGH_BT, true, ("gh", "bt")),
-		event = PairOfEvents(ContinuousEvent(2, testGH_BT, computeEigenElements, ("gh", "bt")), BifDetectEvent)
+		event = event
 	)
 	@assert ~isnothing(branch) "Empty branch!"
 	return correctBifurcation(setproperties(branch; type = :HopfCodim2, functional = hopfPb)), u, tau

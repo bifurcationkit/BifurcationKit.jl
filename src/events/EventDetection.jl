@@ -95,7 +95,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	# emulate a do-while
 	while true
 		if ~state.isconverged
-			@error "----> Newton failed when locating bifurcation using bisection method!"
+			@error "Newton failed to fully locate bifurcation point using bisection parameters!"
 			break
 		 end
 
