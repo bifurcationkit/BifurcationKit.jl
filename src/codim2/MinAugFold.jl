@@ -347,6 +347,7 @@ function continuationFold(F, J,
 				Jᵗ = nothing,
 				d2F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
+			 	computeEigenElements = false,
 				kwargs...) where {T, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 
@@ -444,6 +445,18 @@ function continuationFold(F, J,
 		return BT, CP
 	end
 
+	function testForZH(iter, state)
+		# printstyled(color = :magenta, "\n******* Entree dans Fold-Event-Dis\n")
+		if isnothing(state.eigvals)
+			ZH = 1
+		else
+			ϵ = iter.contParams.precisionStability
+			ρ = minimum(abs ∘ real, state.eigvals)
+			ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
+		end
+		return ZH
+	end
+
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
@@ -462,7 +475,7 @@ function continuationFold(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
-		event = ContinuousEvent(2, testForBT_CP, ("bt", "cusp")),
+		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp")), DiscreteEvent(1, testForZH, false, ("zh",)))
 		)
 		@assert ~isnothing(br) "Empty branch!"
 	return correctBifurcation(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau
@@ -519,27 +532,3 @@ function (eig::FoldEigsolver)(Jma, nev; kwargs...)
 end
 
 geteigenvector(eig::FoldEigsolver, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
-
-"""
-$(SIGNATURES)
-
-This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
-"""
-function correctBifurcation(contres::ContResult)
-	if contres.functional isa AbstractProblemMinimallyAugmented == false
-		return contres
-	end
-	if contres.functional isa FoldProblemMinimallyAugmented
-	conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
-	elseif contres.functional isa HopfProblemMinimallyAugmented
-		conversion = Dict(:bp => :zt, :hopf => :hh, :fold => :nd, :nd => :nd)
-	else
-		throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
-	end
-	for (ind, bp) in pairs(contres.specialpoint)
-		if bp.type in keys(conversion)
-			@set! contres.specialpoint[ind].type = conversion[bp.type]
-		end
-	end
-	return contres
-end

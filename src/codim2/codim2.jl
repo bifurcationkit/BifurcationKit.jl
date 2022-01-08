@@ -106,14 +106,38 @@ function continuation(F, J,
 				kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	# options to detect codim2 bifurcations
+	computeEigenElements = options_cont.detectBifurcation > 0
 	_options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
 	if br.specialpoint[ind_bif].type == :hopf
 		# redefine the multilinear form to accept complex arguments
 		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
 		d3Fc = isnothing(d3F) ? nothing : (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)
-		return continuationHopf(F, J, br, ind_bif, lens2, _options_cont; Jᵗ = Jᵗ, d2F = d2Fc, d3F = d3Fc, startWithEigen = startWithEigen, kwargs...)
+		return continuationHopf(F, J, br, ind_bif, lens2, _options_cont; Jᵗ = Jᵗ, d2F = d2Fc, d3F = d3Fc, startWithEigen = startWithEigen, computeEigenElements = computeEigenElements, kwargs...)
 	else
-		return continuationFold(F, J, br, ind_bif, lens2, _options_cont; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, kwargs...)
+		return continuationFold(F, J, br, ind_bif, lens2, _options_cont; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, startWithEigen = startWithEigen, computeEigenElements = computeEigenElements, kwargs...)
 	end
+end
+"""
+$(SIGNATURES)
+
+This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
+"""
+function correctBifurcation(contres::ContResult)
+	if contres.functional isa AbstractProblemMinimallyAugmented == false
+		return contres
+	end
+	if contres.functional isa FoldProblemMinimallyAugmented
+		conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
+	elseif contres.functional isa HopfProblemMinimallyAugmented
+		conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt)
+	else
+		throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
+	end
+	for (ind, bp) in pairs(contres.specialpoint)
+		if bp.type in keys(conversion)
+			@set! contres.specialpoint[ind].type = conversion[bp.type]
+		end
+	end
+	return contres
 end

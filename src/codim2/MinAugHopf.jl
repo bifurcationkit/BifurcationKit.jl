@@ -361,6 +361,7 @@ function continuationHopf(F, J,
 				d2F = nothing,
 				d3F = nothing,
 				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
+				computeEigenElements = false,
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 
@@ -499,7 +500,8 @@ function continuationHopf(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
-		event = ContinuousEvent(2, testGH_BT, true, ("gh", "bt")),
+		# event = ContinuousEvent(2, testGH_BT, true, ("gh", "bt")),
+		event = PairOfEvents(ContinuousEvent(2, testGH_BT, computeEigenElements, ("gh", "bt")), BifDetectEvent)
 	)
 	@assert ~isnothing(branch) "Empty branch!"
 	return correctBifurcation(setproperties(branch; type = :HopfCodim2, functional = hopfPb)), u, tau
