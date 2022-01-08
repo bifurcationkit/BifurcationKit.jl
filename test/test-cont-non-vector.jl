@@ -9,6 +9,10 @@ _a = BorderedArray(zeros(2), zeros(2))
 _b = BorderedArray(zeros(2), zeros(2))
 BK.mul!(_a, 1., _b)
 BK.axpby!(1., _a, 1., _b)
+BK.getVec(_a)
+BK.getVec(_a.u)
+BK.getVec(BorderedArray(rand(2),1.))
+BK.getP(BorderedArray(rand(2),1.))
 ####################################################################################################
 # We start with a simple Fold problem
 using LinearAlgebra

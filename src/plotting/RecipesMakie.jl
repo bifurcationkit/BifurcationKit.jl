@@ -3,7 +3,14 @@ function GLMakie.convert_arguments(::PointBased, contres::AbstractBranchResult, 
 	return ([Point2f0(i, j) for (i, j) in zip(getproperty(contres.branch, ind1), getproperty(contres.branch, ind2))],)
 end
 
-function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true)
+function plotBranchCont(contres::ContResult,
+		sol::BorderedArray,
+		contparms,
+		plotuserfunction;
+		plotfold = false,
+		plotspecialpoints = true,
+		filterspecialpoints = false,
+		plotcirclesbif = true)
 	if length(contres) == 0; return ;end
 
 	ind1, ind2 = getPlotVars(contres, nothing)
@@ -46,7 +53,8 @@ end
 function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
 	if length(contres) == 0; return ;end
 
-	ind1, ind2 = getPlotVars(contres, nothing)
+	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
+	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 
 	fig = Figure(resolution = (1200, 700))
@@ -59,18 +67,21 @@ function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecial
 	#
 	# put arrow to indicate the order of computation
 	if length(contres) > 1
-		x = contres.branch[end].param
-		y = getproperty(contres.branch,1)[end]
+		x = xplot[end]
+		y = yplot[end]
 		scatter!(ax1, [x], [y], marker = :cross )
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
+
 	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
 		if filterspecialpoints == true
 			bifpt = filterBifurcations(bifpt)
 		end
-		scatter!(ax1, map(x -> getproperty(x, ind1), bifpt), map(x -> getproperty(x.printsol, ind2), bifpt), marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), markersize = 7, color = map(x -> colorbif[x.type], bifpt))
+		scatter!(ax1, [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
+					  [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt],
+			 marker = map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :rect : :circle, bifpt), markersize = 7, color = map(x -> colorbif[x.type], bifpt))
 	end
 
 	display(fig)

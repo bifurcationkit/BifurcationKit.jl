@@ -86,7 +86,11 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
 	verbose && printstyled(color=:green, "--> eve (initial) ",
 		_state.eventValue[2], " --> ",  _state.eventValue[1], "\n")
-	(verbose && ~isnothing(_state.eigvals)) && printstyled(color=:green, "\n--> eigvals = ", _state.eigvals, "\n")
+	if verbose && ~isnothing(_state.eigvals)
+		printstyled(color=:green, "\n--> eigvals = \n")
+		displayEV(_state.eigvals, :green)
+		# calcul des VP et determinant
+	end
 
 	# emulate a do-while
 	while true
@@ -106,10 +110,13 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		# the eigenelements have been computed/stored in state during the call iterate(iter, state)
 		updateEvent!(iter, state)
 		push!(nsigns, nbSigns(state.eventValue[1], event))
-		verbose && printstyled(color=:green, "----> eve (current) ",
+		verbose && printstyled(color=:green, "\n----> eve (current) ",
 			state.eventValue[2], " --> ", state.eventValue[1], "\n")
-		(verbose && ~isnothing(state.eigvals)) && printstyled(color=:green, "\n----> eigvals = ", state.eigvals, "\n")
 
+		if verbose && ~isnothing(state.eigvals)
+			printstyled(color=:blue, "----> eigvals = \n")
+			displayEV(state.eigvals, :blue)
+		end
 
 		if nsigns[end] == nsigns[end-1]
 			# event still after current state, keep going
@@ -134,7 +141,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		state.stopcontinuation = ~iter.finaliseSolution(state.z_old, state.tau, state.step, nothing; bisection = true, state = state)
 
 		if verbose
-			printstyled(color=:blue, "----> ", state.step,
+			printstyled(color=:blue, bold = true, "----> ", state.step,
 				" - [Bisection] (n1, n_current, n2) = ", (n1, nsigns[end], n2),
 				"\n\t\t\tds = ", state.ds, ", p = ", getp(state), ", #reverse = ", n_inversion,
 				"\n----> event ∈ ", getinterval(interval...),
@@ -156,7 +163,15 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		next = iterate(iter, state; _verbosity = 0)
 	end
 
-	verbose && printstyled(color=:red, "----> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
+	if verbose
+		printstyled(color=:red, "----> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
+		printstyled(color=:blue, "-"^40*"\n----> Stopping reason:\n------> isnothing(next)           = ", isnothing(next),
+				"\n------> |ds| < dsminBisection     = ", abs(state.ds) < contParams.dsminBisection,
+				"\n------> step >= maxBisectionSteps = ", state.step >= contParams.maxBisectionSteps,
+				"\n------> n_inversion >= nInversion = ", n_inversion >= contParams.nInversion,
+				"\n------> eventlocated              = ", eventlocated == true, "\n")
+
+	end
 
 	if iter.tangentAlgo isa PolynomialPred
 		iter.tangentAlgo.update = true
@@ -243,7 +258,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 			end
 		end
 	end
-	@assert isempty(event_index_C) == false "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
+	@assert isempty(event_index_C) == false "Error, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_C)
 	end
@@ -267,7 +282,7 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
 			end
 		end
 	end
-	@assert isempty(event_index_D) == false "Strange, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
+	@assert isempty(event_index_D) == false "Error, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_D)
 	end
@@ -318,6 +333,6 @@ function getEventType(event::SetOfEvents, iter::AbstractContinuationIterable, st
 		indD = event_index_D[1]
 		return getEventType(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
 	else
-		@assert 1==0 "Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen."
+		throw("Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen.")
 	end
 end

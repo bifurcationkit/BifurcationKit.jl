@@ -32,6 +32,12 @@ length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) 
 dot(a::BorderedArray, b::BorderedArray) = dot(a.u, b.u) + dot(a.p, b.p)
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
 zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
+
+# getters, useful for dispatch
+getVec(x::AbstractVector) = @view x[1:end-1]
+getP(x::AbstractVector) = x[end]
+getVec(x::BorderedArray) = x.u
+getP(x::BorderedArray{vectype, T}) where {vectype, T <: Number} = x.p
 ################################################################################
 function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, T <: Number, Tv}
 	# Scale an array A by a scalar b overwriting A in-place
