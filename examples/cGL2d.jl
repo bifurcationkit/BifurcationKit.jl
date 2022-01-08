@@ -55,6 +55,7 @@ function Fcgl!(f, u, p)
 	mul!(f, p.Δ, u)
 	f .= f .+ NL(u, p)
 end
+Fcgl(u, p) = Fcgl!(similar(u), u, p)
 
 function dFcgl(x, p, dx)
 	f = similar(dx)
@@ -92,8 +93,9 @@ end
 jet = BK.getJet(Fcgl, Jcgl)
 
 ####################################################################################################
-Nx = 41*1
-	Ny = 21*1
+factor = 2
+Nx = 41*factor
+	Ny = 21*factor
 	n = Nx*Ny
 	lx = pi
 	ly = pi/2
@@ -114,7 +116,7 @@ eigls = EigArpack(1.0, :LM)
 # norm(J0 - J1, Inf)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 6)
-	br, = @time continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 2)
+	br, = @time continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
 hopfpt = computeNormalForm(jet..., br, 2)

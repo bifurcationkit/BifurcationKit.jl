@@ -2,31 +2,31 @@
 nbSigns(x, ::AbstractContinuousEvent) = mapreduce(x -> x > 0, +, x)
 nbSigns(x, ::AbstractDiscreteEvent) = x
 
-function nbSigns(x, eve::PairOfEvents)
-	xc = x[1:eve.eventC.nb]
-	xd = x[eve.eventC.nb+1:end]
-	res = (nbSigns(xc, eve.eventC)..., nbSigns(xd, eve.eventD)...)
+function nbSigns(x, event::PairOfEvents)
+	xc = x[1:event.eventC.nb]
+	xd = x[event.eventC.nb+1:end]
+	res = (nbSigns(xc, event.eventC)..., nbSigns(xd, event.eventD)...)
 	return res
 end
 
-function nbSigns(x, eve::SetOfEvents)
+function nbSigns(x, event::SetOfEvents)
 	nb = 0
-	nC = length(eve.eventC)
-	nD = length(eve.eventD)
+	nC = length(event.eventC)
+	nD = length(event.eventD)
 	nCb = length(x)
 	@inbounds for i in 1:nC
-		nb += nbSigns(x[i], eve.eventC[i])
+		nb += nbSigns(x[i], event.eventC[i])
 	end
 	@inbounds for i in nC+1:nCb
-		nb += nbSigns(x[i], eve.eventC[i-nC])
+		nb += nbSigns(x[i], event.eventC[i-nC])
 	end
 	return  nb
 end
 ####################################################################################################
 # Function to locate precisely an Event using a bisection algorithm. We make sure that, at the end of the algorithm, the state is just after the event (in the s coordinate).
-# I put the event in first argument even if it is in `iter` in order to allow for dispatch
+# I put the event in first argument even if it is in `iter` in order to allow for easier dispatch
 function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
-	@assert isnothing(_state.eventValue) == false "Strange, this should not be happening. Please open an issue."
+	@assert isnothing(_state.eventValue) == false "Empty event value, this should not be happening. Please open an issue."
 
 	# type of scalars in iter
 	_T = eltype(iter)
@@ -74,7 +74,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	# we don't know its type yet
 	eiginfo = nothing
 
-	# we compute the number of changes in event indicatoe
+	# we compute the number of changes in event indicator
 	n_inversion = 0
 	status = :guess
 

@@ -124,7 +124,7 @@ Returns a variable containing the state of the continuation procedure. The field
 	stopcontinuation::Bool = false			# Boolean to stop continuation
 	stepsizecontrol::Bool = true			# Perform step size adaptation
 
-	# the following values encode the current, previous number of unstable (resp. imaginary) eigval
+	# the following values encode the current, previous number of unstable (resp. imaginary) eigen values
 	# it is initialized as -1 when unknown
 	n_unstable::Tuple{Int64,Int64}  = (-1, -1)	# (current, previous)
 	n_imag::Tuple{Int64,Int64} 		= (-1, -1)	# (current, previous)
@@ -258,13 +258,14 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	end
 
 	# Converge initial guess
-	verbose && printstyled("────────── CONVERGE INITIAL GUESS ──────────────", bold = true, color = :magenta)
+	verbose && printstyled("─────────────────  INITIAL GUESS ────────────────────", bold = true, color = :magenta)
+
 	# we pass additional kwargs to newton so that it is sent to the newton callback
 	u0, _, isconverged, _, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
 	@assert isconverged "Newton failed to converge initial guess on the branch."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = ", p0, ", initial step")
-	verbose && printstyled("\n─────── COMPUTING INITIAL TANGENT ─────────────", bold = true, color = :magenta)
+	verbose && printstyled("\n───────────────── INITIAL TANGENT ───────────────────", bold = true, color = :magenta)
 	u_pred, _, isconverged, _, _ = newton(it.F, it.J,
 			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
 	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
@@ -366,7 +367,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 
 	# Step size control
 	if ~state.stopcontinuation && stepsizecontrol(state)
-		# we update the PALC paramters ds and theta, they are in the state variable
+		# we update the PALC parameters ds and theta, they are in the state variable
 		state.ds, state.theta, state.stopcontinuation = stepSizeControl(ds, theta, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
 	end
 
@@ -508,7 +509,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution while computing
-- `recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
+- `recordFromSolution = (x, p; kwargs...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
 - `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution. For example, you can pass something like `(x, p; kwargs...) -> plot(x; kwargs...)`.
 - `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners

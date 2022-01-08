@@ -84,7 +84,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1,
 		br, indfold, (@lens _.β),
 		plot = true, verbosity = 2,
 		optcontfold)
-plot(foldbranch, label = "");title!("")
+plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p.α .* d2N.(x; b = b) .* u .* v
 
