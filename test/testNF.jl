@@ -298,7 +298,7 @@ sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opt
 ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
 cuspnf = computeNormalForm(jet..., sn_codim2, ind[1])
 show(cuspnf)
-BK.type(btpt)
+BK.type(cuspnf)
 @test cuspnf.nf.c == par.c
 ####################################################################################################
 # test for the Bogdanov-Takens normal form
@@ -363,6 +363,17 @@ Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
 hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
 hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
 # plot(hom1, hom2)
+
+# branch switching from BT from Fold
+opt = sn_codim2.contparams
+@set! opt.newtonOptions.verbose = false
+@set! opt.maxSteps = 20
+hp_fromBT, = continuation(jet..., sn_codim2, 1, opt;
+	verbosity = 0, plot = false,
+	δp = 1e-4,
+	updateMinAugEveryStep = 1,
+	)
+
 ####################################################################################################
 # test of the Bautin normal form
 function Fsl2!(f, u, p, t)

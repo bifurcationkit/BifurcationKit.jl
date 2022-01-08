@@ -71,7 +71,7 @@ end
 
 function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 	if detectCodim2Bifurcation > 0
-			if get(kwargs, :updateMinAugEveryStep, 0) == 0
+		if get(kwargs, :updateMinAugEveryStep, 0) == 0
 			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
 		end
 		return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
@@ -174,6 +174,118 @@ function continuation(F, J,
 			kwargs...)
 	end
 end
+####################################################################################################
+# branch switching at bt
+function continuation(F, dF, d2F, d3F,
+			br::ContResult{Ta, Teigvals, Teigvecbr, Biftype, Ts, Tparc, Tfunc, Tpar, Tl},
+			ind_bif::Int, options_cont::ContinuationPar = br.contparams;
+			Jᵗ = nothing,
+			δ::Real = 1e-8, δp = nothing, ampfactor::Real = 1,
+			nev = options_cont.nev,
+			issymmetric = false,
+			detectCodim2Bifurcation::Int = 0,
+			Teigvec = getvectortype(br),
+			scaleζ = norm,
+			startWithEigen = false,
+			autodiff = false,
+			kwargs...) where {Ta, Teigvals, Teigvecbr, Biftype, Ts, Tparc, Tfunc <: AbstractProblemMinimallyAugmented, Tpar, Tl <: Lens}
+
+		verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
+		verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
+
+		@assert br.specialpoint[ind_bif].type in (:bt,) "Only branching from Bogdanov-Takens (for now)"
+
+		# functional
+		prob = br.functional
+
+		# continuation parameters
+		computeEigenElements = options_cont.detectBifurcation > 0
+		optionsCont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+
+		# higher order differentials
+		d2Fc = isnothing(d2F) ? nothing : (x,p,dx1,dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x,p,_dx1,_dx2))(dx1,dx2)
+		d3Fc = isnothing(d3F) ? nothing : (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)
+
+		# scalar type
+		Ty = eltype(Teigvec)
+
+		# compute the normal form of the bifurcation point
+		nf = computeNormalForm(F, dF, d2F, d3F, br, ind_bif; Jᵗ = Jᵗ, δ = δ, nev = nev, verbose = verbose, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff)
+
+		# compute predictor for point on new branch
+		ds = isnothing(δp) ? optionsCont.ds : δp
+
+		if prob isa FoldProblemMinimallyAugmented
+			# define guess for the first Hopf point on the branch
+			pred = predictor(nf, Val(:HopfCurve), ds)
+
+			# new continuation parameters
+			parcont = pred.hopf(ds)
+
+			# new full parameters
+			params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
+
+			# guess for the Hopf point
+			hopfpt = BorderedArray(nf.x0 .+ pred.x0(ds), [parcont[1], pred.ω(ds)])
+
+			# estimates for eigenvectors for ±iω
+			ζ = pred.EigenVec(ds)
+			ζstar = pred.EigenVecAd(ds)
+
+			# put back original options
+			@set! optionsCont.newtonOptions.eigsolver =
+								getsolver(optionsCont.newtonOptions.eigsolver)
+			@set! optionsCont.newtonOptions.linsolver = prob.linsolver
+
+			branch, u, τ = continuationHopf(F, dF, hopfpt, params,
+					nf.lens...,
+					ζ, ζstar,
+					optionsCont;
+					d2F = d2Fc, d3F = d3Fc,
+					bdlinsolver = prob.linbdsolver,
+					startWithEigen = startWithEigen,
+					computeEigenElements = computeEigenElements,
+					kwargs...
+					)
+			return Branch(branch, nf), u, τ
+
+		else
+			@assert prob isa HopfProblemMinimallyAugmented
+			pred = predictor(nf, Val(:FoldCurve), 0.)
+			# new continuation parameters
+			parcont = pred.fold(ds)
+
+			# new full parameters
+			params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
+
+			# guess for the fold point
+			foldpt = BorderedArray(nf.x0 .+ 0 .* pred.x0(ds), parcont[1])
+
+			# estimates for null eigenvectors
+			ζ = pred.EigenVec(ds)
+			ζstar = pred.EigenVecAd(ds)
+
+			# put back original options
+			@set! optionsCont.newtonOptions.eigsolver =
+								getsolver(optionsCont.newtonOptions.eigsolver)
+			@set! optionsCont.newtonOptions.linsolver = prob.linsolver
+			# @set! optionsCont.detectBifurcation = 0
+			# @set! optionsCont.detectEvent = 0
+
+			branch, u, τ = continuationFold(F, dF, foldpt, params,
+					nf.lens...,
+					ζstar, ζ,
+					optionsCont;
+					d2F = d2Fc, #d3F = d3Fc,
+					bdlinsolver = prob.linbdsolver,
+					startWithEigen = startWithEigen,
+					computeEigenElements = computeEigenElements,
+					kwargs...
+					)
+			return Branch(branch, nf), u, τ
+		end
+end
+
 """
 $(SIGNATURES)
 
