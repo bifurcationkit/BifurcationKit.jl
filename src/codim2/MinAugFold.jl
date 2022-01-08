@@ -380,8 +380,8 @@ function continuationFold(F, J,
 	# by updating the vectors a, b
 	function updateMinAugFold(z, tau, step, contResult; kUP...)
 		~modCounter(step, updateMinAugEveryStep) && return true
-		x = z.u.u	# fold point
-		p1 = z.u.p	# first parameter
+		x = getVec(z.u)	# fold point
+		p1 = getP(z.u)	# first parameter
 		p2 = z.p	# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
@@ -417,8 +417,8 @@ function continuationFold(F, J,
 
 	function testForBT_CP(iter, state)
 		z = getx(state)
-		x = z.u				# fold point
-		p1 = z.p			# first parameter
+		x = getVec(z)		# fold point
+		p1 = getP(z)		# first parameter
 		p2 = getp(state)	# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
@@ -439,15 +439,16 @@ function continuationFold(F, J,
 		ζstar ./= norm(ζstar)
 
 		BT = dot(ζstar, ζ)
-		CP = state.tau.p
+		CP = getP(state.tau)
+
 		return BT, CP
 	end
 
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p, p))..., BT = BT) :
-		(u, p; kw...) -> (; namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p, p))..., BT = BT,)
+		(u, p; kw...) -> (zip(lenses, (getP(u), p))..., BT = BT) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (getP(u), p))..., BT = BT,)
 
 	# eigen solver
 	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))

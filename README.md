@@ -4,9 +4,9 @@
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
 | [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/rveltz/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rveltz/BifurcationKit.jl) |
 
-This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, sparse formulation and specific hardwares (*e.g.* GPU).
+This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
 
-It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free eigensolver is used to compute stability and bifurcation points.
+It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free/Dense/Sparse eigensolver is used to compute stability and bifurcation points.
 
 > The idea is to be able to seemingly switch the continuation algorithm a bit like changing the time stepper (Euler, RK4,...) for ODEs.
 
@@ -78,7 +78,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic bifurcation diagram computation of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
-- detection of Bogdanov-Takens, Bautin and Cusp bifurcations
+- detection of Bogdanov-Takens, Bautin and Cusp bifurcations and computation of their normal form.
 - Periodic orbit computation and continuation using Shooting, Finite Differences or Orthogonal Collocation.
 - detection of Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point of periodic orbits.
 - Continuation of Fold of periodic orbits
@@ -103,6 +103,7 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Periodic Orbit with Parallel Poincaré / Standard Shooting Newton / continuation | Yes| `AbstractArray` |  [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
 | Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
+| Bogdanov-Takens / Bautin / Cusp point detection | Yes| Yes|  | :heavy_check_mark: |
 
 ## To do or grab
 Without a priority order:

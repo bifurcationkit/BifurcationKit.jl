@@ -433,7 +433,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			if isEventActive(it)
 				# check if an event occured between the 2 continuation steps
 				eveDetected = updateEvent!(it, state)
-				verbose && printstyled(color = :blue, "--> Event values: ", state.eventValue[2], " --> ", state.eventValue[1],"\n")
+				verbose1 && printstyled(color = :blue, "--> Event values: ", state.eventValue[2], " --> ", state.eventValue[1],"\n")
 				eveDetected && (verbose && printstyled(color=:red, "--> Event detected before p = ", getp(state), "\n"))
 				# save the event if detected and / or use bisection to locate it precisely
 				if eveDetected

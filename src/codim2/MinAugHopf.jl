@@ -439,7 +439,7 @@ function continuationHopf(F, J,
 		return abs(ω) >= threshBT && isbt && resFinal
 	end
 
-	function computeL1(iter, state)
+	function testGH_BT(iter, state)
 		z = getx(state)
 		x = z.u					# hopf point
 		p1 = z.p[1]				# first parameter
@@ -464,7 +464,7 @@ function continuationHopf(F, J,
 		JAd_at_xp = hasAdjoint(hopfPb) ? hopfPb.Jᵗ(x, newpar) : transpose(J_at_xp)
 		ζstar = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 		# test function for Bogdanov-Takens
-		BT = real( dot(ζstar ./ normC(ζstar), ζ) )
+		BT = ω#real( dot(ζstar ./ normC(ζstar), ζ) )
 		ζstar ./= dot(ζ, ζstar)
 
 		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex{T}(0, 0), b = Complex{T}(0,0)), :hopf)
@@ -499,7 +499,7 @@ function continuationHopf(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
-		event = ContinuousEvent(2, computeL1, ("gh","bt"))
+		event = ContinuousEvent(2, testGH_BT, true, ("gh", "bt")),
 	)
 	@assert ~isnothing(branch) "Empty branch!"
 	return correctBifurcation(setproperties(branch; type = :HopfCodim2, functional = hopfPb)), u, tau
