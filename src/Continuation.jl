@@ -442,7 +442,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 						# interval = getinterval(state.z_pred.p, getp(state))::Tuple{_T, _T}
 						status, intervalevent = locateEvent!(it.event, it, state, it.verbosity > 2)
 					end
-					_, bifpt = getEventType(it.event, it, state, it.verbosity, status, intervalevent)
+					success, bifpt = getEventType(it.event, it, state, it.verbosity, status, intervalevent)
+					state.stopcontinuation |= success
 					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
 				end
 			end

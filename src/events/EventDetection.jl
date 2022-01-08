@@ -20,7 +20,7 @@ function nbSigns(x, event::SetOfEvents)
 	@inbounds for i in nC+1:nCb
 		nb += nbSigns(x[i], event.eventC[i-nC])
 	end
-	return  nb
+	return nb
 end
 ####################################################################################################
 # Function to locate precisely an Event using a bisection algorithm. We make sure that, at the end of the algorithm, the state is just after the event (in the s coordinate).
@@ -258,14 +258,20 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 			end
 		end
 	end
-	@assert isempty(event_index_C) == false "Error, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
+	if isempty(event_index_C) == true
+		@error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+		# we halt continuation as it will mess up the detection of events
+		state.stopcontinuation = true
+		return true, EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
+	end
+
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_C)
 	end
 	# record information about the event point
 	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Continuous user point at p ≈ $(getp(state)) \n")
-	return true, userpoint
+	return false, userpoint
 end
 ####################################################################################################
 function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userD") where T
