@@ -297,6 +297,8 @@ sn_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.β2), ContinuationPar(opt
 # find the cusp point
 ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
 cuspnf = computeNormalForm(jet..., sn_codim2, ind[1])
+show(cuspnf)
+BK.type(btpt)
 @test cuspnf.nf.c == par.c
 ####################################################################################################
 # test for the Bogdanov-Takens normal form
@@ -326,7 +328,8 @@ hopf_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.β2), ContinuationPar(o
 # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
 btpt = computeNormalForm(jet..., sn_codim2, 1; nev = 2)
-
+show(btpt)
+BK.type(btpt)
 @test norm(btpt.nf.b * sign(sum(btpt.ζ[1])) - par.b, Inf) < 1e-5
 @test norm(btpt.nf.a * sign(sum(btpt.ζ[1])) - par.a, Inf) < 1e-5
 @test isapprox(abs.(btpt.ζ[1]), [1, 0])
@@ -390,6 +393,7 @@ hopf_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.c3), ContinuationPar(op
 	)
 
 bautin = BifurcationKit.computeNormalForm(jet..., hopf_codim2, 1; nev = 2)
-	show(bautin)
+show(bautin)
+BK.type(bautin)
 
 @test bautin.nf.l2 ≈ par_sl.c5 * 4
