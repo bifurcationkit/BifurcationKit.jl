@@ -8,41 +8,7 @@ function FoldPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
-"""
-$(TYPEDEF)
 
-Structure to encode Fold functional based on a Minimally Augmented formulation.
-
-# Fields
-
-$(FIELDS)
-"""
-struct FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
-	"Function F(x, p) = 0"
-	F::TF
-	"Jacobian of F w.r.t. x"
-	J::TJ
-	"Adjoint of the Jacobian of F"
-	Jᵗ::TJa
-	"Hessian of F"
-	d2F::Td2f
-	"parameter axis for the Fold point"
-	lens::Tl
-	"close to null vector of Jᵗ"
-	a::vectype
-	"close to null vector of J"
-	b::vectype
-	"vector zero, to avoid allocating it many times"
-	zero::vectype
-	"linear solver. Used to invert the jacobian of MA functional."
-	linsolver::S
-	"linear solver for the jacobian adjoint"
-	linsolverAdjoint::Sa
-	"bordered linear solver"
-	linbdsolver::Sbd
-	"whether the Jacobian is Symmetric, avoid computing Jᵗ"
-	issymmetric::Bool
-end
 
 FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, issymmetric)
 FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
@@ -50,11 +16,8 @@ FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::Abstrac
 FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
 FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
 
-@inline issymmetric(pb::FoldProblemMinimallyAugmented) = pb.issymmetric
 
-@inline hasHessian(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
 
-@inline hasAdjoint(pb::FoldProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
 
 function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# https://docs.trilinos.org/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MinimallyAugmented_1_1Constraint.html

@@ -1,7 +1,55 @@
 abstract type AbstractProblemMinimallyAugmented end
-@inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
+
+@inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
+
+for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
+	@eval begin
+		"""
+		$(TYPEDEF)
+
+		Structure to encode Fold / Hopf functional based on a Minimally Augmented formulation.
+
+		# Fields
+
+		$(FIELDS)
+		"""
+		struct $op{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
+			"Function F(x, p) = 0"
+			F::TF
+			"Jacobian of F w.r.t. x"
+			J::TJ
+			"Adjoint of the Jacobian of F"
+			Jᵗ::TJa
+			"Hessian of F"
+			d2F::Td2f
+			"parameter axis for the codim 2 point"
+			lens::Tl
+			"close to null vector of Jᵗ"
+			a::vectype
+			"close to null vector of J"
+			b::vectype
+			"vector zero, to avoid allocating it many times"
+			zero::vectype
+			"linear solver. Used to invert the jacobian of MA functional"
+			linsolver::S
+			"linear solver for the jacobian adjoint"
+			linsolverAdjoint::Sa
+			"bordered linear solver"
+			linbdsolver::Sbd
+			"whether the Jacobian is Symmetric, avoid computing Jᵗ"
+			issymmetric::Bool
+		end
+
+		@inline hasHessian(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
+
+		@inline hasAdjoint(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
+	end
+end
+
+@inline issymmetric(pb::AbstractProblemMinimallyAugmented) = pb.issymmetric
+
 
 function applyJacobian(pb::AbstractProblemMinimallyAugmented, x, par, dx, transposeJac = false)
 	if issymmetric(pb)

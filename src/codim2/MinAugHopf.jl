@@ -10,50 +10,12 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(specialpoint.x, [p, ω] )
 end
 ####################################################################################################
-"""
-$(TYPEDEF)
 
-Structure to encode Hopf functional based on a Minimally Augmented (MA) formulation.
-
-# Fields
-
-$(FIELDS)
-"""
-struct HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
-	"Function F(x, p) = 0"
-	F::TF
-	"Jacobian of F w.r.t. x"
-	J::TJ
-	"Adjoint of the Jacobian of F"
-	Jᵗ::TJa
-	"Hessian of F"
-	d2F::Td2f
-	"parameter axis for the Hopf point"
-	lens::Tl
-	"close to null vector of (J - iω I)^*"
-	a::vectype
-	"close to null vector of (J - iω I)"
-	b::vectype
-	"vector zero, to avoid allocating it many times"
-	zero::vectype
-	"linear solver. Used to invert the jacobian of MA functional."
-	linsolver::S
-	"linear bordered solver"
-	linbdsolver::Sbd
-	"linear bordered solver for the jacobian adjoint"
-	linbdsolverAdjoint::Sbda
-end
 
 HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linbdsolve, linbdsolve)
 
 HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 
-@inline hasHessian(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = Td2f != Nothing
-
-@inline hasAdjoint(pb::HopfProblemMinimallyAugmented{TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sbd, Sbda} = TJa != Nothing
-
-# used for applying jacobian
-@inline issymmetric(pb::HopfProblemMinimallyAugmented) = false
 
 # this function encodes the functional
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
