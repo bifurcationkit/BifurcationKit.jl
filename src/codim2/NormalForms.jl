@@ -434,7 +434,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T; verbose =
 
 	function xLP(t, ϵ)
 		ξ = ϵ * t
-		return @. (ϵ^2/a) * ( (10b/7) * H0001 + u0(ξ) * q0) +
+		return @. bt.x0 + (ϵ^2/a) * ( (10b/7) * H0001 + u0(ξ) * q0) +
 			(ϵ^3/a) * ( v0(ξ) * q1 + u1(ξ) * q0) +
 			(ϵ^4/a) * ( -4 * H0010 + 50 * b^2/(49a) * H0002 + b*τ2 * H0001 +
 						u2(ξ) * q0 + v1(ξ) * q1 +

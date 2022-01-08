@@ -31,6 +31,8 @@ using Test
 
 	@testset "Hopf Codim 2" begin
 		include("testHopfMA.jl")
+		include("lorenz84.jl")
+		include("COModel.jl")
 	end
 
 	@testset "Periodic orbits" begin

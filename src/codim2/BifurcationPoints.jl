@@ -88,6 +88,7 @@ function Base.show(io::IO, bp::BogdanovTakens)
 	println(io, "Normal form (B, $p1 + $p2⋅B + b⋅A⋅B + a⋅A²)")
 	@unpack a,b = bp.nf
 	println(io, "Normal form coefficients:\n a = $a\n b = $b")
+	println(io, "\nYou can call various predictors:\n - predictor(::BogdanovTakens, ::Val{:HopfCurve}, ds)\n - predictor(::BogdanovTakens, ::Val{:FoldCurve}, ds)\n - predictor(::BogdanovTakens, ::Val{:HomoclinicCurve}, ds)")
 end
 ####################################################################################################
 """
