@@ -1,4 +1,4 @@
-# using Revise, Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
+using Revise, Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
@@ -75,6 +75,8 @@ hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_
 	d2F = jet[3], d3F = jet[4],
 	bothside = true,
 	bdlinsolver = MatrixBLS())
+
+show(hp_codim2)
 
 @test hp_codim2.specialpoint[1].type == :bt
 @test hp_codim2.specialpoint[2].type == :gh
