@@ -15,7 +15,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
 		$(FIELDS)
 		"""
-		struct $op{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
+		struct $op{TF, TJ, TJa, Td2f, Tl <: Lens, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
 			"Function F(x, p) = 0"
 			F::TF
 			"Jacobian of F w.r.t. x"
@@ -38,13 +38,15 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			linsolverAdjoint::Sa
 			"bordered linear solver"
 			linbdsolver::Sbd
+			"linear bordered solver for the jacobian adjoint"
+			linbdsolverAdjoint::Sbda
 			"whether the Jacobian is Symmetric, avoid computing Jᵗ"
 			issymmetric::Bool
 		end
 
-		@inline hasHessian(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd} = Td2f != Nothing
+		@inline hasHessian(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tp, Tl, vectype, S, Sa, Sbd, Sbda} = Td2f != Nothing
 
-		@inline hasAdjoint(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd} = TJa != Nothing
+		@inline hasAdjoint(pb::$op{TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd, Sbda}) where {TF, TJ, TJa, Td2f, Tl, vectype, S, Sa, Sbd, Sbda} = TJa != Nothing
 	end
 end
 

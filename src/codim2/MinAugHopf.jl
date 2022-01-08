@@ -10,12 +10,11 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(specialpoint.x, [p, ω] )
 end
 ####################################################################################################
-
-
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linbdsolve, linbdsolve)
+# constructors
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolve, linbdsolve, false)
 
 HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
-
+####################################################################################################
 
 # this function encodes the functional
 function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T

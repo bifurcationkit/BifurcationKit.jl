@@ -8,16 +8,17 @@ function FoldPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
+# constructors
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, linbdsolver, issymmetric)
 
-
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, issymmetric)
 FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
 
 FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
+
 FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
-
-
-
+####################################################################################################
+getVec(x, ::FoldProblemMinimallyAugmented) = getVec(x)
+getP(x, ::FoldProblemMinimallyAugmented) = getP(x)
 
 function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# https://docs.trilinos.org/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MinimallyAugmented_1_1Constraint.html
