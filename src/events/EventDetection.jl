@@ -262,7 +262,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 		@error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
 		# we halt continuation as it will mess up the detection of events
 		state.stopcontinuation = true
-		return true, EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
+		return false, EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
 	end
 
 	if hasCustomLabels(event)
@@ -271,7 +271,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
 	# record information about the event point
 	userpoint = EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
 	(verbosity > 0) && printstyled(color=:red, "!! Continuous user point at p ≈ $(getp(state)) \n")
-	return false, userpoint
+	return true, userpoint
 end
 ####################################################################################################
 function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userD") where T
@@ -288,7 +288,12 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
 			end
 		end
 	end
-	@assert isempty(event_index_D) == false "Error, no event was found whereas it was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n We have eventValue = $(state.eventValue)"
+	if isempty(event_index_D) == true
+		@error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+		# we halt continuation as it will mess up the detection of events
+		state.stopcontinuation = true
+		return false, EventSpecialPoint(state, Symbol(typeE), status, iter.recordFromSolution, iter.normC, interval)
+	end
 	if hasCustomLabels(event)
 		typeE = labels(event, event_index_D)
 	end

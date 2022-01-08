@@ -443,7 +443,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 						status, intervalevent = locateEvent!(it.event, it, state, it.verbosity > 2)
 					end
 					success, bifpt = getEventType(it.event, it, state, it.verbosity, status, intervalevent)
-					state.stopcontinuation |= success
+					state.stopcontinuation |= ~success
 					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
 				end
 			end

@@ -107,11 +107,11 @@ function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont
 	end
 
 	# perform continuation
-	branch, u, tau =  continuation(F, dF,
+	branch, u, τ = continuation(F, dF,
 			specialpoint.x0, specialpoint.params,	# first point on the branch
 			pred.x, pred.p,					# second point on the branch
 			br.lens, optionsCont; kwargs...)
-	return Branch(branch, specialpoint), u, tau
+	return Branch(branch, specialpoint), u, τ
 end
 
 # same but for a Branch
