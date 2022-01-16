@@ -141,7 +141,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			recordFromSolution = (x, p) -> norm(x),
 			plotSolution = (x, p ;kwargs...) -> plot!(x; kwargs...),
 			perturbSolution = (x, p, id) -> x,
-			callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) -> true,
+			callbackN = (state; kwargs...) -> true,
 			acceptSolution = (x, p) -> true,
 			updateDeflationOp = (defOp, x, p) -> push!(defOp, x),
 			normN = norm) where vectype

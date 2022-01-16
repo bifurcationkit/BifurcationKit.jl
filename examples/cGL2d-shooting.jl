@@ -172,7 +172,7 @@ br_po, = continuation(
 	# probSh;
 	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
-	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
+	# callbackN = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
 	finaliseSolution = (z, tau, step, contResult; k...) ->begin
 		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)

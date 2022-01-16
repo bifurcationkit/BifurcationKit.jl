@@ -503,7 +503,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	line_step = true
 
 	# invoke callback before algo really starts
-	compute = callback(x, res_f, nothing, res, 0, 0, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
+	compute = callback((;x, res_f, res, contparams, p, resHist); fromNewton = false, kwargs...)
 
 	# Main loop
 	while (res > tol) && (it < maxIter) && line_step && compute
@@ -565,10 +565,10 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		verbose && displayIteration(it, res, itlinear)
 
 		# shall we break the loop?
-		compute = callback(x, res_f, J, res, it, itlinear, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
+		compute = callback((;x, res_f, J, res, it, itlinear, contparams, z0, p, resHist); fromNewton = false, kwargs...)
 	end
 	verbose && displayIteration(it, res, 0, true) # display last line of the table
-	flag = (resHist[end] < tol) & callback(x, res_f, nothing, res, it, -1, contparams; p = p, resHist = resHist, fromNewton = false, kwargs...)
+	flag = (resHist[end] < tol) & callback((;x, res_f, res, it, contparams, p, resHist); fromNewton = false, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it, itlineartot
 end
 

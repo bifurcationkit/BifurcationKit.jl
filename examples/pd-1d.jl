@@ -170,7 +170,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verb
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh, _, flag = @time newton(probSh, initpo, par_br_hopf, optn;
-		callbackN = (x, f, J, res, iteration; kw...) -> (@show x[end];true),
+		callbackN = (state; kw...) -> (@show state.x[end];true),
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outposh[end], ", amplitude = ", BK.getAmplitude(probSh, outposh, par_br_hopf; ratio = 2),"\n")
 
@@ -219,7 +219,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, v
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 120, linsolver = ls)
 	# deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outposh_pd, _, flag = @time newton(probSh, initpo_pd, par_br_pd, optn;
-		callback = (x, f, J, res, iteration, itlinear, options; kwargs...) -> (@show x[end];true),
+		callback = (state; kwargs...) -> (@show state.x[end];true),
 		normN = norminf)
 	flag && printstyled(color=:red, "--> T = ", outposh_pd[end], ", amplitude = ", BK.getAmplitude(probSh, outposh_pd, (@set par_br.C = -0.86); ratio = 2),"\n")
 

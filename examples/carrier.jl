@@ -76,7 +76,6 @@ outdef1, _, flag = @time newton(
 	# perturbsol(deflationOp[1],0,0), par_def,
 	perturbsol(-out, 0, 0), par_def,
 	optdef, deflationOp;
-	# callback = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(res < 1e8)
 	)
 	flag && push!(deflationOp, outdef1)
 

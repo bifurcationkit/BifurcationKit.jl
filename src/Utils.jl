@@ -1,6 +1,13 @@
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
 ####################################################################################################
+# display eigenvals with color
+function displayEV(eigenvals, color = :black)
+	for r in eigenvals
+		printstyled(color=color, r, "\n")
+	end
+end
+####################################################################################################
 function displayIteration(i, residual, itlinear = 0, lastRow = false)
 	if lastRow
 		lastRow && println("└─────────────┴──────────────────────┴────────────────┘")

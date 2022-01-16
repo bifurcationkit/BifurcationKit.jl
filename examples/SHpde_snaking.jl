@@ -103,7 +103,6 @@ br, = @time continuation(
 	normN = x -> norm(x, Inf64),
 	recordFromSolution = (x, p) -> (s5 = x[end ÷ 5], n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4],),
 	# tangentAlgo = SecantPred(),
-	# callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
 	)
 
 plot(br..., legend=false, linewidth=1, vars = (:param, :n2))

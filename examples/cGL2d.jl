@@ -226,7 +226,7 @@ opt_po = @set opt_newton.verbose = true
 			orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 			(@set opt_po.linsolver = ls); jacobianPO = :FullMatrixFree,
 			normN = norminf,
-			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M; ratio = 2));true)
+			# callback = (state; k...) -> (println("--> amplitude = ", BK.amplitude(state.x, Nx*Ny, M; ratio = 2));true)
 			)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, Nx*Ny, M; ratio = 2),"\n")
 plot();BK.plotPeriodicPOTrap(outpo_f, M, Nx, Ny; ratio = 2);title!("")
@@ -255,7 +255,6 @@ br_po, _ = continuation(
 	opts_po_cont, poTrapMF;
 	ampfactor = 3., jacobianPO = :FullMatrixFree,
 	verbosity = 3,	plot = true,
-	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 	(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
@@ -281,12 +280,12 @@ opt_po = @set opt_newton.verbose = true
 			(@set opt_po.linsolver = ls); jacobianPO = :BorderedMatrixFree,
 			normN = norminf)
 
-function callbackPO(x, f, J, res, iteration, linsolver = ls, prob = poTrap, p = par_cgl; kwargs...)
+function callbackPO(state; linsolver = ls, prob = poTrap, p = par_cgl, kwargs...)
 	@show ls.N keys(kwargs)
 	# we update the preconditioner every 10 continuation steps
 	if mod(kwargs[:iterationC], 10) == 9 && iteration == 1
 		@info "update Preconditioner"
-		Jpo = poTrap(Val(:JacCyclicSparse), x, (@set p.r = kwargs[:p]))
+		Jpo = poTrap(Val(:JacCyclicSparse), state.x, (@set p.r = kwargs[:p]))
 		Precilu = @time ilu(Jpo, τ = 0.003)
 		ls.Pl = Precilu
 	end
@@ -585,7 +584,6 @@ outpo_f, hist, flag = @time newton(
 		poTrapMF, orbitguess_f, (@set par_cgl.r = r_hopf - 0.01),
 		(@set opt_po.linsolver = ls); jacobianPO = :FullMatrixFree,
 		normN = x -> maximum(abs.(x)),
-		# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", amplitude(x));true)
 		) #14s
 flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", amplitude(outpo_f, Nx*Ny, M),"\n")
 
@@ -596,7 +594,6 @@ opt_po = @set opt_newton.verbose = true
 			orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01),
 			(@set opt_po.linsolver = lsgpu); jacobianPO = :FullMatrixFree,
 			normN = x -> maximum(abs.(x)),
-			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M));true)
 			) #7s
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end:end], ", amplitude = ", amplitude(outpo_f, Nx*Ny, M),"\n")
 

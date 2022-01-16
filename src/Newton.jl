@@ -43,7 +43,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `x0` initial guess
 - `p0` set of parameters to be passed to `F` and `J`
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault(x, f, J, res, it, itlinear, options; k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault(state; k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the elements passed in `state` to the callback are the following
     - `x` current solution
     - `f` current residual
     - `J` current jacobian
@@ -112,7 +112,7 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	verbose && displayIteration(it, res)
 
 	# invoke callback before algo really starts
-	compute = callback(x, f, nothing, res, it, 0, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
+	compute = callback((;x, f, nothing, res, it, options); x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
 	# Main loop
 	while (res > tol) && (it < maxIter) && compute
 		J = Jhandle(x, p0)
@@ -130,10 +130,10 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 
 		verbose && displayIteration(it, res, itlinear)
 
-		compute = callback(x, f, J, res, it, itlinear, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
+		compute = callback((;x, f, J, res, it, itlinear, options, x0, resHist); fromNewton = true, kwargs...)
 	end
 	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
-	flag = (resHist[end] < tol) & callback(x, f, nothing, res, it, nothing, options; x0 = x0, resHist = resHist, fromNewton = true, kwargs...)
+	flag = (resHist[end] < tol) & callback((;x, f, res, it, options, x0, resHist); fromNewton = true, kwargs...)
 	verbose && displayIteration(0, res, 0, true) # display last line of the table
 	return x, resHist, flag, it, itlineartot
 end
@@ -146,7 +146,7 @@ end
 
 
 # default callback
-cbDefault(x, f, J, res, it, itlinear, options; k...) = true
+cbDefault(state; k...) = true
 
 # newton callback to limit residual
 """
@@ -157,4 +157,4 @@ Create a callback used to reject residals larger than `cb.maxres` in the Newton 
 struct cbMaxNorm{T}
 	maxres::T
 end
-(cb::cbMaxNorm)(x, f, J, res, it, itlinear, options; k...) = (return res < cb.maxres)
+(cb::cbMaxNorm)(state; k...) = (return state.res < cb.maxres)

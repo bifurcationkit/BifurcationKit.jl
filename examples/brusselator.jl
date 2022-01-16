@@ -189,7 +189,7 @@ outpo_f, _, flag = @time newton(poTrap,
 		# jacobianPO = :BorderedLU,
 		# jacobianPO = :FullSparseInplace,
 		normN = norminf,
-		callback = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true)
+		callback = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true)
 		)
 	flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 	BK.plotPeriodicPOTrap(outpo_f, n, M; ratio = 2)
@@ -207,7 +207,6 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0,
 		jacobianPO = :BorderedSparseInplace,
 		# tangentAlgo = BorderedPred(),
 		verbosity = 3,	plot = true,
-		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
 		# finaliseSolution = (z, tau, step, contResult; k...) ->
 			# (Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...),
@@ -247,7 +246,6 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 		opts_po_cont; jacobianPO = :BorderedMatrixFree,
 		verbosity = 2,
 		plot = true,
-		# callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
 		# plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...)
 		normC = norminf)
 ####################################################################################################
