@@ -6,12 +6,13 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
 # call for using BorderedArray input, specific to Arclength Continuation
 (lbs::AbstractBorderedLinearSolver)(J, dR,
-							dz::BorderedArray, R,
-							n::T, theta::T;
+							dz::BorderedArray,
+							R, n::T,
+							θ::T;
 							shift::Ts = nothing) where {T, Ts} = (lbs)(J, dR,
 																	dz.u, dz.p,
 																	R, n,
-																	theta / length(dz.u), one(T) - theta;
+																	θ / length(dz.u), one(T) - θ;
 																	shift = shift)
 
 ####################################################################################################
@@ -21,6 +22,12 @@ $(TYPEDEF)
 This struct is used to provide the bordered linear solver based on the Bordering Method.
 
 $(TYPEDFIELDS)
+
+# Constructors
+
+- there is a  simple constructor `BorderingBLS(ls)` where `ls` is a linear solver, for example `ls = DefaultLS()`
+- you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
+
 """
 @with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
 	"Linear solver used for the Bordering method."
@@ -42,7 +49,8 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # │  ξu * dz.u'    ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (lbs::BorderingBLS)(  J, dR,
-								dzu, dzp::T, R, n::T,
+								dzu, dzp::T,
+								R, n::T,
 								ξu::Tξ = 1, ξp::Tξ = 1; shift::Ts = nothing)  where {T, Tξ, Ts}
 	# the following parameters are used for the pseudo arc length continuation
 	# ξu = θ / length(dz.u)
@@ -50,10 +58,12 @@ function (lbs::BorderingBLS)(  J, dR,
 
 	# we make this branching to avoid applying a zero shift
 	if isnothing(shift)
-		x1, x2, _, (it1, it2) = lbs.solver(J, R, dR)
+		x1, x2, success, itlinear = lbs.solver(J, R, dR)
 	else
-		x1, x2, _, (it1, it2) = lbs.solver(J, R, dR; a₀ = shift)
+		x1, x2, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
 	end
+
+	~success && @warn "Linear solver failed to converge in BorderingBLS."
 
 	dl = (n - dot(dzu, x1) * ξu) / (dzp * ξp - dot(dzu, x2) * ξu)
 
@@ -64,15 +74,22 @@ function (lbs::BorderingBLS)(  J, dR,
 	# mainly for debugging purposes
 	if lbs.checkPrecision
 		# at this point, x2 is not used anymore, we can use it for computing the residual
-		# hence x2 = J*x1 + dl*dR - R
+		# hence x2 = R - (shift⋅I + J) * x1	 - dl * dR
 		x2 = apply(J, x1)
+		if ~isnothing(shift)
+			axpy!(shift, x1, x2)
+		end
 		axpy!(dl, dR, x2)
-		axpy!(-1, R, x2)
-		if norm(x2) > lbs.tol || abs(n - ξp * dzp * dl -ξu * dot(dzu, x1)) > lbs.tol
+		axpby!(1, R, -1, x2)
+
+		y2 = n - ξp * dzp * dl -ξu * dot(dzu, x1)
+
+		sucessBLS = norm(x2) > lbs.tol || abs(y2) > lbs.tol
+		if sucessBLS
 			@warn "BorderingBLS did not achieve tolerance"
 		end
 	end
-	return x1, dl, true, (it1, it2)
+	return x1, dl, true, itlinear
 end
 ####################################################################################################
 # this interface should work for Sparse Matrices as well as for Matrices

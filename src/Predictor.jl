@@ -113,11 +113,11 @@ struct BorderedPred <: AbstractTangentPredictor end
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
-# it is updated inplace
 # ┌                           ┐┌  ┐   ┌   ┐
 # │      J            dFdl    ││τu│ = │ 0 │
-# │  θ/N * τu       (1-θ)⋅τp  ││τp│   │ 1 │
+# │  θ/N * τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
 # └                           ┘└  ┘   └   ┘
+# it is updated inplace
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: Bordered")
 	ϵ = it.contParams.finDiffEps
@@ -127,8 +127,9 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	rmul!(dFdl, 1/ϵ)
 
 	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	τ_normed = copy(τ)#copyto!(similar(tau), tau) #copy(tau_old)
+	τ_normed = copy(τ)#
 	rmul!(τ_normed, θ / length(τ.u), 1 - θ)
+
 	# extract tangent as solution of bordered linear system, using zero(z_new.u)
 	τu, τp, flag, itl = it.linearAlgo( it.J(z_new.u, setParam(it, z_new.p)), dFdl,
 			τ_normed, 0*z_new.u, T(1), θ)
@@ -501,7 +502,6 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	# Displaying results
 	verbose && displayIteration(it, res)
 	line_step = true
-
 	# invoke callback before algo really starts
 	compute = callback((;x, res_f, res, contparams, p, resHist); fromNewton = false, kwargs...)
 
