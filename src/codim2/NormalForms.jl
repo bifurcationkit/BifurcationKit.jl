@@ -739,3 +739,138 @@ function bautinNormalForm(F, dF, d2F, d3F,
 	)
 end
 ####################################################################################################
+function zeroHopfNormalForm(F, dF, d2F, d3F,
+		br::AbstractBranchResult, ind_bif::Int;
+		δ = 1e-8,
+		nev = length(eigenvalsfrombif(br, ind_bif)),
+		Jᵗ = nothing,
+		verbose = false,
+		ζs = nothing,
+		lens = br.lens,
+		Teigvec = getvectortype(br),
+		scaleζ = norm)
+	@assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Bautin Point"
+
+	verbose && println("#"^53*"\n--> Zero-Hopf Normal form computation")
+
+	# scalar type
+	T = eltype(Teigvec)
+	ϵ2 = T(δ)
+
+	# functional
+	prob = br.functional
+	@assert prob isa AbstractProblemMinimallyAugmented
+	ls = prob.linsolver
+	bls = prob.linbdsolver
+
+	# ``kernel'' dimension
+	N = 3
+
+	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
+	nev = max(N, nev)
+
+	# Newton parameters
+	optionsN = br.contparams.newtonOptions
+
+	# bifurcation point
+	bifpt = br.specialpoint[ind_bif]
+	eigRes = br.eig
+
+	# eigenvalue
+	# ω = abs(getP(bifpt.x, prob)[2])
+	# λ = Complex(0, ω)
+
+	# parameter for vector field
+	p = bifpt.param
+	parbif = set(br.params, lens, p)
+	parbif = set(parbif, prob.lens, get(bifpt.printsol, prob.lens))
+
+	# jacobian at bifurcation point
+	if Teigvec <: BorderedArray
+		x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob))
+	else
+		x0 = convert(Teigvec, getVec(bifpt.x, prob))
+	end
+	L = dF(x0, parbif)
+
+	# right eigenvector
+	if haseigenvector(br) == false
+		# we recompute the eigen-elements if there were not saved during the computation of the branch
+		@info "Recomputing eigenvector on the fly"
+		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+		# null eigenvalue
+		_ind0 = argmin(abs.(_λ))
+		@info "The eigenvalue is $(_λ[_ind0])"
+		@warn abs(_λ[_ind0]) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
+		q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
+		# imaginary eigenvalue
+		_indIm = argmin(real.((_λ[ii] for ii = 1:length(_λ) if ii!=_ind0)))
+		λI = _λ[_indIm]
+		q1 = geteigenvector(optionsN.eigsolver, _ev, _indIm)
+	else
+		@assert 1==0 "Not done"
+		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+	end
+	q0 ./= scaleζ(q0)
+
+	# left eigen-elements
+	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x, p)
+	p0, λstar = getAdjointBasis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p1, λstar1 = getAdjointBasis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+
+	# normalise left eigenvectors
+	p0 ./= dot(p0, q0)
+	@show dot(p1, q1)
+	p1 ./= dot(q1, p1)
+	@assert dot(p0, q0) ≈ 1
+	@assert dot(p1, q1) ≈ 1
+
+	# parameters for vector field
+	p = bifpt.param
+	parbif = set(br.params, lens, p)
+	parbif = set(parbif, prob.lens, get(bifpt.printsol, prob.lens))
+
+	# parameters
+	lenses = (lens, prob.lens)
+	lens1, lens2 = lenses
+	p10 = get(parbif, lens1); p20 = get(parbif, lens2);
+
+	getp(l::Lens) = get(parbif, l)
+	setp(l::Lens, p::Number) = set(parbif, l, p)
+	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+	Jp(p, l)  = ForwardDiff.derivative( P -> F(x0, setp(l, P)) , p)
+
+	dFp = [dot(p0, Jp(p10, lens1)) dot(p0, Jp(p20, lens2)); dot(p1, Jp(p10, lens1)) dot(p1, Jp(p20, lens2))]
+
+	pt = ZeroHopf(
+		x0, parbif,
+		lenses,
+		(;q0, q1), (;p0, p1),
+		(;ω = λI, λ0 = _λ[_ind0], dFp),
+		:none
+	)
+end
+
+function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
+	@unpack ω, λ0 = zh.nf
+	lens1, lens2 = zh.lens
+	p1 = get(zh.params, lens1)
+	p2 = get(zh.params, lens2)
+	par0 = [p1, p2]
+	function HopfCurve(s)
+		return (pars = par0 , ω = abs(ω))
+	end
+	# compute eigenvector corresponding to the Hopf branch
+	function EigenVec(s)
+		return zh.ζ.q1
+	end
+	function EigenVecAd(s)
+		return zh.ζstar.p1
+	end
+
+	return (hopf = t->HopfCurve(t).pars,
+			ω = t->HopfCurve(t).ω,
+			EigenVec = EigenVec,
+			EigenVecAd = EigenVecAd,
+			x0 = t -> 0)
+end

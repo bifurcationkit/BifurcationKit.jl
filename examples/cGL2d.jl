@@ -135,17 +135,27 @@ ind_hopf = 1
 		options = optnew, normN = norminf, startWithEigen = true)
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
-br_hopf, u1_hopf = @time continuation(
-	jet[1], jet[2],
-	br, 1, (@lens _.γ),
-	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= -0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 0, newtonOptions = optnew, plotEveryStep = 5, precisionStability = 1e-7, nev = 15); plot = true,
+br_hopf, = continuation( jet[1], jet[2], br, 1, (@lens _.γ),
+	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 1, newtonOptions = (@set optnew.tol = 1e-8), plotEveryStep = 5, precisionStability = 1e-7, nev = 15, maxBisectionSteps = 55, ); plot = true,
 	updateMinAugEveryStep = 1,
 	d2F = jet[3], d3F = jet[4],
-	startWithEigen = true, bothside = true,
+	startWithEigen = true, bothside = false,
 	detectCodim2Bifurcation = 2,
 	verbosity = 3, normC = norminf)
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
+
+computeNormalForm(jet..., br_hopf, 3; autodiff = false)
+
+brfold, = continuation(jet..., br_hopf, 3, setproperties(br_hopf.contparams; detectBifurcation = 1, maxSteps = 20, saveSolEveryStep = 1);
+	verbosity = 3, plot = true,
+	updateMinAugEveryStep = 1,
+	detectCodim2Bifurcation = 2,
+	# callbackN = BK.cbMaxNorm(1e5),
+	bothside = true, normC = norminf)
+
+plot(br_hopf, branchlabel = "Hopf curve", legend = :topleft)
+	plot!(brfold)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices

@@ -133,6 +133,13 @@ HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 # 	_S = LinRange(0., 0.001, 100)
 # 	plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], label = "Hpred")
 # 	# plot!(hp_codim2_1, vars=(:F, :T), branchlabel = "Hopf1")
+
+# test for Zero-Hopf
+zh = computeNormalForm(jet..., sn_codim2, 2)
+show(zh)
+BK.predictor(zh, Val(:HopfCurve), 0.1).hopf(0.)
+BK.predictor(zh, Val(:HopfCurve), 0.1).x0(0.)
+BK.predictor(zh, Val(:HopfCurve), 0.1).ω(0.)
 ####################################################################################################
 hp_codim2_1, = continuation(jet[1:2]..., br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1) ;
 	normC = norminf,

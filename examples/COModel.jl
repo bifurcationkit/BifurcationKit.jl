@@ -4,7 +4,7 @@ const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)
 ####################################################################################################
-function COm(u, p)
+function COm(u, p, t = 0)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
 	x, y, s = u
 	z = 1-x-y-s
@@ -16,15 +16,15 @@ function COm(u, p)
 end
 jet = BK.getJet(COm; matrixfree=false)
 
-par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
+par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
-	@set! opts_br.newtonOptions.verbose = true
+opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000, saveSolEveryStep = 1)
+	# @set! opts_br.newtonOptions.verbose = true
 	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 		recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]),
-		plot = false, verbosity = 3, normC = norminf,
+		plot = false, verbosity = 0, normC = norminf,
 	bothside = true)
 	show(br)
 

@@ -133,3 +133,44 @@ function Base.show(io::IO, bp::Bautin)
 	println(io, "Normal form coefficients (detailed):")
 	println(io, bp.nf)
 end
+####################################################################################################
+"""
+$(TYPEDEF)
+
+$(TYPEDFIELDS)
+
+"""
+mutable struct ZeroHopf{Tv, Tpar, Tlens, Tevr, Tevl, Tnf} <: AbstractBifurcationPoint
+	"Zero-Hopf point"
+	x0::Tv
+
+	"Parameters used by the vector field."
+	params::Tpar
+
+	"Parameter axis used to compute the branch on which this Zero-Hopf point was detected."
+	lens::Tlens
+
+	"Right eigenvectors"
+	ζ::Tevr
+
+	"Left eigenvectors"
+	ζstar::Tevl
+
+	"Normal form coefficients"
+	nf::Tnf
+
+	"Type of ZeroHopf bifurcation"
+	type::Symbol
+end
+
+type(bp::ZeroHopf) = :ZeroHopf
+
+function Base.show(io::IO, bp::ZeroHopf)
+	lens1, lens2 = bp.lens
+	p1 = get(bp.params, lens1)
+	p2 = get(bp.params, lens2)
+	println(io, "Zero-Hopf bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
+	println(io, "null eigenvalue ≈ ", bp.nf.λ0)
+	println(io, "ω = ", bp.nf.ω)
+	# println(io, bp.nf)
+end
