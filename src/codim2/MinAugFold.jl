@@ -440,7 +440,7 @@ function continuationFold(F, J,
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
-		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp")), DiscreteEvent(1, testForZH, false, ("zh",)))
+		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, testForZH, false, ("zh",)))
 		)
 		@assert ~isnothing(br) "Empty branch!"
 	return correctBifurcation(setproperties(br; type = :FoldCodim2, functional = foldPb)), u, tau

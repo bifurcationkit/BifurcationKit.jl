@@ -22,8 +22,9 @@ hasCustomLabels(::AbstractEvent) = false
 # general condition for detecting a continuous event.
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
 # the ind is used to specify which part of the event is tested
-function isEventCrossed(::AbstractContinuousEvent, iter, state, ind = :)
-	test(x, y) = x * y < 0
+function isEventCrossed(eve::AbstractContinuousEvent, iter, state, ind = :)
+	ϵ = eve.tol
+	test(x, y) = (x * y < 0) || (abs(x) <= ϵ) || (abs(y) <= ϵ)
 	if state.eventValue[1] isa Real
 		return test(state.eventValue[1], state.eventValue[2])
 	else
@@ -55,7 +56,6 @@ end
 # return type when calling eve.fct(iter, state)
 initialize(eve::AbstractContinuousEvent, T) = eve.nb == 1 ? T(1) : ntuple(x -> T(1), eve.nb)
 initialize(eve::AbstractDiscreteEvent, T) = eve.nb == 1 ? Int64(1) : ntuple(x -> Int64(1), eve.nb)
-
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -65,7 +65,7 @@ A continuous call back returns a **tuple/scalar** value and we seek its zeros.
 
 $(TYPEDFIELDS)
 """
-struct ContinuousEvent{Tcb, Tl} <: AbstractContinuousEvent
+struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
 	"number of events, ie the length of the result returned by the callback function"
 	nb::Int64
 
@@ -77,9 +77,12 @@ struct ContinuousEvent{Tcb, Tl} <: AbstractContinuousEvent
 
 	"Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0,1.3213,3.434)`. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
+
+	"Tolerance on event value to declare it as true event."
+	tol::T
 end
 
-ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; ContinuousEvent(nb, fct, false, labels))
+ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; ContinuousEvent(nb, fct, false, labels, 0))
 @inline computeEigenElements(eve::ContinuousEvent) = eve.computeEigenElements
 @inline length(eve::ContinuousEvent) = eve.nb
 @inline hasCustomLabels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)

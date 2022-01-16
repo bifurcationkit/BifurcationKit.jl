@@ -459,9 +459,9 @@ function continuationHopf(F, J,
 
 	# event for detecting codim 2 points
 	if computeEigenElements
-		event = PairOfEvents(ContinuousEvent(2, testGH_BT, computeEigenElements, ("gh", "bt")), BifDetectEvent)
+		event = PairOfEvents(ContinuousEvent(2, testGH_BT, computeEigenElements, ("gh", "bt"), 0), BifDetectEvent)
 	else
-		event = ContinuousEvent(2, testGH_BT, false, ("gh", "bt"))
+		event = ContinuousEvent(2, testGH_BT, false, ("gh", "bt"), 0)
 	end
 
 	# solve the hopf equations

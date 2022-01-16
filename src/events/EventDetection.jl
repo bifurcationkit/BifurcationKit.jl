@@ -313,7 +313,10 @@ function getEventType(event::PairOfEvents, iter::AbstractContinuationIterable, s
 	elseif isEventCrossed(event.eventD, iter, state, nC+1:n)
 		return getEventType(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
 	else
-		throw("Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen.")
+		@error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+		# we halt continuation as it will mess up the detection of events
+		state.stopcontinuation = true
+		return false, EventSpecialPoint(state, :PairOfEvents, status, iter.recordFromSolution, iter.normC, interval)
 	end
 end
 
@@ -344,6 +347,9 @@ function getEventType(event::SetOfEvents, iter::AbstractContinuationIterable, st
 		indD = event_index_D[1]
 		return getEventType(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
 	else
-		throw("Error, no event was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. Indeed, this should not happen.")
+		@error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+		# we halt continuation as it will mess up the detection of events
+		state.stopcontinuation = true
+		return false, EventSpecialPoint(state, :SetOfEvents, status, iter.recordFromSolution, iter.normC, interval)
 	end
 end
