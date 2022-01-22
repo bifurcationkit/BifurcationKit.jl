@@ -262,6 +262,7 @@ br_po, _ = continuation(
 	opts_po_cont, poTrapMF;
 	ampfactor = 3., jacobianPO = :FullMatrixFree,
 	verbosity = 3,	plot = true,
+	linearAlgo = BorderingBLS(solver = ls, checkPrecision = false),
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 	(BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),

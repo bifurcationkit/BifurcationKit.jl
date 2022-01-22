@@ -33,24 +33,24 @@ N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 
 function F_chan(u, p)
-	@unpack alpha, beta = p
-	return [Fun(u(0.), domain(u)) - beta,
-			Fun(u(1.), domain(u)) - beta,
-			Δ * u + alpha * N(u, b = beta)]
+	@unpack α, β = p
+	return [Fun(u(0.), domain(u)) - β,
+			Fun(u(1.), domain(u)) - β,
+			Δ * u + α * N(u, b = β)]
 end
 
 function dF_chan(u, v, p)
-	@unpack alpha, beta = p
+	@unpack α, β = p
 	return [Fun(v(0.), domain(u)),
 			Fun(v(1.), domain(u)),
-			Δ * v + alpha * dN(u, b = beta) * v]
+			Δ * v + α * dN(u, b = β) * v]
 end
 
 function Jac_chan(u, p)
-	@unpack alpha, beta = p
+	@unpack α, β = p
 	return [Evaluation(u.space, 0.),
 			Evaluation(u.space, 1.),
-			Δ + alpha * dN(u, b = beta)]
+			Δ + α * dN(u, b = β)]
 end
 
 function finalise_solution(z, tau, step, contResult)
@@ -60,8 +60,8 @@ function finalise_solution(z, tau, step, contResult)
 end
 
 sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
-const Δ = Derivative(sol.space, 2);
-par_af = (alpha = 3., beta = 0.01)
+const Δ = Derivative(sol0.space, 2);
+par_af = (α = 3., β = 0.01)
 
 optnew = NewtonPar(tol = 1e-12, verbose = true, linsolver = DefaultLS(useFactorization = false))
 	sol, _, flag = @time BK.newton(
@@ -70,18 +70,20 @@ optnew = NewtonPar(tol = 1e-12, verbose = true, linsolver = DefaultLS(useFactori
 
 optcont = ContinuationPar(dsmin = 1e-4, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 10, verbose = false), maxSteps = 300)
 
-	br0, = @time continuation(
-		F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont;
-		plot = true,
-		# tangentAlgo = MoorePenrosePred(), # this works VERY well
-		linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
-		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
+br0, = @time continuation(
+	F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont;
+	plot = true,
+	# tangentAlgo = MoorePenrosePred(), # this works VERY well
+	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
+	plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
-		normC = x -> norm(x, Inf64))
+	normC = x -> norm(x, Inf64))
+
+plot(br0)
 ####################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2, (x, y) -> dot(x, y), 1.0, [sol])
-par_def = @set par_af.alpha = 3.3
+par_def = @set par_af.α = 3.3
 
 optdef = setproperties(optnew; tol = 1e-9, maxIter = 1000)
 
@@ -104,7 +106,7 @@ plot(deflationOp.roots)
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
 
 	br, _ = @time continuation(
-		F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont;
+		F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont;
 		dotPALC = (x, y) -> dot(x, y),
 		plot = true,
 		# finaliseSolution = finalise_solution,
@@ -116,7 +118,7 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 ####################################################################################################
 # tangent predictor with Bordered system
 br, _ = @time continuation(
-	F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont,
+	F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont,
 	tangentAlgo = BorderedPred(),
 	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 	plot = true,

@@ -98,7 +98,7 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
 	copyto!(τ, z_new)
 	minus!(τ, z_old)
-	α = sign(ds) / it.dottheta(τ, θ)
+	α = sign(ds) / it.dotθ(τ, θ)
 	rmul!(τ, α)
 end
 ####################################################################################################
@@ -247,7 +247,7 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 				(verbosity > 0) && printstyled("--> Increase pmimax\n", color=:red)
 				mpd.pmimax += 1
 			else
-				(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
+				(verbosity > 0) && @error "Failure to converge with given tolerances"
 				# we stop the continuation
 				return ds, θ, true
 			end
@@ -420,7 +420,7 @@ end
 function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, pred::AbstractTangentPredictor, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
 	if converged == false
 		if  abs(ds) <= contparams.dsmin
-			(verbosity > 0) && printstyled("*"^80*"\nFailure to converge with given tolerances\n"*"*"^80, color=:red)
+			@error "Failure to converge with given tolerances."
 			# we stop the continuation
 			return ds, θ, true
 		end
@@ -560,5 +560,5 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 end
 
 # conveniency for use in continuation
-newtonPALC(it::AbstractContinuationIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dottheta; kwargs...)
+newtonPALC(it::AbstractContinuationIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dotθ; kwargs...)
 ####################################################################################################

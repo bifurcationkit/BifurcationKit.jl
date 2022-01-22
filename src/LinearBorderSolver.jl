@@ -131,7 +131,9 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
+
 This struct is used to  provide the bordered linear solver based on inverting the full matrix.
+
 $(TYPEDFIELDS)
 """
 struct MatrixBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
