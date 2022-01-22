@@ -143,7 +143,7 @@ type(::Nothing) = nothing
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
 	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
-	println(io, "Normal form (aδμ + b1⋅x + b2⋅x^2/2 + b3⋅x^3/6): \n", bp.nf)
+	println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6): \n", bp.nf)
 end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)

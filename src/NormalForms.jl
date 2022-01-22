@@ -48,10 +48,8 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
 
-	# Newton parameters
 	options = br.contparams.newtonOptions
 
-	# bifurcation point
 	# we need this conversion when running on GPU and loading the branch from the disk
 	x0 = convert(Teigvec, bifpt.x)
 	p = bifpt.param
@@ -104,7 +102,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	# coefficient of p
 	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζstar)
-	verbose && println("--> Normal form:   aδμ + b1⋅x + b2⋅x^2/2 + b3⋅x^3/6")
+	verbose && println("--> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
 	verbose && println("--> a = ", a)
 
 	# coefficient of x*p
@@ -220,7 +218,6 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
 	# formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
 	# dimension of the kernel
 	N = length(bp.ζ)
-	# for the output
 	out = zero(x)
 	# normal form
 	nf = bp.nf
@@ -435,8 +432,8 @@ function computeNormalForm(F, dF, d2F, d3F,
 	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
 	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
 
-	# Newton parameters
 	options = br.contparams.newtonOptions
+	ls = options.linsolver
 
 	# bifurcation point
 	x0 = convert(Teigvec, bifpt.x)
@@ -444,15 +441,10 @@ function computeNormalForm(F, dF, d2F, d3F,
 
 	# parameter for vector field
 	parbif = set(br.params, br.lens, p)
-
-	# jacobian at bifurcation point
 	L = dF(x0, parbif)
 
 	# we invert L repeatdly, so we try to factorize it
 	Linv = L isa AbstractMatrix ? factorize(L) : L
-
-	# linear solver
-	ls = options.linsolver
 
 	# "zero" eigenvalues at bifurcation point
 	rightEv = br.eig[bifpt.idx].eigenvals
@@ -715,7 +707,6 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	verbose && println("#"^53*"\n--> Hopf Normal form computation")
 
-	# Newton parameters
 	options = br.contparams.newtonOptions
 
 	# bifurcation point
@@ -729,8 +720,6 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 	# parameter for vector field
 	p = bifpt.param
 	parbif = set(br.params, lens, p)
-
-	# jacobian at bifurcation point
 	L = dF(convert(Teigvec, bifpt.x), parbif)
 
 	# right eigenvector

@@ -16,7 +16,7 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
 end
 
 ####################################################################################################
-# The following functions are used for the Continuation of Hopf points and the computation of Floquet multipliers
+# The two following functions are used for the Continuation of Hopf points and the computation of Floquet multipliers
 
 """
 This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.

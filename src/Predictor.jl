@@ -15,12 +15,11 @@ Compute, the norm associated to weighted dot product ``\\langle (u_1,p_1), (u_2,
     This is used in the pseudo-arclength constraint with the dot product ``\\frac{1}{N} \\langle u_1,u_2\\rangle,\\quad u_i\\in\\mathbb R^N``
 """
 struct DotTheta{Tdot}
-	dot::Tdot		# defaults to (x,y) -> dot(x,y) / length(x)
+	dot::Tdot
 end
 
 DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x) )
 
-# Implementation of the dot product associated to DotTheta
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
 (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
 
@@ -37,7 +36,6 @@ arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
-# wrapper to use iterators and state
 getPredictor!(state::AbstractContinuationState, iter::AbstractContinuationIterable, nrm = false) = getPredictor!(state.z_pred, state.z_old, state.tau, state.ds, iter.tangentAlgo, nrm)
 getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, verbosity) = getTangent!(state.tau, state.z_new, state.z_old, it, state.ds, θ, it.tangenAlgo::NaturalPred, it.verbosity)
 
@@ -48,7 +46,7 @@ Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 # the nrm argument allows to just increment z_pred.p by ds
 function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
 	# we perform z_pred = z_old + ds * τ
-	copyto!(z_pred, z_old) # z_pred .= z_old
+	copyto!(z_pred, z_old)
 	nrm ? axpy!(ds / τ.p, τ, z_pred) : axpy!(ds, τ, z_pred)
 end
 
@@ -71,7 +69,6 @@ end
 struct NaturalPred <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
-	# we do z_pred .= z_old
 	copyto!(z_pred, z_old)
 	z_pred.p += ds
 end
@@ -95,8 +92,7 @@ end
 """
 struct SecantPred <: AbstractSecantPredictor end
 
-# tangent computation using Secant predictor
-# tau is the tangent prediction
+# τ is the tangent prediction
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: ", pred)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
@@ -136,12 +132,10 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 										θ)
 	~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
 
-	# the new tangent vector must preserve the direction along the curve
-	# we scale in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
+	# we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
 	α = T(1) / sqrt(it.dottheta(τu, τu, τp, τp, θ))
 	α *= sign(it.dottheta(τ.u, τu, τ.p, τp, θ))
 
-	# tau_new = α * tau
 	copyto!(τ.u, τu)
 	τ.p = τp
 	rmul!(τ, α)
@@ -202,7 +196,6 @@ function (mpred::MultiplePred)(state; kwargs...)
 end
 
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
-	# compute tangent and store it
 	(verbosity > 0) && print("Predictor: MultiplePred\n--")
 	getTangent!(τ, z_new, z_old, it, ds, θ, pred.tangentalgo, verbosity)
 	# record the tangent for later use
@@ -225,8 +218,7 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in mpred.nb:-1:1
 		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
-		# record the current index
-		mpred.currentind = ii
+		mpred.currentind = ii # record the current index
 		zpred = _copy(z_pred)
 		axpy!(ii * ds, mpred.τ, zpred)
 		# we restore the original callback if it reaches the usual case ii == 0
@@ -273,7 +265,6 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		end
 	end
 
-	# control step to stay between bounds
 	dsnew = clampDs(dsnew, contparams)
 
 	return dsnew, θ, false
@@ -378,7 +369,6 @@ function updatePred!(polypred::PolynomialPred)
 end
 
 function getTangent!(tau::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
-	# compute tangent and store it
 	(verbosity > 0) && println("Predictor: PolynomialPred")
 	# do we update the predictor with last converged point?
 	if polypred.update
@@ -441,10 +431,8 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 		Nmax = contparams.newtonOptions.maxIter
 		factor = (Nmax - it_newton_number) / Nmax
 		dsnew = ds * (1 + contparams.a * factor^2)
-		# (verbosity > 0) && @show 1 + contparams.a * factor^2
 	end
 
-	# control step to stay between bounds
 	dsnew = clampDs(dsnew, contparams)
 
 	thetanew = contparams.doArcLengthScaling ? arcLengthScaling(θ, contparams, tau, verbosity) : θ
@@ -472,7 +460,6 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 					linearbdalgo = BorderingBLS(DefaultLS()),
 					normN = norm,
 					callback = cbDefault, kwargs...) where {T, S, E, vectype}
-	# Extract parameters
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
 
@@ -488,7 +475,6 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	p = z_pred.p
 	x_pred = _copy(x)
 
-	# Initialise residuals
 	res_f = F(x, set(par, paramlens, p));  res_n = N(x, p)
 
 	dX = _copy(res_f)
@@ -504,13 +490,11 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	it = 0
 	itlineartot = 0
 
-	# Displaying results
 	verbose && displayIteration(it, res)
 	line_step = true
-	# invoke callback before algo really starts
+
 	compute = callback((;x, res_f, res, contparams, p, resHist); fromNewton = false, kwargs...)
 
-	# Main loop
 	while (res > tol) && (it < maxIter) && line_step && compute
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
 		copyto!(dFdp, F(x, set(par, paramlens, p + finDiffEps)))
@@ -554,9 +538,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 			# we put back the initial value
 			α = α0
 		else
-			# x .= x .- u
 			minus!(x, u)
-			# p  = p  - up
 			p = clamp(p - up, pMin, pMax)
 
 			copyto!(res_f, F(x, set(par, paramlens, p)))

@@ -49,7 +49,6 @@ $(TYPEDFIELDS)
 	@assert k > 0
 end
 
-# dummy constructor to simplify user passing options to continuation
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
@@ -72,7 +71,6 @@ function (lbs::BorderingBLS)(  J, dR,
 	dX, dl, itlinear = BEC0(R, n)
 
 	failBLS = true
-
 	while lbs.checkPrecision && k < lbs.k && failBLS
 		δX, δl = Residual(dX, dl)
 		failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
@@ -84,7 +82,6 @@ function (lbs::BorderingBLS)(  J, dR,
 			k += 1
 		end
 	end
-
 	return dX, dl, true, itlinear
 end
 
@@ -132,7 +129,6 @@ function residualBEC(lbs::BorderingBLS,
 end
 
 ####################################################################################################
-# this interface should work for Sparse Matrices as well as for Matrices
 """
 $(TYPEDEF)
 This struct is used to  provide the bordered linear solver based on inverting the full matrix.
@@ -184,8 +180,6 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts}
 end
 
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number, Ts}
-	# This implements the case where Tc is a number, ie there is one scalar constraint in the
-	# bordered linear system
 	out = similar(x)
 	copyto!(out.u, apply(lbmap.J, x.u))
 	axpy!(x.p, lbmap.a, out.u)
@@ -243,7 +237,6 @@ function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing) where {T <: Number, Tξ, S}
 	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift)
-	# what is the vector type used?
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return extractVecBLS(sol), extractParBLS(sol), cv, it

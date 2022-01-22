@@ -280,7 +280,7 @@ end
 """
 Function to compute the Matrix-Free version of Aγ, see docs for its expression.
 """
-function Agamma!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
+function Aγ!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
 	# u0 of size N * M + 1
 	# du of size N * M
 	M, N = size(pb)
@@ -399,7 +399,7 @@ cylicPOTrapSparse(pb::PeriodicOrbitTrapProblem, orbitguess0, par) = blockToSpars
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using a Sparse representation.
 """
-function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1.0, δ = 1e-9)
+function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9))
 	# extraction of various constants
 	M, N = size(pb)
 	T = extractPeriodFDTrap(pb, u0)
@@ -421,7 +421,7 @@ end
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
-@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1.0, δ = 1e-9) where Tj
+@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9)) where Tj
 		M, N = size(pb)
 		T = extractPeriodFDTrap(pb, u0)
 
@@ -473,7 +473,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 end
 
 
-@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1.0, δ = 1e-9, updateborder = true)
+@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder = true)
 	M, N = size(pb)
 	T = extractPeriodFDTrap(pb, u0)
 
@@ -527,7 +527,7 @@ end
 	return J0
 end
 
-function (pb::PeriodicOrbitTrapProblem)(::Val{:JacCyclicSparse}, u0::AbstractVector, par, γ = 1.0)
+function (pb::PeriodicOrbitTrapProblem)(::Val{:JacCyclicSparse}, u0::AbstractVector, par, γ = 1)
 	# extraction of various constants
 	N = pb.N
 	AγBlock = jacobianPOTrapBlock(pb, u0, par; γ = γ)
@@ -733,14 +733,13 @@ end
 end
 
 # this function is called whenever the jacobian of G has to be updated
-function (J::POTrapJacobianBordered)(orbitguess0::AbstractVector, par; δ = 1e-9)
+function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltype(u0), 1e-9))
+	T = extractPeriodFDTrap(J.Aγ.prob, u0)
 	# we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
-	T = extractPeriodFDTrap(J.Aγ.prob, orbitguess0)
 	# TODO REMOVE CE vcat!
-	@views J.∂TGpo .= (J.Aγ.prob(vcat(orbitguess0[1:end-1], T + δ), par) .- J.Aγ.prob(orbitguess0, par)) ./ δ
+	@views J.∂TGpo .= (J.Aγ.prob(vcat(u0[1:end-1], T + δ), par) .- J.Aγ.prob(u0, par)) ./ δ
 
-	# update Aγ
-	J.Aγ(orbitguess0, par)
+	J.Aγ(u0, par) # update Aγ
 
 	# return J, needed to properly call the linear solver.
 	return J
@@ -765,7 +764,7 @@ end
 
 ####################################################################################################
 const DocStrjacobianPOTrap = """
-- `jacobianPO = :BorderedLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
+- `jacobianPO = :FullLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
     - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
     - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
     - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.

@@ -3,8 +3,8 @@ using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff, Parame
 const BK = BifurcationKit
 norminf = x -> norm(x, Inf)
 
-Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
-par = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
+Fbp(x, p) = [p.a0 + x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
+par = (a0 = 0., μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
 ####################################################################################################
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
@@ -67,13 +67,12 @@ bdiag = bifurcationdiagram(jet..., [0.1, 0.1], par,  (@lens _.μ), 2,
 	plot = false, verbosity = 0, normC = norminf)
 ####################################################################################################
 # Case of the pitchfork
-par_pf = @set par.x2 = 0.0
-par_pf = @set par_pf.x3 = -1.0
+par_pf = setproperties(par; x2 = 0.0, x3 = -1.0)
 brp, = BK.continuation(
 	Fbp, [0.1, 0.1], par_pf, (@lens _.μ),
 	recordFromSolution = (x, p) -> x[1],
 	opts_br; plot = false, verbosity = 0, normC = norminf)
-bpp = BK.computeNormalForm(jet..., brp, 1; verbose=false)
+bpp = BK.computeNormalForm(jet..., brp, 1)
 show(bpp)
 
 nf = bpp.nf

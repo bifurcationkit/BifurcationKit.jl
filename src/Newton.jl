@@ -96,7 +96,6 @@ julia> sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x -> norm(
     Make sure that the linear solver (Matrix-Free...) corresponds to your jacobian (Matrix-Free vs. Matrix based).
 """
 function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
-	# Extract parameters
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = options
 
 	# Initialize iterations
@@ -113,12 +112,10 @@ function newton(Fhandle, Jhandle, x0, p0, options::NewtonPar; normN = norm, call
 	# total number of linear iterations
 	itlineartot = 0
 
-	# Displaying results
 	verbose && displayIteration(it, res)
 
-	# invoke callback before algo really starts
 	compute = callback((;x, f, nothing, res, it, options, x0, resHist); fromNewton = true, kwargs...)
-	# Main loop
+
 	while (res > tol) && (it < maxIter) && compute
 		J = Jhandle(x, p0)
 		d, _, itlinear = options.linsolver(J, f)
@@ -153,7 +150,6 @@ end
 # default callback
 cbDefault(state; k...) = true
 
-# newton callback to limit residual
 """
     cb = cbMaxNorm(maxres)
 
