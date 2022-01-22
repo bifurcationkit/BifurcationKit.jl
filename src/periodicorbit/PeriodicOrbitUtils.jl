@@ -52,15 +52,25 @@ end
 # functions to insert the problem into the user passed parameters
 function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 	_finsol = get(kwargs, :finaliseSolution, nothing)
-	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kwargs...) ->
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
 		begin
-			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-			true
+			# we first check that the continuation step was successful
+			# if not, we do not update the problem with bad information!
+			success = get(kF, :state, nothing).isconverged
+			if success && modCounter(step, updateSectionEveryStep) == 1
+				updateSection!(prob, z.u, setParam(contResult, z.p))
+			end
+			return true
 		end :
-		(z, tau, step, contResult; prob = prob, kwargs...) ->
+		(z, tau, step, contResult; kF...) ->
 		begin
-			modCounter(step, updateSectionEveryStep) == 1 && updateSection!(prob, z.u, setParam(contResult, z.p))
-			_finsol(z, tau, step, contResult; prob = prob, kwargs...)
+			# we first check that the continuation step was successful
+			# if not, we do not update the problem with bad information!
+			success = get(kF, :state, nothing).isconverged
+			if success && modCounter(step, updateSectionEveryStep) == 1
+				updateSection!(prob, z.u, setParam(contResult, z.p))
+			end
+			return _finsol(z, tau, step, contResult; prob = prob, kF...)
 		end
 	return _finsol2
 end

@@ -365,10 +365,13 @@ function continuationHopf(F, J,
 	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
 	function updateMinAugHopf(z, tau, step, contResult; kUP...)
-		~modCounter(step, updateMinAugEveryStep) && return true
 		x = z.u.u		# hopf point
 		p1 = z.u.p[1]	# first parameter
 		ω = z.u.p[2]	# Hopf frequency
+		# we first check that the continuation step was successful
+		# if not, we do not update the problem with bad information!
+		success = get(kUP, :state, nothing).isconverged
+		(~modCounter(step, updateMinAugEveryStep) || success == false) && return true
 		p2 = z.p		# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)

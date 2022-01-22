@@ -345,7 +345,10 @@ function continuationFold(F, J,
 	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
 	function updateMinAugFold(z, tau, step, contResult; kUP...)
-		~modCounter(step, updateMinAugEveryStep) && return true
+		# we first check that the continuation step was successful
+		# if not, we do not update the problem with bad information!
+		success = get(kUP, :state, nothing).isconverged
+		(~modCounter(step, updateMinAugEveryStep) || success == false) && return true
 		x = getVec(z.u)	# fold point
 		p1 = getP(z.u)	# first parameter
 		p2 = z.p	# second parameter
