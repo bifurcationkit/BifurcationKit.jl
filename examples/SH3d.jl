@@ -102,19 +102,35 @@ optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, linsolver= @set ls.
 
 contour3dMakie(sol0)
 contour3dMakie(sol_hexa)
-###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15, pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 3, nev = 15, nInversion = 4, plotEveryStep  = 1)
+####################################################################################################
+# deflated newton
+deflationOp = DeflationOperator(2, 1.0, [0*sol_hexa])
+optnew = @set optnew.maxIter = 250
+outdef, _, flag, _ = @time newton(F_sh,
+		(x, p) -> (dx -> dF_sh(x, p, dx)),
+		0.2vec(sol_hexa) .* vec([exp.(-(x+0)^2/25)*exp.(-(0+lx)^2/25) for x in X, y in Y, z in Z]),
+		(@set par.l=0.), optnew, deflationOp, normN = x -> norm(x, Inf))
+		printstyled(color=:green, "Norm of the solution  ", norm(outdef, Inf))
+contour3dMakie(outdef)
+flag && push!(deflationOp, outdef)
+contour3dMakie(deflationOp[end])
+####################################################################################################
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= -0.001, pMax = 0.15, pMin = -.21, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 150, detectBifurcation = 3, nev = 15, nInversion = 4, plotEveryStep  = 1)
 
 	br, u1 = @time continuation(
 		F_sh, #J_sh,
 		(x, p) -> (dx -> dF_sh(x, p, dx)),
-		AF(zeros(N)), par, (@lens _.l), optcont;
+		0*deflationOp[end-1],
+		# sol_hexa,
+		(@set par.l=0.1), (@lens _.l), optcont;
 		plot = true, verbosity = 3,
+		linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 		plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
 		recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 		normC = x -> norm(x, Inf),
 		event = BK.FoldDetectEvent,
 		tangentAlgo = BorderedPred(),
+		)
 
 BK.plotBranch(br)
 contour3dMakie(u1.u)
@@ -126,6 +142,7 @@ br1, = @time continuation(jet..., br, 3, setproperties(optcont; saveSolEveryStep
 	δp = 0.005,
 	verbosedeflation = false,
 	tangentAlgo = BorderedPred(),
+	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 	issymmetric = true,
 	plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
 	recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
@@ -158,3 +175,33 @@ fig = Figure(resolution = (1200, 900))
 	end
 	display(fig)
 
+
+opts2 = setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 3, pMax = 0.1, plotEveryStep = 5, dsmax = 0.02, ds = 0.001)
+brF, uF = @time continuation(
+	F_sh, #J_sh,
+	(x, p) -> (dx -> dF_sh(x, p, dx)),
+	br1[15].sol[2].x, (@set par.l = br1[15].sol[2].p), (@lens _.l),#13 15
+	opts2;
+	plot = true, verbosity = 3,
+	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
+	plotSolution = (ax, x, p) -> contour3dMakie(ax, x),
+	recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+	normC = x -> norm(x, Inf))
+
+BK.plotBranchCont(branches[1], u1, 1, (ax, x, p) -> contour(ax, sol0))
+BK.plotBranch(br, branches..., br12.γ)
+
+# branches = Any[deepcopy(brF)]
+push!(branches, deepcopy(brF))
+
+fig = Figure(resolution = (1200, 900))
+	BK.plotBranch(br)
+	fig = GLMakie.current_figure()
+	for ii=1:length(br1)
+		lines!(fig[1,1], (br1[ii].γ).param, (br1[ii].γ).n2)
+		text!(fig[1,1], "$ii", position = Point(1/30+br1[ii].param[end], br1[ii].n2[end]))
+	end
+	# h.axis.xlabel = "l"
+	# h.axis.ylabel = "n2"
+
+	display(fig)

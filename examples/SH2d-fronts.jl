@@ -65,9 +65,7 @@ optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
 	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
 	plotsol(sol_hexa)
 
-heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
-
-heatmapsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
+plotsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 ###################################################################################################
 # recherche de solutions
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
@@ -92,9 +90,8 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 	br, = @time continuation(
 		F_sh, dF_sh,
 		deflationOp[1], par, (@lens _.l), optcont;
-		plot = true, verbosity = 3,
-		# tangentAlgo = BorderedPred(),
-		# linearAlgo = MatrixBLS(),
+		plot = true, verbosity = 2,
+		tangentAlgo = SecantPred(), linearAlgo = MatrixBLS(),
 		plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
 		recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
 		# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
@@ -143,7 +140,7 @@ plot(br, br2...)
 ###################################################################################################
 # Manual branch switching
 bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)
-BK.nf(bp2d)
+show(bp2d)
 
 
 using ProgressMeter, LaTeXStrings
@@ -186,7 +183,7 @@ diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
 	# usedeflation = true,
 	# δp = 0.005,
 	# tangentAlgo = BorderedPred(),
-	callbackN = cb,
+	# callbackN = cb,
 	# linearAlgo = MatrixBLS(),
 	plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
 	recordFromSolution = (x, p) -> norm(x),

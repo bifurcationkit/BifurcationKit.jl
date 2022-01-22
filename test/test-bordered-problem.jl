@@ -28,8 +28,8 @@ optnewton = NewtonPar(verbose = false)
 sol, hist, flag = newton(F_chan, ig, par, optnewton)
 
 _tau = BorderedArray(rand(n), 1.0)
-g(x, p, tau = _tau) = dot(x, tau.u) + (p[1] - 3.) * tau.p
-pb = BorderedProblem(F_chan, g, @lens _[1])
+_g(x, p, tau = _tau) = dot(x, tau.u) + (p[1] - 3.) * tau.p
+pb = BorderedProblem(F_chan, _g, @lens _[1])
 
 # test functional with AbstractVector form
 pb(vcat(sol, 3.1), par)

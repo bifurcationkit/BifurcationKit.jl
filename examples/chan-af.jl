@@ -59,36 +59,38 @@ function finalise_solution(z, tau, step, contResult)
 	true
 end
 
-sol = Fun( x -> x * (1-x), Interval(0.0, 1.0))
+sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol.space, 2);
 par_af = (alpha = 3., beta = 0.01)
 
-optnew = NewtonPar(tol = 1e-12, verbose = true)
-	out, _, flag = @time BK.newton(
-		F_chan, Jac_chan, sol, par_af, optnew, normN = x -> norm(x, Inf64))
+optnew = NewtonPar(tol = 1e-12, verbose = true, linsolver = DefaultLS(useFactorization = false))
+	sol, _, flag = @time BK.newton(
+		F_chan, Jac_chan, sol0, par_af, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300)
+optcont = ContinuationPar(dsmin = 1e-4, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 10, verbose = false), maxSteps = 300)
 
-	br, = @time continuation(
-		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
+	br0, = @time continuation(
+		F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont;
 		plot = true,
+		# tangentAlgo = MoorePenrosePred(), # this works VERY well
+		linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
 		normC = x -> norm(x, Inf64))
 ####################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [out])
+deflationOp = DeflationOperator(2, (x, y) -> dot(x, y), 1.0, [sol])
 par_def = @set par_af.alpha = 3.3
 
 optdef = setproperties(optnew; tol = 1e-9, maxIter = 1000)
 
-solp = copy(out)
+solp = copy(sol)
 	solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
 
-plot(out);plot!(solp)
+plot(sol);plot!(solp)
 
-outdef1, _, flag = @time newton(
+outdef1, _, flag = @time BK.newton(
 	F_chan, Jac_chan,
 	solp, par_def,
 	optdef, deflationOp)
@@ -102,10 +104,11 @@ plot(deflationOp.roots)
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
 
 	br, _ = @time continuation(
-		F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont;
+		F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont;
 		dotPALC = (x, y) -> dot(x, y),
 		plot = true,
 		# finaliseSolution = finalise_solution,
+		linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
 		# printsolution = x -> norm(x, Inf64),
@@ -113,8 +116,9 @@ optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plo
 ####################################################################################################
 # tangent predictor with Bordered system
 br, _ = @time continuation(
-	F_chan, Jac_chan, out, par_af, (@lens _.alpha), optcont,
+	F_chan, Jac_chan, sol, par_af, (@lens _.alpha), optcont,
 	tangentAlgo = BorderedPred(),
+	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 	plot = true,
 	finaliseSolution = finalise_solution,
 	plotSolution = (x, p;kwargs...)-> plot!(x; label = "l = $(length(x))", kwargs...))
@@ -124,9 +128,9 @@ br, _ = @time continuation(
 indfold = 2
 outfold, _, flag = @time newtonFold(
 		F_chan, Jac_chan,
-		br, indfold, #index of the fold point
-		par_af, (@lens _.alpha),
-		optcont.newtonOptions)
+		br0, indfold, #index of the fold point
+		options = NewtonPar(optcont.newtonOptions; verbose = true),
+		bdlinsolver = BorderingBLS(solver = optnew.linsolver, checkPrecision = false))
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")
 #################################################################################################### Continuation of the Fold Point using minimally augmented
 indfold = 2

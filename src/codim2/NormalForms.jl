@@ -566,7 +566,7 @@ function bogdanovTakensNormalForm(F, dF, d2F, d3F,
 
 	pt = BogdanovTakens(
 		x0, parbif, (prob.lens, lens),
-		(q0, q1), (p0, p1),
+		(;q0, q1), (;p0, p1),
 		(a = zero(Ty), b = zero(Ty) ),
 		(K2 = zero(Ty),),
 		:none
@@ -632,7 +632,7 @@ function bautinNormalForm(F, dF, d2F, d3F,
 		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
 		_ind = argmin(abs.(_λ .- λ))
 		@info "The eigenvalue is $(_λ[_ind])"
-		@assert abs(_λ[_ind] - λ)<br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+		@warn abs(_λ[_ind] - λ)<br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
 		ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
 	else
 		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))

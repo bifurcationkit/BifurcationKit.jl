@@ -128,8 +128,8 @@ Returns a variable containing the state of the continuation procedure. The field
 	z_old::Tv								# current solution
 
 	isconverged::Bool						# Boolean for newton correction
-	itnewton::Int64 = 0						# Number of newton iteration (in corrector)
-	itlinear::Int64 = 0						# Number of linear iteration (in newton corrector)
+	itnewton::Int64 = 0						# Number of newton iterations (in corrector)
+	itlinear::Int64 = 0						# Number of linear iterations (in newton corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
@@ -508,7 +508,7 @@ end
 ####################################################################################################
 
 """
-	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), recordFromSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (state; kwargs...) -> true, linearAlgo = BorderingBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), recordFromSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (state; kwargs...) -> true, linearAlgo = MatrixBLS(), tangentAlgo = SecantPred(), verbosity = 0)
 
 Compute the continuation curve associated to the functional `F` and its jacobian `J`. General information is available in [Continuation methods: introduction](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/IntroContinuation/).
 
@@ -530,14 +530,14 @@ Compute the continuation curve associated to the functional `F` and its jacobian
 - `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners
 - `tangentAlgo = SecantPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` `BorderedPred`, etc. See below for more information. See [predictors](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/).
-- `linearAlgo = BorderingBLS()`. Bordered linear solver used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS`, `MatrixFreeBLS`, etc. See [Bordered linear solvers](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/borderedlinearsolver/)
+- `linearAlgo = MatrixBLS()`. Bordered linear solver used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS`, `MatrixFreeBLS`, etc. See [Bordered linear solvers](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/borderedlinearsolver/)
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events
     - case 3: print information during bisection to detect bifurcation / events
 - `normC = norm` norm used in the different Newton solves
-- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
+- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
 - `bothside=true` compute the branches on the two sides of `p0`, merge them and return it.
 
@@ -560,7 +560,7 @@ function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::Continu
 					linearAlgo = nothing, kwargs...)
 	# Create a bordered linear solver using the newton linear solver provided by the user
 	if isnothing(linearAlgo)
-		_linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver)
+		_linearAlgo = MatrixBLS()
 	else
 		# no linear solver has been specified
 		if isnothing(linearAlgo.solver)

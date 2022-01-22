@@ -11,9 +11,9 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
 end
 ####################################################################################################
 # constructors
-HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolve, linbdsolve, false)
+HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolve = MatrixBLS()) = HopfProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolve, linbdsolve, false)
 
-HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = BorderingBLS(linsolve)) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
+HopfProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver,  linbdsolver = MatrixBLS()) = HopfProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, linsolve)
 ####################################################################################################
 getVec(x::BorderedArray, ::HopfProblemMinimallyAugmented) = x.u
 getVec(x::AbstractVector, ::HopfProblemMinimallyAugmented) = @view x[1:end-2]
@@ -26,7 +26,7 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# input:
 	# - x guess for the point at which the jacobian has a purely imaginary eigenvalue
 	# - p guess for the parameter for which the jacobian has a purely imaginary eigenvalue
-	# The jacobian of the MA problem is solved with a bordering method
+	# The jacobian of the MA problem is solved with a BLS method
 	a = hp.a
 	b = hp.b
 	# update parameter
@@ -201,7 +201,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 # Simplified call:
 Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
 
-	newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int, lens::Lens; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
+	newtonHopf(F, J, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, d2F = nothing, normN = norm, options = br.contparams.newtonOptions, kwargs...)
 
 where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -219,7 +219,7 @@ function newtonHopf(F, J,
 			Jᵗ = nothing,
 			d2F = nothing,
 			normN = norm,
-			bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
+			bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 			kwargs...)
 	hopfproblem = HopfProblemMinimallyAugmented(
 		F, J, Jᵗ, d2F, lens,
@@ -326,7 +326,7 @@ function continuationHopf(F, J,
 				Jᵗ = nothing,
 				d2F = nothing,
 				d3F = nothing,
-				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
+				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				computeEigenElements = false,
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
@@ -398,7 +398,7 @@ function continuationHopf(F, J,
 		# if the frequency is null, this is not a Hopf point, we halt the process
 		threshBT = 100options_newton.tol
 		if abs(ω) < threshBT
-			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, trying lowering Newton tolerance."
+			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, trying lowering Newton tolerance or dsmax."
 		end
 		# call the user-passed finalizer
 		finaliseUser = get(kwargs, :finaliseSolution, nothing)
@@ -470,6 +470,7 @@ function continuationHopf(F, J,
 		hopfpointguess, par, lens2,
 		(@set opt_hopf_cont.newtonOptions.eigsolver = eigsolver);
 		kwargs...,
+		linearAlgo = BorderingBLS(solver = opt_hopf_cont.newtonOptions.linsolver, checkPrecision = false),
 		normC = normC,
 		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,

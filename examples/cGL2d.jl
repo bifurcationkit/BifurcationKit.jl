@@ -51,6 +51,8 @@ end
 	return f
 end
 
+d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
+
 function Fcgl!(f, u, p)
 	mul!(f, p.Δ, u)
 	f .= f .+ NL(u, p)
@@ -141,7 +143,9 @@ br_hopf, = continuation( jet[1], jet[2], br, 1, (@lens _.γ),
 	d2F = jet[3], d3F = jet[4],
 	startWithEigen = true, bothside = false,
 	detectCodim2Bifurcation = 2,
-	verbosity = 3, normC = norminf)
+	verbosity = 3, normC = norminf,
+	bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+	)
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 
@@ -152,6 +156,7 @@ brfold, = continuation(jet..., br_hopf, 3, setproperties(br_hopf.contparams; det
 	updateMinAugEveryStep = 1,
 	detectCodim2Bifurcation = 2,
 	# callbackN = BK.cbMaxNorm(1e5),
+	bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 	bothside = true, normC = norminf)
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :topleft)
@@ -167,6 +172,7 @@ orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
 poTrap = PeriodicOrbitTrapProblem(jet[1], jet[2], real.(vec_hopf), hopfpt.u, M, 2n)
 
+d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; J = (x, p) ->  (dx -> d1Fcgl(x, p, dx)), linsolver = ls0)
 
@@ -240,10 +246,11 @@ br_po, = @time continuation(
 		poTrapMF, outpo_f, (@set par_cgl.r = r_hopf - 0.01), (@lens _.r),
 		opts_po_cont; jacobianPO = :FullMatrixFree,
 		verbosity = 3,	plot = true,
+		linearAlgo = BorderingBLS(solver = ls, checkPrecision = false),
 		plotSolution = (x, p;kwargs...) -> BK.plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...),
 		recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
-branches = Any[br_pok2]
+branches = Any[br_po]
 # push!(branches, br_po)
 plot(branches[1]; putspecialptlegend = false, label="", xlabel="r", ylabel="Amplitude", legend = :bottomright)
 ###################################################################################################
@@ -438,18 +445,20 @@ foldpt = BK.FoldPoint(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
 Precilu = @time ilu(Jpo, τ = 0.005)
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log=true)
-	ls(Jpo, rand(ls.N))
+lsfold = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log=true)
+	lsfold(Jpo, rand(lsfold.N))
 
 outfold, hist, flag = @time BK.newtonFold(
 		(x, p) -> poTrap(x, p),
 		(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 		br_po , indfold; #index of the fold point
-		options = (@set opt_po.linsolver = ls),
-		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
+		options = (@set opt_po.linsolver = lsfold),
+		bdlinsolver = BorderingBLS(solver = lsfold, checkPrecision = false),
+		d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2)
+		)
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p," from ", br_po.specialpoint[indfold].param,"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = lsfold), maxSteps = 20)
 
 # optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = opt_po, maxSteps = 10)
 
@@ -458,6 +467,7 @@ outfoldco, hist, flag = @time BK.continuationFold(
 	(x, p) -> poTrap(Val(:JacFullSparse), x, p),
 	br_po, indfold, (@lens _.c5),
 	optcontfold;
+	bdlinsolver = BorderingBLS(solver = lsfold, checkPrecision = false),
 	d2F = (x, p, dx1, dx2) -> d2Fcglpb(z->poTrap(z,p), x, dx1, dx2),
 	plot = true, verbosity = 2)
 

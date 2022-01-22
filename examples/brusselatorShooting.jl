@@ -115,7 +115,6 @@ opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7
 		recordFromSolution = (x, p) -> x[n÷2], normC = norminf)
 #################################################################################################### Continuation of the Hopf Point
 ind_hopf = 1
-
 	hopfpoint, _, flag = @time newton(
 		Fbru, Jbru_sp,
 		br, ind_hopf;
@@ -176,6 +175,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 100, ver
 	# deflationOp = BK.DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 	outpo, = @time newton(probSh,
 			initpo, par_hopf, optn_po;
+			jacobianPO = :MatrixFree,
 			normN = norminf)
 	plot(initpo[1:end-1], label = "Initial guess")
 	plot!(outpo[1:end-1], label = "solution") |> display
@@ -195,6 +195,7 @@ br_po, = @time continuation(probSh,
 		MatrixFreeBLS(@set ls.N = ls.N+1);
 		updateSectionEveryStep = 2,
 		verbosity = 3,
+		jacobianPO = :MatrixFree,
 		plot = true,
 		# finaliseSolution = (z, tau, step, contResult; k...) ->
 			# (Base.display(contResult.eig[end].eigenvals) ;true),
@@ -219,6 +220,7 @@ br_po, = continuation(
 	ampfactor = 1., δp = 0.0075,
 	verbosity = 3,	plot = true,
 	updateSectionEveryStep = 1,
+	jacobianPO = :MatrixFree,
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
 	finaliseSolution = (z, tau, step, contResult; k...) -> begin
 		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
@@ -231,6 +233,7 @@ br_po, = continuation(
 br_po2, = BK.continuation(br_po, 2, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 300, ds = -0.01);
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = 0.01,
+	jacobianPO = :MatrixFree,
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
 	# usedeflation = false,
 	plotSolution = (x, p; kwargs...) -> begin
@@ -258,6 +261,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(vec(initpo_bar)), maxiter =
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 30, linsolver = ls)
 	outpo_psh, = @time newton(probHPsh,
 		vec(initpo_bar), par_hopf, optn;
+		jacobianPO = :MatrixFree,
 		normN = norminf)
 
 plot(outpo_psh, label = "Solution")
@@ -274,6 +278,7 @@ br_po, = @time continuation(
 	probHPsh,
 	outpo_psh, par_hopf, (@lens _.l),
 	opts_po_cont_floquet;
+	jacobianPO = :MatrixFree,
 	linearAlgo = MatrixFreeBLS(@set ls.N = ls.N+1),
 	verbosity = 3,
 	plot = true,
@@ -299,6 +304,7 @@ Mt = 2
 	jet...,	br, 1,
 	# arguments for continuation
 	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = false);
+	jacobianPO = :MatrixFree,
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true, printPeriod = true,
@@ -315,6 +321,7 @@ plot(br_po, legend = :bottomright)
 br_po2, upo2, = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 10, saveSolEveryStep = 1);
 	verbosity = 3, plot = true,
 	ampfactor = .1, δp = 0.01,
+	jacobianPO = :MatrixFree,
 	# usedeflation = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	recordFromSolution = (x, p) -> (period = getPeriod(br_po.functional, x, set(br_po.params, br_po.lens, p.p)),),
@@ -323,8 +330,3 @@ br_po2, upo2, = continuation(br_po, 1, setproperties(br_po.contparams, detectBif
 		plot!(br_po; subplot = 1)
 	end,
 	)
-
-br_po.functional
-br_po.type
-
-BK.computeNormalForm1d(br_po.γ, 1)

@@ -23,9 +23,9 @@ jet = BK.getJet(F_chan, J_chan)
 par_chan = (α = 3.3, β = 0.01)
 
 n = 101
-	sol = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
+	sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 	opt_newton = NewtonPar(tol = 1e-9, verbose = false)
-	out, hist, flag = newton(jet[1], jet[2], sol, par_chan,
+	sol, hist, flag = newton(jet[1], jet[2], sol0, par_chan,
 							opt_newton, normN = norminf)
 
 # _J = J_chan(sol, par_chan)
@@ -34,32 +34,32 @@ n = 101
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 150, newtonOptions = opt_newton, detectBifurcation = 3)
 	br, = continuation(jet[1], jet[2],
-		out, par_chan, (@lens _.α), opts_br0; )
+		sol, par_chan, (@lens _.α), opts_br0; )
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
-deflationOp = DeflationOperator(2.0, dot, 1.0, [out])
+deflationOp = DeflationOperator(2.0, dot, 1.0, [sol])
 
 # for testing
 show(deflationOp)
 length(deflationOp)
-deflationOp(2out, out)
+deflationOp(2sol, sol)
 push!(deflationOp, rand(n))
 deleteat!(deflationOp, 2)
 
 chanDefPb = DeflatedProblem(jet[1], jet[2], deflationOp)
 
 opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
-outdef1, = newton(chanDefPb, out .* (1 .+0.01*rand(n)), par_chan, opt_def)
+outdef1, = newton(chanDefPb, sol0 .* (1 .+0.01*rand(n)), par_chan, opt_def)
 
 # we now compare the jacobians for the deflated problem either using finite differences or the explicit jacobian
 rhs = rand(n)
-J_def_fd = BK.finiteDifferences(u->chanDefPb(u, par_chan),1.5*out)
+J_def_fd = BK.finiteDifferences(u->chanDefPb(u, par_chan),1.5*sol)
 res_fd =  J_def_fd \ rhs
 
 Jacdf = (u0, pb::DeflatedProblem, ls = opt_def.linsolve ) -> (return (u0, par_chan, pb, ls))
 Jacdfsolver = DeflatedLinearSolver()
 
-res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolver),rhs)[1]
+res_explicit = Jacdfsolver(Jacdf(1.5sol, chanDefPb, opt_def.linsolver),rhs)[1]
 
 # Test jacobian expression for deflated problem
 @test norm(res_fd - res_explicit,Inf64) < 1e-4
@@ -67,7 +67,7 @@ res_explicit = Jacdfsolver(Jacdf(1.5out, chanDefPb, opt_def.linsolver),rhs)[1]
 opt_def = setproperties(opt_newton; tol = 1e-10, maxIter = 1000)
 outdef1, = newton(
 		jet[1], jet[2],
-		out.*(1 .+ 0.1*rand(n)), par_chan,
+		sol.*(1 .+ 0.1*rand(n)), par_chan,
 		opt_def, deflationOp)
 
 ####################################################################################################
@@ -125,7 +125,7 @@ Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 # we test the expression for σp
 σp_fd = J_fold_fd[end,end]
 σp_fd_ana = debugTmpForσ[end,end]
-@test σp_fd ≈ σp_fd_ana rtol = 1e-5
+@test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
 # we test the expression for σx
 σx_fd = J_fold_fd[end,1:end-1]
@@ -159,7 +159,7 @@ Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 # we test the expression for σp
 σp_fd = J_fold_fd[end,end]
 σp_fd_ana = debugTmpForσ[end,end]
-@test σp_fd ≈ σp_fd_ana rtol = 1e-5
+@test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
 # we test the expression for σx
 σx_fd = J_fold_fd[end,1:end-1]
@@ -177,8 +177,8 @@ res_exp = debugTmpForσ \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α), opts_br0, recordFromSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br, = continuation(jet[1], jet[2], sol, par_chan, (@lens _.α), opts_br0, recordFromSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 
-br, = continuation(jet[1], jet[2], out, par_chan, (@lens _.α),opts_br0,plot = false, verbosity = 0)
+br, = continuation(jet[1], jet[2], sol, par_chan, (@lens _.α), opts_br0, )

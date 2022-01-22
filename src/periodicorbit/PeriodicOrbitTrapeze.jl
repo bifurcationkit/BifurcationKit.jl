@@ -749,7 +749,7 @@ end
 ####################################################################################################
 # linear solver for the PO functional, akin to a bordered linear solver
 @with_kw struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
-	linsolverbls::Tl = BorderingBLS(AγLinearSolver())	# linear solver
+	linsolverbls::Tl = BorderingBLS(solver = AγLinearSolver(), checkPrecision = false)	# linear solver
 end
 
 # Linear solver associated to POTrapJacobianBordered
@@ -818,7 +818,7 @@ function _newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::New
 		else	# :BorderedMatrixFree
 			Aγ = AγOperatorMatrixFree(prob = probPO, orbitguess = zeros(N * M + 1), par = par)
 			# linear solver
-			lspo = PeriodicOrbitTrapBLS(BorderingBLS(AγLinearSolver(options.linsolver)))
+			lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), checkPrecision = false))
 		end
 
 		jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
@@ -852,7 +852,7 @@ $DocStrjacobianPOTrap
 newton(probPO::PeriodicOrbitTrapProblem, orbitguess, par, options::NewtonPar; jacobianPO::Symbol = :FullLU, kwargs...) = _newton(probPO, orbitguess, par, options, jacobianPO; defOp = nothing, kwargs...)
 
 """
-	newton(probPO::PeriodicOrbitTrapProblem, orbitguess, options::NewtonPar, defOp::DeflationOperator{T, Tf, vectype}, jacobianPO = :BorderedLU; kwargs...) where {T, Tf, vectype}
+	$(SIGNATURES)
 
 This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
@@ -861,7 +861,7 @@ newton(probPO::PeriodicOrbitTrapProblem, orbitguess::vectype, par, options::Newt
 ####################################################################################################
 # continuation wrapper
 """
-	continuationPOTrap(probPO::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; jacobianPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), kwargs...)
+	$(SIGNATURES)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -936,7 +936,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem, orbitguess, par, len
 		else	# :BorderedMatrixFree
 			Aγ = AγOperatorMatrixFree(prob = prob, orbitguess = zeros(N * M + 1), par = par)
 			# linear solver
-			lspo = PeriodicOrbitTrapBLS(BorderingBLS(AγLinearSolver(options.linsolver)))
+			lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), checkPrecision = false))
 		end
 
 		jacBD = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
@@ -974,7 +974,7 @@ $DocStrjacobianPOTrap
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
 """
-function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; jacobianPO = :BorderedLU, recordFromSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
+function continuation(prob::PeriodicOrbitTrapProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; jacobianPO = :FullLU, recordFromSolution = (u, p) -> (period = u[end],), linearAlgo = nothing, updateSectionEveryStep = 0, kwargs...)
 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 	return continuationPOTrap(prob, orbitguess, par, lens, _contParams, _linearAlgo; jacobianPO = jacobianPO, recordFromSolution = recordFromSolution, updateSectionEveryStep = updateSectionEveryStep, kwargs...)
 end

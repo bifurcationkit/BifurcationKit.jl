@@ -61,6 +61,8 @@ $(TYPEDFIELDS)
 
 	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a description of the fields."
 	specialpoint::Vector{Biftype}
+
+	@assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
 # returns the number of steps in a branch

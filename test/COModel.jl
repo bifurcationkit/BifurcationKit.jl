@@ -26,8 +26,7 @@ opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInv
 
 br, = continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 	recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]),
-	normC = norminf,
-	bothside = true)
+	normC = norminf, bothside = true)
 ####################################################################################################
 @set! opts_br.newtonOptions = NewtonPar(maxIter = 10, tol = 1e-12)
 sn_codim2, = continuation(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 6) ;
@@ -66,7 +65,7 @@ bt = computeNormalForm(jet..., sn_codim2, 1; autodiff = true)
 @test isapprox(bt.nfsupp.a1, abs( -0.8618 ); rtol = 1e-4)
 @test isapprox(bt.nfsupp.b1, abs( -7.1176 ); rtol = 1e-4)
 
-hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 1, ds = -0.0001, dsmax = 0.05, dsmin = 1e-4, nInversion = 12, maxSteps = 150, maxBisectionSteps = 55 ) ;
+hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 1, ds = -0.0001, dsmax = 0.02, dsmin = 1e-4, nInversion = 12, maxSteps = 150, maxBisectionSteps = 35 ) ;
 	normC = norminf,
 	tangentAlgo = BorderedPred(),
 	# linearAlgo = MatrixBLS(),

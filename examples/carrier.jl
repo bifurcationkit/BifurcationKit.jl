@@ -38,19 +38,20 @@ N = 200
 X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
-sol = -(1 .- par_car.X.^2)
+sol0 = -(1 .- par_car.X.^2)
 norminf(x) = norm(x,Inf)
 recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	out, = @time newton(
-		F_carr, Jac_carr, sol, par_car, optnew, normN = x -> norm(x, Inf64))
+	sol, = @time newton(
+		F_carr, Jac_carr, sol0, par_car, optnew, normN = x -> norm(x, Inf64))
 	Plots.plot(out, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 3, nev = 40, nInversion = 6, maxBisectionSteps = 25)
 	br, = @time continuation(
 		F_carr, Jac_carr, zeros(N), par_car, (@lens _.ϵ), optcont;
 		plot = true, verbosity = 3,
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		recordFromSolution = recordFromSolution,
 		normC = norminf)
 
@@ -58,7 +59,7 @@ plot(br)
 
 ####################################################################################################
 # Example with deflation technics
-deflationOp = DeflationOperator(2, 1.0, empty([out]), copy(out))
+deflationOp = DeflationOperator(2, 1.0, empty([sol]), copy(sol))
 par_def = @set par_car.ϵ = 0.6
 
 optdef = setproperties(optnew; tol = 1e-7, maxIter = 200)
@@ -74,7 +75,7 @@ end
 outdef1, _, flag = @time newton(
 	F_carr, Jac_carr,
 	# perturbsol(deflationOp[1],0,0), par_def,
-	perturbsol(-out, 0, 0), par_def,
+	perturbsol(-sol, 0, 0), par_def,
 	optdef, deflationOp;
 	)
 	flag && push!(deflationOp, outdef1)
@@ -117,8 +118,9 @@ BifurcationKit.mergeBranches!(brdc, it)
 ####################################################################################################
 # bifurcation diagram
 diagram = bifurcationdiagram(jet...,
-		0*out, par_car,
+		0*sol, par_car,
 		(@lens _.ϵ), 2,
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		(arg...) -> @set optcont.newtonOptions.verbose=false;
 		recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		plot = true)

@@ -9,10 +9,11 @@ function TMvf!(dz, z, p, t)
 	E, x, u = z
 	SS0 = J * u * x * E + E0
 	SS1 = α * log(1 + exp(SS0 / α))
-	dz[1] = (-E + SS1) / τ
-	dz[2] =	(1.0 - x) / τD - u * x * E
-	dz[3] = (U0 - u) / τF +  U0 * (1.0 - u) * E
-	dz
+	[
+		(-E + SS1) / τ
+		(1.0 - x) / τD - u * x * E
+		(U0 - u) / τF +  U0 * (1.0 - u) * E
+	]
 end
 
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
@@ -113,23 +114,26 @@ using DifferentialEquations#, TaylorIntegration
 # this is the ODEProblem used with `DiffEqBase.solve`
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.09, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = NewtonPar(optn_po; tol = 1e-6, maxIter = 7), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-6), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 10, saveSolEveryStep=0)
 
-br_posh, = @time continuation(
-	jet..., br, 4,
-	# arguments for continuation
-	opts_po_cont,
+br_posh, = @time continuation(jet...,
+	br, 4, opts_po_cont,
 	# this is where we tell that we want Standard Shooting
-	ShootingProblem(15, probsh, Rodas4P(), parallel = true);
-	# ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
-	ampfactor = 1.0, δp = 0.0005,
+	# with 15 time sections
+	ShootingProblem(15, probsh, Rodas4(), parallel = true);
+	# this to help branching
+	δp = 0.0005,
+	# deflation helps not converging to an equilibrium instead of a PO
 	usedeflation = true,
+	# this linear solver is specific to ODEs
+	# it is computed using AD of the flow and
+	# updated inplace
 	jacobianPO = :autodiffDense,
-	linearAlgo = MatrixBLS(),
-	updateSectionEveryStep = 1,
+	# we update the section along the branches
+	updateSectionEveryStep = 2,
+	# regular continuation parameters
 	verbosity = 2,	plot = true,
-	args_po...,
-	)
+	args_po...)
 
 plot(br_posh, br, markersize=3)
 	# plot(br, br_potrap, br_posh, markersize=3)
@@ -145,7 +149,7 @@ end
 
 probmono = ODEProblem(TMvfExtended!, vcat(z0, z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-6, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=35), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= 0.001, dsmin = 1e-6, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=15), nev = 3, precisionStability = 1e-8, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
 
 br_popsh, = @time continuation(
 	jet..., br, 4,
@@ -153,11 +157,11 @@ br_popsh, = @time continuation(
 	opts_po_cont,
 	# this is where we tell that we want Poincaré Shooting
 	# PoincareShootingProblem(Mt, probsh, Rodas5(), probmono, Rodas4P(), parallel = false);
-	PoincareShootingProblem(1, probsh, Rodas5(), parallel = false);
-	# PoincareShootingProblem(Mt, probsh, RadauIIA3(); parallel = false, abstol = 1e-10, reltol = 1e-9);
+	PoincareShootingProblem(10, probsh, Rodas4P2(), parallel = false);
 	ampfactor = 1.0, δp = 0.005,
 	# usedeflation = true,
 	jacobianPO = :autodiffDenseAnalytical,
+	# jacobianPO = :autodiffDense,
 	linearAlgo = MatrixBLS(),
 	updateSectionEveryStep = 2,
 	verbosity = 2,	plot = true,

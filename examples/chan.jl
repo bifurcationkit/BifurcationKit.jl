@@ -118,7 +118,7 @@ function dF_chan(x, dx, p)
 end
 
 ls = GMRESKrylovKit(dim = 100)
-	optnewton_mf = NewtonPar(tol = 1e-11, verbose = true, linsolver = ls, eigsolver = DefaultEig())
+	optnewton_mf = NewtonPar(tol = 1e-10, verbose = true, linsolver = ls, eigsolver = DefaultEig())
 	out_mf, _, flag = @time newton(
 		F_chan,
 		(x, p) -> (dx -> dF_chan(x, dx, p)),
@@ -153,6 +153,7 @@ brmf, = @time continuation(
 	(x, p) -> (dx -> dF_chan(x, dx, p)),
 	out_mf, par, (@lens _.α), (@set opts_cont_mf.newtonOptions = optnewton_mf),
 	tangentAlgo = BorderedPred(),
+	linearAlgo = BorderingBLS(),
 	)
 
 plot(brmf,color=:blue)

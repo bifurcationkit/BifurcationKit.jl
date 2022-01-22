@@ -9,7 +9,6 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 # get the number of time slices
 @inline getMeshSize(pb::AbstractPeriodicOrbitProblem) = pb.M
 
-# get the period
 """
 $(SIGNATURES)
 
@@ -276,7 +275,7 @@ $DocStrjacobianPOSh
 
 """
 function continuation(prob::AbstractPeriodicOrbitProblem, orbitguess, par, lens::Lens, _contParams::ContinuationPar; linearAlgo = nothing, kwargs...)
-	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
+	_linearAlgo = isnothing(linearAlgo) ?  MatrixBLS() : linearAlgo
 	return continuation(prob, orbitguess, par, lens, _contParams, _linearAlgo; kwargs...)
 end
 

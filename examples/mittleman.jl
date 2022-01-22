@@ -76,13 +76,13 @@ Nx = 30
 	Δ, = Laplacian2D(Nx, Ny, lx, ly)
 	par_mit = (λ = .01, Δ = Δ)
 	sol0 = 0*ones(Nx, Ny) |> vec
-	const w = (lx .+ LinRange(-lx,lx,Nx)) * (LinRange(-ly,ly,Ny))' |> vec
+	const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
 	w .-= minimum(w)
 ####################################################################################################
 eigls = EigArpack(20.5, :LM)
 # eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
-	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+	opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = eigls, maxIter = 20)
 	sol, = newton(Fmit, JFmit, sol0, par_mit, opt_newton, normN = norminf)
 
 plotsol(sol)
@@ -96,11 +96,11 @@ function finSol(z, tau, step, br; k...)
 	return true
 end
 
-function cb(x,f,J,res,it,itl,optN; kwargs...)
+function cb(state; kwargs...)
 	_x = get(kwargs, :z0, nothing)
 	fromNewton = get(kwargs, :fromNewton, false)
-	if ~fromNewton
-		return (norm(_x.u - x) < 20.5 && abs(_x.p - kwargs[:p]) < 0.05)
+	if ~fromNewton && ~isnothing(_x)
+		return (norm(_x.u - state.x) < 20.5 && abs(_x.p - state.p) < 0.05)
 	end
 	true
 end
@@ -125,7 +125,9 @@ plot(br)
 ####################################################################################################
 # automatic branch switching
 
-br1, = continuation(jet..., br, 3; kwargsC...)
+br1, = continuation(jet..., br, 3; kwargsC...,
+		verbosity = 3,
+		)
 
 plot(br,br1,plotfold=false)
 
@@ -140,11 +142,12 @@ function optionsCont(x,p,l; opt = opts_br)
 	elseif l==2
 		return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
 	else
-		return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
+		return setproperties(opt ;detectBifurcation = 3,dsmin = 0.0001, ds = 0.00051, dsmax = 0.01)
 	end
 end
 
 diagram = @time bifurcationdiagram(jet..., sol0, par_mit, (@lens _.λ), 3, optionsCont; kwargsC...,
+	verbosity = 0,
 	usedeflation = true,
 	halfbranch = true,
 	)
@@ -210,8 +213,8 @@ bp2d = @time computeNormalForm(jet..., br, 2, nev = 30; issymmetric = true)
 
 res, = BK.continuation(jet..., br, 2,
 	setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
-	nev = 30, verbosity = 3,
-	kwargsC...,
+	nev = 30,
+	kwargsC..., verbosity = 2,
 	)
 
 plot(res..., br ;plotfold= false)
@@ -236,7 +239,7 @@ plotsol(solbif-0*bp2d(deflationOp[2], δp))
 brnf1, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = 0.005);
 	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-	plot = true, verbosity = 3, normC = norminf)
+	plot = true, verbosity = 0, normC = norminf)
 
 branches2 = (br,br1,br2,brnf1)
 push!(branches2, brnf1)
@@ -246,19 +249,19 @@ push!(branches2, brnf1)
 brnf2, = continuation(Fmit, JFmit, solbif, (@set par_mit.λ = bp2d.p + δp), (@lens _.λ), setproperties(opts_br; ds = -0.005);
 	recordFromSolution = (x, p) -> norm(x),
 	plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-	plot = true, verbosity = 3, normC = norminf)
+	plot = true, verbosity = 0, normC = norminf)
 
 # plot([br,br1,br2]);plot!(brnf1);plot!(brnf2)
 plot(branches2...)
 plot!(brnf2)
 ####################################################################################################
 # find isolated branch, see Farrell et al.
-deflationOp = DeflationOperator(2, 1.0, [out])
+deflationOp = DeflationOperator(2, 1.0, [sol])
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogenous solutions
-vp, ve, _, _= eigls(JFmit(out, @set par_mit.λ = br.specialpoint[2].param), 5)
+vp, ve, = eigls(JFmit(sol, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:size(ve, 1)
 		outdef1, _, flag, _ = @time newton(
@@ -307,7 +310,7 @@ plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)
 # deflated continuation
 brdef2, _ = @time BK.continuation(
 	Fmit, JFmit, (@set par_mit.λ = 0.367), (@lens _.λ),
-	ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
+	ContinuationPar(opts_br; ds = -0.0001, dsmin = 1e-4, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0),
 	DeflationOperator(2, 1., ([sol0]));
 	plot=true, verbosity = 2,
 	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))),

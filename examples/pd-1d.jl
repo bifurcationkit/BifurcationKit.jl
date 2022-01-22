@@ -119,7 +119,7 @@ br_po_pd, = @time BK.continuation(
 		verbosity = 3,
 		plot = true,
 		# jacobianPO = :FullSparseInplace,
-		jacobianPO = :BorderedSparseInplace,
+		jacobianPO = :BorderedSparseInplace, linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
 		recordFromSolution = (u, p) -> maximum(u[1:end-1]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
@@ -150,8 +150,16 @@ prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
 
 sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
 
-prob_ode = ODEProblem(Fbr, solc0, (0.0, 280.0), par_br_hopf)
-sol = @time solve(prob_ode, Rodas4P2(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
+#####
+using SparseDiffTools, SparseArrays
+jac_prototype = Jbr(zeros(n), par_br)
+jac_prototype.nzval .= ones(length(jac_prototype.nzval))
+_colors = matrix_colors(jac_prototype)
+vf = ODEFunction(Fbr; jac_prototype = jac_prototype, colorvec = _colors)
+prob_ode = ODEProblem(vf, solc0, (0.0, 280.0), par_br_hopf)
+sol = @time solve(prob_ode, QNDF(); abstol=1e-10, reltol=1e-4, progress = true)
+
+
 orbitsection = Array(sol[:,[end]])
 # orbitsection = orbitguess[:, 1]
 
@@ -287,8 +295,10 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 plot(br_po, br_po_pd, legend=false)
 ####################################################################################################
 # aBS Poincare Shooting
+ls = GMRESIterativeSolvers(reltol = 1e-7, maxiter = 50, verbose = false)
+eig = EigKrylovKit(x₀ = rand(2N-1), dim = 40)
 
-br_po.contparams.newtonOptions.linsolver.solver.N
-br_po_pd.contparams.newtonOptions.linsolver.solver.N
+opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120, linsolver  = ls)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set opt_po.eigsolver = eig), nev = 20, precisionStability = 1e-2, detectBifurcation = 3, plotEveryStep = 1)
 
 ####################################################################################################

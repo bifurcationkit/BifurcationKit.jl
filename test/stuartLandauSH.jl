@@ -268,10 +268,15 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500,
 @set! opts_po_cont.detectBifurcation = 0
 @set! opts_po_cont.newtonOptions.linsolver = ls
 
-for M in [1,2], jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
+for M in (1,2), jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytical, :FiniteDifferencesDense)
 	@info M, jacobianPO, "PS"
-	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO, verbosity = 0)
+
+	# specific to Poincaré Shooting
+	jacPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO
+
+	br_psh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), jacobianPO = jacPO, verbosity = 0)
 
 	br_ssh, = continuation(jet..., br, 1, (@set opts_po_cont.ds = 0.005),
-	ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO, verbosity = 0)
+	ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = true); normC = norminf, updateSectionEveryStep = 2, jacobianPO = jacobianPO,
+	linearAlgo = BorderingBLS(solver = (@set ls.N = 2M + 1), checkPrecision = false), verbosity = 0)
 end

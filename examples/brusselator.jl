@@ -127,6 +127,7 @@ ind_hopf = 1
 	flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.p[1], ", ω = ", hopfpoint.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 if 1==0
+	# case in which we dont pass the analytical versions of the hessian
 	br_hopf, u1_hopf = @time continuation(
 		Fbru, Jbru_sp,
 		br, ind_hopf, (@lens _.β),
@@ -197,15 +198,19 @@ outpo_f, _, flag = @time newton(poTrap,
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, precisionStability = 1e-6, nInversion = 4, detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, precisionStability = 1e-6, nInversion = 4, detectBifurcation = 1, dsminBisection = 1e-6, maxBisectionSteps = 15)
 	br_po, = @time continuation(poTrap,
 		outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 		opts_po_cont;
 		# jacobianPO = :FullLU,
 		updateSectionEveryStep = 1,
+		########
 		# jacobianPO = :FullSparseInplace,
+		# linearAlgo = BorderingBLS(DefaultLS()),
+		########
 		jacobianPO = :BorderedSparseInplace,
-		# tangentAlgo = BorderedPred(),
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+		########
 		verbosity = 3,	plot = true,
 		# finaliseSolution = (z, tau, step, contResult; k...) ->
 			# (Base.display(contResult.eig[end].eigenvals) ;true),
@@ -244,6 +249,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.
 	br_pok, = @time continuation(poTrap,
 		outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 		opts_po_cont; jacobianPO = :BorderedMatrixFree,
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		verbosity = 2,
 		plot = true,
 		# plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...)
@@ -257,13 +263,16 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.
 
 M = 51
 probFD = PeriodicOrbitTrapProblem(M = M)
-br_po, _ = continuation(
+br_po, = continuation(
 	# arguments for branch switching
 	jet..., br, 1,
 	# arguments for continuation
 	opts_po_cont, probFD;
 	δp = 0.01,
-	verbosity = 3,	plot = true, jacobianPO = :BorderedSparseInplace,
+	verbosity = 3,	plot = true,
+	########
+	jacobianPO = :BorderedSparseInplace, linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+	########
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
@@ -272,14 +281,17 @@ br_po, _ = continuation(
 
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO
-br_po2, _ = BK.continuation(
+br_po2, = BK.continuation(
 	# arguments for branch switching
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont;
 	δp = 0.01,
 	usedeflation = true,
-	verbosity = 3,	plot = true, jacobianPO = :BorderedSparseInplace,
+	verbosity = 3,	plot = true,
+	########
+	jacobianPO = :BorderedSparseInplace, linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+	########
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
 	plotSolution = (x, p; kwargs...) -> (plot!(br_po,legend = :bottomright, subplot=1)),

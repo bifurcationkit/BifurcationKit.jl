@@ -16,17 +16,16 @@ function COm(u, p, t = 0)
 end
 jet = BK.getJet(COm; matrixfree=false)
 
-par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
+par_com = (q1 = 2.5, q2 = 0.6, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000, saveSolEveryStep = 1)
+opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 10, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000, saveSolEveryStep = 1)
 	# @set! opts_br.newtonOptions.verbose = true
 	br, = @time continuation(jet[1], jet[2], z0, par_com, (@lens _.q2), opts_br;
 		recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]),
 		plot = false, verbosity = 0, normC = norminf,
 	bothside = true)
-	show(br)
 
 	
 plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
@@ -35,14 +34,14 @@ plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
 @set! opts_br.newtonOptions.maxIter = 10
 opts_br = @set opts_br.newtonOptions.tol = 1e-12
 
-sn, = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
+sn, = newton(jet[1:2]..., br, 2; options = opts_br.newtonOptions)
 
 hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])
 
 BK.hopfNormalForm(jet..., hp, opts_br.newtonOptions.linsolver)
 hpnf = computeNormalForm(jet..., br, 1)
 
-sn_codim2, = continuationFold(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 0, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 6, detectEvent = 2, detectFold = false) ; plot = true,
+sn_codim2, = continuationFold(jet[1:2]..., br, 2, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 6, detectEvent = 2, detectFold = false) ; plot = false,
 	verbosity = 3,
 	normC = norminf,
 	updateMinAugEveryStep = 1,
@@ -62,23 +61,48 @@ plot(sn_codim2)#, real.(sn_codim2.BT), ylims = (-1,1), xlims=(0,2))
 
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
 
-hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 0, ds = -0.0001, dsmax = 0.08, dsmin = 1e-4, nInversion = 6, detectEvent = 2, detectLoop = true, maxSteps = 50, detectFold=false) ; plot = true,
-	verbosity = 3,
+cp = computeNormalForm(jet..., sn_codim2, 2)
+	display(cp.x0)
+	show(cp)
+
+@test isapprox(cp.nf.c, 0.362; rtol = 1e-2)
+
+# case of BT point
+bt = BK.bogdanovTakensNormalForm(jet..., sn_codim2, 1; verbose = true, autodiff = false)
+	display(bt.x0)
+	show(bt)
+
+@test isapprox(bt.nf.a |> abs, 0.083784; rtol = 1e-4)
+@test isapprox(bt.nf.b |> abs, 2.1363; rtol = 1e-4)
+@test isapprox(bt.nfsupp.K2, [-13.113, 51.15]; rtol = 1e-4)
+@test isapprox(bt.nfsupp.d, -0.1778; rtol = 1e-3)
+@test isapprox(bt.nfsupp.e, -7.1422; rtol = 1e-4)
+@test isapprox(bt.nfsupp.a1, -0.8618; rtol = 1e-4)
+@test isapprox(bt.nfsupp.b1, -7.1176; rtol = 1e-4)
+
+hp_codim2, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 1, ds = -0.0001, dsmax = 0.02, dsmin = 1e-4, nInversion = 12, detectLoop = true, maxSteps = 250, maxBisectionSteps = 35 ) ;
+	verbosity = 2, plot = false,
 	normC = norminf,
 	tangentAlgo = BorderedPred(),
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+	recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
 	d2F = jet[3], d3F = jet[4],
-	bothside = true,
-	bdlinsolver = MatrixBLS())
+	bothside = true,)
 
-@test hp_codim2.branch[5].l1 |> real 		≈ 33.15920 rtol = 1e-1
-@test hp_codim2.specialpoint[1].printsol.k 	≈ 0.305879 rtol = 1e-3
-@test hp_codim2.specialpoint[1].printsol.q2 ≈ 0.924255 rtol = 1e-3
-@test hp_codim2.specialpoint[2].printsol.k 	≈ 0.235550 rtol = 1e-4
-@test hp_codim2.specialpoint[2].printsol.q2 ≈ 0.896099 rtol = 1e-4
+@test hp_codim2.specialpoint[2].printsol.k 	≈ 0.305879 rtol = 1e-3
+@test hp_codim2.specialpoint[2].printsol.q2 ≈ 0.924255 rtol = 1e-3
+@test hp_codim2.specialpoint[3].printsol.k 	≈ 0.232 rtol = 1e-2
+@test hp_codim2.specialpoint[3].printsol.q2 ≈ 0.896099 rtol = 1e-2
+
+gh = computeNormalForm(jet..., hp_codim2, 2; verbose = true)
+	display(gh.x0)
+	show(gh)
+
+@test isapprox(gh.nf.G21, -24.9125im; rtol = 1e-4)
+@test isapprox(gh.nf.G32, -9322.74711 + 51539.23090im; rtol = 1e-4)
+@test isapprox(gh.nf.l2, -776.89; rtol = 1e-4)
 
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotcirclesbif = true)
 	plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf",plotcirclesbif = true)
@@ -88,4 +112,33 @@ plot(sn_codim2, vars=(:k, :q2), branchlabel = "Fold")
 	plot!(hp_codim2, vars=(:k, :q2), branchlabel = "Hopf",)
 
 plot(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
+
 ####################################################################################################
+# branch switching at BT
+hp_from_bt, = continuation(jet..., sn_codim2, 3 , setproperties(sn_codim2.contparams, ds = 0.001, maxSteps = 200);
+		verbosity = 3, plot  = true,
+		δp = 1e-5,
+		normC = norminf,
+		updateMinAugEveryStep = 1,
+		bothside = true,
+		recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
+		)
+bt = computeNormalForm(jet..., sn_codim2, 3; verbose = true)
+	display(bt.x0)
+	show(bt)
+HC = predictor(bt, Val(:HopfCurve), 0.)
+
+plot(sn_codim2, vars=(:q2, :k))
+	_S = LinRange(0, 1e-7, 1000)
+	plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=3, label = "Hpred")
+	plot!(hp_codim2, vars=(:q2, :k), color = :black)
+
+HC.ω(0.01)
+
+HC = predictor(bt, Val(:HopfCurve), 0.)
+	HC.EigenVec(0.01)
+
+
+plot(sn_codim2, vars=(:q2, :x))
+	plot!(hp_codim2, vars=(:q2, :x))
+	plot!(hp_from_bt, vars=(:q2, :x), marker = :d)

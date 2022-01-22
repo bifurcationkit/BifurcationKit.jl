@@ -60,6 +60,7 @@ for (ind, jacobianPO) in enumerate([:Dense, :FullLU, :BorderedLU, :FullSparseInp
 	br_po, = continuation(poTrap, outpo_f,
 		par_hopf, (@lens _.r),	(@set opts_po_cont.newtonOptions.linsolver = _ls), jacobianPO = jacobianPO;
 		verbosity = 0,	plot = false,
+		linearAlgo = BorderingBLS(solver = _ls, checkPrecision = false),
 		# plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
 		printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 

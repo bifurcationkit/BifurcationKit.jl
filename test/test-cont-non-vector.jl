@@ -21,7 +21,7 @@ function F0(x::Vector, r)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
-	out0, hist, flag = newton(F0, [0.8], 1., opt_newton0)
+out0, hist, flag = newton(F0, [0.8], 1., opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
@@ -76,7 +76,8 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pM
 	br, u1 = continuation(
 		Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 		sol,  (1., 1.), (@lens _[1]),
-		opts_br; recordFromSolution = (x,p) -> x.u[1])
+		opts_br; recordFromSolution = (x,p) -> x.u[1],
+		linearAlgo = BorderingBLS(opt_newton.linsolver))
 
 BK.getSolx(br,1)
 BK.getSolp(br,1)
@@ -86,14 +87,15 @@ BK.getSolp(br,1)
 outfold, hist, flag = newton(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	br, 1;
+	bdlinsolver = BorderingBLS(opt_newton.linsolver),
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
 	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
-		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.specialpoint[1].param,"\n")
 
 outfoldco, hist, flag = continuation(
 	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
 	br, 1, (@lens _[2]), opts_br;
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
+	bdlinsolver = BorderingBLS(opt_newton.linsolver),
 	d2F = ((x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.)), plot = false)
 
 # try with newtonDeflation
@@ -179,25 +181,28 @@ br0, u1 = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	plot = false,
+	linearAlgo = BorderingBLS(opt_newton0.linsolver),
 	recordFromSolution = (x,p) -> x[1][1])
 
 br0, u1 = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	out0, (0.9, 1.), (@lens _[1]), opts_br0;
 	tangentAlgo = BorderedPred(),
+	linearAlgo = BorderingBLS(opt_newton0.linsolver),
 	plot = false,
 	recordFromSolution = (x,p) -> x[1][1])
 
 outfold, hist, flag = newton(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1; #index of the fold point
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, r) -> JacobianR(x, r[1]),
 	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
-		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br0.specialpoint[1].param,"\n")
 
 outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(@lens _[2]), opts_br0;
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
 	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = SecantPred(), plot = false)
@@ -205,6 +210,7 @@ outfoldco, hist, flag = continuation(
 outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1, (@lens _[2]), opts_br0;
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
 	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = BorderedPred(), plot = false)

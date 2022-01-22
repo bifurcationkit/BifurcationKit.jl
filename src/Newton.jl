@@ -17,14 +17,19 @@ $(TYPEDFIELDS)
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
 	"absolute tolerance for `F(x)`"
 	tol::T			= 1e-12
+
 	"number of Newton iterations"
 	maxIter::Int64 	 = 25
+
 	"display Newton iterations?"
 	verbose::Bool    = false
+
 	"linear solver, must be `<: AbstractLinearSolver`"
 	linsolver::L 	 = DefaultLS()
+
 	"eigen solver, must be `<: AbstractEigenSolver`"
 	eigsolver::E 	 = DefaultEig()
+	
 	linesearch::Bool = false
 	α::T             = convert(typeof(tol), 1.0)        # damping
 	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping

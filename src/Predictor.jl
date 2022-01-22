@@ -72,7 +72,7 @@ struct NaturalPred <: AbstractTangentPredictor end
 
 function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do z_pred .= z_old
-	copyto!(z_pred, z_old) # z_pred .= z_old
+	copyto!(z_pred, z_old)
 	z_pred.p += ds
 end
 
@@ -126,16 +126,20 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	minus!(dFdl, it.F(z_new.u, setParam(it, z_new.p)))
 	rmul!(dFdl, 1/ϵ)
 
-	# tau = getTangent(J(z_new.u, z_new.p), dFdl, tau_old, theta, contparams.newtonOptions.linsolve)
-	τ_normed = copy(τ)#
-	rmul!(τ_normed, θ / length(τ.u), 1 - θ)
-
-	# extract tangent as solution of bordered linear system, using zero(z_new.u)
-	τu, τp, flag, itl = it.linearAlgo( it.J(z_new.u, setParam(it, z_new.p)), dFdl,
-			τ_normed, 0*z_new.u, T(1), θ)
+	# compute jacobian
+	J = it.J(z_new.u, setParam(it, z_new.p))
+	
+	# extract tangent as solution of the above bordered linear system
+	τu, τp, flag, itl = it.linearAlgo( J, dFdl,
+										τ,
+										0*z_new.u, T(1), # Right-hand side
+										θ)
+	~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
 
 	# the new tangent vector must preserve the direction along the curve
-	α = T(1) / it.dottheta(τu, τ.u, τp, τ.p, θ)
+	# we scale in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
+	α = T(1) / sqrt(it.dottheta(τu, τu, τp, τp, θ))
+	α *= sign(it.dottheta(τ.u, τu, τ.p, τp, θ))
 
 	# tau_new = α * tau
 	copyto!(τ.u, τu)
@@ -188,8 +192,9 @@ MultiplePred(x0, α, nb) = MultiplePred(SecantPred(), x0, α, nb)
 Base.empty!(mpd::MultiplePred) = (mpd.currentind = 1; mpd.pmimax = 1)
 
 # callback for newton
-function (mpred::MultiplePred)(x, f, J, res, iteration, itlinear, options; kwargs...)
-	resHist = get(kwargs, :resHist, nothing)
+function (mpred::MultiplePred)(state; kwargs...)
+	resHist = get(state, :resHist, nothing)
+	iteration = get(state, :iteration, 0)
 	if mpred.currentind > 1
 		return iteration - mpred.pmimax > 0 ? resHist[end] <= mpred.α * resHist[end-mpred.pmimax] : true
 	end
@@ -216,7 +221,7 @@ function corrector(it, z_old::M, tau::M, z_pred::M, ds, θ,
 	verbose = it.verbosity
 	(verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─MultiplePred tangent predictor\n")
 	# we combine the callbacks for the newton iterations
-	cb = (x, f, J, res, iteration, itlinear, options; k...) -> callback(x, f, J, res, iteration, itlinear, options; k...) & mpred(x, f, J, res, iteration, itlinear, options; k...)
+	cb = (state; k...) -> callback(state; k...) & mpred(state; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in mpred.nb:-1:1
 		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
@@ -474,19 +479,19 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	# we record the damping parameter
 	α0 = α
 
-	# N = θ⋅(x - z0.u)⋅τ0.u + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
+	# N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
 	N(u, _p) = arcLengthEq(dottheta, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC(resf, resn) = max(normN(resf), abs(resn))
 
 	# Initialise iterations
-	x = _copy(z_pred.u) 					# copy(z_pred.u)
+	x = _copy(z_pred.u)
 	p = z_pred.p
-	x_pred = _copy(x) 						# copy(x)
+	x_pred = _copy(x)
 
 	# Initialise residuals
 	res_f = F(x, set(par, paramlens, p));  res_n = N(x, p)
 
-	dX = _copy(res_f) # copy(res_f)
+	dX = _copy(res_f)
 	dp = T(0)
 	up = T(0)
 	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps

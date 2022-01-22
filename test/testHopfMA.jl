@@ -230,10 +230,11 @@ floquetES = FloquetQaD(DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
 	br_pok2, = continuation(
 		poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; jacobianPO = :BorderedLU,
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		plot = false, verbosity = 0)
 
 # test of simple calls to newton / continuation
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
@@ -248,6 +249,7 @@ for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	br_pok2, = @time continuation(poTrap,
 			copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
 			opts_po_cont; jacobianPO = linalgo, verbosity = 0,
+			linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 			plot = false, normC = norminf)
 end
 

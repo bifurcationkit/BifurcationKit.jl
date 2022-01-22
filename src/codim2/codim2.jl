@@ -193,7 +193,7 @@ function continuation(F, dF, d2F, d3F,
 		verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 		verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
-		@assert br.specialpoint[ind_bif].type in (:bt,) "Only branching from Bogdanov-Takens (for now)"
+		@assert br.specialpoint[ind_bif].type in (:bt,:zh) "Only branching from Bogdanov-Takens and Zero-Hopf (for now)"
 
 		# functional
 		prob = br.functional

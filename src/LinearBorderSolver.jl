@@ -19,7 +19,11 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 """
 $(TYPEDEF)
 
-This struct is used to provide the bordered linear solver based on the Bordering Method.
+This struct is used to provide the bordered linear solver based on the Bordering Method. user the options, you can trigger a sequence of Bordering reductions to meet a precision.
+
+# Reference
+
+This is the solver BEC + k in Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
 
 $(TYPEDFIELDS)
 
@@ -37,7 +41,12 @@ $(TYPEDFIELDS)
 	tol::Ttol = 1e-12
 
 	"Check precision of the linear solve?"
-	checkPrecision::Bool = false
+	checkPrecision::Bool = true
+
+	"Number of recursions to achieve tolerance"
+	k::Int64 = 1
+
+	@assert k > 0
 end
 
 # dummy constructor to simplify user passing options to continuation
@@ -46,7 +55,7 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
 # │ (shift⋅I + J)     dR      ││dX│ = │ R │
-# │  ξu * dz.u'    ξp * dz.p  ││dl│   │ n │
+# │   ξu * dz.u'   ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (lbs::BorderingBLS)(  J, dR,
 								dzu, dzp::T,
@@ -56,41 +65,72 @@ function (lbs::BorderingBLS)(  J, dR,
 	# ξu = θ / length(dz.u)
 	# ξp = 1 - θ
 
-	# we make this branching to avoid applying a zero shift
+	k = 0 # number of BEC iterations
+	BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift = shift)
+	Residual(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift = shift)
+
+	dX, dl, itlinear = BEC0(R, n)
+
+	failBLS = true
+
+	while lbs.checkPrecision && k < lbs.k && failBLS
+		δX, δl = Residual(dX, dl)
+		failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
+		@debug k, norm(δX), abs(δl)
+		if failBLS
+			dX1, dl1, itlinear = BEC0(δX, δl)
+			axpy!(1, dX1, dX)
+			dl += dl1
+			k += 1
+		end
+	end
+
+	return dX, dl, true, itlinear
+end
+
+function BEC(lbs::BorderingBLS,
+							J, dR,
+							dzu, dzp::T,
+							R, n::T,
+							ξu::Tξ = 1, ξp::Tξ = 1;
+							shift::Ts = nothing)  where {T, Tξ, Ts}
 	if isnothing(shift)
-		x1, x2, success, itlinear = lbs.solver(J, R, dR)
+		x1, δx, success, itlinear = lbs.solver(J, R, dR)
 	else
-		x1, x2, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
+		x1, δx, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
 	end
 
 	~success && @warn "Linear solver failed to converge in BorderingBLS."
 
-	dl = (n - dot(dzu, x1) * ξu) / (dzp * ξp - dot(dzu, x2) * ξu)
+	dl = (n - dot(dzu, x1) * ξu) / (dzp * ξp - dot(dzu, δx) * ξu)
 
-	# dX = x1 .- dl .* x2
-	axpy!(-dl, x2, x1)
-
-	# we check the precision of the solution from the bordering algorithm
-	# mainly for debugging purposes
-	if lbs.checkPrecision
-		# at this point, x2 is not used anymore, we can use it for computing the residual
-		# hence x2 = R - (shift⋅I + J) * x1	 - dl * dR
-		x2 = apply(J, x1)
-		if ~isnothing(shift)
-			axpy!(shift, x1, x2)
-		end
-		axpy!(dl, dR, x2)
-		axpby!(1, R, -1, x2)
-
-		y2 = n - ξp * dzp * dl -ξu * dot(dzu, x1)
-
-		sucessBLS = norm(x2) > lbs.tol || abs(y2) > lbs.tol
-		if sucessBLS
-			@warn "BorderingBLS did not achieve tolerance"
-		end
-	end
-	return x1, dl, true, itlinear
+	# dX = x1 .- dl .* δx
+	axpy!(-dl, δx, x1)
+	return x1, dl, itlinear
 end
+
+function residualBEC(lbs::BorderingBLS,
+							J, dR,
+							dzu, dzp::T,
+							R, n,
+							dX, dl::T,
+							ξu::Tξ = 1, ξp::Tξ = 1;
+							shift::Ts = nothing)  where {T, Tξ, Ts}
+	# we check the precision of the solution from the bordering algorithm
+	# at this point, δx is not used anymore, we can use it for computing the residual
+	# hence δx = R - (shift⋅I + J) * dX	 - dl * dR
+	δX = apply(J, dX)
+	if ~isnothing(shift)
+		axpy!(shift, dX, δX)
+	end
+	axpy!(dl, dR, δX)
+	axpby!(1, R, -1, δX)
+
+	δl = n - ξp * dzp * dl - ξu * dot(dzu, dX)
+
+	return δX, δl
+end
+
 ####################################################################################################
 # this interface should work for Sparse Matrices as well as for Matrices
 """
@@ -175,14 +215,14 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x,p)`.
+This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x, p)`.
 
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
 	"Linear solver used to solve the extended linear system"
 	solver::S
-	"What is the structure used to hold `(x,p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
+	"What is the structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
 	useBorderedArray::Bool
 end
 
@@ -227,12 +267,12 @@ struct LSFromBLS{Ts} <: AbstractLinearSolver
 	solver::Ts
 end
 
-LSFromBLS() = LSFromBLS(BorderingBLS(DefaultLS(useFactorization = false)))
+LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), checkPrecision = false))
 
 function (l::LSFromBLS)(J, rhs)
 	F = factorize(J[1:end-1, 1:end-1])
 	x1, x2, flag, it = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs[1:end-1]), rhs[end])
-	return vcat(x1,x2), flag, sum(it)
+	return vcat(x1, x2), flag, sum(it)
 end
 
 function  (l::LSFromBLS)(J, rhs1, rhs2)
@@ -241,5 +281,5 @@ function  (l::LSFromBLS)(J, rhs1, rhs2)
 
 	y1, y2, flag2, it2 = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs2[1:end-1]), rhs2[end])
 
-	return vcat(x1,x2), vcat(y1,y2), flag1 & flag2, (1, 1)
+	return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end

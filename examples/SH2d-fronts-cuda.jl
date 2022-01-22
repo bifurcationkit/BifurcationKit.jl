@@ -166,6 +166,7 @@ opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.0
 		F_shfft, J_shfft,
 		deflationOp[1], par, (@lens _.l),
 		opts_cont;
+		linearAlgo = BorderingBLS(solver = L, checkPrecision = false),
 		# linearAlgo = MatrixFreeBLS(L),
 		plot = true, verbosity = 3,
 		plotSolution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),

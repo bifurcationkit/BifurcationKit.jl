@@ -9,24 +9,23 @@ function FoldPoint(br::AbstractBranchResult, index::Int)
 end
 ####################################################################################################
 # constructors
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS()) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, 0*a, linsolve, linsolve, linbdsolver, linbdsolver, issymmetric)
 
-FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS()) = FoldProblemMinimallyAugmented(F, J, Ja, d2F, lens, a, b, false, linsolve, linbdsolver)
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, issymmetric::Bool, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS()) = FoldProblemMinimallyAugmented(F, J, Ja, nothing, lens, a, b, 0*a, linsolve, linbdsolver, issymmetric)
 
-FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = BorderingBLS(linsolve)) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
+FoldProblemMinimallyAugmented(F, J, Ja, lens::Lens, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS()) = FoldProblemMinimallyAugmented(F, J, Ja, lens, a, b, false, linsolve, linbdsolver)
 ####################################################################################################
 getVec(x, ::FoldProblemMinimallyAugmented) = getVec(x)
 getP(x, ::FoldProblemMinimallyAugmented) = getP(x)
 
 function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
-	# https://docs.trilinos.org/dev/packages/nox/doc/html/classLOCA_1_1TurningPoint_1_1MinimallyAugmented_1_1Constraint.html
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter value `<: Real` at which the jacobian is singular
-	# The jacobian of the MA problem is solved with a bordering method
+	# The jacobian of the MA problem is solved with a BLS method
 	a = fp.a
 	b = fp.b
 	# update parameter
@@ -185,7 +184,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int, lens::Lens; options = br.contparams.newtonOptions, kwargs...)
+	newtonFold(F, J, br::AbstractBranchResult, ind_fold::Int; options = br.contparams.newtonOptions, kwargs...)
 
 where the optional argument `Jᵗ` is the jacobian transpose and the Hessian is `d2F`. The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -204,7 +203,7 @@ function newtonFold(F, J,
 				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
-				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options.linsolver),
+				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				kwargs...)
 
 	foldproblem = FoldProblemMinimallyAugmented(
@@ -234,6 +233,7 @@ function newtonFold(F, J,
 				options = br.contparams.newtonOptions,
 				nev = br.contparams.nev,
 				startWithEigen = false,
+				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.specialpoint[ind_fold]
@@ -260,7 +260,7 @@ function newtonFold(F, J,
 	end
 
 	# solve the Fold equations
-	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, normN = normN, kwargs...)
+	return newtonFold(F, J, foldpointguess, br.params, br.lens, eigenvec, eigenvec_ad, options; issymmetric = issymmetric, Jᵗ = Jᵗ, d2F = d2F, normN = normN, bdlinsolver = bdlinsolver, kwargs...)
 end
 
 """
@@ -311,7 +311,7 @@ function continuationFold(F, J,
 				issymmetric::Bool = false,
 				Jᵗ = nothing,
 				d2F = nothing,
-				bdlinsolver::AbstractBorderedLinearSolver = BorderingBLS(options_cont.newtonOptions.linsolver),
+				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 			 	computeEigenElements = false,
 				kwargs...) where {T, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
@@ -436,6 +436,7 @@ function continuationFold(F, J,
 		foldPb, Jac_fold_MA,
 		foldpointguess, par, lens2,
 		(@set opt_fold_cont.newtonOptions.eigsolver = eigsolver);
+		linearAlgo = BorderingBLS(solver = opt_fold_cont.newtonOptions.linsolver, checkPrecision = false),
 		kwargs...,
 		normC = normC,
 		recordFromSolution = _printsol2,

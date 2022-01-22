@@ -121,6 +121,23 @@ sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 @test sol_bd1u ≈ sol_bd2u
 @test sol_bd1p ≈ sol_bd2p
 ####################################################################################################
+# test of bordered linear solver in nearly singular case
+n = 70
+A = [ (i==j) - (i>j)   for i=1:n, j=1:n]
+b = rand(n); c = rand(n); d = rand();
+x = rand(n); y = rand()
+f = A*x + b*y; g = dot(c, x) + d*y
+
+linBdsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false, k = 1, tol = 1e-10)
+sol_bd3u, sol_bd3p, = @time linBdsolver(A, b, c, d, f, g)
+@test norm(sol_bd3u - x, Inf) > 1e-8
+# @test norm(sol_bd3p - y, Inf) > 1e-8
+
+linBdsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = true, k = 5, tol = 1e-10)
+sol_bd3u, sol_bd3p, = @time linBdsolver(A, b, c, d, f, g)
+@test norm(sol_bd3u - x, Inf) < 1e-10
+@test norm(sol_bd3p - y, Inf) < 1e-10
+####################################################################################################
 # test the bordered linear solvers, Complex case
 # we test the linear system with MA formulation of Hopf bifurcation
 J = [0 1 0; -1 0 0; 0 0 1.]

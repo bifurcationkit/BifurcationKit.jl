@@ -3,7 +3,7 @@ $(SIGNATURES)
 
 This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
-function continuation(F, J, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where Tv
+function continuation(F, J, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = MatrixBLS(), kwargs...) where Tv
 	# Create a bordered linear solver using the newton linear solver provided by the user
 	# dont modify it if the user passed its own version
 	if isnothing(linearAlgo.solver)
@@ -64,7 +64,8 @@ Automatic branch switching at branch points based on a computation of the normal
 function continuation(F, dF, d2F, d3F, br::ContResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams ;
 		Jᵗ = nothing,
 		δ::Real = 1e-8, δp = nothing, ampfactor::Real = 1,
-		nev = optionsCont.nev, issymmetric = false,
+		nev = optionsCont.nev,
+		issymmetric = false,
 		usedeflation::Bool = false,
 		Teigvec = getvectortype(br),
 		scaleζ = norm,

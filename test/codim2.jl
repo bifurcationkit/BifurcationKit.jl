@@ -80,12 +80,12 @@ hppt = computeNormalForm(jet..., br, 1)
 hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true)
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)
 # plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
-@test hp[3] && hp[5] == 12
+@test hp[3] && hp[5] == 8
 
 hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
 @test hp[3] && hp[5] == 12
 
-hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = true)
+hp = newtonHopf(jet[1:2]..., br, 1; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = false)
 @test hp[3] && hp[5] == 8
 
 # we check that we truly have a bifurcation point.
@@ -111,6 +111,6 @@ hp, = newton(jet[1:2]..., br, 1;
 
 hp, = newton(jet[1:2]..., br, 1; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true, d2F = jet[3])
 
-hp_br, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], d3F = jet[4], startWithEigen = true, updateMinAugEveryStep = 1, verbosity=0, plot=false)
+hp_br, = continuation(jet[1:2]..., br, 1, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), d2F = jet[3], d3F = jet[4], startWithEigen = true, updateMinAugEveryStep = 1)
 @test hp_br.specialpoint[1].type == :gh
 @test ~isnothing(hp_br.eig)
