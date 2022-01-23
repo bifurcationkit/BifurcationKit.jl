@@ -1,6 +1,4 @@
 import Base: iterate
-abstract type AbstractContinuationIterable end
-abstract type AbstractContinuationState end
 ####################################################################################################
 # Iterator interface
 """
