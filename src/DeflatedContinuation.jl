@@ -27,19 +27,19 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 	isActive(dcstate) == false &&  return false, 0
 	state = dcstate.contState 	# continuation state
 	it = iter.it 				# continuation iterator
-	@unpack step, ds, theta = state
+	@unpack step, ds, θ = state
 	@unpack verbosity = it
 	state.z_pred.p = current_param
 
-	getPredictor!(state, it)
-	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), setParam(it,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
+	getPredictor!(it, state)
+	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), setParam(it,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z)
 	if converged
 		# record previous parameter (cheap) and update current solution
-		copyto!(state.z_old.u, sol1); state.z_old.p = current_param
+		copyto!(state.z.u, sol1); state.z.p = current_param
 		state.z_pred.p = current_param
 
 		# Get tangent, it only mutates tau
-		getTangent!(state.tau, state.z_pred, state.z_old, it, ds, theta, it.tangentAlgo, verbosity)
+		getTangent!(state.τ, state.z_pred, state.z, it, ds, θ, it.tangentAlgo, verbosity)
 
 		# call user function to deal with DeflationOperator, allows to tackle symmetries
 		iter.updateDeflationOp(defOp, sol1, current_param)

@@ -13,7 +13,7 @@ SaveAtEvent(positions::Tuple) = ContinuousEvent(length(positions), (it, state) -
 
 This event implements the detection of Fold points based on the p-component of the tangent vector to the continuation curve. It is designed to work with the predictor `BorderedPred()` that you pass to `continuation` with the keyword argument `tangentAlgo`.
 """
-FoldDetectEvent = ContinuousEvent(1, (it, state) -> state.tau.p, ("fold",))
+FoldDetectEvent = ContinuousEvent(1, (it, state) -> state.τ.p, ("fold",))
 ####################################################################################################
 # detection of codim 1 bifurcation
 struct BifEvent{Tcb} <: AbstractDiscreteEvent

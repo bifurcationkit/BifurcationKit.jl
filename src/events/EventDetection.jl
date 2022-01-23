@@ -48,7 +48,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	before.n_unstable = (before.n_unstable[2], before.n_unstable[1])
 	before.n_imag = (before.n_imag[2], before.n_imag[1])
 	before.eventValue = (before.eventValue[2], before.eventValue[1])
-	before.z_pred.p, before.z_old.p = before.z_old.p, before.z_pred.p
+	before.z_pred.p, before.z.p = before.z.p, before.z_pred.p
 
 	# the bifurcation point is before the current state
 	# so we want to first iterate backward
@@ -138,7 +138,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		state.step > 0 && (@set! interval[indinterval] = getp(state))
 
 		# we call the finalizer
-		state.stopcontinuation = ~iter.finaliseSolution(state.z_old, state.tau, state.step, nothing; bisection = true, state = state)
+		state.stopcontinuation = ~iter.finaliseSolution(state.z, state.τ, state.step, nothing; bisection = true, state = state)
 
 		if verbose
 			printstyled(color=:blue, bold = true, "----> ", state.step,
@@ -186,8 +186,8 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	if iseven(n_inversion)
 		status = n_inversion >= contParams.nInversion ? :converged : :guess
 		copyto!(_state.z_pred, state.z_pred)
-		copyto!(_state.z_old,  state.z_old)
-		copyto!(_state.tau, state.tau)
+		copyto!(_state.z,  state.z)
+		copyto!(_state.τ, state.τ)
 		# if there is no inversion, the eventValue will possibly be constant like (0, 0). Hence
 
 		if computeEigenElements(iter.event)
@@ -206,8 +206,8 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	else
 		status = :guessL
 		copyto!(_state.z_pred, after.z_pred)
-		copyto!(_state.z_old,  after.z_old)
-		copyto!(_state.tau, after.tau)
+		copyto!(_state.z,  after.z)
+		copyto!(_state.τ, after.τ)
 
 		if computeEigenElements(iter.event)
 			# save eigen-elements

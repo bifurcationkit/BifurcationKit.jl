@@ -46,7 +46,7 @@ $(TYPEDFIELDS)
 	"Number of recursions to achieve tolerance"
 	k::Int64 = 1
 
-	@assert k > 0
+	@assert k > 0 "Number of recursions must be positive"
 end
 
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)

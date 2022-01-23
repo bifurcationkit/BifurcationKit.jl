@@ -31,7 +31,7 @@ $(TYPEDFIELDS)
 	x::Tv = Vector{T}(undef, 0)
 
 	"Tangent along the branch at the special (bifurcation) point"
-	tau::BorderedArray{Tv, T} = BorderedArray(x, T(0))
+	τ::BorderedArray{Tv, T} = BorderedArray(x, T(0))
 
 	"Eigenvalue index responsible for the special (bifurcation) (if applicable)"
 	ind_ev::Int64 = 0
@@ -63,7 +63,7 @@ Return the dimension of the kernel of the special point.
 @inline kernelDim(bp::SpecialPoint) = abs(bp.δ[1])
 
 # constructors
-SpecialPoint(x0, T, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, tau = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
+SpecialPoint(x0, T, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, τ = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
 
 SpecialPoint(state::ContState, type::Symbol, status::Symbol, printsolution, normC, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = SpecialPoint(
 				type = type,
@@ -72,7 +72,7 @@ SpecialPoint(state::ContState, type::Symbol, status::Symbol, printsolution, norm
 				norm = normC(getx(state)),
 				printsol = namedprintsol(printsolution(getx(state), getp(state))),
 				x = _copy(getx(state)),
-				tau = copy(state.tau),
+				τ = copy(state.τ),
 				ind_ev = ind_ev,
 				step = state.step,
 				status = status,

@@ -141,7 +141,7 @@ BK.predictor(zh, Val(:HopfCurve), 0.1).hopf(0.)
 BK.predictor(zh, Val(:HopfCurve), 0.1).x0(0.)
 BK.predictor(zh, Val(:HopfCurve), 0.1).ω(0.)
 ####################################################################################################
-hp_codim2_1, = continuation(jet[1:2]..., br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1) ;
+hp_codim2_1, = continuation(jet[1:2]..., br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.015, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1) ;
 	normC = norminf,
 	tangentAlgo = BorderedPred(),
 	detectCodim2Bifurcation = 2,
@@ -150,7 +150,7 @@ hp_codim2_1, = continuation(jet[1:2]..., br, 2, (@lens _.T), ContinuationPar(opt
 	recordFromSolution = recordFromSolutionLor,
 	d2F = jet[3], d3F = jet[4],
 	bothside = true,
-	# linearAlgo = MatrixBLS(),
+	linearAlgo = MatrixBLS(),
 	bdlinsolver = MatrixBLS())
 
 @test hp_codim2_1.specialpoint[1].type == :bt

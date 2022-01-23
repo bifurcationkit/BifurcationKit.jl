@@ -237,7 +237,7 @@ function newtonFold(F, J,
 				kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.specialpoint[ind_fold]
-	eigenvec = bifpt.tau.u; rmul!(eigenvec, 1/normN(eigenvec))
+	eigenvec = bifpt.τ.u; rmul!(eigenvec, 1/normN(eigenvec))
 	eigenvec_ad = _copy(eigenvec)
 
 	if startWithEigen
@@ -408,7 +408,7 @@ function continuationFold(F, J,
 		ζstar ./= norm(ζstar)
 
 		BT = dot(ζstar, ζ)
-		CP = getP(state.tau)
+		CP = getP(state.τ)
 
 		return BT, CP
 	end
@@ -463,7 +463,7 @@ function continuationFold(F, J,
 				kwargs...)
 	foldpointguess = FoldPoint(br, ind_fold)
 	bifpt = br.specialpoint[ind_fold]
-	eigenvec = bifpt.tau.u; rmul!(eigenvec, 1/norm(eigenvec))
+	eigenvec = bifpt.τ.u; rmul!(eigenvec, 1/norm(eigenvec))
 	eigenvec_ad = _copy(eigenvec)
 
 	p = bifpt.param

@@ -158,7 +158,7 @@ function Base.copy(state::ContState)
 		itnewton 	= state.itnewton,
 		step 		= state.step,
 		ds 			= state.ds,
-		θ	 		= state.theta,
+		θ	 		= state.θ,
 		stopcontinuation = state.stopcontinuation,
 		stepsizecontrol  = state.stepsizecontrol,
 		n_unstable 		 = state.n_unstable,
