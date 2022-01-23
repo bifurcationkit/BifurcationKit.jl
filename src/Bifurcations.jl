@@ -55,7 +55,7 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, tau, n
 	end
 end
 
-locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, getSolution(state), state.tau, iter.normC, iter.recordFromSolution, iter.verbosity)
+locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, getSolution(state), state.τ, iter.normC, iter.recordFromSolution, iter.verbosity)
 ####################################################################################################
 """
 Function for coarse detection of bifurcation points.
@@ -135,14 +135,12 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	@assert detectBifucation(_state) "No bifurcation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
-	# type of scalars in iter
 	_T = eltype(iter)
 
 	# number of unstable eigenvalues after, before the bifurcation point
 	n2, n1 = _state.n_unstable
 	if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
 
-	# get continuation parameters
 	contParams = iter.contParams
 
 	if abs(_state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end

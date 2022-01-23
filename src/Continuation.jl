@@ -104,9 +104,9 @@ Returns a variable containing the state of the continuation procedure. The field
 
 # Arguments
 - `z_pred` current solution on the branch
-- `tau` tangent predictor
-- `z_old` previous solution
-- `isconverged` Boolean for newton correction
+- `τ` tangent predictor
+- `z` previous solution
+- `isconverged` Boolean for corrector
 - `itnewton` Number of newton iteration (in corrector)
 - `step` current continuation step
 - `ds` step size
@@ -123,9 +123,9 @@ Returns a variable containing the state of the continuation procedure. The field
 - `isStable(state)` whether the current state is stable
 """
 @with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState
-	z_pred::Tv								# predictor solution
-	tau::Tv									# tangent predictor
-	z_old::Tv								# current solution
+	z_pred::Tv								# predictor
+	τ::Tv									# tangent predictor
+	z::Tv									# current solution
 
 	isconverged::Bool						# Boolean for newton correction
 	itnewton::Int64 = 0						# Number of newton iterations (in corrector)
@@ -152,8 +152,8 @@ end
 function Base.copy(state::ContState)
 	return ContState(
 		z_pred 	= _copy(state.z_pred),
-		tau = _copy(state.tau),
-		z_old 	= _copy(state.z_old),
+		τ 	= _copy(state.τ),
+		z 		= _copy(state.z),
 		isconverged = state.isconverged,
 		itnewton 	= state.itnewton,
 		step 		= state.step,
@@ -171,8 +171,8 @@ end
 
 function Base.copyto!(dest::ContState, src::ContState)
 		copyto!(dest.z_pred , src.z_pred)
-		copyto!(dest.tau , src.tau)
-		copyto!(dest.z_old , src.z_old)
+		copyto!(dest.τ , src.τ)
+		copyto!(dest.z , src.z)
 		src.isconverged = src.isconverged
 		src.itnewton 	= src.itnewton
 		src.step 		= src.step
@@ -189,9 +189,9 @@ function Base.copyto!(dest::ContState, src::ContState)
 end
 
 # getters
-getSolution(state::AbstractContinuationState) 		= state.z_old
-getx(state::AbstractContinuationState) = state.z_old.u
-@inline getp(state::AbstractContinuationState) = state.z_old.p
+getSolution(state::AbstractContinuationState) 	= state.z
+getx(state::AbstractContinuationState) 			= state.z.u
+@inline getp(state::AbstractContinuationState)  = state.z.p
 @inline getpreviousp(state::AbstractContinuationState) = state.z_pred.p
 @inline isStable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
@@ -199,7 +199,7 @@ getx(state::AbstractContinuationState) = state.z_old.u
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
 			(state.step <= it.contParams.maxSteps) &&
-			(isInDomain(it, state.z_old.p) || state.step == 0) &&
+			(isInDomain(it, getp(state)) || state.step == 0) &&
 			(state.stopcontinuation == false)
 
 function getStateSummary(it, state)
@@ -296,10 +296,10 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 	z_old   = BorderedArray(_copy(u0), p0)
 	# this is a predictor for the next point on the branch, we could have used z_old as well
 	z_pred	= BorderedArray(_copy(u1), p1)
-	tau  = _copy(z_pred)
+	τ  = _copy(z_pred)
 
 	# compute the tangent using Secant predictor
-	getTangent!(tau, z_pred, z_old, it, ds, θ, SecantPred(), _verbosity)
+	getTangent!(τ, z_pred, z_old, it, ds, θ, SecantPred(), _verbosity)
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
@@ -313,7 +313,7 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 
 	# compute event value and store into state
 	cbval = isEventActive(it) ? initialize(it.event, T) : nothing # event result
-	state = ContState(z_pred = z_pred, tau = tau, z_old = z_old, isconverged = true, ds = it.contParams.ds, θ = θ, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
+	state = ContState(z_pred = z_pred, τ = τ, z = z_old, isconverged = true, ds = it.contParams.ds, θ = θ, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
 
 	# update stability
 	if computeEigenElements(it)
@@ -341,31 +341,31 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	if verbose
 		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
 		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))
-		@printf(" = %2.4e ⟶  %2.4e [guess]\n", state.z_old.p, clampPredp(state.z_pred.p, it))
+		@printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clampPredp(state.z_pred.p, it))
 	end
 
 	# Corrector. This does not mutate the arguments
 	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
-			state.z_old, state.tau, state.z_pred,
+			getSolution(state), state.τ, state.z_pred,
 			ds, θ,
 			it.tangentAlgo, it.linearAlgo;
-			normC = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z_old)
+			normC = it.normC, callback = it.callbackN, iterationC = step, z0 = getSolution(state))
 
 	# Successful step
 	if state.isconverged
 		if verbose
 			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
 			print("Parameter ", getLensSymbol(it.lens))
-			@printf(" = %2.4e ⟶  %2.4e \n", state.z_old.p, z_newton.p)
+			@printf(" = %2.4e ⟶  %2.4e \n", getp(state), z_newton.p)
 		end
 
-		# Get tangent, it only mutates tau
-		getTangent!(state.tau, z_newton, state.z_old, it,
+		# Get tangent, it only mutates τ
+		getTangent!(state.τ, z_newton, getSolution(state), it,
 					ds, θ, it.tangentAlgo, verbosity)
 
 		# record previous parameter (cheap) and update current solution
-		state.z_pred.p = state.z_old.p
-		copyto!(state.z_old, z_newton)
+		state.z_pred.p = getp(state)
+		copyto!(state.z, z_newton)
 
 		# Eigen-elements computation, they are stored in state
 		if computeEigenElements(it)
@@ -382,7 +382,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	# Step size control
 	if ~state.stopcontinuation && stepsizecontrol(state)
 		# we update the PALC parameters ds and theta, they are in the state variable
-		state.ds, state.θ, state.stopcontinuation = stepSizeControl(ds, θ, it.contParams, state.isconverged, state.itnewton, state.tau, it.tangentAlgo, verbosity)
+		state.ds, state.θ, state.stopcontinuation = stepSizeControl(ds, θ, it.contParams, state.isconverged, state.itnewton, state.τ, it.tangentAlgo, verbosity)
 	end
 
 	return state, state
@@ -453,7 +453,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
 			# Call user saved finaliseSolution function. If returns false, stop continuation
 			# we put a OR to stop continuation if the stop was required before
-			state.stopcontinuation |= ~it.finaliseSolution(state.z_old, state.tau, state.step, contRes; state = state, iter = it)
+			state.stopcontinuation |= ~it.finaliseSolution(getSolution(state), state.τ, state.step, contRes; state = state, iter = it)
 
 			# Save current state in the branch
 			save!(contRes, it, state)
@@ -466,10 +466,11 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		next = iterate(it, state)
 	end
 
-	it.plot && plotBranchCont(contRes, state.z_old, contParams, it.plotSolution)
+	it.plot && plotBranchCont(contRes, state.z, contParams, it.plotSolution)
 
 	# return current solution in case the corrector did not converge
-	return contRes, state.z_old, state.tau
+	return contRes, state.z, state.τ
+end
 end
 
 function continuation(it::ContIterable)
