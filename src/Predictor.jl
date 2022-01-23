@@ -60,16 +60,13 @@ function getPredictor!(iter::AbstractContinuationIterable,
 end
 
 # generic corrector based on Bordered formulation
-function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			pred::Talgo, linearalgo = MatrixFreeBLS();
-			normC = norm, callback = cbDefault, kwargs...) where
-			{T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
-	if z_pred.p <= it.contParams.pMin || z_pred.p >= it.contParams.pMax
-		z_pred.p = clampPredp(z_pred.p, it)
-		return corrector(it, z_old, τ, z_pred, ds, θ, NaturalPred(), linearalgo;
-						normC = normC, callback = callback, kwargs...)
+function corrector(it, state, pred::AbstractTangentPredictor;
+			normC = norm, callback = cbDefault, kwargs...)
+	if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
+		state.z_pred.p = clampPredp(state.z_pred.p, it)
+		return corrector(it, state, NaturalPred(); normC = normC, callback = callback, kwargs...)
 	end
-	return newtonPALC(it, z_old, τ, z_pred, ds, θ; linearbdalgo = linearalgo, normN = normC, callback = callback, kwargs...)
+	return newtonPALC(it, state; linearbdalgo = it.linearAlgo, normN = normC, callback = callback, kwargs...)
 end
 ####################################################################################################
 """
@@ -85,12 +82,9 @@ function getPredictor!(iter::AbstractContinuationIterable,
 end
 
 # corrector based on natural formulation
-function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
-			pred::NaturalPred, linearalgo = MatrixFreeBLS();
-			normC = norm, callback = cbDefault, kwargs...) where
-			{T, vectype, M <: BorderedArray{vectype, T}}
-	res = newton(it.F, it.J, z_pred.u, setParam(it, clampPredp(z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
-	return BorderedArray(res[1], z_pred.p), res[2:end]...
+function corrector(it, state, pred::NaturalPred; normC = norm, callback = cbDefault, kwargs...)
+	res = newton(it.F, it.J, state.z_pred.u, setParam(it, clampPredp(state.z_pred.p, it)), it.contParams.newtonOptions; normN = normC, callback = callback, kwargs...)
+	return BorderedArray(res[1], state.z_pred.p), res[2:end]...
 end
 
 function getTangent!(iter::AbstractContinuationIterable,
@@ -470,16 +464,22 @@ Here, we specify `p` as a subfield of `par` with the `paramLens::Lens`
 - `(x, par) -> F(x, par)` where `par` is a set of parameters like `(a=1.0, b=1)`
 - `(x, par) -> Jh(x, par)` the jacobian Jh = ∂xF
 """
-function newtonPALC(F, Jh, par, paramlens::Lens,
-					z0::BorderedArray{vectype, T},
-					τ0::BorderedArray{vectype, T},
-					z_pred::BorderedArray{vectype, T},
-					ds::T, θ::T,
-					contparams::ContinuationPar{T, S, E},
-					dottheta::DotTheta;
+function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuationState;
 					linearbdalgo = BorderingBLS(DefaultLS()),
 					normN = norm,
-					callback = cbDefault, kwargs...) where {T, S, E, vectype}
+					callback = cbDefault, kwargs...)
+
+	F = iter.F; Jh = iter.J
+	par = iter.par; paramlens = iter.lens
+	contparams = iter.contParams
+	dotθ = iter.dotθ
+	T = eltype(iter)
+
+	z0 = getSolution(state)
+	τ0 = state.τ
+	z_pred = state.z_pred
+	ds = state.ds; θ = state.θ
+
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
 
@@ -487,7 +487,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 	α0 = α
 
 	# N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
-	N(u, _p) = arcLengthEq(dottheta, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
+	N(u, _p) = arcLengthEq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC(resf, resn) = max(normN(resf), abs(resn))
 
 	# Initialise iterations
@@ -527,7 +527,7 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 		# │ J     dFdp ││u │ = │res_f│
 		# │ τ0.u  τ0.p ││up│   │res_n│
 		# └            ┘└  ┘   └     ┘
-		u, up, flag, itlinear = linearbdalgo(J, dFdp, τ0, res_f, res_n, θ)
+		u, up, flag, itlinear = iter.linearAlgo(J, dFdp, τ0, res_f, res_n, θ)
 		itlineartot += sum(itlinear)
 
 		if linesearch
@@ -580,5 +580,4 @@ function newtonPALC(F, Jh, par, paramlens::Lens,
 end
 
 # conveniency for use in continuation
-newtonPALC(it::AbstractContinuationIterable, z0::M, τ0::M, z_pred::M, ds::T, θ::T; kwargs...) where {T, vectype, M <: BorderedArray{vectype, T}} = newtonPALC(it.F, it.J, it.par, it.lens, z0, τ0, z_pred, ds, θ, it.contParams, it.dotθ; kwargs...)
 ####################################################################################################

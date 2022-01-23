@@ -346,10 +346,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 
 	# Corrector. This does not mutate the arguments
 	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
-			getSolution(state), state.τ, state.z_pred,
-			ds, θ,
-			it.tangentAlgo, it.linearAlgo;
-			normC = it.normC, callback = it.callbackN, iterationC = step, z0 = getSolution(state))
+			state, it.tangentAlgo; normC = it.normC, callback = it.callbackN, iterationC = step, z0 = getSolution(state))
 
 	# Successful step
 	if state.isconverged
