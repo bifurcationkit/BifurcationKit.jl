@@ -36,13 +36,13 @@ n = 101
 	sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 	optnewton = NewtonPar(tol = 1e-8, verbose = true)
 	# ca fait dans les 63.59k Allocations
-	sol, hist, flag = @time newton( F_chan,	Jac_mat, sol0, par, optnewton)
+	sol, = @time newton( F_chan,	Jac_mat, sol0, par, optnewton)
 
-optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9), maxSteps = 150)
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 5, tol = 1e-9, verbose = true), maxSteps = 100)
 	br, = @time continuation(
-		F_chan, #Jac_mat,
-		sol, par, (@lens _.α),
-		optscont; plot = true, verbosity = 0,
+		F_chan, Jac_mat,
+		sol0, par, (@lens _.α),
+		optscont; plot = true, verbosity = 2,
 		plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...))
 		)
 ###################################################################################################
@@ -95,7 +95,7 @@ outfold, _, flag = @time newton(
 		)
 	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true), maxSteps = 1300)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 1300)
 
 outfoldco, = @time continuation(
 		F_chan, Jac_mat,

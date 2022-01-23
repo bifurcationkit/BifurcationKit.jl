@@ -68,15 +68,16 @@ optnew = NewtonPar(tol = 1e-12, verbose = true, linsolver = DefaultLS(useFactori
 		F_chan, Jac_chan, sol0, par_af, optnew, normN = x -> norm(x, Inf64))
 	# Plots.plot(out, label="Solution")
 
-optcont = ContinuationPar(dsmin = 1e-4, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 10, verbose = false), maxSteps = 300)
+optcont = ContinuationPar(dsmin = 1e-4, dsmax = 0.15, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 10, verbose = false), maxSteps = 300)
 
 br0, = @time continuation(
 	F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont;
 	plot = true,
 	# tangentAlgo = MoorePenrosePred(), # this works VERY well
+	dotPALC = BK.DotTheta(dot),
 	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
 	plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
-		verbosity = 2,
+	verbosity = 1,
 	normC = x -> norm(x, Inf64))
 
 plot(br0)

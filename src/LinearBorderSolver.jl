@@ -4,16 +4,6 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing) must be provided
 
-# call for using BorderedArray input, specific to Arclength Continuation
-(lbs::AbstractBorderedLinearSolver)(J, dR,
-							dz::BorderedArray,
-							R, n::T,
-							θ::T;
-							shift::Ts = nothing) where {T, Ts} = (lbs)(J, dR,
-																	dz.u, dz.p,
-																	R, n,
-																	θ / length(dz.u), one(T) - θ;
-																	shift = shift)
 
 ####################################################################################################
 """
@@ -59,14 +49,14 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 function (lbs::BorderingBLS)(  J, dR,
 								dzu, dzp::T,
 								R, n::T,
-								ξu::Tξ = 1, ξp::Tξ = 1; shift::Ts = nothing)  where {T, Tξ, Ts}
+								ξu::Tξ = 1, ξp::Tξ = 1; dotp = dot, shift::Ts = nothing)  where {T, Tξ <: Number, Ts}
 	# the following parameters are used for the pseudo arc length continuation
 	# ξu = θ / length(dz.u)
 	# ξp = 1 - θ
 
 	k = 0 # number of BEC iterations
-	BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift = shift)
-	Residual(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift = shift)
+	BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift = shift, dotp = dotp)
+	Residual(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift = shift, dotp = dotp)
 
 	dX, dl, itlinear = BEC0(R, n)
 
@@ -90,7 +80,7 @@ function BEC(lbs::BorderingBLS,
 							dzu, dzp::T,
 							R, n::T,
 							ξu::Tξ = 1, ξp::Tξ = 1;
-							shift::Ts = nothing)  where {T, Tξ, Ts}
+							shift::Ts = nothing, dotp = dot)  where {T, Tξ, Ts}
 	if isnothing(shift)
 		x1, δx, success, itlinear = lbs.solver(J, R, dR)
 	else
@@ -99,7 +89,7 @@ function BEC(lbs::BorderingBLS,
 
 	~success && @warn "Linear solver failed to converge in BorderingBLS."
 
-	dl = (n - dot(dzu, x1) * ξu) / (dzp * ξp - dot(dzu, δx) * ξu)
+	dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
 
 	# dX = x1 .- dl .* δx
 	axpy!(-dl, δx, x1)
@@ -112,7 +102,7 @@ function residualBEC(lbs::BorderingBLS,
 							R, n,
 							dX, dl::T,
 							ξu::Tξ = 1, ξp::Tξ = 1;
-							shift::Ts = nothing)  where {T, Tξ, Ts}
+							shift::Ts = nothing, dotp = dot)  where {T, Tξ, Ts}
 	# we check the precision of the solution from the bordering algorithm
 	# at this point, δx is not used anymore, we can use it for computing the residual
 	# hence δx = R - (shift⋅I + J) * dX	 - dl * dR
@@ -123,11 +113,19 @@ function residualBEC(lbs::BorderingBLS,
 	axpy!(dl, dR, δX)
 	axpby!(1, R, -1, δX)
 
-	δl = n - ξp * dzp * dl - ξu * dot(dzu, dX)
+	δl = n - ξp * dzp * dl - ξu * dotp(dzu, dX)
 
 	return δX, δl
 end
 
+# version used in PALC
+(lbs::BorderingBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
+				J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
+	  					  (lbs)(J, dR,
+								state.τ.u, state.τ.p,
+								R, n,
+								state.θ, one(T) - state.θ;
+								shift = shift, dotp = iter.dotθ.dot)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -148,7 +146,7 @@ MatrixBLS() = MatrixBLS(nothing)
 function (lbs::MatrixBLS)(J, dR,
 						dzu, dzp::T, R::AbstractVecOrMat, n::T,
 						ξu::T = T(1), ξp::T = T(1);
-						shift::Ts = nothing)  where {T <: Number, S, Ts}
+						shift::Ts = nothing, applyξu! = nothing)  where {T <: Number, S, Ts}
 
 	if isnothing(shift)
 		A = J
@@ -157,7 +155,12 @@ function (lbs::MatrixBLS)(J, dR,
 	end
 
 	A = hcat(A, dR)
-	A = vcat(A, hcat((dzu .* ξu)', dzp * ξp))
+	A = vcat(A, hcat(adjoint(dzu .* ξu), dzp * ξp))
+
+	# apply a linear operator to ξu
+	if ~isnothing(applyξu!)
+		applyξu!(@view(A[end, begin:end-1]))
+	end
 
 	# solve the equations and return the result
 	rhs = vcat(R, n)
@@ -165,6 +168,14 @@ function (lbs::MatrixBLS)(J, dR,
 	return res[1:end-1], res[end], true, 1
 end
 
+# version used in PALC
+(lbs::MatrixBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
+ 					J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
+	  					  (lbs)(J, dR,
+								state.τ.u, state.τ.p,
+								R, n,
+								state.θ, one(T) - state.θ;
+								shift = shift, applyξu! = iter.dotθ.apply!)
 ####################################################################################################
 # composite type to save the bordered linear system with expression
 # ┌         ┐
@@ -173,12 +184,13 @@ end
 # └         ┘
 # It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
 #
-struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts}
+struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
 	J::Tj
 	a::Ta
 	b::Tb
 	c::Tc
 	shift::Ts
+	dot::Td # possibly custom dot product
 end
 
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number, Ts}
@@ -188,7 +200,7 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts})(x::BorderedArray{Ta, Tc})
 	if isnothing(lbmap.shift) == false
 		axpy!(lbmap.shift, x.u, out.u)
 	end
-	out.p = dot(lbmap.b, x.u)  + lbmap.c  * x.p
+	out.p = lbmap.dot(lbmap.b, x.u)  + lbmap.c  * x.p
 	return out
 end
 
@@ -204,7 +216,7 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 	else
 		out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
 	end
-	out[end] = dot(lbmap.b, xu)  + lbmap.c  * xp
+	out[end] = lbmap.dot(lbmap.b, xu)  + lbmap.c  * xp
 	return out
 end
 
@@ -236,13 +248,22 @@ extractParBLS(x::BorderedArray)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
-								ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing) where {T <: Number, Tξ, S}
+								ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing, dotp = dot) where {T <: Number, Tξ, S}
 	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
-	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift)
+	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
 	return extractVecBLS(sol), extractParBLS(sol), cv, it
 end
+
+# version used in PALC
+(lbs::MatrixFreeBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
+				J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
+	  					  (lbs)(J, dR,
+								state.τ.u, state.τ.p,
+								R, n,
+								state.θ, one(T) - state.θ;
+								shift = shift, dotp = iter.dotθ.dot)
 ####################################################################################################
 # Linear Solvers based on a bordered solver
 # !!!! This one is used as a linear Solver, not as a Bordered one

@@ -180,7 +180,7 @@ computeNormalForm(jet..., hp_codim2_1, 2; nev = 4, verbose=true)
 #
 # plot(sn_codim2, vars=(:F, :T), branchlabel = "SN")
 # 	plot!(hp_codim2_1, vars=(:F, :T), branchlabel = "Hopf1")
-# 	plot!(hp_codim2_2, vars=(:F, :T), branchlabel = "Hopf2")
+	# plot!(hp_codim2_2, vars=(:F, :T), branchlabel = "Hopf2")
 # 	ylims!(-0.06,0.09);xlims!(1,3.5)
 #
 # plot(sn_codim2, vars=(:X, :U), branchlabel = "SN")

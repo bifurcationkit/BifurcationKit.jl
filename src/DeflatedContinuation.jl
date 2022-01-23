@@ -137,7 +137,7 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 			plot::Bool = true,
 			tangentAlgo = SecantPred(),
 			linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver),
-			dotPALC = (x,y) -> dot(x,y) / length(x),
+			dotPALC = DotTheta(),
 			recordFromSolution = (x, p) -> norm(x),
 			plotSolution = (x, p ;kwargs...) -> plot!(x; kwargs...),
 			perturbSolution = (x, p, id) -> x,

@@ -20,7 +20,7 @@ struct DotTheta{Tdot, Ta}
 	"dot product used in pseudo-arclength constraint"
 	dot::Tdot
 	"Linear operator associated with dot product, i.e. dot(x, y) = <x, Ay>, where <,> is the standard dot product on R^N. You must provide an inplace function which evaluates A. For example `x -> rmul!(x, 1/length(x))`."
-	A::Ta
+	apply!::Ta
 end
 
 DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x)))
@@ -139,10 +139,10 @@ function getTangent!(it::AbstractContinuationIterable, state::AbstractContinuati
 	J = it.J(z_new.u, setParam(it, z_new.p))
 
 	# extract tangent as solution of the above bordered linear system
-	τu, τp, flag, itl = it.linearAlgo( J, dFdl,
-										τ,
-										0*z_new.u, T(1), # Right-hand side
-										θ)
+	τu, τp, flag, itl = it.linearAlgo( it, state,
+										J, dFdl,
+										0*z_new.u, T(1)) # Right-hand side
+
 	~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
 
 	# we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
@@ -527,7 +527,7 @@ function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuat
 		# │ J     dFdp ││u │ = │res_f│
 		# │ τ0.u  τ0.p ││up│   │res_n│
 		# └            ┘└  ┘   └     ┘
-		u, up, flag, itlinear = iter.linearAlgo(J, dFdp, τ0, res_f, res_n, θ)
+		u, up, flag, itlinear = iter.linearAlgo(iter, state, J, dFdp, res_f, res_n)
 		itlineartot += sum(itlinear)
 
 		if linesearch
