@@ -1,5 +1,7 @@
 """
-	dt = DotTheta( (x,y) -> dot(x,y) / length(x) )
+$(TYPEDEF)
+
+$(TYPEDFIELDS)
 
 This parametric type allows to define a new dot product from the one saved in `dt::dot`. More precisely:
 
@@ -14,11 +16,15 @@ Compute, the norm associated to weighted dot product ``\\langle (u_1,p_1), (u_2,
 !!! info "Info"
     This is used in the pseudo-arclength constraint with the dot product ``\\frac{1}{N} \\langle u_1,u_2\\rangle,\\quad u_i\\in\\mathbb R^N``
 """
-struct DotTheta{Tdot}
+struct DotTheta{Tdot, Ta}
+	"dot product used in pseudo-arclength constraint"
 	dot::Tdot
+	"Linear operator associated with dot product, i.e. dot(x, y) = <x, Ay>, where <,> is the standard dot product on R^N. You must provide an inplace function which evaluates A. For example `x -> rmul!(x, 1/length(x))`."
+	A::Ta
 end
 
-DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x) )
+DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x)))
+DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
 (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
@@ -36,18 +42,21 @@ arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
 abstract type AbstractTangentPredictor end
 abstract type AbstractSecantPredictor <: AbstractTangentPredictor end
 
-getPredictor!(state::AbstractContinuationState, iter::AbstractContinuationIterable, nrm = false) = getPredictor!(state.z_pred, state.z_old, state.tau, state.ds, iter.tangentAlgo, nrm)
-getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, verbosity) = getTangent!(state.tau, state.z_new, state.z_old, it, state.ds, θ, it.tangenAlgo::NaturalPred, it.verbosity)
+getPredictor!(iter::AbstractContinuationIterable, state::AbstractContinuationState, nrm = false) = getPredictor!(iter, state, iter.tangentAlgo, nrm)
 
 # reset the predictor
 Base.empty!(::Union{Nothing, AbstractTangentPredictor}) = nothing
 
 # this function only mutates z_pred
 # the nrm argument allows to just increment z_pred.p by ds
-function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::Talgo, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo <: AbstractTangentPredictor}
-	# we perform z_pred = z_old + ds * τ
-	copyto!(z_pred, z_old)
-	nrm ? axpy!(ds / τ.p, τ, z_pred) : axpy!(ds, τ, z_pred)
+function getPredictor!(iter::AbstractContinuationIterable,
+					state::AbstractContinuationState,
+					pred::Talgo,
+					nrm = false) where {Talgo <: AbstractTangentPredictor}
+	# we perform z_pred = z + ds * τ
+	copyto!(state.z_pred, state.z)
+	ds = state.ds
+	nrm ? axpy!(ds / state.τ.p, state.τ, state.z_pred) : axpy!(ds, state.τ, state.z_pred)
 end
 
 # generic corrector based on Bordered formulation
@@ -68,9 +77,11 @@ end
 """
 struct NaturalPred <: AbstractTangentPredictor end
 
-function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::NaturalPred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
-	copyto!(z_pred, z_old)
-	z_pred.p += ds
+function getPredictor!(iter::AbstractContinuationIterable,
+						state::AbstractContinuationState,
+						pred::NaturalPred, nrm = false)
+	copyto!(state.z_pred, state.z)
+	state.z_pred.p += state.ds
 end
 
 # corrector based on natural formulation
@@ -82,8 +93,11 @@ function corrector(it, z_old::M, τ::M, z_pred::M, ds, θ,
 	return BorderedArray(res[1], z_pred.p), res[2:end]...
 end
 
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::NaturalPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("Predictor: ", algo)
+function getTangent!(iter::AbstractContinuationIterable,
+					state::AbstractContinuationState,
+					z_new,
+					pred::NaturalPred, verbosity)
+	(verbosity > 0) && println("Predictor: ", pred)
 	# we do nothing here, the predictor will just copy z_old into z_pred
 end
 ####################################################################################################
@@ -92,7 +106,8 @@ end
 """
 struct SecantPred <: AbstractSecantPredictor end
 
-# τ is the tangent prediction
+# τ is the tangent prediction.
+# This function is used for initialisation in iterateFromTwoPoints
 function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::SecantPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: ", pred)
 	# secant predictor: tau = z_new - z_old; tau *= sign(ds) / normtheta(tau)
@@ -101,6 +116,8 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	α = sign(ds) / it.dotθ(τ, θ)
 	rmul!(τ, α)
 end
+
+getTangent!(iter::AbstractContinuationIterable, state::AbstractContinuationState, z_new, pred::SecantPred, verbosity) = getTangent!(state.τ, z_new, getSolution(state), iter, state.ds, state.θ, pred, verbosity)
 ####################################################################################################
 """
 	Bordered Tangent predictor
@@ -111,12 +128,14 @@ struct BorderedPred <: AbstractTangentPredictor end
 # τ is the tangent prediction found by solving
 # ┌                           ┐┌  ┐   ┌   ┐
 # │      J            dFdl    ││τu│ = │ 0 │
-# │  θ/N * τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
+# │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
 # └                           ┘└  ┘   └   ┘
 # it is updated inplace
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::BorderedPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getTangent!(it::AbstractContinuationIterable, state::AbstractContinuationState, z_new::BorderedArray{vectype, T}, pred::BorderedPred, verbosity) where {T, vectype}
 	(verbosity > 0) && println("Predictor: Bordered")
 	ϵ = it.contParams.finDiffEps
+	τ = state.τ
+	θ = state.θ
 	# dFdl = (F(z_new.u, z_new.p + ϵ) - F(z_new.u, z_new.p)) / ϵ
 	dFdl = it.F(z_new.u, setParam(it, z_new.p + ϵ))
 	minus!(dFdl, it.F(z_new.u, setParam(it, z_new.p)))
@@ -195,14 +214,14 @@ function (mpred::MultiplePred)(state; kwargs...)
 	return true
 end
 
-function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, pred::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(it::AbstractContinuationIterable, state::AbstractContinuationState, z_new::M, pred::MultiplePred{T, M, Talgo}, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
 	(verbosity > 0) && print("Predictor: MultiplePred\n--")
-	getTangent!(τ, z_new, z_old, it, ds, θ, pred.tangentalgo, verbosity)
+	getTangent!(it, state, z_new, pred.tangentalgo, verbosity)
 	# record the tangent for later use
-	copyto!(pred.τ, τ)
+	copyto!(pred.τ, state.τ)
 end
 
-function getPredictor!(z_pred::M, z_old::M, τ::M, ds, pred::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
+function getPredictor!(it::AbstractContinuationIterable, state::AbstractContinuationState, pred::MultiplePred, nrm = false) where {T, vectype, M <: BorderedArray{vectype, T}}
 	# we do nothing!
 	# empty!(algo)
 	return nothing
@@ -368,8 +387,9 @@ function updatePred!(polypred::PolynomialPred)
 	return true
 end
 
-function getTangent!(tau::M, z_new::M, z_old::M, it::AbstractContinuationIterable, ds, θ, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}, Talgo}
+function getTangent!(it::AbstractContinuationIterable, state::AbstractContinuationState, z_new::M, polypred::PolynomialPred, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
 	(verbosity > 0) && println("Predictor: PolynomialPred")
+	ds = state.ds
 	# do we update the predictor with last converged point?
 	if polypred.update
 		if length(polypred.arclengths) == 0
@@ -382,7 +402,7 @@ function getTangent!(tau::M, z_new::M, z_old::M, it::AbstractContinuationIterabl
 	end
 
 	if ~isready(polypred) || ~polypred.update
-		return getTangent!(tau, z_new, z_old, it, ds, θ, polypred.tangentalgo, verbosity)
+		return getTangent!(it, state, z_new, polypred.tangentalgo, verbosity)
 	else
 		return polypred.update ? updatePred!(polypred) : true
 	end

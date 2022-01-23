@@ -336,7 +336,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	@unpack step, ds, θ = state
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
-	getPredictor!(state, it)
+	getPredictor!(it, state)
 
 	if verbose
 		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
@@ -360,8 +360,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		end
 
 		# Get tangent, it only mutates τ
-		getTangent!(state.τ, z_newton, getSolution(state), it,
-					ds, θ, it.tangentAlgo, verbosity)
+		getTangent!(it, state, z_newton, it.tangentAlgo, verbosity)
 
 		# record previous parameter (cheap) and update current solution
 		state.z_pred.p = getp(state)
