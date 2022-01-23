@@ -1,7 +1,6 @@
 using IterativeSolvers, KrylovKit, Arpack, LinearAlgebra
 
 abstract type AbstractEigenSolver end
-# abstract type for Matrix-Free eigensolvers
 abstract type AbstractMFEigenSolver <: AbstractEigenSolver end
 abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
@@ -27,7 +26,6 @@ function (l::DefaultEig)(J, nev; kwargs...)
 	return Complex.(F.values[I[1:nev2]]), Complex.(F.vectors[:, I[1:nev2]]), true, 1
 end
 
-# case of sparse matrices or matrix free method
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
@@ -125,7 +123,6 @@ geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, Array{Int
 ####################################################################################################
 # Solvers for ArnoldiMethod
 ####################################################################################################
-# case of sparse matrices or matrix free method
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)

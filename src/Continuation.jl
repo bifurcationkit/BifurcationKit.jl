@@ -124,7 +124,7 @@ Returns a variable containing the state of the continuation procedure. The field
 """
 @with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState
 	z_pred::Tv								# predictor
-	τ::Tv									# tangent predictor
+	τ::Tv									# tangent to the curve
 	z::Tv									# current solution
 
 	isconverged::Bool						# Boolean for newton correction
@@ -337,7 +337,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 
 	# Predictor: state.z_pred. The following method only mutates z_pred
 	getPredictor!(state, it)
-	
+
 	if verbose
 		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
 		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))

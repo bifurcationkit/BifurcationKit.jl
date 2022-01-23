@@ -124,7 +124,7 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 
 	# compute jacobian
 	J = it.J(z_new.u, setParam(it, z_new.p))
-	
+
 	# extract tangent as solution of the above bordered linear system
 	τu, τp, flag, itl = it.linearAlgo( J, dFdl,
 										τ,
@@ -133,8 +133,8 @@ function getTangent!(τ::M, z_new::M, z_old::M, it::AbstractContinuationIterable
 	~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
 
 	# we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
-	α = T(1) / sqrt(it.dottheta(τu, τu, τp, τp, θ))
-	α *= sign(it.dottheta(τ.u, τu, τ.p, τp, θ))
+	α = T(1) / sqrt(it.dotθ(τu, τu, τp, τp, θ))
+	α *= sign(it.dotθ(τ.u, τu, τ.p, τp, θ))
 
 	copyto!(τ.u, τu)
 	τ.p = τp
