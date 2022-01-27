@@ -7,6 +7,9 @@ module BifurcationKit
 	using DataStructures: CircularBuffer
 	using ForwardDiff
 
+	# we put this here to be used in LinearBorderSolver
+	abstract type AbstractContinuationIterable end
+	abstract type AbstractContinuationState end
 
 	include("BorderedArrays.jl")
 	include("LinearSolver.jl")
