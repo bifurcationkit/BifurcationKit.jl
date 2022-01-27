@@ -135,7 +135,7 @@ HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 # 	# plot!(hp_codim2_1, vars=(:F, :T), branchlabel = "Hopf1")
 
 # test for Zero-Hopf
-zh = BK.zeroHopfNormalForm(jet..., sn_codim2, 2)
+zh = BK.computeNormalForm(jet..., sn_codim2, 2)
 show(zh)
 BK.predictor(zh, Val(:HopfCurve), 0.1).hopf(0.)
 BK.predictor(zh, Val(:HopfCurve), 0.1).x0(0.)

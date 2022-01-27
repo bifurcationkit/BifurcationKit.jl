@@ -421,6 +421,8 @@ function computeNormalForm(F, dF, d2F, d3F,
 		return bogdanovTakensNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ, detailed = detailed, autodiff = autodiff)
 	elseif bifpt.type == :gh
 		return bautinNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+	elseif bifpt.type == :zh
+		return zeroHopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
 	end
