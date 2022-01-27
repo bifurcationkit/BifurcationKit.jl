@@ -56,7 +56,7 @@ function ContIterable(Fhandle, Jhandle,
 					plotSolution = (x, p; kwargs...) -> nothing,
 					recordFromSolution = (x, p; kwargs...) -> norm(x),
 					normC = norm,
-					dotPALC = (x,y) -> dot(x,y) / length(x),
+					dotPALC = DotTheta(),
 					finaliseSolution = finaliseDefault,
 					callbackN = cbDefault,
 					event = nothing,
@@ -72,7 +72,7 @@ function ContIterable(Fhandle, Jhandle,
 				plotSolution = plotSolution,
 				recordFromSolution = recordFromSolution,
 				normC = normC,
-				dotθ = DotTheta(dotPALC),
+				dotθ = dotPALC,
 				finaliseSolution = finaliseSolution,
 				callbackN = callbackN,
 				event = event,
@@ -532,7 +532,7 @@ Compute the continuation curve associated to the functional `F` and its jacobian
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events
     - case 3: print information during bisection to detect bifurcation / events
 - `normC = norm` norm used in the different Newton solves
-- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
+- `dotPALC = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners
 

@@ -20,6 +20,7 @@ test_newton(ones(10) .+ rand(10) * 0.1)
 sol, = test_newton(Float16.(ones(10) .+ rand(10) * 0.1))
 @test eltype(sol) == Float16
 ####################################################################################################
+
 function test_newton_palc(x0, p0)
 	Ty = eltype(x0)
 	N = length(x0)
@@ -27,21 +28,24 @@ function test_newton_palc(x0, p0)
 	θ = Ty(0.2)
 	dotθ = BK.DotTheta(dot)
 
-	F(x, p) = x.^3 .- p
-	Jac(x, p) = diagm(0 => 3 .* x.^2)
+	F(x, p) = x.^3 .- 13 .* x .- p
+	Jac(x, p) = diagm(0 => 3 .* x.^2 .- 13)
 
 	z0 = BorderedArray(x0, p0)
 	τ0 = BorderedArray(rand(Ty, N), convert(typeof(p0), 0.2))
 	zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
-	optn = NewtonPar{Ty, DefaultLS, DefaultEig}()
-	optc = ContinuationPar{Ty, DefaultLS, DefaultEig}(newtonOptions = optn)
-	sol, hist, flag, _ = newtonPALC(F, Jac, p0, (@lens _), z0, τ0, zpred, Ty(0.02), θ, optc, dotθ)
+	optn = NewtonPar{Ty, DefaultLS, DefaultEig}(verbose = true, tol = Ty(1e-6))
+	optc = ContinuationPar{Ty, DefaultLS, DefaultEig}(newtonOptions = optn, ds = 0.001, theta = θ)
+
+	iter = ContIterable(F, Jac, x0, p0, (@lens _), optc)
+	state = iterate(iter)[1]
+	sol, hist, flag, _ = newtonPALC(iter, state)
 end
 
-sol, = test_newton_palc(ones(10) .+ rand(10) * 0.1, 1.)
+sol, = test_newton_palc(ones(10) .+ rand(10) * 0.01, 1.)
 
 #test type
-sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.1), Float32(1.))
+sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.001), Float32(1.))
 @test typeof(sol) == BorderedArray{Vector{Float32}, Float32}
 ####################################################################################################
 # test of  deflated problems
