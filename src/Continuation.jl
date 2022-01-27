@@ -465,7 +465,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 	# return current solution in case the corrector did not converge
 	return contRes, state.z, state.τ
 end
-end
 
 function continuation(it::ContIterable)
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
