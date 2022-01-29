@@ -94,6 +94,7 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 
 # this is for use with BorderingBLS with checkPrecision = true
 apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
+
 # specific linear solver to dispatch
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
 	solver::T

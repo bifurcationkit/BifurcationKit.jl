@@ -187,6 +187,7 @@ outpo_f, _, flag = @time newton(poTrap,
 		opt_po;
 		# deflationOp,
 		jacobianPO = :BorderedSparseInplace, #  3.428727 seconds (874.14 k allocations: 2.376 GiB, 5.56% gc time, 8.77% compilation time)
+		# jacobianPO = :FullLU,
 		# jacobianPO = :BorderedLU,
 		# jacobianPO = :FullSparseInplace,
 		normN = norminf,
@@ -208,9 +209,13 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0,
 		# jacobianPO = :FullSparseInplace,
 		# linearAlgo = BorderingBLS(DefaultLS()),
 		########
-		jacobianPO = :BorderedSparseInplace,
-		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+		# jacobianPO = :FullMatrixFree,
+		# linearAlgo = BorderingBLS(solver = GMRESKrylovKit(), checkPrecision = true),
 		########
+		jacobianPO = :BorderedSparseInplace,
+		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = true, k = 2),
+		########
+		tangentAlgo = BorderedPred(),
 		verbosity = 3,	plot = true,
 		# finaliseSolution = (z, tau, step, contResult; k...) ->
 			# (Base.display(contResult.eig[end].eigenvals) ;true),
