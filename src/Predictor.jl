@@ -461,7 +461,7 @@ Here, we specify `p` as a subfield of `par` with the `paramLens::Lens`
 - `(x, par) -> Jh(x, par)` the jacobian Jh = ∂xF
 """
 function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuationState;
-					linearbdalgo = BorderingBLS(DefaultLS()),
+					# linearbdalgo = BorderingBLS(DefaultLS()),
 					normN = norm,
 					callback = cbDefault, kwargs...)
 
@@ -478,6 +478,7 @@ function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuat
 
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack finDiffEps, pMin, pMax = contparams
+	linsolver = iter.linearAlgo
 
 	# we record the damping parameter
 	α0 = α
@@ -509,7 +510,7 @@ function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuat
 	verbose && displayIteration(it, res)
 	line_step = true
 
-	compute = callback((;x, res_f, res, contparams, p, resHist); fromNewton = false, kwargs...)
+	compute = callback((;x, res_f, res, it, contparams, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
 
 	while (res > tol) && (it < maxIter) && line_step && compute
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
@@ -523,7 +524,7 @@ function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuat
 		# │ J     dFdp ││u │ = │res_f│
 		# │ τ0.u  τ0.p ││up│   │res_n│
 		# └            ┘└  ┘   └     ┘
-		u, up, flag, itlinear = iter.linearAlgo(iter, state, J, dFdp, res_f, res_n)
+		u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
 		itlineartot += sum(itlinear)
 
 		if linesearch
@@ -568,10 +569,10 @@ function newtonPALC(iter::AbstractContinuationIterable, state::AbstractContinuat
 		verbose && displayIteration(it, res, itlinear)
 
 		# shall we break the loop?
-		compute = callback((;x, res_f, J, res, it, itlinear, contparams, z0, p, resHist); fromNewton = false, kwargs...)
+		compute = callback((;x, res_f, J, res, it, itlinear, contparams, z0, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
 	end
 	verbose && displayIteration(it, res, 0, true) # display last line of the table
-	flag = (resHist[end] < tol) & callback((;x, res_f, res, it, contparams, p, resHist); fromNewton = false, kwargs...)
+	flag = (resHist[end] < tol) & callback((;x, res_f, res, it, contparams, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
 	return BorderedArray(x, p), resHist, flag, it, itlineartot
 end
 

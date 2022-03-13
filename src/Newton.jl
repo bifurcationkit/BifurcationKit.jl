@@ -55,7 +55,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
     - `res` current norm of the residual
     - `iteration` current newton iteration
     - `itlinear` number of iterations to solve the linear system
-    - `optionsN` a copy of the argument `options` passed to `newton`
+	- `options` a copy of the argument `options` passed to `newton`
     - `kwargs` kwargs arguments, contain your initial guess `x0`
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
