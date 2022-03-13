@@ -118,7 +118,7 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	if verbose
 		println("--> For ", getLensSymbol(br.lens), " = ", br.branch[ind].param)
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-	println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
+		println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
 	end
 	br.eig[ind+1].eigenvals
 end
@@ -205,7 +205,7 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractBranchResult
-	"Set of branches branching  off the bifurcation point `bp`"
+	"Set of branches branching off the bifurcation point `bp`"
 	γ::T
 	"Bifurcation point. It is thought as the root of the branches in γ"
 	bp::Tbp

@@ -255,7 +255,7 @@ end
 # PeriodicOrbitTrapProblem
 
 # Matrix-Free version of the monodromy operator
-function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+@views function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
 	poPb = JacFW.pb
 	u0 = JacFW.x
 	par = JacFW.par
@@ -274,16 +274,16 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 
 	u0c = getTimeSlices(u0, N, M)
 
-	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 	out .= res
 
 	for ii in 2:M-1
 		h =  T * getTimeStep(poPb, ii)
-		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
 		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 		out .= res
 	end
 
