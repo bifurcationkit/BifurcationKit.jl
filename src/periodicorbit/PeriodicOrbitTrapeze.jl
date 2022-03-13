@@ -20,7 +20,7 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], 
 ####################################################################################################
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
 """
-	pb = PeriodicOrbitTrapProblem(F, J, ϕ, xπ, M::Int)
+
 This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
 ## Arguments
@@ -632,7 +632,8 @@ end
 	# update the normals
 	for ii in 0:M-1
 		# ii2 = (ii+1)<= M ? ii+1 : ii+1-M
-		prob.ϕ[ii*N+1:ii*N+N] .= prob.F(xc[:, ii+1], par) ./ M
+		applyF(prob, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], par)
+		prob.ϕ[ii*N+1:ii*N+N] ./= M
 	end
 
 	return true
