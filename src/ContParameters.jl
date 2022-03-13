@@ -10,7 +10,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `pMin, pMax` allowed parameter range for `p`
 - `maxSteps = 100` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
-- `saveToFile = false`: save to file. A name is automatically generated.
+- `saveToFile = false`: save to file. A name is automatically generated or can be defined in [`continuation`](@ref). This requires `using JLD2`.
 - `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution
 - `plotEveryStep = 10`
 

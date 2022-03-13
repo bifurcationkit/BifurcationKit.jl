@@ -97,13 +97,13 @@ apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
 
 # specific linear solver to dispatch
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
-	solver::T
+	linsolver::T
 end
 # this constructor prevents from having FloquetWrapperLS(FloquetWrapperLS(ls))
 FloquetWrapperLS(ls::FloquetWrapperLS) = ls
-(ls::FloquetWrapperLS)(J, rhs; kwargs...) = ls.solver(J, rhs; kwargs...)
-(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.solver(J.jacpb, rhs; kwargs...)
-(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.solver(J.jacpb, rhs1, rhs2)
+(ls::FloquetWrapperLS)(J, rhs; kwargs...) = ls.linsolver(J, rhs; kwargs...)
+(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.linsolver(J.jacpb, rhs; kwargs...)
+(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.linsolver(J.jacpb, rhs1, rhs2)
 
 # this is for the use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
@@ -493,8 +493,8 @@ function continuation(br::AbstractBranchResult, ind_bif::Int, _contParams::Conti
 		if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
 			@set! _contParams.newtonOptions.linsolver.N = length(orbitguess)
 		elseif _contParams.newtonOptions.linsolver isa FloquetWrapperLS
-			if _contParams.newtonOptions.linsolver.solver isa GMRESIterativeSolvers
-				@set! _contParams.newtonOptions.linsolver.solver.N = length(orbitguess)
+			if _contParams.newtonOptions.linsolver.linsolver isa GMRESIterativeSolvers
+				@set! _contParams.newtonOptions.linsolver.linsolver.N = length(orbitguess)
 			end
 		end
 	end
