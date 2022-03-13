@@ -77,7 +77,7 @@ Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 """
 $(TYPEDEF)
 
-Define a structure to interface the Jacobian of the Shooting Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver not to use the jacobian but the monodromy matrix instead.
+Define a structure to interface the Jacobian of the periodic orbits Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver not to use the jacobian but the monodromy matrix instead.
 
 $(TYPEDFIELDS)
 """

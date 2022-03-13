@@ -154,7 +154,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 end
 
 # jacobian of the shooting functional
-function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =convert(eltype(x),1e-9))
+function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =convert(eltype(x), 1e-8))
 	# period of the cycle
 	# Sundials does not like @views :(
 	dT = getPeriod(sh, dx)
@@ -191,7 +191,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =c
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = convert(eltype(x.u),1e-9))
+function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = convert(eltype(x.u), 1e-8))
 	dT = getPeriod(sh, dx)
 	T  = getPeriod(sh, x)
 	M  = getMeshSize(sh)

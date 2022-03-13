@@ -294,8 +294,7 @@ end
 # at position x from the Floquet eigenvector ζ
 function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, ζ::AbstractVector)
 	# extraction of various constants
-	M = poPb.M
-	N = poPb.N
+	M, N = size(poPb)
 
 	# period of the cycle
 	T = extractPeriodFDTrap(poPb, u0)

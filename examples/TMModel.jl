@@ -17,7 +17,6 @@ function TMvf!(dz, z, p, t)
 end
 
 TMvf(z, p) = TMvf!(similar(z), z, p, 0)
-dTMvf(z,p) = ForwardDiff.jacobian(x-> TMvf(x,p), z)
 
 # we group the differentials together
 jet  = BK.getJet(TMvf, matrixfree=false)
@@ -27,7 +26,7 @@ z0 = [0.238616, 0.982747, 0.367876 ]
 
 opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.125, nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
 	opts_br = @set opts_br.newtonOptions.verbose = false
-	br, = continuation(TMvf, dTMvf, z0, par_tm, (@lens _.E0), opts_br;
+	br, = continuation(jet[1], jet[2], z0, par_tm, (@lens _.E0), opts_br;
 	printSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),
 	tangentAlgo = BorderedPred(),
 	plot = true, normC = norminf)

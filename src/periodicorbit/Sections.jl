@@ -90,7 +90,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 end
 
 (hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
-isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tn == Nothing)
+isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
 # ==================================================================================================
 function _duplicate!(x::AbstractVector)
@@ -141,7 +141,7 @@ dR!(hyp::SectionPS, out, dx::AbstractVector, k::Int) = R!(hyp, out, dx, k)
 function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
 	@assert length(xbar) == length(hyp.normals[1]) - 1 "Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))"
 	k = hyp.indices[ii]
-	nbar = hyp.normals_bar[ii]
+	nbar  = hyp.normals_bar[ii]
 	xcbar = hyp.centers_bar[ii]
 	coord_k = hyp.centers[ii][k] - (dot(nbar, xbar) - dot(nbar, xcbar)) / hyp.normals[ii][k]
 

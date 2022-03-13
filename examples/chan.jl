@@ -1,5 +1,4 @@
-using Revise
-	using BifurcationKit, LinearAlgebra, Plots, Setfield, Parameters
+using Revise, BifurcationKit, LinearAlgebra, Plots, Setfield, Parameters
 
 N(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 dN(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
@@ -34,9 +33,8 @@ end
 n = 101
 	par = (α = 3.3, β = 0.01)
 	sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-	optnewton = NewtonPar(tol = 1e-8, verbose = true)
-	# ca fait dans les 63.59k Allocations
-	sol, = @time newton( F_chan,	Jac_mat, sol0, par, optnewton)
+	optnewton = NewtonPar(tol = 1e-8, verbose = false)
+	sol, = @time newton( F_chan, Jac_mat, sol0, par, optnewton)
 
 optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.2, ds= 0.1, pMax = 4.1, nev = 5, detectFold = true, plotEveryStep = 40, newtonOptions = NewtonPar(maxIter = 5, tol = 1e-9, verbose = true), maxSteps = 100)
 	br, = @time continuation(

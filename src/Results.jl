@@ -140,7 +140,7 @@ function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
 end
 
 function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
-	println(io, prefix * "┌─ Branch number of points: ", length(br.branch))
+	println(io, prefix * "┌─ Number of points: ", length(br.branch))
 	print(io, prefix * "├─ Branch of ")
 	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
 	print(io, "\n" * prefix * "├─ Type of vectors: ")
@@ -193,6 +193,7 @@ Function is used to initialize the composite type `ContResult` according to the 
 end
 
 function _ContResult()
+	@assert 1==0 "WIP, really `Any` in  the constructor?"
 	ContResult(branch = StructArray([(a=1,b=2)]), eig = [(eigenvals = Any[], eigenvec=Any[],step=0)],sol=Any[],contparams = opts_br, lens=(@lens _[1]), bifpoint=Any[]);
 end
 ####################################################################################################
