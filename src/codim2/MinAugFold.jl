@@ -348,7 +348,7 @@ function continuationFold(F, J,
 		# we first check that the continuation step was successful
 		# if not, we do not update the problem with bad information!
 		success = get(kUP, :state, nothing).isconverged
-		(~modCounter(step, updateMinAugEveryStep) || success == false) && return true
+		(~modCounter(step, updateMinAugEveryStep) || success == false) && (@goto FinalizeMAFold)
 		x = getVec(z.u)	# fold point
 		p1 = getP(z.u)	# first parameter
 		p2 = z.p	# second parameter
@@ -376,10 +376,11 @@ function continuationFold(F, J,
 		# do not normalize with dot(newb, foldPb.a), it prevents from BT detection
 		copyto!(foldPb.b, newb); rmul!(foldPb.b, 1/normC(newb))
 
+		@label FinalizeMAFold
 		# call the user-passed finalizer
 		finaliseUser = get(kwargs, :finaliseSolution, nothing)
 		if isnothing(finaliseUser) == false
-			return finaliseUser(z, tau, step, contResult; kUP...)
+			return finaliseUser(z, tau, step, contResult; prob = foldPb, kUP...)
 		end
 		return true
 	end
