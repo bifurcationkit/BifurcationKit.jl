@@ -27,15 +27,15 @@ end
 
 @inline _displayLine(i::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", i, itlinear[1], itlinear[2])
 ####################################################################################################
-function computeEigenvalues(it::ContIterable, u0, par, nev = it.contParams.nev; kwargs...)
-	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; kwargs...)
+function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contParams.nev; kwargs...)
+	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; iter = it, state = state, kwargs...)
 end
 
 function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 	# we compute the eigen-elements
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
-	eiginfo = computeEigenvalues(iter, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
+	eiginfo = computeEigenvalues(iter, state, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
 	_isstable, n_unstable, n_imag = isStable(iter.contParams, eiginfo[1])
 	return eiginfo, _isstable, n_unstable, n_imag
 end

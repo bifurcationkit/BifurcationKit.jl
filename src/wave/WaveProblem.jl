@@ -37,11 +37,12 @@ This simplified call handles the case where a single symmetry needs to be frozen
 	∂u₀::TDu0 = (D * u₀,)
 	DAE::Int = 0
 	nc::Int = 1 	# number of constraints
+	isinplace::Bool = false
 	@assert 0 <= DAE <= 1
 	@assert 0 < nc
 end
 
-function TWProblem(F, J, ∂::Tuple, u₀; DAE = 0)
+function TWProblem(F, J, ∂::Tuple, u₀; DAE = 0, isinplace = false)
 	# ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
 	∂u₀ = Tuple( mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
 	return TWProblem(F = F, J = J, ∂ = ∂,
@@ -49,6 +50,7 @@ function TWProblem(F, J, ∂::Tuple, u₀; DAE = 0)
 		∂u₀ = ∂u₀,
 		# u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀),
 		DAE = DAE,
+		isinplace = isinplace,
 		nc = length(∂) )
 end
 
@@ -198,7 +200,7 @@ function continuation(prob::TWProblem,
 	end
 	# define the mass matrix for the eigensolver
 	N = length(orbitguess)
-	B = spdiagm(vcat(ones(N-1),0))
+	B = Diagonal(vcat(ones(N-1),0))
 	# convert eigsolver to generalised one
 	old_eigsolver = contParams.newtonOptions.eigsolver
 	contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)
