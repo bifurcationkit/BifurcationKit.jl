@@ -368,7 +368,7 @@ function continuationFold(F, J,
 		if foldPb.issymmetric
 			JAd_at_xp = J_at_xp
 		else
-			JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, par0) : transpose(J_at_xp)
+			JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
 		end
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 
