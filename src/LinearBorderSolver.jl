@@ -5,6 +5,12 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing) must be provided
 
 
+# Reminder we want to solve the linear system
+# Cramer's rule gives σ = det(J) / det(M)
+#     ┌        ┐┌   ┐   ┌ ┐
+# M = │ J    b ││ v │ = │0│
+#     │ c'   d ││ σ │   │1│
+#     └        ┘└   ┘   └ ┘
 ####################################################################################################
 """
 $(TYPEDEF)

@@ -52,7 +52,6 @@ end
 
 @inline issymmetric(pb::AbstractProblemMinimallyAugmented) = pb.issymmetric
 
-
 function applyJacobian(pb::AbstractProblemMinimallyAugmented, x, par, dx, transposeJac = false)
 	if issymmetric(pb)
 		return apply(pb.J(x, par), dx)
@@ -72,7 +71,7 @@ end
 function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 	if detectCodim2Bifurcation > 0
 		if get(kwargs, :updateMinAugEveryStep, 0) == 0
-			@error "You ask for detection of codim2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
+			@error "You ask for detection of codim 2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
 		end
 		return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
 	else
@@ -117,7 +116,7 @@ end
 """
 $(SIGNATURES)
 
-codim 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold/Hopf point into a curve of Fold/Hopf points based on a Minimally Augmented formulation. The arguments are as follows
+Codimension 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold/Hopf point into a curve of Fold/Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `F = (x, p) ->	F(x, p)` where `p` is a set of parameters
 - `J = (x, p) -> d_xF(x, p)` associated jacobian
 - `br` results returned after a call to [continuation](@ref Library-Continuation)

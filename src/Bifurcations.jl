@@ -62,7 +62,7 @@ Function for coarse detection of bifurcation points.
 """
 function getBifurcationType(contparams::ContinuationPar, state, normC, printsolution, verbosity, status::Symbol, interval::Tuple{T, T}) where T
 	# this boolean ensures that edge cases are handled
-	detected = false
+	known = false
 
 	# get current number of unstable eigenvalues and
 	# unstable eigenvalues with nonzero imaginary part
@@ -89,32 +89,32 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 		else # I dont know what bifurcation this is
 			tp = :nd
 		end
-		detected = true
+		known = true
 	elseif δn_unstable == 2
 		if δn_imag == 2
 			tp = contparams.newtonOptions.eigsolver isa AbstractFloquetSolver ? :ns : :hopf
 		else
 			tp = :nd
 		end
-		detected = true
+		known = true
 	elseif δn_unstable > 2
 		tp = :nd
-		detected = true
+		known = true
 	end
 
 	if δn_unstable < δn_imag
 		@warn "Error in eigenvalues computation. It seems that an eigenvalue is missing, probably conj(λ) for some already computed eigenvalue λ. This makes the identification (but not the detection) of bifurcation points erroneous. You should increase the number of requested eigenvalues `nev`."
 		tp = :nd
-		detected = true
+		known = true
 	end
 
 	# rule out initial condition where we populate n_unstable = (-1,-1) and n_imag = (-1,-1)
 	if prod(state.n_unstable) < 0 || prod(state.n_imag) < 0
 		tp = :nd
-		detected = true
+		known = true
 	end
 
-	if detected
+	if known
 		# record information about the bifurcation point
 		# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information)  corresponding to the current bifurcation point are saved in br.eig[step+1]
 		specialpoint = SpecialPoint(state, tp, status, printsolution, normC, interval;
@@ -125,7 +125,7 @@ function getBifurcationType(contparams::ContinuationPar, state, normC, printsolu
 	else
 		throw("We could not detect/identify the bifurcation point. (δn_unstable, δn_imag) = ($δn_unstable, $δn_imag)")
 	end
-	return detected, specialpoint
+	return known, specialpoint
 end
 
 """
@@ -135,6 +135,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	@assert detectBifucation(_state) "No bifurcation detected for the state"
 	verbose && println("----> Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
+	# type of scalars in iter
 	_T = eltype(iter)
 
 	# number of unstable eigenvalues after, before the bifurcation point
