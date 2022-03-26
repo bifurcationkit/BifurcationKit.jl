@@ -197,7 +197,14 @@ function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where
 	if Tl == Nothing
 		res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
 	else # use preconditioner
-		res, info = KrylovKit.linsolve(x -> (out = apply(J, x); ldiv!(l.Pl, out)), ldiv!(l.Pl, copy(rhs)), a₀, a₁; rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
+		# the preconditioner must be applied after the scaling
+		function _linmap(dx)
+			# out = apply(J, dx); axpby!(a₀, dx, a₁, out)
+			out = _axpy_op(J, dx, a₀, a₁)
+			ldiv!(l.Pl, out)
+			out
+		end
+		res, info = KrylovKit.linsolve(_linmap, ldiv!(l.Pl, copy(rhs)); rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
 	end
 	info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
 	return res, true, info.numops

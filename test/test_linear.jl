@@ -47,7 +47,7 @@ ls = DefaultLS()
 _sol, = ls(J0, rhs)
 @test _sol == sol_explicit
 
-ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
+ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16)
 _sol, = ls(J0, rhs)
 @test _sol ≈ sol_explicit
 
@@ -62,11 +62,21 @@ ls = DefaultLS()
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol == sol_explicit
 
-ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
+ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16)
+_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+@test _sol ≈ sol_explicit
+
+# with preconditioner
+ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16, Pl = I)
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol ≈ sol_explicit
 
 ls = GMRESKrylovKit(rtol = 1e-16)
+_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+@test _sol ≈ sol_explicit
+
+# with preconditioner
+ls = GMRESKrylovKit(rtol = 1e-16, Pl = I)
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol ≈ sol_explicit
 ####################################################################################################
