@@ -371,7 +371,7 @@ function continuationHopf(F, J,
 		# we first check that the continuation step was successful
 		# if not, we do not update the problem with bad information!
 		success = get(kUP, :state, nothing).isconverged
-		(~modCounter(step, updateMinAugEveryStep) || success == false) && (@goto FinalizeMAHopf)
+		(~modCounter(step, updateMinAugEveryStep) || success == false) && return true
 		p2 = z.p		# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
@@ -404,7 +404,6 @@ function continuationHopf(F, J,
 			@warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, trying lowering Newton tolerance or dsmax."
 		end
 
-		@label FinalizeMAHopf
 		# call the user-passed finalizer
 		finaliseUser = get(kwargs, :finaliseSolution, nothing)
 		resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = hopfPb, kUP...)
