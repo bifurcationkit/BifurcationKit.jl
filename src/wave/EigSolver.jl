@@ -63,7 +63,6 @@ GEigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, re
 convertToGEV(l::EigArpack, B) = GEigArpack(l.sigma, l.which, l.by, l.kwargs, B)
 
 function (l::GEigArpack)(J, nev; kwargs...)
-	@show typeof(J) typeof(l.B)
 	if J isa AbstractMatrix
 		λ, ϕ, ncv = Arpack.eigs(J, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
 	else

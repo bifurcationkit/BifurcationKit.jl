@@ -168,7 +168,7 @@ function bogdanovTakensNormalForm(prob, L, d2F, d3F,
 	G = [dot(xs, x) for xs in pt.ζstar, x in pt.ζ]
 	norm(G-I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
 
-	G = [dot(xs, L*x) for xs in pt.ζstar, x in pt.ζ]
+	G = [dot(xs, apply(L,x)) for xs in pt.ζstar, x in pt.ζ]
 	norm(G-[0 1;0 0], Inf) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norm(G-[0 1;0 0], Inf))"
 
 	# second differential
@@ -475,7 +475,6 @@ function bogdanovTakensNormalForm(F, dF, d2F, d3F,
 		scaleζ = norm,
 		detailed = true,
 		autodiff = true)
-	@assert getvectortype(br) <: BorderedArray
 	@assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
 	# functional
@@ -542,15 +541,16 @@ function bogdanovTakensNormalForm(F, dF, d2F, d3F,
 	# Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
 	###########################
 	vext = real.(ζs[1])
-	_λstar, _evstar, _ = eigsolver(transpose(L), nev)
+	Lᵗ = isnothing(Jᵗ) ? transpose(L) : Jᵗ(x0, parbif)
+	_λstar, _evstar, _ = eigsolver(Lᵗ, nev)
 	Ivp = sortperm(_λstar, by = abs)
 	# in case the prob is HopfMA, we real it
 	zerov = real.(prob.zero)
 	wext = real.(geteigenvector(eigsolver, _evstar, Ivp[1]))
 	q0, = bls(L, wext, vext, zero(Ty), zerov, one(Ty))
-	p1, = bls(transpose(L), vext, wext, zero(Ty), zerov, one(Ty))
+	p1, = bls(Lᵗ, vext, wext, zero(Ty), zerov, one(Ty))
 	q1, = bls(L, p1, q0, zero(Ty), q0, zero(Ty))
-	p0, = bls(transpose(L), q0, p1, zero(Ty), p1, zero(Ty))
+	p0, = bls(Lᵗ, q0, p1, zero(Ty), p1, zero(Ty))
 	# we want
 	# A⋅q0 = 0, A⋅q1 = q0
 	# At⋅p1 = 0, At⋅p0 = p1
@@ -584,7 +584,6 @@ function bautinNormalForm(F, dF, d2F, d3F,
 		lens = br.lens,
 		Teigvec = getvectortype(br),
 		scaleζ = norm)
-	@assert getvectortype(br) <: BorderedArray
 	@assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
 	verbose && println("#"^53*"\n--> Bautin Normal form computation")
