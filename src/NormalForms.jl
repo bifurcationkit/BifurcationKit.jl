@@ -103,14 +103,14 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζstar)
 	verbose && println("--> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
-	verbose && println("--> a = ", a)
+	verbose && println("--> a    = ", a)
 
 	# coefficient of x*p
 	R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) - apply(dF(x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	Ψ01, _ = ls(L, E(R01))
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζstar)
-	verbose && println("--> b1 = ", b1)
+	verbose && println("--> b1   = ", b1)
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
@@ -118,7 +118,7 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	verbose && println("--> b2/2 = ", b2/2)
 
 	# coefficient of x^3, recall b2v = R2(ζ, ζ)
-	wst, _ = ls(L, E(b2v))
+	wst, _ = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
 	b3 = dot(b3v, ζstar)
 	verbose && println("--> b3/6 = ", b3/6)

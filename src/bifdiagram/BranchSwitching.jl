@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-This function is the analog of [`continuation`](@ref) when the two first points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
+This function is the analog of [`continuation`](@ref) when the first two points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
 function continuation(F, J, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contParams::ContinuationPar; linearAlgo = MatrixBLS(), kwargs...) where Tv
 	# Create a bordered linear solver using the newton linear solver provided by the user
@@ -20,12 +20,6 @@ function continuation(F, J, x0::Tv, par0, x1::Tv, p1::Real, lens::Lens, contPara
 end
 
 function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
-	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	# The result type of this method
-	# is not known at compile time so we
-	# need a function barrier to resolve it
-	#############################################
-
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
 	state, _ = iterateFromTwoPoints(it, x0, p0, x1, p1)
