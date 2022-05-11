@@ -492,10 +492,18 @@ function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::Continu
 		@set! it.contParams.ds = -contParams.ds
 		res2 = continuation(it)
 		contresult = _merge(res1[1],res2[1])
+
+		# we have to update the branch if saved on a file
+		it.contParams.saveToFile && saveToFile(it, contresult)
+		
 		return contresult, res1[2], res1[3]
 
 	else
-		return continuation(it)
+		contresult = continuation(it)
+		# we have to update the branch if saved on a file,
+		# basically this removes "branchfw" or "branchbw" in file and append "branch"
+		it.contParams.saveToFile && saveToFile(it, contresult[1])
+		return contresult
 	end
 end
 
