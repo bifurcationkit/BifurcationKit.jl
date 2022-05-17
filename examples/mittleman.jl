@@ -278,7 +278,7 @@ for ii=1:size(ve, 1)
 
 l = @layout grid(3,2)
 	plot(layout = l)
-	for ii=1:length(deflationOp)
+	for ii=eachindex(deflationOp)
 		plotsol!(deflationOp[ii], title="$ii", subplot = ii, label = "", xlabel="$ii", colorbar=true)
 	end
 	title!("")

@@ -5,7 +5,7 @@ abstract type AbstractBranchResult end
 namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
-namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in 1:length(x)), x)...)
+namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x)...)
 mergefromuser(x, a::NamedTuple) = merge(namedprintsol(x), a)
 ####################################################################################################
 # Structure to hold continuation result

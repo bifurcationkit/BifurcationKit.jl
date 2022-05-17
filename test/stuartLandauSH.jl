@@ -242,7 +242,7 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 outpo, = newton(probPsh, initpo_bar, par_hopf, optn; normN = norminf, jacobianPO = :autodiffDenseAnalytical)
 
 for ii=1:length(normals)
-	@show BK.E(probPsh	, [outpo[ii]], ii)
+	@show BK.E(probPsh, [outpo[ii]], ii)
 end
 
 getPeriod(probPsh, outpo, par_hopf)

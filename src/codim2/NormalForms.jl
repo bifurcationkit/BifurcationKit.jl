@@ -803,7 +803,7 @@ function zeroHopfNormalForm(F, dF, d2F, d3F,
 		@warn abs(_λ[_ind0]) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
 		q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
 		# imaginary eigenvalue
-		_indIm = argmin(real.((_λ[ii] for ii = 1:length(_λ) if ii!=_ind0)))
+		_indIm = argmin(real.((_λ[ii] for ii = eachindex(_λ) if ii!=_ind0)))
 		λI = _λ[_indIm]
 		q1 = geteigenvector(optionsN.eigsolver, _ev, _indIm)
 	else

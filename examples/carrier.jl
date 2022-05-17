@@ -45,7 +45,7 @@ recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 optnew = NewtonPar(tol = 1e-8, verbose = true)
 	sol, = @time newton(
 		F_carr, Jac_carr, sol0, par_car, optnew, normN = x -> norm(x, Inf64))
-	Plots.plot(out, label="Solution")
+	Plots.plot(sol, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 3, nev = 40, nInversion = 6, maxBisectionSteps = 25)
 	br, = @time continuation(

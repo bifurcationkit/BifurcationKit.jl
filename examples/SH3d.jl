@@ -197,7 +197,7 @@ push!(branches, deepcopy(brF))
 fig = Figure(resolution = (1200, 900))
 	BK.plotBranch(br)
 	fig = GLMakie.current_figure()
-	for ii=1:length(br1)
+	for ii=eachindex(br1)
 		lines!(fig[1,1], (br1[ii].γ).param, (br1[ii].γ).n2)
 		text!(fig[1,1], "$ii", position = Point(1/30+br1[ii].param[end], br1[ii].n2[end]))
 	end

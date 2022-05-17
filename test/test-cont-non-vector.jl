@@ -134,7 +134,7 @@ using KrylovKit
 function Fr(x::RecursiveVec, p)
 	r, s = p
 	out = similar(x)
-	for ii=1:length(x)
+	for ii=eachindex(x)
 		out[ii] .= r .+  s .* x[ii] .- x[ii].^3
 	end
 	out
@@ -150,7 +150,7 @@ end
 # We express the jacobian operator
 function (J::JacobianR)(dx)
 	out = similar(dx)
-	for ii=1:length(out)
+	for ii=eachindex(out)
 		out[ii] .= (J.s .- 3 .* (J.x[ii]).^2) .* dx[ii]
 	end
 	return out
@@ -161,7 +161,7 @@ struct linsolveBd_r <: BK.AbstractBorderedLinearSolver end
 function (l::linsolveBd_r)(J, dx)
 	x = J.x
 	out = similar(dx)
-	for ii=1:length(out)
+	for ii=eachindex(out)
 		out[ii] .= dx[ii] ./ (J.s .- 3 .* (x[ii]).^2)
 	end
 	out, true, 1
@@ -197,14 +197,14 @@ outfold, hist, flag = newton(
 	br0, 1; #index of the fold point
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, r) -> JacobianR(x, r[1]),
-	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
+	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)]),)
 
 outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(@lens _[2]), opts_br0;
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
+	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)])),
 	tangentAlgo = SecantPred(), plot = false)
 
 outfoldco, hist, flag = continuation(
@@ -212,7 +212,7 @@ outfoldco, hist, flag = continuation(
 	br0, 1, (@lens _[2]), opts_br0;
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
+	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)])),
 	tangentAlgo = BorderedPred(), plot = false)
 
 # try with newtonDeflation

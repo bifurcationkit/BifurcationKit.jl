@@ -460,9 +460,9 @@ function computeNormalForm(F, dF, d2F, d3F,
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
-			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[1:length(rightEv)])))
-			if norm(_λ[1:length(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
-				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[1:length(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[1:length(rightEv)] - rightEv)
+			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
+			if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
+				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
 			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
