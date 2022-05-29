@@ -21,7 +21,7 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
 """
 
-This composite type implements Finite Differences based on a Trapezoidal rule to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
+This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
 ## Arguments
 - `F` vector field specified as a function of two arguments `F(x,p)`

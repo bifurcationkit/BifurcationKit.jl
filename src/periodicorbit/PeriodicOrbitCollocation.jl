@@ -1,7 +1,7 @@
 using FastGaussQuadrature: gausslegendre
 
 """
-	cache = POOrthogonalCollocationCache(Ntst::Int, m::Int, Ty = Float64)
+	cache = OrthogonalCollocationCache(Ntst::Int, m::Int, Ty = Float64)
 
 Structure to hold the cache for the collocation method.
 
@@ -10,7 +10,7 @@ Structure to hold the cache for the collocation method.
 - `m` degree of the polynomials
 - `Ty` type of the time variable
 """
-struct POOrthogonalCollocationCache{T}
+struct OrthogonalCollocationCache{T}
 	Ntst::Int
 	degree::Int
     lagrange_vals::Matrix{T}
@@ -23,29 +23,29 @@ struct POOrthogonalCollocationCache{T}
 	full_mesh::Vector{T}
 end
 
-function POOrthogonalCollocationCache(Ntst::Int, m::Int, Ty = Float64)
+function OrthogonalCollocationCache(Ntst::Int, m::Int, Ty = Float64)
 	τs = LinRange{Ty}( 0, 1, Ntst + 1) |> collect
 	σs = LinRange{Ty}(-1, 1, m + 1)
 	L, ∂L = getL(σs)
 	zg, wg = gausslegendre(m)
-	prob = POOrthogonalCollocationCache(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(Ty, 1 + m * Ntst))
+	prob = OrthogonalCollocationCache(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(Ty, 1 + m * Ntst))
 	# put the mesh where we removed redundant timing
 	prob.full_mesh .= getTimes(prob)
 	return prob
 end
 
-@inline Base.eltype(pb::POOrthogonalCollocationCache) = eltype(pb.lagrange_vals)
-@inline Base.size(pb::POOrthogonalCollocationCache) = (pb.degree, pb.Ntst)
-@inline getLs(pb::POOrthogonalCollocationCache) = (pb.lagrange_vals, pb.lagrange_driv)
-@inline getMesh(pb::POOrthogonalCollocationCache) = pb.mesh
-@inline getMeshColl(pb::POOrthogonalCollocationCache) = pb.mesh_coll
-getMaxTimeStep(pb::POOrthogonalCollocationCache) = maximum(diff(getMesh(pb)))
+@inline Base.eltype(pb::OrthogonalCollocationCache) = eltype(pb.lagrange_vals)
+@inline Base.size(pb::OrthogonalCollocationCache) = (pb.degree, pb.Ntst)
+@inline getLs(pb::OrthogonalCollocationCache) = (pb.lagrange_vals, pb.lagrange_driv)
+@inline getMesh(pb::OrthogonalCollocationCache) = pb.mesh
+@inline getMeshColl(pb::OrthogonalCollocationCache) = pb.mesh_coll
+getMaxTimeStep(pb::OrthogonalCollocationCache) = maximum(diff(getMesh(pb)))
 τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j])
 # get the sigma corresponding to τ in the interval (𝜏s[j], 𝜏s[j+1])
 σj(τ, τs, j) = -(2*τ - τs[j] - τs[j + 1])/(-τs[j + 1] + τs[j])
 
 # code from Jacobi.lagrange
-function lagrange(i, x, z)
+function lagrange(i::Int, x, z)
     nz = length(z)
     l = one(z[1])
 	for k in 1:(i-1)
@@ -78,7 +78,7 @@ $(SIGNATURES)
 
 Return the times at which is evaluated the collocation problem.
 """
-function getTimes(pb::POOrthogonalCollocationCache)
+function getTimes(pb::OrthogonalCollocationCache)
 	m, Ntst = size(pb)
 	Ty = eltype(pb)
 	ts = Matrix{Ty}(undef, Ntst, m + 1)
@@ -94,7 +94,7 @@ function getTimes(pb::POOrthogonalCollocationCache)
 	return vec(tsvec)
 end
 
-function updateMesh!(pb::POOrthogonalCollocationCache, mesh)
+function updateMesh!(pb::OrthogonalCollocationCache, mesh)
 	pb.mesh .= mesh
 	pb.full_mesh .= getTimes(pb)
 end
@@ -114,7 +114,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `ϕ::AbstractVector` used to set a section for the phase constraint equation
 - `xπ::AbstractVector` used in the section for the phase constraint equation
 - `N::Int` dimension of the state space
-- `coll_cache::POOrthogonalCollocationCache` cache for collocation. See docs of `POOrthogonalCollocationCache` .
+- `coll_cache::OrthogonalCollocationCache` cache for collocation. See docs of `OrthogonalCollocationCache` .
 
 ## Methods
 
@@ -140,7 +140,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 - `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
 
 """
-@with_kw_noshow struct PeriodicOrbitOCollProblem{TF, TJ, vectype, Tmass, Tcache <: POOrthogonalCollocationCache} <: AbstractPeriodicOrbitProblem
+@with_kw_noshow struct PeriodicOrbitOCollProblem{TF, TJ, vectype, Tmass, Tcache <: OrthogonalCollocationCache} <: AbstractPeriodicOrbitProblem
 	# Function F(x, par)
 	F::TF = nothing
 
@@ -169,16 +169,20 @@ end
 
 # trivial constructor
 function PeriodicOrbitOCollProblem(Ntst, m, N = 0)
-	cache = POOrthogonalCollocationCache(Ntst, m)
+	cache = OrthogonalCollocationCache(Ntst, m)
 	PeriodicOrbitOCollProblem(; N = N, coll_cache = cache)
 end
 
 # TODO rename this in num_mesh? or meshSize
 @inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.coll_cache.Ntst
-
-@inline length(pb::PeriodicOrbitOCollProblem) = ( (n, m, Ntst) = size(pb); return n * (1 + m * Ntst) )
 # the size is (n, m, Ntst)
 @inline Base.size(pb::PeriodicOrbitOCollProblem) = (pb.N, size(pb.coll_cache)...)
+
+@inline function length(pb::PeriodicOrbitOCollProblem)
+	(n, m, Ntst) = size(pb)
+	return n * (1 + m * Ntst)
+end
+
 @inline Base.eltype(pb::PeriodicOrbitOCollProblem) = eltype(pb.coll_cache)
 getLs(pb::PeriodicOrbitOCollProblem) = getLs(pb.coll_cache)
 
@@ -229,13 +233,13 @@ end
 	return result
 end
 
-# function or collocation problem
+# function for collocation problem
 @views function functionalColl!(pb, out, u, period, (L, ∂L), pars)
 	Ty = eltype(u)
 	n, ntimes = size(u)
 	m = pb.coll_cache.degree
 	Ntst = pb.coll_cache.Ntst
-	# on veut faire des slices a t fixes, donc des gj[:, j], c'est le plus rapide
+	# we want slices at fixed  times, hence gj[:, j] is the fastest
 	gj = zeros(Ty, n, m)
 	∂gj = zeros(Ty, n, m)
 	uj = zeros(Ty, n, m+1)
@@ -249,7 +253,7 @@ end
 		# mul!(∂gj, uj, ∂L')
 		# compute the collocation residual
 		for l in 1:m
-			out[:, rg[l]] .= ∂gj[:, l] .- (period * (mesh[j+1]-mesh[j]) / (2)) .* pb.F(gj[:, l], pars)
+			out[:, rg[l]] .= ∂gj[:, l] .- (period * (mesh[j+1]-mesh[j]) / 2) .* pb.F(gj[:, l], pars)
 		end
 		rg = rg .+ m
 	end
@@ -266,7 +270,6 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 	T = getPeriod(prob, u, p)
 	ts = getTimes(prob)
 	uc = getTimeSlices(prob, u)
-	n, m, Ntst = size(prob)
 	return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
 

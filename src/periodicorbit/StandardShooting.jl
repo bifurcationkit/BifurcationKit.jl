@@ -71,6 +71,9 @@ end
 function Base.show(io::IO, sh::ShootingProblem)
 	println(io, "┌─ Standard shooting problem")
 	println(io, "├─ time slices : ", getMeshSize(sh))
+	if sh.flow isa FlowDE
+		println(io, "├─ integrator  : ", typeof(sh.flow.alg).name.name)
+	end
 	println(io, "└─ parallel    : ", isParallel(sh))
 end
 
@@ -132,7 +135,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 	T = getPeriod(sh, x)
 	M = getMeshSize(sh)
 
-	# extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
+	# extract the orbit guess
 	xc = getTimeSlices(sh, x)
 
 	# variable to hold the computed result
