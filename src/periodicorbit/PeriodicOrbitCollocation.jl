@@ -76,7 +76,7 @@ end
 """
 $(SIGNATURES)
 
-Return the times at which is evaluated the collocation problem.
+Return the times at which the collocation problem is evaluated.
 """
 function getTimes(pb::OrthogonalCollocationCache)
 	m, Ntst = size(pb)
@@ -126,7 +126,7 @@ Here are some useful methods you can apply to `pb`
 - `getMeshColl(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
 - `getTimes(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
 - `generateSolution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
-- `POOcollSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
+- `POOCollSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
 
 
 # Orbit guess
@@ -138,7 +138,6 @@ Note that you can generate this guess from a function using `generateSolution`.
  A functional, hereby called `G`, encodes this problem. The following methods are available
 
 - `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
-
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{TF, TJ, vectype, Tmass, Tcache <: OrthogonalCollocationCache} <: AbstractPeriodicOrbitProblem
 	# Function F(x, par)
@@ -165,6 +164,9 @@ Note that you can generate this guess from a function using `generateSolution`.
 
 	# collocation cache
 	coll_cache::Tcache = nothing
+
+	# whether F and J are inplace functions
+	isinplace::Bool = false
 end
 
 # trivial constructor
@@ -175,7 +177,7 @@ end
 
 # TODO rename this in num_mesh? or meshSize
 @inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.coll_cache.Ntst
-# the size is (n, m, Ntst)
+# the size returns (n, m, Ntst)
 @inline Base.size(pb::PeriodicOrbitOCollProblem) = (pb.N, size(pb.coll_cache)...)
 
 @inline function length(pb::PeriodicOrbitOCollProblem)
@@ -195,6 +197,7 @@ getMesh(pb::PeriodicOrbitOCollProblem) = getMesh(pb.coll_cache)
 getMeshColl(pb::PeriodicOrbitOCollProblem) = getMeshColl(pb.coll_cache)
 getMaxTimeStep(pb::PeriodicOrbitOCollProblem) = getMaxTimeStep(pb.coll_cache)
 updateMesh!(pb::PeriodicOrbitOCollProblem, mesh) = updateMesh!(pb.coll_cache, mesh)
+isInplace(pb::PeriodicOrbitOCollProblem) = pb.isinplace
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 	N, m, Ntst = size(pb)
@@ -203,6 +206,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 	println(io, "├─ time slices     : ", Ntst)
 	println(io, "├─ degree          : ", m)
 	println(io, "├─ space dimension : ", pb.N)
+	println(io, "├─ inplace         : ", pb.isinplace)
 	println(io, "└─ # unknowns      : ", pb.N * (1 + m * Ntst))
 end
 
@@ -222,6 +226,10 @@ function generateSolution(pb::PeriodicOrbitOCollProblem, orbit, period)
 	return vcat(vec(ci), period)
 end
 
+@views function phaseCondition(prob::PeriodicOrbitOCollProblem, u)
+	dot(u[1:end-1], prob.ϕ) - dot(prob.xπ, prob.ϕ)
+end
+
 @views function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
 	uc = getTimeSlices(prob, u)
 	T = getPeriod(prob, u, pars)
@@ -229,32 +237,40 @@ end
 	resultc = getTimeSlices(prob, result)
 	functionalColl!(prob, resultc, uc, T, getLs(prob.coll_cache), pars)
 	# add  the phase condition
-	result[end] = dot(u[1:end-1], prob.ϕ) - dot(prob.xπ, prob.ϕ)
+	result[end] = phaseCondition(prob, u)
 	return result
 end
 
+function _POOCollScheme!(pb::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, tmp)
+	applyF(pb, tmp, u, par)
+	dest .= @. ∂u - h * tmp
+end
+
 # function for collocation problem
-@views function functionalColl!(pb, out, u, period, (L, ∂L), pars)
+@views function functionalColl!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
 	Ty = eltype(u)
 	n, ntimes = size(u)
 	m = pb.coll_cache.degree
 	Ntst = pb.coll_cache.Ntst
 	# we want slices at fixed  times, hence gj[:, j] is the fastest
+	# temporaries to reduce allocations
 	gj = zeros(Ty, n, m)
 	∂gj = zeros(Ty, n, m)
 	uj = zeros(Ty, n, m+1)
 	mesh = getMesh(pb)
-	rg = 1:m+1
+	# range for locating time slices
+	rg = UnitRange(1, m+1)
 	for j in 1:Ntst
 		uj .= u[:, rg]
-		gj 	.=  uj * L'
-		∂gj .=  uj * ∂L'
-		# mul!(gj, uj, L')
-		# mul!(∂gj, uj, ∂L')
+		mul!(gj, uj, L')
+		mul!(∂gj, uj, ∂L')
 		# compute the collocation residual
 		for l in 1:m
-			out[:, rg[l]] .= ∂gj[:, l] .- (period * (mesh[j+1]-mesh[j]) / 2) .* pb.F(gj[:, l], pars)
+			# out[:, end] serves as buffer for now
+			_POOCollScheme!(pb, out[:, rg[l]], ∂gj[:, l], gj[:, l], pars, period * (mesh[j+1]-mesh[j]) / 2, out[:, end])
+
 		end
+		# carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
 		rg = rg .+ m
 	end
 	# add the periodicity condition
@@ -423,13 +439,21 @@ end
 ∂(f) = x -> ForwardDiff.derivative(f, x)
 ∂(f, n) = n == 0 ? f : ∂(∂(f), n-1)
 
-struct POOcollSolution{Tpb, Tx}
+
+"""
+Structure to encode the solution associated to a functional  `::PeriodicOrbitOCollProblem`. In particular, this allows to use the collocation polynomials to interpolate the solution. Hence, if `prob::POOCollSolution`, one can call
+
+    `prob(t)`
+
+on any time `t`.
+"""
+struct POOCollSolution{Tpb <: PeriodicOrbitOCollProblem, Tx}
 	pb::Tpb
 	x::Tx
 end
 
-@views function (sol::POOcollSolution)(t0)
-	n,m,Ntst = size(sol.pb)
+@views function (sol::POOCollSolution)(t0)
+	n, m, Ntst = size(sol.pb)
 	xc = getTimeSlices(sol.pb, sol.x)
 
 	T = getPeriod(sol.pb, sol.x, 0)

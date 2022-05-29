@@ -6,7 +6,7 @@ using Test
 # The goal of these tests is to test all combinaisons of options
 ##################################################################
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ν, c3 = p
@@ -34,7 +34,7 @@ br, = continuation(jet[1], jet[2], u0, par_hopf, (@lens _.r), optconteq)
 Ntst = 3
 m = 4
 N = 3
-coll_cache = BK.POOrthogonalCollocationCache(Ntst, m)
+coll_cache = BK.OrthogonalCollocationCache(Ntst, m)
 const Mf = rand(N,N)
 prob_col = BK.PeriodicOrbitOCollProblem(F = (x,p) -> Mf * x.^2, N = N, coll_cache = coll_cache, ϕ = ones(N*( 1 + m * Ntst)), xπ = zeros(N*( 1 + m * Ntst)))
 size(prob_col)
@@ -55,18 +55,22 @@ BK.∂(sin, 2)(0.)
 prob_col(_ci, par_sl) #|> scatter
 BK.getTimeSlices(prob_col, _ci)
 # interpolate solution
-sol = BK.POOcollSolution(prob_col, _ci)
+sol = BK.POOCollSolution(prob_col, _ci)
 sol(rand())
 
 # using ForwardDiff
 # J(x,p) = ForwardDiff.jacobian(u -> prob_col(u,  p), x)
 # _J = J(vcat(vec(_ci), 1),  par_sl)
 # 	heatmap(_J .!= 0, yflip = true)
+
+# case inplace
+prob_col = BK.PeriodicOrbitOCollProblem(F = (o,x,p) -> o .= x.^2, N = N, coll_cache = coll_cache, ϕ = ones(N*( 1 + m * Ntst)), xπ = zeros(N*( 1 + m * Ntst)), isinplace = true)
+prob_col(_ci, par_sl)
 ####################################################################################################
 Ntst = 50
 m = 4
 N = 2
-coll_cache = BK.POOrthogonalCollocationCache(Ntst, m)
+coll_cache = BK.OrthogonalCollocationCache(Ntst, m)
 prob_col = BK.PeriodicOrbitOCollProblem(F = Fsl, N = 2, coll_cache = coll_cache, ϕ = zeros(N*( 1 + m * Ntst)), xπ = zeros(N*( 1 + m * Ntst)))
 prob_col.ϕ[2] = 1
 

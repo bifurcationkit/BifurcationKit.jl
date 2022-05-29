@@ -4,7 +4,7 @@ using Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 ####################################################################################################
 function Lor(u, p)
 	@unpack α,β,γ,δ,G,F,T = p

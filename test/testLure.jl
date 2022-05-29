@@ -3,7 +3,7 @@ using Parameters, Setfield, LinearAlgebra, Test
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-norminf = (x) -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 recordFromSolution(x, p) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
 function lur!(dz, z, p, t)

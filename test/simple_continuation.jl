@@ -21,7 +21,7 @@ BK._displayLine(1, 1, (1,1))
 BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
 
-normInf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false, detectBifurcation = 0)
 x0 = 0.01 * ones(N)

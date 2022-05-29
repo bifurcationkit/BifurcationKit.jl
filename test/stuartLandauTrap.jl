@@ -6,7 +6,7 @@ using Test
 # The goal of these tests is to test all combinaisons of options
 ##################################################################
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ν, c3 = p

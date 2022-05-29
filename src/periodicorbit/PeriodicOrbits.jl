@@ -29,7 +29,7 @@ onGpu(pb::AbstractPOFDProblem) = pb.ongpu
 hasHessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
 isInplace(pb::AbstractPOFDProblem) = pb.isinplace
 
-function applyF(pb::AbstractPOFDProblem, dest, x, p)
+function applyF(pb, dest, x, p)
 	if isInplace(pb)
 		pb.F(dest, x, p)
 	else
@@ -38,7 +38,7 @@ function applyF(pb::AbstractPOFDProblem, dest, x, p)
 	dest
 end
 
-function applyJ(pb::AbstractPOFDProblem, dest, x, p, dx)
+function applyJ(pb, dest, x, p, dx)
 	if isInplace(pb)
 		pb.J(dest, x, p, dx)
 	else

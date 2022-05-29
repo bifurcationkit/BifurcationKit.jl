@@ -169,7 +169,7 @@ getTimeSlices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
 # getTimeSlices(x::BorderedArray,  N, M) = x.u
 getTimeSlices(pb::PeriodicOrbitTrapProblem, x) = getTimeSlices(x, pb.N, pb.M)
 
-# do not type h::Number because this will imped using CUDA
+# do not type h::Number because this will annoy using CUDA
 function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h, tmp, linear::Bool = true; applyf::Bool = true)
 	# this function implements the basic implicit scheme used for the time integration
 	# because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call

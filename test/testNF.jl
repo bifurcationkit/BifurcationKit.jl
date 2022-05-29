@@ -1,7 +1,7 @@
 # using Revise, Plots, Test
 using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff, Parameters
 const BK = BifurcationKit
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 Fbp(x, p) = [p.a0 + x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
 par = (a0 = 0., μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0)
@@ -301,7 +301,7 @@ BK.type(cuspnf)
 @test cuspnf.nf.c == par.c
 ####################################################################################################
 # test for the Bogdanov-Takens normal form
-Fbt(x, p) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
+Fbt(x, p, t = 0) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
 par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
 jet  = BK.getJet(Fbt; matrixfree=false)
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 40, verbose = false)

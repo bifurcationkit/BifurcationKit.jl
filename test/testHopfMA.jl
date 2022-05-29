@@ -3,7 +3,7 @@ using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, Parameters, F
 const BK = BifurcationKit
 
 f1(u, v) = u^2 * v
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Fbru!(f, x, p)
 	@unpack α, β, D1, D2, l = p

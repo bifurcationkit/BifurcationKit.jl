@@ -79,7 +79,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 25)
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 150, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, precisionStability = 1e-5, detectBifurcation = 0, plotEveryStep = 40, saveSolEveryStep=1)
 
-br_pocoll, ucoll, = @time continuation(
+br_pocoll, = @time continuation(
 	jet..., br, 4, opts_po_cont,
 	PeriodicOrbitOCollProblem(20, 5);
 	tangentAlgo = BorderedPred(),

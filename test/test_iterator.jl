@@ -2,7 +2,7 @@
 using BifurcationKit, SparseArrays, LinearAlgebra, Plots, Setfield
 const BK = BifurcationKit
 
-normInf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 k = 2
 F = (x, p) -> (@. p + x - x^(k+1)/(k+1))

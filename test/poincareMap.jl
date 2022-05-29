@@ -4,7 +4,7 @@ using BifurcationKit, OrdinaryDiffEq, ForwardDiff
 	# using Zygote, DiffEqSensitivity
 	using LinearAlgebra, Parameters
 
-norminf = x -> norm(x, Inf)
+norminf(x) = norm(x, Inf)
 
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ω, c3 = p
