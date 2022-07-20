@@ -20,7 +20,7 @@ The current focus is on large scale nonlinear problems and multiple hardwares. H
 ## Support and citation
 If you use this package for your work, we ask that you cite the following paper. Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future. It is referenced on HAL-Inria as follows:
 
-```
+```bibtex
 @misc{veltz:hal-02902346,
   TITLE = {{BifurcationKit.jl}},
   AUTHOR = {Veltz, Romain},
