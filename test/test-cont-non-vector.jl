@@ -134,7 +134,7 @@ using KrylovKit
 function Fr(x::RecursiveVec, p)
 	r, s = p
 	out = similar(x)
-	for ii=eachindex(x)
+	for ii=1:length(x)
 		out[ii] .= r .+  s .* x[ii] .- x[ii].^3
 	end
 	out
@@ -150,7 +150,7 @@ end
 # We express the jacobian operator
 function (J::JacobianR)(dx)
 	out = similar(dx)
-	for ii=eachindex(out)
+	for ii=1:length(out)
 		out[ii] .= (J.s .- 3 .* (J.x[ii]).^2) .* dx[ii]
 	end
 	return out
@@ -161,7 +161,7 @@ struct linsolveBd_r <: BK.AbstractBorderedLinearSolver end
 function (l::linsolveBd_r)(J, dx)
 	x = J.x
 	out = similar(dx)
-	for ii=eachindex(out)
+	for ii=1:length(out)
 		out[ii] .= dx[ii] ./ (J.s .- 3 .* (x[ii]).^2)
 	end
 	out, true, 1
@@ -173,7 +173,7 @@ opt_newton0 = NewtonPar(tol = 1e-10, maxIter = 50, verbose = false, linsolver = 
 		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),
 		opt_newton0)
 
-Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copyto!(dest.vecs, in.vecs)
+Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
 
@@ -197,14 +197,14 @@ outfold, hist, flag = newton(
 	br0, 1; #index of the fold point
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, r) -> JacobianR(x, r[1]),
-	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)]),)
+	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
 
 outfoldco, hist, flag = continuation(
 	Fr, (x, p) -> JacobianR(x, p[1]),
 	br0, 1,	(@lens _[2]), opts_br0;
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)])),
+	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = SecantPred(), plot = false)
 
 outfoldco, hist, flag = continuation(
@@ -212,7 +212,7 @@ outfoldco, hist, flag = continuation(
 	br0, 1, (@lens _[2]), opts_br0;
 	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
 	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=eachindex(x)])),
+	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
 	tangentAlgo = BorderedPred(), plot = false)
 
 # try with newtonDeflation

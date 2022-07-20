@@ -38,12 +38,12 @@ algsl = KenCarp4()#Rodas4P()
 sol = solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
-function flowTS(x, t, pb = prob; alg = algsl, kwargs...)
+function flowTS(x, t, pb; alg = algsl, kwargs...)
 	_pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
 	sol = DiffEqBase.solve(_pb, alg; abstol =1e-10, reltol=1e-9, save_everystep = false, kwargs...)
 	return sol.t, sol
 end
-flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb = pb; alg = alg, kwargs...)[2][end]
+flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2][end]
 
 
 dflowDE = (x, dx, ts; kwargs...) -> diffAD(z -> flowDE(z, ts; kwargs...), x, dx)
@@ -86,7 +86,7 @@ u0 = [0, 1.]
 du0 = [0, -1.]
 
 # check that we cross the sections the way we want
-ts, ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, save_at = LinRange(0,1,20))
+ts, ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, saveat = LinRange(0,1,20))
 # plot(ts,ss[:,:]')
 # plot(ss[1,:], ss[2,:], label="flow");scatter!(ss[1,[1]], ss[2,[1]]);plot!(sol[1,:], sol[2,:], label="sol")
 
@@ -105,7 +105,7 @@ println("--> dΠ using Finite differences")
 resFD = dΠFD(u0, du0);show(resFD)
 
 println("--> Norm of the difference = ", resAna - resFD |> norminf)
-@test resAna - resFD |> norminf < 1000δ
+@test resAna - resFD |> norminf < 1e-4
 ####################################################################################################
 # matrix of the Poincare map, analytical formula
 const FD = ForwardDiff
@@ -119,12 +119,12 @@ normal = normals[1]
 
 dTfd = BK.finiteDifferences(T, u0; δ = 1e-8)
 dT = -normal' * dϕ ./ dot(normal, F)
-@test norm(dTfd - dT, Inf) < 1e-5
+@test norm(dTfd - dT, Inf) < 5e-5
 
 Jtmp = dϕ .- F * normal' * dϕ #./ dot(F, normal)
 dΠfd = BK.finiteDifferences(Π, u0; δ = 1e-8)
 Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
-@test norm(dΠfd - Jtmp, Inf) < 2e-5
+@test norm(dΠfd - Jtmp, Inf) < 5e-5
 ####################################################################################################
 # comparison with BK
 using BifurcationKit

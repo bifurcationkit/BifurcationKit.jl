@@ -69,7 +69,7 @@ br_po_pd, = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifu
 ####################################################################################################
 using OrdinaryDiffEq
 
-probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; atol = 1e-10, rtol = 1e-7)
+probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-10, reltol = 1e-7)
 
 optn_po = NewtonPar(tol = 1e-7, maxIter = 25)
 
