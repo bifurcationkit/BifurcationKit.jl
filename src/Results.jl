@@ -14,7 +14,7 @@ $(TYPEDEF)
 
 Structure which holds the results after a call to [`continuation`](@ref).
 
-You can see the propertynames of a result by using `propertynames(::ContResult)` or by typing `br.` + TAB where `br::ContResult`.
+You can see the propertynames of a result `br::ContResult` by using `propertynames(br)` or `propertynames(br.branch)`.
 
 # Fields
 
@@ -105,7 +105,7 @@ function Base.getproperty(br::ContResult, s::Symbol)
 		getproperty(br.branch, s)
 	end
 end
-Base.propertynames(br::ContResult) = (propertynames(br.branch)..., :specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
+
 @inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
 
 """
@@ -228,7 +228,6 @@ Base.lastindex(br::Branch) = lastindex(br.γ)
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
 Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
-Base.propertynames(br::Branch) = ((:γ, :bp)..., propertynames(br.γ)...)
 Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
 ####################################################################################################
 _reverse!(x) = reverse!(x)
