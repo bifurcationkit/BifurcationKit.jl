@@ -61,15 +61,15 @@ affect!(integrator) = terminate!(integrator)
 cb = ContinuousCallback(pSection, affect!; affect_neg! = nothing)
 
 Π(x) = flowDE(x, Inf; callback = cb, save_everystep = false) # Poincaré return map
-T(x) = flowTS(x, Inf64; callback = cb)[1][end] # time to section
+T(x) = flowTS(x, Inf64, prob; callback = cb)[1][end] # time to section
 dΠ(x, dx) = diffAD(Π, x, dx)
 dΠFD(x, dx) = (Π(x .+ δ .* dx) .- Π(x)) ./ δ
 
-function DPoincare(x, dx, p, normal, center, _cb; verbose = false)
+function DPoincare(x, dx, p, normal, center, _cb, pb; verbose = false)
 	verbose && printstyled(color=:blue, "\nEntree dans DPoincare\n")
 	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
 	# compute the Poincare map from x
-	_tΣ, _solΣ = flowTS(x, Inf; callback = _cb, save_everystep = false)
+	_tΣ, _solΣ = flowTS(x, Inf, pb; callback = _cb, save_everystep = false)
 	tΣ, solΣ = _tΣ[end], _solΣ[end]
 
 	z = Fsl(solΣ, p)
@@ -86,7 +86,7 @@ u0 = [0, 1.]
 du0 = [0, -1.]
 
 # check that we cross the sections the way we want
-ts, ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, saveat = LinRange(0,1,20))
+ts, ss = flowTS([0., 1], Inf, prob; callback = cb, save_everystep = true, saveat = LinRange(0,1,20))
 # plot(ts,ss[:,:]')
 # plot(ss[1,:], ss[2,:], label="flow");scatter!(ss[1,[1]], ss[2,[1]]);plot!(sol[1,:], sol[2,:], label="sol")
 
@@ -99,7 +99,7 @@ ts, ss = flowTS([0., 1], Inf; callback = cb, save_everystep = true, saveat = Lin
 # Zygote.pullback(t->Π(u0 .+ t.* du0), 0.)[1] |> Base.show
 
 println("--> dΠ using Analytical formula")
-resAna = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb);show(resAna)
+resAna = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob);show(resAna)
 
 println("--> dΠ using Finite differences")
 resFD = dΠFD(u0, du0);show(resFD)
@@ -111,9 +111,9 @@ println("--> Norm of the difference = ", resAna - resFD |> norminf)
 const FD = ForwardDiff
 const BK = BifurcationKit
 
-tΣ, solΣ = flowTS(u0, Inf64; callback = cb)
+tΣ, solΣ = flowTS(u0, Inf64, prob; callback = cb)
 	tΣ = tΣ[end]; solΣ = solΣ[end]
-dϕ = FD.jacobian( x -> flowTS(x, tΣ)[2][end], (u0))
+dϕ = FD.jacobian( x -> flowTS(x, tΣ, prob)[2][end], (u0))
 F = Fsl(Π(u0), par_sl)
 normal = normals[1]
 
@@ -146,6 +146,6 @@ probHPsh = BK.PoincareShootingProblem(
 @show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 
 
-resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb; verbose = true)
+resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
 resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 @test norminf(resDP - resDPBK) < 1e-6
