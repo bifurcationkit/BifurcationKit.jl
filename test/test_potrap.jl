@@ -1,4 +1,4 @@
-using Revise
+# using Revise
 using Test, BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
 const BK = BifurcationKit
 
