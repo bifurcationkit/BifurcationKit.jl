@@ -11,7 +11,7 @@ Structure to record a generic special (bifurcation) point.
 
 $(TYPEDFIELDS)
 """
-@with_kw struct SpecialPoint{T, Tp, Tv} <: AbstractBifurcationPoint
+@with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
 	"Bifurcation type, `:hopf, :bp...`."
 	type::Symbol = :none
 
@@ -31,7 +31,7 @@ $(TYPEDFIELDS)
 	x::Tv = Vector{T}(undef, 0)
 
 	"Tangent along the branch at the special (bifurcation) point"
-	τ::BorderedArray{Tv, T} = BorderedArray(x, T(0))
+	τ::BorderedArray{Tvτ, T} = BorderedArray(x, T(0))
 
 	"Eigenvalue index responsible for the special (bifurcation) (if applicable)"
 	ind_ev::Int64 = 0
@@ -52,7 +52,7 @@ $(TYPEDFIELDS)
 	interval::Tuple{T, T} = (0, 0)
 end
 
-getVectorType(::Type{SpecialPoint{T, Tp, Tv}}) where {T, Tp, Tv} = Tv
+getVectorType(::Type{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = Tvτ
 type(bp::SpecialPoint) = bp.type
 
 """
@@ -63,15 +63,15 @@ Return the dimension of the kernel of the special point.
 @inline kernelDim(bp::SpecialPoint) = abs(bp.δ[1])
 
 # constructors
-SpecialPoint(x0, T, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = namedprintsol(printsol), x = x0, τ = BorderedArray(x0, T(0)), ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
+SpecialPoint(x0, τ, T::Type, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = printsol, x = x0, τ = τ, ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
 
-SpecialPoint(state::ContState, type::Symbol, status::Symbol, printsolution, normC, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = SpecialPoint(
+SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = SpecialPoint(
 				type = type,
 				idx = idx,
 				param = getp(state),
-				norm = normC(getx(state)),
-				printsol = namedprintsol(printsolution(getx(state), getp(state))),
-				x = _copy(getx(state)),
+				norm = it.normC(getx(state)),
+				printsol = namedprintsol(recordFromSolution(it)(getx(state), getp(state))),
+				x = getSolution(it.prob, _copy(getx(state))),
 				τ = copy(state.τ),
 				ind_ev = ind_ev,
 				step = state.step,
@@ -83,10 +83,14 @@ SpecialPoint(state::ContState, type::Symbol, status::Symbol, printsolution, norm
 
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
 	if bp.type == :none ; return; end
+	if bp.type == :endpoint
+		@printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                     step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
+		return
+	end
 	if bp.status == :converged
-		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+		@printf(io, "- #%3i,\e[1;34m %8s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	else
-		@printf(io, "- #%3i,\e[1;34m %5s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+		@printf(io, "- #%3i,\e[1;34m %8s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
 	end
 end
 
@@ -209,7 +213,7 @@ Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint)
 	println(io, "Non simple bifurcation point at ", getLensSymbol(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
-	println(io, "Normal form :")
+	println(io, "Normal form:")
 	println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
 end
 ####################################################################################################

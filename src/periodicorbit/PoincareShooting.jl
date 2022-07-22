@@ -7,11 +7,18 @@
 
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
-- `M`: the number of Poincaré sections. If `M==1`, then the simple shooting is implemented and the multiple one otherwise.
-- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M==1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
+- `M`: the number of Poincaré sections. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
+- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M == 1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
 - `δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
 - `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplane section)
 - `parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
+- `par` parameters of the model
+- `lens` parameter axis
+- `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
+- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
+
+## Jacobian
+$DocStrjacobianPOSh
 
 ## Simplified constructors
 - A simpler way is to create a functional is
@@ -44,19 +51,32 @@ Note that you can generate this guess from a function solution using `generateSo
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS} <: AbstractShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS, Tpar, Tlens} <: AbstractShootingProblem
 	M::Int64 = 0						# number of Poincaré sections
 	flow::Tf = Flow()					# should be a Flow
 	section::Tsection = SectionPS(M)	# Poincaré sections
 	δ::Float64 = 0e-8					# Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
 	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
+	par::Tpar = nothing
+	lens::Tlens = nothing
+	updateSectionEveryStep::Int = 0
+	jacobian::Symbol = :autodiffDenseAnalytical
 end
 
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
-function Base.show(io::IO, pb::PoincareShootingProblem)
-	println(io, "┌─ Poincaré shooting problem")
-	println(io, "├─ time slices : ", getMeshSize(pb))
-	println(io, "└─ parallel   : ", isParallel(pb))
+@inline getLens(psh::PoincareShootingProblem) = psh.lens
+getParams(prob::PoincareShootingProblem) = prob.par
+
+function Base.show(io::IO, psh::PoincareShootingProblem)
+	println(io, "┌─ Poincaré shooting functional for periodic orbits")
+	println(io, "├─ time slices : ", getMeshSize(psh))
+	println(io, "├─ lens        : ", getLensSymbol(psh.lens))
+    println(io, "├─ jacobian    : ", psh.jacobian)
+    println(io, "├─ update section : ", psh.updateSectionEveryStep)
+	if psh.flow isa FlowDE
+		println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
+	end
+	println(io, "└─ parallel    : ", isParallel(psh))
 end
 
 R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
@@ -353,8 +373,8 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 		@views dflow(Jtmp, xc[:, im1], tΣ)
 		Jtmp .= Jtmp .- F * normal' * Jtmp ./ dot(F, normal)
 		# projection with Rm, Em
-		ForwardDiff.jacobian!(Rm, x->R(psh.section, x, ii), zeros(N))
-		ForwardDiff.jacobian!(Em, x->E(psh.section, x, im1), zeros(Nm1))
+		ForwardDiff.jacobian!(Rm, x-> R(psh.section, x, ii), zeros(N))
+		ForwardDiff.jacobian!(Em, x-> E(psh.section, x, im1), zeros(Nm1))
 		J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (im1-1)*Nm1+1:(im1-1)*Nm1+Nm1] .= -Rm * Jtmp * Em
 		if M == 1
 			J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .+= In
@@ -369,26 +389,42 @@ end
 (psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function reMake(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers, period; k...)
+function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, period; k...)
 
 	# create the section
 	if isEmpty(prob.section)
-	normals = [F(u, hopfpt.params) for u in centers]
+	normals = [residual(prob_vf, u, hopfpt.params) for u in centers]
 	for n in normals; n ./= norm(n); end
 	else
 		normals = prob.section.normals
 		centers = prob.section.centers
 	end
 
-	@assert isEmpty(prob.section) "Specifying its own section for aBS from a Hopf point is not allowed yet."
+	# @assert isEmpty(prob.section) "Specifying its own section for aBS from a Hopf point is not allowed yet."
 
 	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. `prob.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
 
-	# update the problem
+	# update the problem, hacky way to pass parameters
 	if length(prob.flow) == 4
-		probPSh = PoincareShootingProblem(prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers);
+            parallel = prob.parallel,
+            lens = getLens(prob_vf),
+            par = getParams(prob_vf),
+            updateSectionEveryStep = prob.updateSectionEveryStep,
+            jacobian = prob.jacobian,
+            prob.flow.kwargs...)
 	else
-		probPSh = PoincareShootingProblem(prob.flow.prob1, prob.flow.alg1, prob.flow.prob2, prob.flow.alg2, deepcopy(normals), deepcopy(centers); parallel = prob.parallel, prob.flow.kwargs...)
+		probPSh = PoincareShootingProblem(prob.flow.prob1,
+            prob.flow.alg1,
+            prob.flow.prob2,
+            prob.flow.alg2,
+            deepcopy(normals),
+            deepcopy(centers);
+            parallel = prob.parallel,
+            lens = getLens(prob_vf),
+            updateSectionEveryStep = prob.updateSectionEveryStep,
+            jacobian = prob.jacobian,
+            prob.flow.kwargs...)
 	end
 
 	# create initial guess. We have to pass it through the projection R
@@ -396,7 +432,7 @@ function reMake(prob::PoincareShootingProblem, F, dF, par, hopfpt, ζr, centers,
 	M = getMeshSize(probPSh)
 	@assert length(normals) == M
 	orbitguess_bar = zeros(length(centers[1])-1, M)
-	for ii in 1:M
+	for ii in 1:length(normals)
 		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)
 	end
 

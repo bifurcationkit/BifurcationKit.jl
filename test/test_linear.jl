@@ -38,6 +38,15 @@ z_sim = BorderedArray(rand(3), rand(2))
 z_sim2 = similar(z_sim)
 typeof(z_sim) == typeof(z_sim2)
 ####################################################################################################
+# test _axpy_op
+J0 = rand(100, 100)
+dx = rand(size(J0, 1))
+a₀ = rand(ComplexF64)
+a₁ = -1.432
+out1 = BK._axpy_op(J0, dx, a₀, a₁)
+out2 = a₀ * dx + a₁ * J0 * dx
+@test out1 ≈ out2
+####################################################################################################
 # test of the linear  solvers
 J0 = rand(100,100) * 0.1 - I
 rhs = rand(100)
@@ -47,7 +56,7 @@ ls = DefaultLS()
 _sol, = ls(J0, rhs)
 @test _sol == sol_explicit
 
-ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16)
+ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
 _sol, = ls(J0, rhs)
 @test _sol ≈ sol_explicit
 
@@ -62,21 +71,11 @@ ls = DefaultLS()
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol == sol_explicit
 
-ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16)
-_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
-@test _sol ≈ sol_explicit
-
-# with preconditioner
-ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16, Pl = I)
+ls = GMRESIterativeSolvers(N=100, reltol = 1e-16)
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol ≈ sol_explicit
 
 ls = GMRESKrylovKit(rtol = 1e-16)
-_sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
-@test _sol ≈ sol_explicit
-
-# with preconditioner
-ls = GMRESKrylovKit(rtol = 1e-16, Pl = I)
 _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
 @test _sol ≈ sol_explicit
 ####################################################################################################
@@ -130,23 +129,6 @@ sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 
 @test sol_bd1u ≈ sol_bd2u
 @test sol_bd1p ≈ sol_bd2p
-####################################################################################################
-# test of bordered linear solver in nearly singular case
-n = 70
-A = [ (i==j) - (i>j)   for i=1:n, j=1:n]
-b = rand(n); c = rand(n); d = rand();
-x = rand(n); y = rand()
-f = A*x + b*y; g = dot(c, x) + d*y
-
-linBdsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false, k = 1, tol = 1e-10)
-sol_bd3u, sol_bd3p, = @time linBdsolver(A, b, c, d, f, g)
-@test norm(sol_bd3u - x, Inf) > 1e-8
-# @test norm(sol_bd3p - y, Inf) > 1e-8
-
-linBdsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = true, k = 5, tol = 1e-10)
-sol_bd3u, sol_bd3p, = @time linBdsolver(A, b, c, d, f, g)
-@test norm(sol_bd3u - x, Inf) < 1e-10
-@test norm(sol_bd3p - y, Inf) < 1e-10
 ####################################################################################################
 # test the bordered linear solvers, Complex case
 # we test the linear system with MA formulation of Hopf bifurcation

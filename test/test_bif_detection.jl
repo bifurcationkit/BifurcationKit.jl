@@ -1,11 +1,12 @@
-# using Revise, Test, Plots
+# using Revise
+# using Test, Plots
 using BifurcationKit, LinearAlgebra, Setfield
 const BK = BifurcationKit
 
 # display internal information about the branch
 function displayBr(contRes)
 	println("#"^50)
-	for ii in eachindex(contRes.branch)
+	for ii in 1:length(contRes.branch)
 		println("- $ii --------------")
 		println("step = ", contRes[ii][end])
 		println("eiv = "); display(contRes.eig[ii].eigenvals)
@@ -32,13 +33,17 @@ function testBranch(br)
 	end
 	# test about bifurcation points
 	for bp in br.specialpoint
-		id = bp.idx
-		# test that the states marked as bifurcation points are always after true bifurcation points
-		@test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
-		# test that the bifurcation point belongs to the interval
-		@test bp.interval[1] <= bp.param <= bp.interval[2]
-		# test that bp.param = br[id].param
-		@test bp.param == br[id].param
+		if bp.type != :endpoint
+			id = bp.idx
+			# test that the states marked as bifurcation points are always after true bifurcation points
+			# for reversed branch, we test with id+1
+			@test (abs(br[id].n_unstable - br[id-1].n_unstable) > 0) ||
+			(abs(br[id].n_unstable - br[id+1].n_unstable) > 0)
+			# test that the bifurcation point belongs to the interval
+			@test bp.interval[1] <= bp.param <= bp.interval[2]
+			# test that bp.param = br[id].param
+			@test bp.param == br[id].param
+		end
 	end
 end
 
@@ -64,29 +69,35 @@ dimBif = [ii for ii in 1:5]; append!(dimBif, [1 1 1 1])
 x0 = zeros(size(par.L, 1))
 
 optc = ContinuationPar(pMin = -1., pMax = 10., ds = 0.1, maxSteps = 150, detectBifurcation = 2, saveEigenvectors = false)
-br1, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), optc; verbosity = 0)
+prob = BK.BifurcationProblem(Ftb, x0, par, (@lens _.λ); J = Jtb)
+alg = PALC()
+br1 = continuation(prob, alg, optc; verbosity = 0)
 testBranch(br1)
 
-br2, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
+br1r = BK._reverse(br1)
+testBranch(BK._reverse(br1))
+
+
+br2 = continuation(prob, alg, setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
 testBranch(br2)
 for bp in br2.specialpoint
 	@test bp.interval[1] <= bp.param <= bp.interval[2]
 end
 
-specialpoint2 = [bp.param for bp in br2.specialpoint]
+specialpoint2 = [bp.param for bp in br2.specialpoint if bp.type != :endpoint]
 @test specialpoint2 > specialpoints
 @test norm(specialpoints - specialpoint2, Inf) < 3e-3
-dimBif2 = [abs(bp.δ[1]) for bp in br2.specialpoint]
+dimBif2 = [abs(bp.δ[1]) for bp in br2.specialpoint if bp.type != :endpoint]
 @test dimBif2 == dimBif
 
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
-br3, = continuation(Ftb, Jtb, x0, par, (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 8, tolBisectionEigenvalue = 1e-7); verbosity = 0)
+br3 = continuation(prob, alg, setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 8, tolBisectionEigenvalue = 1e-7); verbosity = 0)
 testBranch(br3)
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
 # in this case, we test if coming from above, and having no inversion, still leads to correct result
-br4, = continuation(Ftb, Jtb, x0, (@set par.λ = 0.95), (@lens _.λ), setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
+br4 = continuation((@set prob.params.λ = 0.95), alg, setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
 testBranch(br4)
 ####################################################################################################
 # this example is to test failures in Newton annd how it affects the bifurcation points labels
@@ -96,8 +107,8 @@ Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
 opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, maxSteps = 130, pMin = -3., pMax = 0.1, newtonOptions = NewtonPar(tol = 1e-8, verbose = false, maxIter = 4), detectBifurcation=3, nInversion=4)
 
-br4, = continuation(F, Jac_m, zeros(1), -0.1, (@lens _), opts; verbosity = 0, plot=false,
-	recordFromSolution = (x,p)->x[1])
+prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@lens _); J = Jac_m, recordFromSolution = (x,p)->x[1])
+br4 = continuation(prob4, alg, opts; verbosity = 0, plot=false)
 testBranch(br4)
 ####################################################################################################
 using ForwardDiff
@@ -115,11 +126,11 @@ par = (p1 = -3., p2=-3., k=3)
 
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 135, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 6, dsminBisection = 1e-9, maxBisectionSteps = 15, nev = 2)
 
-br, = continuation(Ftb, Jtb2, -2ones(2), par, (@lens _.p1), (@set opts.detectBifurcation = 3);
-	plot = false, verbosity = 0,
-	recordFromSolution = (x, p) -> x[1],)
+prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@lens _.p1); J = Jtb2, recordFromSolution = (x,p)->x[1])
+br = continuation(prob, alg, (@set opts.detectBifurcation = 3);
+	plot = false, verbosity = 0,)
 	show(br)
 testBranch(br)
 
-br, = continuation(Ftb, Jtb2, -2ones(2), par, (@lens _.p1), opts)
+br = continuation(prob, alg, opts)
 testBranch(br)

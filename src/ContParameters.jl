@@ -6,7 +6,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 # Arguments
 - `dsmin, dsmax` are the minimum, maximum arclength allowed value. It controls the density of points in the computed branch of solutions.
 - `ds = 0.01` is the initial arclength.
-- `theta` is a parameter in the arclength constraint. It is very **important** to tune it. See the docs of [`continuation`](@ref). We quote them here "It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
+- `θ` is a parameter in the arclength constraint. It is very **important** to tune it. See the docs of [`continuation`](@ref). We quote them here "It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
 - `pMin, pMax` allowed parameter range for `p`
 - `maxSteps = 100` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
@@ -20,7 +20,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
 
 ## Handling bifurcation detection
-- `precisionStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
+- `tolStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
 - `detectFold = true` detect Fold bifurcations? It is a useful option although the detection of Fold is cheap. Indeed, it may happen that there is a lot of Fold points and this can saturate the memory in memory limited devices (e.g. on GPU)
 - `detectBifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 1, the eigen-elements are computed. If set to 2, the bifurcations points are detected during the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations points (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
 - `dsminBisection = 1e-16` dsmin for the bisection algorithm for locating bifurcation points
@@ -30,8 +30,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling `ds` adaptation (see [`continuation`](@ref) for more information)
 - `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
-- `thetaMin = 1.0e-3` minimum value of `theta`
-- `doArcLengthScaling = false` trigger further adaptation of `theta`
 
 ## Handling event detection
 - `detectEvent::Int` ∈ {0, 1, 2} If set to 0, nothing is done. If set to 1, the event locations are seek during the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the event (slower).
@@ -53,18 +51,13 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	@assert dsmin > 0 "The interval for ds must be positive"
 	@assert dsmax > 0
 
-	# parameters for scaling arclength step size
-	theta::T					= 0.5 		# parameter in the dot product used for the extended system
-	doArcLengthScaling::Bool  	= false
-	gGoal::T					= 0.5
-	gMax::T						= 0.8
-	thetaMin::T					= 1.0e-3
-	a::T						= 0.5  		# aggressiveness factor
-	tangentFactorExponent::T 	= 1.5
+	# parameters for continuation
+	θ::T	= 0.5 		# parameter in the dot product of the extended system
+	a::T	= 0.5  		# aggressiveness factor
 
 	# parameters bound
 	pMin::T	= -1.0
-	pMax::T	=  1.0; 			@assert pMax >= pMin "You must provide a valid interval [pMin, pMax]"
+	pMax::T	=  1.0
 
 	# maximum number of continuation steps
 	maxSteps::Int64  = 100
@@ -75,7 +68,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	η::T = 150.								# parameter to estimate tangent at first point
 
 	saveToFile::Bool = false 				# save to file?
-	saveSolEveryStep::Int64 = 0				# what steps do we save the current solution
+	saveSolEveryStep::Int64 = 0				# at what steps do we save the current solution
 
 	# parameters for eigenvalues
 	nev::Int64 = 3 							# number of eigenvalues
@@ -85,25 +78,26 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	plotEveryStep::Int64 = 10
 
 	# handling bifurcation points
-	precisionStability::T = 1e-10			# lower bound for stability of equilibria and periodic orbits
+	tolStability::T = 1e-10					# lower bound for stability of equilibria and periodic orbits
 	detectFold::Bool = true 				# detect fold points?
-	detectBifurcation::Int64 = 0			# detect other bifurcation points?
+	detectBifurcation::Int64 = 3			# detect other bifurcation points?
 	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
 	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
 	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
 	tolBisectionEigenvalue::T = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
 	# handling event detection
-	detectEvent::Int64 = 0				# event location
-	tolParamBisectionEvent::T = 1e-16	# tolerance on value of parameter
+	detectEvent::Int64 = 0					# event location
+	tolParamBisectionEvent::T = 1e-16		# tolerance on value of parameter
 
+	@assert pMax >= pMin "You must provide a valid interval [pMin, pMax]"
 	@assert iseven(nInversion) "The option `nInversion` number must be even"
 	@assert 0 <= detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
 	@assert 0 <= detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
 	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops
-	@assert 0 <= theta <=1 "theta must belong to [0, 1]"
+	@assert 0 <= θ <=1 "θ must belong to [0, 1]"
 	@assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
 	@assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
 end

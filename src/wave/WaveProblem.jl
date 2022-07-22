@@ -2,7 +2,7 @@ abstract type abstractModulatedWaveFD <: AbstractPOFDProblem end
 abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
 
 """
-	pb = TWProblem(F, J, ∂::Tuple, u₀; DAE = 0)
+	pb = TWProblem(prob, ∂::Tuple, u₀; DAE = 0)
 
 This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
 
@@ -12,14 +12,13 @@ This composite type implements a functional for freezing symmetries in order, fo
 					└                  ┘
 
 ## Arguments
-- `(x, p) -> F(x, p)` function with continuous symmetries
-- `J` jacobian of `F`. Can be matrix based or matrix-free. The requirements are same as for [`newton`](@ref)
+- `prob` bifurcation problem with continuous symmetries
 - `∂::Tuple = (T1, T2, ⋯)` tuple of Lie generators. In effect, each of these is an (differential) operator which can be specified as a (sparse) matrix or as an operator implementing `LinearAlgebra.mul!`.
 - `u₀` reference solution
 
 ## Additional Constructor(s)
 
-	pb = TWProblem(F, J, ∂, u₀; kw...)
+	pb = TWProblem(prob, ∂, u₀; kw...)
 
 This simplified call handles the case where a single symmetry needs to be frozen.
 
@@ -29,38 +28,50 @@ This simplified call handles the case where a single symmetry needs to be frozen
 - `nbConstraints(::TWProblem)` number of constraints (or Lie generators)
 
 """
-@with_kw struct TWProblem{Tf, TJf, Tu0, TDu0, TD}
-	F::Tf
-	J::TJf = nothing
-	∂::TD			# differential operator
-	u₀::Tu0 		# reference solution, we only need one!
+@with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD}
+	"vector field, must be `AbstractBifurcationProblem`"
+	prob_vf::Tprob
+	"Infinitesimal generator of symmetries, differential operator"
+	∂::TD
+	"reference solution, we only need one!"
+	u₀::Tu0
 	∂u₀::TDu0 = (D * u₀,)
 	DAE::Int = 0
 	nc::Int = 1 	# number of constraints
-	isinplace::Bool = false
+	jacobian::Symbol = :AutoDiff
 	@assert 0 <= DAE <= 1
 	@assert 0 < nc
 end
 
-function TWProblem(F, J, ∂::Tuple, u₀; DAE = 0, isinplace = false)
+function TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
 	# ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
 	∂u₀ = Tuple( mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
-	return TWProblem(F = F, J = J, ∂ = ∂,
+	return TWProblem(prob_vf = prob, ∂ = ∂,
 		u₀ = u₀,
 		∂u₀ = ∂u₀,
 		# u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀),
 		DAE = DAE,
-		isinplace = isinplace,
-		nc = length(∂) )
+		nc = length(∂),
+		jacobian = jacobian )
 end
 
 # constructor
-TWProblem(F, J, ∂, u₀; kw...) = TWProblem(F, J, (∂,), u₀; kw...)
+TWProblem(prob, ∂, u₀; kw...) = TWProblem(prob, (∂,), u₀; kw...)
 
 @inline nbConstraints(pb::TWProblem) = pb.nc
 
+
+function Base.show(io::IO, tw::TWProblem)
+	println(io, "┌─ Travelling wave functional")
+	println(io, "├─ type          : Vector{", eltype(tw.u₀), "}")
+	println(io, "├─ # constraints : ", tw.nc)
+	println(io, "├─ lens          : ", getLensSymbol(getLens(tw.prob_vf)))
+	println(io, "├─ jacobian      : ", tw.jacobian)
+	println(io, "└─ DAE           : ", tw.DAE)
+end
+
 # we put type information to ensure the user pass a correct u0
-function updateSection!(pb::TWProblem{Tf, TJf, Tu0, TDu0, TD}, u₀::Tu0) where {Tf, TJf, Tu0, TDu0, TD}
+function updateSection!(pb::TWProblem{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {Tprob, Tu0, TDu0, TD}
 	copyto!(pb.u₀, u₀)
 	for (∂, ∂u₀) in zip(pb.∂, pb.∂u₀)
 		# pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
@@ -85,7 +96,7 @@ applyD(pb::TWProblem, u) = applyD(pb, zero(u), 1, u)
 # Return F(u, p) - s * D * u
 @views function VFplusD(pb::TWProblem, u::AbstractVector, s::Tuple, pars)
 	# apply the vector field
-	out = pb.F(u, pars)
+	out = residual(pb.prob_vf, u, pars)
 	# we add the freezing, it can be done now since out is filled by the previous call!!
 	applyD(pb, out, s, u)
 	return out
@@ -131,7 +142,7 @@ end
 	s = Tuple(x[end-nc+1:end])
 	ds = Tuple(dx[end-nc+1:end])
 	# get the jacobian
-	J = pb.J(u, pars)
+	J = jacobian(pb.prob_vf, u, pars)
 	outu .= apply(J, du)
 	applyD(pb, outu, s, du)
 	applyD(pb, outu, ds, u)
@@ -153,7 +164,7 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
 	# get the state space vector
 	u = ufreez[1:N]
 	# the jacobian of the
-	J1 = pb.J(u, par)
+	J1 = jacobian(pb.prob_vf, u, par)
 	# we add the Lie algebra generators
 	rightpart = zeros(N, nc)
 	for ii in 1:nc
@@ -166,9 +177,23 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
 	end
 	return J2
 end
+################################################################################
+function modifyTWRecord(probTW, kwargs, par, lens)
+	_recordsol0 = get(kwargs, :recordFromSolution, nothing)
+	if isnothing(_recordsol0) == false
+		_recordsol0 = get(kwargs, :recordFromSolution, nothing)
+		return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probTW, p = p); k...)
+	else
+		return _recordsol = (x, p; k...) -> (s = x[end],)
+	end
+end
+################################################################################
+residual(tw::WrapTW, x, p) = tw.prob(x, p)
+jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
+@inline isSymmetric(::WrapTW) = false
 
-function newton(prob::TWProblem, orbitguess, par, optn::NewtonPar;
-		jacobian = :MatrixFree, kwargs...)
+function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
+	jacobian = prob.jacobian
 	@assert jacobian in  (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
 	if jacobian == :AutoDiff
 		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
@@ -180,12 +205,14 @@ function newton(prob::TWProblem, orbitguess, par, optn::NewtonPar;
 	elseif jacobian == :MatrixFree
 		jac = (x, p) -> (dx ->  prob(x, p, dx))
 	end
-	return newton(prob, jac, orbitguess, par, optn; kwargs...,)
+	probwp = WrapTW(prob, jac, orbitguess, getParams(prob.prob_vf), getLens(prob.prob_vf), recordFromSolution(prob.prob_vf), plotSolution(prob.prob_vf))
+	return newton(probwp, optn; kwargs...,)
 end
 
 function continuation(prob::TWProblem,
-		orbitguess, par, lens::Lens, contParams::ContinuationPar;
-		jacobian = :MatrixFree, kwargs...)
+		orbitguess, alg::AbstractContinuationAlgorithm, contParams::ContinuationPar;
+		kwargs...)
+	jacobian = prob.jacobian
 	@assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
 
 	if jacobian == :AutoDiff
@@ -200,11 +227,17 @@ function continuation(prob::TWProblem,
 	end
 	# define the mass matrix for the eigensolver
 	N = length(orbitguess)
-	B = Diagonal(vcat(ones(N-1),0))
+	B = spdiagm(vcat(ones(N-1),0))
 	# convert eigsolver to generalised one
 	old_eigsolver = contParams.newtonOptions.eigsolver
 	contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)
+
+	# update record function
+	_recordsol = modifyTWRecord(prob, kwargs, getParams(prob.prob_vf), getLens(prob.prob_vf))
+
+	probwp = WrapTW(prob, jac, orbitguess, getParams(prob.prob_vf), getLens(prob.prob_vf), plotSolution(prob.prob_vf), _recordsol)
+
 	# call continuation
-	branch, u, τ = continuation(prob, jac, orbitguess, par, lens, contParamsWave; kwargs...,)
-	return setproperties(branch; type = :TravellingWave, functional = prob), u, τ
+	branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
+	return branch
 end

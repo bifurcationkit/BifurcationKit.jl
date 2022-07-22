@@ -40,7 +40,14 @@ $(SIGNATURES)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
-function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ = 1e-8, nev = length(eigenvalsfrombif(br, ind_bif)), Jᵗ = nothing, verbose = false, lens = br.lens, issymmetric = false, Teigvec = vectortype(br), tolFold = 1e-3, scaleζ = norm)
+function getNormalForm1d(prob::AbstractBifurcationProblem,
+					br::ContResult, ind_bif::Int;
+					nev = length(eigenvalsfrombif(br, ind_bif)),
+					verbose = false,
+					lens = getLens(br),
+					Teigvec = vectortype(br),
+					tolFold = 1e-3,
+					scaleζ = norm)
 	bifpt = br.specialpoint[ind_bif]
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
@@ -55,10 +62,10 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	p = bifpt.param
 
 	# parameter for vector field
-	parbif = set(br.params, lens, p)
+	parbif = set(getParams(br), lens, p)
 
 	# jacobian at bifurcation point
-	L = dF(x0, parbif)
+	L = jacobian(prob, x0, parbif)
 
 	# linear solver
 	ls = options.linsolver
@@ -75,16 +82,16 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
 		ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
 	else
-		ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+		ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
 	end
 	ζ ./= scaleζ(ζ)
 
 	# extract eigen-elements for adjoint(L), needed to build spectral projector
-	if issymmetric
+	if isSymmetric(prob)
 		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
 		ζstar = copy(ζ)
 	else
-		_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x0, parbif)
+		_Jt = hasAdjoint(prob) ? jad(prob_vf, x0, parbif) : adjoint(L)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
@@ -94,19 +101,20 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	ζstar ./= dot(ζ, ζstar)
 
 	# differentials and projector on Range(L), there are real valued
-	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
-	R3 = ((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3))
-	E = x -> x .- dot(x, ζstar) .* ζ
+	R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
+	R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
+	E(x) = x .- dot(x, ζstar) .* ζ
 
 	# we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	# coefficient of p
-	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
+	δ = getDelta(prob)
+	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζstar)
 	verbose && println("--> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
 	verbose && println("--> a    = ", a)
 
 	# coefficient of x*p
-	R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) - apply(dF(x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	Ψ01, _ = ls(L, E(R01))
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζstar)
@@ -133,8 +141,9 @@ function computeNormalForm1d(F, dF, d2F, d3F, br::ContResult, ind_bif::Int; δ =
 	return nothing
 end
 
-computeNormalForm1d(F, dF, d2F, d3F, br::Branch, ind_bif::Int; kwargs...) = computeNormalForm1d(F, dF, d2F, d3F, getContResult(br), ind_bif; kwargs...)
+getNormalForm1d(br::Branch, ind_bif::Int; kwargs...) = getNormalForm1d(getContResult(br), ind_bif; kwargs...)
 
+getNormalForm1d(br::ContResult, ind_bif::Int; kwargs...) = getNormalForm1d(br.prob, br, ind_bif; kwargs...)
 """
 $(SIGNATURES)
 
@@ -373,18 +382,15 @@ $(SIGNATURES)
 Compute the normal form of the bifurcation point located at `br.specialpoint[ind_bif]`.
 
 # Arguments
-- `F, dF, d2F, d3F` vector field `(x, p) -> F(x, p)` and its derivatives w.r.t. `x`.
+- `prob::AbstractBifurcationProblem`
 - `br` result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br.specialpoint`
 
 # Optional arguments
-- `δ` used to compute ∂pF with finite differences
 - `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
-- `Jᵗ = (x,p) -> ...` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoids recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`.
 - `verbose` whether to display information
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
-- `issymmetric` whether the Jacobian is Symmetric, avoid computing the left eigenvectors.
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
@@ -396,15 +402,12 @@ Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities a
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating periodic orbit.v
 
 """
-function computeNormalForm(F, dF, d2F, d3F,
+function getNormalForm(prob::AbstractBifurcationProblem,
 			br::ContResult, id_bif::Int ;
-			δ = 1e-8,
 			nev = length(eigenvalsfrombif(br, id_bif)),
-			Jᵗ = nothing,
 			verbose = false,
 			ζs = nothing,
-			lens = br.lens,
-			issymmetric = false,
+			lens = getLens(br),
 			Teigvec = getvectortype(br),
 			scaleζ = norm,
 			detailed = true,
@@ -413,19 +416,25 @@ function computeNormalForm(F, dF, d2F, d3F,
 
 	@assert !(bifpt.type in (:hh,)) "Normal form for $(bifpt.type) not implemented"
 
+	# parameters for normal form
+	kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+
 	if bifpt.type == :hopf
-		return hopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+		return hopfNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :cusp
-		return cuspNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+		return cuspNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :bt
-		return bogdanovTakensNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ, detailed = detailed, autodiff = autodiff)
+		return bogdanovTakensNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
 	elseif bifpt.type == :gh
-		return bautinNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+		return bautinNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :zh
-		return zeroHopfNormalForm(F, dF, d2F, d3F, br, id_bif; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return computeNormalForm1d(F, dF, d2F, d3F, br, id_bif ; δ = δ, nev = nev, Jᵗ = Jᵗ, verbose = verbose, lens = lens, issymmetric = issymmetric, Teigvec = Teigvec, scaleζ = scaleζ)
+		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
 	end
+
+	prob_vf = prob
+
 	# kernel dimension:
 	N = abs(bifpt.δ[1])
 
@@ -442,8 +451,10 @@ function computeNormalForm(F, dF, d2F, d3F,
 	p = bifpt.param
 
 	# parameter for vector field
-	parbif = set(br.params, br.lens, p)
-	L = dF(x0, parbif)
+	parbif = setParam(br, p)
+
+	# jacobian at bifurcation point
+	L = jacobian(prob_vf, x0, parbif)
 
 	# we invert L repeatdly, so we try to factorize it
 	Linv = L isa AbstractMatrix ? factorize(L) : L
@@ -466,7 +477,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
 		else
-			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in indev-N+1:indev]
+			ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev]
 		end
 	end
 
@@ -474,11 +485,11 @@ function computeNormalForm(F, dF, d2F, d3F,
 	# it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
 	# only adjust ζstars
 	for ζ in ζs; ζ ./= scaleζ(ζ); end
-	if issymmetric
+	if isSymmetric(prob)
 		λstars = copy(λs)
 		ζstars = copy.(ζs)
 	else
-		_Jt = isnothing(Jᵗ) ? transpose(L) : Jᵗ(x0, parbif)
+		_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
 		ζstars, λstars = getAdjointBasis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 	end
 	ζstars = real.(ζstars); λstars = real.(λstars)
@@ -488,8 +499,8 @@ function computeNormalForm(F, dF, d2F, d3F,
 	ζs, ζstars = biorthogonalise(ζs, ζstars, verbose)
 
 	# differentials should work as we are looking at reals
-	R2 = ((dx1, dx2)      -> d2F(x0, parbif, dx1, dx2))
-	R3 = ((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3))
+	R2(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
+	R3(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
 
 	# projector on Range(L)
 	function E(x)
@@ -505,7 +516,8 @@ function computeNormalForm(F, dF, d2F, d3F,
 
 	# coefficients of p
 	dgidp = Vector{Tvec}(undef, N)
-	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
+	δ = getDelta(prob)
+	R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζstars[ii])
 	end
@@ -514,7 +526,7 @@ function computeNormalForm(F, dF, d2F, d3F,
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Tvec, N, N)
 	for ii in 1:N, jj in 1:N
-		R11 = (apply(dF(x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(dF(x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
+		R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
 		Ψ01, flag = ls(Linv, E(R01))
 		~flag && @warn "linear solver did not converge"
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
@@ -572,12 +584,13 @@ function computeNormalForm(F, dF, d2F, d3F,
 
 end
 
-computeNormalForm(F, dF, d2F, d3F, br::Branch, id_bif::Int; kwargs...) = computeNormalForm(F, dF, d2F, d3F, getContResult(br), id_bif; kwargs...)
+getNormalForm(br::ContResult, id_bif::Int; kwargs...) = getNormalForm(br.prob, br, id_bif; kwargs...)
+getNormalForm(br::Branch, id_bif::Int; kwargs...) = getNormalForm(getContResult(br), id_bif; kwargs...)
 
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding	 these zeros is based on deflated newton.
+This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding these zeros is based on deflated newton.
 """
 function predictor(bp::NdBranchPoint, δp::T;
 		verbose::Bool = false,
@@ -588,24 +601,28 @@ function predictor(bp::NdBranchPoint, δp::T;
 		J = nothing,
 		normN = x -> norm(x, Inf),
 		optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
+
 	# dimension of the kernel
 	n = length(bp.ζ)
 
-	# find zeros for the normal on each side of the bifurcation point
+	# find zeros of the normal on each side of the bifurcation point
 	function getRootsNf(_ds)
 		deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
+		prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
+									rand(n) .* 1.1, _ds)
+		if ~isnothing(J)
+			@set! prob.VF.J = J
+		end
 		failures = 0
-		# we allow for 10 failures of nonlinear deflation
-		outdef1 = rand(n)
+		# we allow for 30 failures of nonlinear deflation
 		while failures < nbfailures
-			if isnothing(J)
-				jac = (x,p) -> ForwardDiff.jacobian(z -> perturb(bp(Val(:reducedForm), z, p)), x)
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), jac, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
+			outdef1 = newton(prob, deflationOp, optn, Val(:autodiff); normN = normN)
+			if converged(outdef1)
+				push!(deflationOp, ampfactor .* outdef1.u)
 			else
-				outdef1, hist, flag, _ = newton((x, p) -> perturb(bp(Val(:reducedForm), x, p)), J, outdef1 .+ 0.1rand(n), _ds, optn, deflationOp, Val(:autodiff); normN = normN)
+				failures += 1
 			end
-			flag && push!(deflationOp, ampfactor .* outdef1)
-			~flag && (failures += 1)
+			prob.u0 .= outdef1.u .+ 0.1 .* rand(n)
 		end
 		return deflationOp.roots
 	end
@@ -622,15 +639,14 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
+- `prob::AbstractBifurcationProblem` bifurcation problem
 - `pt::Hopf` Hopf bifurcation point
 - `ls` linear solver
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences
 - `verbose` bool to print information
 """
-function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose::Bool = false)
+function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose::Bool = false)
 	x0 = pt.x0
 	p = pt.p
 	lens = pt.lens
@@ -641,14 +657,16 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose::Bool 
 	ζstar = pt.ζstar
 
 	# jacobian at the bifurcation point
-	L = dF(x0, parbif)
+	# c'est recalcule ici!!!! 2x
+	L = jacobian(prob, x0, parbif)
 
 	# we use BilinearMap to be able to call on complex valued arrays
-	R2 = BilinearMap( (dx1, dx2)      -> d2F(x0, parbif, dx1, dx2) ./2)
-	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(x0, parbif, dx1, dx2, dx3) ./6 )
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
 	# −LΨ001 = R01
-	R01 = (F(x0, set(parbif, lens, p + δ)) .- F(x0, set(parbif, lens, p - δ))) ./ (2δ)
+	δ = getDelta(prob)
+	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	Ψ001, _ = ls(L, -R01)
 
 	# (2iω−L)Ψ200 = R20(ζ,ζ)
@@ -661,7 +679,7 @@ function hopfNormalForm(F, dF, d2F, d3F, pt::Hopf, ls; δ = 1e-8, verbose::Bool 
 	Ψ110, _ = ls(L, -R20)
 
 	# a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
-	av = (apply(dF(x0, set(parbif, lens, p + δ)), ζ) .- apply(dF(x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	av .+= 2 .* R2(ζ, Ψ001)
 	a = dot(av, ζstar)
 
@@ -689,14 +707,12 @@ $(SIGNATURES)
 Compute the Hopf normal form.
 
 # Arguments
-- `F, dF, d2F, d3F`: function `(x, p) -> F(x, p)` and its differentials `(x, p, dx) -> d1F(x, p, dx)`, `(x, p, dx1, dx2) -> d2F(x, p, dx1, dx2)`...
+- `prob::AbstractBifurcationProblem` bifurcation problem
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_hopf` index of the bifurcation point in `br`
 - `options` options for the Newton solver
 
 # Optional arguments
-- `Jᵗ` is the jacobian adjoint, used for computation of the eigen-elements of the jacobian adjoint, needed to compute the spectral projector
-- `δ = 1e-8` used for finite differences
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 
@@ -705,7 +721,13 @@ Compute the Hopf normal form.
 Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf, ds)` to obtain an estimate of the bifurcating periodic orbit.
 
 """
-function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int; Jᵗ = nothing, δ = 1e-8, nev = length(eigenvalsfrombif(br, id_bif)), verbose::Bool = false, lens = br.lens, Teigvec = getvectortype(br), scaleζ = norm)
+function hopfNormalForm(prob::AbstractBifurcationProblem,
+					br::AbstractBranchResult, ind_hopf::Int;
+					nev = length(eigenvalsfrombif(br, id_bif)),
+					verbose::Bool = false,
+					lens = getLens(br),
+					Teigvec = getvectortype(br),
+					scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
 	verbose && println("#"^53*"\n--> Hopf Normal form computation")
 
@@ -721,8 +743,8 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 
 	# parameter for vector field
 	p = bifpt.param
-	parbif = set(br.params, lens, p)
-	L = dF(convert(Teigvec, bifpt.x), parbif)
+	parbif = set(getParams(br), lens, p)
+	L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
 
 	# right eigenvector
 	if haseigenvector(br) == false
@@ -731,12 +753,12 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
 		ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
 	else
-		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
 	end
 	ζ ./= scaleζ(ζ)
 
 	# left eigen-elements
-	_Jt = isnothing(Jᵗ) ? adjoint(L) : Jᵗ(x, p)
+	_Jt = hasAdjoint(prob) ? jad(prob, onvert(Teigvec, bifpt.x), parbif) : adjoint(L)
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
 	# check that λstar ≈ conj(λ)
@@ -753,7 +775,7 @@ function hopfNormalForm(F, dF, d2F, d3F, br::AbstractBranchResult, ind_hopf::Int
 		(a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
 		:SuperCritical
 	)
-	return hopfNormalForm(F, dF, d2F, d3F, hopfpt, options.linsolver ; δ = δ, verbose = verbose)
+	return hopfNormalForm(prob, hopfpt, options.linsolver ; verbose = verbose)
 end
 
 """

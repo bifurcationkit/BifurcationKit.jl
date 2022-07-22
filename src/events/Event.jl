@@ -20,16 +20,29 @@ labels(::AbstractEvent, ind) = "user"
 hasCustomLabels(::AbstractEvent) = false
 
 # general condition for detecting a continuous event.
+function testEve(eve::AbstractContinuousEvent, x, y)
+	ϵ = eve.tol
+	return (x * y < 0) || (abs(x) <= ϵ) || (abs(y) <= ϵ)
+end
+
+# is x actually an event
+function isOnEvent(eve::AbstractContinuousEvent, eventValue) 
+	for u in eventValue
+		if  abs(u) <= eve.tol
+			return true
+		end
+	end
+	return false
+end
+
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
 # the ind is used to specify which part of the event is tested
 function isEventCrossed(eve::AbstractContinuousEvent, iter, state, ind = :)
-	ϵ = eve.tol
-	test(x, y) = (x * y < 0) || (abs(x) <= ϵ) || (abs(y) <= ϵ)
 	if state.eventValue[1] isa Real
-		return test(state.eventValue[1], state.eventValue[2])
+		return testEve(eve, state.eventValue[1], state.eventValue[2])
 	else
 		for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-			if test(u[1], u[2])
+			if testEve(eve, u[1], u[2])
 				return true
 			end
 		end
@@ -38,13 +51,15 @@ function isEventCrossed(eve::AbstractContinuousEvent, iter, state, ind = :)
 end
 
 # general condition for detecting a discrete event
-function isEventCrossed(::AbstractDiscreteEvent, iter, state, ind = :)
-	test(x, y) = x != y
+testEve(eve::AbstractDiscreteEvent, x, y) = x != y
+isOnEvent(::AbstractDiscreteEvent, x) = false
+
+function isEventCrossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
 	if state.eventValue[1] isa Integer
-		return test(state.eventValue[1], state.eventValue[2])
+		return testEve(eve, state.eventValue[1], state.eventValue[2])
 	else
 		for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-			if test(u[1], u[2])
+			if testEve(eve, u[1], u[2])
 				return true
 			end
 		end
@@ -141,6 +156,8 @@ end
 
 @inline computeEigenElements(eve::PairOfEvents) = computeEigenElements(eve.eventC) || computeEigenElements(eve.eventD)
 @inline length(event::PairOfEvents) = length(event.eventC) + length(event.eventD)
+# is x actually an event, we just need to test the continuous part
+isOnEvent(eve::PairOfEvents, x) = isOnEvent(eve.eventC, x[1:length(eve.eventC)])
 
 function (eve::PairOfEvents)(iter, state)
 	outc = eve.eventC(iter, state)
@@ -210,6 +227,15 @@ function (eve::SetOfEvents)(iter, state)
 end
 
 initialize(eve::SetOfEvents, T) = map(x->initialize(x,T),eve.eventC)..., map(x->initialize(x,T),eve.eventD)...
+
+# is x actually an event, we just need to test the continuous events
+function isOnEvent(eves::SetOfEvents, eValues)
+	out = false
+	for (index, eve) in pairs(eves.eventC)
+		out = out | isOnEvent(eve, eValues[index])
+	end
+	return out
+end  
 
 function isEventCrossed(event::SetOfEvents, iter, state)
 	res = false

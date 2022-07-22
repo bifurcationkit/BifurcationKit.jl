@@ -66,26 +66,28 @@ function Jbru_sp(x, p)
 end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
-jet = BK.getJet(Fbru, Jbru_ana)
 
 n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
-	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
+sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
+prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
+		J = Jbru_ana,
+		recordFromSolution = (x, p) -> norminf(x))
 
 # test that the jacobian is well computed
 @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-	out, hist, flag = newton(jet[1], jet[2], sol0 .* (1 .+ 0.01rand(2n)), par_bru, opt_newton)
+out = newton(BK.reMake(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, newtonOptions = opt_newton, detectBifurcation = 3, nev = 16, nInversion = 4)
-	br, = continuation(jet[1], jet[2], out, (@set par_bru.l = 0.3), (@lens _.l), opts_br0, recordFromSolution = (x, p) -> norm(x, Inf64))
+br = continuation(BK.reMake(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
 ###################################################################################################
 # Hopf continuation with automatic procedure
-outhopf, = newton(jet[1], jet[2], br, 1; startWithEigen = true, d2F = jet[3])
-outhopf, = newtonHopf(jet[1], jet[2], br, 1; startWithEigen = true)
+outhopf = newton(br, 1; startWithEigen = true)
+outhopf = newton(br, 1; startWithEigen = true)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 50, detectBifurcation = 2)
-outhopfco, = continuationHopf(jet[1], jet[2], br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1, plot = false)
+outhopfco = continuation(br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1, plot = false)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -94,10 +96,9 @@ ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
-					jet[1], jet[2], nothing, nothing,
-					(@lens _.l),
-					conj.(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
-					(br.eig[bifpt.idx].eigenvec[:, bifpt.ind_ev]),
+					(@set prob.VF.d2F = nothing), # this is for debug array
+					conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
+					(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
 					# av,
 					# bv,
 					opts_br0.newtonOptions.linsolver)
@@ -111,7 +112,7 @@ hopfpbVec(x, p) = Bd2Vec(hopfvariable(Vec2Bd(x),p))
 # finite differences Jacobian
 Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian( u-> hopfpbVec(u, p), u0)
 # ``analytical'' jacobian
-Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0,params=p ,hopfpb=pb))
+Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0, params=p,hopfpb=pb))
 
 rhs = rand(length(hopfpt))
 jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
@@ -137,15 +138,14 @@ sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[
 σx_fd_ana = tmpVecforσ[3:end]
 @test σx_fd ≈ σx_fd_ana rtol = 1e-3
 
-outhopf, hist, flag = newton(
-		jet[1], jet[2], br, 1, Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)))
-		# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
+outhopf = newton(br, 1)
+@test BK.converged(outhopf)
 
-outhopf, _, flag, _ = newton((u, p) -> hopfvariable(u, p),
-							(x, p) -> Jac_hopf_MA(x, p, hopfvariable),
-							hopfpt, par_bru, NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
-	# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[2], " from ", hopfpt.p, "\n")
-
+pbgopfperso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
+				hopfpt, par_bru;
+				J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
+outhopf = newton(pbgopfperso, NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
+@test BK.converged(outhopf)
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
 	n = div(length(x),2)
@@ -159,16 +159,16 @@ function d2F(x, p1, du1, du2)
 	return out
 end
 
-outhopf, hist, flag = newton(jet[1], jet[2], br, 1,
-		Jᵗ = (x, p) -> transpose(Jbru_sp(x, p)),
-		d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
-		# flag && printstyled(color=:red, "--> We found a Hopf Point at l = ", outhopf.p[1], ", ω = ", outhopf.p[end], ", from l = ",hopfpt.p[1],"\n")
+# add specific hessian
+br_d2f = (@set br.prob.VF.d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 
-br_hopf, u1_hopf = continuation(
-			jet[1], jet[2], br, ind_hopf, (@lens _.β),
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+outhopf = newton(br_d2f, 1)
+@test BK.converged(outhopf)
 
-br_hopf, u1_hopf = continuation(jet[1], jet[2], br, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., theta = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), Jᵗ = (x, p) ->  transpose(Jbru_sp(x, p)), d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2), verbosity = 0, plot = false)
+br_hopf = continuation(br, ind_hopf, (@lens _.β),
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+
+br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -191,7 +191,11 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-poTrap = PeriodicOrbitTrapProblem(jet[1], Jbru_sp, real.(vec_hopf), hopfpt.u, M, 2n	)
+prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
+		J = Jbru_sp,
+		recordFromSolution = (x, p) -> norminf(x))
+
+poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n	)
 
 jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -207,15 +211,15 @@ BK.getTimeDiff(poTrap, orbitguess_f)
 # BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
+_prob = BK.BifurcationProblem((x, p) -> poTrap(x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
 opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 150)
-	outpo_f, _, flag = @time newton(
-		(x, p) ->  poTrap(x, p),
-		(x, p) ->  poTrap(Val(:JacFullSparse),x,p),
-		copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), opt_po)
+outpo_f = @time newton(_prob, opt_po)
+@test BK.converged(outpo_f)
 	# println("--> T = ", outpo_f[end])
 # flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
-newton(poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), opt_po; jacobianPO = :FullLU)
+outpo_f = newton(poTrap, orbitguess_f, opt_po; jacobianPO = :FullLU)
+BK.converged(outpo_f)
 
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -227,29 +231,27 @@ BK.MonodromyQaD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitgu
 floquetES = FloquetQaD(DefaultEig())
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, theta = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
-	br_pok2, = continuation(
-		poTrap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; jacobianPO = :BorderedLU,
-		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, θ = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
+	br_pok2 = continuation(
+		poTrap, orbitguess_f, PALC(), opts_po_cont; jacobianPO = :BorderedLU,
 		plot = false, verbosity = 0)
 
 # test of simple calls to newton / continuation
-deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 15)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, tolStability = 1e-8, detectBifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	# with deflation
 	@time newton(poTrap,
-			copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), opt_po, deflationOp; linalgo = linalgo, normN = norminf)
+			copy(orbitguess_f), deflationOp, opt_po; linalgo = linalgo, normN = norminf)
 	# classic Newton-Krylov
-	outpo_f, hist, flag = @time newton(poTrap,
-			copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), opt_po; linalgo = linalgo, normN = norminf)
+	outpo_f = @time newton(poTrap,
+			copy(orbitguess_f), opt_po; linalgo = linalgo, normN = norminf)
 	# continuation
-	br_pok2, = @time continuation(poTrap,
-			copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01), (@lens _.l),
+	br_pok2 = @time continuation(poTrap,
+			copy(orbitguess_f), PALC(),
 			opts_po_cont; jacobianPO = linalgo, verbosity = 0,
-			linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 			plot = false, normC = norminf)
 end
 
@@ -258,5 +260,5 @@ eil = EigKrylovKit(x₀ = rand(2n))
 ls = GMRESKrylovKit()
 ls = DefaultLS()
 opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 10, linsolver = ls, eigsolver = eil)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, precisionStability = 1e-8, detectBifurcation = 2)
-br_pok2, upo, = continuation(poTrap, outpo_f, (@set par_bru.l = l_hopf + 0.01), (@lens _.l), opts_po_cont; jacobianPO = :FullLU, normC = norminf, verbosity = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, tolStability = 1e-8, detectBifurcation = 2)
+br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; jacobianPO = :FullLU, normC = norminf, verbosity = 0)

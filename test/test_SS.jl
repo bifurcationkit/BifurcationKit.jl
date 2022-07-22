@@ -18,9 +18,9 @@ par = nothing
 
 fl = BK.Flow(vf, flow, dflow)
 
-probSh = BK.ShootingProblem(M, fl,
-	LinRange(0, 1, M+1) |> diff,
-	section, false)
+probSh = BK.ShootingProblem(M = M, flow = fl,
+	ds = LinRange(0, 1, M+1) |> diff,
+	section = section)
 
 show(probSh)
 
@@ -55,9 +55,9 @@ dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 
 fl = BK.Flow(vf, flow, dflow)
 
-probSh = BK.ShootingProblem(M, fl,
-	LinRange(0,1,M+1) |> diff ,
-	section, false)
+probSh = BK.ShootingProblem(M = M, flow = fl,
+	ds = LinRange(0,1,M+1) |> diff ,
+	section = section)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
 	po = BorderedArray(poguess, 1.)

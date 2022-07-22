@@ -56,7 +56,7 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 		begin
 			# we first check that the continuation step was successful
 			# if not, we do not update the problem with bad information!
-			success = get(kF, :state, nothing).isconverged
+			success = converged(get(kF, :state, nothing))
 			if success && modCounter(step, updateSectionEveryStep) == 1
 				updateSection!(prob, z.u, setParam(contResult, z.p))
 			end
@@ -66,7 +66,57 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 		begin
 			# we first check that the continuation step was successful
 			# if not, we do not update the problem with bad information!
-			success = get(kF, :state, nothing).isconverged
+			success = converged(get(kF, :state, nothing))
+			if success && modCounter(step, updateSectionEveryStep) == 1
+				updateSection!(prob, z.u, setParam(contResult, z.p))
+			end
+			return _finsol(z, tau, step, contResult; prob = prob, kF...)
+		end
+	return _finsol2
+end
+
+# version specific to collocation. Handles mesh adaptation
+function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
+	_finsol = get(kwargs, :finaliseSolution, nothing)
+	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
+		begin
+			# we first check that the continuation step was successful
+			# if not, we do not update the problem with bad information!
+			success = converged(get(kF, :state, nothing))
+			# mesh adaptation
+			if success && prob.meshadapt
+				oldsol = copy(z.u)
+				adapt = computeError(prob, z.u;
+						verbosity = prob.versboseMeshAdap,
+						par = setParam(contResult, z.p),
+						K = prob.K)
+				if ~adapt.success
+					return false
+				end
+				@info norm(oldsol - z.u, Inf)
+			end
+			if success && modCounter(step, updateSectionEveryStep) == 1
+				updateSection!(prob, z.u, setParam(contResult, z.p))
+			end
+			return true
+		end :
+		(z, tau, step, contResult; kF...) ->
+		begin
+			# we first check that the continuation step was successful
+			# if not, we do not update the problem with bad information!
+			success = converged(get(kF, :state, nothing))
+			# mesh adaptation
+			if success && prob.meshadapt
+				oldsol = copy(z.u)
+				adapt = computeError(prob, z.u;
+						verbosity = prob.versboseMeshAdap,
+						par = setParam(contResult, z.p),
+						K = prob.K)
+				if ~adapt.success
+					return false
+				end
+				@info norm(oldsol - z.u, Inf)
+			end
 			if success && modCounter(step, updateSectionEveryStep) == 1
 				updateSection!(prob, z.u, setParam(contResult, z.p))
 			end
@@ -80,7 +130,17 @@ function modifyPORecord(probPO, kwargs, par, lens)
 		_recordsol0 = get(kwargs, :recordFromSolution, nothing)
 		return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
 	else
-		return _recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, set(par, lens, p)),)
+		if probPO isa AbstractPODiffProblem
+			return _recordsol = (x, p; k...) -> begin
+				period = getPeriod(probPO, x, set(par, lens, p))
+				sol = getPeriodicOrbit(probPO, x, set(par, lens, p))
+				max = maximum(sol[1,:])
+				min = minimum(sol[1,:])
+				return (max = max, min = min, amplitude = max - min, period = period)
+			end
+		else
+			return _recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, set(par, lens, p)),)
+		end
 	end
 end
 

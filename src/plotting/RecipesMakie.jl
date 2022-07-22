@@ -50,11 +50,11 @@ function plotBranchCont(contres::ContResult,
 	fig
 end
 
-function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable)
+function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecialpoints = true, filterspecialpoints = false, plotcirclesbif = true, linewidthunstable = 1.0, linewidthstable = 2linewidthunstable, applytoX = identity, applytoY = identity)
 	if length(contres) == 0; return ;end
 
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
-	ind1, ind2 = getPlotVars(contres, vars)
+	ind1, ind2 = getPlotVars(contres, nothing)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 
 	fig = Figure(resolution = (1200, 700))
@@ -67,13 +67,13 @@ function plotBranch(contres::AbstractBranchResult; plotfold = false, plotspecial
 	#
 	# put arrow to indicate the order of computation
 	if length(contres) > 1
-		x = xplot[end]
-		y = yplot[end]
+		x = contres.branch[end].param
+		y = getproperty(contres.branch,1)[end]
 		scatter!(ax1, [x], [y], marker = :cross )
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
+	bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
 
 	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
 		if filterspecialpoints == true
@@ -105,7 +105,7 @@ function plotBranch(contresV::AbstractBranchResult...; plotfold = false, plotspe
 		ax1.xlabel = xlab; ax1.ylabel = ylab
 
 		# display bifurcation points
-		bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+		bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold), contres.specialpoint)
 		if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
 			if filterspecialpoints == true
 				bifpt = filterBifurcations(bifpt)

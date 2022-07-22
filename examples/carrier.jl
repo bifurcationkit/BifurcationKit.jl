@@ -32,34 +32,33 @@ end
 	# @time Jac_carr(sol, par_car)
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
-jet = BK.getJet(F_carr, Jac_carr)
-
 N = 200
 X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
-sol0 = -(1 .- par_car.X.^2)
+sol = -(1 .- par_car.X.^2)
 norminf(x) = norm(x,Inf)
 recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
+prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@lens _.ϵ);
+	J = Jac_carr,
+	recordFromSolution = recordFromSolution)
+
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-	sol, = @time newton(
-		F_carr, Jac_carr, sol0, par_car, optnew, normN = x -> norm(x, Inf64))
-	Plots.plot(sol, label="Solution")
+	out = @time newton(prob, optnew, normN = x -> norm(x, Inf64))
+	plot(out.u, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 3, nev = 40, nInversion = 6, maxBisectionSteps = 25)
-	br, = @time continuation(
-		F_carr, Jac_carr, zeros(N), par_car, (@lens _.ϵ), optcont;
-		plot = true, verbosity = 3,
-		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
-		recordFromSolution = recordFromSolution,
+	br = @time continuation(
+		prob, PALC(bls = BorderingBLS(solver = DefaultLS(), checkPrecision = false)), optcont;
+		plot = true, verbosity = 0,
 		normC = norminf)
 
 plot(br)
 
 ####################################################################################################
 # Example with deflation technics
-deflationOp = DeflationOperator(2, 1.0, empty([sol]), copy(sol))
+deflationOp = DeflationOperator(2, 1.0, empty([out.u]), copy(out.u))
 par_def = @set par_car.ϵ = 0.6
 
 optdef = setproperties(optnew; tol = 1e-7, maxIter = 200)
@@ -72,35 +71,34 @@ function perturbsol(sol, p, id)
 	return sol .+ solp .* sol0
 end
 
-outdef1, _, flag = @time newton(
-	F_carr, Jac_carr,
+outdef1 = @time newton(
+	(@set prob.u0 = perturbsol(-out.u, 0, 0)), deflationOp,
 	# perturbsol(deflationOp[1],0,0), par_def,
-	perturbsol(-sol, 0, 0), par_def,
-	optdef, deflationOp;
+	optdef;
+	# callback = BK.cbMaxNorm(1e8)
 	)
-	flag && push!(deflationOp, outdef1)
+	BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(); for _s in deflationOp.roots; plot!(_s);end;title!("")
 perturbsol(-deflationOp[1],0,0) |> plot
 ####################################################################################################
 # bifurcation diagram with deflated continuation
 # empty!(deflationOp)
+alg = DefCont(deflationOperator = deflationOp,
+				perturbSolution = perturbsol,
+				maxBranches = 40,
+				)
 
-brdc, it, = @time continuation(
-	F_carr, Jac_carr,
-	(@set par_def.ϵ = 0.6), (@lens _.ϵ),
-	setproperties(optcont; ds = -0.005, dsmin=1e-5, maxSteps = 180, pMax = 0.7, pMin = 0.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false), detectBifurcation = 0, plotEveryStep = 20, saveSolEveryStep = 30),
-	# (@set deflationOp.roots = deflationOp.roots[1:1])
-	deflationOp
+brdc = @time continuation(
+	(@set prob.params.ϵ = 0.6), alg,
+	setproperties(optcont; ds = -0.0021, dsmin=1e-5, maxSteps = 20000,
+		pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
+		newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
 	;verbosity = 1,
-	maxBranches = 40,
-	# tangentAlgo = BorderedPred(),
-	perturbSolution = perturbsol,
-	recordFromSolution = recordFromSolution,
 	normN = norminf,
 	)
 
-plot(brdc..., legend=true)#, marker=:d)
+plot(brdc, legend=true)#, marker=:d)
 scatter!([b.branch[end].param for b in brdc], [b.branch[end][1] for b in brdc], marker = :circle, color=:red, markeralpha=0.5,label = "")
 	scatter!([b.branch[1].param for b in brdc], [b.branch[1][1] for b in brdc], marker = :cross, color=:green,  label = "")
 
@@ -117,12 +115,8 @@ BifurcationKit.mergeBranches!(brdc, it)
 
 ####################################################################################################
 # bifurcation diagram
-diagram = bifurcationdiagram(jet...,
-		0*sol, par_car,
-		(@lens _.ϵ), 2,
-		linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS(), checkPrecision = false)), 2,
 		(arg...) -> @set optcont.newtonOptions.verbose=false;
-		recordFromSolution = (x, p) -> (x[2]-x[1]) * sum(x->x^2, x),
 		plot = true)
 
 plot(diagram, legend=false)

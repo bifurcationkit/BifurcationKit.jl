@@ -5,7 +5,6 @@ getLensSymbol(lens::Setfield.PropertyLens{F}) where F = F
 getLensSymbol(lens::Setfield.ComposedLens) = getLensSymbol(lens.inner)
 getLensSymbol(::Setfield.IdentityLens) = :p
 getLensSymbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
-getLensSymbol(br::AbstractBranchResult) = getLensSymbol(br.lens)
 
 function getLensSymbol(lens1::Lens, lens2::Lens)
 	p1 = getLensSymbol(lens1)
@@ -75,7 +74,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
+	bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
 
 	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
 		if filterspecialpoints == true
@@ -128,11 +127,11 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 	ind1, ind2 = getPlotVars(brs[1], vars)
 	if length(brs) == 0; return; end
 	# handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
-	bptps = Any[(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if pt.type != :none]
+	bptps = Any[(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if ((pt.type != :none)&&(pt.type != :endpoint))]
 	for ii=2:length(brs)
 		_ind1, _ind2 = getPlotVars(brs[ii], vars)
 		for pt in brs[ii].specialpoint
-			if pt.type != :none
+			if (pt.type != :none) && (pt.type != :endpoint)
 				push!(bptps, (type = pt.type, param = getproperty(pt, _ind1), printsol = getproperty(pt.printsol, _ind2)))
 			end
 		end
@@ -166,7 +165,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 			applytoY --> applytoY
 			vars --> vars
 			if ind1 == 1 || ind1 == :param
-				xguide --> String(getLensSymbol(brs[id].lens))
+				xguide --> String(getLensSymbol(brs[id]))
 			elseif ind1 isa Symbol
 				xguide --> String(ind1)
 			end
@@ -179,6 +178,36 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 				# this does not work very well when changing optional argument vars
 				pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, ind2)))
 			end
+			res
+		end
+	end
+end
+
+RecipesBase.@recipe function Plots(brs::DCResult;
+							plotfold = false,
+							putspecialptlegend = true,
+							filterspecialpoints = false,
+							vars = nothing,
+							plotstability = true,
+							plotspecialpoints = true,
+							branchlabel = "",
+							linewidthunstable = 1.0,
+							linewidthstable = 2linewidthunstable,
+							plotcirclesbif = false,
+							applytoY = identity,
+							applytoX = identity)
+	for (id, res) in pairs(brs.branches)
+		@series begin
+			putspecialptlegend --> false
+			plotfold --> plotfold
+			plotspecialpoints --> plotspecialpoints
+			plotstability --> plotstability
+			branchlabel --> branchlabel
+			linewidthunstable --> linewidthunstable
+			linewidthstable --> linewidthstable
+			applytoX --> applytoX
+			applytoY --> applytoY
+			vars --> vars
 			res
 		end
 	end
@@ -283,7 +312,7 @@ end
 ####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
-RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl};
+RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
 	plotfold = false,
 	putspecialptlegend = true,
 	filterspecialpoints = false,
@@ -296,7 +325,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 	plotcirclesbif = false,
 	_basicplot = true,
 	applytoY = identity,
-	applytoX = identity) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc <: Union{FoldProblemMinimallyAugmented, HopfProblemMinimallyAugmented}, Tpar, Tl}
+	applytoX = identity) where {Tk <: TwoParamCont, Tprob}
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
 	ind1, ind2 = getPlotVars(contres, vars)
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
@@ -311,7 +340,7 @@ RecipesBase.@recipe function Plots(contres::ContResult{Ta, Teigvals, Teigvec, Bi
 	end
 
 	# display bifurcation points
-	bifpt = filter(x -> (x.type != :none) && (plotfold || x.type != :fold), contres.specialpoint)
+	bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold), contres.specialpoint)
 
 	if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
 		if filterspecialpoints == true

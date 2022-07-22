@@ -1,6 +1,5 @@
-using IterativeSolvers, KrylovKit, LinearAlgebra
-
-# In this file, we provide linear solvers for the Package
+using IterativeSolvers, LinearAlgebra
+import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual 
 
 abstract type AbstractLinearSolver end
 abstract type AbstractDirectLinearSolver <: AbstractLinearSolver end
@@ -93,6 +92,23 @@ function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
 		return _J \ rhs1, _J \ rhs2, true, (1, 1)
 	end
 end
+
+"""
+$(TYPEDEF)
+
+Mainly for debugging!! This is defined as an iterative pseudo-inverse linear solver
+This struct is used to test Moore-Penrose continuation. Used to solve `J * x = rhs`.
+
+$(TYPEDFIELDS)
+"""
+@with_kw struct DefaultPILS <: AbstractIterativeLinearSolver
+	"Whether to catch a factorization for multiple solves. Some operators may not support LU (like ApproxFun.jl) or QR factorization so it is best to let the user decides. Some matrices do not have `factorize` like `StaticArrays.MMatrix`."
+	useFactorization::Bool = true
+end
+
+function (l::DefaultPILS)(J, rhs; kwargs...)
+	return J \ rhs, true, 1
+end
 ####################################################################################################
 # Solvers for IterativeSolvers
 ####################################################################################################
@@ -167,10 +183,10 @@ $(TYPEDFIELDS)
 	dim::Int64 = KrylovDefaults.krylovdim
 
 	"Absolute tolerance for solver"
-	atol::T  = KrylovDefaults.tol
+	atol::T = KrylovDefaults.tol
 
 	"Relative tolerance for solver"
-	rtol::T  = KrylovDefaults.tol
+	rtol::T = KrylovDefaults.tol
 
 	"Maximum number of iterations"
 	maxiter::Int64 = KrylovDefaults.maxiter
@@ -199,12 +215,12 @@ function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where
 	else # use preconditioner
 		# the preconditioner must be applied after the scaling
 		function _linmap(dx)
-			# out = apply(J, dx); axpby!(a₀, dx, a₁, out)
-			out = _axpy_op(J, dx, a₀, a₁)
-			ldiv!(l.Pl, out)
-			out
+			Jdx = apply(J, dx)
+			out = similar(dx)
+			ldiv!(out, l.Pl, Jdx)
+			axpby!(a₀, dx, a₁, out)
 		end
-		res, info = KrylovKit.linsolve(_linmap, ldiv!(l.Pl, copy(rhs)); rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
+		res, info = KrylovKit.linsolve(_linmap, ldiv!(similar(rhs), l.Pl, copy(rhs)); rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
 	end
 	info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
 	return res, true, info.numops

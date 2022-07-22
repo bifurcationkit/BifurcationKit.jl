@@ -1,4 +1,4 @@
-# using Revise
+using Revise
 using Test, BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
 const BK = BifurcationKit
 
@@ -7,26 +7,27 @@ M = 30
 par = nothing
 sol0 = rand(2n)				# 585.977 KiB
 orbitguess_f = rand(2n*M+1)	# 17.166MiB
+
+prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> (dx -> 2 .* dx))
+probi = BK.BifurcationProblem((o, x, p) -> o .= x.^2, sol0, par; J = ((o, x, p, dx) -> o .= 2 .* dx), inplace = true)
+
 pb = PeriodicOrbitTrapProblem(
-			(x, p) -> x.^2,
-			(x, p) -> (dx -> 2 .* dx),
+			prob,
 			rand(2n*M),
 			rand(2n*M),
 			rand(M-1))
 
 pbg = PeriodicOrbitTrapProblem(
-			(x, p) -> x.^2,
-			(x, p) -> (dx -> 2 .* dx),
+			prob,
 			pb.ϕ,
 			pb.xπ,
 			pb.mesh.ds ; ongpu = true)
 
 pbi = PeriodicOrbitTrapProblem(
-			(o, x, p) -> o .= x.^2,
-			((o, x, p, dx) -> o .= 2 .* dx),
+			probi,
 			pb.ϕ,
 			pb.xπ,
-			pb.mesh.ds ; isinplace = true)
+			pb.mesh.ds)
 @test BK.isInplace(pb) == false
 # @time BK.POTrapFunctional(pb, res, orbitguess_f)
 # @time BK.POTrapFunctional(pbi, res, orbitguess_f)
@@ -94,11 +95,11 @@ function _functional(poPb, u0, p)
 	u0c = BK.getTimeSlices(poPb, u0)
 	outc = similar(u0c)
 
-	outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
+	outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
 
 	for ii = 2:M-1
 		h = T * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= Mass * (u0c[:, ii] .- u0c[:, ii-1]) .- (h/2) .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
+		outc[:, ii] .= Mass * (u0c[:, ii] .- u0c[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
 	end
 
 	# closure condition ensuring a periodic orbit
@@ -122,19 +123,19 @@ function _dfunctional(poPb, u0, p, du)
 	duc = BK.getTimeSlices(poPb, du)
 	outc = similar(u0c)
 
-	outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.J(u0c[:, M-1], p)(duc[:, M-1]))
+	outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.prob_vf.VF.J(u0c[:, M-1], p)(duc[:, M-1]))
 
 	for ii = 2:M-1
 		h = T * BK.getTimeStep(poPb, ii)
 		dh = dT * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= Mass * (duc[:, ii] .- duc[:, ii-1]) .- (h/2) .* (poPb.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.J(u0c[:, ii-1], p)(duc[:, ii-1]))
+		outc[:, ii] .= Mass * (duc[:, ii] .- duc[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.prob_vf.VF.J(u0c[:, ii-1], p)(duc[:, ii-1]))
 	end
 
 	dh = dT * BK.getTimeStep(poPb, 1)
-	outc[:, 1] .-=  dh/2 .* (poPb.F(u0c[:, 1], p) .+ poPb.F(u0c[:, M-1], p))
+	outc[:, 1] .-=  dh/2 .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
 	for ii = 2:M-1
 		dh = dT * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .-= dh/2 .* (poPb.F(u0c[:, ii], p) .+ poPb.F(u0c[:, ii-1], p))
+		outc[:, ii] .-= dh/2 .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
 	end
 
 	# closure condition ensuring a periodic orbit
@@ -168,9 +169,9 @@ _res = _dfunctional(pbmass, orbitguess_f, par, _du)
 ####################################################################################################
 # test whether the analytical version of the Jacobian is right
 n = 50
+prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
 pbsp = PeriodicOrbitTrapProblem(
-			(x, p) -> cos.(x),
-			(x, p) -> spdiagm(0 => -sin.(x)),
+			prob,
 			rand(2n*10),
 			rand(2n*10),
 			10)
@@ -244,9 +245,9 @@ Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
 ####################################################################################################
 # test whether the inplace version of computation of the Jacobian is right
 n = 1000
+prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> spdiagm(0 => 2 .* x))
 pbsp = PeriodicOrbitTrapProblem(
-			(x, p) -> x.^2,
-			(x, p) -> spdiagm(0 => 2 .* x),
+			prob,
 			rand(2n*M),
 			rand(2n*M),
 			M)
@@ -292,16 +293,15 @@ pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updatebord
 ####################################################################################################
 # test of the version with inhomogenous time discretisation
 M = 10
+prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
 pbsp = PeriodicOrbitTrapProblem(
-			(x, p) -> cos.(x),
-			(x, p) -> spdiagm(0 => -sin.(x)),
+			prob,
 			rand(2n*M),
 			rand(2n*M),
 			M)
 
 pbspti = PeriodicOrbitTrapProblem(
-			(x, p) -> cos.(x),
-			(x, p) -> spdiagm(0 => -sin.(x)),
+			prob,
 			pbsp.ϕ,
 			pbsp.xπ,
 			ones(9) ./ 10)

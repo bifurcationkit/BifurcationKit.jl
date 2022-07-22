@@ -205,7 +205,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	N = div(Nj, M)
 
 	if M == 1
-		return I-J
+		return I - J
 	end
 
 	mono = copy(J[N+1:2N, 1:N])
@@ -274,16 +274,16 @@ end
 
 	u0c = getTimeSlices(u0, N, M)
 
-	out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
-	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
+	# res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, 1])) \ out
+	res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 	out .= res
 
 	for ii in 2:M-1
 		h =  T * getTimeStep(poPb, ii)
-		out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
-		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
+		# res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, ii])) \ out
+		res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 		out .= res
 	end
 
@@ -307,18 +307,18 @@ function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem
 
 	u0c = getTimeSlices(u0, N, M)
 
-	@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, M-1], par), out)
+	@views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
 	# res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-	@views res, _ = poPb.linsolver(poPb.J(u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+	@views res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 	out .= res
 	out_a = [copy(out)]
 	# push!(out_a, copy(out))
 
 	for ii in 2:M-1
 		h =  T * getTimeStep(poPb, ii)
-		@views out .= out .+ h/2 .* apply(poPb.J(u0c[:, ii-1], par), out)
+		@views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
 		# res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-		@views res, _ = poPb.linsolver(poPb.J(u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+		@views res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
 		out .= res
 		push!(out_a, copy(out))
 	end
@@ -345,14 +345,14 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 
 	u0c = getTimeSlices(u0, N, M)
 
-	@views mono = Array(I - h/2 * (poPb.J(u0c[:, 1], par))) \ Array(I + h/2 * poPb.J(u0c[:, M-1], par))
+	@views mono = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, 1], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, M-1], par))
 	temp = similar(mono)
 
 	for ii in 2:M-1
 		# for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
 		# also I - h/2 .* J seems to hurt (a little) the performances
 		h =  T * getTimeStep(poPb, ii)
-		@views temp = Array(I - h/2 * (poPb.J(u0c[:, ii], par))) \ Array(I + h/2 * poPb.J(u0c[:, ii-1], par))
+		@views temp = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, ii], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, ii-1], par))
 		mono .= temp * mono
 	end
 	return mono

@@ -43,7 +43,6 @@ end
 
 d2F_sh(u, p, dx1, dx2) = (2 .* p.ν .* dx2 .- 6 .* dx2 .* u) .* dx1
 d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
-jet = (F_sh, dF_sh, d2F_sh, d3F_sh)
 
 X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
 Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
@@ -60,40 +59,41 @@ L1 = (I + Δ)^2
 par = (l = -0.1, ν = 1.3, L1 = L1)
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20)
-# optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
-	sol_hexa, hist, flag = @time newton(F_sh, dF_sh, vec(sol0), par, optnew)
-	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
-	plotsol(sol_hexa)
 
-plotsol(0.2vec(sol_hexa) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
+prob = BK.BifurcationProblem(F_sh, vec(sol0), par, (@lens _.l); J = dF_sh, plotSolution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
+# optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, eigsolver = EigArpack(0.5, :LM))
+sol_hexa = @time newton(prob, optnew)
+	println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
+	plotsol(sol_hexa.u)
+
+plotsol(0.2vec(sol_hexa.u) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
+
+plotsol(0.2vec(sol_hexa.u) .* vec([exp(-(x+0lx)^2/25) for x in X, y in Y]))
 ###################################################################################################
 # recherche de solutions
-deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 
 optnew = @set optnew.maxIter = 250
 optnewd = @set optnew.maxIter = 250
-outdef, _, flag, _ = @time newton(F_sh, dF_sh,
-		0.4vec(sol_hexa) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y]),
+outdef = @time newton(
+		(@set prob.u0 = 0.4vec(sol_hexa.u) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y])), deflationOp,
 		# 0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+lx)^2/55) for x in X, y in Y]),
-		par, optnewd, deflationOp)
-	println("--> norm(sol) = ", norm(outdef))
-	plotsol(outdef) |> display
-	flag && push!(deflationOp, outdef)
+		optnewd)
+	println("--> norm(sol) = ", norm(outdef.u))
+	plotsol(outdef.u) |> display
+	BK.converged(outdef) && push!(deflationOp, outdef.u)
 
 plotsol(deflationOp[end])
 
-plotsol(0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
+plotsol(0.4vec(sol_hexa.u) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0, pMin = -1.0, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), maxSteps = 146, detectBifurcation = 3, nev = 40, dsminBisection = 1e-9, nInversion = 6, tolBisectionEigenvalue= 1e-19)
 	optcont = @set optcont.newtonOptions.eigsolver = EigArpack(0.1, :LM)
+	# prob.u0 .= deflationOp[1]
 
-	br, = @time continuation(
-		F_sh, dF_sh,
-		deflationOp[1], par, (@lens _.l), optcont;
-		plot = true, verbosity = 2,
-		tangentAlgo = SecantPred(), linearAlgo = MatrixBLS(),
-		plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
-		recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+	br = @time continuation(
+		prob, PALC(), optcont;
+		plot = true, verbosity = 3,
 		# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 		# callbackN = cb,
 		normC = x -> norm(x, Inf))
@@ -102,16 +102,18 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = -0.0
 optfold = @set optcont.detectBifurcation = 0
 @set! optfold.newtonOptions.verbose = true
 optfold = setproperties(optfold; pMin = -2., pMax= 2., dsmax = 0.1)
-brfold = continuation(F_sh, dF_sh, br, 1, (@lens _.ν), optfold;
-	verbosity = 3, plot = true, issymmetric = true,
+brfold = continuation(br, 1, (@lens _.ν), optfold;
+	verbosity = 3, plot = true,
 	# bdlinsolver = MatrixBLS(),
+	plotSolution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
 	updateMinAugEveryStep = 1,
 	)
 
+plot(brfold)
 
 ###################################################################################################
 using IncompleteLU
-prec = ilu(L1 + I,τ = 0.15)
+prec = ilu(L1 + I, τ = 0.15)
 prec = lu(L1 + I)
 ls = GMRESIterativeSolvers(reltol = 1e-5, N = Nx*Ny, Pl = prec)
 
@@ -120,27 +122,24 @@ function dF_sh2(du, u, p)
 	return -L1 * du .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
 end
 
-sol_hexa, _, flag = @time newton(
-		F_sh,
-		(u, p) -> (du -> dF_sh2(du, u, p)),
-		vec(sol0), par,
-		@set optnew.linsolver = ls)
-	println("--> norm(sol) = ", norm(sol_hexa, Inf64))
-	plotsol(sol_hexa)
+prob2 = @set prob.VF.J = (u, p) -> (du -> dF_sh2(du, u, p))
+@set! prob2.u0 = vec(sol0)
+
+sol_hexa = @time newton(prob2, @set optnew.linsolver = ls)
+	println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
+	plotsol(sol_hexa.u)
 ###################################################################################################
 # Automatic branch switching
 
-br2, = continuation(jet..., br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
+br2 = continuation(br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 3, plotEveryStep = 5, maxSteps = 170);  nev = 30,
 			plot = true, verbosity = 2,
-			plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...);plot!(br; subplot=1,plotfold=false)),
-			recordFromSolution = (x, p) -> norm(x),
 			normC = x -> norm(x, Inf))
 
 plot(br, br2...)
 ###################################################################################################
 # Manual branch switching
-bp2d = computeNormalForm(jet..., br, 11; verbose = true, nev = 80)
-show(bp2d)
+bp2d = getNormalForm(br, 12; verbose = true, nev = 80)
+BK.nf(bp2d)
 
 
 using ProgressMeter, LaTeXStrings
@@ -178,38 +177,28 @@ function optionsCont(x,p,l; opt = optcont)
 	end
 end
 
-diagram = bifurcationdiagram(jet..., br, 2, optionsCont;
+diagram = bifurcationdiagram(br.prob, br, 2, optionsCont;
 	plot = true, verbosity = 0,
 	# usedeflation = true,
 	# δp = 0.005,
-	# tangentAlgo = BorderedPred(),
-	# callbackN = cb,
+	callbackN = cb,
 	# linearAlgo = MatrixBLS(),
-	plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
-	recordFromSolution = (x, p) -> norm(x),
-	finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
+	# finaliseSolution = (z, tau, step, contResult; k...) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	normC = x -> norm(x, Inf)
 	)
 
 plot(diagram; code = (), legend = false, plotfold = false)
 	plot!(br)
 
-# BK.add!(diagram, br2, 2)
 
 ###################################################################################################
-deflationOp = DeflationOperator(2, 1.0, [sol_hexa])
+deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 optcontdf = @set optcont.newtonOptions.verbose = true
-brdf,  = continuation(F_sh, dF_sh, par, (@lens _.l), setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1),
-	deflationOp;
+
+algdc = BK.DefCont(deflationOperator = deflationOp, perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))), maxIterDefOp = 50, maxBranches = 40, seekEveryStep = 5,)
+
+brdf = continuation(prob, algdc, setproperties(optcontdf; detectBifurcation = 0, plotEveryStep = 1);
 	plot = true, verbosity = 2,
-	# tangentAlgo = BorderedPred(),
-	# linearAlgo = MatrixBLS(),
-	# plotSolution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),
-	maxIterDefOp = 50,
-	maxBranches = 40,
-	seekEveryStep = 5,
-	recordFromSolution = (x, p) -> norm(x),
-	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
 	# finaliseSolution = (z, tau, step, contResult) -> 	(Base.display(contResult.eig[end].eigenvals) ;true),
 	# callbackN = cb,
 	normN = x -> norm(x, Inf))

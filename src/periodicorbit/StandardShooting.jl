@@ -28,17 +28,24 @@ Create a problem to implement the Standard Simple / Parallel Multiple Standard S
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
 - `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you).
+- `par` parameters of the model
+- `lens` parameter axis
+- `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
+- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
-- `pb(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
+- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
 Note that you can generate this guess from a function solution using `generateSolution`.
+
+## Jacobian
+$DocStrjacobianPOSh
 
 ## Simplified constructors
 - A simpler way to build the functional is to use
@@ -55,26 +62,35 @@ or
 or
 
 	pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
-where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p),dF(x,p)\\cdot y)``.
+where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p), dF(x,p)\\cdot y)``.
 """
-@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Ts, Tsection} <: AbstractShootingProblem
+@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Ts, Tsection, Tpar, Tlens} <: AbstractShootingProblem
 	M::Int64 = 0							# number of sections
 	flow::Tf = Flow()						# should be a Flow
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
 	section::Tsection = nothing				# sections for phase condition
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
+	par::Tpar = nothing
+	lens::Tlens = nothing
+	updateSectionEveryStep::Int = 0
+	jacobian::Symbol = :autodiffDense
 end
 
 @inline isSimple(sh::ShootingProblem) = getMeshSize(sh) == 1
 @inline isParallel(sh::ShootingProblem) = sh.parallel
+@inline getLens(sh::ShootingProblem) = sh.lens
+getParams(prob::ShootingProblem) = prob.par
 
 function Base.show(io::IO, sh::ShootingProblem)
-	println(io, "┌─ Standard shooting problem")
-	println(io, "├─ time slices : ", getMeshSize(sh))
+	println(io, "┌─ Standard shooting functional for periodic orbits")
+	println(io, "├─ time slices    : ", getMeshSize(sh))
+	println(io, "├─ lens           : ", getLensSymbol(sh.lens))
+	println(io, "├─ jacobian       : ", sh.jacobian)
+	println(io, "├─ update section : ", sh.updateSectionEveryStep)
 	if sh.flow isa FlowDE
-		println(io, "├─ integrator  : ", typeof(sh.flow.alg).name.name)
+		println(io, "├─ integrator     : ", typeof(sh.flow.alg).name.name)
 	end
-	println(io, "└─ parallel    : ", isParallel(sh))
+	println(io, "└─ parallel       : ", isParallel(sh))
 end
 
 # this function updates the section during the continuation run
@@ -317,17 +333,17 @@ end
 
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function reMake(prob::ShootingProblem, F, dF, par, hopfpt, ζr, orbitguess_a, period; k...)
+function reMake(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
 	# append period at the end of the initial guess
 	orbitguess_v = reduce(vcat, orbitguess_a)
 	orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
 	# update the problem but not the section if the user passed one
-	probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(F(orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section)
+	probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section, par = getParams(prob_vf), lens = getLens(prob_vf))
 	probSh.section.normal ./= norm(probSh.section.normal)
 
 	# be sure that the vector field is correctly inplace in the Flow structure
-	# @set! probSh.flow.F = F
+	# @set! probSh.flow.F = prob_vf.VF.F
 
 	return probSh, orbitguess
 end

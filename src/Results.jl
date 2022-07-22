@@ -1,7 +1,8 @@
 abstract type AbstractBranchResult end
+abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
 
 ####################################################################################################
-# functions used in RecordFromSol
+# functions used in RecordFromSolution
 namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
@@ -14,7 +15,7 @@ $(TYPEDEF)
 
 Structure which holds the results after a call to [`continuation`](@ref).
 
-You can see the propertynames of a result `br::ContResult` by using `propertynames(br)` or `propertynames(br.branch)`.
+You can see the propertynames of a result `br` by using `propertynames(br)` or `propertynames(br.branch)`.
 
 # Fields
 
@@ -27,8 +28,11 @@ $(TYPEDFIELDS)
 - `br[k+1]` gives information about the k-th step
 - `getSolx(br, k)` returns the k-th solution on the branch
 - `getSolp(br, k)` returns the parameter  value associated with k-th solution on the branch
+- `getParams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
+- `setParam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`
+- `getLens(br)` get the lens used for the computation of the branch
 """
-@with_kw_noshow struct ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl <: Lens} <: AbstractBranchResult
+@with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
 	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
@@ -36,37 +40,36 @@ $(TYPEDFIELDS)
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
   - `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)"
-	branch::StructArray{Ta}
+	branch::StructArray{Tbr}
 
 	"A vector with eigen-elements at each continuation step."
-	eig::Vector{NamedTuple{(:eigenvals, :eigenvec, :step), Tuple{Teigvals, Teigvec, Int64}}}
+	eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :step), Tuple{Teigvals, Teigvec, Int64}}}
 
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
-	sol::Ts
+	sol::Tsol
 
 	"The parameters used for the call to `continuation` which produced this branch. Must be a ContinatioPar"
 	contparams::Tparc
 
 	"Type of solutions computed in this branch."
-	type::Symbol = :Equilibrium
+	kind::Tkind = EquilibriumCont()
 
 	"Structure associated to the functional, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
-	functional::Tfunc = nothing
-
-	"Parameters passed to continuation and used in the equation `F(x, par) = 0`."
-	params::Tpar = nothing
-
-	"Parameter axis used for computing the branch"
-	lens::Tl
+	prob::Tprob = nothing
 
 	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a description of the fields."
 	specialpoint::Vector{Biftype}
+
+	"Continuation algorithm used for the computation of the branch"
+	alg::Talg
 
 	@assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
+getParams(br::AbstractBranchResult) = getParams(br.prob)
+getLens(br::AbstractBranchResult) = getLens(br.prob)
 
 # check whether the eigenvalues are saved in the branch
 # this is a good test bifucause we always fill br.eig with a dummy vector :(
@@ -74,11 +77,11 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the solution are saved in the branch
-@inline hassolution(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl } = Ts != Nothing
+@inline hassolution(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} ) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg } = Tsol != Nothing
 @inline hassolution(br::AbstractBranchResult) = hassolution(br.γ)
 
 # check whether the eigenvectors are saved in the branch
-@inline haseigenvector(br::ContResult{Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} ) where {Ta, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl } = Teigvec != Nothing
+@inline haseigenvector(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} ) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
@@ -86,20 +89,21 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline getvectortype(br::AbstractBranchResult) = getVectorType(eltype(br.specialpoint))
 @inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
-setParam(br::AbstractBranchResult, p0) = set(br.params, br.lens, p0)
-Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvec = haseigenvector(br) ? br.eig[k].eigenvec : nothing)
+setParam(br::AbstractBranchResult, p0) = setParam(br.prob, p0)
+Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvecs = haseigenvector(br) ? br.eig[k].eigenvecs : nothing)
 Base.lastindex(br::ContResult) = length(br)
 @inline function getSolx(br::ContResult, ind::Int)
 	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
 	return br.sol[ind].x
 end
+
 @inline function getSolp(br::ContResult, ind::Int)
 	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
 	return br.sol[ind].p
 end
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:specialpoint, :contparams, :lens, :sol, :type, :branch, :eig, :functional, :params)
+	if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg)
 		getfield(br, s)
 	else
 		getproperty(br.branch, s)
@@ -116,7 +120,7 @@ Return the eigenvalues of the ind-th continuation step. `verbose` is used to tel
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
 	if verbose
-		println("--> For ", getLensSymbol(br.lens), " = ", br.branch[ind].param)
+		println("--> For ", getLensSymbol(br), " = ", br.branch[ind].param)
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
 		println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
 	end
@@ -136,28 +140,32 @@ Return the indev-th eigenvectors of the ind-th continuation step.
 """
 function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
 	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
-	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvec, indev)
+	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvecs, indev)
 end
+
+@inline getLensSymbol(br::AbstractBranchResult) = getLensSymbol(getLens(br))
 
 function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
 	println(io, prefix * "┌─ Number of points: ", length(br.branch))
-	print(io, prefix * "├─ Branch of ")
-	printstyled(io, br.type, comment, color=:light_cyan, bold = true)
+	print(io, prefix * "├─ Curve of ")
+	printstyled(io, typeof(br.kind).name.name, comment, color=:cyan, bold = true)
 	print(io, "\n" * prefix * "├─ Type of vectors: ")
-	printstyled(io, getvectortype(br), color=:light_cyan, bold = true)
+	printstyled(io, getvectortype(br), color=:cyan, bold = true)
 	print(io, "\n" * prefix * "├─ Parameter ")
-	printstyled(io, getLensSymbol(br.lens), color=:light_cyan, bold = true)
+	printstyled(io, getLensSymbol(br), color=:cyan, bold = true)
 	println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
+	print(io, prefix * "├─ Algo: ")
+	printstyled(io, typeof(br.alg).name.name, "\n", color=:cyan, bold = true)
 	if length(br.specialpoint) > 0
 		println(io, prefix * "└─ Special points:\n\nIf `br` is the name of the branch,\nind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`\n")
 		for ii in eachindex(br.specialpoint)
-			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br.lens)))
+			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br)))
 		end
 	end
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
-getEigenelements(br::ContResult{T, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl}, bp::Biftype) where {T, Teigvals, Teigvec, Biftype, Ts, Tparc, Tfunc, Tpar, Tl} = br.eig[bp.idx]
+getEigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} = br.eig[bp.idx]
 
 """
 $(SIGNATURES)
@@ -169,18 +177,18 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _ContResult(printsol, br, x0, par, lens::Lens, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool) where {T, S, E}
+ function _ContResult(prob, alg, printsol, br, x0, τ, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool, kind::AbstractContinuationKind) where {T, S, E}
 	# example of bifurcation point
-	bif0 = SpecialPoint(x0, T, namedprintsol(printsol))
+	bif0 = SpecialPoint(x0, τ, T, namedprintsol(printsol))
 	# shall we save full solution?
-	sol = contParams.saveSolEveryStep > 0 ? [(x = copy(x0), p = get(par, lens), step = 0)] : nothing
+	sol = contParams.saveSolEveryStep > 0 ? [(x = x0, p = getParam(prob), step = 0)] : nothing
 	n_unstable = 0; n_imag = 0; stability = true
 
 	if computeEigElements
 		evvectors = saveEigenvectors(contParams) ? eiginfo[2] : nothing
-		_evvectors = (eigenvals = eiginfo[1], eigenvec = evvectors, step = 0)
+		_evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, step = 0)
 	else
-		_evvectors = (eigenvals = nothing, eigenvec = nothing, step = 0)
+		_evvectors = (eigenvals = nothing, eigenvecs = nothing, step = 0)
 	end
 	return ContResult(
 		branch = StructArray([br]),
@@ -188,13 +196,14 @@ Function is used to initialize the composite type `ContResult` according to the 
 		eig = computeEigElements ? [_evvectors] : empty([_evvectors]),
 		sol = sol,
 		contparams =  contParams,
-		params = par,
-		lens = lens)
+		alg = alg,
+		kind = kind,
+		prob = prob)
 end
 
 function _ContResult()
 	@assert 1==0 "WIP, really `Any` in  the constructor?"
-	ContResult(branch = StructArray([(a=1,b=2)]), eig = [(eigenvals = Any[], eigenvec=Any[],step=0)],sol=Any[],contparams = opts_br, lens=(@lens _[1]), bifpoint=Any[]);
+	ContResult(branch = StructArray([(a=1,b=2)]), eig = [(eigenvals = Any[], eigenvecs=Any[],step=0)],sol=Any[],contparams = opts_br, lens=(@lens _[1]), bifpoint=Any[]);
 end
 ####################################################################################################
 """
@@ -204,14 +213,18 @@ A Branch is a structure which encapsulates the result of the computation of a br
 
 $(TYPEDFIELDS)
 """
-struct Branch{T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractBranchResult
+struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
 	"Set of branches branching off the bifurcation point `bp`"
 	γ::T
 	"Bifurcation point. It is thought as the root of the branches in γ"
 	bp::Tbp
+	function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ AbstractResult{Tkind, Tprob}} }}
+		return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
+	end
 end
 
 Base.length(br::Branch) = length(br.γ)
+@inline kernelDim(br::Branch, ind) = kernelDim(br.γ, ind)
 
 """
 $(SIGNATURES)
@@ -222,7 +235,7 @@ from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
-Base.show(io::IO, br::Branch{T, Tbp}; k...) where {T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
+Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.lastindex(br::Branch) = lastindex(br.γ)
 
 # extend the getproperty for easy manipulation of a Branch
@@ -260,8 +273,8 @@ function _reverse(br0::ContResult)
 	return br
 end
 
-_append!(x,y) = append!(x,y)
-_append!(x,::Nothing) = nothing
+_append!(x, y) = append!(x, y)
+_append!(x, ::Nothing) = nothing
 
 """
 $(SIGNATURES)
@@ -302,27 +315,27 @@ Same as _cat! but determine the ordering so that the branches merge properly
 """
 function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
 	# find the intersection point
-	dst(x1,p1,x2,p2) = max(abs(x1-x2),abs(p1-p2))
-	dst(i,j) = dst(br1.branch[i][1],br1.branch[i].param,br2.branch[j][1],br2.branch[j].param)
-	ind = (1,1)
-	for i in [1,length(br1)], j in [1,length(br2)]
-		if dst(i,j) < tol
-			ind = (i,j)
+	dst(x1, p1, x2, p2) = max(abs(x1 - x2), abs(p1 - p2))
+	dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
+	ind = (1, 1)
+	for i in [1, length(br1)], j in [1, length(br2)]
+		if dst(i, j) < tol
+			ind = (i, j)
 			break
 		end
 	end
 
 	if ind[1] == 1
 		if ind[2] == 1
-			return _cat!(_reverse(br2),br1)
+			return _cat!(_reverse(br2), br1)
 		else
-			return _cat!((br2),br1)
+			return _cat!((br2), br1)
 		end
 	else
 		if ind[2] == 1
-			return _cat!(br1,br2)
+			return _cat!(br1, br2)
 		else
-			return _cat!(br1,_reverse(br2))
+			return _cat!(br1, _reverse(br2))
 		end
 
 	end

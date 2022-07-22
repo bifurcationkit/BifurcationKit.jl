@@ -2,14 +2,21 @@ module BifurcationKit
 	using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
 	using Setfield: setproperties, @set, @set!, Lens, get, set, @lens
 	using Parameters: @with_kw, @unpack, @with_kw_noshow
-	using RecursiveArrayTools: VectorOfArray
+	using RecursiveArrayTools: VectorOfArray, ArrayPartition
 	using DocStringExtensions
 	using DataStructures: CircularBuffer
 	using ForwardDiff
 
-	# we put this here to be used in LinearBorderSolver
-	abstract type AbstractContinuationIterable end
-	abstract type AbstractContinuationState end
+	# using Infiltrator
+
+	include("Problems.jl")
+
+	# we put this here to be used in LinearBorderSolver and Continuation
+	abstract type AbstractContinuationAlgorithm end
+	abstract type AbstractContinuationIterable{kind} end
+	abstract type AbstractContinuationState{Tv} end
+
+	include("ContKind.jl")
 
 	include("BorderedArrays.jl")
 	include("LinearSolver.jl")
@@ -19,17 +26,26 @@ module BifurcationKit
 	include("Newton.jl")
 	include("ContParameters.jl")
 	include("Results.jl")
-	
+
 	include("events/Event.jl")
-	
+
+	include("DeflationOperator.jl")
+
 	include("Continuation.jl")
+	include("IteratorUtils.jl")
+
 	include("events/EventDetection.jl")
 	include("events/BifurcationDetection.jl")
 
 	include("Bifurcations.jl")
-	include("Predictor.jl")
 
-	include("DeflationOperator.jl")
+	include("continuation/ContBase.jl")
+	include("continuation/Natural.jl")
+	include("continuation/Palc.jl")
+	include("continuation/Multiple.jl")
+	include("continuation/MoorePenrose.jl")
+	include("DeflatedContinuation.jl")
+
 	include("BorderedProblem.jl")
 
 	include("Utils.jl")
@@ -45,8 +61,6 @@ module BifurcationKit
 	include("codim2/BifurcationPoints.jl")
 	include("codim2/NormalForms.jl")
 	include("bifdiagram/BifurcationDiagram.jl")
-
-	include("DeflatedContinuation.jl")
 
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
@@ -103,22 +117,22 @@ module BifurcationKit
 				# bothside = true is passed to continuation
 				fd = iter.contParams.ds >=0 ? "fw" : "bw"
 
-					# create a group in the JLD format
-					jldopen(filename*".jld2", "a+") do file
+				# create a group in the JLD format
+				jldopen(filename*".jld2", "a+") do file
 					if haskey(file, "sol-$fd-$i")
 						delete!(file, "sol-$fd-$i")
 					end
 					mygroup = JLD2.Group(file, "sol-$fd-$i")
-						mygroup["sol"] = sol
-						mygroup["param"] = p
-					end
+					mygroup["sol"] = sol
+					mygroup["param"] = p
+				end
 
 				jldopen(filename*"-branch.jld2", "a+") do file
 					if haskey(file, "branch"*fd)
 						delete!(file, "branch"*fd)
 					end
 					file["branch"*fd] = br
-					end
+				end
 			end
 
 			# final save of branch, in case bothsided = true is used
@@ -148,6 +162,9 @@ module BifurcationKit
 	export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit,
 			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
+	# Problems
+	export BifurcationProblem, BifFunction, getLens, getParams, reMake
+
 	# bordered nonlinear problems
 	export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
 
@@ -161,10 +178,10 @@ module BifurcationKit
 	export DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
 
 	# predictors for continuation
-	export SecantPred, BorderedPred, NaturalPred, MultiplePred, PolynomialPred
+	export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose
 
 	# newton methods
-	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered
+	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered, NonLinearSolution
 
 	# continuation methods
 	export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals, getSolx, getSolp
@@ -182,7 +199,7 @@ module BifurcationKit
 	export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
 	# normal form
-	export computeNormalForm, predictor
+	export getNormalForm, predictor
 
 	# automatic bifurcation diagram
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP

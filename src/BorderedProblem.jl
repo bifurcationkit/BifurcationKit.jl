@@ -76,137 +76,137 @@ function (pb::BorderedProblem)(xe, par, dxe)
 end
 
 # Structure to hold the jacobian of the bordered problem
-# mutable struct JacobianBorderedProblem{Tpb, Tj, Tdpf, Tdg, Tdpg}
-# 	pb::Tpb
-# 	J::Tj
-# 	dpF::Tdpf
-# 	∇g::Tdg
-# 	dpg::Tdpg
-# end
+mutable struct JacobianBorderedProblem{Tpb, Tj, Tdpf, Tdg, Tdpg}
+	pb::Tpb
+	J::Tj
+	dpF::Tdpf
+	dg::Tdg
+	dpg::Tdpg
+end
 
-# # simplified constructor
-# JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, pb.dxF(x, p), pb.dpF(x, p), pb.∇g(x, p), pb.dpg(x, p))
-#
-# JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, extractVector(pb, x), extractParameter(pb, x))
-#
-#
-# function (Jpb::JacobianBorderedProblem)(x, p)
-# 	# computation of the jacobian of the Bordered problem
-# 	pb = Jpb.pb
-# 	if Jpb.J isa AbstractArray
-# 		copyto!(Jpb.J, 	 pb.dxF(x, p))
-# 	else
-# 		Jpb.J = pb.dxF(x, p)
-# 	end
-#
-# 	if Jpb.dpF isa AbstractArray
-# 		copyto!(Jpb.dpF, pb.dpF(x, p))
-# 	else
-# 		Jpb.dpF = pb.dpF(x, p)
-# 	end
-#
-# 	if Jpb.∇g isa AbstractArray
-# 		copyto!(Jpb.∇g,  pb.∇g(x, p))
-# 	else
-# 		Jpb.∇g = pb.∇g(x, p)
-# 	end
-# 	if getParameterDim(pb) == 1
-# 		Jpb.dpg = pb.dpg(x, p)
-# 	else
-# 		copyto!(Jpb.dpg, pb.dpg(x, p))
-# 	end
-# 	return Jpb
-# end
-#
-# (Jbp::JacobianBorderedProblem)(x) = Jbp(extractVector(Jbp.pb, x), extractParameter(Jbp.pb, x))
-#
-# @with_kw struct LinearSolverBorderedProblem{T, Ts, L <: AbstractBorderedLinearSolver} <: AbstractLinearSolver
-# 	ls::L
-# 	# these are used to alter the second linear equation in the bordered system
-# 	xiu::T = 1.0
-# 	xip::T = 1.0
-# 	shift::Ts = nothing
-# end
-#
-# # simplified constructor
-# LinearSolverBorderedProblem(ls) = LinearSolverBorderedProblem(ls = ls)
-#
-# function (lsbdp::LinearSolverBorderedProblem)(J::JacobianBorderedProblem, x)
-# 	# call the bordered linear solver
-# 	ou, op, flag, it = lsbdp.ls(J.J, J.dpF, J.∇g, J.dpg, extractVector(J.pb, x), extractParameter(J.pb, x), lsbdp.xiu, lsbdp.xip; shift = lsbdp.shift)
-# 	if x isa BorderedArray
-# 		return BorderedArray(ou, op), flag, it
-# 	else
-# 		return vcat(ou, op), flag, it
-# 	end
-# end
-#
-# ####################################################################################################
-# # newton functions
-# """
-# 	newtonBordered(pb::BorderedProblem, z0, options::NewtonPar{T, L, S}; kwargs...)
-#
-# This function solves the equation associated with the functional `pb` with initial guess
-# """
-# function newtonBordered(pb::Tpb, z0, par, options::NewtonPar{T, L, S}; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S, Tpb <: BorderedProblem}
-# 	@show z0
-# 	Jac   = JacobianBorderedProblem(pb, z0, par)
-# 	lsbpb = LinearSolverBorderedProblem(options.linsolver)
-# 	options2 = @set options.linsolver = lsbpb
-# 	return newton(pb, Jac, z0, par, options2; kwargs...)
-# end
-#
-# """
-# This is the newton solver used to solve `F(x, p) = 0` together
-# with the scalar condition `n(x, p) = (x - x0) * xp + (p - p0) * lp - n0`
-# """
-# function _newtonPALC(F, Jh,
-# 					z0::BorderedArray{vectype, T},
-# 					tau0::BorderedArray{vectype, T},
-# 					z_pred::BorderedArray{vectype, T},
-# 					options::ContinuationPar{T},
-# 					dottheta::DotTheta;
-# 					linearbdalgo = BorderingBLS(),
-# 					normN = norm,
-# 					callback = cbDefault, kwargs...) where {T, vectype}
-# 	# Extract parameters
-# 	@error "WIP - will replace newtonPALC once performances improve"
-# 	newtonOpts = options.newtonOptions
-# 	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
-# 	@unpack theta, ds, finDiffEps = options
-#
-# 	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
-# 	normAC = (resf, resn) -> max(normN(resf), abs(resn))
-#
-# 	pb = BorderedProblem(F = F, dxF = Jh, g = N, ∇g = (x, p) -> tau0.u, dpg = (x, p) -> tau0.p)
-# 	Jac   = JacobianBorderedProblem(pb, z0)
-# 	lsbpb = LinearSolverBorderedProblem(ls = linearbdalgo, xiu = theta / length(z0.u), xip = one(T) - theta)
-# 	options2 = @set newtonOpts.linsolver = lsbpb
-# 	return newton(pb, Jac, z0, options2; kwargs...)
-# end
-# ####################################################################################################
-# # continuation function
-# function continuationBordered(pb, z0, p0::Real, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
-# 	Jac   = p -> JacobianBorderedProblem(pb(p), z0)
-# 	lsbpb = LinearSolverBorderedProblem(contParams.newtonOptions.linsolver)
-# 	contParams2 = @set contParams.newtonOptions.linsolver = lsbpb
-# 	return continuation((z, p) -> pb(p)(z),
-# 						(z, p) -> Jac(p)(z),
-# 						z0, p0, contParams2; kwargs...)
-# end
-#
-# """
-# continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; kwargs...)
-#
-# This is the continuation routine for finding the curve of solutions of a family of Bordered problems `p->prob(p)`.
-#
-# # Arguments
-# - `p -> prob(p)` is a family such that `prob(p)::BorderedProblem` encodes the functional G
-# - `z0` a guess for the constrained problem.
-# - `p0` initial parameter, must be a real number
-# - `contParams` same as for the regular `continuation` method
-# """
-# function continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
-# 	linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
-# 	return continuationBordered(prob, z0, p0, contParams, linearAlgo; kwargs...)
-# end
+# simplified constructor
+JacobianBorderedProblem(pb, x, p) = JacobianBorderedProblem(pb, pb.dxF(x, p), pb.dpF(x, p), pb.dg(x, p), pb.dpg(x, p))
+
+JacobianBorderedProblem(pb, x) = JacobianBorderedProblem(pb, extractVector(pb, x), extractParameter(pb, x))
+
+
+function (Jpb::JacobianBorderedProblem)(x, p)
+	# computation of the jacobian of the Bordered problem
+	pb = Jpb.pb
+	if Jpb.J isa AbstractArray
+		copyto!(Jpb.J, 	 pb.dxF(x, p))
+	else
+		Jpb.J = pb.dxF(x, p)
+	end
+
+	if Jpb.dpF isa AbstractArray
+		copyto!(Jpb.dpF, pb.dpF(x, p))
+	else
+		Jpb.dpF = pb.dpF(x, p)
+	end
+
+	if Jpb.dg isa AbstractArray
+		copyto!(Jpb.dg,  pb.dg(x, p))
+	else
+		Jpb.dg = pb.dg(x, p)
+	end
+	if getParameterDim(pb) == 1
+		Jpb.dpg = pb.dpg(x, p)
+	else
+		copyto!(Jpb.dpg, pb.dpg(x, p))
+	end
+	return Jpb
+end
+
+(Jbp::JacobianBorderedProblem)(x) = Jbp(extractVector(Jbp.pb, x), extractParameter(Jbp.pb, x))
+
+@with_kw struct LinearSolverBorderedProblem{T, Ts, L <: AbstractBorderedLinearSolver} <: AbstractLinearSolver
+	ls::L
+	# these are used to alter the second linear equation in the bordered system
+	xiu::T = 1.0
+	xip::T = 1.0
+	shift::Ts = nothing
+end
+
+# simplified constructor
+LinearSolverBorderedProblem(ls) = LinearSolverBorderedProblem(ls = ls)
+
+function (lsbdp::LinearSolverBorderedProblem)(J::JacobianBorderedProblem, x)
+	# call the bordered linear solver
+	ou, op, flag, it = lsbdp.ls(J.J, J.dpF, J.dg, J.dpg, extractVector(J.pb, x), extractParameter(J.pb, x), lsbdp.xiu, lsbdp.xip; shift = lsbdp.shift)
+	if x isa BorderedArray
+		return BorderedArray(ou, op), flag, it
+	else
+		return vcat(ou, op), flag, it
+	end
+end
+
+####################################################################################################
+# newton functions
+"""
+	newtonBordered(pb::BorderedProblem, z0, options::NewtonPar{T, L, S}; kwargs...)
+
+This function solves the equation associated with the functional `pb` with initial guess
+"""
+function newtonBordered(pb::Tpb, z0, par, options::NewtonPar{T, L, S}; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S, Tpb <: BorderedProblem}
+	@show typeof(z0)
+	Jac   = JacobianBorderedProblem(pb, z0)
+	lsbpb = LinearSolverBorderedProblem(options.linsolver)
+	options2 = @set options.linsolver = lsbpb
+	return newton(pb, Jac, z0, par, options2; kwargs...)
+end
+
+"""
+This is the newton solver used to solve `F(x, p) = 0` together
+with the scalar condition `n(x, p) = (x - x0) * xp + (p - p0) * lp - n0`
+"""
+function _newtonPALC(F, Jh,
+					z0::BorderedArray{vectype, T},
+					tau0::BorderedArray{vectype, T},
+					z_pred::BorderedArray{vectype, T},
+					options::ContinuationPar{T},
+					dottheta::DotTheta;
+					linearbdalgo = BorderingBLS(),
+					normN = norm,
+					callback = cbDefault, kwargs...) where {T, vectype}
+	# Extract parameters
+	@error "WIP - will replace newtonPALC once performances improve"
+	newtonOpts = options.newtonOptions
+	@unpack tol, maxIter, verbose, alpha, almin, linesearch = newtonOpts
+	@unpack theta, ds, finDiffEps = options
+
+	N = (x, p) -> arcLengthEq(dottheta, minus(x, z0.u), p - z0.p, tau0.u, tau0.p, theta, ds)
+	normAC = (resf, resn) -> max(normN(resf), abs(resn))
+
+	pb = BorderedProblem(F = F, dxF = Jh, g = N, dg = (x, p) -> tau0.u, dpg = (x, p) -> tau0.p)
+	Jac   = JacobianBorderedProblem(pb, z0)
+	lsbpb = LinearSolverBorderedProblem(ls = linearbdalgo, xiu = theta / length(z0.u), xip = one(T) - theta)
+	options2 = @set newtonOpts.linsolver = lsbpb
+	return newton(pb, Jac, z0, options2; kwargs...)
+end
+####################################################################################################
+# continuation function
+function continuationBordered(pb, z0, p0::Real, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
+	Jac   = p -> JacobianBorderedProblem(pb(p), z0)
+	lsbpb = LinearSolverBorderedProblem(contParams.newtonOptions.linsolver)
+	contParams2 = @set contParams.newtonOptions.linsolver = lsbpb
+	return continuation((z, p) -> pb(p)(z),
+						(z, p) -> Jac(p)(z),
+						z0, p0, contParams2; kwargs...)
+end
+
+"""
+continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; kwargs...)
+
+This is the continuation routine for finding the curve of solutions of a family of Bordered problems `p->prob(p)`.
+
+# Arguments
+- `p -> prob(p)` is a family such that `prob(p)::BorderedProblem` encodes the functional G
+- `z0` a guess for the constrained problem.
+- `p0` initial parameter, must be a real number
+- `contParams` same as for the regular `continuation` method
+"""
+function continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
+	linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
+	return continuationBordered(prob, z0, p0, contParams, linearAlgo; kwargs...)
+end

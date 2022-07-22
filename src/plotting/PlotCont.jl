@@ -6,7 +6,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	plot(layout = l )
 
 	plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
-		xlabel = getLensSymbol(contres.lens),
+		xlabel = getLensSymbol(contres),
 		ylabel = getfirstusertype(contres),
 		label = "", plotfold = false, subplot = 1)
 
@@ -18,8 +18,12 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
 	if computeEigenElements(contparms)
 		eigvals = contres.eig[end].eigenvals
 		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
+		# add stability boundary
+		maxIm = maximum(imag, eigvals)
+		minIm = minimum(imag, eigvals)
+		plot!([0, 0], [maxIm, minIm], subplot=4, label = "", color = :blue)
 	end
 
-	plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = getLensSymbol(contres.lens), label = "", subplot = 2) |> display
+	plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = getLensSymbol(contres), label = "", subplot = 2) |> display
 
 end

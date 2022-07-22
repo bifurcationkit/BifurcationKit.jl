@@ -1,5 +1,7 @@
+closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
+norm2sqr(x) = dot(x,x)
 ####################################################################################################
 # display eigenvals with color
 function displayEV(eigenvals, color = :black)
@@ -25,10 +27,12 @@ end
 
 @inline _displayLine(i::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear)
 
+@inline _displayLine(i::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", i, itlinear)
+
 @inline _displayLine(i::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", i, itlinear[1], itlinear[2])
 ####################################################################################################
 function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contParams.nev; kwargs...)
-	return it.contParams.newtonOptions.eigsolver(it.J(u0, par), nev; iter = it, state = state, kwargs...)
+	return it.contParams.newtonOptions.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
 end
 
 function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
@@ -36,8 +40,8 @@ function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 	n = state.n_unstable[2]
 	nev_ = max(n + 5, iter.contParams.nev)
 	eiginfo = computeEigenvalues(iter, state, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
-	_isstable, n_unstable, n_imag = isStable(iter.contParams, eiginfo[1])
-	return eiginfo, _isstable, n_unstable, n_imag
+	@unpack isstable, n_unstable, n_imag = isStable(iter.contParams, eiginfo[1])
+	return eiginfo, isstable, n_unstable, n_imag
 end
 
 # same as previous but we save the eigen-elements in state
@@ -189,30 +193,6 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
-####################################################################################################
-"""
-$(SIGNATURES)
-
-Return the 3-Jet of f, namely (f, df, d2f, d3f). If J is passed, the function returns (f, J, d2f, d3f). These differentials are computed using ForwardDiff.jl.
-
-## Optional argument
-- `matrixfree = true` returns the matrix-free jacobian operator. Otherwise returns the Matrix based jacobian.
-"""
-function getJet(f, J = nothing; matrixfree = true)
-	d1f(x,p,dx1) = ForwardDiff.derivative(t -> f(x .+ t .* dx1, p), 0.)
-	d2f(x,p,dx1,dx2) = ForwardDiff.derivative(t -> d1f(x .+ t .* dx2, p, dx1), 0.)
-	d3f(x,p,dx1,dx2,dx3) = ForwardDiff.derivative(t -> d2f(x .+ t .* dx3, p, dx1, dx2), 0.)
-	if isnothing(J)
-		if matrixfree
-	 		return (f, d1f, d2f, d3f)
-		else
-			Jmat(x,p) = ForwardDiff.jacobian(z -> f(z, p), x)
-			return (f, Jmat, d2f, d3f)
-		end
-	else
-		return (f, J, d2f, d3f)
-	end
-end
 ####################################################################################################
 """
 $(SIGNATURES)

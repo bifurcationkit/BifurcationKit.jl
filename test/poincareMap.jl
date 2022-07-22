@@ -50,6 +50,8 @@ dflowDE = (x, dx, ts; kwargs...) -> diffAD(z -> flowDE(z, ts; kwargs...), x, dx)
 dflowDEfd = (x, dx, ts) -> (flowDE(x .+ δ .* dx, ts) - flowDE(x, ts)) ./ δ
 
 @test dflowDE(u0,u0,1.) .- dflowDEfd(u0,u0,1.) |> norminf < 10δ
+
+flowDE(u0,1.)
 ####################################################################################################
 # defining the Poincare Map
 normals = [[-1., 0.]]

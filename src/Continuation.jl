@@ -5,7 +5,7 @@ import Base: iterate
 $(TYPEDEF)
 
 # Useful functions
-- `setParam(iter, p)` set parameter with lens `iter.lens` to `p`
+- `setParam(iter, p)` set parameter with lens `iter.prob.lens` to `p`
 - `isEventActive(iter)` whether the event detection is active
 - `computeEigenElements(iter)` whether to compute eigen elements
 - `saveEigenvectors(iter)` whether to save eigen vectors
@@ -14,47 +14,31 @@ $(TYPEDEF)
 - `isInDomain(iter, p)` whether `p` in is domain [pMin, pMax]. (See [`ContinuationPar`](@ref))
 - `isOnBoundary(iter, p)` whether `p` in is {pMin, pMax}
 """
-@with_kw_noshow struct ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} <: AbstractContinuationIterable
-	F::TF
-	J::TJ
-
-	x0::Tv			# initial guess
-	par::Tp			# reference to parameter, so no worry if this one is big like sparse matrix
-	lens::Tlens		# param axis to be considered specified by a ::Lens
-
+@with_kw_noshow struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+	kind::Tkind
+	prob::Tprob
+	alg::Talg
 	contParams::ContinuationPar{T, S, E}
-
-	tangentAlgo::Ttangent
-	linearAlgo::Tlinear
-
 	plot::Bool = false
-	plotSolution::Tplotsolution
-	recordFromSolution::Tprintsolution
 	event::Tevent = nothing
-
 	normC::TnormC
 	dotθ::Tdot
 	finaliseSolution::Tfinalisesolution
 	callbackN::TcallbackN
-
 	verbosity::Int64 = 2
-
-	filename::Tfilename
+	filename::String
 end
 
 # default finalizer
 finaliseDefault(z, tau, step, contResult; k...) = true
 
 # constructor
-function ContIterable(Fhandle, Jhandle,
-					x0, par, lens::Lens,
-					contParams::ContinuationPar{T, S, E},
-					linearAlgo::AbstractBorderedLinearSolver = BorderingBLS(DefaultLS());
+function ContIterable(prob::AbstractBifurcationProblem,
+					alg::AbstractContinuationAlgorithm,
+					contParams::ContinuationPar{T, S, E};
+					kind = EquilibriumCont(),
 					filename = "branch-" * string(Dates.now()),
-					tangentAlgo = SecantPred(),
 					plot = false,
-					plotSolution = (x, p; kwargs...) -> nothing,
-					recordFromSolution = (x, p; kwargs...) -> norm(x),
 					normC = norm,
 					dotPALC = DotTheta(),
 					finaliseSolution = finaliseDefault,
@@ -63,14 +47,11 @@ function ContIterable(Fhandle, Jhandle,
 					verbosity = 0, kwargs...
 					) where {T <: Real, S, E}
 
-	return ContIterable(F = Fhandle, J = Jhandle,
-				x0 = x0, par = par, lens = lens,
+	return ContIterable(kind = kind,
+				prob = prob,
+				alg = alg,
 				contParams = contParams,
-				tangentAlgo = tangentAlgo,
-				linearAlgo = linearAlgo,
 				plot = plot,
-				plotSolution = plotSolution,
-				recordFromSolution = recordFromSolution,
 				normC = normC,
 				dotθ = dotPALC,
 				finaliseSolution = finaliseSolution,
@@ -80,15 +61,27 @@ function ContIterable(Fhandle, Jhandle,
 				filename = filename)
 end
 
-Base.eltype(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = T
+Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent}) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} = T
 
-setParam(it::ContIterable{TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename}, p0::T) where {TF, TJ, Tv, Tp, Tlens, T, S, E, Ttangent, Tlinear, Tplotsolution, Tprintsolution, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent, Tfilename} = set(it.par, it.lens, p0)
+setParam(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent}, p0::T) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} = setParam(it.prob, p0)
+
+# getters
+@inline getLens(it::ContIterable) = getLens(it.prob)
+@inline getAlg(it::ContIterable) = it.alg
+@inline callback(it::ContIterable) = it.callbackN
+recordFromSolution(it::ContIterable) = recordFromSolution(it.prob)
+plotSolution(it::ContIterable) = plotSolution(it.prob)
+
+getLensSymbol(it::ContIterable) = getLensSymbol(getLens(it))
+
+# get the linear solver for Continuation
+getLinsolver(iter::ContIterable) = getLinsolver(iter.alg)
 
 @inline isEventActive(it::ContIterable) = !isnothing(it.event) && it.contParams.detectEvent > 0
 @inline computeEigenElements(it::ContIterable) = computeEigenElements(it.contParams) || (isEventActive(it) && computeEigenElements(it.event))
 @inline saveEigenvectors(it::ContIterable) = saveEigenvectors(it.contParams)
 
-@inline getParams(it::ContIterable) = it.contParams
+@inline getContParams(it::ContIterable) = it.contParams
 Base.length(it::ContIterable) = it.contParams.maxSteps
 @inline isInDomain(it::ContIterable, p) = it.contParams.pMin < p < it.contParams.pMax
 @inline isOnBoundary(it::ContIterable, p) = (it.contParams.pMin == p) || (p == it.contParams.pMax)
@@ -102,9 +95,9 @@ Returns a variable containing the state of the continuation procedure. The field
 
 # Arguments
 - `z_pred` current solution on the branch
+- `converged` Boolean for newton correction
 - `τ` tangent predictor
 - `z` previous solution
-- `isconverged` Boolean for corrector
 - `itnewton` Number of newton iteration (in corrector)
 - `step` current continuation step
 - `ds` step size
@@ -120,18 +113,19 @@ Returns a variable containing the state of the continuation procedure. The field
 - `getpreviousp(state)` returns the p component of the previous solution
 - `isStable(state)` whether the current state is stable
 """
-@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState
+@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
 	z_pred::Tv								# predictor
 	τ::Tv									# tangent to the curve
 	z::Tv									# current solution
+	z_old::Tv								# previous solution
 
-	isconverged::Bool						# Boolean for newton correction
-	itnewton::Int64 = 0						# Number of newton iterations (in corrector)
-	itlinear::Int64 = 0						# Number of linear iterations (in newton corrector)
+	converged::Bool							# Boolean for newton correction
+	itnewton::Int64 = 0						# Number of newton iteration (in corrector)
+	itlinear::Int64 = 0						# Number of linear iteration (in newton corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
-	θ::T								# theta parameter for constraint equation in PALC
+	θ::T									# theta parameter for constraint equation in PALC
 
 	stopcontinuation::Bool = false			# Boolean to stop continuation
 	stepsizecontrol::Bool = true			# Perform step size adaptation
@@ -151,8 +145,9 @@ function Base.copy(state::ContState)
 	return ContState(
 		z_pred 	= _copy(state.z_pred),
 		τ 	= _copy(state.τ),
-		z 		= _copy(state.z),
-		isconverged = state.isconverged,
+		z 	= _copy(state.z),
+		z_old 	= _copy(state.z_old),
+		converged = state.converged,
 		itnewton 	= state.itnewton,
 		step 		= state.step,
 		ds 			= state.ds,
@@ -171,26 +166,28 @@ function Base.copyto!(dest::ContState, src::ContState)
 		copyto!(dest.z_pred , src.z_pred)
 		copyto!(dest.τ , src.τ)
 		copyto!(dest.z , src.z)
-		src.isconverged = src.isconverged
-		src.itnewton 	= src.itnewton
-		src.step 		= src.step
-		src.ds 			= src.ds
-		src.θ 			= src.θ
-		src.stopcontinuation = src.stopcontinuation
-		src.stepsizecontrol  = src.stepsizecontrol
-		src.n_unstable 		 = src.n_unstable
-		src.n_imag 			 = src.n_imag
-		src.eventValue		 = src.eventValue
-		src.eigvals			 = src.eigvals
-		src.eigvecs			 = src.eigvecs # can be removed? to save memory?
+		copyto!(dest.z_old , src.z_old)
+		dest.converged 	= src.converged
+		dest.itnewton 	= src.itnewton
+		dest.step 		= src.step
+		dest.ds 		= src.ds
+		dest.θ 			= src.θ
+		dest.stopcontinuation = src.stopcontinuation
+		dest.stepsizecontrol  = src.stepsizecontrol
+		dest.n_unstable 	  = src.n_unstable
+		dest.n_imag 		  = src.n_imag
+		dest.eventValue		  = src.eventValue
+		dest.eigvals		  = src.eigvals
+		dest.eigvecs		  = src.eigvecs # can be removed? to save memory?
 	return dest
 end
 
 # getters
+@inline converged(state::AbstractContinuationState) = state.converged
 getSolution(state::AbstractContinuationState) 	= state.z
 getx(state::AbstractContinuationState) 			= state.z.u
 @inline getp(state::AbstractContinuationState)  = state.z.p
-@inline getpreviousp(state::AbstractContinuationState) = state.z_pred.p
+@inline getpreviousp(state::AbstractContinuationState) = state.z_old.p
 @inline isStable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 ####################################################################################################
@@ -201,8 +198,9 @@ getx(state::AbstractContinuationState) 			= state.z.u
 			(state.stopcontinuation == false)
 
 function getStateSummary(it, state)
-	x = getx(state); p = getp(state)
-	pt = it.recordFromSolution(x, p)
+	x = getSolution(it.prob, getx(state))
+	p = getp(state)
+	pt = recordFromSolution(it)(x, p)
 	stable = computeEigenElements(it) ? isStable(state) : nothing
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, θ = state.θ, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
@@ -217,27 +215,28 @@ function save!(br::ContResult, it::AbstractContinuationIterable, state::Abstract
 	push!(br.branch, getStateSummary(it, state))
 	# save solution
 	if it.contParams.saveSolEveryStep > 0 && (modCounter(state.step, it.contParams.saveSolEveryStep) || ~done(it, state))
-		push!(br.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
+		push!(br.sol, (x = getSolution(it.prob, copy(getx(state))), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryStep) == 0
-			push!(br.eig, (eigenvals = state.eigvals, eigenvec = state.eigvecs, step = state.step))
+			push!(br.eig, (eigenvals = state.eigvals, eigenvecs = state.eigvecs, step = state.step))
 		end
 	end
 end
 
 function plotBranchCont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
-	if iter.plot && mod(state.step, getParams(iter).plotEveryStep) == 0
-		return plotBranchCont(contres, getSolution(state), getParams(iter), iter.plotSolution)
+	if iter.plot && mod(state.step, getContParams(iter).plotEveryStep) == 0
+		return plotBranchCont(contres, getSolution(state), getContParams(iter), plotSolution(iter))
 	end
 end
 
 function ContResult(it::AbstractContinuationIterable, state::AbstractContinuationState)
-	x0 = getx(state); p0 = getp(state)
-	pt = it.recordFromSolution(x0, p0)
+	x0 = _copy(getx(state))
+	p0 = getp(state)
+	pt = recordFromSolution(it)(x0, p0)
 	eiginfo = computeEigenElements(it) ? (state.eigvals, state.eigvecs) : nothing
-	return _ContResult(pt, getStateSummary(it, state), x0, setParam(it, p0), it.lens, eiginfo, getParams(it), computeEigenElements(it))
+	return _ContResult(it.prob, getAlg(it), pt, getStateSummary(it, state), getSolution(it.prob, x0), state.τ, eiginfo, getContParams(it), computeEigenElements(it), it.kind)
 end
 
 # function to update the state according to the event
@@ -257,15 +256,17 @@ end
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	# the keyword argument is to overwrite verbosity behaviour, like when locating bifurcations
 	verbose = min(it.verbosity, _verbosity) > 0
-	p0 = get(it.par, it.lens)
+	prob = it.prob
+	p₀ = getParam(prob)
+
 	T = eltype(it)
 
-	verbose && printstyled("#"^53*"\n────────── Pseudo-Arclength Continuation ────────────\n\n", bold = true, color = :red)
+	verbose && printstyled("#"^53*"\n────────── ",typeof(getAlg(it)).name.name," ────────────\n\n", bold = true, color = :red)
 
 	# Get parameters
 	@unpack pMin, pMax, maxSteps, newtonOptions, η, ds = it.contParams
-	if !(pMin <= p0 <= pMax)
-		@error "Initial parameter $p0 must be within bounds [$pMin, $pMax]"
+	if !(pMin <= p₀ <= pMax)
+		@error "Initial parameter $p₀ must be within bounds [$pMin, $pMax]"
 		return nothing
 	end
 
@@ -273,35 +274,27 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	verbose && printstyled("─────────────────  INITIAL GUESS ────────────────────", bold = true, color = :magenta)
 
 	# we pass additional kwargs to newton so that it is sent to the newton callback
-	u0, _, isconverged, _, _ = newton(it.F, it.J, it.x0, it.par, newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0)
-	@assert isconverged "Newton failed to converge initial guess on the branch."
+	sol₀ = newton(prob, newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀)
+	@assert converged(sol₀) "Newton failed to converge the initial guess on the branch."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = ", p0, ", initial step")
+	verbose && println("--> parameter = ", p₀, ", initial step")
 	verbose && printstyled("\n───────────────── INITIAL TANGENT ───────────────────", bold = true, color = :magenta)
-	u_pred, _, isconverged, _, _ = newton(it.F, it.J,
-			u0, setParam(it, p0 + ds / η), newtonOptions; normN = it.normC, callback = it.callbackN, iterationC = 0, p = p0 + ds / η)
-	@assert isconverged "Newton failed to converge. Required for the computation of the initial tangent."
-	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = ", p0 + ds/η, ", initial step (bis)")
-	return iterateFromTwoPoints(it, u0, p0, u_pred, p0 + ds / η; _verbosity = _verbosity)
+	sol₁ = newton(reMake(prob; params = setParam(it, p₀ + ds / η), u0 = sol₀.u),
+			newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
+	@assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
+	verbose && (print("\n--> convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("--> parameter = ", p₀ + ds/η, ", initial step (bis)")
+	return iterateFromTwoPoints(it, sol₀.u, p₀, sol₁.u, p₀ + ds / η; _verbosity = _verbosity)
 end
 
-# same as the previous function but when two (initial guesses) points  are provided
-function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity = it.verbosity) where T
-	θ = it.contParams.theta
+# same as previous function but when two (initial guesses) points  are provided
+function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
+	θ = it.contParams.θ
 	ds = it.contParams.ds
-	# this is the last (first) point on the branch
-	z_old   = BorderedArray(_copy(u0), p0)
-	# this is a predictor for the next point on the branch, we could have used z_old as well
-	z_pred	= BorderedArray(_copy(u1), p1)
-	τ  = _copy(z_pred)
-
-	# compute the tangent using Secant predictor
-	getTangent!(τ, z_pred, z_old, it, ds, θ, SecantPred(), _verbosity)
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
-		eigvals, eigvecs, = computeEigenvalues(it, nothing, u0, it.par, it.contParams.nev)
+		eigvals, eigvecs, = computeEigenvalues(it, nothing, u₀, getParams(it.prob), it.contParams.nev)
 		if ~saveEigenvectors(it)
 			eigvecs = nothing
 		end
@@ -311,11 +304,18 @@ function iterateFromTwoPoints(it::ContIterable, u0, p0::T, u1, p1::T; _verbosity
 
 	# compute event value and store into state
 	cbval = isEventActive(it) ? initialize(it.event, T) : nothing # event result
-	state = ContState(z_pred = z_pred, τ = τ, z = z_old, isconverged = true, ds = it.contParams.ds, θ = θ, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
+	state = ContState(z_pred = BorderedArray(_copy(u₀), p₀),
+						τ = BorderedArray(0*u₁, zero(p₁)),
+						z = BorderedArray(_copy(u₁), p₁),
+						z_old = BorderedArray(_copy(u₀), p₀),
+						converged = true, ds = it.contParams.ds, θ = θ, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
+
+	# compute the state for the continuation algorithm, at this point the tangent is set up
+	initialize!(state, it)
 
 	# update stability
 	if computeEigenElements(it)
-		_, n_unstable, n_imag = isStable(getParams(it), eigvals)
+		@unpack n_unstable, n_imag = isStable(getContParams(it), eigvals)
 		updateStability!(state, n_unstable, n_imag)
 	end
 
@@ -328,62 +328,50 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	if !done(it, state) return nothing end
 	# next line is to overwrite verbosity behaviour, for example when locating bifurcations
 	verbosity = min(it.verbosity, _verbosity)
-	verbose = verbosity > 0
-	verbose1 = verbosity > 1
+	verbose = verbosity > 0; verbose1 = verbosity > 1
 
 	@unpack step, ds, θ = state
 
-	# Predictor: state.z_pred. The following method only mutates z_pred
-	getPredictor!(it, state)
-
 	if verbose
-		printstyled("──"^35*"\nContinuation Step $step \n", bold= true);
-		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it.lens))
+		printstyled("──"^35*"\nContinuation Step $step \n", bold = true);
+		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it))
 		@printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clampPredp(state.z_pred.p, it))
 	end
 
-	# Corrector. This does not mutate the arguments
-	z_newton, fval, state.isconverged, state.itnewton, state.itlinear = corrector(it,
-			state, it.tangentAlgo; normC = it.normC, callback = it.callbackN, iterationC = step, z0 = getSolution(state))
+	# in PALC, z_pred contains the previous solution
+	corrector!(state, it; iterationC = step, z0 = state.z)
 
 	# Successful step
-	if state.isconverged
+	if converged(state)
 		if verbose
 			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
-			print("Parameter ", getLensSymbol(it.lens))
-			@printf(" = %2.4e ⟶  %2.4e \n", getp(state), z_newton.p)
+			print("Parameter ", getLensSymbol(it))
+			@printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
 		end
-
-		# Get tangent, it only mutates τ
-		getTangent!(it, state, z_newton, it.tangentAlgo, verbosity)
-
-		# record previous parameter (cheap) and update current solution
-		state.z_pred.p = getp(state)
-		copyto!(state.z, z_newton)
 
 		# Eigen-elements computation, they are stored in state
 		if computeEigenElements(it)
-			# this compute eigen-elements, store them in state and update the stab indices in state
-			iteigen = computeEigenvalues!(it, state)
-			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", iteigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
+			# this computes eigen-elements, store them in state and update the stability indices in state
+			it_eigen = computeEigenvalues!(it, state)
+			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
 		end
 		state.step += 1
 	else
 		verbose && printstyled("Newton correction failed\n", color=:red)
-		verbose && (println("--> Newton Residuals history = ");display(fval))
 	end
 
 	# Step size control
-	if ~state.stopcontinuation && stepsizecontrol(state)
-		# we update the PALC parameters ds and theta, they are in the state variable
-		state.ds, state.θ, state.stopcontinuation = stepSizeControl(ds, θ, it.contParams, state.isconverged, state.itnewton, state.τ, it.tangentAlgo, verbosity)
-	end
+	# we update the parameters ds and theta stored in state
+	stepSizeControl!(state, it)
+
+	# Predictor: state.z_pred. The following method only mutates z_pred and τ
+	getPredictor!(state, it)
 
 	return state, state
 end
 
 function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
-	contParams = getParams(it)
+	contParams = getContParams(it)
 	verbose = it.verbosity > 0
 	verbose1 = it.verbosity > 1
 
@@ -396,31 +384,34 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		# the new solution has been successfully computed
 		# we perform saving, plotting, computation of eigenvalues...
 		# the case state.step = 0 was just done above
-		if state.isconverged && (state.step <= it.contParams.maxSteps) && (state.step > 0)
+		if converged(state) && (state.step <= it.contParams.maxSteps) && (state.step > 0)
 			# Detection of fold points based on parameter monotony, mutates contRes.specialpoint
 			# if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
 			if contParams.detectFold && contParams.detectBifurcation < 2
 				foldetected = locateFold!(contRes, it, state)
+				if foldetected && contParams.detectLoop
+					state.stopcontinuation |= detectLoop(contRes, nothing; verbose = verbose1)
+				end
 			end
 
 			if contParams.detectBifurcation > 1 && detectBifucation(state)
 				status::Symbol = :guess
 				_T = eltype(it)
-				interval::Tuple{_T, _T} = getinterval(state.z_pred.p, getp(state))
+				interval::Tuple{_T, _T} = getinterval(getpreviousp(state), getp(state))
 				# if the detected bifurcation point involves a parameter values with is on
 				# the boundary of the parameter domain, we disable bisection because it would
 				# lead to infinite looping. Indeed, clamping messes up the `ds`
 				if contParams.detectBifurcation > 2 && ~isOnBoundary(it, getp(state))
 					verbose1 && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
-					# locate bifurcations with bisection, mutates state so that it stays very close to the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
+					# locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end
 				# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 				if detectBifucation(state)
-					_, bifpt = getBifurcationType(contParams, state, it.normC, it.recordFromSolution, it.verbosity, status, interval)
+					_, bifpt = getBifurcationType(it, state, status, interval)
 					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
 					# detect loop in the branch
-					# contParams.detectLoop && (state.stopcontinuation = detectLoop(contRes, bifpt))
+					contParams.detectLoop && (state.stopcontinuation |= detectLoop(contRes, bifpt))
 				end
 			end
 
@@ -439,6 +430,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 					success, bifpt = getEventType(it.event, it, state, it.verbosity, status, intervalevent)
 					state.stopcontinuation |= ~success
 					if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
+					# detect loop in the branch
+					contParams.detectLoop && (state.stopcontinuation |= detectLoop(contRes, bifpt))
 				end
 			end
 
@@ -460,23 +453,24 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 		next = iterate(it, state)
 	end
 
-	it.plot && plotBranchCont(contRes, state.z, contParams, it.plotSolution)
+	it.plot && plotBranchCont(contRes, state.z, contParams, plotSolution(it))
 
 	# return current solution in case the corrector did not converge
-	return contRes, state.z, state.τ
+	push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, :converged, (getp(state), getp(state))))
+	return contRes
 end
 
 function continuation(it::ContIterable)
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	# The return type of this method, e.g. ContResult
 	# is not known at compile time so we
-	# need a function barrier to resolve it
+	# use a function barrier to resolve it
 	## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	# we compute the cache for the continuation, i.e. state::ContState
 	# In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
 	states = iterate(it)
-	isnothing(states) && return nothing, nothing, nothing
+	isnothing(states) && return nothing
 
 	# variable to hold the result from continuation, i.e. a branch
 	contRes = ContResult(it, states[1])
@@ -484,95 +478,68 @@ function continuation(it::ContIterable)
 	# perform the continuation
 	return continuation!(it, states[1], contRes)
 end
-
-function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; bothside = false, kwargs...)
-	it = ContIterable(Fhandle, Jhandle, x0, par, lens, contParams, linearAlgo; kwargs...)
-	if bothside
-		res1 = continuation(it)
-		@set! it.contParams.ds = -contParams.ds
-		res2 = continuation(it)
-		contresult = _merge(res1[1],res2[1])
-
-		# we have to update the branch if saved on a file
-		it.contParams.saveToFile && saveToFile(it, contresult)
-		
-		return contresult, res1[2], res1[3]
-
-	else
-		contresult = continuation(it)
-		# we have to update the branch if saved on a file,
-		# basically this removes "branchfw" or "branchbw" in file and append "branch"
-		it.contParams.saveToFile && saveToFile(it, contresult[1])
-		return contresult
-	end
-end
-
 ####################################################################################################
 
 """
-	continuation(F, J, x0, par, lens::Lens, contParams::ContinuationPar; plot = false, normC = norm, dotPALC = (x,y) -> dot(x,y) / length(x), recordFromSolution = norm, plotSolution = (x, p; kwargs...)->nothing, finaliseSolution = (z, tau, step, contResult; kwargs...) -> true, callbackN = (state; kwargs...) -> true, linearAlgo = MatrixBLS(), tangentAlgo = SecantPred(), verbosity = 0)
+$(SIGNATURES)
 
-Compute the continuation curve associated to the functional `F` and its jacobian `J`. General information is available in [Continuation methods: introduction](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/IntroContinuation/).
+Compute the continuation curve associated to the functional `F` which is stored in the bifurcation problem `prob`. General information is available in [Continuation methods: introduction](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/IntroContinuation/).
 
 # Arguments:
-- `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` which represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
-- `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
-    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, you can use the default arguments of `contParams::ContinuationPar` for `continuation`.
-    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, you cannot use the default parameters of `contParams::ContinuationPar` for `continuation` and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
-    3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself is passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
-- `x0` initial guess,
-- `par` initial set of parameters,
-- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`.
-- `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
+- `prob::AbstractBifurcationFunction` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
+- `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(),...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
+- `contParams` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:
-- `plot = false` whether to plot the solution while computing
-- `bothside=true` compute the branches on the two sides of `p0`, merge them and return it.
-- `recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve.
-- `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution. For example, you can pass something like `(x, p; kwargs...) -> plot(x; kwargs...)`.
-- `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z` (see below), `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
-- `tangentAlgo = SecantPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` `BorderedPred`, etc. See below for more information. See [predictors](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/).
-- `linearAlgo = MatrixBLS()`. Bordered linear solver used to control the way the extended linear system associated to the continuation problem is solved. Can be `MatrixBLS`, `BorderingBLS`, `MatrixFreeBLS`, etc. See [Bordered linear solvers](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/borderedlinearsolver/)
+- `plot = false` whether to plot the solution/branch/spectrum while computing
+- `bothside = true` compute the branches on the two sides of `p0`, merge them and return it.
+- `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z`, `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events
-    - case 3: print information during bisection to detect bifurcation / events
-- `normC = norm` norm used in the different Newton solves
+    - case 3: print information during bisection to locate bifurcation / events
+- `normC = norm` norm used in the Newton solves
 - `dotPALC = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
-- `callbackN` callback for newton iterations. See docs for [`newton`](@ref). Can be used to change preconditioners.
+- `callbackN` callback for newton iterations. See docs for [`newton`](@ref). For example, it can be used to change preconditioners.
+- `kind::AbstractContinuationKind` [Internal] flag to describe continuation kind (equilibrium, codim 2, ...). Default = `EquilibriumCont()`
 
-# Outputs:
+# Output:
 - `contres::ContResult` composite type which contains the computed branch. See [`ContResult`](@ref) for more information.
-- `u::BorderedArray` the last solution computed on the branch
-
-!!! tip "Controlling the argument `linearAlgo`"
-    In this simplified interface to `continuation`, the argument `linearAlgo` is internally overwritten to provide a valid argument to the algorithm. If you do not want this to happen, call directly `continuation(F, J, x0, par, lens, contParams, linearAlgo; kwargs...)`.
 
 !!! tip "Continuing the branch in the opposite direction"
     Just change the sign of `ds` in `ContinuationPar`.
-
-# Simplified call:
-You can also use the following call for which the jacobian **matrix** (beware of large systems of equations!) is computed internally using Finite Differences
-
-	continuation(Fhandle, x0, par, lens, contParams::ContinuationPar; kwargs...)
 """
-function continuation(Fhandle, Jhandle, x0, par, lens::Lens, contParams::ContinuationPar;
-					linearAlgo = nothing, kwargs...)
+function continuation(prob::AbstractBifurcationProblem,
+						alg::AbstractContinuationAlgorithm,
+						contParams::ContinuationPar;
+						linearAlgo = nothing,
+						bothside::Bool = false,
+						kwargs...)
 	# Create a bordered linear solver using the newton linear solver provided by the user
-	if isnothing(linearAlgo)
-		_linearAlgo = MatrixBLS()
+	alg = update(alg, contParams, linearAlgo)
+
+	# perform continuation
+	itfwd = ContIterable(prob, alg, contParams; kwargs...)
+	if bothside
+		itbwd = ContIterable(deepcopy(prob), deepcopy(alg), contParams; kwargs...)
+		@set! itbwd.contParams.ds = -contParams.ds
+
+		resfwd = continuation(itfwd)
+		resbwd = continuation(itbwd)
+		contresult = _merge(resfwd, resbwd)
+
+		# we have to update the branch if saved on a file
+		itfwd.contParams.saveToFile && saveToFile(itfwd, contresult)
+
+		return contresult
+
 	else
-		# no linear solver has been specified
-		if isnothing(linearAlgo.solver)
-			_linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
-		else
-			_linearAlgo = linearAlgo
-		end
+		contresult = continuation(itfwd)
+		# we have to update the branch if saved on a file,
+		# basically this removes "branchfw" or "branchbw" in file and append "branch"
+		itfwd.contParams.saveToFile && saveToFile(itfwd, contresult[1])
+		return contresult
 	end
-
-	return continuation(Fhandle, Jhandle, x0, par, lens, contParams, _linearAlgo; kwargs...)
 end
-
-continuation(Fhandle, x0, par, lens::Lens, contParams::ContinuationPar; kwargs...) = continuation(Fhandle, (x, p) -> finiteDifferences(u -> Fhandle(u, p), x), x0, par, lens, contParams; kwargs...)

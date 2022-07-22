@@ -4,6 +4,7 @@ using ApproxFun, LinearAlgebra, Parameters, Setfield
 using BifurcationKit, Plots
 const BK = BifurcationKit
 
+norminf(x) = norm(x, Inf64)
 ####################################################################################################
 # specific methods for ApproxFun
 import Base: eltype, similar, copyto!, length
@@ -62,85 +63,57 @@ end
 sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol0.space, 2);
 par_af = (α = 3., β = 0.01)
+prob = BK.BifurcationProblem(F_chan, sol0, par_af, (@lens _.α); J = Jac_chan, plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
-optnew = NewtonPar(tol = 1e-12, verbose = true, linsolver = DefaultLS(useFactorization = false))
-	sol, _, flag = @time BK.newton(
-		F_chan, Jac_chan, sol0, par_af, optnew, normN = x -> norm(x, Inf64))
-	# Plots.plot(out, label="Solution")
+optnew = NewtonPar(tol = 1e-12, verbose = true)
+	sol = @time BK.newton(prob, optnew, normN = norminf)
 
-optcont = ContinuationPar(dsmin = 1e-4, dsmax = 0.15, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 10, verbose = false), maxSteps = 300)
+plot(sol.u, label="Solution")
 
-br0, = @time continuation(
-	F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont;
-	plot = true,
-	# tangentAlgo = MoorePenrosePred(), # this works VERY well
-	dotPALC = BK.DotTheta(dot),
-	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
-	plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
-	verbosity = 1,
-	normC = x -> norm(x, Inf64))
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 0)
 
-plot(br0)
+	br = @time continuation(
+		prob, PALC(bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+		plot = true, verbosity = 2,
+		normC = norminf)
 ####################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2, (x, y) -> dot(x, y), 1.0, [sol])
+deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [sol.u])
 par_def = @set par_af.α = 3.3
 
 optdef = setproperties(optnew; tol = 1e-9, maxIter = 1000)
 
-solp = copy(sol)
+solp = copy(sol.u)
 	solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
 
-plot(sol);plot!(solp)
+plot(sol.u);plot!(solp)
 
-outdef1, _, flag = @time BK.newton(
-	F_chan, Jac_chan,
-	solp, par_def,
-	optdef, deflationOp)
-	flag && push!(deflationOp, outdef1)
+outdef1 = @time BK.newton(
+	BK._remake(prob, u0 = solp), deflationOp, optdef)
+	BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(deflationOp.roots)
 ####################################################################################################
 # other dot product
 # dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y) * length(x) # gives 0.1
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, theta = 0.2)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, θ = 0.2, detectBifurcation = 0)
 
-	br, _ = @time continuation(
-		F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont;
-		dotPALC = (x, y) -> dot(x, y),
+	br = @time continuation(
+		prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+		dotPALC = BK.DotTheta(dot),
 		plot = true,
-		# finaliseSolution = finalise_solution,
-		linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
-		plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...),
 		verbosity = 2,
-		# printsolution = x -> norm(x, Inf64),
-		normC = x -> norm(x, Inf64))
+		normC = norminf)
 ####################################################################################################
 # tangent predictor with Bordered system
-br, _ = @time continuation(
-	F_chan, Jac_chan, sol, par_af, (@lens _.α), optcont,
-	tangentAlgo = BorderedPred(),
-	linearAlgo = BorderingBLS(solver = optnew.linsolver, checkPrecision = false),
-	plot = true,
-	finaliseSolution = finalise_solution,
-	plotSolution = (x, p;kwargs...)-> plot!(x; label = "l = $(length(x))", kwargs...))
+br = @time continuation(
+	prob, PALC(tangent=Bordered(), bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont,
+	plot = true,)
 ####################################################################################################
-# tangent predictor with Bordered system
-# optcont = @set optcont.newtonOptions.verbose = true
 indfold = 2
-outfold, _, flag = @time newtonFold(
-		F_chan, Jac_chan,
-		br0, indfold, #index of the fold point
-		options = NewtonPar(optcont.newtonOptions; verbose = true),
-		bdlinsolver = BorderingBLS(solver = optnew.linsolver, checkPrecision = false))
-	flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")
-#################################################################################################### Continuation of the Fold Point using minimally augmented
-indfold = 2
-
-outfold, _, flag = @time newtonFold(
-	(x, p) -> F_chan(x, p),
-	(x, p) -> Jac_chan(x, p),
-	(x, p) -> Jac_chan(x, p),
-	br, indfold, #index of the fold point
-	optcont.newtonOptions)
+outfold = @time BK.newton(
+		br, indfold, #index of the fold point
+		bdlinsolver = BorderingBLS(solver = DefaultLS(false), checkPrecision = false)
+		)
+	BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")

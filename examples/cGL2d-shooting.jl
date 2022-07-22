@@ -99,13 +99,14 @@ Nx = 41*1
 	sol0 = 0.1rand(2Nx, Ny)
 	sol0_f = vec(sol0)
 
+prob = BK.BifurcationProblem(Fcgl, sol0_f, par_cgl, (@lens _.r); J = Jcgl)
 ####################################################################################################
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 4)
+opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 6)
 
-	br, = @time continuation(Fcgl, Jcgl, vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+	br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 
 plot(br)
 ####################################################################################################
@@ -120,7 +121,7 @@ sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt =
 # sol = @time solve(prob, LawsonEuler(krylov=true, m=50); abstol=1e-14, reltol=1e-14, dt = 0.1)
 # sol = @time solve(prob_sp, CNAB2(linsolve=LinSolveGMRES()); abstol=1e-14, reltol=1e-14, dt = 0.03)
 
-plot(sol.t, [norm(v[1:Nx*Ny], Inf) for v in sol.u], xlims=(115, 120))
+plot(sol.t, [norm(v[1:Nx*Ny], Inf) for v in sol.u], xlims=(105, 120))
 
 # plotting the solution as a movie
 for ii = 1:20:length(sol.t)
@@ -132,53 +133,52 @@ end
 probSh = ShootingProblem(
 	# we pass the ODEProblem encoding the flow and the time stepper
 	prob_sp, ETDRK2(krylov = true),
-	[sol[:, end]], abstol = 1e-10, reltol = 1e-8)
+	[sol[:, end]], abstol = 1e-10, reltol = 1e-8,
+	lens = (@lens _.r),
+	jacobian = :FiniteDifferences)
 
-initpo = vcat(sol(116.), 4.9) |> vec
+@assert BK.getParams(probSh) == @set par_cgl.r = 1.2
+
+initpo = vcat(sol[end], 6.3) |> vec
 	probSh(initpo, @set par_cgl.r = 1.2) |> norminf
 
 ls = GMRESIterativeSolvers(reltol = 1e-4, N = 2n + 1, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
-outpo, = @time newton(probSh, initpo, (@set par_cgl.r = 1.2), optn; normN = norminf)
+outpo = @time newton(probSh, initpo, optn; normN = norminf)
+BK.getPeriod(probSh, outpo.u, BK.getParams(probSh))
 
-heatmap(reshape(outpo[1:Nx*Ny], Nx, Ny), color = :viridis)
+heatmap(reshape(outpo.u[1:Nx*Ny], Nx, Ny), color = :viridis)
 
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
-br_po, upo, = @time continuation(probSh, outpo, (@set par_cgl.r = 1.2), (@lens _.r),
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
+br_po = @time continuation(probSh, outpo.u, PALC(),
 		opts_po_cont;
 		verbosity = 3,
 		plot = true,
-		# tangentAlgo = BorderedPred(),
 		linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
-		# callbackN = cb_ss,
 		plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-		recordFromSolution = (u, p; k...) -> BK.getAmplitude(probSh, u, (@set par_cgl.r = p); ratio = 2), normC = norminf)
+		recordFromSolution = (u, p; k...) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
+		normC = norminf)
 
 ####################################################################################################
 # automatic branch switching
-jet  = BK.getJet(Fcgl, Jcgl)
-
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
 	optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, precisionStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
+	opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
 
 Mt = 1 # number of time sections
-br_po, = continuation(
-	jet...,	br, 2,
+br_po = continuation(
+	br, 2,
 	# arguments for continuation
 	opts_po_cont,
-	# probSh;
-	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8) ;
+	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = :FiniteDifferences) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
-	# callbackN = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true),
+	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
 	finaliseSolution = (z, tau, step, contResult; k...) ->begin
 		BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
 		return true
 	end,
-	recordFromSolution = (u, p; k...) -> BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2),
+	recordFromSolution = (u, p; k...) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
 	normC = norminf)
-
-#ShootingProblem(1, par_cgl, prob_sp, ETDRK2(krylov = true)) ;

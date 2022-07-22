@@ -1,4 +1,5 @@
-using IterativeSolvers, KrylovKit, Arpack, LinearAlgebra
+using IterativeSolvers, Arpack, LinearAlgebra
+import KrylovKit: eigsolve
 
 abstract type AbstractEigenSolver end
 abstract type AbstractMFEigenSolver <: AbstractEigenSolver end

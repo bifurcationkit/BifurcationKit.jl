@@ -1,4 +1,5 @@
-using KrylovKit, ArnoldiMethod, LinearMaps, LinearAlgebra, RecursiveArrayTools
+import KrylovKit
+using ArnoldiMethod, LinearMaps, LinearAlgebra, RecursiveArrayTools
 
 struct PrecPartialSchur{Ts, Tu, Tsm1, Teigen}
 	S::Ts

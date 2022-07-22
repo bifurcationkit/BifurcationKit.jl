@@ -21,20 +21,24 @@ function F0(x::Vector, r)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
-out0, hist, flag = newton(F0, [0.8], 1., opt_newton0)
+	prob = BK.BifurcationProblem(F0, [0.8], 1., (@lens _);
+			recordFromSolution = (x, p) -> x[1],
+			J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
+			Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
+			d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
+	sol0 = newton(prob, opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
 BK.isStable(opts_br0, nothing)
 
-br0, u1 = continuation(F0, out0, 1.0, (@lens _), opts_br0, recordFromSolution = (x, p) -> x[1])
+br0 = continuation(prob, PALC(), opts_br0)
+@test br0.param[end] == -1
 
-outfold, hist, flag = newton(
-		F0, (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
-		br0, 2;
-		Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
-		d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
+solfold = newton(br0, 2)
 	# flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.specialpoint[2].param, "\n")
+
+@test BK.converged(solfold)
 
 ####################################################################################################
 # Here is a more involved example
@@ -69,73 +73,60 @@ end
 sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-sol, hist, flag = newton(Fb, (x, p) -> Jacobian(x, 1., 1.), sol0, (1., 1.), opt_newton)
+prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]))
+sol = newton(prob, opt_newton)
+@test BK.converged(sol)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, saveSolEveryStep = 1)
 
-	br, u1 = continuation(
-		Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-		sol,  (1., 1.), (@lens _[1]),
-		opts_br; recordFromSolution = (x,p) -> x.u[1],
-		linearAlgo = BorderingBLS(opt_newton.linsolver))
+	br = continuation(prob, PALC(), opts_br; recordFromSolution = (x,p) -> x.u[1], linearAlgo = BorderingBLS(opt_newton.linsolver))
 
-BK.getSolx(br,1)
-BK.getSolp(br,1)
+BK.getSolx(br, 1)
+BK.getSolp(br, 1)
+@test br.param[end] == -1
 
 # plot(br);title!("")
 
-outfold, hist, flag = newton(
-	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-	br, 1;
-	bdlinsolver = BorderingBLS(opt_newton.linsolver),
+prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]);
+	J = (x, r) -> Jacobian(x, r[1], r[2]),
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
-	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
+	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),
+	recordFromSolution = (x,p) -> x.u[1])
 
-outfoldco, hist, flag = continuation(
-	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-	br, 1, (@lens _[2]), opts_br;
-	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
-	bdlinsolver = BorderingBLS(opt_newton.linsolver),
-	d2F = ((x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.)), plot = false)
+br = continuation(prob2, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.linsolver))
+@test br.param[end] == -1
+
+solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
+		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.specialpoint[1].param,"\n")
+@test BK.converged(solfold)
+
+outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 
 # try with newtonDeflation
 # test with Newton deflation 1
-deflationOp = DeflationOperator(2, 1.0, [zero(sol)])
+deflationOp = DeflationOperator(2, 1.0, [zero(sol.u)])
 soldef0 = BorderedArray([0.1], 0.0)
-soldef1,  = newton(
-	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-	soldef0, (0., 1.),
-	opt_newton, deflationOp)
+soldef1 = newton(BK.reMake(prob, u0 = soldef0), deflationOp, opt_newton)
 
-push!(deflationOp, soldef1)
+push!(deflationOp, soldef1.u)
 
 Random.seed!(1231)
 # test with Newton deflation 2
-soldef2, = newton(
-	Fb, (x, r) -> Jacobian(x, r[1], r[2]),
-	rmul!(soldef0,rand()),  (0., 1.),
-	opt_newton, deflationOp)
+soldef2 = newton(BK.reMake(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
 
-# test indexing
 deflationOp[1]
-
-# test length
 length(deflationOp)
-
-# test pop!
 pop!(deflationOp)
-
-# test empty
 empty!(deflationOp)
 
 ####################################################################################################
-using KrylovKit
+using KrylovKit, Parameters
 
-function Fr(x::RecursiveVec, p)
-	r, s = p
+function Fr(x, p)
+	@unpack r, s = p
 	out = similar(x)
 	for ii=1:length(x)
-		out[ii] .= r .+  s .* x[ii] .- x[ii].^3
+		out[ii] .= @. r +  s * x[ii] - x[ii]^3
 	end
 	out
 end
@@ -167,60 +158,52 @@ function (l::linsolveBd_r)(J, dx)
 	out, true, 1
 end
 
-opt_newton0 = NewtonPar(tol = 1e-10, maxIter = 50, verbose = false, linsolver = linsolveBd_r())
-	out0, hist, flag = newton(
-		Fr, (x, p) -> JacobianR(x, p[1]),
-		RecursiveVec([1 .+ 0.1*rand(10) for _ = 1:2]), (0., 1.),
-		opt_newton0)
+opt_newton0 = NewtonPar(tol = 1e-10, maxIter = 5, verbose = false, linsolver = linsolveBd_r())
+
+prob = BK.BifurcationProblem(Fr,
+		RecursiveVec([1 .+ 0.1*rand(1) for _ = 1:2]),
+		(r = 1.0, s = 1.), (@lens _.r);
+		J  = (x, p) -> JacobianR(x, p.s),
+		Jᵗ = (x, p) -> JacobianR(x, p.s),
+		recordFromSolution = (x,p) -> x[1][1],
+		d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))
+
+sol = newton(prob, opt_newton0)
 
 Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.2, ds= -0.01, pMin = -1.1, pMax = 1.1, newtonOptions = opt_newton0)
+opts_br0 = ContinuationPar(dsmin = 0.00001, dsmax = 0.1, ds= -0.01, pMin = -1., pMax = 1.1, newtonOptions = opt_newton0, maxSteps = 200, detectBifurcation = 0)
 
-br0, u1 = continuation(
-	Fr, (x, p) -> JacobianR(x, p[1]),
-	out0, (0.9, 1.), (@lens _[1]), opts_br0;
-	plot = false,
-	linearAlgo = BorderingBLS(opt_newton0.linsolver),
-	recordFromSolution = (x,p) -> x[1][1])
+br0 = continuation(BK.reMake(prob, u0 = sol.u),
+			PALC(tangent=Secant()),
+			opts_br0;
+			linearAlgo = BorderingBLS(opt_newton0.linsolver)
+			)
 
-br0, u1 = continuation(
-	Fr, (x, p) -> JacobianR(x, p[1]),
-	out0, (0.9, 1.), (@lens _[1]), opts_br0;
-	tangentAlgo = BorderedPred(),
-	linearAlgo = BorderingBLS(opt_newton0.linsolver),
-	plot = false,
-	recordFromSolution = (x,p) -> x[1][1])
+@test br0.param[end] == -1
 
-outfold, hist, flag = newton(
-	Fr, (x, p) -> JacobianR(x, p[1]),
-	br0, 1; #index of the fold point
-	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
-	Jᵗ = (x, r) -> JacobianR(x, r[1]),
-	d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]),)
+br0 = continuation(BK.reMake(prob, u0 = sol.u),
+	PALC(tangent=Secant()), opts_br0;
+	linearAlgo = BorderingBLS(opt_newton0.linsolver),)
 
-outfoldco, hist, flag = continuation(
-	Fr, (x, p) -> JacobianR(x, p[1]),
-	br0, 1,	(@lens _[2]), opts_br0;
-	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
-	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
-	tangentAlgo = SecantPred(), plot = false)
+br0 = continuation(prob, PALC(tangent = Bordered()), opts_br0;
+	linearAlgo = BorderingBLS(opt_newton0.linsolver))
 
-outfoldco, hist, flag = continuation(
-	Fr, (x, p) -> JacobianR(x, p[1]),
-	br0, 1, (@lens _[2]), opts_br0;
-	bdlinsolver = BorderingBLS(opt_newton0.linsolver),
-	Jᵗ = (x, s) -> JacobianR(x, s[1]),
-	d2F = ((x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)])),
-	tangentAlgo = BorderedPred(), plot = false)
+outfold = newton(br0, 1; bdlinsolver = BorderingBLS(opt_newton0.linsolver))
+@test BK.converged(outfold)
+
+
+outfoldco = continuation(br0, 1, (@lens _.s), opts_br0,
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),)
+
+br0sec = @set br0.alg.tangent = Secant()
+outfoldco = continuation(br0sec, 1, (@lens _.s), opts_br0,
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),)
 
 # try with newtonDeflation
 # test with Newton deflation 1
-deflationOp = DeflationOperator(2, 1.0, [out0])
-soldef1, = newton(
-	Fr, (x, p) -> JacobianR(x, 0.),
-	out0, (0., 1.0),
-	opt_newton0, deflationOp)
+deflationOp = DeflationOperator(2, 1.0, [sol.u])
+soldef1 = newton(BK.reMake(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
+	deflationOp, (@set opt_newton0.maxIter = 20))
 
-push!(deflationOp, soldef1)
+push!(deflationOp, soldef1.u)

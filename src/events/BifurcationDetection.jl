@@ -41,5 +41,5 @@ This event implements the detection of bifurcations points along a continuation 
 BifDetectEvent = BifEvent(1, detectBifurcationEVE)
 
 function getEventType(event::BifEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = :user) where T
-	return getBifurcationType(iter.contParams, state, iter.normC, iter.recordFromSolution, verbosity, status, interval)
+	return getBifurcationType(iter, state, status, interval)
 end

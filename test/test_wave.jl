@@ -65,8 +65,6 @@ Fcgl(u, p, t = 0) = Fcgl!(similar(u), u, p)
 
 	Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
 end
-
-jet = BK.getJet(Fcgl, Jcgl)
 ####################################################################################################
 n = 50
 	l = pi
@@ -80,19 +78,21 @@ _J0 = Jcgl(_sol0, par_cgl)
 _J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
 @test _J0 ≈ _J1
 
+prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@lens _.r); J = Jcgl)
+
 eigls = EigArpack(1.0, :LM)
 	eigls = DefaultEig()
 	# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 	opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-	out, hist, flag = @time newton(jet[1], jet[2], sol0, par_cgl, opt_newton, normN = norminf)
+	out = @time newton(prob, opt_newton, normN = norminf)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 8, maxBisectionSteps=20)
-br, = continuation(jet[1], jet[2], vec(sol0), par_cgl, (@lens _.r), opts_br, verbosity = 0)
+br = continuation(prob, PALC(), opts_br, verbosity = 0)
 
 ####################################################################################################
 # we test the jacobian
-_J0 = jet[2](sol0, par_cgl)
-_J1 = FD.jacobian(z->jet[1](z, par_cgl), sol0) |> sparse
+_J0 = BK.jacobian(prob, sol0, par_cgl)
+_J1 = FD.jacobian(z->BK.residual(prob, z, par_cgl), sol0) |> sparse
 @test _J0 == _J1
 ####################################################################################################
 function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0, k = 1.)
@@ -134,8 +134,9 @@ uold = copy(orbitguess2[1][1:2n])
 # plot(uold[1:end-1]; linewidth = 5)
 
 # we create a TW problem
-probTW = BK.TWProblem(Fcgl, Jcgl, par_cgl.Db, copy(uold))
+probTW = BK.TWProblem(prob, par_cgl.Db, copy(uold))
 probTW(vcat(uold,.1), par_cgl)
+show(probTW)
 
 # we test the sparse formulation of the problem jacobian
 _sol0 = rand(2n+1)
@@ -159,22 +160,24 @@ BK.applyD(probTW, rand(2n))
 BK.updateSection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
-newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :AutoDiff)
-newton(probTW, vcat(uold,.1), par_cgl, NewtonPar(verbose = true, maxIter = 5), jacobian = :FullLU)
+sol = newton(probTW, vcat(uold,.1), NewtonPar(verbose = true, maxIter = 5), jacobian = :AutoDiff)
+@test BK.converged(sol)
+sol = newton(probTW, vcat(uold,.1), NewtonPar(verbose = true, maxIter = 5), jacobian = :FullLU)
+@test BK.converged(sol)
 ####################################################################################################
 # test continuation method witth different Generalised eigensolvers
 optn = NewtonPar(tol = 1e-8)
 opt_cont_br = ContinuationPar(pMin = -1., pMax = 1., newtonOptions = optn, maxSteps = 3, detectBifurcation = 2)
-continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :FullLU, verbosity = 0)
+continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :FullLU, verbosity = 0)
 
 @set! opt_cont_br.newtonOptions.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
-continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :FullLU, verbosity = 0)
+continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :FullLU, verbosity = 0)
 
 BK.GEigArpack(nothing, :LR)
 @set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
-continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :AutoDiff, verbosity = 0)
+continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :AutoDiff, verbosity = 0)
 
 @set! opt_cont_br.newtonOptions.linsolver = GMRESIterativeSolvers(N = 2n+1)
 @set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
 @set! opt_cont_br.detectBifurcation = 0
-continuation(probTW, vcat(uold,.1), par_cgl, (@lens _.r), opt_cont_br; jacobian = :MatrixFreeAD, verbosity = 0)
+continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :MatrixFreeAD, verbosity = 0)

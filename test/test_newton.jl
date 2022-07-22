@@ -1,5 +1,5 @@
-# using Revise, Test
-using BifurcationKit, LinearAlgebra, Setfield
+# using Revise
+using Test, BifurcationKit, LinearAlgebra, Setfield
 const BK = BifurcationKit
 
 function test_newton(x0)
@@ -8,56 +8,83 @@ function test_newton(x0)
 	F(x, p) = x.^3 .- 1
 	Jac(x, p) = diagm(0 => 3 .* x.^2)
 
-	opts = NewtonPar( tol = Ty(1e-8), verbose = true)
-	sol, hist, flag, _ = newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = BK.cbMaxNorm(100.0))
+	opts = NewtonPar( tol = Ty(1e-8), verbose = false)
+	# newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = BK.cbMaxNorm(100.0))
+	# newton version with AbstractBifurcationFunction
+	prob = BifurcationProblem(F, x0, nothing; J = Jac)
+	newton(prob, opts; callback = BK.cbMaxNorm(100.0), normN = x->norm(x,Inf))
 end
 ####################################################################################################
 # we test the regular newton algorithm
 # simple case
-test_newton(ones(10) .+ rand(10) * 0.1)
+sol = test_newton(ones(10) .+ rand(10) * 0.1)
 
 # test types for newton
-sol, = test_newton(Float16.(ones(10) .+ rand(10) * 0.1))
-@test eltype(sol) == Float16
+# test type
+for T in (Float64, Float32, Float16)
+	sol = test_newton(T.(ones(10) .+ rand(10) * 0.1)).u
+	@test eltype(sol) == T
+end
 ####################################################################################################
-
-function test_newton_palc(x0, p0)
-	Ty = eltype(x0)
+function test_newton_palc(x0, p0::T) where T
+	@assert eltype(x0) == T
 	N = length(x0)
 
-	θ = Ty(0.2)
+	θ = T(0.5)
 	dotθ = BK.DotTheta(dot)
 
 	F(x, p) = x.^3 .- 13 .* x .- p
 	Jac(x, p) = diagm(0 => 3 .* x.^2 .- 13)
 
 	z0 = BorderedArray(x0, p0)
-	τ0 = BorderedArray(rand(Ty, N), convert(typeof(p0), 0.2))
+	τ0 = BorderedArray(rand(T, N), convert(typeof(p0), 0.2))
 	zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
-	optn = NewtonPar{Ty, DefaultLS, DefaultEig}(verbose = true, tol = Ty(1e-6))
-	optc = ContinuationPar{Ty, DefaultLS, DefaultEig}(newtonOptions = optn, ds = 0.001, theta = θ)
+	optn = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
+	optc = ContinuationPar{T, DefaultLS, DefaultEig}(newtonOptions = optn, ds = 0.001, θ = θ)
 
-	iter = ContIterable(F, Jac, x0, p0, (@lens _), optc)
+	prob = BifurcationProblem(F, x0, p0, (@lens _); J = Jac)
+	iter = ContIterable(prob, PALC(), optc)
 	state = iterate(iter)[1]
-	sol, hist, flag, _ = newtonPALC(iter, state)
+	newtonPALC(iter, state)
 end
 
-sol, = test_newton_palc(ones(10) .+ rand(10) * 0.01, 1.)
+test_newton_palc(-ones(10) .*0.04, 0.5)
 
-#test type
-sol, = test_newton_palc(Float32.(ones(10) .+ rand(10) * 0.001), Float32(1.))
-@test typeof(sol) == BorderedArray{Vector{Float32}, Float32}
+# test type
+for T in (Float64, Float32, Float16)
+	sol = test_newton_palc(T.(-ones(10) .*0.04), T(0.5)).u
+	@test typeof(sol) == BorderedArray{Vector{T}, T}
+end
 ####################################################################################################
-# test of  deflated problems
-_T = Float32
-F4def = (x, p) -> @. (x-1) * (x-2)
-J4def = (x, p) -> BK.finiteDifferences(z->F4def(z,p), x)
-deflationOp = DeflationOperator(_T(2), dot, _T(1), [[_T(1)]])
-@test firstindex(deflationOp) == 1
-@test lastindex(deflationOp) == 1
-@test eltype(deflationOp) == _T
-@test deflationOp(rand(_T,1)) isa _T
-defpb = DeflatedProblem(F4def, J4def, deflationOp)
+# test of deflated factor
+using ForwardDiff
+F4def(x, p) = @. (x-1) * (x-2)
+J4def(x, p) = ForwardDiff.jacobian(z -> F4def(z, p), x)
+
+for _T in (Float64, Float32, Float16)
+	deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
+	@test firstindex(deflationOp) == 1
+	@test lastindex(deflationOp) == 1
+	@test eltype(deflationOp) == _T
+	@test deflationOp(rand(_T, 1)) isa _T
+end
+
+# the test the value of the deflation factor
+_T = Float64
+deflationOp = DeflationOperator(2, dot, _T(1), [rand(2) for _ in 1:3])
+let
+	_x0 = rand(2)
+	_res = 1
+	for r in deflationOp.roots
+		_res *= deflationOp.α + norm(_x0 - r)^(-2deflationOp.power)
+	end
+	@test _res ≈ deflationOp(_x0)[1] rtol = 1e-8
+end
+
+# test of deflated problem
+deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
+prob = BifurcationProblem(F4def, [0.1], nothing; J = J4def)
+defpb = DeflatedProblem(prob, deflationOp, nothing)
 @test defpb(rand(_T, 1), nothing) |> eltype == _T
 @test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T
 
@@ -66,8 +93,52 @@ push!(deflationOp, rand(_T,1))
 @test deflationOp(rand(_T, 1), rand(_T, 1)) isa _T
 copy(deflationOp)
 
-#  test custom distance
+# test of custom distance
 deflationOp2 = DeflationOperator(_T(2), BifurcationKit.CustomDist((u,v)->norm(u-v)), _T(1), deflationOp.roots)
 @test deflationOp2(zeros(_T, 1)) isa _T
 length(deflationOp2)
 deflationOp2(rand(_T, 1), rand(_T, 1))
+
+# test of the jacobians
+let
+	n = 3
+	deflationOp = DeflationOperator(2, dot, _T(1), [1 .+ 0.01rand(n) for _ in 1:3]; autodiff = true)
+	rhs = rand(n)
+	sol = rand(n)
+	solverdf = BK.DefProbCustomLinearSolver(DefaultLS())
+	probdf = DeflatedProblem(prob, deflationOp, Val(:Custom))
+	Jdf = BK.jacobian((@set probdf.jactype = BK.AD()), sol, nothing)
+	@test Jdf ≈ ForwardDiff.jacobian(z->probdf(z,nothing),sol)
+	Jdf = BK.jacobian(probdf, sol, nothing)
+	# test the value of the jacobian
+	outj = probdf(sol, nothing, rhs)
+	outfd = ForwardDiff.derivative(t->probdf(sol .+ t .* rhs, nothing), 0)
+	@test outj ≈ outfd
+
+	sol0, = solverdf(Jdf, rhs)
+	Jfd = ForwardDiff.jacobian(z->probdf(z, nothing), sol)
+	solfd = Jfd \ rhs
+	@test sol0 ≈ solfd
+end
+
+# test of the different newton solvers
+deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
+
+sol = newton(prob, deflationOp, NewtonPar())
+@test BK.converged(sol)
+sol = newton(prob, deflationOp, NewtonPar(), Val(:autodiff))
+@test BK.converged(sol)
+sol = newton(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()),)
+@test BK.converged(sol)
+sol = newton(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()), Val(:fullIterative))
+@test BK.converged(sol)
+####################################################################################################
+# test newton adapted to branch switching
+F4def(x, p) = @. (x-1) * (x-2)
+prob = BifurcationProblem(F4def, [0.1], nothing)
+sol1, sol0, flag = newton(prob, [1.2], [2.1], nothing, NewtonPar())
+@test flag
+@test BK.converged(sol0)
+@test BK.converged(sol1)
+@test sol0.u ≈ [1.]
+@test sol1.u ≈ [2.]

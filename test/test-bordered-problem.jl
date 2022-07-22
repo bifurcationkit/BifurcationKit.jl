@@ -24,16 +24,17 @@ end
 n = 101
 par = (3.3, 0.01)
 ig = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
+prob = BK.BifurcationProblem(F_chan, ig, par)
 optnewton = NewtonPar(verbose = false)
-sol, hist, flag = newton(F_chan, ig, par, optnewton)
+newton(prob, optnewton)
 
 _tau = BorderedArray(rand(n), 1.0)
-_g(x, p, tau = _tau) = dot(x, tau.u) + (p[1] - 3.) * tau.p
-pb = BorderedProblem(F_chan, _g, @lens _[1])
+g(x, p, tau = _tau) = dot(x, tau.u) + (p[1] - 3.) * tau.p
+pb = BorderedProblem(F_chan, g, @lens _[1])
 
 # test functional with AbstractVector form
-pb(vcat(sol, 3.1), par)
-pb(vcat(sol, 3.1), par, vcat(sol, 3.1))
+pb(vcat(sol.u, 3.1), par)
+pb(vcat(sol.u, 3.1), par, vcat(sol, 3.1))
 # # test functional with BorderedVector form
 # pb(BorderedArray(sol, 3.1), par)
 #

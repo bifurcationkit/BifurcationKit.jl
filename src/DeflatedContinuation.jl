@@ -1,18 +1,68 @@
-# iterable which contains the options associated with Deflated Continuation
-@with_kw struct DefContIterable{Tit, TperturbSolution, TacceptSolution, TupdateDeflationOp}
-	it::Tit									# replicate PALC iterator
-	maxBranches::Int64						# maximum number of (active) branches to be computed
-	maxIterDefOp::Int64						# maximum number of deflated Newton iterations
-	seekEveryStep::Int64 = 1				# whether to seek new (deflated) solution at every step
-	perturbSolution::TperturbSolution 		# perturb function
-	acceptSolution::TacceptSolution	  		# accept (solution) function
-	updateDeflationOp::TupdateDeflationOp	# function to update the deflation operator
+"""
+$(TYPEDEF)
+
+Structure which holds the parameters specific to Deflated continuation.
+
+# Fields
+
+$(TYPEDFIELDS)
+
+"""
+@with_kw_noshow struct DefCont{Tdo, Talg, Tps, Tas, Tud, Tk} <: AbstractContinuationAlgorithm
+	"Deflation operator, `::DeflationOperator`"
+	deflationOperator::Tdo = nothing
+	"Used as a predictor, `::AbstractContinuationAlgorithm`. For example `PALC()`, `Natural()`,..."
+	alg::Talg = PALC()
+	"maximum number of (active) branches to be computed"
+	maxBranches::Int = 100
+	"whether to seek new (deflated) solution at every step"
+	seekEveryStep::Int = 1
+	"maximum number of deflated Newton iterations"
+	maxIterDefOp::Int = 5
+	"perturb function"
+	perturbSolution::Tps = _perturbSolution
+	"accept (solution) function"
+	acceptSolution::Tas = _acceptSolution
+	"function to update the deflation operator"
+	updateDeflationOp::Tud = _updateDeflationOp
+	"jacobian for deflated newton"
+	jacobian::Tk = DefProbCustomLinearSolver()
 end
+
+# iterable which contains the options associated with Deflated Continuation
+@with_kw struct DefContIterable{Tit, Talg <: DefCont}
+	it::Tit						# replicate continuation iterator
+	alg::Talg
+end
+
+"""
+
+$(TYPEDEF)
+
+Structure holding the result from deflated continuation.
+
+$(TYPEDFIELDS)
+"""
+struct DCResult{Tprob, Tbr, Tit, Tsol, Talg} <: AbstractBranchResult
+	"Bifurcation problem"
+	prob::Tprob
+	"Branches of solution"
+	branches::Tbr
+	"Continuation iterator"
+	iter::Tit
+	"Solutions"
+	sol::Tsol
+	"Algorithm"
+	alg::Talg
+end
+Base.lastindex(br::DCResult) = lastindex(br.branches)
+Base.getindex(br::DCResult, k::Int) = getindex(br.branches, k)
+Base.length(br::DCResult) = length(br.branches)
 
 # state specific to Deflated Continuation, it is updated during the continuation process
 mutable struct DCState{T, Tstate}
 	tmp::T
-	contState::Tstate
+	state::Tstate
 	isactive::Bool
 	DCState(sol::T) where T = new{T, Nothing}(copy(sol), nothing, true)
 	DCState(sol::T, state::ContState) where {T} = new{T, typeof(state)}(copy(sol), state, true)
@@ -20,29 +70,32 @@ end
 # whether the branch is active
 isActive(dc::DCState) = dc.isactive
 # getters
-getx(dc::DCState) = getx(dc.contState)
-getp(dc::DCState) = getp(dc.contState)
+getx(dc::DCState) = getx(dc.state)
+getp(dc::DCState) = getp(dc.state)
 
-function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::ContResult, defOp::DeflationOperator; current_param, step)
+function updatebranch!(dcIter::DefContIterable, dcstate::DCState, contResult::ContResult, defOp::DeflationOperator; current_param, step)
 	isActive(dcstate) == false &&  return false, 0
-	state = dcstate.contState 	# continuation state
-	it = iter.it 				# continuation iterator
+	state = dcstate.state 		# continuation state
+	it = dcIter.it 				# continuation iterator
+	alg = dcIter.alg
 	@unpack step, ds, θ = state
 	@unpack verbosity = it
 	state.z_pred.p = current_param
 
-	getPredictor!(it, state)
-	sol1, fval, converged, itnewton = newton(it.F, it.J, getx(state), setParam(it,current_param), it.contParams.newtonOptions, defOp; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z)
-	if converged
+	getPredictor!(state, it)
+	pbnew = reMake(it.prob; u0 = getx(state), params = setParam(it, current_param))
+	sol1 = newton(pbnew, defOp, it.contParams.newtonOptions, alg.jacobian; normN = it.normC, callback = it.callbackN, iterationC = step, z0 = state.z)
+	if converged(sol1)
 		# record previous parameter (cheap) and update current solution
-		copyto!(state.z.u, sol1); state.z.p = current_param
-		state.z_pred.p = current_param
+		copyto!(state.z.u, sol1.u); state.z.p = current_param
+		state.z_old.p = current_param
 
 		# Get tangent, it only mutates tau
-		getTangent!(state.τ, state.z_pred, state.z, it, ds, θ, it.tangentAlgo, verbosity)
+		# getTangent!(state.τ, state.z_pred, state.z, it, ds, θ, it.tangentAlgo, verbosity)
+		getPredictor!(state, it)
 
 		# call user function to deal with DeflationOperator, allows to tackle symmetries
-		iter.updateDeflationOp(defOp, sol1, current_param)
+		alg.updateDeflationOp(defOp, sol1.u, current_param)
 
 		# compute stability and bifurcation points
 		computeEigenElements(it.contParams) && computeEigenvalues!(it, state)
@@ -50,34 +103,33 @@ function updatebranch!(iter::DefContIterable, dcstate::DCState, contResult::Cont
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
 				_T  = eltype(it)
-				_, bifpt = getBifurcationType(it.contParams, state, it.normC, it.recordFromSolution, it.verbosity, :guess, getinterval(current_param, current_param-ds))
+				_, bifpt = getBifurcationType(it.contParams, state, it.normC, recordFromSolution(it), it.verbosity, :guess, getinterval(current_param, current_param-ds))
 				if bifpt.type != :none; push!(contResult.specialpoint, bifpt); end
 			end
 		end
 		state.step += 1
-		save!(contResult, iter.it, state)
+		save!(contResult, it, state)
 	else
 		dcstate.isactive = false
 		# save the last solution
 		push!(contResult.sol, (x = copy(getx(state)), p = getp(state), step = state.step))
 	end
-	return converged, itnewton
+	return converged(sol1), sol1.itnewton
 end
 
 # this is a function barrier to make Deflated continuation type stable
 # it returns the  set of states and the ContResult
 function getStatesContResults(iter::DefContIterable, roots::Vector{Tvec}) where Tvec
-	@assert length(roots) > 0 "You must provide roots in the deflation operators. These roots are used "
+	@assert length(roots) > 0 "You must provide roots in the deflation operators. These roots are used as initial conditions of the deflated continuation process."
 	contIt = iter.it
-	copyto!(contIt.x0, roots[1])
+	copyto!(contIt.prob.u0, roots[1])
 	state = DCState(copy(roots[1]), iterate(contIt)[1])
 	states = [state]
-	for ii=2:length(roots)
-		copyto!(contIt.x0, roots[ii])
+	for ii = 2:length(roots)
 		push!(states, DCState(copy(roots[ii]), iterate(contIt)[1]))
 	end
 	# allocate branches to hold the result
-	branches = [ContResult(contIt, state.contState) for state in states]
+	branches = [ContResult(contIt, st.state) for st in states]
 	return states, branches
 end
 
@@ -91,62 +143,47 @@ function plotDContBranch(branches, nbrs::Int, nactive::Int, nstep::Int)
 end
 plotAllDCBranch(branches) = display(plot(branches..., label = ""))
 
+_perturbSolution(x, p, id) = x
+_acceptSolution(x, p) = true
+_updateDeflationOp(defOp, x, p) = push!(defOp, x)
+
+
 """
 $(SIGNATURES)
 
-This function computes the set of curves of solutions `γ(s) = (x(s), p(s))` to the equation `F(x,p)=0` based on the algorithm of **deflated continuation** as described in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. “The Computation of Disconnected Bifurcation Diagrams.” ArXiv:1603.00809 [Math], March 2, 2016. http://arxiv.org/abs/1603.00809.
+This function computes the set of curves of solutions `γ(s) = (x(s), p(s))` to the equation `F(x,p) = 0` based on the algorithm of **deflated continuation** as described in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. “The Computation of Disconnected Bifurcation Diagrams.” ArXiv:1603.00809 [Math], March 2, 2016. http://arxiv.org/abs/1603.00809.
 
-Depending on the options in `contParams`, it can locate the bifurcation points on each branch. Note that you can specify different predictors using `tangentAlgo`.
+Depending on the options in `contParams`, it can locate the bifurcation points on each branch. Note that you can specify different predictors using `alg`.
 
 # Arguments:
-- `F` is a function with input arguments `(x, p)`, where `p` is the set of parameters passed to `F`, and returning a vector `r` that represents the functional. For type stability, the types of `x` and `r` should match. In particular, it is not **inplace**,
-- `J` is the jacobian of `F` at `(x, p)`. It can assume three forms.
-    1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, you can use the default arguments of `contParams::ContinuationPar` for `continuation`.
-    2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, you cannot use the default parameters of `contParams::ContinuationPar` for `continuation` and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
-    3. Or `J` is a function and `J(x, p)` returns a variable `j` which can assume any type. Then, you must implement a linear solver `ls` as a composite type, subtype of `AbstractLinearSolver` which is called like `ls(j, rhs)` and which returns the solution of the jacobian linear system. See for example `examples/SH2d-fronts-cuda.jl`. This linear solver is passed to `NewtonPar(linsolver = ls)` which itself passed to `ContinuationPar`. Similarly, you have to implement an eigensolver `eig` as a composite type, subtype of `AbstractEigenSolver`.
-- `par` initial set of parameters,
-- `lens::Lens` specifies which parameter axis among `par` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`,
-- `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options,
-- `defOp::DeflationOperator` a Deflation Operator (see [`DeflationOperator`](@ref)) which contains the set of solution guesses for the parameter `par`.
+- `prob::AbstractBifurcationProblem` bifurcation problem
+- `alg::DefCont`, deflated continuation algorithm, see [`DefCont`](@ref)
+- `contParams` parameters for continuation. See [`ContinuationPar`](@ref) for more information about the options
 
 # Optional Arguments:
-- `seekEveryStep::Int = 1` we look for additional solution, using deflated newton, every `seekEveryStep` step,
-- `maxBranches::Int = 100` maximum number of branches considered,
-- `maxIterDefOp::Int` maximum number of deflated Newton iterations
 - `plot = false` whether to plot the solution while computing,
-- `recordFromSolution = (x, p) -> norm(x)` function used to plot in the continuation curve. It is also used in the way results are saved. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...),
-- `plotSolution = (x, p; kwargs...) -> nothing` function implementing the plot of the solution,
 - `callbackN` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners or affect the newton iterations. In the deflation part of the algorithm, when seeking for new branches, the callback is passed the keyword argument `fromDeflatedNewton = true` to tell the user can it is not in the continuation part (regular newton) of the algorithm,
-- `tangentAlgo = NaturalPred()` controls the algorithm used to predict the tangents along the curve of solutions or the corrector. Can be `NaturalPred`, `SecantPred` or `BorderedPred`,
 - `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,⋯,5}`,
-- `normN = norm` norm used in the different Newton solves,
-- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see below). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
-- `perturbSolution = (x, p, id) -> x` perturbation applied to the solution when trying to find new solutions using Deflated Newton. You can use for example `(x, p, id) -> x .+ (1 .+ 0.001 * rand(size(x)...))`
+- `normN = norm` norm used in the Newton solves,
+- `dotPALC = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
 
 # Outputs:
-- `contres::Vector{ContResult}` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,
-- the iterator associated with the computation
-- the solutions at the last parameter value,
-- current parameter value.
+- `contres::DCResult` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,
 """
-function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp::DeflationOperator;
+function continuation(prob::AbstractBifurcationProblem,
+	 		algdc::DefCont,
+			contParams::ContinuationPar;
 			verbosity::Int = 2,
-			maxBranches::Int = 100,
-			seekEveryStep::Int = 1,
-			maxIterDefOp::Int = 5contParams.newtonOptions.maxIter,
 			plot::Bool = true,
-			tangentAlgo = SecantPred(),
 			linearAlgo = BorderingBLS(contParams.newtonOptions.linsolver),
 			dotPALC = DotTheta(),
-			recordFromSolution = (x, p) -> norm(x),
-			plotSolution = (x, p ;kwargs...) -> plot!(x; kwargs...),
-			perturbSolution = (x, p, id) -> x,
 			callbackN = (state; kwargs...) -> true,
-			acceptSolution = (x, p) -> true,
-			updateDeflationOp = (defOp, x, p) -> push!(defOp, x),
-			normN = norm) where vectype
+			filename = "branch-" * string(Dates.now()),
+			normN = norm)
 
+	algdc = @set algdc.maxIterDefOp = algdc.maxIterDefOp * contParams.newtonOptions.maxIter
 	# allow to remove the corner case and associated specific return variables, type stable
+	defOp = algdc.deflationOperator
 	@assert length(defOp) > 0 "You must provide at least one guess"
 
 	# we make a copy of the deflation operator
@@ -157,21 +194,21 @@ function continuation(F, J, par, lens::Lens, contParams::ContinuationPar, defOp:
 
 	# underlying continuation iterator
 	# we "hack" the saveSolEveryStep option because we always want to record the first point on each branch
-	contIt = ContIterable(F, J, defOp[1], par, lens, ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep), linearAlgo; tangentAlgo = tangentAlgo, plot = plot, plotSolution = plotSolution, recordFromSolution = recordFromSolution, normC = normN, dotPALC = dotPALC, finaliseSolution = finaliseDefault, callbackN = callbackN, verbosity = verbosity-2, filename = nothing)
+	contIt = ContIterable(prob, algdc.alg, ContinuationPar(contParams, saveSolEveryStep = contParams.saveSolEveryStep == 0 ? Int(1e14) : contParams.saveSolEveryStep); plot = plot, normC = normN, dotPALC = dotPALC, finaliseSolution = finaliseDefault, callbackN = callbackN, verbosity = verbosity-2, filename = filename)
 
-	#
-	iter = DefContIterable(contIt, maxBranches, maxIterDefOp, seekEveryStep, perturbSolution, acceptSolution, updateDeflationOp)
+	iter = DefContIterable(contIt, algdc)
 
 	return deflatedContinuation(iter, deflationOp, contParams, verbosity, plot)
 end
 
-function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOperator, contParams, verbosity, plot)
+function deflatedContinuation(dcIter::DefContIterable, deflationOp::DeflationOperator, contParams, verbosity, plot)
 
-	states, branches = getStatesContResults(iter, deflationOp.roots)
+	states, branches = getStatesContResults(dcIter, deflationOp.roots)
 
-	contIt = iter.it
-	par = contIt.par
-	lens = contIt.lens
+	contIt = dcIter.it
+	alg = dcIter.alg
+	par = getParams(contIt.prob)
+	lens = getLens(contIt)
 	current_param = get(par, lens)
 
 	# we extract the newton options
@@ -179,7 +216,8 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 
 	# function to get new solutions based on Deflated Newton
 	function getNewSolution(_st::DCState, _p::Real, _idb)
-		newton(contIt.F, contIt.J, iter.perturbSolution(getx(_st), _p, _idb), set(par, lens, _p), setproperties(optnewton; maxIter = iter.maxIterDefOp), deflationOp; normN = contIt.normC, callback = contIt.callbackN, fromDeflatedNewton = true)
+		prob_df = reMake(contIt.prob; u0 = alg.perturbSolution(getx(_st), _p, _idb), params = set(par, lens, _p))
+		newton(prob_df, deflationOp, setproperties(optnewton; maxIter = alg.maxIterDefOp); normN = contIt.normC, callback = contIt.callbackN, fromDeflatedNewton = true)
 	end
 
 	nstep = 0
@@ -200,9 +238,9 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 		for (idb, state) in enumerate(states)
 			# this computes the solution for the new parameter value current_param
 			# it also updates deflationOp
-			flag, itnewton = updatebranch!(iter, state, branches[idb], deflationOp;
+			flag, itnewton = updatebranch!(dcIter, state, branches[idb], deflationOp;
 					current_param = current_param, step = nstep)
-			(verbosity>=2 && isActive(state)) && println("----> Continuation of branch $idb in $itnewton iterations")
+			(verbosity>=2 && isActive(state)) && println("----> Continuation of branch $idb in $itnewton Iterations")
 			verbosity>=1 && ~flag && itnewton>0 && printstyled(color=:red, "--> Fold for branch $idb ?\n")
 		end
 
@@ -217,25 +255,30 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 		end
 
 		# only look for new branches if the number of active branches is too small
-		if mod(nstep, iter.seekEveryStep) == 0 && nactive < iter.maxBranches
+		if mod(nstep, alg.seekEveryStep) == 0 && nactive < alg.maxBranches
 			n_active = 0
 			# we restrict to 1:nbrs because we don't want to update the newly found branches
 			for (idb, state) in enumerate(states[1:nbrs])
-				if isActive(state) && (n_active <iter.maxBranches)
+				if isActive(state) && (n_active < alg.maxBranches)
 					n_active += 1
 					_success = true
 					verbosity >= 2 && println("----> Deflating branch $idb")
 					while _success
-						sol1, hist, _success, itnewton = getNewSolution(state, current_param, idb)
-						if _success && contIt.normC(sol1 - getx(state)) < optnewton.tol
+						sol1 = getNewSolution(state, current_param, idb)
+						_success = converged(sol1)
+						if _success && contIt.normC(sol1.u - getx(state)) < optnewton.tol
 							@error "Same solution found for identical parameter value!!"
 							_success = false
 						end
 						if _success
 							verbosity>=1 && printstyled(color=:green, "--> new solution for branch $idb \n")
-							push!(deflationOp.roots, sol1)
-							push!(states, DCState(sol1, iterate(setproperties(contIt; x0 = sol1, par = set(par,lens,current_param)))[1]))
-							push!(branches, ContResult(contIt, states[end].contState))
+							push!(deflationOp.roots, sol1.u)
+
+							# create a new iterator and iterate it once to set up the ContState
+							contitnew = @set contIt.prob = reMake(contIt.prob, u0 = sol1.u, params = set(par,lens,current_param))
+							push!(states, DCState(sol1.u, iterate(contitnew)[1]))
+
+							push!(branches, ContResult(contIt, states[end].state))
 						end
 					end
 				end
@@ -244,5 +287,122 @@ function deflatedContinuation(iter::DefContIterable, deflationOp::DeflationOpera
 		nstep += 1
 	end
 	plot && plotAllDCBranch(branches)
-	return branches, contIt, [getx(c.contState) for c in states if isActive(c)], current_param
+	return DCResult(nothing, branches, contIt, [getx(c.state) for c in states if isActive(c)], dcIter.alg)
+end
+
+function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}
+	@warn "il faut length(br) > 1"
+	# get the continuation parameters
+	@unpack pMin, pMax, ds = brs[1].contparams
+	# we update the parameter span with provided initial conditions
+	pMin = ds > 0 ? brs[1].branch[1].param : pMin
+	pMax = ds < 0 ? brs[1].branch[1].param : pMax
+	@show pMin pMax
+
+	function _setnewsol(_x, _p0, _pMin, _pMax, _sign = -1)
+		@show iter.contParams.maxSteps
+		_iter2 = @set iter.par = setParam(iter, _p0)
+		_iter2 = @set _iter2.contParams = setproperties(_iter2.contParams; ds = abs(iter.contParams.ds) * _sign, pMin = _pMin, pMax = _pMax)
+		copyto!(_iter2.x0, _x)
+		return _iter2
+	end
+
+	# test if the branch is done
+	doneBranch(_br::ContResult) = _br.branch[1].param in [pMin, pMax] && _br.branch[end].param in [pMin, pMax]
+	doneBranch(_brs::Vector{ <: ContResult}) = mapreduce(doneBranch, +, _brs)
+
+	# test if (x,p) belongs to a branch
+	function isin(_br::ContResult, x, p)
+		tol = _br.contparams.newtonOptions.tol
+		for (_id, _sol) in pairs(_br.sol)
+			if max(iter.normC(_sol.x - x), abs(_sol.p - p)) < tol
+				return true, _id
+			end
+		end
+		 return false, 0
+	end
+
+	# function to find the branch to which (x, p) belongs
+	# return found?, which?, end?
+	function intersectBranch(_brs::Vector{ <: ContResult}, x, p, idavoid = 0)
+		for (_id, _br) in pairs(_brs)
+			_res = isin(_br, x, p)
+			if (_res[1] && _id != idavoid)
+				return (_res[1], _id, _res[2])  # return if branch id found
+			end
+		end
+		return false, 0, 0
+	end
+
+	function getParamValues(_brs::Vector{ <: ContResult})
+		ps = [(p = sol.p, id = ii) for (ii, br) in pairs(brs) if length(br) >1 for sol in br.sol[[1,end]]]
+		sort!(ps, by = x -> x.p, rev = true )
+		return ps
+	end
+	# @assert doneBranch(brs[1]) "error"
+
+	printstyled(color=:blue,"#"^50*"\n")
+	iterbrs = 0
+
+	while doneBranch(brs) < length(brs) && iterbrs < iterbrsmax
+		printstyled(color=:green, "#"^50*" - $iterbrs, #br = $(length(brs)) \n")
+		for (id, br) in pairs(brs)
+			print("--> branch $id, # = ", length(br), ", isdone = ")
+			printstyled("$(doneBranch(br)) \n", color = (doneBranch(br) ? :green : :red))
+			if ~doneBranch(br) && length(br) > 1 # if there is a single point, discard
+				printstyled(color=:magenta,"--> branch $id not finished\n")
+				# we found an un-finished branch
+				iterbr = 0
+				# we use as starting point the one
+				startingpoint = ((br.branch[1].param > br.branch[2].param) & (br.branch[1].param < pMax)) ? (br.sol[1]..., first = true) : (br.sol[end]..., first = false)
+				@show startingpoint.p
+				if length(br) > 1
+					# δp is where we want to go:
+					δp = startingpoint.first ? br.branch[1].param - br.branch[2].param : br.branch[end].param - br.branch[end-1].param
+				else
+					@error "branch not large enough"
+					δp = -abs(ds)
+				end
+				δp = δp == 0 ? -abs(ds) : δp
+				_ps = getParamValues(brs)
+				display(_ps)
+				if δp > 0
+					@assert 1==1 "searchsorted?"
+					idp = findfirst(x -> x.p > startingpoint.p, _ps)
+					@show  idp
+					pspan = (startingpoint.p, ~isnothing(idp) ? _ps[idp].p : pMax)
+					printstyled(color=:blue, "--> to the right\n")
+				else
+					@assert 1==1 "searchsorted?"
+					idp = findfirst(x -> x.p < startingpoint.p, _ps)
+					pspan = (~isnothing(idp) ? _ps[idp].p : pMin, startingpoint.p)
+					printstyled(color=:green, "--> to the left\n")
+				end
+
+				# we define the parameter span
+				iter2 = _setnewsol(startingpoint.x, startingpoint.p, pspan..., sign(δp))
+				while ~doneBranch(brs[id]) && iterbr < 1
+					brright, = continuation(iter2)
+					brs[id] = _merge(br, brright)
+					println("--> branch from ",brs[id].sol[1].p," to ", brright.sol[end].p)
+					# return brright
+
+					res = intersectBranch(brs, brright.sol[end].x, brright.sol[end].p,id)
+					if res[1]  #we found a curve to merge with
+							printstyled(color=:red, "--> Merge branch with ", res[2],"\n")
+						brs[id] = _merge(brs[res[2]], brs[id])
+							printstyled(color=:green,"\n--> the branch is complete = ", doneBranch(brs[id]),"\n")
+						# we remove the other branch that we merged
+						deleteat!(brs, res[2])
+							println("--> #br = $(length(brs))\n")
+					end
+					iterbr += 1
+				end
+
+				break
+			end
+		end
+		iterbrs += 1
+	end
+	iterbrs < iterbrsmax && printstyled("--> Merge computed!!!", color=:green)
 end

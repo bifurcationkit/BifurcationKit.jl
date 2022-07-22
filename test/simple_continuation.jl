@@ -1,4 +1,6 @@
-# using Revise, Plots, Test
+# using Revise
+# using Plots
+using Test
 using BifurcationKit, LinearAlgebra, Setfield, SparseArrays
 const BK = BifurcationKit
 
@@ -6,12 +8,11 @@ k = 2
 N = 1
 F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
 Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
-
 ####################################################################################################
 # test creation of specific scalar product
+_dt = BK.DotTheta(dot)
 _dt = BK.DotTheta()
 # tests for the predictors
-BK.empty!(nothing)
 BK.mergefromuser(1., (a=1,))
 BK.mergefromuser(rand(2), (a=1,))
 BK.mergefromuser((1,2), (a=1,))
@@ -20,14 +21,20 @@ BK.Fold(rand(2),0.1,0.1,(@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
 BK._displayLine(1, 1, (1,1))
 BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
-
+# test continuation algorithm
+BK.empty(Natural())
+BK.empty(PALC())
+BK.empty(PALC(tangent = Bordered()))
+BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
+BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
+####################################################################################################
 normInf(x) = norm(x, Inf)
 
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false, detectBifurcation = 0)
 x0 = 0.01 * ones(N)
 
-opts = @set opts.doArcLengthScaling = true
-br0, = @time continuation(F, Jac_m, x0, -1.5, (@lens _), opts) #(16.12 k allocations: 772.250 KiB)
+prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
+br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts) #(16.12 k allocations: 772.250 KiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.computeEigenvalues(opts)
@@ -37,11 +44,11 @@ br0[1]
 br0[end]
 
 # test with callbacks
-br0, = continuation(F,Jac_m,x0, -1.5, (@lens _), (@set opts.maxSteps = 3), callbackN = (state; kwargs...)->(true))
+br0 = continuation(prob, PALC(), (@set opts.maxSteps = 3), callbackN = (state; kwargs...)->(true))
 
 ###### Used to check type stability of the methods
 # using RecursiveArrayTools
-iter = ContIterable(F, Jac_m, x0, -1.5, (@lens _), opts)
+iter = ContIterable(prob, PALC(), opts)
 state = iterate(iter)[1]
 # test copy, copyto!
 state1 = copy(state);copyto!(state1, state)
@@ -57,8 +64,8 @@ typeof(contRes)
 # 	 @code_warntype continuation!(iter, state, contRes)
 #####
 
-opts = ContinuationPar(opts;detectBifurcation = 1,saveEigenvectors=true)
-br1, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _),opts) #(14.28 k allocations: 1001.500 KiB)
+opts = ContinuationPar(opts; detectBifurcation = 1, saveEigenvectors=true)
+br1 = continuation(prob, PALC(), opts) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
 br1[1]
@@ -69,54 +76,51 @@ BK.getvectortype(br1)
 BK.getvectoreltype(br1)
 BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
-br1.params
+BK.getParams(br1)
 
-br2, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, recordFromSolution = (x,p) -> norm(x,2))
+@set! prob.recordFromSolution = (x,p) -> norm(x,2)
+br2 = continuation(prob, PALC(), opts)
 
 # test for different norms
-br3, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, normC = normInf)
+br3 = continuation(prob, PALC(), opts, normC = normInf)
 
 # test for linesearch in Newton method
 opts = @set opts.newtonOptions.linesearch = true
-br4, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
+br4 = continuation(prob, PALC(), opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts = @set opts.newtonOptions.linesearch = false
-br5, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, normC = normInf, linearAlgo = BorderingBLS())
+br5 = continuation(prob, PALC(bls = BorderingBLS()), opts, normC = normInf)
 
-br5, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, normC = normInf, linearAlgo = MatrixBLS())
+br5 = continuation(prob, PALC(bls = MatrixBLS()), opts, normC = normInf)
 
 # test for stopping continuation based on user defined function
 finaliseSolution = (z, tau, step, contResult; k...) -> (step < 20)
-br5a, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, finaliseSolution = finaliseSolution)
+br5a = continuation(prob, PALC(), opts, finaliseSolution = finaliseSolution)
 @test length(br5a.branch) == 21
 
 # test for different predictors
-br6, = continuation(F,Jac_m,x0,-1.5, (@lens _),opts, tangentAlgo = SecantPred())
+br6 = continuation(prob, PALC(tangent = Secant()), opts)
 
 optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
-br7, = continuation(F,Jac_m,x0,-1.5, (@lens _),optsnat, tangentAlgo = NaturalPred(),recordFromSolution = (x,p)->x[1])
+br7 = continuation((@set prob.recordFromSolution = (x,p)->x[1]), Natural(), optsnat)
 
 # tangent prediction with Bordered predictor
-br8, sol, _ = continuation(F,Jac_m,x0,-1.5, (@lens _), opts, tangentAlgo = BorderedPred(),recordFromSolution = (x,p)->x[1])
+br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9, = continuation(F,Jac_m,x0,-1.5, (@lens _), opts9,
-	recordFromSolution = (x,p)->x[1],
-	tangentAlgo = MultiplePred(copy(x0), 0.01,13)
-	)
-	BK.empty!(BK.MultiplePred(copy(x0), 0.01,13))
+	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9)
+	BK.empty!(BK.Multiple(copy(x0), 0.01,13))
 	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
 
 # tangent prediction with Polynomial predictor
-polpred = PolynomialPred(BorderedPred(),2,6,x0)
+polpred = Polynomial(Bordered(), 2, 6, x0)
 	opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
-	br10, = continuation(F, Jac_m, x0, -1.5, (@lens _), opts9,
-	tangentAlgo = polpred, plot=false,
-	recordFromSolution = (x,p)->x[1],
+	br10 = continuation(prob, PALC(tangent = polpred), opts9,
+	plot=false,
 	)
 	# plot(br10) |> display
 	polpred(0.1)
@@ -159,45 +163,59 @@ polpred = PolynomialPred(BorderedPred(),2,6,x0)
 # 	scatter!([polpred(0.1)[2]],[polpred(0.1)[1][1]],marker=:cross)
 # 	title!("",)
 
+# tangent prediction with Moore Penrose
+opts11 = (@set opts.newtonOptions.verbose=false)
+opts11 = ContinuationPar(opts11; maxSteps = 50, ds = 0.015, dsmin = 1e-5, dsmax = 0.15)
+br11 = continuation(prob, BK.MoorePenrose(), opts11; verbosity = 0)
+br11 = continuation(prob, BK.MoorePenrose(directLS = false), opts11; verbosity = 0)
+# plot(br11)
+
+
 # further testing with sparse Jacobian operator
-Jac_sp_simple = (x, p) -> SparseArrays.spdiagm(0 => p  .+ x.^k)
-brsp, = continuation(F,Jac_sp_simple, x0, -1.5, (@lens _),opts)
-brsp, = continuation(F,Jac_sp_simple, x0, -1.5, (@lens _),opts, recordFromSolution = (x,p) -> norm(x,2))
-brsp, = continuation(F,Jac_sp_simple, x0, -1.5, (@lens _),opts,linearAlgo = BK.BorderingBLS(solver = BK.DefaultLS(), checkPrecision = false))
-brsp, = continuation(F,Jac_sp_simple, x0, -1.5, (@lens _),opts,linearAlgo = BK.MatrixBLS())
-# plotBranch(br1,marker=:d);title!("")
-# plotBranch!(br8,marker=:d);title!("")
+prob_sp = @set prob.VF.J = (x, p) -> SparseArrays.spdiagm(0 => p .+ x.^k)
+brsp = continuation(prob_sp, PALC(), opts)
+brsp = continuation(prob_sp, PALC(bls = BK.BorderingBLS(solver = BK.DefaultLS(), checkPrecision = false)), opts)
+brsp = continuation(prob_sp, PALC(bls = BK.MatrixBLS()), opts)
+# plot(brsp,marker=:d)
 ####################################################################################################
 # check bounds for all predictors / correctors
-for talgo in [BorderedPred(), SecantPred()]
-	brbd,  = continuation(F,Jac_m, x0, -3.0, (@lens _), opts; tangentAlgo = talgo, verbosity = 0)
+for talgo in (Bordered(), Secant())
+	brbd  = continuation(prob, PALC(tangent = talgo), opts; verbosity = 0)
 	@test length(brbd) > 2
 end
-brbd,  = continuation(F,Jac_m,ones(N)*3, -3.0, (@lens _), ContinuationPar(opts, pMax = -2))
-brbd,  = continuation(F,Jac_m,ones(N)*3, -3.2, (@lens _), ContinuationPar(opts, pMax = -2), verbosity = 3)
+prob.u0 .= ones(N)*3
+@set! prob.params = -3.
+brbd = continuation(prob, PALC(), ContinuationPar(opts, pMax = -2))
+@set! prob.params = -3.2
+brbd  = continuation(prob, PALC(), ContinuationPar(opts, pMax = -2), verbosity = 0)
 @test isnothing(brbd)
 ####################################################################################################
 # testing when starting with 2 points on the branch
 opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 3)
 x0 = 0.01 * ones(2)
 
-x0, = newton(F,Jac_m,x0, -1.5, opts.newtonOptions)
-x1, = newton(F,Jac_m,x0, -1.45, opts.newtonOptions)
+prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
+x0 = newton(prob, opts.newtonOptions)
+x1 = newton((@set prob.params = -1.45), opts.newtonOptions)
 
-br0, = continuation(F,Jac_m, x0, -1.5, (@lens _), opts, verbosity=0)
+br0 = continuation(prob, PALC(), opts, verbosity=0)
 BK.getEigenelements(br0, br0.specialpoint[1])
-BK.detectLoop(br0, x0, -1.45)
+BK.detectLoop(br0, x0.u, -1.45)
 
-br1, = continuation(F,Jac_m, x1, -1.45, x0, -1.5, (@lens _), ContinuationPar(opts; ds = -0.001))
+@set! prob.params = -1.5
+br1 = continuation(prob, PALC(), ContinuationPar(opts; ds = -0.001))
 
-br2, = continuation(F,Jac_m,x0, -1.5, x1, -1.45, (@lens _), opts; tangentAlgo = BorderedPred())
+br2 = continuation(prob, x0.u, -1.5, x1.u, -1.45, PALC(tangent = Bordered()), (@lens _), opts)
 ####################################################################################################
 # test for computing both sides
-br3, = continuation(F,Jac_m,x0, -1.5, (@lens _), opts; tangentAlgo = BorderedPred(), bothside = true)
+br3 = continuation(prob, PALC(tangent = Bordered()), opts; bothside = true)
 ####################################################################################################
 # test for deflated continuation
-brdc, = continuation(F,Jac_m, 0.5, (@lens _),
-	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40),
-	DeflationOperator(2, .001, [[0.]]); plot=false, verbosity = 0,
-	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))),
-	callbackN = (state; kwargs...) -> state.res <1e3)
+prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
+alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
+	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x)))
+	)
+brdc = continuation(prob, alg,
+	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40);
+	plot=false, verbosity = 3,
+	callbackN = BK.cbMaxNorm(1e3))

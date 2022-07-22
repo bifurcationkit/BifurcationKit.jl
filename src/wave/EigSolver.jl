@@ -1,4 +1,4 @@
-using IterativeSolvers, KrylovKit, Arpack, LinearAlgebra
+using IterativeSolvers, Arpack, LinearAlgebra
 
 # abstract type for generalised eigenvector
 abstract type AbstractGEigenSolver <: AbstractEigenSolver end

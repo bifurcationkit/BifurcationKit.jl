@@ -1,5 +1,5 @@
 # composite type for Bordered arrays
-import Base: copy, copyto!, eltype, zero, eltype
+import Base: eltype, zero, eltype
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 
 """
@@ -21,10 +21,20 @@ Base.:*(a::S, b::BorderedArray{vectype, T}) where {vectype, T, S <: Number} = Bo
 # a version of copy which cope with our requirements concerning the methods
 # available for
 _copy(b) = 1*b
-copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
+_copy(b::AbstractArray) = copy(b)
+Base.copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
 
-copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1, T2 } = (copyto!(dest.u, src.u); copyto!(dest.p, src.p); dest)
-copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number} = (copyto!(dest.u, src.u); dest.p = src.p;dest)
+function Base.copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1, T2 }
+	copyto!(dest.u, src.u)
+	copyto!(dest.p, src.p)
+	return dest
+end
+
+function Base.copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number}
+	copyto!(dest.u, src.u)
+	dest.p = src.p
+	return dest
+end
 
 length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
 length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) + 1
@@ -101,7 +111,11 @@ end
 minus!(x, y) = axpy!(-1, y, x)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <: Number} = (x = x - y)
-minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (minus!(x.u, y.u); minus!(x.p, y.p))
+function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T}
+	minus!(x.u, y.u)
+	minus!(x.p, y.p)
+	return x
+end
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Number}
 	minus!(x.u, y.u)
 	# Carefull here. If I use the line below, then x.p will be left unaffected
