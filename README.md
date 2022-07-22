@@ -2,11 +2,11 @@
 
 | **Documentation**                                                               | **Build Status**                                                                                |
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-| [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/Bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rveltz/BifurcationKit.jl) |
+| [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/rveltz/BifurcationKit.jl) |
 
-<span style="color:red">New version of the package with modified interface. You are now required to define a `BifurcationProblem` to perform continuation or bifurcation analysis. The previous interface is available under the tag 0.1.11 which can be installed by doing</span>
+<span style="color:red">New version of the package with modified interface. You are now required to define a `BifurcationProblem` to perform continuation or bifurcation analysis. The previous interface is available under the tag 0.1.12 which can be installed by doing</span>
 
-<span style="color:red">`] add BifurcationKit@0.1.11`</span>
+<span style="color:red">`] add BifurcationKit@0.1.12`</span>
 
 <span style="color:red">The new version provides many bugs fix though.
 </span>

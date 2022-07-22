@@ -26,10 +26,10 @@ function (hp::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	b = hp.b
 	# update parameter
 	par = set(params, getLens(hp), p)
-	# ┌         ┐┌  ┐ ┌ ┐
-	# │ J-iω  a ││v │=│0│
-	# │  b    0 ││σ1│ │1│
-	# └         ┘└  ┘ └ ┘
+	# ┌         ┐┌  ┐   ┌ ┐
+	# │ J-iω  a ││v │ = │0│
+	# │  b    0 ││σ1│   │1│
+	# └         ┘└  ┘   └ ┘
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J - iω
 	#       a should be a null vector of J'+ iω
@@ -134,8 +134,8 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 		u1r = applyJacobian(pb.prob_vf, x + ϵ2 * vr, par0, cw, true)
 		u1i = applyJacobian(pb.prob_vf, x + ϵ2 * vi, par0, cw, true)
 		u2 = apply(JAd_at_xp,  cw)
-		σxv2r = @. -(u1r-u2) / ϵ2
-		σxv2i = @. -(u1i-u2) / ϵ2
+		σxv2r = @. -(u1r - u2) / ϵ2
+		σxv2i = @. -(u1i - u2) / ϵ2
 		σx = @. σxv2r + Complex{T}(0, 1) * σxv2i
 
 		σxx1 = dot(σx, x1)
@@ -332,7 +332,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	# Jacobian for the Hopf problem
 	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
 
-	opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
+		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
@@ -394,7 +394,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		z = getx(state)
 		x = getVec(z, hopfPb)		# hopf point
 		p1, ω = getP(z, hopfPb)		# first parameter
-		p2 = getp(state)		# second parameter
+		p2 = getp(state)			# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 
@@ -417,8 +417,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		BT = ω#real( dot(ζstar ./ normC(ζstar), ζ) )
 		ζstar ./= dot(ζ, ζstar)
 
-		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a=Complex{T}(0, 0), b = Complex{T}(0,0)), :hopf)
-		hopfNormalForm(F, J, d2F, d3F, hp, options_newton.linsolver, verbose=false)
+		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a = Complex{T}(0,0), b = Complex{T}(0,0)), :hopf)
+		hopfNormalForm(prob_vf, hp, options_newton.linsolver, verbose = false)
 
 		# lyapunov coefficient
 		l1 = hp.nf.b

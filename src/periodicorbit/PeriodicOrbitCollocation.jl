@@ -1,4 +1,6 @@
 using FastGaussQuadrature: gausslegendre
+# using PreallocationTools: dualcache, get_tmp
+
 
 """
 	cache = MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
@@ -123,10 +125,10 @@ struct POCollCache{T}
 end
 
 function POCollCache(Ty::Type, n::Int, m::Int)
-	gj  = dualcache(zeros(Ty, n, m), [n, m])
-	gi  = dualcache(zeros(Ty, n, m), [n, m])
-	∂gj = dualcache(zeros(Ty, n, m), [n, m])
-	uj  = dualcache(zeros(Ty, n, m+1), [n, (1 + m)])
+	gj  = (zeros(Ty, n, m), [n, m])
+	gi  = (zeros(Ty, n, m), [n, m])
+	∂gj = (zeros(Ty, n, m), [n, m])
+	uj  = (zeros(Ty, n, m+1), [n, (1 + m)])
 	return POCollCache(gj, gi, ∂gj, uj)
 end
 ####################################################################################################

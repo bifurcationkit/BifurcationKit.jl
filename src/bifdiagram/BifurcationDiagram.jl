@@ -14,6 +14,7 @@ mutable struct BifDiagNode{Tγ, Tc}
 	child::Tc
 end
 
+# getters
 @inline level(node::BifDiagNode) = node.level
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
 from(tree::BifDiagNode) = from(tree.γ)
@@ -22,6 +23,7 @@ add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::
 add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
 getContResult(br::ContResult) = br
 getContResult(br::Branch) = br.γ
+getAlg(tree::BifDiagNode) = tree.γ.alg
 
 function Base.show(io::IO, tree::BifDiagNode)
 	println(io, "[Bifurcation diagram]")
@@ -68,31 +70,29 @@ $(SIGNATURES)
 Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recursively.
 
 # Arguments
-- `F, dF, d2F, d3F` functional and its derivatives
-- `x0` initial guess
-- `par0` parameter values at `x0`
-- `lens` lens to select the parameter axis
+- `prob::AbstractBifurcationProblem` bifurcation problem
+- `alg` continuation algorithm
 - `level` maximum branching (or recursion) level for computing the bifurcation diagram
 - `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
 - `kwargs` optional arguments. Look at [`bifurcationdiagram!`](@ref) for more details.
 
 # Simplified call:
 
-We also provide the call
+We also provide the method
 
-`bifurcationdiagram(F, dF, d2F, d3F, br::ContResult, level::Int, options; kwargs...)`
+`bifurcationdiagram(br::ContResult, level::Int, options; kwargs...)`
 
 where `br` is a branch computed after a call to [`continuation`](@ref) from which we want to compute the bifurcating branches recursively.
 """
-function bifurcationdiagram(F, dF, d2F, d3F, x0, par0, lens::Lens, level::Int, options; kwargs...)
-	γ, u = continuation(F, dF, x0, par0, lens, options(x0, par0, 1); kwargs...)
-	bifurcationdiagram(F, dF, d2F, d3F, γ, level, options; code = "0", kwargs...)
+function bifurcationdiagram(prob::AbstractBifurcationProblem, alg::AbstractContinuationAlgorithm, level::Int, options; kwargs...)
+	γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs...)
+	bifurcationdiagram(prob, γ, level, options; code = "0", kwargs...)
 end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
-function bifurcationdiagram(F, dF, d2F, d3F, br::AbstractBranchResult, maxlevel::Int, options; kwargs...)
+function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; kwargs...)
 	printstyled(color = :magenta, "#"^50 * "\n---> Automatic computation of bifurcation diagram\n\n")
-	bifurcationdiagram!(F, dF, d2F, d3F, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", kwargs...)
+	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", kwargs...)
 end
 
 """
@@ -111,7 +111,7 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `halfbranch = false` for Pitchfork/Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
-function bifurcationdiagram!(F, dF, d2F, d3F,
+function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 		node::BifDiagNode,
 		maxlevel::Int,
 		options;
@@ -130,11 +130,17 @@ function bifurcationdiagram!(F, dF, d2F, d3F,
 		optscont = options(_pt.x, _pt.param, _level + 1)
 		@set! optscont.ds *= _dsfactor
 
-		continuation(F, dF, d2F, d3F, getContResult(node.γ), _id, optscont;
+		function plotSolBD(x, p; kws...)
+			plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level+1), dim = $(kernelDim(_pt))", label="", kws...)
+			plot!(node.γ; subplot = 1, legend=:topleft, putspecialptlegend = false, markersize = 2)
+		end
+
+		continuation(getContResult(node.γ), _id, optscont;
 			nev = optscont.nev, kwargs...,
 			ampfactor = _ampfactor,
 			usedeflation = usedeflation,
-			plotSolution = (x, p; kws...) -> (plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level+1), dim = $(kernelDim(_pt))", label="", kws...);plot!(node.γ; subplot = 1, legend=:topleft, putspecialptlegend = false, markersize = 2)))
+			plotSolution = plotSolBD
+		)
 	end
 
 	for (id, pt) in enumerate(node.γ.specialpoint)
@@ -142,18 +148,18 @@ function bifurcationdiagram!(F, dF, d2F, d3F,
 		if pt.step > 1 && pt.type in (:bp, :nd)
 			try
 				println("─"^80*"\n--> New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
-				γ, = letsbranch(id, pt, level)
+				γ = letsbranch(id, pt, level)
 				add!(node, γ, level+1, id)
 				 ~isnothing(γ) && printstyled(color = :green, "----> From ", type(from(γ)), "\n")
 
 				# in the case of a Transcritical bifurcation, we compute the other branch
 				if ~isnothing(γ) && ~(γ isa Vector)
 					if ~halfbranch && from(γ) isa Transcritical
-						γ, = letsbranch(id, pt, level; _dsfactor = -1)
+						γ = letsbranch(id, pt, level; _dsfactor = -1)
 						add!(node, γ, level+1, id)
 					end
 					if ~halfbranch && from(γ) isa Pitchfork
-						γ, = letsbranch(id, pt, level; _ampfactor = -1)
+						γ = letsbranch(id, pt, level; _ampfactor = -1)
 						add!(node, γ, level+1, id)
 					end
 				end
@@ -165,7 +171,7 @@ function bifurcationdiagram!(F, dF, d2F, d3F,
 		end
 	end
 	for (ii, _node) in enumerate(node.child)
-		bifurcationdiagram!(F, dF, d2F, d3F, _node, maxlevel, options; code = code*"-$ii", kwargs...)
+		bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", kwargs...)
 	end
 	return node
 end
