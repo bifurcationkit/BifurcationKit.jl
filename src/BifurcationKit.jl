@@ -39,7 +39,7 @@ module BifurcationKit
 
 	include("Bifurcations.jl")
 
-	include("continuation/ContBase.jl")
+	include("continuation/Contbase.jl")
 	include("continuation/Natural.jl")
 	include("continuation/Palc.jl")
 	include("continuation/Multiple.jl")

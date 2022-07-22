@@ -42,7 +42,7 @@ end
 Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is computed (Matrix-Free), using the package `KrylovKit.jl`, from which a projection is built. The options are similar to the ones of `EigKrylovKit()`.
 """
 function PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0)
-	H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, Arnoldi(krylovdim = krylovdim, verbosity = verbosity))
+	H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, KrylovKit.Arnoldi(krylovdim = krylovdim, verbosity = verbosity))
 	Q, S = qr(H)
 	U = VectorOfArray(V) * Q
 	return PrecPartialSchur(S, U, inv(S), vals)
