@@ -330,9 +330,17 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Hopf problem
-	Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
+	if 1==1
+		# Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
+		prob_h = HopfMAProblem(hopfPb, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
 
 		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
+	else
+		@assert 1==0 "WIP"
+		Jac_hopf_MA = (x, p) -> ForwardDiff.jacobian(z -> hopfPb(z, p), x)
+		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+		hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
+	end
 
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
@@ -376,7 +384,9 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		hopfPb.b .= newb ./ normC(newb)
 
 		# we stop continuation at Bogdanov-Takens points
-		isbt = isnothing(contResult) ? true : isnothing(findfirst(x->x.type == :bt, contResult.specialpoint))
+
+		# CA NE DEVRAIT PAS ETRE ISSNOT?
+		isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
 
 		# if the frequency is null, this is not a Hopf point, we halt the process
 		if abs(ω) < threshBT
@@ -414,7 +424,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		JAd_at_xp = hasAdjoint(hopfPb) ? jad(hopfPb.prob_vf, x, newpar) : transpose(J_at_xp)
 		ζstar = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 		# test function for Bogdanov-Takens
-		BT = ω#real( dot(ζstar ./ normC(ζstar), ζ) )
+		BT = ω
+		BT2 = real( dot(ζstar ./ normC(ζstar), ζ) )
 		ζstar ./= dot(ζ, ζstar)
 
 		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a = Complex{T}(0,0), b = Complex{T}(0,0)), :hopf)
