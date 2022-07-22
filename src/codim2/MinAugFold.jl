@@ -21,10 +21,10 @@ function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	b = fp.b
 	# update parameter
 	par = set(params, getLens(fp), p)
-	# ┌      ┐┌  ┐ ┌ ┐
-	# │ J  a ││v │=│0│
-	# │ b  0 ││σ1│ │1│
-	# └      ┘└  ┘ └ ┘
+	# ┌      ┐┌  ┐   ┌ ┐
+	# │ J  a ││v │ = │0│
+	# │ b  0 ││σ1│   │1│
+	# └      ┘└  ┘   └ ┘
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J
 	#       a should be a null vector of J'
@@ -303,8 +303,17 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Fold problem
+	if 1==1
+		prob_f = FoldMAProblem(foldPb, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
 
-	opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
+		opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
+	else
+		@assert 1==0 "WIP"
+		# Jac_fold_MA = (x, p) -> ForwardDiff.jacobian(z -> foldPb(z, p), x)
+		prob_f = FoldMAProblem(foldPb, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+		opt_fold_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
+	end
 
 	# this functions allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
