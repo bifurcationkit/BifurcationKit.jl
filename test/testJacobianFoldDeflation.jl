@@ -33,7 +33,7 @@ out = newton( prob, opt_newton)
 
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 120, newtonOptions = opt_newton, detectBifurcation = 3)
-br = continuation( prob, PALC(), opts_br0; plot=false, verbosity = 0)
+br = continuation( prob, PALC(), opts_br0)
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2, dot, 1.0, [out.u])

@@ -9,6 +9,7 @@
 <span style="color:red">`] add BifurcationKit@0.1.12`</span>
 
 <span style="color:red">The new version provides many bugs fix though.
+(Please note that the docs are not yet up to date).
 </span>
 
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
