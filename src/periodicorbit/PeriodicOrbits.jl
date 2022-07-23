@@ -21,6 +21,9 @@ Compute the period of the periodic orbit associated to `x`.
 setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 setParamsPO(pb::AbstractPOFDProblem, pars) = (@set pb.prob_vf = reMake(pb.prob_vf; params = pars))
 
+getPeriodicOrbit(prob::WrapPOColl, u::AbstractVector, p) = getPeriodicOrbit(prob.prob, u, p)
+getPeriodicOrbit(prob::WrapPOSh, u::AbstractVector, p) = getPeriodicOrbit(prob.prob, u, p)
+
 # update a problem with arguments
 function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
 

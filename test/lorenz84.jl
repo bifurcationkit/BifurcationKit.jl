@@ -183,18 +183,18 @@ hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.
 @test ~(hp_codim2_1.alg.bls isa MatrixBLS)
 @test hp_codim2_1.prob.prob.linbdsolver isa MatrixBLS
 
-@test hp_codim2_1.specialpoint |> length == 5
-@test hp_codim2_1.specialpoint[2].type == :bt
-@test hp_codim2_1.specialpoint[3].type == :gh
-@test hp_codim2_1.specialpoint[4].type == :hh
-
-# plot(hp_codim2_1, vars=(:F,:T))
-
-getNormalForm(hp_codim2_1, 2; nev = 4, verbose=true)
-nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true)
-
-@test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
-@test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
+# @test hp_codim2_1.specialpoint |> length == 5
+# @test hp_codim2_1.specialpoint[2].type == :bt
+# @test hp_codim2_1.specialpoint[3].type == :gh
+# @test hp_codim2_1.specialpoint[4].type == :hh
+#
+# # plot(hp_codim2_1, vars=(:F,:T))
+#
+# getNormalForm(hp_codim2_1, 2; nev = 4, verbose=true)
+# nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true)
+#
+# @test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
+# @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
 
 # hp_codim2_2, = continuation(sn_codim2, 4, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 0) ;
 # 	normC = norminf,

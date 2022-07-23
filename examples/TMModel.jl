@@ -85,11 +85,6 @@ br_pocoll = @time continuation(
 
 	end,
 	callbackN = BK.cbMaxNorm(1000.),
-	finaliseSolution = (z, tau, step, contResult; k...) -> begin
-		prob = k[:prob]
-		newt, err = BK.computeError(prob, z.u; verbosity = 3, par = BK.setParam(contResult, z.p))#, K = 100)
-		return true
-	end,
 
 	)
 

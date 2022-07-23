@@ -78,10 +78,10 @@ dlagrange(i, x, z) = ForwardDiff.derivative(x -> lagrange(i, x, z), x)
 function getL(σs::AbstractVector)
 	m = length(σs) - 1
 	zs, = gausslegendre(m)
-	L = zeros(m, m+1); ∂L = zeros(m, m + 1)
+	L = zeros(m, m + 1); ∂L = zeros(m, m + 1)
 	for j in 1:m+1
 		for i in 1:m
-			L[i, j]  =  lagrange(j, zs[i], σs)
+			 L[i, j] =  lagrange(j, zs[i], σs)
 			∂L[i, j] = dlagrange(j, zs[i], σs)
 		end
 	end
@@ -255,14 +255,14 @@ updateMesh!(pb::PeriodicOrbitOCollProblem, mesh) = updateMesh!(pb.mesh_cache, me
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 	N, m, Ntst = size(pb)
 	println(io, "┌─ Collocation functional for periodic orbits")
-	println(io, "├─ type            : Vector{", eltype(pb), "}")
+	println(io, "├─ type               : Vector{", eltype(pb), "}")
 	println(io, "├─ time slices (Ntst) : ", Ntst)
 	println(io, "├─ degree      (m)    : ", m)
 	println(io, "├─ dimension   (N)    : ", pb.N)
 	println(io, "├─ inplace            : ", isInplace(pb))
 	println(io, "├─ update section     : ", pb.updateSectionEveryStep)
 	println(io, "├─ jacobian           : ", pb.jacobian)
-	println(io, "└─ # unknowns      : ", pb.N * (1 + m * Ntst))
+	println(io, "└─ # unknowns         : ", pb.N * (1 + m * Ntst))
 end
 
 """
@@ -346,7 +346,7 @@ end
 	result = zero(u)
 	resultc = getTimeSlices(prob, result)
 	functionalColl!(prob, resultc, uc, T, getLs(prob.mesh_cache), pars)
-	# add  the phase condition
+	# add the phase condition
 	result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache))
 	return result
 end
@@ -365,9 +365,9 @@ end
 	# we want slices at fixed  times, hence gj[:, j] is the fastest
 	# temporaries to reduce allocations
 	# TODO VIRER CES TMP?
-	gj = zeros(Ty, n, m)
+	gj  = zeros(Ty, n, m)
 	∂gj = zeros(Ty, n, m)
-	uj = zeros(Ty, n, m+1)
+	uj  = zeros(Ty, n, m+1)
 
 	mesh = getMesh(pb)
 	# range for locating time slices
@@ -602,7 +602,7 @@ end
 	# @assert -1 <= σ <= 1 "Strange value of $σ"
 	σs = getMeshColl(sol.pb)
 	out = zeros(typeof(t), sol.pb.N)
-	rg = (1:m+1) .+ (indτ-1)*m
+	rg = (1:m+1) .+ (indτ-1) * m
 	for l in 1:m+1
 		out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
 	end

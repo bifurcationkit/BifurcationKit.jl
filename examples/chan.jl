@@ -47,8 +47,8 @@ optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.1, pMax = 4.25, nev 
 alg = PALC(tangent = Bordered())
 br = @time continuation( prob, alg, optscont; plot = true, verbosity = 0)
 
-# try MoorePenrose
-br = @time continuation( prob, MoorePenrose(tangent = alg), optscont; plot = true, verbosity = 0)
+# try Moore-Penrose
+br_mp = @time continuation( prob, MoorePenrose(tangent = alg), optscont; plot = true, verbosity = 0)
 ###################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
