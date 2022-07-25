@@ -290,119 +290,119 @@ function deflatedContinuation(dcIter::DefContIterable, deflationOp::DeflationOpe
 	return DCResult(nothing, branches, contIt, [getx(c.state) for c in states if isActive(c)], dcIter.alg)
 end
 
-function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}
-	@warn "il faut length(br) > 1"
-	# get the continuation parameters
-	@unpack pMin, pMax, ds = brs[1].contparams
-	# we update the parameter span with provided initial conditions
-	pMin = ds > 0 ? brs[1].branch[1].param : pMin
-	pMax = ds < 0 ? brs[1].branch[1].param : pMax
-	@show pMin pMax
-
-	function _setnewsol(_x, _p0, _pMin, _pMax, _sign = -1)
-		@show iter.contParams.maxSteps
-		_iter2 = @set iter.par = setParam(iter, _p0)
-		_iter2 = @set _iter2.contParams = setproperties(_iter2.contParams; ds = abs(iter.contParams.ds) * _sign, pMin = _pMin, pMax = _pMax)
-		copyto!(_iter2.x0, _x)
-		return _iter2
-	end
-
-	# test if the branch is done
-	doneBranch(_br::ContResult) = _br.branch[1].param in [pMin, pMax] && _br.branch[end].param in [pMin, pMax]
-	doneBranch(_brs::Vector{ <: ContResult}) = mapreduce(doneBranch, +, _brs)
-
-	# test if (x,p) belongs to a branch
-	function isin(_br::ContResult, x, p)
-		tol = _br.contparams.newtonOptions.tol
-		for (_id, _sol) in pairs(_br.sol)
-			if max(iter.normC(_sol.x - x), abs(_sol.p - p)) < tol
-				return true, _id
-			end
-		end
-		 return false, 0
-	end
-
-	# function to find the branch to which (x, p) belongs
-	# return found?, which?, end?
-	function intersectBranch(_brs::Vector{ <: ContResult}, x, p, idavoid = 0)
-		for (_id, _br) in pairs(_brs)
-			_res = isin(_br, x, p)
-			if (_res[1] && _id != idavoid)
-				return (_res[1], _id, _res[2])  # return if branch id found
-			end
-		end
-		return false, 0, 0
-	end
-
-	function getParamValues(_brs::Vector{ <: ContResult})
-		ps = [(p = sol.p, id = ii) for (ii, br) in pairs(brs) if length(br) >1 for sol in br.sol[[1,end]]]
-		sort!(ps, by = x -> x.p, rev = true )
-		return ps
-	end
-	# @assert doneBranch(brs[1]) "error"
-
-	printstyled(color=:blue,"#"^50*"\n")
-	iterbrs = 0
-
-	while doneBranch(brs) < length(brs) && iterbrs < iterbrsmax
-		printstyled(color=:green, "#"^50*" - $iterbrs, #br = $(length(brs)) \n")
-		for (id, br) in pairs(brs)
-			print("--> branch $id, # = ", length(br), ", isdone = ")
-			printstyled("$(doneBranch(br)) \n", color = (doneBranch(br) ? :green : :red))
-			if ~doneBranch(br) && length(br) > 1 # if there is a single point, discard
-				printstyled(color=:magenta,"--> branch $id not finished\n")
-				# we found an un-finished branch
-				iterbr = 0
-				# we use as starting point the one
-				startingpoint = ((br.branch[1].param > br.branch[2].param) & (br.branch[1].param < pMax)) ? (br.sol[1]..., first = true) : (br.sol[end]..., first = false)
-				@show startingpoint.p
-				if length(br) > 1
-					# δp is where we want to go:
-					δp = startingpoint.first ? br.branch[1].param - br.branch[2].param : br.branch[end].param - br.branch[end-1].param
-				else
-					@error "branch not large enough"
-					δp = -abs(ds)
-				end
-				δp = δp == 0 ? -abs(ds) : δp
-				_ps = getParamValues(brs)
-				display(_ps)
-				if δp > 0
-					@assert 1==1 "searchsorted?"
-					idp = findfirst(x -> x.p > startingpoint.p, _ps)
-					@show  idp
-					pspan = (startingpoint.p, ~isnothing(idp) ? _ps[idp].p : pMax)
-					printstyled(color=:blue, "--> to the right\n")
-				else
-					@assert 1==1 "searchsorted?"
-					idp = findfirst(x -> x.p < startingpoint.p, _ps)
-					pspan = (~isnothing(idp) ? _ps[idp].p : pMin, startingpoint.p)
-					printstyled(color=:green, "--> to the left\n")
-				end
-
-				# we define the parameter span
-				iter2 = _setnewsol(startingpoint.x, startingpoint.p, pspan..., sign(δp))
-				while ~doneBranch(brs[id]) && iterbr < 1
-					brright, = continuation(iter2)
-					brs[id] = _merge(br, brright)
-					println("--> branch from ",brs[id].sol[1].p," to ", brright.sol[end].p)
-					# return brright
-
-					res = intersectBranch(brs, brright.sol[end].x, brright.sol[end].p,id)
-					if res[1]  #we found a curve to merge with
-							printstyled(color=:red, "--> Merge branch with ", res[2],"\n")
-						brs[id] = _merge(brs[res[2]], brs[id])
-							printstyled(color=:green,"\n--> the branch is complete = ", doneBranch(brs[id]),"\n")
-						# we remove the other branch that we merged
-						deleteat!(brs, res[2])
-							println("--> #br = $(length(brs))\n")
-					end
-					iterbr += 1
-				end
-
-				break
-			end
-		end
-		iterbrs += 1
-	end
-	iterbrs < iterbrsmax && printstyled("--> Merge computed!!!", color=:green)
-end
+# function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}
+# 	@warn "il faut length(br) > 1"
+# 	# get the continuation parameters
+# 	@unpack pMin, pMax, ds = brs[1].contparams
+# 	# we update the parameter span with provided initial conditions
+# 	pMin = ds > 0 ? brs[1].branch[1].param : pMin
+# 	pMax = ds < 0 ? brs[1].branch[1].param : pMax
+# 	@show pMin pMax
+#
+# 	function _setnewsol(_x, _p0, _pMin, _pMax, _sign = -1)
+# 		@show iter.contParams.maxSteps
+# 		_iter2 = @set iter.par = setParam(iter, _p0)
+# 		_iter2 = @set _iter2.contParams = setproperties(_iter2.contParams; ds = abs(iter.contParams.ds) * _sign, pMin = _pMin, pMax = _pMax)
+# 		copyto!(_iter2.x0, _x)
+# 		return _iter2
+# 	end
+#
+# 	# test if the branch is done
+# 	doneBranch(_br::ContResult) = _br.branch[1].param in [pMin, pMax] && _br.branch[end].param in [pMin, pMax]
+# 	doneBranch(_brs::Vector{ <: ContResult}) = mapreduce(doneBranch, +, _brs)
+#
+# 	# test if (x,p) belongs to a branch
+# 	function isin(_br::ContResult, x, p)
+# 		tol = _br.contparams.newtonOptions.tol
+# 		for (_id, _sol) in pairs(_br.sol)
+# 			if max(iter.normC(_sol.x - x), abs(_sol.p - p)) < tol
+# 				return true, _id
+# 			end
+# 		end
+# 		 return false, 0
+# 	end
+#
+# 	# function to find the branch to which (x, p) belongs
+# 	# return found?, which?, end?
+# 	function intersectBranch(_brs::Vector{ <: ContResult}, x, p, idavoid = 0)
+# 		for (_id, _br) in pairs(_brs)
+# 			_res = isin(_br, x, p)
+# 			if (_res[1] && _id != idavoid)
+# 				return (_res[1], _id, _res[2])  # return if branch id found
+# 			end
+# 		end
+# 		return false, 0, 0
+# 	end
+#
+# 	function getParamValues(_brs::Vector{ <: ContResult})
+# 		ps = [(p = sol.p, id = ii) for (ii, br) in pairs(brs) if length(br) >1 for sol in br.sol[[1,end]]]
+# 		sort!(ps, by = x -> x.p, rev = true )
+# 		return ps
+# 	end
+# 	# @assert doneBranch(brs[1]) "error"
+#
+# 	printstyled(color=:blue,"#"^50*"\n")
+# 	iterbrs = 0
+#
+# 	while doneBranch(brs) < length(brs) && iterbrs < iterbrsmax
+# 		printstyled(color=:green, "#"^50*" - $iterbrs, #br = $(length(brs)) \n")
+# 		for (id, br) in pairs(brs)
+# 			print("--> branch $id, # = ", length(br), ", isdone = ")
+# 			printstyled("$(doneBranch(br)) \n", color = (doneBranch(br) ? :green : :red))
+# 			if ~doneBranch(br) && length(br) > 1 # if there is a single point, discard
+# 				printstyled(color=:magenta,"--> branch $id not finished\n")
+# 				# we found an un-finished branch
+# 				iterbr = 0
+# 				# we use as starting point the one
+# 				startingpoint = ((br.branch[1].param > br.branch[2].param) & (br.branch[1].param < pMax)) ? (br.sol[1]..., first = true) : (br.sol[end]..., first = false)
+# 				@show startingpoint.p
+# 				if length(br) > 1
+# 					# δp is where we want to go:
+# 					δp = startingpoint.first ? br.branch[1].param - br.branch[2].param : br.branch[end].param - br.branch[end-1].param
+# 				else
+# 					@error "branch not large enough"
+# 					δp = -abs(ds)
+# 				end
+# 				δp = δp == 0 ? -abs(ds) : δp
+# 				_ps = getParamValues(brs)
+# 				display(_ps)
+# 				if δp > 0
+# 					@assert 1==1 "searchsorted?"
+# 					idp = findfirst(x -> x.p > startingpoint.p, _ps)
+# 					@show  idp
+# 					pspan = (startingpoint.p, ~isnothing(idp) ? _ps[idp].p : pMax)
+# 					printstyled(color=:blue, "--> to the right\n")
+# 				else
+# 					@assert 1==1 "searchsorted?"
+# 					idp = findfirst(x -> x.p < startingpoint.p, _ps)
+# 					pspan = (~isnothing(idp) ? _ps[idp].p : pMin, startingpoint.p)
+# 					printstyled(color=:green, "--> to the left\n")
+# 				end
+#
+# 				# we define the parameter span
+# 				iter2 = _setnewsol(startingpoint.x, startingpoint.p, pspan..., sign(δp))
+# 				while ~doneBranch(brs[id]) && iterbr < 1
+# 					brright, = continuation(iter2)
+# 					brs[id] = _merge(br, brright)
+# 					println("--> branch from ",brs[id].sol[1].p," to ", brright.sol[end].p)
+# 					# return brright
+#
+# 					res = intersectBranch(brs, brright.sol[end].x, brright.sol[end].p,id)
+# 					if res[1]  #we found a curve to merge with
+# 							printstyled(color=:red, "--> Merge branch with ", res[2],"\n")
+# 						brs[id] = _merge(brs[res[2]], brs[id])
+# 							printstyled(color=:green,"\n--> the branch is complete = ", doneBranch(brs[id]),"\n")
+# 						# we remove the other branch that we merged
+# 						deleteat!(brs, res[2])
+# 							println("--> #br = $(length(brs))\n")
+# 					end
+# 					iterbr += 1
+# 				end
+#
+# 				break
+# 			end
+# 		end
+# 		iterbrs += 1
+# 	end
+# 	iterbrs < iterbrsmax && printstyled("--> Merge computed!!!", color=:green)
+# end

@@ -27,6 +27,7 @@ BK.empty(PALC())
 BK.empty(PALC(tangent = Bordered()))
 BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
+BK.getPredictor(Natural())
 ####################################################################################################
 normInf(x) = norm(x, Inf)
 
@@ -34,6 +35,10 @@ opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pM
 x0 = 0.01 * ones(N)
 
 prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
+BK.isInplace(prob)
+BK.getVectorType(prob)
+show(prob)
+
 br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts) #(16.12 k allocations: 772.250 KiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
