@@ -3,6 +3,9 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2022-07-23
+- new interface based on the problem `BifurcationProblem`
+
 ## [0.1.8] - 2021-12-12
 - switch from `DiffEqBase` to `SciMLBase`
 - change function name `closesttozero` to `rightmost`

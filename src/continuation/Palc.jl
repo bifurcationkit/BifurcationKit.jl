@@ -343,32 +343,6 @@ function arcLengthScaling(θ, alg, τ::M, verbosity) where {M <: BorderedArray}
 	return thetanew
 end
 
-
-function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, τ::M, alg::PALC, verbosity) where {T, vectype, M<:BorderedArray{vectype, T}}
-	if converged == false
-		if  abs(ds) <= contparams.dsmin
-			@error "Failure to converge with given tolerances."
-			# we stop the continuation
-			return ds, θ, true
-		end
-		dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
-		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
-	else
-		# control to have the same number of Newton iterations
-		Nmax = contparams.newtonOptions.maxIter
-		factor = (Nmax - it_newton_number) / Nmax
-		dsnew = ds * (1 + contparams.a * factor^2)
-	end
-
-	dsnew = clampDs(dsnew, contparams)
-
-	thetanew = alg.doArcLengthScaling ? arcLengthScaling(θ, alg, τ, verbosity) : θ
-	thetanew = θ
-	# we do not stop the continuation
-	return dsnew, thetanew, false
-end
-
-
 ####################################################################################################
 """
 This is the classical Newton-Krylov solver used to solve `F(x, p) = 0` together

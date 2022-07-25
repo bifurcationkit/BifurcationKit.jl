@@ -72,7 +72,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
 	@unpack ds = state
 	(verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─MultiplePred tangent predictor\n")
 	# we combine the callbacks for the newton iterations
-	cb = (state; k...) -> callback(state; k...) & alg(state; k...)
+	cb = (state; k...) -> callback(it)(state; k...) & algo(state; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in algo.nb:-1:1
 		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
@@ -81,7 +81,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
 		axpy!(ii * ds, algo.τ, zpred)
 		copyto!(state.z_pred, zpred)
 		# we restore the original callback if it reaches the usual case ii == 0
-		corrector!(state, it, algo.alg; kwargs...)
+		corrector!(state, it, algo.alg; callback = cb, kwargs...)
 		if verbose > 1
 			if converged(state)
 				printstyled("YES", color=:green)
@@ -98,8 +98,17 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
 	return true
 end
 
-function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, it_newton_number::Int, tau::M, alg::Multiple, verbosity) where {T, vectype, M <: BorderedArray{vectype, T}}
-	if converged == false
+function stepSizeControl!(state::AbstractContinuationState,
+						iter::AbstractContinuationIterable,
+						alg::Multiple)
+	if ~state.stopcontinuation && stepsizecontrol(state)
+		_stepSizeControlMultiple!(state, getContParams(iter), iter.verbosity, alg)
+	end
+end
+
+function _stepSizeControlMultiple!(state, contparams::ContinuationPar, verbosity, alg)
+	ds = state.ds
+	if converged(state) == false
 		dsnew = ds
 		if abs(ds) < (1 + alg.nb) * contparams.dsmin
 			if alg.pmimax < alg.imax
@@ -108,7 +117,8 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 			else
 				(verbosity > 0) && @error "Failure to converge with given tolerances"
 				# we stop the continuation
-				return ds, θ, true
+				state.stopcontinuation = true
+				return
 			end
 		else
 			@error "--> Decrease ds"
@@ -116,15 +126,20 @@ function stepSizeControl(ds, θ, contparams::ContinuationPar, converged::Bool, i
 			(verbosity > 0) && printstyled("Halving continuation step, ds = $(dsnew)\n", color=:red)
 		end
 	else # the newton correction has converged
-		dsnew = ds
 		if alg.currentind == alg.nb && abs(ds) * alg.dsfact <= contparams.dsmax
-			(verbosity > 0) && @show dsnew
 			# println("--> Increase ds")
 			dsnew = ds *  alg.dsfact
+			(verbosity > 0) && @show dsnew
+		else
+			dsnew = ds
 		end
 	end
 
 	dsnew = clampDs(dsnew, contparams)
 
-	return dsnew, θ, false
+	# we do not stop the continuation
+	state.ds = dsnew
+	state.stopcontinuation = false
+
+	return
 end

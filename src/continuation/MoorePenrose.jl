@@ -84,10 +84,10 @@ function corrector!(state::AbstractContinuationState,
 	return true
 end
 
-function getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, algo::MoorePenrose)
-	(verbosity > 0) && println("Predictor: ", algo)
-	return getTangent!(it, state, z_new, algo.tangentalgo, 0)
-end
+# function getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, algo::MoorePenrose)
+# 	(verbosity > 0) && println("Predictor: ", algo)
+# 	return getTangent!(it, state, z_new, algo.tangentalgo, 0)
+# end
 
 function newtonMoorePenrose(iter::AbstractContinuationIterable,
 					state::AbstractContinuationState;

@@ -85,6 +85,7 @@ BK.getParams(br1)
 
 @set! prob.recordFromSolution = (x,p) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
+BK.arcLengthScaling(0.5, PALC(), BorderedArray(rand(2),0.1), true)
 
 # test for different norms
 br3 = continuation(prob, PALC(), opts, normC = normInf)
@@ -117,8 +118,8 @@ br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9)
-	BK.empty!(BK.Multiple(copy(x0), 0.01,13))
-	# plot(br9, title = "$(length(br9))",marker=:d,vars=(:p,:sol),plotfold=false)
+	BK.empty!(Multiple(copy(x0), 0.01,13))
+	plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
 
 # tangent prediction with Polynomial predictor
 polpred = Polynomial(Bordered(), 2, 6, x0)
@@ -174,6 +175,10 @@ opts11 = ContinuationPar(opts11; maxSteps = 50, ds = 0.015, dsmin = 1e-5, dsmax 
 br11 = continuation(prob, BK.MoorePenrose(), opts11; verbosity = 0)
 br11 = continuation(prob, BK.MoorePenrose(directLS = false), opts11; verbosity = 0)
 # plot(br11)
+
+MoorePenrose(directLS = false)
+BK.getPredictor(MoorePenrose(directLS = false))
+BK.getLinsolver(MoorePenrose(directLS = false))
 
 
 # further testing with sparse Jacobian operator

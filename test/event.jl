@@ -22,6 +22,7 @@ SetOfEvents(nothing)
 SetOfEvents(_eve)
 SetOfEvents(_eved)
 BK.split_events(_eve, _eved, nothing)
+BK.hasCustomLabels(BK.BifEvent(1,1))
 ####################################################################################################
 function testBranch(br)
 	# test if stability works
@@ -93,6 +94,7 @@ args = (prob, PALC(), opts)
 kwargs = (plot = false, verbosity = 0, recordFromSolution = (x,p) -> x[1], linearAlgo = MatrixBLS(),)
 
 br = continuation(args...; kwargs...,
+	verbosity = 3, # test printing
 	event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
 @test br.specialpoint[1].type==:userC
