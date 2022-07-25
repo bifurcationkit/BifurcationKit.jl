@@ -184,6 +184,6 @@ continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
 @set! opt_cont_br.newtonOptions.linsolver = GMRESIterativeSolvers(N = 2n+1)
 @set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
-@set! opt_cont_br.detectBifurcation = 1
+@set! opt_cont_br.detectBifurcation = 0
 continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
