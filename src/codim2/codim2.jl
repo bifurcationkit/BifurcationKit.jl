@@ -60,13 +60,14 @@ end
 """
 $(SIGNATURES)
 
-This function turns an initial guess for a Fold/Hopf point into a solution to the Fold/Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
+This function turns an initial guess for a Fold/Hopf point into a solution to the Fold/Hopf problem based on a Minimally Augmented formulation.
+
+## Arguments
 - `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
-- `lens` parameter axis used to locate the Fold/Hopf point.
-- `options::NewtonPar`
 
 # Optional arguments:
+- `options::NewtonPar`, default value `br.contparams.newtonOptions`
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `bdlinsolver` bordered linear solver for the constraint equation

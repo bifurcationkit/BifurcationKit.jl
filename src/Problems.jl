@@ -245,7 +245,7 @@ end
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
 	print(io, prefix * "┌─ Bifurcation Problem with uType ")
 	printstyled(io, getVectorType(prob), color=:cyan, bold = true)
-	print(io, prefix * "\n├─ inplace:  ")
+	print(io, prefix * "\n├─ Inplace:  ")
 	printstyled(io, isInplace(prob), color=:cyan, bold = true)
 	print(io, "\n" * prefix * "├─ Symmetric: ")
 	printstyled(io, isSymmetric(prob), color=:cyan, bold = true)

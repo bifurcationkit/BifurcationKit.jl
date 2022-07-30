@@ -293,7 +293,7 @@ Compared to [`newton`](@ref), the only different arguments are
     - custom solver `DefProbCustomLinearSolver()` with requires solving two linear systems `J⋅x = rhs`.
     - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
     - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian of the deflated problem
-    - if passed `Val{:fullIterative}`, then a full matrix free method is used.
+    - if passed `Val(:fullIterative)`, then a full matrix free method is used.
 """
 function newton(prob::AbstractBifurcationProblem,
 				defOp::DeflationOperator{Tp, Tdot, T, vectype},
