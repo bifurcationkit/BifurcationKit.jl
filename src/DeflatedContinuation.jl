@@ -102,8 +102,7 @@ function updatebranch!(dcIter::DefContIterable, dcstate::DCState, contResult::Co
 		if it.contParams.detectBifurcation > 1 && detectBifucation(state)
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
-				_T  = eltype(it)
-				_, bifpt = getBifurcationType(it.contParams, state, it.normC, recordFromSolution(it), it.verbosity, :guess, getinterval(current_param, current_param-ds))
+				_, bifpt = getBifurcationType(it, state, :guess, getinterval(current_param, current_param-ds))
 				if bifpt.type != :none; push!(contResult.specialpoint, bifpt); end
 			end
 		end
@@ -201,7 +200,11 @@ function continuation(prob::AbstractBifurcationProblem,
 	return deflatedContinuation(iter, deflationOp, contParams, verbosity, plot)
 end
 
-function deflatedContinuation(dcIter::DefContIterable, deflationOp::DeflationOperator, contParams, verbosity, plot)
+function deflatedContinuation(dcIter::DefContIterable,
+							deflationOp::DeflationOperator,
+							contParams,
+							verbosity,
+							plot)
 
 	states, branches = getStatesContResults(dcIter, deflationOp.roots)
 
@@ -287,7 +290,7 @@ function deflatedContinuation(dcIter::DefContIterable, deflationOp::DeflationOpe
 		nstep += 1
 	end
 	plot && plotAllDCBranch(branches)
-	return DCResult(nothing, branches, contIt, [getx(c.state) for c in states if isActive(c)], dcIter.alg)
+	return DCResult(contIt.prob, branches, contIt, [getx(c.state) for c in states if isActive(c)], dcIter.alg)
 end
 
 # function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}

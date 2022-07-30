@@ -20,6 +20,9 @@ $(TYPEDEF)
 
 Structure to hold the vector field and its derivatives. It should rarely be called directly. Also, in essence, it is very close to `SciMLBase.ODEFunction`.
 
+
+## Fields
+
 $(TYPEDFIELDS)
 
 ## Methods
@@ -79,14 +82,16 @@ plotDefault(x, p; kwargs...) = nothing
 
 
 # create specific problems where pretty much is available
-for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem, :DDEBifProblem, :FoldMAProblem, :HopfMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
+for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, :HopfMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
 
-	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem, :DDEBifProblem)
+	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin
 """
 $(TYPEDEF)
 
 Structure to hold the bifurcation problem. If don't have parameters, you can pass `nothing`.
+
+## Fields
 
 $(TYPEDFIELDS)
 
@@ -103,7 +108,7 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-- `BifurcationProblem(F, u0, params, lens; kwargs...)`
+- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above.
 
 """
 			struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec} <: AbstractAllJetBifProblem
@@ -161,7 +166,7 @@ $(TYPEDFIELDS)
 	end
 
 	# forward getters
-	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem, :DDEBifProblem)
+	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin
 			residual(pb::$op, x, p) = residual(pb.VF, x, p)
 			jacobian(pb::$op, x, p) = jacobian(pb.VF, x, p)
