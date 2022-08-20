@@ -107,8 +107,10 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 """
-function continuation(br::AbstractBranchResult, ind_bif::Int64,
-				lens2::Lens, options_cont::ContinuationPar = br.contparams ;
+function continuation(br::AbstractBranchResult,
+					ind_bif::Int64,
+					lens2::Lens,
+					options_cont::ContinuationPar = br.contparams ;
 				startWithEigen = false,
 				detectCodim2Bifurcation::Int = 0,
 				kwargs...)

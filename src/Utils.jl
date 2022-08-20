@@ -94,9 +94,7 @@ function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
 end
 ####################################################################################################
 using BlockArrays, SparseArrays
-"""
-Function waiting to be accepted to BlockArrays.jl
-"""
+
 function blockToSparse(J::AbstractBlockArray)
 	nl, nc = size(J.blocks)
 	# form the first line of blocks

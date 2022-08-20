@@ -193,7 +193,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 	massmatrix::Tmass = nothing
 
 	# update the section every step
-	updateSectionEveryStep::Int = 0
+	updateSectionEveryStep::Int = 1
 
 	# symbol to control the way the jacobian of the functional is computed
 	jacobian::Symbol = :autodiffDense

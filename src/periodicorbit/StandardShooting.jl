@@ -72,7 +72,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	parallel::Bool = false					# whether we use DE in Ensemble mode for multiple shooting
 	par::Tpar = nothing
 	lens::Tlens = nothing
-	updateSectionEveryStep::Int = 0
+	updateSectionEveryStep::Int = 1
 	jacobian::Symbol = :autodiffDense
 end
 

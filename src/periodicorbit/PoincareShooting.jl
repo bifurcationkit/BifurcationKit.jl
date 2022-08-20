@@ -59,7 +59,7 @@ Note that you can generate this guess from a function solution using `generateSo
 	parallel::Bool = false				# whether we use DE in Ensemble mode for multiple shooting
 	par::Tpar = nothing
 	lens::Tlens = nothing
-	updateSectionEveryStep::Int = 0
+	updateSectionEveryStep::Int = 1
 	jacobian::Symbol = :autodiffDenseAnalytical
 end
 

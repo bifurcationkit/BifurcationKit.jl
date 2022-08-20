@@ -55,9 +55,10 @@ args_po = (	recordFromSolution = (x, p) -> begin
 
 Mt = 200 # number of sections
 	br_potrap = continuation(br, 4, opts_po_cont,
-					PeriodicOrbitTrapProblem(M = Mt, jacobian = :Dense,);
+					PeriodicOrbitTrapProblem(M = Mt, jacobian = :Dense, updateSectionEveryStep = 0);
 					verbosity = 2,	plot = true,
 					args_po...,
+					callbackN = BK.cbMaxNorm(1000.),
 					)
 
 plot(br, br_potrap, markersize = 3)
@@ -67,16 +68,15 @@ plot(br, br_potrap, markersize = 3)
 hopfpt = getNormalForm(br, 4)
 
 # newton parameters
-optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 25)
+optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 10)
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.1, ds= -0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 150, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, tolStability = 1e-5, detectBifurcation = 0, plotEveryStep = 40, saveSolEveryStep=1)
 
 br_pocoll = @time continuation(
 	br, 4, opts_po_cont,
-	PeriodicOrbitOCollProblem(20, 5, updateSectionEveryStep = 1);
-	# tangentAlgo = BorderedPred(),
-	verbosity = 2,	plot = false,
+	PeriodicOrbitOCollProblem(20, 5, updateSectionEveryStep = 0);
+	verbosity = 2,	plot = true,
 	args_po...,
 	plotSolution = (x, p; k...) -> begin
 		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
@@ -85,7 +85,6 @@ br_pocoll = @time continuation(
 
 	end,
 	callbackN = BK.cbMaxNorm(1000.),
-
 	)
 
 plot(br, br_pocoll, markersize = 3)
@@ -131,7 +130,7 @@ end
 
 probmono = ODEProblem(TMvfExtended!, vcat(z0, z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-6, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=35), nev = 3, tolStability = 1e-8, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= 0.001, dsmin = 1e-6, pMax = 0., pMin=-5., maxSteps = 200, newtonOptions = NewtonPar(optn_po;tol = 1e-6, maxIter=35), nev = 3, tolStability = 1e-8, detectBifurcation = 0, plotEveryStep = 1, saveSolEveryStep = 1)
 
 br_popsh = @time continuation(
 	br, 4,
