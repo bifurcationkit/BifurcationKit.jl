@@ -1,5 +1,6 @@
 abstract type AbstractBifurcationFunction end
 abstract type AbstractBifurcationProblem end
+# this type is based on the type BifFunction, see below
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 
 getVectorType(::AbstractBifurcationProblem) = Nothing
@@ -127,8 +128,6 @@ $(TYPEDFIELDS)
 			end
 
 			getVectorType(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
-			isInplace(pb::$op) = isInplace(pb.VF)
-			isSymmetric(pb::$op) = isSymmetric(pb.VF)
 		end
 	else
         """
@@ -152,34 +151,11 @@ $(TYPEDFIELDS)
 			getVectorType(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
 			isInplace(pb::$op) = isInplace(pb.prob)
 		end
-
-	end
-
-	@eval begin
-		getu0(pb::$op) = pb.u0
-		getParams(pb::$op) = pb.params
-		@inline getLens(pb::$op) = pb.lens
-		getParam(pb::$op) = get(pb.params, pb.lens)
-		setParam(pb::$op, p0) = set(pb.params, pb.lens, p0)
-		recordFromSolution(pb::$op) = pb.recordFromSolution
-		plotSolution(pb::$op) = pb.plotSolution
 	end
 
 	# forward getters
 	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin
-			residual(pb::$op, x, p) = residual(pb.VF, x, p)
-			jacobian(pb::$op, x, p) = jacobian(pb.VF, x, p)
-			jad(pb::$op, x, p) = jad(pb.VF, x, p)
-			dF(pb::$op, x, p, dx) = dF(pb.VF, x, p, dx)
-			d2F(pb::$op, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)
-			d2Fc(pb::$op, x, p, dx1, dx2) = d2Fc(pb.VF, x, p, dx1, dx2)
-			d3F(pb::$op, x, p, dx1, dx2, dx3) = d3F(pb.VF, x, p, dx1, dx2, dx3)
-			d3Fc(pb::$op, x, p, dx1, dx2, dx3) = d3Fc(pb.VF, x, p, dx1, dx2, dx3)
-			hasHessian(pb::$op) = hasHessian(pb.VF)
-			hasAdjoint(pb::$op) = hasAdjoint(pb.VF)
-			getDelta(pb::$op) = getDelta(pb.VF)
-
 			function $op(F, u0, parms, lens = (@lens _);
 							dF = nothing,
 							dFad = nothing,
@@ -214,6 +190,30 @@ $(TYPEDFIELDS)
 		end
 	end
 end
+
+# getters for AbstractBifurcationProblem
+getu0(pb::AbstractBifurcationProblem) = pb.u0
+getParams(pb::AbstractBifurcationProblem) = pb.params
+@inline getLens(pb::AbstractBifurcationProblem) = pb.lens
+getParam(pb::AbstractBifurcationProblem) = get(pb.params, pb.lens)
+setParam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)
+recordFromSolution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
+plotSolution(pb::AbstractBifurcationProblem) = pb.plotSolution
+
+# specifics for AbstractAllJetBifProblem
+isInplace(pb::AbstractAllJetBifProblem) = isInplace(pb.VF)
+isSymmetric(pb::AbstractAllJetBifProblem) = isSymmetric(pb.VF)
+residual(pb::AbstractAllJetBifProblem, x, p) = residual(pb.VF, x, p)
+jacobian(pb::AbstractAllJetBifProblem, x, p) = jacobian(pb.VF, x, p)
+jad(pb::AbstractAllJetBifProblem, x, p) = jad(pb.VF, x, p)
+dF(pb::AbstractAllJetBifProblem, x, p, dx) = dF(pb.VF, x, p, dx)
+d2F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)
+d2Fc(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2Fc(pb.VF, x, p, dx1, dx2)
+d3F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2, dx3) = d3F(pb.VF, x, p, dx1, dx2, dx3)
+d3Fc(pb::AbstractAllJetBifProblem, x, p, dx1, dx2, dx3) = d3Fc(pb.VF, x, p, dx1, dx2, dx3)
+hasHessian(pb::AbstractAllJetBifProblem) = hasHessian(pb.VF)
+hasAdjoint(pb::AbstractAllJetBifProblem) = hasAdjoint(pb.VF)
+getDelta(pb::AbstractAllJetBifProblem) = getDelta(pb.VF)
 
 for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
 	@eval begin
