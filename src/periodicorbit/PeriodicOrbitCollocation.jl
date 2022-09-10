@@ -223,9 +223,11 @@ function PeriodicOrbitOCollProblem(Ntst::Int, m::Int, Ty = Float64; kwargs...)
 									kwargs...)
 end
 
-# TODO rename this in num_mesh? or meshSize
 @inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.mesh_cache.Ntst
-# the size returns (n, m, Ntst)
+
+"""
+The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProblem`
+"""
 @inline Base.size(pb::PeriodicOrbitOCollProblem) = (pb.N, size(pb.mesh_cache)...)
 
 @inline function length(pb::PeriodicOrbitOCollProblem)

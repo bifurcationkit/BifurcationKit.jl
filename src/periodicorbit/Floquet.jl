@@ -52,7 +52,14 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 	# the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
 	logvals = log.(complex.(vals))
 	I = sortperm(logvals, by = real, rev = true)
-	return logvals[I], geteigenvector(fl.eigsolver, vecs, I), cv, info
+
+	# floquet exponents
+	σ = logvals[I]
+	vp0 = minimum(abs, σ)
+	if ~(J isa FloquetWrapper{PoincareShootingProblem}) && vp0 > 1e-8
+		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+	end
+	return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
 ####################################################################################################
 # ShootingProblem
@@ -397,5 +404,10 @@ end
 	vals = values[indvalid]
 	# these are the Floquet multipliers
 	μ = @. Complex(1 / (1 + vals))
+	vp0 = minimum(abs∘log, μ)
+	if vp0 > 1e-9
+		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+	end
+
 	return log.(μ), Complex.(vecs[indvalid, :]), true
 end
