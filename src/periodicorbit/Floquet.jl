@@ -395,7 +395,7 @@ end
 	ind = isinf.(values)
 	indvalid = ind .== false
 	vals = values[indvalid]
-	# this are the Floquet multipliers
+	# these are the Floquet multipliers
 	μ = @. Complex(1 / (1 + vals))
 	return log.(μ), Complex.(vecs[indvalid, :]), true
 end

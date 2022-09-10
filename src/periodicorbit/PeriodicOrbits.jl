@@ -348,10 +348,10 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 	verbose && printstyled(color = :green, "#"^61*
 			"\n┌─ Start branching from Hopf bif. point to periodic orbits.",
 			"\n├─ Bifurcation type = ", hopfpt.type,
-			"\n├─── Hopf param     = ", br.specialpoint[ind_bif].param,
-			"\n├─── newp           = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param,
-			"\n├─── amplitude      = ", pred.amp,
-			"\n├─── period         = ", pred.period,
+			"\n├─── Hopf param  p0 = ", br.specialpoint[ind_bif].param,
+			"\n├─── new param    p = ", pred.p, ", p - p0 = ", pred.p - br.specialpoint[ind_bif].param,
+			"\n├─── amplitude p.o. = ", pred.amp,
+			"\n├─── period       T = ", pred.period,
 			"\n├─ Method = \n", probPO, "\n")
 
 	# we compute a phase so that the constraint equation
@@ -466,10 +466,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	verbose && printstyled(color = :green, "#"^61*
 			"\n┌─ Start branching from $(bptype) point to periodic orbits.
 			 \n├─ Bifurcation type = ", bppt.type,
-			"\n├─── bif. param     = ", bppt.param,
+			"\n├─── bif. param  p0 = ", bppt.param,
 			"\n├─── period at bif. = ", getPeriod(br.prob.prob, bppt.x, setParam(br, bppt.param)),
-			"\n├─── newp           = ", bppt.param + δp, ", δp = ", δp,
-			"\n├─── amplitude      = ", ampfactor,
+			"\n├─── new param    p = ", bppt.param + δp, ", p - p0 = ", δp,
+			"\n├─── amplitude p.o. = ", ampfactor,
 			"\n")
 
 	_linearAlgo = isnothing(linearAlgo) ? BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo

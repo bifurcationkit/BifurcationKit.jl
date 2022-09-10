@@ -60,7 +60,6 @@ TWProblem(prob, ∂, u₀; kw...) = TWProblem(prob, (∂,), u₀; kw...)
 
 @inline nbConstraints(pb::TWProblem) = pb.nc
 
-
 function Base.show(io::IO, tw::TWProblem)
 	println(io, "┌─ Travelling wave functional")
 	println(io, "├─ type          : Vector{", eltype(tw.u₀), "}")
