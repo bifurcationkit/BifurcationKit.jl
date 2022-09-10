@@ -367,7 +367,7 @@ end
 ####################################################################################################
 # simplified version of
 # Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
-struct FloquetLUColl{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
+struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
 	eigsolver::E		# not really needed
 	B::Tb
 	"""
@@ -376,18 +376,18 @@ struct FloquetLUColl{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
 	- `ntot` total number of unknowns (without countinig the period)
 	- `n` space dimension
 	"""
-	function FloquetLUColl(eigls::AbstractEigenSolver, ntot::Int, n::Int)
+	function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int)
 		eigls2 = checkFloquetOptions(eigls)
 		# build the mass matrix
 		B = zeros(ntot, ntot)
 		B[end-n+1:end, end-n+1:end] .= I(n)
 		return new{typeof(eigls2), typeof(B)}(eigls2, B)
 	end
-	FloquetLUColl(eigls::FloquetLUColl) = eigls
+	FloquetCollGEV(eigls::FloquetCollGEV) = eigls
 end
 
 # based on Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
-@views function (fl::FloquetLUColl)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+@views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
 	prob = JacColl.pb
 	_J = JacColl.jacpb
 	n, m, Ntst = size(prob)
@@ -405,7 +405,7 @@ end
 	# these are the Floquet multipliers
 	μ = @. Complex(1 / (1 + vals))
 	vp0 = minimum(abs∘log, μ)
-	if vp0 > 1e-9
+	if vp0 > 1e-8
 		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
 	end
 

@@ -511,6 +511,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem, orbitguess,
 					alg::AbstractContinuationAlgorithm,
 					_contParams::ContinuationPar,
 					linearAlgo::AbstractBorderedLinearSolver;
+					eigsolver = FloquetCollGEV(_contParams.newtonOptions.eigsolver, length(probPO), probPO.N),
 					kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert jacobianPO in
@@ -527,7 +528,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem, orbitguess,
 	alg = update(alg, contParams, linearAlgo)
 
 	if computeEigenElements(contParams)
-		contParams = @set contParams.newtonOptions.eigsolver = FloquetLUColl(contParams.newtonOptions.eigsolver, length(probPO), probPO.N)
+		contParams = @set contParams.newtonOptions.eigsolver = eigsolver
 	end
 
 	# change the user provided finalise function by passing prob in its parameters
