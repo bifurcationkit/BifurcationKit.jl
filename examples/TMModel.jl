@@ -91,7 +91,6 @@ plot(br, br_pocoll, markersize = 3)
 	# plot!(br_pocoll.param, br_pocoll.min, label = "")
 	# plot!(br, br_potrap, markersize = 3)
 	# plot!(br_potrap.param, br_potrap.min, label = "", marker = :d)
-
 ####################################################################################################
 # idem with Standard shooting
 using DifferentialEquations#, TaylorIntegration

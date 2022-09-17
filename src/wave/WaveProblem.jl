@@ -2,7 +2,7 @@ abstract type abstractModulatedWaveFD <: AbstractPOFDProblem end
 abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
 
 """
-	pb = TWProblem(prob, ∂::Tuple, u₀; DAE = 0)
+ TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
 
 This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
 
@@ -28,14 +28,14 @@ This simplified call handles the case where a single symmetry needs to be frozen
 - `nbConstraints(::TWProblem)` number of constraints (or Lie generators)
 
 """
-@with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD}
+@with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD} <: AbstractBifurcationProblem
 	"vector field, must be `AbstractBifurcationProblem`"
 	prob_vf::Tprob
 	"Infinitesimal generator of symmetries, differential operator"
 	∂::TD
 	"reference solution, we only need one!"
 	u₀::Tu0
-	∂u₀::TDu0 = (D * u₀,)
+	∂u₀::TDu0 = (∂ * u₀,)
 	DAE::Int = 0
 	nc::Int = 1 	# number of constraints
 	jacobian::Symbol = :AutoDiff

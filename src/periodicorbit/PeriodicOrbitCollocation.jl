@@ -500,12 +500,8 @@ This is the continuation method for computing a periodic orbit using an orthogon
 
 Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollProblem`](@ref). By default, it prints the period of the periodic orbit.
 
-# Optional argument
-- `jacobianPO` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences]`. This is used to select a way of inverting the jacobian dG
-- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
-
-# Choices for `jacobianPO`
-$DocStrjacobianPOColl
+# Keywords arguments
+- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
 function continuation(probPO::PeriodicOrbitOCollProblem, orbitguess,
 					alg::AbstractContinuationAlgorithm,

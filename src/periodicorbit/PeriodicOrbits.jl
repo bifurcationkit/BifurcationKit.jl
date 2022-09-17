@@ -213,8 +213,8 @@ This is the continuation method for computing a periodic orbit using a (Standard
 
 Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 
-# Optional argument
-- `δ = 1e-8` used for finite differences
+# Optional arguments
+- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 $DocStrjacobianPOSh
 """
 function continuation(probPO::AbstractShootingProblem, orbitguess,
@@ -283,7 +283,7 @@ This is the continuation routine for computing a periodic orbit using a (Standar
 Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 
 # Optional argument
-- `δ = 1e-8` used for finite differences
+- `linearAlgo::AbstractBorderedLinearSolver`
 $DocStrjacobianPOSh
 
 """
@@ -386,7 +386,6 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 		# we start with the case of zero amplitude
 		orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
 		# this factor prevent shooting jacobian from being singular at fixed points
-		# Tfactor = (prob isa AbstractPOFDProblem) || (prob isa PoincareShootingProblem) ? 0 : 0.001
 		if probPO isa PoincareShootingProblem
 			Tfactor = 0
 		elseif probPO isa AbstractPOFDProblem

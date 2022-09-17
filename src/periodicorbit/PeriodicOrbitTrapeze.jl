@@ -890,10 +890,13 @@ This is the continuation routine for computing a periodic orbit using a function
 # Arguments
 - `prob::PeriodicOrbitTrapProblem` encodes the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `p0` set of parameters passed to the vector field
+- `alg` conntinuation algorithm
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
-- `updateSectionEveryStep = 0` updates the section every `updateSectionEveryStep` step during continuation
+
+# Keywords arguments
+- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
+
 $DocStrjacobianPOTrap
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
@@ -1000,8 +1003,11 @@ This is the continuation routine for computing a periodic orbit using a function
 # Arguments
 - `prob::PeriodicOrbitTrapProblem` encodes the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `p0` set of parameters passed to the vector field
+- `alg` continuation algorithm
 - `contParams` same as for the regular [`continuation`](@ref) method
+
+# Keyword arguments
+
 - `linearAlgo` same as in [`continuation`](@ref)
 $DocStrjacobianPOTrap
 
