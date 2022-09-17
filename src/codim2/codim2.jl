@@ -1,9 +1,7 @@
 abstract type AbstractProblemMinimallyAugmented end
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
-# @inline getLens(pb::AbstractProblemMinimallyAugmented) = pb.lens
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
-# @inline issymmetric(pb::AbstractProblemMinimallyAugmented) = pb.issymmetric
 
 for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 	@eval begin
@@ -71,11 +69,14 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
+- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to use the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+
+!!! tip "startWithEigen"
+    It is recommanded that you use the option `startWithEigen=true`
 """
 function newton(br::AbstractBranchResult, ind_bif::Int64; normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
@@ -106,6 +107,9 @@ where the parameters are as above except that you have to pass the branch `br` f
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+
+!!! tip "startWithEigen"
+    It is recommanded that you use the option `startWithEigen=true`
 """
 function continuation(br::AbstractBranchResult,
 					ind_bif::Int64,

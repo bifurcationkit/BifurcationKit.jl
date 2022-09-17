@@ -1,5 +1,5 @@
 using IterativeSolvers, LinearAlgebra
-import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual 
+import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
 
 abstract type AbstractLinearSolver end
 abstract type AbstractDirectLinearSolver <: AbstractLinearSolver end

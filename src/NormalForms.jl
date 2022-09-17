@@ -414,7 +414,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 
-	@assert !(bifpt.type in (:hh,)) "Normal form for $(bifpt.type) not implemented"
+	@assert !(bifpt.type in (:hh,:endpoint)) "Normal form for $(bifpt.type) not implemented"
 
 	# parameters for normal form
 	kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
@@ -472,7 +472,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
 			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
-			if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.precisionStability
+			if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tolStability
 				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
 			end
 			ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]

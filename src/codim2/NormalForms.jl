@@ -218,7 +218,7 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	p10 = get(parbif, lens1); p20 = get(parbif, lens2);
 
 	if autodiff
-		Jp(p, l)  = ForwardDiff.derivative( P -> F(x0, setp(l, P)) , p)
+		Jp(p, l)  = ForwardDiff.derivative( P -> F(x0, setp(l, P)), p)
 		Jpp(p, l) = ForwardDiff.derivative( P -> Jp(P, l), p)
 		Fp(p1, p2)  = F(x0, setp(p1, p2))
 		Jp1p2(p1, p2) = ForwardDiff.derivative(P1 -> ForwardDiff.derivative(P2 -> Fp(P1, P2) , p2), p1)
@@ -340,6 +340,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 	p2 = get(bt.params, lens2)
 	par0 = [p1, p2]
 	getx(s) = a > 0 ? -sqrt(abs(s) / a) : sqrt(abs(s) / abs(a))
+
 	function HopfCurve(s)
 		# x = getx(s)
 		if a > 0
@@ -353,6 +354,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 		ω = sqrt(-2x*a)
 		return (pars = par0 .+ K10 .* β1 .+ K11 .* β2 .+ K2 .* (β2^2/2), ω = ω)
 	end
+
 	# compute eigenvector corresponding to the Hopf branch
 	function EigenVec(s)
 		x = getx(s)
@@ -363,6 +365,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 		hopfvec = F.vectors[:, ind]
 		return bt.ζ[1] .* hopfvec[1] .+ bt.ζ[2] .* hopfvec[2]
 	end
+
 	function EigenVecAd(s)
 		x = getx(s)
 		# the jacobian is [0 1; 2x*a b*X+β2] with b*X+β2 = 0
@@ -372,6 +375,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 		hopfvec = F.vectors[:, ind]
 		return bt.ζstar[1] .* hopfvec[1] .+ bt.ζstar[2] .* hopfvec[2]
 	end
+
 	# compute point on the Hopf curve
 	x0 = getx(ds)
 
@@ -490,7 +494,7 @@ function bogdanovTakensNormalForm(_prob,
 	# bordered linear solver
 	bls = prob_ma.linbdsolver
 
-	# kernel dimension:
+	# kernel dimension
 	N = 2
 
 	# in case nev = 0 (number of requested eigenvalues), we increase nev to avoid bug
@@ -503,13 +507,6 @@ function bogdanovTakensNormalForm(_prob,
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
 	eigRes = br.eig
-
-	# # eigenvalue
-	# if bifpt.ind_ev > 0
-	# 	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
-	# else
-	# 	λ = rightmost(eigRes[bifpt.idx].eigenvals)[1]
-	# end
 
 	# parameters for vector field
 	p = bifpt.param
@@ -647,7 +644,7 @@ function bautinNormalForm(_prob,
 		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
 		_ind = argmin(abs.(_λ .- λ))
 		@info "The eigenvalue is $(_λ[_ind])"
-		@warn abs(_λ[_ind] - λ)<br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+		@warn abs(_λ[_ind] - λ) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
 		ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
 	else
 		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))

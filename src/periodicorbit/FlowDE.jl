@@ -31,11 +31,11 @@ function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEP
 	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing))
 end
 ####################################################################################################
-_getVectorField(prob::ODEProblem, o,x,p) = prob.f(o,x,p, prob.tspan[1])
-_getVectorField(prob::ODEProblem, x,p) = prob.f(x,p, prob.tspan[1])
+_getVectorField(prob::ODEProblem, o, x, p) = prob.f(o, x, p, prob.tspan[1])
+_getVectorField(prob::ODEProblem, x, p) = prob.f(x, p, prob.tspan[1])
 
-_getVectorField(prob::EnsembleProblem, x,p) = _getVectorField(prob.prob, x,p)
-_getVectorField(prob::EnsembleProblem, o,x,p) = _getVectorField(prob.prob, o,x,p)
+_getVectorField(prob::EnsembleProblem, x, p) = _getVectorField(prob.prob, x, p)
+_getVectorField(prob::EnsembleProblem, o, x, p) = _getVectorField(prob.prob, o, x, p)
 
 @inline _isinplace(pb::ODEProblem) = isinplace(pb)
 @inline _isinplace(pb::EnsembleProblem) = isinplace(pb.prob)
@@ -61,10 +61,6 @@ end
 # this function takes into accound a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
 function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem}
-	# _prob = remake(fl.prob; u0 = x, tspan = (zero(eltype(tm)), tm), p = p)
-	# # the use of concrete_solve makes it compatible with Zygote
-	# sol = solve(_prob, fl.alg; save_everystep = false, fl.kwargsDE..., kw...)
-	# return (t = sol.t[end], u = sol[end])
 	return _flow(x, p, tm, fl.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 

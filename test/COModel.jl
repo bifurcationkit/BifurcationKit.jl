@@ -123,7 +123,7 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
 @test hp_from_bt.specialpoint[3].type == :gh
 @test hp_from_bt.specialpoint[4].type == :gh
 @test hp_from_bt.specialpoint[5].type == :bt
-# bt = computeNormalForm(jet..., sn_codim2, 3; verbose = true)
+# bt = computeNormalForm(sn_codim2, 3; verbose = true)
 # 	display(bt.x0)
 # 	show(bt)
 # HC = predictor(bt, Val(:HopfCurve), 0.)

@@ -87,7 +87,7 @@ function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSection
 			if success && prob.meshadapt
 				oldsol = copy(z.u)
 				adapt = computeError(prob, z.u;
-						verbosity = prob.versboseMeshAdap,
+						verbosity = prob.verboseMeshAdapt,
 						par = setParam(contResult, z.p),
 						K = prob.K)
 				if ~adapt.success
