@@ -365,17 +365,28 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 	return mono
 end
 ####################################################################################################
-# simplified version of
-# Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+"""
+Computation of Floquet coefficients for the orthogonal collocation method. The method is based on a formulation through a generalised eigenvalue problem (GEV). Relatively slow but quite precise.
+
+This is a simplified version of [1].
+
+## Arguments
+- `eigls` an eigensolver
+- `ntot` total number of unknowns (without counting the period), ie `length(::PeriodicOrbitOCollProblem)`
+- `n` space dimension
+
+## Example
+
+You can create such solver like this (here `n=2`):
+
+	eigfloquet = BifurcationKit.FloquetCollGEV(DefaultEig(), (30*4+1)*2, 2))
+
+## References
+[1] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+"""
 struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
-	eigsolver::E		# not really needed
+	eigsolver::E
 	B::Tb
-	"""
-	## Arguments
-	- `eigls` an eigensolver
-	- `ntot` total number of unknowns (without countinig the period)
-	- `n` space dimension
-	"""
 	function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int)
 		eigls2 = checkFloquetOptions(eigls)
 		# build the mass matrix
@@ -386,7 +397,6 @@ struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
 	FloquetCollGEV(eigls::FloquetCollGEV) = eigls
 end
 
-# based on Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
 @views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
 	prob = JacColl.pb
 	_J = JacColl.jacpb

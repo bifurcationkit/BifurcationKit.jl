@@ -902,6 +902,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 			orbitguess,
 			alg::AbstractContinuationAlgorithm,
 			contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver;
+			eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
 			kwargs...)
 	# this hack is for the test to work with CUDA
 	@assert sum(extractPeriodFDTrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
@@ -913,7 +914,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver =
-		 FloquetQaD(contParams.newtonOptions.eigsolver)
+		 eigsolver
 	end
 
 	# change the user provided finalise function by passing prob in its parameters

@@ -258,8 +258,10 @@ br_po = continuation(
 	########
 	δp = 0.01,
 	verbosity = 3,	plot = true,
-	finaliseSolution = (z, tau, step, contResult; k...) ->
-		(Base.display(contResult.eig[end].eigenvals) ;true),
+	finaliseSolution = (z, tau, step, contResult; k...) -> begin
+		@info "Floquet exponents:"
+		(Base.display(contResult.eig[end].eigenvals) ;true)
+		end,
 	plotSolution = (x, p; kwargs...) -> heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
 	normC = norminf)
 

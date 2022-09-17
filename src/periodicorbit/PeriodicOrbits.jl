@@ -222,6 +222,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 						contParams::ContinuationPar,
 						linearAlgo::AbstractBorderedLinearSolver;
 						δ = convert(eltype(orbitguess), 1e-8),
+						eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
 						kwargs...,
 					)
 	jacobianPO = probPO.jacobian
@@ -230,7 +231,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences) "This jacobian is not defined. Please chose another one."
 
 	if computeEigenElements(contParams)
-		contParams = @set contParams.newtonOptions.eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver)
+		contParams = @set contParams.newtonOptions.eigsolver = eigsolver
 	end
 
 	options = contParams.newtonOptions
