@@ -193,10 +193,26 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 	)
 ####################################################################################################
 # test  Hopf aBS
-br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01).newtonOptions.verbose = false),
+br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
 	PeriodicOrbitOCollProblem(20, 5; jacobian = :autodiffDense, updateSectionEveryStep = 1);
 	δp = 0.1,
 	usedeflation = true,
+	eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
 	# regular continuation options
 	verbosity = 0,	plot = false,
 	)
+
+br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
+	PeriodicOrbitOCollProblem(20, 5; jacobian = :autodiffDense, updateSectionEveryStep = 1);
+	δp = 0.1,
+	usedeflation = true,
+	eigsolver = BK.FloquetColl(),
+	# regular continuation options
+	verbosity = 0,	plot = false,
+	)
+
+# we test that the 2 methods give the same floquet exponents
+for i=1:length(br_po)-1
+	@info i
+	@test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+end

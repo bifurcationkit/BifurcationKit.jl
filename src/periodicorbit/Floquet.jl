@@ -421,3 +421,83 @@ end
 
 	return log.(μ), Complex.(vecs[indvalid, :]), true
 end
+
+"""
+	eigfloquet = BifurcationKit.FloquetColl()
+
+Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2] in which we form the monodromy matrix with a product of `Ntst` matrices.
+
+This is much faster than `FloquetCollGEV` but less precise. The better version will use a Periodic Schur decomposition instead of the product of `Ntst` matrices. This will be provided in the near future.
+
+## References
+[1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. « NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS ». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
+
+[2] Lust, Kurt. « Improved Numerical Floquet Multipliers ». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
+"""
+struct FloquetColl{E <: AbstractEigenSolver} <: AbstractFloquetSolver
+	eigsolver::E
+	function FloquetColl(eigls::AbstractEigenSolver = DefaultEig())
+		eigls2 = checkFloquetOptions(eigls)
+		return new{typeof(eigls2)}(eigls2)
+	end
+	FloquetColl(eigls::FloquetColl) = eigls
+end
+
+@views function (eig::FloquetColl)(JacColl, nev; kwargs...)
+	prob = JacColl.pb
+	Ty = eltype(prob)
+	J = JacColl.jacpb
+	n, m, Ntst = size(prob)
+	nbcoll = n * m
+
+	nev = min(n, nev)
+
+	# condensation of parameters
+	# this removes the internal unknowns of each mesh interval
+	# this matrix is diagonal by blocks and each block is the L Matrix
+	# which makes the corresponding J block upper triangular
+	P = Matrix{Ty}(LinearAlgebra.I(size(J, 1)))
+	rg = 1:nbcoll # range
+	for k = 1:Ntst
+		F = lu(J[rg, rg .+ n])
+		P[rg, rg] .= (F.P \ F.L)
+		# ldiv!(P[rg, rg], F.P, F.L)
+		rg = rg .+ m * n
+	end
+
+	Jcond = P \ J
+
+	Ai = Matrix{Ty}(undef, n, n)
+	Bi = Matrix{Ty}(undef, n, n)
+	r1 = 1:n
+	r2 = n*(m-1)+1:(m*n)
+
+	# monodromy matrix
+	M = Array{Ty}(LinearAlgebra.I(n))
+
+	for _ in 1:Ntst
+		Ai .= Jcond[r2, r1]
+		Bi .= Jcond[r2, r1 .+ n*m]
+		r1  = r1 .+ m*n
+		r2  = r2 .+ m*n
+
+		M = (Bi \ Ai) * M
+
+	end
+
+	# floquet multipliers
+	vals, vecs = eigen(M)
+
+	logvals = log.(Complex.(vals))
+	I = sortperm(logvals, by = real, rev = true)[1:nev]
+
+	# floquet exponents
+	σ = logvals[I]
+
+	# give indications on the precision on the Floquet coefficients
+	vp0 = minimum(abs, σ)
+	if vp0 > 1e-9
+		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+	end
+	return σ, Complex.(vecs[I, :]), true
+end
