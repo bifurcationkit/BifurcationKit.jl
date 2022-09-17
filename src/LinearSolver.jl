@@ -164,7 +164,7 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwarg
 		Jmap = LinearMap{T}(J_map, l.N, l.N ; ismutating = false)
 	end
 	res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
-	(res[2].iters >= l.maxiter) && (@warn "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
+	(res[2].iters >= l.maxiter) && (@debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
 	return res[1], length(res) > 1, res[2].iters
 end
 ####################################################################################################
@@ -222,6 +222,6 @@ function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where
 		end
 		res, info = KrylovKit.linsolve(_linmap, ldiv!(similar(rhs), l.Pl, copy(rhs)); rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
 	end
-	info.converged == 0 && (@warn "KrylovKit.linsolve solver did not converge")
-	return res, true, info.numops
+	info.converged == 0 && (@debug "KrylovKit.linsolve solver did not converge")
+	return res, info.converged == 1, info.numops
 end

@@ -64,7 +64,7 @@ function (lbs::BorderingBLS)(  J, dR,
 	BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift = shift, dotp = dotp)
 	Residual(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift = shift, dotp = dotp)
 
-	dX, dl, itlinear = BEC0(R, n)
+	dX, dl, cv, itlinear = BEC0(R, n)
 
 	failBLS = true
 	while lbs.checkPrecision && k < lbs.k && failBLS
@@ -72,13 +72,13 @@ function (lbs::BorderingBLS)(  J, dR,
 		failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
 		@debug k, norm(δX), abs(δl)
 		if failBLS
-			dX1, dl1, itlinear = BEC0(δX, δl)
+			dX1, dl1, cv, itlinear = BEC0(δX, δl)
 			axpy!(1, dX1, dX)
 			dl += dl1
 			k += 1
 		end
 	end
-	return dX, dl, true, itlinear
+	return dX, dl, cv, itlinear
 end
 
 function BEC(lbs::BorderingBLS,
@@ -93,13 +93,13 @@ function BEC(lbs::BorderingBLS,
 		x1, δx, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
 	end
 
-	~success && @warn "Linear solver failed to converge in BorderingBLS."
+	~success && @debug "Linear solver failed to converge in BorderingBLS."
 
 	dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
 
 	# dX = x1 .- dl .* δx
 	axpy!(-dl, δx, x1)
-	return x1, dl, itlinear
+	return x1, dl, success, itlinear
 end
 
 function residualBEC(lbs::BorderingBLS,
