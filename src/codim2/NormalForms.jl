@@ -522,10 +522,14 @@ function bogdanovTakensNormalForm(_prob,
 	Ty = eltype(Teigvec)
 	L = jacobian(prob_vf, x0, parbif)
 
+	# "zero" eigenvalues at bifurcation point
+	rightEv = br.eig[bifpt.idx].eigenvals
+	indev = br.specialpoint[ind_bif].ind_ev
+
 	# and corresponding eigenvectors
 	eigsolver = getsolver(optionsN.eigsolver)
 	if isnothing(ζs) # do we have a basis for the kernel?
-		# if haseigenvector(br) == false # are the eigenvector saved in the branch?
+		if haseigenvector(br) == false # are the eigenvector saved in the branch?
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ0, _ev, _ = eigsolver(L, nev)
@@ -537,9 +541,14 @@ function bogdanovTakensNormalForm(_prob,
 				display(_λ[1:N] .- 0)
 			end
 			ζs = [copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
-		# else
-		# 	ζs = [copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvec, ii)) for ii in indev-N+1:indev]
-		# end
+		else
+			# find the 2 eigenvalues closest to zero
+			Ind = sortperm(abs.(rightEv))
+			ind0 = Ind[1]
+			ind1 = Ind[2]
+			verbose && (println("----> eigenvalues = ", rightEv[Ind[1:2]]))
+			ζs = [copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
+		end
 	end
 	###########################
 	# Construction of the basis (ζ0, ζ1), (ζstar0, ζstar1). We follow the procedure described in Al-Hdaibat et al. 2016 on page 972.
@@ -761,7 +770,8 @@ function zeroHopfNormalForm(_prob,
 		ζs = nothing,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
-		scaleζ = norm)
+		scaleζ = norm,
+		autodiff = true)
 	@assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
 	verbose && println("#"^53*"\n--> Zero-Hopf Normal form computation")
@@ -859,7 +869,13 @@ function zeroHopfNormalForm(_prob,
 	getp(l::Lens) = get(parbif, l)
 	setp(l::Lens, p::Number) = set(parbif, l, p)
 	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-	Jp(p, l)  = ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
+	if autodiff
+		Jp(p, l)  = ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
+	else
+		# finite differencess
+		Jp(p, l) = (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
+	end
+
 
 	dFp = [dot(p0, Jp(p10, lens1)) dot(p0, Jp(p20, lens2)); dot(p1, Jp(p10, lens1)) dot(p1, Jp(p20, lens2))]
 
