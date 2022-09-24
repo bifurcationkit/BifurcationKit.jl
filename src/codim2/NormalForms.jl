@@ -647,7 +647,8 @@ function bautinNormalForm(_prob,
 	L = jacobian(prob_vf, x0, parbif)
 
 	# right eigenvector
-	if haseigenvector(br) == false
+	# TODO IMPROVE THIS
+	if 1==1#haseigenvector(br) == false
 		# we recompute the eigen-elements if there were not saved during the computation of the branch
 		@info "Recomputing eigenvector on the fly"
 		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
@@ -656,7 +657,7 @@ function bautinNormalForm(_prob,
 		@warn abs(_λ[_ind] - λ) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
 		ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
 	else
-		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+		ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
 	end
 	ζ ./= scaleζ(ζ)
 
@@ -825,7 +826,8 @@ function zeroHopfNormalForm(_prob,
 	L = jacobian(prob_vf, x0, parbif)
 
 	# right eigenvector
-	if haseigenvector(br) == false
+	# TODO IMPROVE THIS
+	if 1==1#haseigenvector(br) == false
 		# we recompute the eigen-elements if there were not saved during the computation of the branch
 		@info "Recomputing eigenvector on the fly"
 		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
