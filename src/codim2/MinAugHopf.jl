@@ -264,6 +264,7 @@ function newtonHopf(br::AbstractBranchResult, ind_hopf::Int;
 
 		# computation of adjoint eigenvector
 		_Jt = ~hasAdjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
 		ζad .= ζstar ./ dot(ζstar, ζ)
 	end
@@ -349,9 +350,10 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	lenses = getLensSymbol(lens1, lens2)
 
 	# current lyapunov coefficient
-	l1 = Complex{eltype(Tb)}(0, 0)
-	BT = one(eltype(Tb))
-	GH = one(eltype(Tb))
+	eTb = eltype(Tb)
+	hopfPb.l1 = Complex{eTb}(0, 0)
+	hopfPb.BT = one(eTb)
+	hopfPb.GH = one(eTb)
 
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented problem
@@ -375,7 +377,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
 		# compute new b
 		T = typeof(p1)
-		n = T(1)
+		local n = T(1)
 		newb = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, -ω))[1]
 
 		# compute new a
@@ -411,23 +413,25 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 
-		a = hopfPb.a
-		b = hopfPb.b
+		probhopf = iter.prob.prob
+
+		a = probhopf.a
+		b = probhopf.b
 
 		# expression of the jacobian
-		J_at_xp = jacobian(hopfPb.prob_vf, x, newpar)
+		J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
 
 		# compute new b
 		T = typeof(p1)
 		n = T(1)
-		ζ = hopfPb.linbdsolver(J_at_xp, a, b, T(0), hopfPb.zero, n; shift = Complex(0, -ω))[1]
+		ζ = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex(0, -ω))[1]
 		ζ ./= normC(ζ)
 
 		# compute new a
-		JAd_at_xp = hasAdjoint(hopfPb) ? jad(hopfPb.prob_vf, x, newpar) : transpose(J_at_xp)
-		ζstar = hopfPb.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
+		JAd_at_xp = hasAdjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
+		ζstar = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), hopfPb.zero, n; shift = Complex(0, ω))[1]
 		# test function for Bogdanov-Takens
-		BT = ω
+		probhopf.BT = ω
 		BT2 = real( dot(ζstar ./ normC(ζstar), ζ) )
 		ζstar ./= dot(ζ, ζstar)
 
@@ -435,20 +439,20 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		hopfNormalForm(prob_vf, hp, options_newton.linsolver, verbose = false)
 
 		# lyapunov coefficient
-		l1 = hp.nf.b
+		probhopf.l1 = hp.nf.b
 		# test for Bautin bifurcation.
 		# If GH is too large, we take the previous value to avoid spurious detection
 		# GH will be large close to BR points
-		GH = abs(real(hp.nf.b)) < 1e5 ? real(l1) : state.eventValue[2][2]
-		return BT, GH
+		probhopf.GH = abs(real(hp.nf.b)) < 1e5 ? real(hp.nf.b) : state.eventValue[2][2]
+		return probhopf.BT, probhopf.GH
 	end
 
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (zip(lenses, (u.p[1], p))..., ω = u.p[2], l1=l1, BT = BT, GH = GH) :
+		(u, p; kw...) -> ((zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH)) :
 		(u, p; kw...) -> begin
-			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (u.p[1], p))..., ω = u.p[2], l1 = l1, BT = BT, GH = GH)
+			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH)
 		end
 
 	prob_h = reMake(prob_h, recordFromSolution = _printsol2)

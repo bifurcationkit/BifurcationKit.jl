@@ -14,7 +14,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
 		$(FIELDS)
 		"""
-		struct $op{Tprob <: AbstractBifurcationProblem, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
+		mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
 			"Functional F(x, p) - vector field - with all derivatives"
 			prob_vf::Tprob
 			"close to null vector of Jᵗ"
@@ -23,6 +23,16 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			b::vectype
 			"vector zero, to avoid allocating it many times"
 			zero::vectype
+			"Lyapunov coefficient"
+			l1::Complex{T}
+			"Cusp test value"
+			CP::T
+			"Bogdanov-Takens test value"
+			BT::T
+			"Bautin test values"
+			GH::T
+			"Zero-Hopf test values"
+			ZH::Int
 			"linear solver. Used to invert the jacobian of MA functional"
 			linsolver::S
 			"linear solver for the jacobian adjoint"
@@ -36,11 +46,23 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 		@inline hasHessian(pb::$op) = hasHessian(pb.prob_vf)
 		@inline isSymmetric(pb::$op) = isSymmetric(pb.prob_vf)
 		@inline hasAdjoint(pb::$op) = hasAdjoint(pb.prob_vf)
+		@inline hasAdjointMF(pb::$op) = hasAdjointMF(pb.prob_vf)
 		@inline isInplace(pb::$op) = isInplace(pb.prob_vf)
 		@inline getLens(pb::$op) = getLens(pb.prob_vf)
+		jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
 		# constructor
-		$op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS()) = $op(prob, a, b, 0*a, linsolve, linsolve, linbdsolver, linbdsolver)
+		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS())
+			# determine scalar type associated to vectors a and b
+			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+			return $op(prob, a, b, 0*a,
+						complex(zero(eltype(α))),   # l1
+						real(one(eltype(α))),		# cp
+						real(one(eltype(α))),		# bt
+						real(one(eltype(α))),		# gh
+						1,							# zh
+						linsolve, linsolve, linbdsolver, linbdsolver)
+		end
 	end
 end
 

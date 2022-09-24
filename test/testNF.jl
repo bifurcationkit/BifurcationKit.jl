@@ -298,6 +298,7 @@ sn_codim2 = continuation(br, 2, (@lens _.β2), ContinuationPar(opts_br, detectBi
 	)
 @test sn_codim2.specialpoint[1].type == :bt
 @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
+@test length(unique(sn_codim2.BT)) == length(sn_codim2)
 
 hopf_codim2 = continuation(br, 3, (@lens _.β2), ContinuationPar(opts_br, detectBifurcation = 1, saveSolEveryStep = 1, maxSteps = 40, maxBisectionSteps = 25) ; plot = false, verbosity = 0,
 	detectCodim2Bifurcation = 2,
@@ -309,6 +310,7 @@ hopf_codim2 = continuation(br, 3, (@lens _.β2), ContinuationPar(opts_br, detect
 @test length(hopf_codim2.specialpoint) == 3
 @test hopf_codim2.specialpoint[2].type == :bt
 @test hopf_codim2.specialpoint[2].param ≈ 0 atol = 1e-6
+@test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
 # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
 btpt = getNormalForm(sn_codim2, 1; nev = 2)
@@ -325,6 +327,10 @@ BK.type(btpt)
 @test isapprox(btpt.nfsupp.e, 0; atol = 1e-3)
 @test isapprox(btpt.nfsupp.a1, 0; atol = 1e-3)
 @test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
+
+btpt1 = getNormalForm(sn_codim2, 1; nev = 2, autodiff = false)
+@test mapreduce(isapprox,&, btpt.nf, btpt1.nf)
+@test mapreduce(isapprox,&, btpt.nfsupp, btpt1.nfsupp)
 
 HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 	HC.hopf(0.)

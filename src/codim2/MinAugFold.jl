@@ -321,9 +321,9 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 	lenses = getLensSymbol(lens1, lens2)
 
 	# global variables to save call back
-	BT::T = one(T)
-	CP::T = one(T)
-	ZH::Int = 1
+	foldPb.BT = one(T)
+	foldPb.CP = one(T)
+	foldPb.ZH = 1
 
 	# this function is used as a Finalizer
 	# it is called to update the Minimally Augmented problem
@@ -377,44 +377,45 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 
-		a = foldPb.a
-		b = foldPb.b
+		probfold = iter.prob.prob
+
+		a = probfold.a
+		b = probfold.b
 
 		# expression of the jacobian
-		J_at_xp = jacobian(foldPb.prob_vf, x, newpar)
+		J_at_xp = jacobian(probfold.prob_vf, x, newpar)
 
 		# compute new b
-		ζ = foldPb.linbdsolver(J_at_xp, a, b, T(0), foldPb.zero, T(1))[1]
+		ζ = probfold.linbdsolver(J_at_xp, a, b, T(0), probfold.zero, T(1))[1]
 		ζ ./= norm(ζ)
 
 		# compute new a
-		JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
-		ζstar = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
+		JAd_at_xp = hasAdjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
+		ζstar = probfold.linbdsolver(JAd_at_xp, b, a, T(0), probfold.zero, T(1))[1]
 		ζstar ./= norm(ζstar)
 
-		BT = dot(ζstar, ζ)
-		CP = getP(state.τ)
+		probfold.BT = dot(ζstar, ζ)
+		probfold.CP = getP(state.τ)
 
-		return BT, CP
+		return probfold.BT, probfold.CP
 	end
 
 	function testForZH(iter, state)
-		# printstyled(color = :magenta, "\n******* Entree dans Fold-Event-Dis\n")
 		if isnothing(state.eigvals)
-			ZH = 1
+			iter.prob.prob.ZH = 1
 		else
 			ϵ = iter.contParams.tolStability
 			ρ = minimum(abs ∘ real, state.eigvals)
-			ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
+			iter.prob.prob.ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
 		end
-		return ZH
+		return iter.prob.prob.ZH
 	end
 
 	# the following allows to append information specific to the codim 2 continuation to the user data
-	_printsol = recordFromSolution(prob)
-	_printsol2 = _printsol == recordSolDefault ?
-		(u, p; kw...) -> (zip(lenses, (getP(u), p))..., BT = BT) :
-		(u, p; kw...) -> (; namedprintsol(_printsol(u.u, p; kw...))..., zip(lenses, (getP(u), p))..., BT = BT,)
+	_printsol = get(kwargs, :recordFromSolution, nothing)
+	_printsol2 = isnothing(_printsol) ?
+		(u, p; kw...) -> (zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(u.u, p; kw...))..., zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH,)
 
 	# eigen solver
 	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))

@@ -31,9 +31,11 @@ opts_br = ContinuationPar(pMin = -1.5, pMax = 3.0, ds = 0.001, dsmax = 0.025,
 
 z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105288273117459]
 
-recordFromSolutionLor(x, p) = (u = BK.getVec(x);(X = u[1], Y = u[2], Z = u[3], U = u[4]))
+recordFromSolutionLor(u::AbstractVector, p) = (X = u[1], Y = u[2], Z = u[3], U = u[4])
+recordFromSolutionLor(u::BorderedArray, p) = recordFromSolutionLor(u.u, p)
+
 prob = BK.BifurcationProblem(Lor, z0, parlor, (@lens _.F);
-	recordFromSolution = (x, p) -> (X = x[1], Y = x[2], Z = x[3], U = x[4]),)
+	recordFromSolution = recordFromSolutionLor,)
 
 br = @time continuation(reMake(prob, params = setproperties(parlor;T=0.04,F=3.)),
  	PALC(tangent = Bordered()),
@@ -58,6 +60,7 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), 
 	detectCodim2Bifurcation = 1,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
+    recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS(),
 	)
 
@@ -68,18 +71,22 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), 
 @test sn_codim2_test.specialpoint[3].param ≈ -0.00045281 rtol = 1e-5
 @test sn_codim2_test.specialpoint[4].param ≈ -0.02135893 rtol = 1e-5
 
+@test sn_codim2_test.eig[1].eigenvecs != nothing
+
 hp_codim2_test = continuation(br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
+    recordFromSolution = recordFromSolutionLor,
 	bothside = true,
 	bdlinsolver = MatrixBLS())
 
 @test hp_codim2_test.specialpoint[2].param ≈ +0.02627393 rtol = 1e-5
 @test hp_codim2_test.specialpoint[3].param ≈ -0.02627430 atol = 1e-8
 
-# plot(hp_codim2_test)
+@test hp_codim2_test.eig[1].eigenvecs != nothing
+
 ####################################################################################################
 """
 This function test if the eigenvalues are well computed during a branch of Hopf/Fold.
@@ -145,6 +152,7 @@ sn_codim2 = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), Conti
 	detectCodim2Bifurcation = 1,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
+    recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS())
 
 @test sn_codim2.specialpoint[1].type == :bt
@@ -152,7 +160,9 @@ sn_codim2 = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), Conti
 @test sn_codim2.specialpoint[3].type == :zh
 @test sn_codim2.specialpoint[4].type == :bt
 
-btpt = getNormalForm(sn_codim2, 1; nev = 4)
+@test sn_codim2.eig[1].eigenvecs != nothing
+
+btpt = getNormalForm(sn_codim2, 1; nev = 4, verbose = true)
 HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 	HC.hopf(0.)
 
@@ -177,6 +187,7 @@ hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
 	bothside = true,
+    recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS())
 
 @test hp_codim2_1.alg.tangent isa Bordered
