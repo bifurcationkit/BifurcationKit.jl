@@ -35,14 +35,14 @@ br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
 @test br.specialpoint[5].param ≈ 1.05158367
 ####################################################################################################
 @set! opts_br.newtonOptions = NewtonPar(maxIter = 10, tol = 1e-12)
-sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 8) ;
+
+sn_codim2 = continuation(br, 3, (@lens _.k),
+	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., ds = -0.001, dsmax = 0.05, nInversion = 8) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
-	startWithEigen = true,
 	recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
 	bothside = true,
-	bdlinsolver = MatrixBLS()
 	)
 
 @test sn_codim2.kind == BK.FoldCont()
@@ -50,7 +50,7 @@ sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2
 @test sn_codim2.specialpoint[3].type == :cusp
 @test sn_codim2.specialpoint[4].type == :bt
 
-@test sn_codim2.specialpoint[2].param ≈ 0.97139757
+@test sn_codim2.specialpoint[2].param ≈ 0.97139757 atol = 1e-5
 @test sn_codim2.specialpoint[3].param ≈ 0.35665351 rtol = 1e-4
 @test sn_codim2.specialpoint[4].param ≈ 0.7223392465523879
 
@@ -70,7 +70,7 @@ bt = getNormalForm(sn_codim2, 2; autodiff = true)
 
 @test isapprox(bt.nf.a |> abs, 0.083784; rtol = 1e-4)
 @test isapprox(bt.nf.b |> abs, 2.1363; rtol = 1e-4)
-@test isapprox(bt.nfsupp.K2, [-13.1139, 51.1513]; rtol = 1e-4)
+@test isapprox(bt.nfsupp.K2, [-13.1155, 51.17]; atol = 1e-2)
 @test isapprox(bt.nfsupp.d, -0.1778; rtol = 1e-3)
 @test isapprox(bt.nfsupp.e, -7.1422; rtol = 1e-4)
 @test isapprox(abs(bt.nfsupp.a1), abs( -0.8618 ); rtol = 1e-3)

@@ -76,7 +76,7 @@ opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pM
 			recordFromSolution = (x, p) -> x[1])
 
 	br0 = continuation(prob, PALC(), opts0;
-		plot = false, verbosity = 3,
+		plot = false, verbosity = 0,
 		)
 testBranch(br0)
 # plot(br0, plotspecialpoints=true)
@@ -94,7 +94,7 @@ args = (prob, PALC(), opts)
 kwargs = (plot = false, verbosity = 0, recordFromSolution = (x,p) -> x[1], linearAlgo = MatrixBLS(),)
 
 br = continuation(args...; kwargs...,
-	verbosity = 3, # test printing
+	verbosity = 0, # test printing
 	event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
 @test br.specialpoint[1].type==:userC

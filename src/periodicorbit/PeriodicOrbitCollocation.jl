@@ -209,7 +209,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 	meshadapt::Bool = false
 
 	# verbose mesh adaptation information
-	versboseMeshAdap::Bool = true
+	verboseMeshAdapt::Bool = true
 
 	# parameter for mesh adaptation, control new mesh step size
 	K::Float64 = 500

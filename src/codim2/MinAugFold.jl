@@ -87,7 +87,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
 	v, σ1, cv, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
-	~cv && @debug "Linear solver for J' did not converge."
+	~cv && @debug "Linear solver for J did not converge."
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
@@ -98,7 +98,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	################### computation of σx σp ####################
 	################### and inversion of Jfold ####################
 	dpF = minus(residual(pb.prob_vf, x, set(par, lens, p + ϵ1)),
-					residual(pb.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1) / T(2ϵ1))
+				residual(pb.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1) / T(2ϵ1))
 	dJvdp = minus(apply(jacobian(pb.prob_vf, x, set(par, lens, p + ϵ3)), v),
 					apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1) / T(2ϵ3))
 	σp = -dot(w, dJvdp) / n
@@ -464,7 +464,7 @@ function continuationFold(prob,
 		rmul!(eigenvec, 1/normC(eigenvec))
 
 		# jacobian adjoint at bifurcation point
-		_Jt = ~hasAdjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+		_Jt = hasAdjoint(prob) ?  jad(prob, bifpt.x, parbif) : transpose(L)
 
 		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
 		eigenvec_ad = real.(ζstar)

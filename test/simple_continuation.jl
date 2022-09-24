@@ -13,11 +13,11 @@ Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
 _dt = BK.DotTheta(dot)
 _dt = BK.DotTheta()
 # tests for the predictors
-BK.mergefromuser(1., (a=1,))
-BK.mergefromuser(rand(2), (a=1,))
-BK.mergefromuser((1,2), (a=1,))
+BK.mergefromuser(1., (a = 1,))
+BK.mergefromuser(rand(2), (a = 1,))
+BK.mergefromuser((1, 2), (a = 1,))
 
-BK.Fold(rand(2),0.1,0.1,(@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
+BK.Fold(rand(2), 0.1, 0.1, (@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
 BK._displayLine(1, 1, (1,1))
 BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
@@ -227,5 +227,5 @@ alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
 	)
 brdc = continuation(prob, alg,
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40);
-	plot=false, verbosity = 3,
+	plot=false, verbosity = 0,
 	callbackN = BK.cbMaxNorm(1e3))
