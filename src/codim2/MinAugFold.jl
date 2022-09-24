@@ -86,7 +86,8 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
+	v, σ1, cv, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
+	~cv && @debug "Linear solver for J' did not converge."
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
@@ -111,11 +112,13 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 		########## Resolution of the bordered linear system ########
 		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
+		~flag && @debug "Linear solver for J did not converge."
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
 		# !!! Carefull, this method makes the linear system singular
-		x1, x2, _, it = pb.linsolver(J_at_xp, rhsu, dpF)
+		x1, x2, cv, it = pb.linsolver(J_at_xp, rhsu, dpF)
+		~cv && @debug "Linear solver for J did not converge."
 
 		d2Fv = d2F(pb.prob_vf, x, par0, x1, v)
 		σx1 = -dot(w, d2Fv ) / n
@@ -151,7 +154,6 @@ end
 @inline hasAdjoint(foldpb::FoldMAProblem) = hasAdjoint(foldpb.prob)
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
-# jacobian(foldpb::FoldMAProblem, x, p) = foldpb.jacobian(x, p)
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, fldpb = foldpb.prob)
 ################################################################################################### Newton / Continuation functions
 """

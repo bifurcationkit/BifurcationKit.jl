@@ -101,10 +101,12 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	n = T(1)
 
 	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
-	v, σ1, _, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, -ω))
+	v, σ1, cv, itv = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n; shift = Complex{T}(0, -ω))
+	~cv && @debug "Linear solver for (J-iω) did not converge."
 
 	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
-	w, σ2, _, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = Complex{T}(0, ω))
+	w, σ2, cv, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = Complex{T}(0, ω))
+	~cv && @debug "Linear solver for (J+iω)' did not converge."
 
 	δ = T(1e-9)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -121,7 +123,8 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	σω = Complex{T}(0, 1) * dot(w, v) / n
 
 	# we solve J⋅x1 = duu and J⋅x2 = dpF
-	x1, x2, _, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
+	x1, x2, cv, (it1, it2) = pb.linsolver(J_at_xp, duu, dpF)
+	~cv && @debug "Linear solver for J did not converge."
 
 	# the case of ∂_xσ is a bit more involved
 	# we first need to compute the value of ∂_xσ written σx
@@ -529,8 +532,6 @@ struct HopfEig{S} <: AbstractCodim2EigenSolver
 	eigsolver::S
 end
 
-geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
-
 function (eig::HopfEig)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
 
@@ -542,7 +543,6 @@ function (eig::HopfEig)(Jma, nev; kwargs...)
 	J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
 
 	eigenelts = eig.eigsolver(J, n; kwargs...)
-	# @assert 1==0 "Mettre les 2 params a jour"
 	return eigenelts
 end
 
@@ -551,3 +551,5 @@ function (eig::HopfEig)(iter, state, Jma::AbstractMatrix, nev; kwargs...)
 	eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], n; kwargs...)
 	return eigenelts
 end
+
+geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
