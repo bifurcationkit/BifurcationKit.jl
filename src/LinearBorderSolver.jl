@@ -83,10 +83,10 @@ end
 
 function BEC(lbs::BorderingBLS,
 							J, dR,
-							dzu, dzp::T,
-							R, n::T,
+							dzu, dzp,
+							R, n,
 							ξu::Tξ = 1, ξp::Tξ = 1;
-							shift::Ts = nothing, dotp = dot)  where {T, Tξ, Ts}
+							shift::Ts = nothing, dotp = dot)  where {Tξ, Ts}
 	if isnothing(shift)
 		x1, δx, success, itlinear = lbs.solver(J, R, dR)
 	else
@@ -104,11 +104,11 @@ end
 
 function residualBEC(lbs::BorderingBLS,
 							J, dR,
-							dzu, dzp::T,
+							dzu, dzp,
 							R, n,
-							dX, dl::T,
+							dX, dl,
 							ξu::Tξ = 1, ξp::Tξ = 1;
-							shift::Ts = nothing, dotp = dot)  where {T, Tξ, Ts}
+							shift::Ts = nothing, dotp = dot)  where {Tξ, Ts}
 	# we check the precision of the solution from the bordering algorithm
 	# at this point, δx is not used anymore, we can use it for computing the residual
 	# hence δx = R - (shift⋅I + J) * dX	 - dl * dR
