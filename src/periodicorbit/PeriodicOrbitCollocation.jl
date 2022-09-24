@@ -146,6 +146,9 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `mesh_cache::MeshCollocationCache` cache for collocation. See docs of `MeshCollocationCache`
 - `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
 - `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations. Can only be `:autodiffDense`.
+- `meshadapt::Bool = false` whether to use mesh adaptation
+- `verboseMeshAdapt::Bool = true` verbose mesh adaptation information
+- `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size
 
 ## Methods
 
@@ -209,7 +212,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 	meshadapt::Bool = false
 
 	# verbose mesh adaptation information
-	verboseMeshAdapt::Bool = true
+	verboseMeshAdapt::Bool = false
 
 	# parameter for mesh adaptation, control new mesh step size
 	K::Float64 = 500
@@ -264,6 +267,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 	println(io, "├─ inplace            : ", isInplace(pb))
 	println(io, "├─ update section     : ", pb.updateSectionEveryStep)
 	println(io, "├─ jacobian           : ", pb.jacobian)
+	println(io, "├─ mesh adaptation    : ", pb.meshadapt)
 	println(io, "└─ # unknowns         : ", pb.N * (1 + m * Ntst))
 end
 
@@ -428,6 +432,15 @@ end
 residual(prob::WrapPOColl, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
 @inline isSymmetric(prob::WrapPOColl) = isSymmetric(prob.prob)
+
+# for recording the solution in a branch
+function getSolution(prob::WrapPOColl, x)
+	if prob.prob.meshadapt
+		return (mesh = copy(getTimes(prob.prob)), sol = x)
+	else
+		return x
+	end
+end
 ####################################################################################################
 const DocStrjacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(:autodiffDense, )`. This is used to select a way of inverting the jacobian dG
@@ -606,4 +619,100 @@ end
 		out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
 	end
 	out
+end
+
+"""
+$(SIGNATURES)
+
+Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
+
+p. 368
+"""
+function computeError(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
+					normE = norm,
+					verbosity::Bool = false,
+					K = Inf,
+					kw...) where Ty
+	n, m, Ntst = size(pb)
+	period = getPeriod(pb, x, nothing)
+	# get solution
+	sol = POOCollSolution(deepcopy(pb), x)
+	# derivative of degree m, indeed ∂(sol, m+1) = 0
+	dmsol = ∂(sol, m)
+	# we find the values of vm := ∂m(x) at the mid points
+	mesh = getMesh(pb)
+	meshT = mesh .* period
+	vm = [ dmsol( (meshT[i] + meshT[i+1]) / 2 ) for i = 1:Ntst ]
+	############
+	# Approx. IA
+	# this is the function s^{(k)} in the above paper on page 63
+	# we want to estimate sk = s^{(m+1)} which is 0 by definition, pol of degree m
+	if isempty(findall(diff(meshT) .<= 0)) == false
+		@error "[In mesh-adaptation]. The mesh is non monotonic! Please report the error to the website of BifurcationKit.jl"
+		return (success = false, newmeshT = meshT, ϕ = meshT)
+	end
+	sk = Ty[]
+	push!(sk, 2normE(vm[1])/(meshT[2]-meshT[1]))
+	for i in 2:Ntst-1
+		push!(sk, normE(vm[i]) / (meshT[i+1] - meshT[i-1]) +
+				normE(vm[i+1]) / (meshT[i+2] - meshT[i]))
+	end
+	push!(sk, 2normE(vm[end]) / (meshT[end] - meshT[end-2]))
+
+	############
+	# monitor function
+	ϕ = sk.^(1/m)
+	ϕ = max.(ϕ, maximum(ϕ) / K)
+	@assert length(ϕ) == Ntst "Error. Please open an issue of the website of BifurcationKit.jl"
+	# compute θ = ∫ϕ but also all intermediate values
+	# these intermediate values are useful because the integral is piecewise linear
+	# and equipartition is analytical
+	# there are ntst values for the integrals, one for (0, mesh[2]), (mesh[2], mesh[3])...
+	θs = zeros(Ty, Ntst); θs[1] = ϕ[1] * (meshT[2] - meshT[1])
+	for i = 2:Ntst
+		θs[i] = θs[i-1] + ϕ[i] * (meshT[i+1] - meshT[i])
+	end
+	θs = vcat(0, θs)
+	θ = θs[end]
+
+	############
+	# compute new mesh from equipartition
+	newmeshT = zero(meshT); newmeshT[end] = 1
+	c = θ / Ntst
+	for i in 1:Ntst-1
+		θeq = i * c
+		# we have that θeq ∈ (θs[ind-1], θs[ind])
+		ind = searchsortedfirst(θs, θeq)
+		@assert 2 <= ind <= Ntst+1 "Error with 1 < $ind <= $(Ntst+1). Please open an issue on the website of BifurcationKit.jl"
+		α = (θs[ind] - θs[ind-1]) / (meshT[ind] - meshT[ind-1])
+		newmeshT[i+1] = meshT[ind-1] + (θeq - θs[ind-1]) / α
+		@assert newmeshT[i+1] > newmeshT[i] "Error. Please open an issue on the website of BifurcationKit.jl"
+	end
+	newmesh = newmeshT ./ period; newmesh[end] = 1
+
+	if verbosity
+		h = maximum(diff(newmesh))
+		printstyled(color = :magenta, "----> Mesh adaptation
+		 \n ------> min(hi)       = ", minimum(diff(newmesh)),
+		"\n ------> h = max(hi)   = ", h,
+		"\n ------> K = max(h/hi) = ", maximum(h ./ diff(newmesh)),
+		"\n ------> θ             = ", θ,
+		"\n ------> min(ϕ)        = ", minimum(ϕ),
+		"\n ------> max(ϕ)        = ", maximum(ϕ),
+		"\n ------> θ             = ", θ,
+		"\n")
+	end
+
+	############
+	# modify meshes
+	updateMesh!(pb, newmesh)
+
+	############
+	# update solution
+
+	newsol = generateSolution(pb, t -> sol(t), period)
+	x .= newsol
+
+	success = true
+	return (;success, newmeshT, ϕ)
 end

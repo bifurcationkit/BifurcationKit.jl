@@ -1,6 +1,7 @@
 abstract type AbstractBifurcationFunction end
 abstract type AbstractBifurcationProblem end
 # this type is based on the type BifFunction, see below
+# it provides all derivatives
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 
 getVectorType(::AbstractBifurcationProblem) = Nothing

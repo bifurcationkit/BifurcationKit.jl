@@ -7,8 +7,6 @@ module BifurcationKit
 	using DataStructures: CircularBuffer
 	using ForwardDiff
 
-	# using Infiltrator
-
 	include("Problems.jl")
 
 	# we put this here to be used in LinearBorderSolver and Continuation

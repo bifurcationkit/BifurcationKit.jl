@@ -68,7 +68,6 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is used
 	################################################################################################
 	# N = length(du) - 2
-	# The jacobian should be passed as a tuple as Jac_hopf_MA(u0, pb::HopfProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# the jacobian expression of the hopf problem Jhopf is
 	#           ┌             ┐
@@ -108,7 +107,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	w, σ2, cv, itw = pb.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), pb.zero, n; shift = Complex{T}(0, ω))
 	~cv && @debug "Linear solver for (J+iω)' did not converge."
 
-	δ = T(1e-9)
+	δ = getDelta(pb.prob_vf)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 	################### computation of σx σp ####################
 	################### and inversion of Jhopf ####################

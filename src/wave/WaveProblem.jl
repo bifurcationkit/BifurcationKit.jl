@@ -190,6 +190,8 @@ end
 residual(tw::WrapTW, x, p) = tw.prob(x, p)
 jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
 @inline isSymmetric(::WrapTW) = false
+@inline hasAdjoint(::WrapTW) = false
+@inline getDelta(::WrapTW) = 1e-8
 
 function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
 	jacobian = prob.jacobian

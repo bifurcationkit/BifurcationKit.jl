@@ -51,8 +51,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	################################################################################################
 	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
 	################################################################################################
-	# Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the above function.
-	# The jacobian has to be passed as a tuple as Jac_fold_MA(u0, pb::FoldProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
+	# Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the function above.
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# We solve here Jfold⋅res = rhs := [rhsu, rhsp]
 	# The Jacobian expression of the Fold problem is
@@ -61,7 +60,9 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	#           │ σx   σp │
 	#           └         ┘
 	# where σx := ∂_xσ and σp := ∂_pσ
-	# We recall the expression of σx = -< w, d2F(x,p)[v, x2]> where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
+	# We recall the expression of
+	#			σx = -< w, d2F(x,p)[v, x2]>
+	# where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
 	########################## Extraction of function names ########################################
 	a = pb.a
 	b = pb.b
@@ -93,7 +94,7 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
 		w, σ2, _, itw = pb.linbdsolver(JAd_at_xp, b, a, T(0), pb.zero, n)
 
-	δ = T(1e-8)
+	δ = getDelta(pb.prob_vf)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 	################### computation of σx σp ####################
 	################### and inversion of Jfold ####################

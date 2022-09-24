@@ -48,6 +48,10 @@ BK.from(br0)
 br0[1]
 br0[end]
 
+branch = Branch(br0, rand(2));
+branch[end]
+
+
 # test with callbacks
 br0 = continuation(prob, PALC(), (@set opts.maxSteps = 3), callbackN = (state; kwargs...)->(true))
 

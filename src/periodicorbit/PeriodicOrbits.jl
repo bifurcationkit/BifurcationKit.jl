@@ -15,7 +15,7 @@ $(SIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getPeriod(sh::AbstractPeriodicOrbitProblem, x, par = nothing) = extractPeriod(x)
+@inline getPeriod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extractPeriod(x)
 @inline extractPeriod(x::AbstractVector) = x[end]
 @inline extractPeriod(x::BorderedArray)  = x.p
 setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)

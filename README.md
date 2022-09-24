@@ -1,8 +1,13 @@
 # BifurcationKit.jl
 
-| **Documentation**                                                               | **Build Status**                                                                                |
-|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------:|
-| [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev) | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) |
+| **Documentation** | **Build Status** | **Downloads** |
+|:-----------------:|:----------------:|:-------------:|
+| [![docs-stable][docs-stable-img]][docs-stable-url] [![docs-dev][docs-dev-img]][docs-dev-url] | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/BifurcationKit)](https://pkgs.genieframework.com?packages=BifurcationKit)|
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/stable
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
+[docs-dev-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev
 
 ## IMPORTANT NOTICE
 **New version of the package with modified interface. You are now required to define a `BifurcationProblem` to perform continuation or bifurcation analysis. The previous interface is available under the tag 0.1.12 which can be installed by doing**
@@ -79,7 +84,7 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
 - Continuation written as an [iterator](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 - Monitoring user functions along curves computed by continuation, see [events](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/)
-- Continuation methods: PALC, Moore Penrose, Deflated continuation, ...
+- Continuation methods: PALC, Moore Penrose, Deflated continuation, ANM, ...
 - Bifurcation points located with a bisection algorithm
 - detection of Branch, Fold, Hopf bifurcation point of stationary solutions and computation of their normal form.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)

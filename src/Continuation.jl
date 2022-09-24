@@ -198,7 +198,7 @@ getx(state::AbstractContinuationState) 			= state.z.u
 			(state.stopcontinuation == false)
 
 function getStateSummary(it, state)
-	x = getSolution(it.prob, getx(state))
+	x = getx(state)
 	p = getp(state)
 	pt = recordFromSolution(it)(x, p)
 	stable = computeEigenElements(it) ? isStable(state) : nothing
