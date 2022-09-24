@@ -184,6 +184,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			# A = hcat(J, dFdp); A = vcat(A, ϕ')
 			# ϕ .= A \ vcat(zero(x),1)
 			u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(T), one(T), one(T))
+			~flag && @debug "Linear solver for (J-iω) did not converge."
 			ϕ.u .= u; ϕ.p = up
 			# rmul!(ϕ,  T(1) / norm(ϕ))
 			itlinear = (itlinear1 .+ itlinear2)
