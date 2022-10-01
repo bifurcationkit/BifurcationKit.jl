@@ -55,11 +55,12 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS())
 			# determine scalar type associated to vectors a and b
 			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+			Ty = eltype(α)
 			return $op(prob, a, b, 0*a,
-						complex(zero(eltype(α))),   # l1
-						real(one(eltype(α))),		# cp
-						real(one(eltype(α))),		# bt
-						real(one(eltype(α))),		# gh
+						complex(zero(Ty)),   # l1
+						real(one(Ty)),		# cp
+						real(one(Ty)),		# bt
+						real(one(Ty)),		# gh
 						1,							# zh
 						linsolve, linsolve, linbdsolver, linbdsolver)
 		end
@@ -76,6 +77,7 @@ function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...
 		return options_cont
 	end
 end
+################################################################################
 
 """
 $(SIGNATURES)
@@ -108,7 +110,7 @@ function newton(br::AbstractBranchResult, ind_bif::Int64; normN = norm, options 
 		return newtonFold(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	end
 end
-
+################################################################################
 """
 $(SIGNATURES)
 
@@ -137,9 +139,9 @@ function continuation(br::AbstractBranchResult,
 					ind_bif::Int64,
 					lens2::Lens,
 					options_cont::ContinuationPar = br.contparams ;
-				startWithEigen = false,
-				detectCodim2Bifurcation::Int = 0,
-				kwargs...)
+					startWithEigen = false,
+					detectCodim2Bifurcation::Int = 0,
+					kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	# options to detect codim2 bifurcations
 	computeEigenElements = options_cont.detectBifurcation > 0
@@ -158,7 +160,7 @@ function continuation(br::AbstractBranchResult,
 	end
 end
 ####################################################################################################
-# branch switching at bt
+# branch switching at Bogdanov-Takens bifurcation point
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			options_cont::ContinuationPar = br.contparams;
 			alg = br.alg,
@@ -263,7 +265,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			return Branch(branch, nf)
 		end
 end
-
+################################################################################
 """
 $(SIGNATURES)
 

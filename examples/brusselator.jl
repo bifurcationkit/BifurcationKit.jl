@@ -182,8 +182,6 @@ outpo_f = @time newton(poTrap,
 		orbitguess_f,
 		opt_po;
 		# deflationOp,
-		# jacobianPO = :BorderedLU,
-		# jacobianPO = :FullSparseInplace,
 		normN = norminf,
 		callback = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true)
 		)

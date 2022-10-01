@@ -465,7 +465,7 @@ function continuationFold(prob,
 		rmul!(eigenvec, 1/normC(eigenvec))
 
 		# jacobian adjoint at bifurcation point
-		_Jt = hasAdjoint(prob) ?  jad(prob, bifpt.x, parbif) : transpose(L)
+		_Jt = hasAdjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
 
 		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
 		eigenvec_ad = real.(ζstar)

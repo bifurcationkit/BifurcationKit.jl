@@ -31,7 +31,7 @@ function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
 	verbose && (println("--> left eigenvalues = "); display(λstar))
 	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
 	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λstar[I])) !≈ 0.  You can perhaps increase the argument `nev`."
-	ζstar = geteigenvector(eigsolver ,evstar, I)
+	ζstar = geteigenvector(eigsolver, evstar, I)
 	return copy(ζstar), λstar[I]
 end
 ####################################################################################################

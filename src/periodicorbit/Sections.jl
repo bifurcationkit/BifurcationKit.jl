@@ -136,6 +136,7 @@ R(hyp::SectionPS, x::AbstractVector, k::Int) = R!(hyp, similar(x, length(x) - 1)
 
 # differential of R
 dR!(hyp::SectionPS, out, dx::AbstractVector, k::Int) = R!(hyp, out, dx, k)
+dR(hyp::SectionPS, dx::AbstractVector, k::Int) = R(hyp, dx, k)
 
 # Operateur Ek from the paper above
 function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)

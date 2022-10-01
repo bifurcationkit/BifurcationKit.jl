@@ -1,10 +1,12 @@
 using Revise, Parameters, KrylovKit
+using GLMakie
 using BifurcationKit
 using LinearAlgebra, SparseArrays, LinearMaps, DiffEqOperators, Setfield
 const BK = BifurcationKit
 
-using GLMakie
-GLMakie.inline!(true)
+# GLMakie.inline!(true)
+
+norminf(x) = norm(x, Inf)
 
 contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
@@ -67,7 +69,6 @@ par = (l = 0.1, ν = 1.2, L1 = L1)
 Pr = cholesky(L1)
 using SuiteSparse
 LinearAlgebra.ldiv!(o::Vector, P::SuiteSparse.CHOLMOD.Factor{Float64}, v::Vector) = o .= -(P \ v)
-# LinearAlgebra.ldiv!(o, P::SuiteSparse.CHOLMOD.Factor{Float64}, v) = o .= P \ v
 
 # rtol must be small enough to pass the folds and to get precise eigenvalues
 ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Pr)
@@ -111,21 +112,20 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 
 	br = @time continuation(
 		reMake(prob, u0 = 0prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
-		plot = true, verbosity = 0,
-		normC = x -> norm(x, Inf),
+		plot = true, verbosity = 1,
+		normC = norminf,
 		event = BK.FoldDetectEvent,
-		finaliseSolution = (z, tau, step, contResult; k...) -> begin
-		if length(contResult) == 1
-			pretty_table(contResult.branch)
-		else
-			pretty_table(contResult.branch, overwrite = true,)
-		end
-		true
-	end
+		# finaliseSolution = (z, tau, step, contResult; k...) -> begin
+		# if length(contResult) == 1
+		# 	pretty_table(contResult.branch)
+		# else
+		# 	pretty_table(contResult.branch, overwrite = true,)
+		# end
+		# true
+	# end
 		)
 
 BK.plotBranch(br)
-contour3dMakie(u1.u)
 ####################################################################################################
 getNormalForm(br, 3; nev = 5)
 
@@ -140,7 +140,7 @@ br1 = @time continuation(br, 3, setproperties(optcont; saveSolEveryStep = 10, de
 		true
 	end,
 	# callbackN = cb,
-	normC = x -> norm(x, Inf))
+	normC = norminf)
 
 BK.plotBranch(br, br1...)
 BK.plotBranch(br1[15])

@@ -31,7 +31,7 @@ function guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitud
 	vec_hopf = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev-1)
 	vec_hopf ./=  norm(vec_hopf)
 
-	 orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii in 0:M-1]
+	orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii in 0:M-1]
 
 	return p_hopf, 2pi/ωH, orbitguess, hopfpoint, vec_hopf
 end

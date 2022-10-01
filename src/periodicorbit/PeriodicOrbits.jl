@@ -394,6 +394,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 			Tfactor = 0.001
 		end
 
+		# TODO should only update guess here, cf Poincaré
 		probPO0, orbitzeroamp = reMake(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, Tfactor * abs(2pi / pred.ω))
 		sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
 

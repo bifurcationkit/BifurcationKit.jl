@@ -34,7 +34,7 @@ struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
 		eigls2 = checkFloquetOptions(eigls)
 		return new{typeof(eigls2)}(eigls2)
 	end
-	FloquetQaD(eigls::FloquetQaD) = eigls
+	FloquetQaD(eigls::AbstractFloquetSolver) = eigls
 end
 geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenvector(eig.eigsolver, vecs, n)
 
@@ -56,7 +56,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 	# floquet exponents
 	σ = logvals[I]
 	vp0 = minimum(abs, σ)
-	if ~(J isa FloquetWrapper{PoincareShootingProblem}) && vp0 > 1e-8
+	if (J isa FloquetWrapper{ShootingProblem}) && vp0 > 1e-8
 		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
 	end
 	return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info

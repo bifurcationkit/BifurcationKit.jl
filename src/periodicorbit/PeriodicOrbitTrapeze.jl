@@ -19,14 +19,14 @@ Base.collect(ms::TimeMesh) = ms.ds
 Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([getTimeStep(ms, 1)], ms.ds)
 ####################################################################################################
 const DocStrjacobianPOTrap = """
-- `jacobian = :FullLU`. Specify the choice of the linear algorithm, which must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-    - For `:FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
-    - For `:FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-    - For `:Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-    - For `:BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver.
-    - For `:BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-	    - For `:FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
-    - For `:BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+- `jacobian = :FullLU`. Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `[:FullLU, :FullSparseInplace, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
+- For `jacobian = :FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
+- For `jacobian = :FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+- For `jacobian = :Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
+- For `jacobian = :BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver.
+- For `jacobian = :BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+- For `jacobian = :FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
+- For `jacobian = :BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
 """
 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
@@ -39,7 +39,7 @@ This composite type implements Finite Differences based on a Trapezoidal rule (O
 - `M::Int` number of time slices
 - `ϕ` used to set a section for the phase constraint equation, of size N*M
 - `xπ` used in the section for the phase constraint equation, of size N*M
-- `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers.
+- `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a full matrix-free setting.
 - `ongpu::Bool` whether the computation takes place on the gpu (Experimental)
 - `massmatrix` a mass matrix. You can pass for example a sparse matrix. Default: identity matrix.
 - `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
@@ -56,7 +56,7 @@ where ``h_1 = s_i-s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
 
 # Orbit guess
-You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
+You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
 
 Note that you can generate this guess from a function solution using `generateSolution`.
 
@@ -140,10 +140,29 @@ end
 
 # PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, ls; isinplace = isinplace, ongpu = ongpu, massmatrix = massmatrix)
 
-function PeriodicOrbitTrapProblem(prob_vf, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, massmatrix = nothing, updateSectionEveryStep::Int = 0, jacobian::Symbol = :Dense) where {vectype, vecmesh <: AbstractVector}
+function PeriodicOrbitTrapProblem(prob_vf,
+									ϕ::vectype,
+									xπ::vectype,
+									m::Union{Int, vecmesh},
+									N::Int,
+									ls::AbstractLinearSolver = DefaultLS();
+									ongpu = false,
+									massmatrix = nothing,
+									updateSectionEveryStep::Int = 0,
+									jacobian::Symbol = :Dense) where {vectype, vecmesh <: AbstractVector}
 	M = m isa Number ? m : length(m) + 1
 	# we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-	prob = PeriodicOrbitTrapProblem(prob_vf = prob_vf, ϕ = similar(ϕ, N*M), xπ = similar(xπ, N*M), M = M, mesh = TimeMesh(m), N = N, linsolver = ls, ongpu = ongpu, massmatrix = massmatrix, updateSectionEveryStep = updateSectionEveryStep, jacobian = jacobian)
+	prob = PeriodicOrbitTrapProblem(prob_vf = prob_vf,
+									ϕ = similar(ϕ, N*M),
+									xπ = similar(xπ, N*M),
+									M = M,
+									mesh = TimeMesh(m),
+									N = N,
+									linsolver = ls,
+									ongpu = ongpu,
+									massmatrix = massmatrix,
+									updateSectionEveryStep = updateSectionEveryStep,
+									jacobian = jacobian)
 
 	prob.xπ .= 0
 	prob.ϕ .= 0
@@ -155,7 +174,13 @@ end
 
 # PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, massmatrix = massmatrix)
 
-PeriodicOrbitTrapProblem(prob_vf, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
+PeriodicOrbitTrapProblem(prob_vf,
+						m::Union{Int, vecmesh},
+						N::Int,
+						ls::AbstractLinearSolver = DefaultLS();
+						ongpu = false,
+					 	adaptmesh = false,
+						massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
 
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = onGpu(pb) ? x[end:end] : x[end]
@@ -293,7 +318,7 @@ end
 """
 Function to compute the Matrix-Free version of the cyclic matrix Jc, see docs for its expression.
 """
-function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVector	, par, T, du::AbstractVector, tmp)
+function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVector, par, T, du::AbstractVector, tmp)
 	# tmp plays the role of buffer array
 	# u0 of size N * (M - 1)
 	# du of size N * (M - 1)
@@ -684,7 +709,7 @@ end
 	out = similar(dx)
 	M, N = size(A.prob)
 	out1 = apply(A.Jc, dx[1:end-N])
-	return vcat(out1, -dx[1:N].+ dx[end-N+1:end])
+	return vcat(out1, -dx[1:N] .+ dx[end-N+1:end])
 end
 
 # linear solvers designed specifically for AbstractPOTrapAγOperator
@@ -754,7 +779,7 @@ end
 #        └             ┘
 @views function apply(J::POTrapJacobianBordered, dx)
 	# this function would be much more efficient if
-	# we call J.Aγ.prob(x, par, dx) but we dont have x, par
+	# we call J.Aγ.prob(x, par, dx) but we dont have (x, par)
 	out1 = apply(J.Aγ, dx[1:end-1])
 	out1 .+= J.∂TGpo[1:end-1] .* dx[end]
 	return vcat(out1, dot(J.Aγ.prob.ϕ, dx[1:end-1]) + dx[end] * J.∂TGpo[end])

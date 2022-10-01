@@ -872,10 +872,10 @@ function zeroHopfNormalForm(_prob,
 	setp(l::Lens, p::Number) = set(parbif, l, p)
 	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
 	if autodiff
-		Jp(p, l)  = ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
+		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
 	else
 		# finite differencess
-		Jp(p, l) = (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
+		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
 	end
 
 

@@ -301,7 +301,7 @@ for M in (1,2), jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytica
 
 	# specific to Poincaré Shooting
 	jacPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO
-	_parallel = jacPO == :MatrixFree ? false : true 
+	_parallel = jacPO == :MatrixFree ? false : true
 
 	br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), verbosity = 0)
 
