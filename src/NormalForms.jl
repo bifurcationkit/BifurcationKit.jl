@@ -758,7 +758,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 	ζ ./= scaleζ(ζ)
 
 	# left eigen-elements
-	_Jt = hasAdjoint(prob) ? jad(prob, onvert(Teigvec, bifpt.x), parbif) : adjoint(L)
+	_Jt = hasAdjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
 	# check that λstar ≈ conj(λ)

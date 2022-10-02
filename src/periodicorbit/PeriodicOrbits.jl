@@ -39,7 +39,7 @@ function applyF(pb, dest, x, p)
 	if isInplace(pb)
 		pb.prob_vf.VF.F(dest, x, p)
 	else
-		dest .= pb.prob_vf.VF.F(x, p)
+		dest .= residual(pb.prob_vf, x, p)
 	end
 	dest
 end

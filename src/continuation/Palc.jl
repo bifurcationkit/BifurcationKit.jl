@@ -49,16 +49,20 @@ $(TYPEDFIELDS)
 # Associated methods
 """
 @with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T} <: AbstractContinuationAlgorithm
-	"Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`"
+	"Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
 	tangent::Ttang = Secant()
-	"[internal]"
+	"[internal], "
 	bothside::Bool = false
-	"Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`"
+	"Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
 	bls::Tbls = MatrixBLS()
 	# parameters for scaling arclength step size
+	"Unused for now, "
 	doArcLengthScaling::Bool  	= false
+	"Unused for now, "
 	gGoal::T					= 0.5
+	"Unused for now, "
 	gMax::T						= 0.8
+	"Unused for now, "
 	θMin::T						= 1.0e-3
 
 	@assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"

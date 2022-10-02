@@ -104,6 +104,7 @@ end
 # function (u, p) -> F(u, p) - s * D * u to be used with shooting or Trapezoid
 VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VFplusD(pb, u, parsFreez.s, parsFreez.user)
 
+# vector field of the TW problem
 @views function (pb::TWProblem)(x::AbstractVector, pars)
 	# number of constraints
 	nc = pb.nc
@@ -127,6 +128,7 @@ VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VFplusD(pb, u, parsFreez.s, 
 	return out
 end
 
+# jacobian-free function
 @views function (pb::TWProblem)(x::AbstractVector, pars, dx::AbstractVector)
 	# number of constraints
 	nc = pb.nc

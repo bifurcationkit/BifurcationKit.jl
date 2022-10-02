@@ -383,7 +383,7 @@ function cylicPOTrapBlock!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par
 	u0c = getTimeSlices(pb, u0)
 	outc = similar(u0c)
 
-	tmpJ = @views pb.prob_vf.VF.J(u0c[:, 1], par)
+	tmpJ = @views jacobian(pb.prob_vf, u0c[:, 1], par)
 
 	h = T * getTimeStep(pb, 1)
 	Jn = In - (h/2) .* tmpJ
