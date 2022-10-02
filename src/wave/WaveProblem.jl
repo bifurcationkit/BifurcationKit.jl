@@ -2,14 +2,14 @@ abstract type abstractModulatedWaveFD <: AbstractPOFDProblem end
 abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
 
 """
- TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
+TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
 
 This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
 
-					┌                  ┐
-					│ f(x, par) - s⋅∂x │
-					│   <x - u₀, ∂u₀>  │
-					└                  ┘
+					┌                   ┐
+					│ f(x, par) - s⋅∂⋅x │
+					│   <x - u₀, ∂⋅u₀>  │
+					└                   ┘
 
 ## Arguments
 - `prob` bifurcation problem with continuous symmetries
@@ -195,14 +195,15 @@ jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
 
 function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
 	jacobian = prob.jacobian
-	@assert jacobian in  (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
+	@assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
 	if jacobian == :AutoDiff
 		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
 	elseif jacobian == :MatrixFreeAD
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
 	elseif jacobian == :FullLU
 		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
-	# elseif jacobian == :FullSparseInplace
+	elseif jacobian == :FiniteDifferences
+		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x)
 	elseif jacobian == :MatrixFree
 		jac = (x, p) -> (dx ->  prob(x, p, dx))
 	end
@@ -214,7 +215,7 @@ function continuation(prob::TWProblem,
 		orbitguess, alg::AbstractContinuationAlgorithm, contParams::ContinuationPar;
 		kwargs...)
 	jacobian = prob.jacobian
-	@assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU)
+	@assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
 
 	if jacobian == :AutoDiff
 		jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
@@ -222,7 +223,8 @@ function continuation(prob::TWProblem,
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
 	elseif jacobian == :FullLU
 		jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
-	# elseif jacobian == :FullSparseInplace
+	elseif jacobian == :FiniteDifferences
+		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x)
 	elseif jacobian == :MatrixFree
 		jac = (x, p) -> (dx ->  prob(x, p, dx))
 	end

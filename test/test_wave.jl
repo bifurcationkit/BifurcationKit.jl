@@ -187,3 +187,4 @@ continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 @set! opt_cont_br.detectBifurcation = 0
 continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+continuation((@set probTW.jacobian = :FiniteDifferences), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)

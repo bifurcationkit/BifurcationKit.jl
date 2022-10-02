@@ -110,7 +110,7 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above.
+- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`]@ref for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian.
 
 """
 			struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec} <: AbstractAllJetBifProblem
@@ -178,7 +178,7 @@ $(TYPEDFIELDS)
 					d2Fc = d2F
 				end
 				if isnothing(d3F)
-					d3F = (x,p,dx1,dx2,dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.)
+					d3F  = (x,p,dx1,dx2,dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.)
 					d3Fc = (x,p,dx1,dx2,dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x,p,_dx1,_dx2,_dx3))(dx1,dx2,dx3)
 				else
 					d3Fc = d3F

@@ -929,7 +929,8 @@ Note that by default, the method prints the period of the periodic orbit as func
 function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 			orbitguess,
 			alg::AbstractContinuationAlgorithm,
-			contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver;
+			contParams::ContinuationPar,
+			linearAlgo::AbstractBorderedLinearSolver;
 			eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
 			kwargs...)
 	# this hack is for the test to work with CUDA

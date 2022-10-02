@@ -329,8 +329,8 @@ BK.type(btpt)
 @test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
 
 btpt1 = getNormalForm(sn_codim2, 1; nev = 2, autodiff = false)
-@test mapreduce(isapprox,&, btpt.nf, btpt1.nf)
-@test mapreduce(isapprox,&, btpt.nfsupp, btpt1.nfsupp)
+@test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
+@test mapreduce(isapprox, &, btpt.nfsupp, btpt1.nfsupp)
 
 HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 	HC.hopf(0.)

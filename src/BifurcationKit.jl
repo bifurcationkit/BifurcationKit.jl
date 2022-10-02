@@ -89,13 +89,13 @@ module BifurcationKit
 			include("plotting/PlotCont.jl")
 		end
 		@require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
-			using .AbstractPlotting: @recipe, inline!, layoutscene, Figure, Axis, lines!
+			using .AbstractPlotting: @recipe, layoutscene, Figure, Axis, lines!
 			include("plotting/RecipesMakie.jl")
 		end
 
 		@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
 			@info "Loading GLMakie code"
-			using .GLMakie: @recipe, inline!, layoutscene, Figure, Axis, lines!, PointBased, Point2f0, scatter!
+			using .GLMakie: @recipe, Figure, Axis, lines!, PointBased, Point2f0, scatter!
 			include("plotting/RecipesMakie.jl")
 		end
 
