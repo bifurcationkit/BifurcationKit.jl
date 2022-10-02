@@ -154,7 +154,7 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Ts, Tl, Tr}
+function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Tl, Tr}
 	# no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
 	if l.ismutating == true
 		@assert ((a₀ == 0) && (a₁ == 1)) "Perturbed inplace linear problem not done yet!"

@@ -86,15 +86,15 @@ The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 - Monitoring user functions along curves computed by continuation, see [events](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/)
 - Continuation methods: PALC, Moore Penrose, Deflated continuation, ANM, ...
 - Bifurcation points located with a bisection algorithm
-- detection of Branch, Fold, Hopf bifurcation point of stationary solutions and computation of their normal form.
+- Detection of Branch, Fold, Hopf bifurcation point of stationary solutions and computation of their normal form.
 - Automatic branch switching at branch points (whatever the dimension of the kernel)
 - Automatic branch switching at simple Hopf points to periodic orbits
 - **Automatic computation of bifurcation diagrams of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
-- detection all codim 2 bifurcations of equilibria and computation of the normal forms of Bogdanov-Takens, Bautin and Cusp
+- Detection of all codim 2 bifurcations of equilibria and computation of the normal forms of Bogdanov-Takens, Bautin and Cusp
 - Branching from Bogdanov-Takens points to Fold / Hopf curve
 - Periodic orbit computation and continuation using Shooting, Finite Differences or Orthogonal Collocation.
-- detection of Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point of periodic orbits.
+- Detection of Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point of periodic orbits.
 - Continuation of Fold of periodic orbits
 
 Custom state means, we can use something else than `AbstractArray`, for example your own `struct`.
@@ -123,9 +123,3 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf normal forms | Yes| Yes|  | :heavy_check_mark: |
 | Branching from Bogdanov-Takens points to Fold / Hopf curve | No | `AbstractVector` | |  |
 
-
-## To do or grab
-Without a priority order:
-
-- [ ] improve compatibility with `DifferentialEquations.jl`
-- [ ] Add interface to other iterative linear solvers (cg, minres,...) from IterativeSolvers.jl

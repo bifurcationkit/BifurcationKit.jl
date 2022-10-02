@@ -208,7 +208,7 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	H0200, = Ainv(2 .* H1100 .- B(q1, q1))
 
 	# first order drivatives
-	pBq(p, q) = 2 .* (applyJacobian(VF, x0 + ϵ * q, parbif, p, true) .-
+	pBq(p, q) = 2 .* (applyJacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
 					  applyJacobian(VF, x0, parbif, p, true)) ./ ϵ
 	A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
 	 				  applyJacobian(VF, x0, parbif, q)) ./ϵ

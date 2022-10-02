@@ -99,9 +99,9 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	################### computation of σx σp ####################
 	################### and inversion of Jfold ####################
 	dpF = minus(residual(pb.prob_vf, x, set(par, lens, p + ϵ1)),
-				residual(pb.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1) / T(2ϵ1))
+				residual(pb.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1 / (2ϵ1)))
 	dJvdp = minus(apply(jacobian(pb.prob_vf, x, set(par, lens, p + ϵ3)), v),
-					apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1) / T(2ϵ3))
+					apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1/(2ϵ3)))
 	σp = -dot(w, dJvdp) / n
 
 	if hasHessian(pb) == false
@@ -354,7 +354,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		if isSymmetric(foldPb)
 			JAd_at_xp = J_at_xp
 		else
-			JAd_at_xp = hasAdjoint(foldPb) ? foldPb.Jᵗ(x, newpar) : transpose(J_at_xp)
+			JAd_at_xp = hasAdjoint(foldPb) ? jad(foldPb.prob_vf, x, newpar) : transpose(J_at_xp)
 		end
 		newa = foldPb.linbdsolver(JAd_at_xp, b, a, T(0), foldPb.zero, T(1))[1]
 

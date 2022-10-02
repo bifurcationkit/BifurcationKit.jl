@@ -133,7 +133,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
-    It is recommanded that you use the option `startWithEigen=true`
+    It is recommanded that you use the option `startWithEigen = true`
 """
 function continuation(br::AbstractBranchResult,
 					ind_bif::Int64,

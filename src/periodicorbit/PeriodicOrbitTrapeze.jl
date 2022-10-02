@@ -180,7 +180,7 @@ PeriodicOrbitTrapProblem(prob_vf,
 						ls::AbstractLinearSolver = DefaultLS();
 						ongpu = false,
 					 	adaptmesh = false,
-						massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
+						massmatrix = nothing) where {vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
 
 # these functions extract the last component of the periodic orbit guess
 @inline extractPeriodFDTrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = onGpu(pb) ? x[end:end] : x[end]

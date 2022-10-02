@@ -576,7 +576,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		printstyled(color=:green, "\n--> b3 (∂³/∂x³) = \n")
 		for ii in 1:N
 			printstyled(color=:blue, "--> component $ii\n")
-			Base.display( d3gidxjdxkdxl[ii,:,:, :] ./ 6 )
+			Base.display( d3gidxjdxkdxl[ii,:,:,:] ./ 6 )
 		end
 	end
 

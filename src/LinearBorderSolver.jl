@@ -86,7 +86,8 @@ function BEC(lbs::BorderingBLS,
 							dzu, dzp,
 							R, n,
 							ξu::Tξ = 1, ξp::Tξ = 1;
-							shift::Ts = nothing, dotp = dot)  where {Tξ, Ts}
+							shift::Ts = nothing,
+							dotp = dot)  where {Tξ, Ts}
 	if isnothing(shift)
 		x1, δx, success, itlinear = lbs.solver(J, R, dR)
 	else
@@ -152,7 +153,7 @@ MatrixBLS() = MatrixBLS(nothing)
 function (lbs::MatrixBLS)(J, dR,
 						dzu, dzp::T, R::AbstractVecOrMat, n::T,
 						ξu::T = T(1), ξp::T = T(1);
-						shift::Ts = nothing, applyξu! = nothing)  where {T <: Number, S, Ts}
+						shift::Ts = nothing, applyξu! = nothing)  where {T <: Number, Ts}
 
 	if isnothing(shift)
 		A = J
