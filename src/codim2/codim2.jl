@@ -102,10 +102,12 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 !!! tip "startWithEigen"
     It is recommanded that you use the option `startWithEigen=true`
 """
-function newton(br::AbstractBranchResult, ind_bif::Int64; normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, kwargs...)
+function newton(br::AbstractBranchResult, ind_bif::Int64; normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, lens2::Lens = (@lens _), kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	if br.specialpoint[ind_bif].type == :hopf
 		return newtonHopf(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+	elseif br.specialpoint[ind_bif].type == :bt
+		return newtonBT(br, ind_bif; lens2 = lens2, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	else
 		return newtonFold(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
 	end

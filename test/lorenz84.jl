@@ -163,6 +163,7 @@ sn_codim2 = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), Conti
 @test sn_codim2.eig[1].eigenvecs != nothing
 
 btpt = getNormalForm(sn_codim2, 1; nev = 4, verbose = true)
+@test norm(eigvals(BK.jacobian(br.prob, btpt.x0, btpt.params))[1:2], Inf) < 0.02
 HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
 	HC.hopf(0.)
 
@@ -180,6 +181,39 @@ show(zh)
 BK.predictor(zh, Val(:HopfCurve), 0.1).hopf(0.)
 BK.predictor(zh, Val(:HopfCurve), 0.1).x0(0.)
 BK.predictor(zh, Val(:HopfCurve), 0.1).ω(0.)
+
+# locate BT point with newton algorithm and compute the normal form
+_bt = BK.BTPoint(sn_codim2, 1) # does nothing
+
+solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = true, tol = 1e-16), startWithEigen = true, jacobian = :finitedifferences)
+solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = true, tol = 1e-16), startWithEigen = true, jacobian = :minaug)
+
+solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = true, tol = 1e-16), startWithEigen = true, jacobian = :autodiff)
+@test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8
+
+sn_codim2_forbt = @set sn_codim2.specialpoint[1].x.u = Array(solbt.u.x0)
+	@set! sn_codim2_forbt.specialpoint[1].x.p = solbt.u.params.F
+	@set! sn_codim2_forbt.specialpoint[1].param = solbt.u.params.T
+
+bpbt_2 = getNormalForm(sn_codim2_forbt, 1; nev = 4, verbose = true)
+@test bpbt_2.nf.a ≈ 0.2144233509273467
+@test bpbt_2.nf.b ≈ 0.6065145518280868
+
+@test bpbt_2.nfsupp.γ ≈ -1.2655376039398163
+	@test bpbt_2.nfsupp.c ≈ 12.35040633066114
+	@test bpbt_2.nfsupp.K10 ≈ [-5.261465557678953, 5.261454635012957]
+	@test bpbt_2.nfsupp.K11 ≈ [-0.24485516427537235, 0.24485405521091583]
+	@test bpbt_2.nfsupp.K2 ≈ [-1.1704584730763776, 1.1704560432349538]
+	@test bpbt_2.nfsupp.d ≈ -0.23814643486558454
+	@test bpbt_2.nfsupp.e ≈ -2.8152510696740043
+	@test bpbt_2.nfsupp.a1 ≈ 0.588485870443459
+	@test bpbt_2.nfsupp.b1 ≈ 1.2381458099504048
+	@test bpbt_2.nfsupp.H0001 ≈ [1.2666466468447481, -0.11791034083511988, -0.26313225842609955, -0.5338271838915466]
+	@test bpbt_2.nfsupp.H0010 ≈ [15.651509120793042, -1.1750214928055762, -3.2016608356146423, -6.424103770005164]
+	@test bpbt_2.nfsupp.H0002 ≈ [-0.34426541029040103, 0.7403628764888541, 0.5020796040084594, 0.7211107457956355]
+	@test bpbt_2.nfsupp.H1001 ≈ [0.8609019479520158, 0.3666091456682787, 0.09272126477464948, -1.1252591151814477]
+	@test bpbt_2.nfsupp.H2000 ≈ [-1.1430891994241816, 0.5090981254844374, 0.4300904962638521, -0.4240003230561569]
+
 ####################################################################################################
 hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.015, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
 	normC = norminf,
