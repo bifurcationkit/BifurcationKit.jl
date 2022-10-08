@@ -160,9 +160,15 @@ function (lbs::MatrixBLS)(J, dR,
 	else
 		A = J + shift * I
 	end
+	# USE BLOCK ARRAYS LAZY?
+	# A = hcat(A, dR)
+	# A = vcat(A, hcat(adjoint(dzu .* ξu), dzp * ξp))
 
-	A = hcat(A, dR)
-	A = vcat(A, hcat(adjoint(dzu .* ξu), dzp * ξp))
+	# TEST SPEED
+	# USE Hvcat
+	# n = size(A, 1)
+	# A = hvcat((n+1, n+1), A, dR, adjoint(dzu .* ξu), dzp * ξp) # much slower than the following
+	A = vcat(hcat(A, dR), hcat(adjoint(dzu .* ξu), dzp * ξp))
 
 	# apply a linear operator to ξu
 	if ~isnothing(applyξu!)
@@ -172,7 +178,7 @@ function (lbs::MatrixBLS)(J, dR,
 	# solve the equations and return the result
 	rhs = vcat(R, n)
 	res = A \ rhs
-	return res[1:end-1], res[end], true, 1
+	return (@view res[1:end-1]), res[end], true, 1
 end
 
 # version used in PALC
@@ -200,7 +206,7 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
 	dot::Td # possibly custom dot product
 end
 
-function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts})(x::BorderedArray{Ta, Tc}) where {Tj, Ta, Tb, Tc <: Number, Ts}
+function (lbmap::MatrixFreeBLSmap)(x::BorderedArray)
 	out = similar(x)
 	copyto!(out.u, apply(lbmap.J, x.u))
 	axpy!(x.p, lbmap.a, out.u)
