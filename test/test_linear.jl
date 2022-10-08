@@ -20,7 +20,7 @@ dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
 
 z = BorderedArray(z_pred, rand(10))
 z2 = BorderedArray(z_pred, rand(10))
-zero(z2);zero(z_pred)
+zero(z2); zero(z_pred)
 @test length(z_pred) == 11
 
 copyto!(z,z2)
@@ -129,6 +129,64 @@ sol_bd2u, sol_bd2p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[
 
 @test sol_bd1u ≈ sol_bd2u
 @test sol_bd1p ≈ sol_bd2p
+####################################################################################################
+# test the bordered linear solvers in the case of blocks
+J0 = rand(100,100) * 0.2 - I
+rhs = rand(100)
+m = 3
+J = J0[1:end-m, 1:end-m]
+c = J0[end-m+1:end, end-m+1:end]
+a = Tuple(J0[1:end-m, k] for k in size(J0,1)-m+1:size(J0,1))
+b = Tuple(J0[k, 1:end-m] for k in size(J0,1)-m+1:size(J0,1))
+@assert J0 ≈ vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
+
+rhs = rand(100)
+sol_explicit = J0 \ rhs
+
+ls = DefaultLS()
+
+linBdsolver = BK.MatrixBLS(ls)
+sol_bd1u, sol_bd1p, _, _ = linBdsolver(Val(:Block), J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+@test sol_explicit[1:end-m] ≈ sol_bd1u
+@test sol_explicit[end-m+1:end] ≈ sol_bd1p
+
+for ls in (DefaultLS(), GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
+    linBdsolver = BK.BorderingBLS(ls)
+    sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+    @assert success
+    @test sol_explicit[1:end-m] ≈ sol_bd2u
+    @test sol_explicit[end-m+1:end] ≈ sol_bd2p
+end
+
+# same but matrix-free
+Jmf = x -> J * x
+for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
+    linBdsolver = BK.BorderingBLS(ls)
+    sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+    @assert success
+    @test sol_explicit[1:end-m] ≈ sol_bd2u
+    @test sol_explicit[end-m+1:end] ≈ sol_bd2p
+end
+
+# test MatrixFreeBLSmap evaluation
+blsmap = BK.MatrixFreeBLSmap(Jmf, a, b, c, nothing, dot)
+rhs_bd = BorderedArray(rhs[1:end-m], rhs[end-m+1:end])
+lhs = J0 * rhs
+lhs2 = blsmap(rhs_bd)
+@test lhs[1:end-m] ≈ lhs2.u
+@test lhs[end-m+1:end] ≈ lhs2.p
+lhs2 = blsmap(rhs)
+@test lhs[1:end-m] ≈ lhs2[1:end-m]
+@test lhs[end-m+1:end] ≈ lhs2[end-m+1:end]
+
+# test MatrixFreeBLS
+for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J0,1)))
+    linBdsolver = BK.MatrixFreeBLS(ls)
+    sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+    @assert success
+    @test sol_explicit[1:end-m] ≈ sol_bd2u
+    @test sol_explicit[end-m+1:end] ≈ sol_bd2p
+end
 ####################################################################################################
 # test the bordered linear solvers, Complex case
 # we test the linear system with MA formulation of Hopf bifurcation

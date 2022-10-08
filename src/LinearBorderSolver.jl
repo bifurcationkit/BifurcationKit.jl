@@ -133,6 +133,44 @@ end
 								R, n,
 								state.θ, one(T) - state.θ;
 								shift = shift, dotp = iter.dotθ.dot)
+
+# specific version with b,c,d being matrices / tuples of vectors
+# ┌         ┐
+# │  J    b │
+# │  c'   d │
+# └         ┘
+function (lbs::BorderingBLS)(::Val{:Block}, J, b::NTuple{M, AbstractVector}, c::NTuple{M, AbstractVector}, d::AbstractMatrix, rhst, rhsb) where M
+	m = size(d, 1)
+	@assert length(b) == length(c) == m == M
+	x1 = lbs.solver(J, rhst)[1]
+	x2s = typeof(b[1])[]
+	its = Int[]
+	cv = true
+	δx = similar(x2s)
+	for ii in eachindex(b)
+		x2, success, it = lbs.solver(J, b[ii])
+		push!(x2s, x2)
+		push!(its, it)
+		cv = cv & success
+	end
+	# we compute c*x2 in M_m(R)
+	# ∑_k c[i,k] x2[k,j]
+	c_mat  = hcat(c...)
+	x2_mat = hcat(x2s...)
+	# TODO USE mul!
+	δd = d - c_mat' * x2_mat
+
+	cx1 = zeros(eltype(d), m)
+	for ii in eachindex(c)
+		cx1[ii] = dot(c[ii], x1)
+	end
+
+	u2 = δd \ (rhsb - cx1)
+	# TODO USE mul!
+	u1 = x1 -  x2_mat * u2
+
+	return u1, u2, cv, (its...)
+end
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -189,6 +227,21 @@ end
 								R, n,
 								state.θ, one(T) - state.θ;
 								shift = shift, applyξu! = iter.dotθ.apply!)
+
+# version used for normal form computation
+# specific version with a,b,c being matrices / tuples of vectors
+# ┌         ┐
+# │  J    a │
+# │  b'   c │
+# └         ┘
+function (lbs::MatrixBLS)(::Val{:Block}, J, a::Tuple, b::Tuple, c::AbstractMatrix, rhst, rhsb)
+	@assert length(a) == length(b) == size(c,1)
+	n = size(c, 1)
+	# A = [J hcat(a...); hcat(b...)' c]
+	A = vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
+	sol = A \ vcat(rhst, rhsb)
+	return (@view sol[1:end-n]), (@view sol[end-n+1:end]), true, 1
+end
 ####################################################################################################
 # composite type to save the bordered linear system with expression
 # ┌         ┐
@@ -233,6 +286,49 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 	return out
 end
 
+# case matrix by blocks
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
+	out = similar(x)
+	copyto!(out.u, apply(lbmap.J, x.u))
+	for ii in eachindex(lbmap.a)
+		axpy!(x.p[ii], lbmap.a[ii], out.u)
+	end
+	if isnothing(lbmap.shift) == false
+		axpy!(lbmap.shift, x.u, out.u)
+	end
+	out.p .= lbmap.c * x.p
+	for ii in eachindex(lbmap.b)
+		out.p[ii] += lbmap.dot(lbmap.b[ii], x.u)
+	end
+	return out
+end
+
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::AbstractArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
+	# This implements the case where Tc is a number, ie there is one scalar constraint in the
+	# bordered linear system
+	out = similar(x)
+	m = length(lbmap.a)
+	xu = @view x[1:end-m]
+	xp = @view x[end-m+1:end]
+
+	outu = @view out[1:end-m]
+	outp = @view out[end-m+1:end]
+
+	out[1:end-m] .= apply(lbmap.J, xu)
+	for ii in eachindex(lbmap.a)
+		axpy!(xp[ii], lbmap.a[ii], outu)
+	end
+
+	if isnothing(lbmap.shift) == false
+		axpy!(lbmap.shift, xu, outu)
+	end
+	outp .= lbmap.c * xp
+	for ii in eachindex(lbmap.b)
+		outp[ii] += lbmap.dot(lbmap.b[ii], xu)
+	end
+	return out
+end
+
 """
 $(TYPEDEF)
 
@@ -252,17 +348,17 @@ MatrixFreeBLS(useBorderedArray::Bool = true) = MatrixFreeBLS(nothing, useBordere
 MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
 MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 
-extractVecBLS(x::AbstractVector) = @view x[1:end-1]
-extractVecBLS(x::BorderedArray)  = x.u
+extractVecBLS(x::AbstractVector, m::Int = 1) = @view x[1:end-m]
+extractVecBLS(x::BorderedArray, m::Int = 1)  = x.u
 
+extractParBLS(x::AbstractVector, m::Int) = @view x[end-m+1:end]
 extractParBLS(x::AbstractVector) = x[end]
-extractParBLS(x::BorderedArray)  = x.p
+extractParBLS(x::BorderedArray, m::Int = 1)  = x.p
 
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J, 	dR,
 								dzu, 	dzp::T, R, n::T,
 								ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing, dotp = dot) where {T <: Number, Tξ, S}
-	~isnothing(shift) && @warn "Shift is not implemented for the bordered linear solver MatrixFreeBLS"
 	linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
 	rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
 	sol, cv, it = lbs.solver(linearmap, rhs)
@@ -277,6 +373,15 @@ end
 								R, n,
 								state.θ, one(T) - state.θ;
 								shift = shift, dotp = iter.dotθ.dot)
+
+# version for blocks
+function (lbs::MatrixFreeBLS)(::Val{:Block}, J, a,
+								b, 	c, rhst, rhsb; shift::Ts = nothing, dotp = dot) where {Ts}
+	linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
+	rhs = lbs.useBorderedArray ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
+	sol, cv, it = lbs.solver(linearmap, rhs)
+	return extractVecBLS(sol, length(a)), extractParBLS(sol, length(a)), cv, it
+end
 ####################################################################################################
 # Linear Solvers based on a bordered solver
 # !!!! This one is used as a linear Solver, not as a Bordered one
