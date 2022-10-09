@@ -27,6 +27,7 @@ const DocStrjacobianPOTrap = """
 - For `jacobian = :BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = :FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
 - For `jacobian = :BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+- For `jacobian = :FullMatrixFreeAD`, the evalution map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential. 
 """
 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
@@ -818,10 +819,10 @@ function _newtonTrap(probPO::PeriodicOrbitTrapProblem,
 	# this hack is for the test to work with CUDA
 	@assert sum(extractPeriodFDTrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
 	jacobianPO = probPO.jacobian
-	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please choose another one."
+	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please choose another one."
 	M, N = size(probPO)
 
-	if jacobianPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace)
+	if jacobianPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
 		if jacobianPO == :FullLU
 			jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
 		elseif jacobianPO == :FullSparseInplace
@@ -833,6 +834,8 @@ function _newtonTrap(probPO::PeriodicOrbitTrapProblem,
 		elseif jacobianPO == :Dense
 			_J =  probPO(Val(:JacFullSparse), orbitguess, getParams(probPO.prob_vf)) |> Array
 			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
+		elseif jacobianPO == :FullMatrixFreeAD
+			jac = (x, p) -> dx -> ForwardDiff.derivative(t->probPO(x .+ t .* dx, p), 0)
 		else
 		 	jac = (x, p) -> ( dx -> probPO(x, p, dx))
 		end
@@ -936,7 +939,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 	# this hack is for the test to work with CUDA
 	@assert sum(extractPeriodFDTrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
 	jacobianPO = prob.jacobian
-	@assert jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace) "This jacobian is not defined. Please chose another one."
+	@assert jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please chose another one."
 
 	M, N = size(prob)
 	options = contParams.newtonOptions
@@ -951,7 +954,7 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 	_recordsol = modifyPORecord(prob, kwargs, getParams(prob.prob_vf), getLens(prob.prob_vf))
 	_plotsol = modifyPOPlot(prob, kwargs)
 
-	if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace)
+	if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
 		if jacobianPO == :FullLU
 			jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
 		elseif jacobianPO == :FullSparseInplace
@@ -965,6 +968,8 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 			jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
 		elseif jacobianPO == :DenseAD
 			jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
+		elseif jacobianPO == :FullMatrixFreeAD
+			jac = (x, p) -> dx -> ForwardDiff.derivative(t->prob(x .+ t .* dx, p), 0)
 		else
 		 	jac = (x, p) -> FloquetWrapper(prob, x, p)
 		end

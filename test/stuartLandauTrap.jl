@@ -50,7 +50,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
-for (ind, jacobianPO) in enumerate((:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree))
+for (ind, jacobianPO) in enumerate((:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :FullMatrixFreeAD, :BorderedMatrixFree))
 	@show jacobianPO, ind
 	_ls = ind > 5 ? lsit : lsdef
 	outpo_f = newton((@set poTrap.jacobian = jacobianPO),
