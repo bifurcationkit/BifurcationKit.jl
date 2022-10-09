@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, ForwardDiff, RecursiveArrayTools, LinearAlgebra
+using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools
 const BK = BifurcationKit
 N = 10
 M = 5

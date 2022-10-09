@@ -41,8 +41,8 @@ br = continuation(prob_vf, PALC(), optconteq)
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 ####################################################################################################
-sol = solve(probMono, KenCarp4(), abstol =1e-9, reltol=1e-6)
-sol = solve(prob, KenCarp4(), abstol =1e-9, reltol=1e-6)
+sol = solve(probMono, KenCarp4(), abstol=1e-9, reltol=1e-6)
+sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 ####################################################################################################
 section(x, T) = x[1] #* x[end]

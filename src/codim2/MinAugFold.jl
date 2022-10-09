@@ -8,8 +8,8 @@ function FoldPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
-getVec(x, ::FoldProblemMinimallyAugmented) = getVec(x)
-getP(x, ::FoldProblemMinimallyAugmented) = getP(x)
+@inline getVec(x, ::FoldProblemMinimallyAugmented) = extractVecBLS(x)
+@inline getP(x, ::FoldProblemMinimallyAugmented) = extractParBLS(x)
 
 function (fp::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
