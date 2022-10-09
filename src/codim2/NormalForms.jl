@@ -141,7 +141,9 @@ function bogdanovTakensNormalForm(prob_ma, L,
 							δ = 1e-8,
 							verbose = false,
 							detailed = true,
-							autodiff = true)
+							autodiff = true,
+							# bordered linear solver
+							bls = prob_ma.linbdsolver)
 	x0 = pt.x0
 	parbif = pt.params
 	Ty = eltype(x0)
@@ -156,7 +158,6 @@ function bogdanovTakensNormalForm(prob_ma, L,
 
 	# linear solvers
 	ls = prob_ma.linsolver
-	bls = prob_ma.linbdsolver
 
 	lens1, lens2 = pt.lens
 
@@ -246,19 +247,12 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	A22 = [[pAq(p1, q0, lens1), pAq(p0, q0, lens1)+pAq(p1, q1, lens1)] [pAq(p1, q0, lens2), pAq(p0, q0, lens2)+pAq(p1, q1, lens2)] ]
 
 	# solving the linear system of size n+2
-	# TODO REMOVE THIS HACK FOR MATRIX-FREE
-	Anp2 = [L hcat(J1s...); hcat(A12_1, A12_2)' A22]
+	# @infiltrate
 	c = 3dot(p0, H1100) - dot(p0, B(q1, q1))
-
-	sol = Anp2 \ vcat(q1, dot(p1, B(q1, q1))/2, c)
-	H0010 = sol[1:end-2]
+	H0010, K10, cv, it = bls(Val(:Block), L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
 	@assert size(H0010) == size(x0)
-	K10 = sol[end-1:end]
-
-	sol = Anp2 \ vcat(zero(q1), zero(Ty), one(Ty))
-	H0001 = sol[1:end-2]
+	H0001, K11, cv, it = bls(Val(:Block), L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
 	@assert size(H0001) == size(x0)
-	K11 = sol[end-1:end]
 
 	# computation of K2
 	κ1 = dot(p1, B(H0001, H0001))
@@ -477,6 +471,8 @@ function bogdanovTakensNormalForm(_prob,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
 		scaleζ = norm,
+		# bordered linear solver
+		bls = _prob.prob.linbdsolver,
 		detailed = true,
 		autodiff = true)
 	@assert getvectortype(br) <: BorderedArray
@@ -490,9 +486,6 @@ function bogdanovTakensNormalForm(_prob,
 	prob_vf = prob_ma.prob_vf
 
 	@assert prob_ma isa AbstractProblemMinimallyAugmented
-
-	# bordered linear solver
-	bls = prob_ma.linbdsolver
 
 	# kernel dimension
 	N = 2
