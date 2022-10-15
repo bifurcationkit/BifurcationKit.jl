@@ -277,13 +277,13 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 # Optional arguments:
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `autodiff::Bool = true` use automatic differentiation
+- `jacobian::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-	newtonBT(br::AbstractBranchResult, ind_bt::Int; options = br.contparams.newtonOptions, kwargs...)
+	newton(br::AbstractBranchResult, ind_bt::Int; options = br.contparams.newtonOptions, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -291,7 +291,7 @@ The parameters / options are as usual except that you have to pass the branch `b
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
 """
 function newtonBT(prob::AbstractBifurcationProblem,
 				btpointguess, par,
@@ -316,7 +316,6 @@ function newtonBT(prob::AbstractBifurcationProblem,
 
 	Ty = eltype(btpointguess)
 
-	# prob_f = FoldMAProblem(bt, nothing, btpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
 	if jacobian == :autodiff
 		prob_f = BifurcationProblem(btproblem, btpointguess, par)
 		optn_bt = @set options.linsolver = DefaultLS()
@@ -325,12 +324,12 @@ function newtonBT(prob::AbstractBifurcationProblem,
 			J = (x, p) -> finiteDifferences(z -> btproblem(z, p), x))
 		optn_bt = @set options.linsolver = DefaultLS()
 	else
-		prob_f = BTMAProblem(btproblem, nothing, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
+		prob_f = BTMAProblem(btproblem, jacobian, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
 		# options for the Newton Solver
 		optn_bt = @set options.linsolver = BTLinearSolverMinAug()
 	end
 
-	# solve the Fold equations
+	# solve the BT equations
 	sol = newton(prob_f, optn_bt; normN = normN, kwargs...)
 
 	# save the solution in BogdanovTakens
@@ -355,6 +354,7 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 - `options::NewtonPar`, default value `br.contparams.newtonOptions`
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
+- `jacobian::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -363,7 +363,7 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
     For ODE problems, it is more efficient to use the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
-    It is recommanded that you use the option `startWithEigen = true`
+    For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
 """
 function newtonBT(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 				probvf = br.prob.prob.prob_vf,
