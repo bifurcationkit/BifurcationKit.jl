@@ -51,14 +51,16 @@ function BTPoint(br::AbstractResult{FoldCont, Tprob}, index::Int) where {Tprob}
 	bptype = br.specialpoint[index].type
 	@assert bptype == :bt "This should be a BT point"
 	specialpoint = br.specialpoint[index]
-	return BorderedArray(_copy(specialpoint.x.u), [specialpoint.x.p, specialpoint.param])
+	prob_ma = br.prob.prob
+	return BorderedArray(_copy(getVec(specialpoint.x, prob_ma)), [getP(specialpoint.x, prob_ma), specialpoint.param])
 end
 
 function BTPoint(br::AbstractResult{HopfCont, Tprob}, index::Int) where {Tprob}
 	bptype = br.specialpoint[index].type
 	@assert bptype == :bt "This should be a BT point"
 	specialpoint = br.specialpoint[index]
-	return BorderedArray(_copy(specialpoint.x.u), [specialpoint.x.p[1], specialpoint.param])
+	prob_ma = br.prob.prob
+	return BorderedArray(_copy(getVec(specialpoint.x, prob_ma)), [getP(specialpoint.x, prob_ma)[1], specialpoint.param])
 end
 ################################################################################
 getVec(x, ::BTProblemMinimallyAugmented) = getVec(x)
@@ -277,7 +279,7 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 # Optional arguments:
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `jacobian::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
+- `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
@@ -299,11 +301,11 @@ function newtonBT(prob::AbstractBifurcationProblem,
 				eigenvec, eigenvec_ad,
 				options::NewtonPar;
 				normN = norm,
-				jacobian::Symbol = :autodiff,
+				jacobian_ma::Symbol = :autodiff,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				kwargs...)
 
-	@assert jacobian in (:autodiff, :finitedifferences, :minaug)
+	@assert jacobian_ma in (:autodiff, :finitedifferences, :minaug)
 
 	btproblem = BTProblemMinimallyAugmented(
 		prob,
@@ -316,15 +318,15 @@ function newtonBT(prob::AbstractBifurcationProblem,
 
 	Ty = eltype(btpointguess)
 
-	if jacobian == :autodiff
+	if jacobian_ma == :autodiff
 		prob_f = BifurcationProblem(btproblem, btpointguess, par)
 		optn_bt = @set options.linsolver = DefaultLS()
-	elseif jacobian == :finitedifferences
+	elseif jacobian_ma == :finitedifferences
 		prob_f = BifurcationProblem(btproblem, btpointguess, par;
 			J = (x, p) -> finiteDifferences(z -> btproblem(z, p), x))
 		optn_bt = @set options.linsolver = DefaultLS()
 	else
-		prob_f = BTMAProblem(btproblem, jacobian, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
+		prob_f = BTMAProblem(btproblem, jacobian_ma, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
 		# options for the Newton Solver
 		optn_bt = @set options.linsolver = BTLinearSolverMinAug()
 	end
@@ -354,7 +356,7 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 - `options::NewtonPar`, default value `br.contparams.newtonOptions`
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
-- `jacobian::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
+- `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
@@ -379,10 +381,10 @@ function newtonBT(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 	btpointguess = BTPoint(br, ind_bt)
 
 	# we look for a solution which is a Vector so we can use ForwardDiff
-	btpointguess = vcat(btpointguess.u, btpointguess.p)
+	btpointguess = vcat(getVec(btpointguess, prob_ma), getP(btpointguess, prob_ma))
 
 	bifpt = br.specialpoint[ind_bt]
-	eigenvec = (bifpt.τ.u).u; rmul!(eigenvec, 1/normN(eigenvec))
+	eigenvec = getVec(bifpt.τ.u, prob_ma); rmul!(eigenvec, 1/normN(eigenvec))
 	# in the case of Fold continuation, this could be ill-defined.
 	if ~isnothing(findfirst(isnan, eigenvec)) && ~startWithEigen
 		@warn "Eigenvector ill defined (has NaN). Use the option startWithEigen = true"

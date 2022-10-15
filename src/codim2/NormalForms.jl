@@ -475,7 +475,6 @@ function bogdanovTakensNormalForm(_prob,
 		bls = _prob.prob.linbdsolver,
 		detailed = true,
 		autodiff = true)
-	@assert getvectortype(br) <: BorderedArray
 	@assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
 	# functional
