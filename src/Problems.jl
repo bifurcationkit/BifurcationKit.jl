@@ -7,6 +7,10 @@ abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 getVectorType(::AbstractBifurcationProblem) = Nothing
 isInplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
+# singleton for defining jacobians
+struct AutoDiff end
+struct FiniteDifferences end
+
 # function to save the full solution on the branch. It is useful to define This
 # in order to allow for redefinition. Indeed, some problem are mutable (adaptive
 # mesh for periodic orbit) and this approach seems efficient
@@ -84,7 +88,7 @@ plotDefault(x, p; kwargs...) = nothing
 
 
 # create specific problems where pretty much is available
-for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, :HopfMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
+for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, :HopfMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW, :BTMAProblem)
 
 	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin
