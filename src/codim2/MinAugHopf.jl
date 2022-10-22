@@ -475,7 +475,6 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		kind = HopfCont(),
 		linearAlgo = BorderingBLS(solver = opt_hopf_cont.newtonOptions.linsolver, checkPrecision = false),
 		normC = normC,
-		recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugHopf,
 		event = event
 	)

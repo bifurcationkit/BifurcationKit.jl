@@ -21,8 +21,6 @@ function cuspNormalForm(_prob,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
 		scaleζ = norm)
-	@assert getvectortype(br) <: BorderedArray
-	@assert br.specialpoint[ind_bif].x isa BorderedArray
 	@assert br.specialpoint[ind_bif].type == :cusp "The provided index does not refer to a Cusp Point"
 
 	verbose && println("#"^53*"\n--> Cusp Normal form computation")
@@ -67,7 +65,7 @@ function cuspNormalForm(_prob,
 	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
 
 	# jacobian at bifurcation point
-	x0 = convert(Teigvec.parameters[1], bifpt.x.u)
+	x0 = getVec(bifpt.x, prob_ma)
 	L = jacobian(prob_vf, x0, parbif)
 
 	# eigenvectors
@@ -634,7 +632,7 @@ function bautinNormalForm(_prob,
 	if Teigvec <: BorderedArray
 		x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
 	else
-		x0 = convert(Teigvec, getVec(bifpt.x, prob))
+		x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
 	end
 	L = jacobian(prob_vf, x0, parbif)
 

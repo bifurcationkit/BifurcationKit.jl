@@ -243,15 +243,15 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
 	@show linalgo
 	# with deflation
-	@time newton(poTrap,
-			copy(orbitguess_f), deflationOp, opt_po; linalgo = linalgo, normN = norminf)
+	@time newton((@set poTrap.jacobian = linalgo),
+			copy(orbitguess_f), deflationOp, opt_po; normN = norminf)
 	# classic Newton-Krylov
-	outpo_f = @time newton(poTrap,
-			copy(orbitguess_f), opt_po; linalgo = linalgo, normN = norminf)
+	outpo_f = @time newton((@set poTrap.jacobian = linalgo),
+			copy(orbitguess_f), opt_po; normN = norminf)
 	# continuation
-	br_pok2 = @time continuation(poTrap,
+	br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
 			copy(orbitguess_f), PALC(),
-			opts_po_cont; jacobianPO = linalgo, verbosity = 0,
+			opts_po_cont; verbosity = 0,
 			plot = false, normC = norminf)
 end
 
@@ -261,4 +261,4 @@ ls = GMRESKrylovKit()
 ls = DefaultLS()
 opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 10, linsolver = ls, eigsolver = eil)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, tolStability = 1e-8, detectBifurcation = 2)
-br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; jacobianPO = :FullLU, normC = norminf, verbosity = 0)
+br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; normC = norminf, verbosity = 0)

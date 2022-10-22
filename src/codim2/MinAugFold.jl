@@ -416,7 +416,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
 		(u, p; kw...) -> (zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH) :
-		(u, p; kw...) -> (; namedprintsol(_printsol(u.u, p; kw...))..., zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH,)
+		(u, p; kw...) -> (; namedprintsol(_printsol(u, p; kw...))..., zip(lenses, (getP(u, foldPb), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH,)
 
 	# eigen solver
 	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))
@@ -431,7 +431,6 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		kwargs...,
 		kind = FoldCont(),
 		normC = normC,
-		# recordFromSolution = _printsol2,
 		finaliseSolution = updateMinAugFold,
 		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, testForZH, false, ("zh",)))
 		)

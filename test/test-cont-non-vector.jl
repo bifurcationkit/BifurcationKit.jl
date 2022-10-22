@@ -73,13 +73,13 @@ end
 sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]))
+prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), recordFromSolution = (x,p) -> x.u[1])
 sol = newton(prob, opt_newton)
 @test BK.converged(sol)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150, saveSolEveryStep = 1)
 
-	br = continuation(prob, PALC(), opts_br; recordFromSolution = (x,p) -> x.u[1], linearAlgo = BorderingBLS(opt_newton.linsolver))
+	br = continuation(prob, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.linsolver))
 
 BK.getSolx(br, 1)
 BK.getSolp(br, 1)
@@ -97,7 +97,6 @@ br = continuation(prob2, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.l
 @test br.param[end] == -1
 
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
-		# flag && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.p, ", from ", br.specialpoint[1].param,"\n")
 @test BK.converged(solfold)
 
 outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver))
