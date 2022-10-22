@@ -364,6 +364,10 @@ hp_fromBT = continuation(sn_codim2, 1, opt;
 	updateMinAugEveryStep = 1,
 	)
 
+########################################
+# update the BT point using newton and MA formulation
+solbt = BK.newtonBT(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newtonOptions, verbose = true), startWithEigen = true, jacobian_ma = :autodiff)
+@assert BK.converged(solbt)
 ####################################################################################################
 # test of the Bautin normal form
 function Fsl2!(f, u, p, t)

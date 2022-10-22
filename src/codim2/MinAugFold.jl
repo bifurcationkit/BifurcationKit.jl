@@ -42,6 +42,11 @@ function (foldpb::FoldProblemMinimallyAugmented)(x::BorderedArray, params)
 	return BorderedArray(res[1], res[2])
 end
 
+@views function (foldpb::FoldProblemMinimallyAugmented)(x::AbstractVector, params)
+	res = foldpb(x[1:end-1], x[end], params)
+	return vcat(res[1], res[2])
+end
+
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -156,6 +161,8 @@ end
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, fldpb = foldpb.prob)
+jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
+jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
 ################################################################################################### Newton / Continuation functions
 """
 $(SIGNATURES)
@@ -289,6 +296,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 				normC = norm,
 				updateMinAugEveryStep = 0,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+				jacobian_ma::Symbol = :autodiff,
 			 	computeEigenElements = false,
 				kwargs...) where {T, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
@@ -306,16 +314,13 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Fold problem
-	if 1==1
-		prob_f = FoldMAProblem(foldPb, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-
-		opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
-	else
-		@assert 1==0 "WIP"
-		# Jac_fold_MA = (x, p) -> ForwardDiff.jacobian(z -> foldPb(z, p), x)
+	if jacobian_ma == :autodiff
+		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
 		prob_f = FoldMAProblem(foldPb, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
 		opt_fold_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
-		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
+	else
+		prob_f = FoldMAProblem(foldPb, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+		opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
 	end
 
 	# this functions allows to tackle the case where the two parameters have the same name
@@ -489,6 +494,11 @@ function (eig::FoldEigsolver)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
 	J = jacobian(Jma.fldpb.prob_vf, getVec(Jma.x), set(Jma.params, getLens(Jma.fldpb), getP(Jma.x)))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
+	return eigenelts
+end
+
+@views function (eig::FoldEigsolver)(Jma::AbstractMatrix, nev; kwargs...)
+	eigenelts = eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
 	return eigenelts
 end
 

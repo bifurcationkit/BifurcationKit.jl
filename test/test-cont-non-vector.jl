@@ -99,7 +99,7 @@ br = continuation(prob2, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.l
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
-outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver))
+outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver), jacobian_ma = :minaug)
 
 # try with newtonDeflation
 # test with Newton deflation 1
@@ -193,11 +193,11 @@ outfold = newton(br0, 1; bdlinsolver = BorderingBLS(opt_newton0.linsolver))
 
 
 outfoldco = continuation(br0, 1, (@lens _.s), opts_br0,
-	bdlinsolver = BorderingBLS(opt_newton0.linsolver),)
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver), jacobian_ma = :minaug)
 
 br0sec = @set br0.alg.tangent = Secant()
 outfoldco = continuation(br0sec, 1, (@lens _.s), opts_br0,
-	bdlinsolver = BorderingBLS(opt_newton0.linsolver),)
+	bdlinsolver = BorderingBLS(opt_newton0.linsolver),jacobian_ma = :minaug)
 
 # try with newtonDeflation
 # test with Newton deflation 1

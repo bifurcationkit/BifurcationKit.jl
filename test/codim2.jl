@@ -64,7 +64,7 @@ sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), startWithEigen = true)
 @test BK.converged(sn) && sn.itlineartot == 8
 
-sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), startWithEigen = true, updateMinAugEveryStep = 1, verbosity = 0, plot=false)
+sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), startWithEigen = true, updateMinAugEveryStep = 1, jacobian_ma = :minaug, verbosity = 0, plot=false)
 @test sn_br.kind isa BK.FoldCont
 @test sn_br.specialpoint[1].type == :bt
 @test sn_br.specialpoint[1].param ≈ 0.9716038596420551

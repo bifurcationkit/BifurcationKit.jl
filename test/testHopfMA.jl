@@ -87,7 +87,7 @@ br = continuation(BK.reMake(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), 
 outhopf = newton(br, 1; startWithEigen = true)
 outhopf = newton(br, 1; startWithEigen = true)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 6.8, pMin = 0., newtonOptions = opt_newton, maxSteps = 50, detectBifurcation = 2)
-outhopfco = continuation(br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1, plot = false)
+outhopfco = continuation(br, 1, (@lens _.β), optconthopf; startWithEigen = true, updateMinAugEveryStep = 1, plot = false, jacobian_ma = :minaug)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -166,9 +166,9 @@ outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
 br_hopf = continuation(br, ind_hopf, (@lens _.β),
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 
-br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), verbosity = 0, plot = false)
+br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 #################################################################################################### Continuation of Periodic Orbit
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)

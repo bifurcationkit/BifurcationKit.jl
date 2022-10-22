@@ -53,6 +53,11 @@ function (hopfpb::HopfProblemMinimallyAugmented)(x::BorderedArray, params)
 	return BorderedArray(res[1], [res[2], res[3]])
 end
 
+@views function (hopfpb::HopfProblemMinimallyAugmented)(x::AbstractVector, params)
+	res = hopfpb(x[1:end-2], x[end-1], x[end], params)
+	return vcat(res[1], res[2], res[3])
+end
+
 # Struct to invert the jacobian of the Hopf MA problem.
 struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -176,6 +181,7 @@ end
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
+jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
 ################################################################################################### Newton / Continuation functions
 """
 $(SIGNATURES)
@@ -313,6 +319,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 				updateMinAugEveryStep = 0,
 				normC = norm,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+				jacobian_ma::Symbol = :autodiff,
 				computeEigenElements = false,
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
@@ -331,16 +338,13 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
 
 	# Jacobian for the Hopf problem
-	if 1==1
-		# Jac_hopf_MA = (x, param) -> (x = x, params = param, hopfpb = hopfPb)
-		prob_h = HopfMAProblem(hopfPb, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-
-		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
-	else
-		@assert 1==0 "WIP"
-		Jac_hopf_MA = (x, p) -> ForwardDiff.jacobian(z -> hopfPb(z, p), x)
-		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+	if jacobian_ma == :autodiff
 		hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
+		prob_h = HopfMAProblem(hopfPb, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+	else
+		prob_h = HopfMAProblem(hopfPb, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
 	end
 
 	# this functions allows to tackle the case where the two parameters have the same name
@@ -467,6 +471,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		event = ContinuousEvent(2, testBT_GH, false, ("bt", "gh"), threshBT)
 	end
 
+	prob_h = reMake(prob_h, recordFromSolution = _printsol2)
+
 	# solve the hopf equations
 	br = continuation(
 		prob_h, alg,
@@ -543,6 +549,11 @@ function (eig::HopfEig)(Jma, nev; kwargs...)
 	J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
 
 	eigenelts = eig.eigsolver(J, n; kwargs...)
+	return eigenelts
+end
+
+@views function (eig::HopfEig)(Jma::AbstractMatrix, nev; kwargs...)
+	eigenelts = eig.eigsolver(Jma[1:end-2,1:end-2], nev; kwargs...)
 	return eigenelts
 end
 
