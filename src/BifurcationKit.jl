@@ -48,9 +48,11 @@ module BifurcationKit
 
 	include("Utils.jl")
 
+
 	include("codim2/codim2.jl")
 	include("codim2/MinAugFold.jl")
 	include("codim2/MinAugHopf.jl")
+	include("codim2/MinAugBT.jl")
 
 	include("BifurcationPoints.jl")
 
