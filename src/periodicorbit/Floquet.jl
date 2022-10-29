@@ -10,6 +10,7 @@ function checkFloquetOptions(eigls::AbstractEigenSolver)
 	if eigls isa EigKrylovKit
 		return @set eigls.which = :LM
 	end
+	eigls
 end
 
 # see https://discourse.julialang.org/t/uniform-scaling-inplace-addition-with-matrix/59928/5

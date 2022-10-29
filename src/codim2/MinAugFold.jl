@@ -420,7 +420,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (; namedprintsol(recordFromSolution(prob)(getVec(u), p; kw...))..., zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH) :
+		(u, p; kw...) -> (; zip(lenses, (getP(u), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH, namedprintsol(recordFromSolution(prob)(getVec(u), p; kw...))...) :
 		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u), p; kw...))..., zip(lenses, (getP(u, foldPb), p))..., BT = foldPb.BT, CP = foldPb.CP, ZH = foldPb.ZH,)
 
 	# eigen solver
