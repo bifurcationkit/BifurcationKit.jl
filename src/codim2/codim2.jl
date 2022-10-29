@@ -78,7 +78,27 @@ function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...
 	end
 end
 ################################################################################
+function getBifPointCodim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+	prob_ma = br.prob.prob
+	Teigvec = getvectortype(br)
 
+	bifpt = br.specialpoint[ind]
+	# jacobian at bifurcation point
+	if Teigvec <: BorderedArray
+		x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+	else
+		x0 = convert(Teigvec, getVec(bifpt.x , prob_ma))
+	end
+
+	# parameters for vector field
+	p = bifpt.param
+	parbif = set(getParams(br), getLens(br), p)
+	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+
+	return (x = x0, params = parbif)
+
+end
+################################################################################
 """
 $(SIGNATURES)
 
