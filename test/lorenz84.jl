@@ -261,7 +261,7 @@ solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newtonOptions;v
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
 
-hp_codim2_2 = continuation(sn_codim2, 4, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
+hp_codim2_2 = continuation(sn_codim2, 1, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
