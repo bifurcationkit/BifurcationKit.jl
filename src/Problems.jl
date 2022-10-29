@@ -7,19 +7,20 @@ abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 getVectorType(::AbstractBifurcationProblem) = Nothing
 isInplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
-# singleton for defining jacobians
+"""
+Singleton type to trigger the computation of the jacobian using ForwardDiff.jl. It can be used for example in newton or in deflated newton.
+"""
 struct AutoDiff end
+
+"""
+Singleton type to trigger the computation of the jacobian using finite differences. It can be used for example in newton or in deflated newton.
+"""
 struct FiniteDifferences end
 
 # function to save the full solution on the branch. It is useful to define This
 # in order to allow for redefinition. Indeed, some problem are mutable (adaptive
 # mesh for periodic orbit) and this approach seems efficient
 @inline getSolution(::AbstractBifurcationProblem, x) = x
-
-"""
-Singleton type to trigger the computation of the jacobian using ForwardDiff.jl. It can be used for example in newton or in deflated newton.
-"""
-struct AD end
 
 """
 $(TYPEDEF)

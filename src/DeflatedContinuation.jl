@@ -1,3 +1,7 @@
+_perturbSolution(x, p, id) = x
+_acceptSolution(x, p) = true
+_updateDeflationOp(defOp, x, p) = push!(defOp, x)
+
 """
 $(TYPEDEF)
 
@@ -141,10 +145,6 @@ function plotDContBranch(branches, nbrs::Int, nactive::Int, nstep::Int)
 	scatter!([br.branch[1].param for br in branches], [br.branch[1][1] for br in branches], marker = :cross, color=:green, label = "") |> display
 end
 plotAllDCBranch(branches) = display(plot(branches..., label = ""))
-
-_perturbSolution(x, p, id) = x
-_acceptSolution(x, p) = true
-_updateDeflationOp(defOp, x, p) = push!(defOp, x)
 
 
 """

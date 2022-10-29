@@ -557,10 +557,4 @@ end
 	return eigenelts
 end
 
-function (eig::HopfEig)(iter, state, Jma::AbstractMatrix, nev; kwargs...)
-	n = min(nev, size(Jma, 1) - 2)
-	eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], n; kwargs...)
-	return eigenelts
-end
-
 geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

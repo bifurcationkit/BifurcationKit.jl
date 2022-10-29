@@ -205,7 +205,7 @@ brbd  = continuation(prob, PALC(), ContinuationPar(opts, pMax = -2), verbosity =
 @test isnothing(brbd)
 ####################################################################################################
 # testing when starting with 2 points on the branch
-opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 3)
+opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds = 0.001, maxSteps = 140, pMin = -3., newtonOptions = NewtonPar(verbose = false), detectBifurcation = 3)
 x0 = 0.01 * ones(2)
 
 prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
@@ -230,6 +230,6 @@ alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x)))
 	)
 brdc = continuation(prob, alg,
-	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40);
+	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40, detectBifurcation = 3);
 	plot=false, verbosity = 0,
 	callbackN = BK.cbMaxNorm(1e3))

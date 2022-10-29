@@ -206,7 +206,7 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 	σ2p2 = -dot(w2, dJv1dp2) / n - dot(w1, dJv2dp2) / n
 	σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
-	if 1==1#hasHessian(pb) == false
+	if 1==1
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
 		# apply Jacobian adjoint
 		u11 = applyJacobian(pb.prob_vf, x + ϵ2 * v1, par0, w1, true)
@@ -225,24 +225,6 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 		# we invert Jfold
 		dX, dsig, flag, it = pb.linbdsolver(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
 		~flag && @debug "Linear solver for J did not converge."
-	else
-		@assert 1==0 "WIP"
-		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
-		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
-		# !!! Carefull, this method makes the linear system singular
-		x1, x2, cv, it = pb.linsolver(J_at_xp, rhsu, dpF)
-		~cv && @debug "Linear solver for J did not converge."
-
-		d2Fv = d2F(pb.prob_vf, x, par0, x1, v)
-		σx1 = -dot(w, d2Fv ) / n
-
-		copyto!(d2Fv, d2F(pb.prob_vf, x, par0, x2, v))
-		σx2 = -dot(w, d2Fv ) / n
-
-		dsig = (rhsp - σx1) / (σp - σx2)
-
-		# dX = x1 .- dsig .* x2
-		dX = _copy(x1); axpy!(-dsig, x2, dX)
 	end
 
 	return dX, dsig, true, sum(it) + sum(itv1) + sum(itw1) + sum(itv2) + sum(itw2)

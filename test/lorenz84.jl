@@ -145,7 +145,7 @@ testEV(sn_codim2_test)
 testEV(hp_codim2_test)
 ####################################################################################################
 @set! opts_br.newtonOptions.verbose = false
-
+sn_codim2 = nothing
 for _jac in (:autodiff, :minaug)
 	# be careful here, Bordered predictor not good for Fold continuation
 	sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, pMax = 3.2, pMin = -0.1, detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, nInversion = 10, saveSolEveryStep = 1, maxSteps = 30, maxBisectionSteps = 55) ; verbosity = 0,
@@ -188,11 +188,11 @@ for _jac in (:autodiff, :minaug)
 	# locate BT point with newton algorithm and compute the normal form
 	_bt = BK.BTPoint(sn_codim2, 1) # does nothing
 
-	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian = :finitedifferences)
+	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian_ma = :finitedifferences)
 	@test BK.converged(solbt)
-	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian = :minaug)
+	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian_ma = :minaug)
 	@test BK.converged(solbt)
-	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian = :autodiff)
+	solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian_ma = :autodiff)
 	@test BK.converged(solbt)
 	@test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8
 
@@ -246,6 +246,8 @@ hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.
 @test hp_codim2_1.specialpoint[3].type == :gh
 @test hp_codim2_1.specialpoint[4].type == :hh
 
+getNormalForm(hp_codim2_1, 4)
+
 # plot(sn_codim2, vars=(:X,:U))
 # plot!(hp_codim2_1, vars=(:X,:U))
 
@@ -261,7 +263,15 @@ solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newtonOptions;v
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
 
+# test branch switching from BT points
 hp_codim2_2 = continuation(sn_codim2, 1, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
+	normC = norminf,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	recordFromSolution = recordFromSolutionLor,
+	bdlinsolver = MatrixBLS())
+
+sn_codim2_2 = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,

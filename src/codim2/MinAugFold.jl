@@ -502,11 +502,4 @@ end
 	return eigenelts
 end
 
-function (eig::FoldEigsolver)(iter, state, Jma::AbstractMatrix, nev; kwargs...)
-	n = min(nev, size(Jma, 1) - 1)
-	J = @view Jma[1:end-1, 1:end-1]
-	eigenelts = eig.eigsolver(J, n; kwargs...)
-	return eigenelts
-end
-
 geteigenvector(eig::FoldEigsolver, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

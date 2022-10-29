@@ -181,7 +181,7 @@ end
 
 jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, Val{:fullIterative}}, x, p) where {Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype} = dx -> dfp(x, p, dx)
 
-jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, AD}, x, p) where {Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype} = ForwardDiff.jacobian(z -> dfp(z, p), x)
+jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, AutoDiff}, x, p) where {Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype} = ForwardDiff.jacobian(z -> dfp(z, p), x)
 
 # getters
 getu0(dfp::DeflatedProblem) = getu0(dfp.prob)
@@ -318,7 +318,7 @@ function newton(prob::AbstractBifurcationProblem,
 				options::NewtonPar{T, L, E},
 				::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	# we create the new functional
-	deflatedPb = DeflatedProblem(prob, defOp, AD())
+	deflatedPb = DeflatedProblem(prob, defOp, AutoDiff())
 
 	return newton(deflatedPb, options; kwargs...)
 end

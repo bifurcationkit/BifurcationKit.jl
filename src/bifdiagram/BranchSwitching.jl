@@ -185,7 +185,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 		Teigvec = getvectortype(br),
 		verbosedeflation = false,
 		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
-		lsdefop = DeflatedLinearSolver(),
+		lsdefop = DefProbCustomLinearSolver(),
 		perturbGuess = identity,
 		kwargs...)
 	# compute predictor for point on new branch
@@ -271,7 +271,8 @@ function multicontinuation(br::AbstractBranchResult,
 		Teigvec = getvectortype(br),
 		verbosedeflation = false,
 		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
-		lsdefop = DeflatedLinearSolver(),
+		lsdefop = DefProbCustomLinearSolver(),
+		plotSolution = missing,
 		kwargs...)
 
 	ds = isnothing(δp) ? optionsCont.ds : δp |> abs
@@ -282,7 +283,8 @@ function multicontinuation(br::AbstractBranchResult,
 	function _continue(_sol, _dp, _ds)
 		# needed to reset the tangent algorithm in case fields are used
 		println("#"^50)
-		continuation(br.prob,
+		prob = ismissing(plotSolution) ? br.prob : reMake(br.prob; plotSolution = plotSolution)
+		continuation(prob,
 			bpnf.x0, par,		# first point on the branch
 			_sol, bpnf.p + _dp, # second point on the branch
 			empty(alg), getLens(br),
