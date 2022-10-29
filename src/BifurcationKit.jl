@@ -175,10 +175,10 @@ module BifurcationKit
 	export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS, BorderedArray
 
 	# nonlinear deflation
-	export DeflationOperator, DeflatedProblem, DeflatedLinearSolver, scalardM
+	export DeflationOperator, DeflatedProblem, DefProbCustomLinearSolver, scalardM
 
 	# predictors for continuation
-	export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose
+	export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS
 
 	# newton methods
 	export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered, NonLinearSolution

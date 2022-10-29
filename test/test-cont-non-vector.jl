@@ -90,8 +90,7 @@ BK.getSolp(br, 1)
 prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]);
 	J = (x, r) -> Jacobian(x, r[1], r[2]),
 	Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
-	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),
-	recordFromSolution = (x,p) -> x.u[1])
+	d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 
 br = continuation(prob2, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.linsolver))
 @test br.param[end] == -1
@@ -164,7 +163,6 @@ prob = BK.BifurcationProblem(Fr,
 		(r = 1.0, s = 1.), (@lens _.r);
 		J  = (x, p) -> JacobianR(x, p.s),
 		Jᵗ = (x, p) -> JacobianR(x, p.s),
-		recordFromSolution = (x,p) -> x[1][1],
 		d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))
 
 sol = newton(prob, opt_newton0)

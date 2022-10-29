@@ -107,7 +107,7 @@ let
 	sol = rand(n)
 	solverdf = BK.DefProbCustomLinearSolver(DefaultLS())
 	probdf = DeflatedProblem(prob, deflationOp, Val(:Custom))
-	Jdf = BK.jacobian((@set probdf.jactype = BK.AD()), sol, nothing)
+	Jdf = BK.jacobian((@set probdf.jactype = BK.AutoDiff()), sol, nothing)
 	@test Jdf ≈ ForwardDiff.jacobian(z->probdf(z,nothing),sol)
 	Jdf = BK.jacobian(probdf, sol, nothing)
 	# test the value of the jacobian
