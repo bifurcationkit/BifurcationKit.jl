@@ -447,6 +447,9 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	ls = options.linsolver
 
 	# bifurcation point
+	if ~(bifpt.x isa Teigvec)
+		@error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec). You can keep your choice by using the option `Teigvec` in `getNormalForm` to specify the type of the equilibrum."
+	end
 	x0 = convert(Teigvec, bifpt.x)
 	p = bifpt.param
 

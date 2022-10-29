@@ -172,7 +172,6 @@ for _jac in (:autodiff, :minaug)
 
 	@test btpt.nf.a ≈ 0.20776621366525655
 	@test btpt.nf.b ≈ 0.5773685192880018
-
 	# plot(sn_codim2, vars=(:F, :T), branchlabel = "SN")
 	# 	_S = LinRange(0., 0.001, 100)
 	# 	plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], label = "Hpred")
