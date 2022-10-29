@@ -177,12 +177,13 @@ polpred = Polynomial(Bordered(), 2, 6, x0)
 opts11 = (@set opts.newtonOptions.verbose=false)
 opts11 = ContinuationPar(opts11; maxSteps = 50, ds = 0.015, dsmin = 1e-5, dsmax = 0.15)
 br11 = continuation(prob, BK.MoorePenrose(), opts11; verbosity = 0)
-br11 = continuation(prob, BK.MoorePenrose(directLS = false), opts11; verbosity = 0)
+br11 = continuation(prob, BK.MoorePenrose(method = BK.pinv), opts11; verbosity = 0)
+br11 = continuation(prob, BK.MoorePenrose(method = BK.iterative), opts11; verbosity = 0)
 # plot(br11)
 
-MoorePenrose(directLS = false)
-BK.getPredictor(MoorePenrose(directLS = false))
-BK.getLinsolver(MoorePenrose(directLS = false))
+MoorePenrose(method = BK.iterative)
+BK.getPredictor(MoorePenrose(method = BK.iterative))
+BK.getLinsolver(MoorePenrose(method = BK.iterative))
 
 
 # further testing with sparse Jacobian operator

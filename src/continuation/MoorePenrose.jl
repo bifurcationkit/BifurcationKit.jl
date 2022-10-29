@@ -1,3 +1,4 @@
+@enum MoorePenroseLS direct=1 pInv=2 iterative=3
 """
 	Moore-Penrose predictor / corrector
 
@@ -17,7 +18,7 @@ struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgor
 	"Tangent predictor, example `PALC()`"
 	tangent::T
 	"Use a direct linear solver"
-	directLS::Bool
+	method::MoorePenroseLS
 	"(Bordered) linear solver"
 	ls::Tls
 end
@@ -25,8 +26,8 @@ end
 """
 $(SIGNATURES)
 """
-function MoorePenrose(;tangent = PALC(), directLS = true, ls = nothing)
-	if directLS
+function MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)
+	if ~(method == iterative)
 		ls = isnothing(ls) ? DefaultLS() : ls
 	else
 		if isnothing(ls)
@@ -37,7 +38,7 @@ function MoorePenrose(;tangent = PALC(), directLS = true, ls = nothing)
 			end
 		end
 	end
-	return MoorePenrose(tangent, directLS, ls)
+	return MoorePenrose(tangent, method, ls)
 end
 
 getPredictor(alg::MoorePenrose) = getPredictor(alg.tangent)
@@ -100,7 +101,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	dotθ = iter.dotθ
 	T = eltype(iter)
 
-	@unpack directLS = iter.alg
+	@unpack method = iter.alg
 
 	z0 = getSolution(state)
 	τ0 = state.τ
@@ -140,7 +141,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	compute = callback((;x, res_f, res, it, contparams, p, resHist, z0); fromNewton = false, kwargs...)
 
 	X = BorderedArray(x, p)
-	if linsolver isa AbstractIterativeLinearSolver || ~directLS
+	if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
 		ϕ = _copy(τ0)
 		rmul!(ϕ,  T(1) / norm(ϕ))
 	end
@@ -152,12 +153,15 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))
-		if directLS
-			@debug "Direct"
+		if method == direct || method == pInv
+			@debug method
 			Jb = hcat(J, dFdp)
 			# pinv(Array(Jb)) * res_f seems to work better than the following
-			# dx, flag, converged = linsolver.solver(Jb, res_f)
-			dx = pinv(Array(Jb)) * res_f; flag = true;
+			if method == direct
+				dx, flag, converged = linsolver(Jb, res_f)
+			else
+				dx = LinearAlgebra.pinv(Array(Jb)) * res_f; flag = true;
+			end
 			x .-= @view dx[1:end-1]
 			p -= dx[end]
 			itlinear = 1
@@ -176,7 +180,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		res_f .= residual(prob, x, set(par, paramlens, p))
 		res = normN(res_f)
 
-		if directLS == false
+		if method == iterative
 			# compute jacobian
 			J = jacobian(prob, x, set(par, paramlens, p))
 			copyto!(dFdp, residual(prob, x, set(par, paramlens, p + finDiffEps)))

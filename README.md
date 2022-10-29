@@ -121,5 +121,5 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf point detection | Yes| Yes|  | :heavy_check_mark: |
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf normal forms | Yes| Yes|  | :heavy_check_mark: |
-| Branching from Bogdanov-Takens points to Fold / Hopf curve | No | `AbstractVector` | |  |
+| Branching from Bogdanov-Takens points to Fold / Hopf curve | Yes | `AbstractVector` | |  |
 
