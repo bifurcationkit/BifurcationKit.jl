@@ -5,6 +5,8 @@ $(TYPEDFIELDS)
 
 # Constructor(s)
 
+	Multiple(alg, x0, α, n)
+
 	Multiple(pred, x0, α, n)
 
 	Multiple(x0, α, n)

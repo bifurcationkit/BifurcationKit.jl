@@ -264,7 +264,8 @@ Automatic branch switching at branch points based on a computation of the normal
 The rest is as the regular `multicontinuation` function.
 """
 function multicontinuation(br::AbstractBranchResult,
-		bpnf::NdBranchPoint, defOpm::DeflationOperator, defOpp::DeflationOperator,
+		bpnf::NdBranchPoint, 
+		defOpm::DeflationOperator, defOpp::DeflationOperator,
 		optionsCont::ContinuationPar = br.contparams ;
 		alg = br.alg,
 		δp = nothing,

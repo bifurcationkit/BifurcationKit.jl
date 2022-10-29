@@ -85,11 +85,6 @@ function corrector!(state::AbstractContinuationState,
 	return true
 end
 
-# function getTangent!(state::AbstractContinuationState, it::AbstractContinuationIterable, algo::MoorePenrose)
-# 	(verbosity > 0) && println("Predictor: ", algo)
-# 	return getTangent!(it, state, z_new, algo.tangentalgo, 0)
-# end
-
 function newtonMoorePenrose(iter::AbstractContinuationIterable,
 					state::AbstractContinuationState;
 					normN = norm,
@@ -156,10 +151,10 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		if method == direct || method == pInv
 			@debug method
 			Jb = hcat(J, dFdp)
-			# pinv(Array(Jb)) * res_f seems to work better than the following
 			if method == direct
 				dx, flag, converged = linsolver(Jb, res_f)
 			else
+				# pinv(Array(Jb)) * res_f seems to work better than the following
 				dx = LinearAlgebra.pinv(Array(Jb)) * res_f; flag = true;
 			end
 			x .-= @view dx[1:end-1]
