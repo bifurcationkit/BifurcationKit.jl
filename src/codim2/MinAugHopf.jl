@@ -451,10 +451,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> ((zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH)) :
-		(u, p; kw...) -> begin
-			(namedprintsol(_printsol(u, p;kw...))..., zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH)
-		end
+		(u, p; kw...) -> (; namedprintsol(recordFromSolution(prob_vf)(u, p; kw...))..., zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(u, p; kw...))..., zip(lenses, (getP(u, hopfPb)[1], p))..., ω = getP(u, hopfPb)[2], l1 = hopfPb.l1, BT = hopfPb.BT, GH = hopfPb.GH)
 
 	prob_h = reMake(prob_h, recordFromSolution = _printsol2)
 
@@ -545,7 +543,6 @@ function (eig::HopfEig)(Jma, nev; kwargs...)
 	p1, ω = Jma.x.p	# first parameter
 	newpar = set(Jma.params, getLens(Jma.hopfpb), p1)
 
-	# J = Jma.hopfpb.J(x, newpar)
 	J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
 
 	eigenelts = eig.eigsolver(J, n; kwargs...)
