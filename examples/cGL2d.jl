@@ -135,14 +135,34 @@ ind_hopf = 1
 	BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf = continuation(br, 1, (@lens _.γ),
-	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 0, newtonOptions = optnew, plotEveryStep = 5, tolStability = 1e-7, nev = 15); plot = true,
+	ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 1, newtonOptions = optnew, plotEveryStep = 5, tolStability = 1e-7, nev = 15); plot = true,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true, bothside = false,
 	detectCodim2Bifurcation = 2,
 	verbosity = 3, normC = norminf,
+	jacobian_ma = :minaug,
 	bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false))
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
+
+getNormalForm(br_hopf, 2; autodiff = false)
+# improve estimation of BT point
+btsol = BK.newton(br_hopf, 2; jacobian_ma = :minaug,)
+
+# find the index of the BT point
+indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
+# branch from the BT point
+brfold = continuation(br_hopf, indbt, setproperties(br_hopf.contparams; detectBifurcation = 1, maxSteps = 20, saveSolEveryStep = 1);
+	updateMinAugEveryStep = 1,
+	detectCodim2Bifurcation = 2,
+	callbackN = BK.cbMaxNorm(1e5),
+	bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+	jacobian_ma = :minaug,
+	bothside = true, normC = norminf)
+
+plot(br_hopf, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
+
+getNormalForm(brfold, 4; autodiff = false)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices

@@ -127,7 +127,9 @@ optnew = opts_br_eq.newtonOptions
 if 1==0
 	br_hopf = @time continuation(
 		br, ind_hopf, (@lens _.β),
-		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew); verbosity = 2, normC = norminf)
+		ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew);
+		jacobian_ma = :minaug,
+		verbosity = 2, normC = norminf)
 
 	plot(br_hopf, label="")
 end
@@ -144,6 +146,7 @@ if 1==1
 		updateMinAugEveryStep = 1,
 		startWithEigen = true,
 		detectCodim2Bifurcation = 2,
+		jacobian_ma = :minaug,
 		verbosity = 2, normC = norminf, bothside = true)
 end
 
@@ -214,7 +217,6 @@ _indx = BK.getBlocks(Jpo, 2n, M)
 
 @time lu(Jpo)
 Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
-@time lu(Jpo)
 
 Precilu = @time ilu(Jpo, τ = 0.01)
 Precilu = @time lu(Jpo)

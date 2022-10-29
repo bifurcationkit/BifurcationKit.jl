@@ -91,7 +91,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
 		ζstar = copy(ζ)
 	else
-		_Jt = hasAdjoint(prob) ? jad(prob_vf, x0, parbif) : adjoint(L)
+		_Jt = hasAdjoint(prob) ? jad(prob, x0, parbif) : adjoint(L)
 		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
@@ -414,7 +414,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 
-	@assert !(bifpt.type in (:hh,:endpoint)) "Normal form for $(bifpt.type) not implemented"
+	@assert !(bifpt.type in (:hh, :endpoint)) "Normal form for $(bifpt.type) not implemented"
 
 	# parameters for normal form
 	kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
@@ -428,7 +428,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :gh
 		return bautinNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :zh
-		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...)
+		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
 	end
