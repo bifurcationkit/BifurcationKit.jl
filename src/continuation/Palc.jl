@@ -420,7 +420,7 @@ function newtonPALC(iter::AbstractContinuationIterable,
 		# │ τ0.u  τ0.p ││up│   │res_n│
 		# └            ┘└  ┘   └     ┘
 		u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
-		~flag && @debug "Linear solver for (J-iω) did not converge."
+		~flag && @debug "Linear solver for J did not converge."
 		itlineartot += sum(itlinear)
 
 		if linesearch

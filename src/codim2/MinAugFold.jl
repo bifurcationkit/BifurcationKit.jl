@@ -470,7 +470,7 @@ function continuationFold(prob,
 		L = jacobian(prob, bifpt.x, parbif)
 
 		# computation of adjoint eigenvalue
-		eigenvec .= real.(	geteigenvector(options_cont.newtonOptions.eigsolver ,br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+		eigenvec .= real.(	geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
 		rmul!(eigenvec, 1/normC(eigenvec))
 
 		# jacobian adjoint at bifurcation point

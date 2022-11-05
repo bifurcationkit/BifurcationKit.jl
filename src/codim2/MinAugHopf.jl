@@ -506,7 +506,7 @@ function continuationHopf(prob,
 
 	@assert ~isnothing(br.eig[1].eigenvecs) "The branch contains no eigenvectors for the Hopf point. Please provide one."
 
-	ζ = geteigenvector(options_cont.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+	ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
 	ζ ./= normC(ζ)
 	ζad = conj.(ζ)
 

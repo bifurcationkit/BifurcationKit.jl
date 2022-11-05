@@ -27,6 +27,8 @@ mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, 
 	linbdsolverAdjoint::Sbda
 	"second parameter axis"
 	lens2::Tlens
+	"wether to use the hessian of prob_vf"
+	usehessian::Bool
 end
 
 @inline hasHessian(pb::BTProblemMinimallyAugmented) = hasHessian(pb.prob_vf)
@@ -39,9 +41,13 @@ end
 jad(pb::BTProblemMinimallyAugmented, args...) = jad(pb.prob_vf, args...)
 
 # constructor
-function BTProblemMinimallyAugmented(prob, a, b, linsolve::AbstractLinearSolver, lens2::Lens, linbdsolver = MatrixBLS())
+function BTProblemMinimallyAugmented(prob, a, b,
+							linsolve::AbstractLinearSolver,
+							lens2::Lens;
+							linbdsolver = MatrixBLS(),
+							usehessian = true)
 	return BTProblemMinimallyAugmented(prob, a, b, 0*a,
-				linsolve, linsolve, linbdsolver, linbdsolver, lens2)
+				linsolve, linsolve, linbdsolver, linbdsolver, lens2, usehessian)
 end
 
 """
@@ -284,6 +290,7 @@ function newtonBT(prob::AbstractBifurcationProblem,
 				options::NewtonPar;
 				normN = norm,
 				jacobian_ma::Symbol = :autodiff,
+				usehessian = false,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				kwargs...)
 
@@ -294,9 +301,10 @@ function newtonBT(prob::AbstractBifurcationProblem,
 		_copy(eigenvec_ad), # a
 		_copy(eigenvec),    # b
 		options.linsolver,
-		lens2,
+		lens2;
 		# do not change linear solver if user provides it
-		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver))
+		linbdsolver = (@set bdlinsolver.solver = isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver),
+		usehessian = usehessian)
 
 	Ty = eltype(btpointguess)
 
