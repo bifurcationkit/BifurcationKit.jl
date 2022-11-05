@@ -106,10 +106,11 @@ function foldMALinearSolver(x, p::T, pb::FoldProblemMinimallyAugmented, par,
 	dpF = minus(residual(pb.prob_vf, x, set(par, lens, p + ϵ1)),
 				residual(pb.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1 / (2ϵ1)))
 	dJvdp = minus(apply(jacobian(pb.prob_vf, x, set(par, lens, p + ϵ3)), v),
-					apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)); rmul!(dJvdp, T(1/(2ϵ3)))
+				  apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v));
+	rmul!(dJvdp, T(1/(2ϵ3)))
 	σp = -dot(w, dJvdp) / n
 
-	if hasHessian(pb) == false
+	if hasHessian(pb) == false || ~pb.usehessian
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
 		# apply Jacobian adjoint
 		u1 = applyJacobian(pb.prob_vf, x + ϵ2 * v, par0, w, true)
@@ -199,6 +200,7 @@ function newtonFold(prob::AbstractBifurcationProblem,
 				options::NewtonPar;
 				normN = norm,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+				usehessian = true,
 				kwargs...)
 
 	foldproblem = FoldProblemMinimallyAugmented(
@@ -207,7 +209,8 @@ function newtonFold(prob::AbstractBifurcationProblem,
 		_copy(eigenvec_ad),
 		options.linsolver,
 		# do not change linear solver if user provides it
-		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver))
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
+		usehessian = usehessian)
 
 	prob_f = FoldMAProblem(foldproblem, nothing, foldpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
 
@@ -298,6 +301,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				jacobian_ma::Symbol = :autodiff,
 			 	computeEigenElements = false,
+				usehessian = true,
 				kwargs...) where {T, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob)
@@ -311,7 +315,8 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 			_copy(eigenvec_ad),
 			options_newton.linsolver,
 			# do not change linear solver if user provides it
-			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
+			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+			usehessian = usehessian)
 
 	# Jacobian for the Fold problem
 	if jacobian_ma == :autodiff

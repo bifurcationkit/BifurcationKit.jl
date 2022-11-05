@@ -115,9 +115,9 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	################### computation of σx σp ####################
 	################### and inversion of Jhopf ####################
 	dpF   = (residual(pb.prob_vf, x, set(par, lens, p + ϵ1)) -
-				residual(pb.prob_vf, x, set(par, lens, p - ϵ1))) / T(2ϵ1)
+			 residual(pb.prob_vf, x, set(par, lens, p - ϵ1))) / T(2ϵ1)
 	dJvdp = (apply(jacobian(pb.prob_vf, x, set(par, lens, p + ϵ3)), v) -
-				apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
+			 apply(jacobian(pb.prob_vf, x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
 	σp = -dot(w, dJvdp) / n
 
 	# case of sigma_omega
@@ -133,7 +133,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	# σx = zeros(Complex{T}, length(x))
 	σx = similar(x, Complex{T})
 
-	if hasHessian(pb) == false
+	if hasHessian(pb) == false || ~pb.usehessian
 		cw = conj(w)
 		vr = real(v); vi = imag(v)
 		u1r = applyJacobian(pb.prob_vf, x + ϵ2 * vr, par0, cw, true)
@@ -219,6 +219,7 @@ function newtonHopf(prob,
 			options::NewtonPar;
 			normN = norm,
 			bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+			usehessian = true,
 			kwargs...)
 	# we first need to update d2F and d3F for them to accept complex arguments
 
@@ -228,7 +229,8 @@ function newtonHopf(prob,
 		_copy(eigenvec), 	# this is pb.b ≈ null space of  J - iω I
 		options.linsolver,
 		# do not change linear solver if user provides it
-		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver))
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
+		usehessian = usehessian)
 
 	prob_h = HopfMAProblem(hopfproblem, nothing, hopfpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
 
@@ -321,6 +323,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 				bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 				jacobian_ma::Symbol = :autodiff,
 				computeEigenElements = false,
+				usehessian = true,
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob_vf)
@@ -335,7 +338,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		_copy(eigenvec), 	# this is b ≈ null space of  J - iω I
 		options_newton.linsolver,
 		# do not change linear solver if user provides it
-		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver))
+		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+		usehessian = usehessian)
 
 	# Jacobian for the Hopf problem
 	if jacobian_ma == :autodiff

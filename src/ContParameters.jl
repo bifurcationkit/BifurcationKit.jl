@@ -36,7 +36,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `tolParamBisectionEvent = 1e-16` tolerance on parameter to locate event
 
 ## Misc
-- `finDiffEps::T  = 1e-9` ε used in finite differences computations
+- `η = 150.` parameter to estimate tangent at first point with parameter  p₀ + ds / η
+- `finDiffEps  = 1e-9` ε used in finite differences computations
 - `detectLoop` [WORK IN PROGRESS] detect loops in the branch and stop the continuation
 
 !!! tip "Mutating"

@@ -41,6 +41,8 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			linbdsolver::Sbd
 			"linear bordered solver for the jacobian adjoint"
 			linbdsolverAdjoint::Sbda
+			"wether to use the hessian of prob_vf"
+			usehessian::Bool
 		end
 
 		@inline hasHessian(pb::$op) = hasHessian(pb.prob_vf)
@@ -52,7 +54,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 		jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
 		# constructor
-		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS())
+		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true)
 			# determine scalar type associated to vectors a and b
 			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
 			Ty = eltype(α)
@@ -62,7 +64,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 						real(one(Ty)),		# bt
 						real(one(Ty)),		# gh
 						1,							# zh
-						linsolve, linsolve, linbdsolver, linbdsolver)
+						linsolve, linsolve, linbdsolver, linbdsolver, usehessian)
 		end
 	end
 end
