@@ -80,7 +80,7 @@ Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recurs
 
 We also provide the method
 
-`bifurcationdiagram(br::ContResult, level::Int, options; kwargs...)`
+`bifurcationdiagram(prob, br::ContResult, level::Int, options; kwargs...)`
 
 where `br` is a branch computed after a call to [`continuation`](@ref) from which we want to compute the bifurcating branches recursively.
 """

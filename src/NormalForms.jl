@@ -765,7 +765,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
 	# check that λstar ≈ conj(λ)
-	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ ≈ $λ,\nλstar ≈ $λstar?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
 	ζstar ./= dot(ζ, ζstar)
