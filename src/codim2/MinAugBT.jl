@@ -2,7 +2,7 @@
 """
 $(TYPEDEF)
 
-Structure to encode Fold / Hopf functional based on a Minimally Augmented formulation.
+Structure to encode Bogdanov-Takens functional based on a Minimally Augmented formulation.
 
 # Fields
 
@@ -51,7 +51,7 @@ function BTProblemMinimallyAugmented(prob, a, b,
 end
 
 """
-For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonFold`.
+For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonBT`.
 """
 function BTPoint(br::AbstractResult{FoldCont, Tprob}, index::Int) where {Tprob}
 	bptype = br.specialpoint[index].type
@@ -73,7 +73,7 @@ getVec(x, ::BTProblemMinimallyAugmented) = getVec(x)
 getP(x, ::BTProblemMinimallyAugmented) = getP(x)
 
 function (bt::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where T
-	# These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
+	# These are the equations of the minimally augmented (MA) formulation of the bt bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter value `<: Real` at which the jacobian is singular
@@ -127,10 +127,10 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 	# where σi(x,p1,p2) is computed in the function above.
 	# The jacobian has to be passed as a tuple as Jac_bt_MA(u0, pb::BTProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
-	# We solve here Jfold⋅res = rhs := [rhsu, rhsp]
-	# The Jacobian expression of the Fold problem is
+	# We solve here Jbt⋅res = rhs := [rhsu, rhsp]
+	# The Jacobian expression of the BT problem is
 	#           ┌           ┐
-	#  Jfold =  │  J    dpF │
+	#  Jbt.  =  │  J    dpF │
 	#           │ σ1x   σ1p │
 	#           │ σ2x   σ2p │
 	#           └           ┘
@@ -183,7 +183,7 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 	δ = getDelta(pb.prob_vf)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 	################### computation of σx σp ####################
-	################### and inversion of Jfold ####################
+	################### and inversion of Jbt ####################
 	lens1, lens2 = getLenses(pb)
 	dp1F = minus(residual(pb.prob_vf, x, set(par, lens1, p1 + ϵ1)),
 				 residual(pb.prob_vf, x, set(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
@@ -228,7 +228,7 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 		σ2x2 = minus(u22, u21); rmul!(σ2x2, 1 / ϵ2)
 		σ2x = σ2x1 + σ2x2
 		########## Resolution of the bordered linear system ########
-		# we invert Jfold
+		# we invert Jbt
 		dX, dsig, flag, it = pb.linbdsolver(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
 		~flag && @debug "Linear solver for J did not converge."
 	end
@@ -271,7 +271,7 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
-Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
+Simplified call to refine an initial guess for a BT point. More precisely, the call is as follows
 
 	newton(br::AbstractBranchResult, ind_bt::Int; options = br.contparams.newtonOptions, kwargs...)
 
@@ -352,10 +352,10 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to use the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
 
 !!! tip "startWithEigen"
-    For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
+    For ODE problems, it is more efficient to pass the option `startWithEigen = true`
 """
 function newtonBT(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 				probvf = br.prob.prob.prob_vf,
@@ -400,6 +400,6 @@ function newtonBT(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 		rmul!(eigenvec_ad, 1/normN(eigenvec_ad))
 	end
 
-	# solve the Fold equations
+	# solve the BT equations
 	return newtonBT(prob_ma.prob_vf, btpointguess, getParams(br), getLens(br), eigenvec, eigenvec_ad, options; normN = normN, bdlinsolver = bdlinsolver, kwargs...)
 end

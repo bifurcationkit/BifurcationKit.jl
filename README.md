@@ -64,6 +64,15 @@ To install the bleeding edge version, please run
 
 The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
 
+## Plugins
+
+Most of the are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
+
+- [DDEBifurcationKit.jl](https://github.com/bifurcationkit/DDEBifurcationKit.jl) bifurcation analysis of delay differential equations (DDE)
+- [AsymptoticNumericalMethod.jl](https://github.com/bifurcationkit/AsymptoticNumericalMethod.jl) provides the numerical continuation algorithm **Asymptotic Numerical Method** (ANM) which is to be used
+- [GridapBifurcationKit.jl](https://github.com/bifurcationkit/GridapBifurcationKit) bifurcation analysis of PDEs solved using the Finite Elements Method (FEM) thanks to the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
+- [PeriodicSchurBifurcationKit.jl](https://github.com/bifurcationkit/PeriodicSchurBifurcationKit.jl) state of the art computation of Floquet coefficients, useful for computing the stability of periodic orbits.
+
 ## Examples of bifurcation diagrams
 
 
