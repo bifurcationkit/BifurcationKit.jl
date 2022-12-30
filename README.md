@@ -9,14 +9,6 @@
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
 [docs-dev-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev
 
-## IMPORTANT NOTICE
-**New version of the package with modified interface. You are now required to define a `BifurcationProblem` to perform continuation or bifurcation analysis. The previous interface is available under the tag 0.1.12 which can be installed by doing**
-
-<span style="color:red">`] add BifurcationKit@0.1.12`</span>
-
-**The new version provides many bugs fix though.
-(Please note that the docs are up to date).**
-
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free/Dense/Sparse eigensolver is used to compute stability and bifurcation points.
@@ -60,17 +52,13 @@ To install the bleeding edge version, please run
 
 `] add BifurcationKit#master`
 
-## Website
-
-The package is located [here](https://github.com/rveltz/BifurcationKit.jl).
-
 ## Plugins
 
-Most of the are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
+Most of the plugins are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
 
 - [DDEBifurcationKit.jl](https://github.com/bifurcationkit/DDEBifurcationKit.jl) bifurcation analysis of delay differential equations (DDE)
-- [AsymptoticNumericalMethod.jl](https://github.com/bifurcationkit/AsymptoticNumericalMethod.jl) provides the numerical continuation algorithm **Asymptotic Numerical Method** (ANM) which is to be used
-- [GridapBifurcationKit.jl](https://github.com/bifurcationkit/GridapBifurcationKit) bifurcation analysis of PDEs solved using the Finite Elements Method (FEM) thanks to the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
+- [AsymptoticNumericalMethod.jl](https://github.com/bifurcationkit/AsymptoticNumericalMethod.jl) provides the numerical continuation algorithm **Asymptotic Numerical Method** (ANM) which can be used directly in `BifurcationKit.jl`
+- [GridapBifurcationKit.jl](https://github.com/bifurcationkit/GridapBifurcationKit) bifurcation analysis of PDEs solved with the Finite Elements Method (FEM) using the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
 - [PeriodicSchurBifurcationKit.jl](https://github.com/bifurcationkit/PeriodicSchurBifurcationKit.jl) state of the art computation of Floquet coefficients, useful for computing the stability of periodic orbits.
 
 ## Examples of bifurcation diagrams
