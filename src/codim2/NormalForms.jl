@@ -903,3 +903,151 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
 			EigenVecAd = EigenVecAd,
 			x0 = t -> 0)
 end
+####################################################################################################
+function hopfHopfNormalForm(_prob,
+		br::AbstractBranchResult, ind_bif::Int;
+		δ = 1e-8,
+		nev = length(eigenvalsfrombif(br, ind_bif)),
+		verbose = false,
+		ζs = nothing,
+		lens = getLens(br),
+		Teigvec = getvectortype(br),
+		scaleζ = norm,
+		autodiff = true)
+	@assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
+
+	verbose && println("#"^53*"\n--> Hopf-Hopf Normal form computation")
+
+	# scalar type
+	T = eltype(Teigvec)
+	ϵ2 = T(δ)
+
+	# get the MA problem
+	prob_ma = _prob.prob
+
+	# get the initial vector field
+	prob_vf = prob_ma.prob_vf
+
+	@assert prob_ma isa AbstractProblemMinimallyAugmented
+
+	# linear solver
+	ls = prob_ma.linsolver
+
+	# bordered linear solver
+	bls = prob_ma.linbdsolver
+
+	# kernel dimension
+	N = 4
+
+	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
+	nev = max(N, nev)
+
+	# Newton parameters
+	optionsN = br.contparams.newtonOptions
+
+	# bifurcation point
+	bifpt = br.specialpoint[ind_bif]
+	eigRes = br.eig
+
+	# parameter for vector field
+	p = bifpt.param
+	parbif = set(getParams(br), lens, p)
+	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+
+	# jacobian at bifurcation point
+	if Teigvec <: BorderedArray
+		x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+	else
+		x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
+	end
+
+	p0, ω0 = getP(bifpt.x, prob_ma)
+
+	L = jacobian(prob_vf, x0, parbif)
+
+	# right eigenvector
+	# TODO IMPROVE THIS
+	if 1==1#haseigenvector(br) == false
+		# we recompute the eigen-elements if there were not saved during the computation of the branch
+		@info "Recomputing eigenvector on the fly"
+		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+		# imaginary eigenvalue iω0
+		_ind0 = argmin(abs.(_λ .- im * ω0))
+		λ1 = _λ[_ind0]
+		@info "The first eigenvalue  is $(λ1), ω0 = $ω0"
+		q1 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
+		tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
+		# imaginary eigenvalue iω1
+		_ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
+		_indIm = argmin(real(_λ[ii]) for ii in _ind2)
+		λ2 = _λ[_ind2[_indIm]]
+		@info "The second eigenvalue is $(λ2)"
+		q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
+	else
+		@assert 1==0 "Not done"
+	end
+	q1 ./= scaleζ(q1)
+
+	# left eigen-elements
+	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+	p1, λstar1 = getAdjointBasis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p2, λstar2 = getAdjointBasis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+
+	# normalise left eigenvectors
+	p1 ./= dot(q1, p1)
+	p2 ./= dot(q2, p2)
+	@assert dot(p1, q1) ≈ 1 "we found $(dot(p1, q1))"
+	@assert dot(p2, q2) ≈ 1 "we found $(dot(p2, q2))"
+
+	# parameters for vector field
+	p = bifpt.param
+	parbif = set(getParams(br), lens, p)
+	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+
+	# parameters
+	lenses = (getLens(prob_ma), lens)
+	lens1, lens2 = lenses
+	p10 = get(parbif, lens1); p20 = get(parbif, lens2);
+
+	getp(l::Lens) = get(parbif, l)
+	setp(l::Lens, p::Number) = set(parbif, l, p)
+	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+	if autodiff
+		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
+	else
+		# finite differencess
+		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
+	end
+
+	pt = HopfHopf(
+		x0, parbif,
+		lenses,
+		(;q1, q2), (;p1, p2),
+		(;λ1 = λ1, λ2 = λ2),
+		:none
+	)
+end
+
+function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
+	@unpack λ1, λ2 = hh.nf
+	lens1, lens2 = hh.lens
+	p1 = get(hh.params, lens1)
+	p2 = get(hh.params, lens2)
+	par0 = [p1, p2]
+	function HopfCurve(s)
+		return (pars = par0 , ω = imag(λ2))
+	end
+	# compute eigenvector corresponding to the Hopf branch
+	function EigenVec(s)
+		return hh.ζ.q2
+	end
+	function EigenVecAd(s)
+		return hh.ζstar.p2
+	end
+
+	return (hopf = t -> HopfCurve(t).pars,
+			ω    = t -> HopfCurve(t).ω,
+			EigenVec = EigenVec,
+			EigenVecAd = EigenVecAd,
+			x0 = t -> 0)
+end

@@ -202,7 +202,12 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 		verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 		verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
-		@assert br.specialpoint[ind_bif].type in (:bt,:zh) "Only branching from Bogdanov-Takens and Zero-Hopf (for now)"
+		bif_type = br.specialpoint[ind_bif].type
+		@assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf (for now)"
+
+		if bif_type == :hh
+			@assert Tkind <: HopfCont
+		end
 
 		# functional
 		prob_ma = br.prob.prob
@@ -221,7 +226,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 		# compute predictor for point on new branch
 		ds = isnothing(δp) ? optionsCont.ds : δp
 
-		if prob_ma isa FoldProblemMinimallyAugmented
+		if prob_ma isa FoldProblemMinimallyAugmented || bif_type == :hh
 			# define guess for the first Hopf point on the branch
 			pred = predictor(nf, Val(:HopfCurve), ds)
 
@@ -258,6 +263,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 		else
 			@assert prob_ma isa HopfProblemMinimallyAugmented
 			pred = predictor(nf, Val(:FoldCurve), 0.)
+
 			# new continuation parameters
 			parcont = pred.fold(ds)
 
@@ -302,9 +308,9 @@ function correctBifurcation(contres::ContResult)
 		return contres
 	end
 	if contres.prob.prob isa FoldProblemMinimallyAugmented
-		conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd)
+		conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd, :btbp => :bt)
 	elseif contres.prob.prob isa HopfProblemMinimallyAugmented
-		conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt)
+		conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt, :btbp => :bt)
 	else
 		throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
 	end

@@ -270,27 +270,45 @@ solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newtonOptions;v
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
 
-
-sn_codim2_2 = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
+# curv of Hopf points from BT
+sn_from_bt = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, pMax = 15.) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS())
+@test sn_codim2_2.kind isa BK.FoldCont
 
-# plot!(hp_codim2_2, vars=(:X,:U))
-# getNormalForm(hp_codim2_2, 1; nev = 4, verbose=true)
+# curve of Hopf points from ZH
+hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, maxSteps = 100) ;
+	plot = false, verbosity = 0,
+	normC = norminf,
+	# δp = 0.001,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	bothside = false,
+	)
+@test hp_from_zh.kind isa BK.HopfCont
+@test length(hp_from_zh.γ.specialpoint) == 5
 
-# plot(hp_codim2_1, vars=(:F,:T), ylims=(0,0.06), xlims=(1,3))
-# plot(hp_codim2_2, vars=(:F,:T), ylims=(-0.06,0.06), xlims=(1,3))
-#
-#
-# plot(sn_codim2, vars=(:F, :T), branchlabel = "SN")
-# 	plot!(hp_codim2_1, vars=(:F, :T), branchlabel = "Hopf1")
-# 	plot!(hp_codim2_2, vars=(:F, :T), branchlabel = "Hopf2")
-# 	ylims!(-0.06,0.09);xlims!(1,3.5)
-#
-# plot(sn_codim2, vars=(:X, :U), branchlabel = "SN")
-# 	plot!(hp_codim2_1, vars=(:X, :U), branchlabel = "Hopf1")
-# 	plot!(hp_codim2_2, vars=(:X, :U), branchlabel = "Hopf2")
-# 	ylims!(-0.7,0.75);xlims!(0.95,1.5)
+# curve of Hopf points from HH
+hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, maxSteps = 120) ;
+	plot = false, verbosity = 0,
+	normC = norminf,
+	# jacobian_ma = :min_aug,
+	# δp = 0.001,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	bothside = false,
+	)
+@test hp_from_zh.kind isa BK.HopfCont
+
+plot(sn_codim2,vars=(:X, :U),)
+	plot!(sn_from_bt, vars=(:X, :U),)
+	plot!(hp_codim2_1, vars=(:X, :U), branchlabel = "Hopf")
+	plot!(hp_from_zh, vars=(:X, :U), branchlabel = "Hopf")
+	plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf")
+
+# test getters for branches
+BK.getLens(hp_from_hh)
+BK.getParams(hp_from_hh)

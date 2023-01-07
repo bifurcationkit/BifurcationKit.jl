@@ -119,4 +119,5 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf point detection | Yes| Yes|  | :heavy_check_mark: |
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf normal forms | Yes| Yes|  | :heavy_check_mark: |
 | Branching from Bogdanov-Takens points to Fold / Hopf curve | Yes | `AbstractVector` | |  |
+| Branching from Zero-Hopf points to Fold / Hopf curve | Yes | `AbstractVector` | |  |
 

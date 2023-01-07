@@ -414,7 +414,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 
-	@assert !(bifpt.type in (:hh, :endpoint)) "Normal form for $(bifpt.type) not implemented"
+	@assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
 
 	# parameters for normal form
 	kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
@@ -429,6 +429,8 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		return bautinNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :zh
 		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
+	elseif bifpt.type == :hh
+		return hopfHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
 	end

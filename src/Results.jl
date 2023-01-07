@@ -70,6 +70,7 @@ end
 Base.length(br::AbstractBranchResult) = length(br.branch)
 getParams(br::AbstractBranchResult) = getParams(br.prob)
 getLens(br::AbstractBranchResult) = getLens(br.prob)
+@inline getProb(br::AbstractBranchResult) = br.prob
 
 # check whether the eigenvalues are saved in the branch
 # this is a good test bifucause we always fill br.eig with a dummy vector :(
@@ -237,6 +238,7 @@ from(tree::ContResult) = nothing
 getfirstusertype(br::Branch) = getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.lastindex(br::Branch) = lastindex(br.γ)
+@inline getParams(br::Branch) = getParams(br.γ)
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
