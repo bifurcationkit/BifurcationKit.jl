@@ -171,7 +171,10 @@ poTrapMF = PeriodicOrbitTrapProblem(
 			(@set prob.VF.J = (x, p) -> (dx -> d1Fbru(x, p, dx))),
 			real.(vec_hopf),
 			hopfpt.u,
-			M, ls0)
+			M, 2n, ls0;
+			jacobian = :BorderedSparseInplace,
+			# jacobian = :FullSparseInplace,
+			)
 
 deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
 # deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])

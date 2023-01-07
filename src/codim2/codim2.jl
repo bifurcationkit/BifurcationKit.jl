@@ -14,7 +14,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
 		$(FIELDS)
 		"""
-		mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver} <: AbstractProblemMinimallyAugmented
+		mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented
 			"Functional F(x, p) - vector field - with all derivatives"
 			prob_vf::Tprob
 			"close to null vector of Jᵗ"
@@ -43,6 +43,8 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			linbdsolverAdjoint::Sbda
 			"wether to use the hessian of prob_vf"
 			usehessian::Bool
+			"wether to use a mass matrix M for studying M∂tu = F(u), default = I"
+			massmatrix::Tmass
 		end
 
 		@inline hasHessian(pb::$op) = hasHessian(pb.prob_vf)
@@ -54,7 +56,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 		jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
 		# constructor
-		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true)
+		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true, massmatrix = LinearAlgebra.I)
 			# determine scalar type associated to vectors a and b
 			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
 			Ty = eltype(α)
@@ -64,7 +66,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 						real(one(Ty)),		# bt
 						real(one(Ty)),		# gh
 						1,							# zh
-						linsolve, linsolve, linbdsolver, linbdsolver, usehessian)
+						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
 		end
 	end
 end

@@ -59,7 +59,7 @@ getPeriodicOrbit(br::AbstractBranchResult, ind::Int) = getPeriodicOrbit(br.prob,
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,1] and the period `period`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,2π] and the period `period`.
 """
 function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 	M = getMeshSize(pb)

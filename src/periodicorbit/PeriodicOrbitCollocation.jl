@@ -413,7 +413,7 @@ function reMake(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractV
 	N = length(ζr)
 
 	_, m, Ntst = size(prob)
-	nunknows = N * (1 + m*Ntst)
+	nunknows = N * (1 + m * Ntst)
 
 	# update the problem
 	probPO = setproperties(prob, N = N, prob_vf = prob_vf, ϕ = zeros(nunknows), xπ = zeros(nunknows), cache = POCollCache(eltype(prob), N, m))

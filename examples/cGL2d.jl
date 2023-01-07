@@ -129,7 +129,7 @@ hopfpt = getNormalForm(br, 2)
 
 ind_hopf = 1
 	# hopfpt = BK.HopfPoint(br, ind_hopf)
-	optnew = NewtonPar(opts_br.newtonOptions, verbose=true)
+	optnew = NewtonPar(opts_br.newtonOptions, verbose = true)
 	hopfpoint = newton(br, ind_hopf;
 		options = optnew, normN = norminf, startWithEigen = true)
 	BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
@@ -160,7 +160,8 @@ brfold = continuation(br_hopf, indbt, setproperties(br_hopf.contparams; detectBi
 	jacobian_ma = :minaug,
 	bothside = true, normC = norminf)
 
-plot(br_hopf, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
+br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
+plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
 getNormalForm(brfold, 4; autodiff = false)
 ####################################################################################################

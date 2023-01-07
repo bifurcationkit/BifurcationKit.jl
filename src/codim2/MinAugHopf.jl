@@ -324,6 +324,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 				jacobian_ma::Symbol = :autodiff,
 				computeEigenElements = false,
 				usehessian = true,
+				massmatrix = LinearAlgebra.I,
 				kwargs...) where {Tb, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob_vf)
@@ -339,7 +340,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		options_newton.linsolver,
 		# do not change linear solver if user provides it
 		@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
-		usehessian = usehessian)
+		usehessian = usehessian,
+		massmatrix = massmatrix)
 
 	# Jacobian for the Hopf problem
 	if jacobian_ma == :autodiff

@@ -115,7 +115,7 @@ function evolve(fl::FlowDE{T1,T2,Nothing,T4,T5,T6}, x::AbstractArray, p, dx, tm;
 	end
 end
 ######### Optional methods
-# this gives access to the full solution, convenient for Poincaré shooting
+# this gives access to the full solution
 # this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem}
 	_prob = remake(fl.prob; u0 = x, tspan = (zero(tm), tm), p = p)
