@@ -71,7 +71,7 @@ function Base.show(io::IO, bp::HopfHopf)
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
 	println(io, "Hopf-Hopf bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
-	println(io, "ω = ", bp.nf.ω)
+	println(io, "λ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
 	println(io, bp.nf)
 end
 ####################################################################################################
