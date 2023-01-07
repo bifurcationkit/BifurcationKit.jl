@@ -824,12 +824,16 @@ function zeroHopfNormalForm(_prob,
 		# null eigenvalue
 		_ind0 = argmin(abs.(_λ))
 		@info "The eigenvalue is $(_λ[_ind0])"
-		@warn abs(_λ[_ind0]) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
+		abs(_λ[_ind0]) > br.contparams.newtonOptions.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
 		q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
 		# imaginary eigenvalue
-		_indIm = argmin(real.((_λ[ii] for ii = eachindex(_λ) if ii!=_ind0)))
-		λI = _λ[_indIm]
-		q1 = geteigenvector(optionsN.eigsolver, _ev, _indIm)
+		tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
+		# imaginary eigenvalue iω1
+		_ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
+		_indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
+		λI = _λ[_ind2[_indIm]]
+		q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
+		@info "Second eigenvalue = $(λI)"
 	else
 		@assert 1==0 "Not done"
 		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
