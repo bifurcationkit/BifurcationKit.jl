@@ -408,7 +408,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
-function reMake(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t->t)
+function reMake(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t->t, k...)
 	M = length(orbitguess_a)
 	N = length(ζr)
 

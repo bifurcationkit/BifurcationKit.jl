@@ -27,7 +27,7 @@ const DocStrjacobianPOTrap = """
 - For `jacobian = :BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = :FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
 - For `jacobian = :BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
-- For `jacobian = :FullMatrixFreeAD`, the evalution map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential. 
+- For `jacobian = :FullMatrixFreeAD`, the evalution map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential.
 """
 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
@@ -214,7 +214,7 @@ function POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h, 
 		dest .-= h .* tmp
 	end
 end
-POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool = true; applyf::Bool = true) = POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf = applyf)
+POTrapScheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool = true; applyf::Bool = true) = POTrapScheme!(pb, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf = applyf)
 
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
