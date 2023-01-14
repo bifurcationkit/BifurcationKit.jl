@@ -830,6 +830,7 @@ function zeroHopfNormalForm(_prob,
 		tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
 		# imaginary eigenvalue iω1
 		_ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
+		verbose && @info "EV" _λ _ind2
 		_indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
 		λI = _λ[_ind2[_indIm]]
 		q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])

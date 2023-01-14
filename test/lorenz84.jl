@@ -147,6 +147,7 @@ testEV(hp_codim2_test)
 @set! opts_br.newtonOptions.verbose = false
 sn_codim2 = nothing
 for _jac in (:autodiff, :minaug)
+	@info _jac
 	# be careful here, Bordered predictor not good for Fold continuation
 	sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, pMax = 3.2, pMin = -0.1, detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, nInversion = 10, saveSolEveryStep = 1, maxSteps = 30, maxBisectionSteps = 55) ; verbosity = 0,
 		normC = norminf,
@@ -178,7 +179,7 @@ for _jac in (:autodiff, :minaug)
 	# 	# plot!(hp_codim2_1, vars=(:F, :T), branchlabel = "Hopf1")
 
 	# test for Zero-Hopf
-	zh = BK.getNormalForm(sn_codim2, 2)
+	zh = BK.getNormalForm(sn_codim2, 2, verbose = true)
 	show(zh)
 	BK.predictor(zh, Val(:HopfCurve), 0.1).hopf(0.)
 	BK.predictor(zh, Val(:HopfCurve), 0.1).x0(0.)
