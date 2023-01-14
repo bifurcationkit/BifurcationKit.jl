@@ -232,7 +232,51 @@ for _jac in (:autodiff, :minaug)
 end
 
 ####################################################################################################
-hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.015, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
+# test events
+sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, pMax = 3.2, pMin = -0.1, detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, nInversion = 10, saveSolEveryStep = 1, maxSteps = 30, maxBisectionSteps = 55) ; verbosity = 0,
+	normC = norminf,
+	# jacobian_ma = _jac,
+	# jacobian_ma = :minaug,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	startWithEigen = true,
+	# bothside = true,
+	recordFromSolution = recordFromSolutionLor,
+	event = SaveAtEvent((0.001,.01)),
+	bdlinsolver = MatrixBLS())
+
+@test sn_codim2.specialpoint |> length == 7
+@test sn_codim2.specialpoint[2].type == Symbol("save-2")
+@test sn_codim2.specialpoint[3].type == Symbol("save-1")
+
+hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
+	# verbosity = 3, plot = true,
+	normC = norminf,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	startWithEigen = true,
+	bothside = false,
+	jacobian_ma = :autodiff,
+	# jacobian_ma = :minaug,
+	event = SaveAtEvent((-0.05,.0)),
+	recordFromSolution = recordFromSolutionLor,
+	bdlinsolver = MatrixBLS())
+
+@test hp_codim2_1.specialpoint |> length == 4
+@test hp_codim2_1.specialpoint[2].type == Symbol("save-2")
+@test hp_codim2_1.specialpoint[3].type == Symbol("save-1")
+####################################################################################################
+sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, pMax = 3.2, pMin = -0.1, detectBifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, nInversion = 10, saveSolEveryStep = 1, maxSteps = 30, maxBisectionSteps = 55) ; verbosity = 0,
+	normC = norminf,
+	# jacobian_ma = _jac,
+	# jacobian_ma = :minaug,
+	detectCodim2Bifurcation = 2,
+	updateMinAugEveryStep = 1,
+	startWithEigen = true,
+	recordFromSolution = recordFromSolutionLor,
+	bdlinsolver = MatrixBLS())
+
+hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
 	verbosity = 0,
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
@@ -277,7 +321,7 @@ sn_from_bt = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, 
 	updateMinAugEveryStep = 1,
 	recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS())
-@test sn_codim2_2.kind isa BK.FoldCont
+@test sn_from_bt.kind isa BK.FoldCont
 
 # curve of Hopf points from ZH
 hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, maxSteps = 100) ;

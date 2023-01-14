@@ -1,4 +1,6 @@
 """
+$(SIGNATURES)
+
 For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonFold`.
 """
 function FoldPoint(br::AbstractBranchResult, index::Int)
@@ -433,6 +435,14 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 
 	prob_f = reMake(prob_f, recordFromSolution = _printsol2)
 
+	# define event for detecting bifurcations. Coupled it with user passed events
+	event_user = get(kwargs, :event, nothing)
+	if isnothing(event_user)
+		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, testForZH, false, ("zh",)))
+	else
+		event = SetOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, testForZH, false, ("zh",)), event_user)
+	end
+
 	# solve the Fold equations
 	br = continuation(
 		prob_f, alg,
@@ -442,7 +452,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		kind = FoldCont(),
 		normC = normC,
 		finaliseSolution = updateMinAugFold,
-		event = PairOfEvents(ContinuousEvent(2, testForBT_CP, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, testForZH, false, ("zh",)))
+		event = event
 		)
 		@assert ~isnothing(br) "Empty branch!"
 	return correctBifurcation(br)

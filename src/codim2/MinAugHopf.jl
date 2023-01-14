@@ -465,14 +465,24 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	# eigen solver
 	eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver))
 
+	# define event for detecting bifurcations. Coupled it with user passed events
 	# event for detecting codim 2 points
+	event_user = get(kwargs, :event, nothing)
 	if computeEigenElements
-		event = PairOfEvents(ContinuousEvent(2, testBT_GH, computeEigenElements, ("bt", "gh"), threshBT), BifDetectEvent)
+		if isnothing(event_user)
+			event = PairOfEvents(ContinuousEvent(2, testBT_GH, computeEigenElements, ("bt", "gh"), threshBT), BifDetectEvent)
+		else
+			event = SetOfEvents(ContinuousEvent(2, testBT_GH, computeEigenElements, ("bt", "gh"), threshBT), BifDetectEvent, event_user)
+		end
 		# careful here, we need to adjust the tolerance for stability to avoid
 		# spurious ZH or HH bifurcations
 		@set! opt_hopf_cont.tolStability = 10opt_hopf_cont.newtonOptions.tol
 	else
-		event = ContinuousEvent(2, testBT_GH, false, ("bt", "gh"), threshBT)
+		if isnothing(event_user)
+			event = ContinuousEvent(2, testBT_GH, false, ("bt", "gh"), threshBT)
+		else
+			event = PairOfEvents(ContinuousEvent(2, testBT_GH, false, ("bt", "gh"), threshBT), event_user)
+		end
 	end
 
 	prob_h = reMake(prob_h, recordFromSolution = _printsol2)
