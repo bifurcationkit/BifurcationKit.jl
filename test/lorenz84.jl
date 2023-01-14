@@ -347,11 +347,11 @@ hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, ds
 	)
 @test hp_from_zh.kind isa BK.HopfCont
 
-plot(sn_codim2,vars=(:X, :U),)
-	plot!(sn_from_bt, vars=(:X, :U),)
-	plot!(hp_codim2_1, vars=(:X, :U), branchlabel = "Hopf")
-	plot!(hp_from_zh, vars=(:X, :U), branchlabel = "Hopf")
-	plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf")
+# plot(sn_codim2,vars=(:X, :U),)
+# 	plot!(sn_from_bt, vars=(:X, :U),)
+# 	plot!(hp_codim2_1, vars=(:X, :U), branchlabel = "Hopf")
+# 	plot!(hp_from_zh, vars=(:X, :U), branchlabel = "Hopf")
+# 	plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf")
 
 # test getters for branches
 BK.getLens(hp_from_hh)
