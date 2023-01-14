@@ -1,5 +1,5 @@
 """
-For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonHopf`.
+For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newtonHopf`.
 """
 function HopfPoint(br::AbstractBranchResult, index::Int)
 	@assert br.specialpoint[index].type == :hopf "The provided index does not refer to a Hopf point"

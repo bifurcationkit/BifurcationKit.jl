@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonFold`.
+For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will can refined using `newtonFold`.
 """
 function FoldPoint(br::AbstractBranchResult, index::Int)
 	bptype = br.specialpoint[index].type
