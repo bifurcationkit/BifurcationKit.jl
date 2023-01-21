@@ -36,7 +36,7 @@ n = 101
 par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
-prob = BK.BifurcationProblem(F_chan, sol0, par, (@lens _.α); J = (x,p) -> BK.finiteDifferences(z->F_chan(z,p),x), plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
+prob = BK.BifurcationProblem(F_chan, sol0, par, (@lens _.α); plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
 # ca fait dans les 63.59k Allocations
@@ -82,6 +82,8 @@ outfold = @time newton(br, indfold)
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300, detectBifurcation = 0)
 	foldbranch = @time continuation(br, indfold, (@lens _.β),
 		plot = false, verbosity = 0,
+		jacobian_ma = :minaug,
+		startWithEigen = true,
 		optcontfold)
 plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector

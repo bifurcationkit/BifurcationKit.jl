@@ -1,4 +1,4 @@
-abstract type AbstractPeriodicOrbitProblem end
+abstract type AbstractPeriodicOrbitProblem <: AbstractBifurcationProblem end
 
 # Periodic orbit computations by finite differences
 abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
@@ -251,7 +251,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 	elseif jacobianPO == :autodiffMF
 		jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
 	elseif jacobianPO == :FiniteDifferences
-		jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x, p)) ./ δ, x, p)
+		jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x .- δ .* dx, p)) ./ (2δ), x, p)
 	else
 		jac = (x, p) -> FloquetWrapper(probPO, x, p)
 	end

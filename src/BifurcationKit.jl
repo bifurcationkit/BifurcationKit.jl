@@ -29,14 +29,17 @@ module BifurcationKit
 
 	include("DeflationOperator.jl")
 
+	# continuation
 	include("Continuation.jl")
 	include("IteratorUtils.jl")
 
+	# events
 	include("events/EventDetection.jl")
 	include("events/BifurcationDetection.jl")
 
 	include("Bifurcations.jl")
 
+	# continuers
 	include("continuation/Contbase.jl")
 	include("continuation/Natural.jl")
 	include("continuation/Palc.jl")
@@ -44,11 +47,12 @@ module BifurcationKit
 	include("continuation/MoorePenrose.jl")
 	include("DeflatedContinuation.jl")
 
+	# wip
 	include("BorderedProblem.jl")
 
 	include("Utils.jl")
 
-
+	# generic codim 2
 	include("codim2/codim2.jl")
 	include("codim2/MinAugFold.jl")
 	include("codim2/MinAugHopf.jl")
@@ -62,12 +66,11 @@ module BifurcationKit
 	include("codim2/NormalForms.jl")
 	include("bifdiagram/BifurcationDiagram.jl")
 
+	# periodic orbit problems
 	include("periodicorbit/Sections.jl")
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitTrapeze.jl")
 	include("periodicorbit/PeriodicOrbitCollocation.jl")
-	# include("periodicorbit/PeriodicOrbitMIRK.jl")
-	# include("periodicorbit/PeriodicOrbitFDAdapt.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/FlowDE.jl")
@@ -76,6 +79,7 @@ module BifurcationKit
 	include("periodicorbit/ShootingDE.jl")
 	include("periodicorbit/Floquet.jl")
 
+	# wave problem
 	include("wave/WaveProblem.jl")
 	include("wave/EigSolver.jl")
 

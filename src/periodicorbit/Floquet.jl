@@ -417,7 +417,7 @@ end
 	μ = @. Complex(1 / (1 + vals))
 	vp0 = minimum(abs∘log, μ)
 	if vp0 > 1e-8
-		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
 	end
 
 	return log.(μ), Complex.(vecs[indvalid, :]), true
@@ -428,7 +428,7 @@ end
 
 Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2] in which we form the monodromy matrix with a product of `Ntst` matrices.
 
-This is much faster than `FloquetCollGEV` but less precise. The better version will use a Periodic Schur decomposition instead of the product of `Ntst` matrices. This will be provided in the near future.
+This is much faster than `FloquetCollGEV` but less precise. The best version uses a Periodic Schur decomposition instead of the product of `Ntst` matrices. This is provided in the package `PeriodicSchurBifurcationKit.jl`.
 
 ## References
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. « NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS ». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
@@ -445,10 +445,10 @@ struct FloquetColl{E <: AbstractEigenSolver} <: AbstractFloquetSolver
 end
 
 @views function (eig::FloquetColl)(JacColl, nev; kwargs...)
-	prob = JacColl.pb
-	Ty = eltype(prob)
+	pbcoll = JacColl.pb
+	Ty = eltype(pbcoll)
 	J = JacColl.jacpb
-	n, m, Ntst = size(prob)
+	n, m, Ntst = size(pbcoll)
 	nbcoll = n * m
 
 	nev = min(n, nev)
@@ -481,9 +481,7 @@ end
 		Bi .= Jcond[r2, r1 .+ n*m]
 		r1  = r1 .+ m*n
 		r2  = r2 .+ m*n
-
 		M = (Bi \ Ai) * M
-
 	end
 
 	# floquet multipliers
@@ -498,7 +496,7 @@ end
 	# give indications on the precision on the Floquet coefficients
 	vp0 = minimum(abs, σ)
 	if vp0 > 1e-9
-		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+		@warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetColl`"
 	end
 	return σ, Complex.(vecs[I, :]), true
 end
