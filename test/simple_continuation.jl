@@ -23,11 +23,11 @@ BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
 # test branch kinds
 BK.FoldCont()
-BK.HopfCont() 
-BK.PDCont() 
+BK.HopfCont()
+BK.PDCont()
 
 # Codim2 periodic orbit
-BK.FoldPeriodicOrbitCont() 
+BK.FoldPeriodicOrbitCont()
 BK.PDPeriodicOrbitCont()
 BK.NSPeriodicOrbitCont()
 ####################################################################################################
@@ -223,7 +223,7 @@ prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
 x0 = newton(prob, opts.newtonOptions)
 x1 = newton((@set prob.params = -1.45), opts.newtonOptions)
 
-br0 = continuation(prob, PALC(), opts, verbosity=0)
+br0 = continuation(prob, PALC(), opts, verbosity=3)
 BK.getEigenelements(br0, br0.specialpoint[1])
 BK.detectLoop(br0, x0.u, -1.45)
 

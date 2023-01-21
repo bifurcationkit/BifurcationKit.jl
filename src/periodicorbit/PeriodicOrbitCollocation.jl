@@ -479,6 +479,39 @@ function getSolution(prob::WrapPOColl, x)
 		return x
 	end
 end
+
+using SciMLBase: AbstractTimeseriesSolution
+"""
+$(SIGNATURES)
+
+Generate a periodic orbit problem from a solution.
+
+## Arguments
+- `pb` a `PeriodicOrbitOCollProblem` which provide basic information, like the number of time slices `M`
+- `bifprob` a bifurcation problem to provide the vector field
+- `sol` basically, and `ODEProblem
+- `period` estimate of the period of the periodic orbit
+
+## Output
+- returns a `PeriodicOrbitOCollProblem` and an initial guess.
+"""
+function generateCIProblem(pb::PeriodicOrbitOCollProblem, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period)
+	u0 = sol(0)
+	@assert u0 isa AbstractVector
+	N = length(u0)
+
+	n,m,Ntst = size(pb)
+	probcoll = PeriodicOrbitOCollProblem(Ntst, m ; N = N, prob_vf = bifprob, xπ = copy(u0), ϕ = copy(u0))
+
+	resize!(probcoll.ϕ, length(probcoll))
+	resize!(probcoll.xπ, length(probcoll))
+
+	ci = generateSolution(probcoll, t -> sol(t*period/2-period/4), period)
+	probcoll.ϕ .= @view ci[1:end-1]
+	ci = generateSolution(probcoll, t -> sol(t*period/2), period)
+
+	return probcoll, ci
+end
 ####################################################################################################
 const DocStrjacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(:autodiffDense, )`. This is used to select a way of inverting the jacobian dG

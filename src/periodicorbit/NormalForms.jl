@@ -106,7 +106,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 								kwargs_nf...)
 	# Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.
 	# on page 1243
-	
+
 	# first, get the bifurcation point parameters
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
@@ -153,60 +153,6 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	v₁ₛ = getTimeSlices(coll, vcat(v₁,0))
 	v₁★ₛ = getTimeSlices(coll, vcat(v₁★,0))
 
-	@assert ∫(coll, ζ★ₛ, ζₛ, 1) ≈ 0.5
-	@assert ∫(coll, ζₛ, ζₛ, 1) ≈ 1
-
-	u₀ₛ = getTimeSlices(coll, bifpt.x) # periodic solution at bifurcation
-	Fu₀ₛ = copy(u₀ₛ)
-	Aₛ = copy(u₀ₛ)
-	Bₛ = copy(u₀ₛ)
-	Cₛ = copy(u₀ₛ)
-	for i=1:size(u₀ₛ, 2)
-		Fu₀ₛ[:,i] .= F(u₀ₛ[:,i], par)
-		Aₛ[:,i]   .= A(u₀ₛ[:,i], par, v₁ₛ[:,i])
-		Bₛ[:,i]  .= R2(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i])
-		Cₛ[:,i]  .= R3(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i], v₁ₛ[:,i])
-	end
-
-	# computation of ψ★
-	J[end-N:end-1, 1:N] .= -I(N)
-	J[end, :] .= rand(nj)
-	J[:, end] .= rand(nj)
-	q = J  \ rhs; q = q[1:end-1]; q ./= norm(q)
-	p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
-
-	J[end, 1:end-1] .= q
-	J[1:end-1, end] .= p
-
-	ψ₁★ = J' \ rhs
-	ψ₁★ₛ = getTimeSlices(coll, ψ₁★)
-	ψ₁★ ./= 2∫(coll, ψ₁★ₛ, Fu₀ₛ, 1)
-
-	@assert ∫(coll, ψ₁★ₛ, Fu₀ₛ, 1) ≈ 0.5
-
-	a = ∫(coll, ψ₁★ₛ, Bₛ, 1)
-
-	# computation of h₂
-	rhsₛ = @. Bₛ - 2a * Fu₀ₛ
-	rhs = vcat(vec(rhsₛ), 0)
-	J[end-N:end-1, 1:N] .= -I(N)
-	@warn "Je ne suis pas sur que ce soit la bonne condition"
-	J[end, 1:end] .= ψ₁★
-	J[end, end] = 0
-	h₂ = J \ rhs
-
-	# computation of c
-	h₂ₛ = getTimeSlices(coll, h₂)
-	for i=1:size(u₀ₛ, 2)
-		Bₛ[:,i]  .= R2(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
-	end
-	c = ∫(coll, v₁★ₛ, Cₛ, 1/T) +
-		3∫(coll, v₁★ₛ, Bₛ, 1) -
-		2a * ∫(coll, v₁★ₛ, Aₛ, 1/T)
-	c /= 3
-
-	nf = (a = a, c = c)
-	@debug "" a c c/a
 
 	return PeriodDoubling(bifpt.x, T, bifpt.param, par, getLens(br), v₁, v₁★, nf, :none, coll)
 

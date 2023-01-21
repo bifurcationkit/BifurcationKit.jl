@@ -62,11 +62,11 @@ function Base.show(io::IO, pd::PeriodDoubling)
 	println(io, "Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf)
 end
 
-function Base.show(io::IO, pd::BranchPointPeriodicOrbit)
-	print(io, pd.type, " - ")
-	println(io, type(pd), " bifurcation point at ", getLensSymbol(pd.lens)," ≈ $(pd.p)")
-	println(io, "Period = ", abs(pd.T))
-	println(io, "Problem : ", typeof(pd.prob).name.name)
+function Base.show(io::IO, bp::BranchPointPeriodicOrbit)
+	print(io, bp.type, " - ")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+	println(io, "Period = ", abs(bp.T))
+	println(io, "Problem : ", typeof(bp.prob).name.name)
 end
 
 ####################################################################################################

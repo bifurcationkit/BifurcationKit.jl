@@ -44,6 +44,12 @@ probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 sol = solve(probMono, KenCarp4(), abstol=1e-9, reltol=1e-6)
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
+
+# test generation of initial guess from ODESolution
+generateCIProblem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
+generateCIProblem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
+generateCIProblem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
+generateCIProblem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
 ####################################################################################################
 section(x, T) = x[1] #* x[end]
 section(x, T, dx, dT) = dx[1] #* x[end]

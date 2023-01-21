@@ -1078,3 +1078,37 @@ function reMake(prob::PeriodicOrbitTrapProblem, prob_vf, hopfpt, ζr::AbstractVe
 
 	return probPO, orbitguess
 end
+
+using SciMLBase: AbstractTimeseriesSolution
+"""
+$(SIGNATURES)
+
+Generate a periodic orbit problem from a solution.
+
+## Arguments
+- `pb` a `PeriodicOrbitTrapProblem` which provide basic information, like the number of time slices `M`
+- `bifprob` a bifurcation problem to provide the vector field
+- `sol` basically, and `ODEProblem
+- `period` estimate of the period of the periodic orbit
+
+## Output
+- returns a `PeriodicOrbitTrapProblem` and an initial guess.
+"""
+function generateCIProblem(pb::PeriodicOrbitTrapProblem, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period)
+	u0 = sol(0)
+	@assert u0 isa AbstractVector
+	N = length(u0)
+	probtrap = PeriodicOrbitTrapProblem(M = pb.M, N = N, prob_vf = bifprob, xπ = copy(u0), ϕ = copy(u0))
+
+	M, N = size(probtrap)
+	resize!(probtrap.ϕ, N * M)
+	resize!(probtrap.xπ, N * M)
+
+	ci = generateSolution(probtrap, t -> sol(t*period/2/pi), period)
+	_sol = getPeriodicOrbit(probtrap, ci, nothing)
+	probtrap.xπ .= 0
+	probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:,i], sol.prob.p) for i=1:probtrap.M])
+
+	return probtrap, ci
+end
+####################################################################################################
