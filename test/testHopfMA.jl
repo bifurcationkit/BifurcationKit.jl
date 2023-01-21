@@ -224,11 +224,11 @@ BK.converged(outpo_f)
 # jacobian of the functional
 Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
-# calcul des exposants de Floquet, extract full vector
-BK.MonodromyQaD(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
-
 # calcul des exposants de Floquet
 floquetES = FloquetQaD(DefaultEig())
+
+# calcul des exposants de Floquet, extract full vector
+floquetES(Val(:ExtractEigenVector), poTrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, θ = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)

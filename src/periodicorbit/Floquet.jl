@@ -145,7 +145,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function MonodromyQaD(::Val{:ExtractEigenVector}, sh::ShootingProblem, x::AbstractVector, par, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, sh::ShootingProblem, x::AbstractVector, par, ζ::AbstractVector)
 
 	# period of the cycle
 	T = getPeriod(sh, x)
@@ -235,7 +235,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function MonodromyQaD(::Val{:ExtractEigenVector}, psh::PoincareShootingProblem, x_bar::AbstractVector, p, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, psh::PoincareShootingProblem, x_bar::AbstractVector, p, ζ::AbstractVector)
 	#  ζ is of size (N-1)
 	M = getMeshSize(psh)
 	Nm1 = length(ζ)
@@ -300,7 +300,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the Trapezoid functional
 # at position x from the Floquet eigenvector ζ
-function MonodromyQaD(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, ζ::AbstractVector)
+function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, ζ::AbstractVector)
 	# extraction of various constants
 	M, N = size(poPb)
 
