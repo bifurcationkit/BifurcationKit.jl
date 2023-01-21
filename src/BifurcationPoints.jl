@@ -110,7 +110,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 		to find the zeros of the normal form polynomials.
 		"""
 		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractSimpleBranchPoint
-			"bifurcation point."
+			"Bifurcation point."
 			x0::Tv
 
 			"Parameter value at the bifurcation point."
@@ -183,7 +183,7 @@ You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zero
 - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
 """
 mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractBranchPoint
-	"bifurcation point"
+	"Bifurcation point"
 	x0::Tv
 
 	"Parameter value at the bifurcation point"
@@ -237,7 +237,7 @@ mutable struct Hopf{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: Abstrac
 	"Parameter value at the Hopf point"
 	p::T
 
-	"Frequency of the Hopf point"
+	"Frequency at the Hopf point"
 	ω::Tω
 
 	"Parameters used by the vector field."

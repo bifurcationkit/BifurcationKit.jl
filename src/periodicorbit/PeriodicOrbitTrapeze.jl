@@ -1096,7 +1096,7 @@ function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::S
 		orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
 		orbitguess = vec(orbitguess_c[:,1:2:end])
 
-		@debug size(orbitguess0) size(orbitguess) size(ζ) size(orbitguess_c)
+		# we append twice the period
 		orbitguess = vcat(orbitguess, 2bifpt.x[end])
 	end
 	return pb, orbitguess

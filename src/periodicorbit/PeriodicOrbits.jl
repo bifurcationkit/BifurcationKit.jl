@@ -18,8 +18,8 @@ Compute the period of the periodic orbit associated to `x`.
 @inline getPeriod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extractPeriod(x)
 @inline extractPeriod(x::AbstractVector) = x[end]
 @inline extractPeriod(x::BorderedArray)  = x.p
+setParamsPO(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = reMake(pb.prob_vf; params = pars))
 setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
-setParamsPO(pb::AbstractPOFDProblem, pars) = (@set pb.prob_vf = reMake(pb.prob_vf; params = pars))
 
 getPeriodicOrbit(prob::WrapPOColl, u::AbstractVector, p) = getPeriodicOrbit(prob.prob, u, p)
 getPeriodicOrbit(prob::WrapPOSh, u::AbstractVector, p) = getPeriodicOrbit(prob.prob, u, p)
@@ -465,8 +465,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	verbose && printstyled(color = :green, "#"^61*
-			"\n┌─ Start branching from $(bptype) point to periodic orbits.
-			 \n├─ Bifurcation type = ", bifpt.type,
+			"\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
 			"\n├─── bif. param  p0 = ", bifpt.param,
 			"\n├─── period at bif. = ", getPeriod(br.prob.prob, bifpt.x, setParam(br, bifpt.param)),
 			"\n├─── new param    p = ", bifpt.param + δp, ", p - p0 = ", δp,
@@ -475,8 +474,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 
 	_linearAlgo = isnothing(linearAlgo) ? BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
 
-	# we copy the problem for not mutating the one passed by the user
+	# we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
 	pb = deepcopy(br.prob.prob)
+	# In contrast, this is a WrapPO, useful to pass the jacobian to the Floquet eigenvector getter :ExtractEigenVector
+	pbwrap = br.prob
 
 	# let us compute the kernel
 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -488,7 +489,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	verbose && println("Done!")
 
 	# compute the full eigenvector
-	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+	floquetsolver = br.contparams.newtonOptions.eigsolver
+	ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
 	ζs = reduce(vcat, ζ_a)
 
 	## predictor

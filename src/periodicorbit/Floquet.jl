@@ -145,7 +145,9 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, sh::ShootingProblem, x::AbstractVector, par, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOSh{ <: ShootingProblem}, x::AbstractVector, par, ζ::AbstractVector)
+	# get the shooting problem
+	sh = powrap.prob
 
 	# period of the cycle
 	T = getPeriod(sh, x)
@@ -235,7 +237,10 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, psh::PoincareShootingProblem, x_bar::AbstractVector, p, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOSh{ <: PoincareShootingProblem}, x_bar::AbstractVector, p, ζ::AbstractVector)
+	# get the shooting problem
+	psh = powrap.prob
+
 	#  ζ is of size (N-1)
 	M = getMeshSize(psh)
 	Nm1 = length(ζ)
@@ -300,7 +305,10 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the Trapezoid functional
 # at position x from the Floquet eigenvector ζ
-function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, poPb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, ζ::AbstractVector)
+function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::AbstractVector, par, ζ::AbstractVector)
+	# get the Trapezoid problem
+	poPb = powrap.prob
+
 	# extraction of various constants
 	M, N = size(poPb)
 
@@ -451,8 +459,6 @@ end
 	n, m, Ntst = size(pbcoll)
 	nbcoll = n * m
 
-	nev = min(n, nev)
-
 	# condensation of parameters
 	# this removes the internal unknowns of each mesh interval
 	# this matrix is diagonal by blocks and each block is the L Matrix
@@ -479,14 +485,15 @@ end
 	for _ in 1:Ntst
 		Ai .= Jcond[r2, r1]
 		Bi .= Jcond[r2, r1 .+ n*m]
-		r1  = r1 .+ m*n
-		r2  = r2 .+ m*n
+		r1  = r1 .+ m * n
+		r2  = r2 .+ m * n
 		M = (Bi \ Ai) * M
 	end
 
 	# floquet multipliers
 	vals, vecs = eigen(M)
 
+	nev = min(n, nev)
 	logvals = log.(Complex.(vals))
 	I = sortperm(logvals, by = real, rev = true)[1:nev]
 
