@@ -516,11 +516,12 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 # Keywords arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
-function continuation(probPO::PeriodicOrbitOCollProblem, orbitguess,
+function continuation(probPO::PeriodicOrbitOCollProblem,
+					orbitguess,
 					alg::AbstractContinuationAlgorithm,
 					_contParams::ContinuationPar,
 					linearAlgo::AbstractBorderedLinearSolver;
-					eigsolver = FloquetCollGEV(_contParams.newtonOptions.eigsolver, length(probPO), probPO.N),
+					eigsolver = FloquetColl(),
 					kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert jacobianPO in
