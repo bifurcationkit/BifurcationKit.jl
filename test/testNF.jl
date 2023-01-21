@@ -320,7 +320,7 @@ BK.type(btpt)
 @test norm(btpt.nf.a * sign(sum(btpt.ζ[1])) - par.a, Inf) < 1e-5
 @test isapprox(abs.(btpt.ζ[1]), [1, 0])
 @test isapprox(abs.(btpt.ζ[2]), [0, 1];rtol = 1e-6)
-@test isapprox(abs.(btpt.ζstar[1]), [1, 0];rtol = 1e-6)
+@test isapprox(abs.(btpt.ζ★[1]), [1, 0];rtol = 1e-6)
 
 @test isapprox(btpt.nfsupp.K2, [0, 0]; atol = 1e-5)
 @test isapprox(btpt.nfsupp.d, 0; atol = 1e-3)

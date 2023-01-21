@@ -1,23 +1,23 @@
-function getAdjointBasis(Lstar, λs, eigsolver; nev = 3, verbose = false)
+function getAdjointBasis(L★, λs, eigsolver; nev = 3, verbose = false)
 	# we compute the eigen-elements of the adjoint of L
-	λstar, evstar = eigsolver(Lstar, nev)
-	verbose && Base.display(λstar)
+	λ★, ev★ = eigsolver(L★, nev)
+	verbose && Base.display(λ★)
 	# vectors to hold eigen-elements for the adjoint of L
-	λstars = Vector{eltype(λs)}()
+	λ★s = Vector{eltype(λs)}()
 	# TODO This is a horrible hack to get  the type of the left eigenvectors
-	ζstars = Vector{typeof(geteigenvector(eigsolver, evstar, 1))}()
+	ζ★s = Vector{typeof(geteigenvector(eigsolver, ev★, 1))}()
 
 	for (idvp, λ) in enumerate(λs)
-		I = argmin(abs.(λstar .- λ))
-		abs(real(λstar[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λstar[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
-		verbose && println("--> VP[$idvp] paired with VPstar[$I]")
-		ζstar = geteigenvector(eigsolver, evstar, I)
-		push!(ζstars, copy(ζstar))
-		push!(λstars, λstar[I])
-		# we change λstar so that it is not used twice
-		λstar[I] = 1e9
+		I = argmin(abs.(λ★ .- λ))
+		abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
+		verbose && println("--> VP[$idvp] paired with VP★[$I]")
+		ζ★ = geteigenvector(eigsolver, ev★, I)
+		push!(ζ★s, copy(ζ★))
+		push!(λ★s, λ★[I])
+		# we change λ★ so that it is not used twice
+		λ★[I] = 1e9
 	end
-	return ζstars, λstars
+	return ζ★s, λ★s
 end
 
 """
@@ -25,14 +25,14 @@ $(SIGNATURES)
 
 Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more eigenvalues than necessary.
 """
-function getAdjointBasis(Lstar, λ::Number, eigsolver; nev = 3, verbose = false)
-	λstar, evstar = eigsolver(Lstar, nev)
-	I = argmin(abs.(λstar .- λ))
-	verbose && (println("--> left eigenvalues = "); display(λstar))
-	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λstar[I])
-	abs(real(λstar[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λstar[I])) !≈ 0.  You can perhaps increase the argument `nev`."
-	ζstar = geteigenvector(eigsolver, evstar, I)
-	return copy(ζstar), λstar[I]
+function getAdjointBasis(L★, λ::Number, eigsolver; nev = 3, verbose = false)
+	λ★, ev★ = eigsolver(L★, nev)
+	I = argmin(abs.(λ★ .- λ))
+	verbose && (println("--> left eigenvalues = "); display(λ★))
+	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λ★[I])
+	abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
+	ζ★ = geteigenvector(eigsolver, ev★, I)
+	return copy(ζ★), λ★[I]
 end
 ####################################################################################################
 """
@@ -88,28 +88,28 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 
 	# extract eigen-elements for adjoint(L), needed to build spectral projector
 	if isSymmetric(prob)
-		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-		ζstar = copy(ζ)
+		λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+		ζ★ = copy(ζ)
 	else
 		_Jt = hasAdjoint(prob) ? jad(prob, x0, parbif) : adjoint(L)
-		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+		ζ★, λ★ = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 	end
 
-	ζstar = real.(ζstar); λstar = real.(λstar)
+	ζ★ = real.(ζ★); λ★ = real.(λ★)
 
-	@assert abs(dot(ζ, ζstar)) > 1e-10 "We got ζ⋅ζstar = $((dot(ζ, ζstar))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
-	ζstar ./= dot(ζ, ζstar)
+	@assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+	ζ★ ./= dot(ζ, ζ★)
 
 	# differentials and projector on Range(L), there are real valued
 	R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
 	R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
-	E(x) = x .- dot(x, ζstar) .* ζ
+	E(x) = x .- dot(x, ζ★) .* ζ
 
 	# we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	# coefficient of p
 	δ = getDelta(prob)
 	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-	a = dot(R01, ζstar)
+	a = dot(R01, ζ★)
 	verbose && println("--> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
 	verbose && println("--> a    = ", a)
 
@@ -117,21 +117,21 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	Ψ01, _ = ls(L, E(R01))
 
-	b1 = dot(R11 .- R2(ζ, Ψ01), ζstar)
+	b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
 	verbose && println("--> b1   = ", b1)
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
-	b2 = dot(b2v, ζstar)
+	b2 = dot(b2v, ζ★)
 	verbose && println("--> b2/2 = ", b2/2)
 
 	# coefficient of x^3, recall b2v = R2(ζ, ζ)
 	wst, _ = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
-	b3 = dot(b3v, ζstar)
+	b3 = dot(b3v, ζ★)
 	verbose && println("--> b3/6 = ", b3/6)
 
-	bp = (x0, p, parbif, lens, ζ, ζstar, (a = a, b1 = b1, b2 = b2, b3 = b3), :NA)
+	bp = (x0, p, parbif, lens, ζ, ζ★, (a = a, b1 = b1, b2 = b2, b3 = b3), :NA)
 	if abs(a) < tolFold
 		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else
@@ -333,47 +333,47 @@ $(SIGNATURES)
 
 Bi-orthogonalise the arguments.
 """
-function biorthogonalise(ζs, ζstars, verbose)
-	# change only the ζstars to have bi-orthogonal left/right eigenvectors
+function biorthogonalise(ζs, ζ★s, verbose)
+	# change only the ζ★s to have bi-orthogonal left/right eigenvectors
 	# we could use projector P=A(A^{T}A)^{-1}A^{T}
 	# we use Gram-Schmidt algorithm instead
-	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 	@assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
 	# save those in case the first algo fails
 	_ζs = deepcopy(ζs)
-	_ζstars = deepcopy(ζstars)
+	_ζ★s = deepcopy(ζ★s)
 
 	# first algo
-	tmp = copy(ζstars[1])
-	for ii in eachindex(ζstars)
-		tmp .= ζstars[ii]
+	tmp = copy(ζ★s[1])
+	for ii in eachindex(ζ★s)
+		tmp .= ζ★s[ii]
 		for jj in eachindex(ζs)
 			if ii != jj
 				tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
 			end
 		end
-		ζstars[ii] .= tmp ./ dot(tmp, ζs[ii])
+		ζ★s[ii] .= tmp ./ dot(tmp, ζs[ii])
 	end
 
-	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 
 	# we switch to another algo if the above fails
 	if norm(G - LinearAlgebra.I, Inf) >= 1e-5
 		@warn "Gram matrix not equal to idendity. Switching to LU algorithm."
 		println("G (det = $(det(G))) = "); display(G)
-		G = [ dot(ζ, ζstar) for ζ in _ζs, ζstar in _ζstars]
+		G = [ dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
 		_F = lu(G; check = true)
 		display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
 		ζs = inv(_F.L) * inv(_F.P) * _ζs
-		ζstars = inv(_F.U)' * _ζstars
+		ζ★s = inv(_F.U)' * _ζ★s
 	end
 
 	# test the bi-orthogonalization
-	G = [ dot(ζ, ζstar) for ζ in ζs, ζstar in ζstars]
+	G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
 	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
-	return ζs, ζstars
+	return ζs, ζ★s
 end
 
 """
@@ -488,20 +488,20 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 
 	# extract eigen-elements for transpose(L), needed to build spectral projector
 	# it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
-	# only adjust ζstars
+	# only adjust ζ★s
 	for ζ in ζs; ζ ./= scaleζ(ζ); end
 	if isSymmetric(prob)
-		λstars = copy(λs)
-		ζstars = copy.(ζs)
+		λ★s = copy(λs)
+		ζ★s = copy.(ζs)
 	else
 		_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
-		ζstars, λstars = getAdjointBasis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
+		ζ★s, λ★s = getAdjointBasis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
 	end
-	ζstars = real.(ζstars); λstars = real.(λstars)
+	ζ★s = real.(ζ★s); λ★s = real.(λ★s)
 	ζs = real.(ζs); λs = real.(λs)
-	verbose && println("--> VP     = ", λs, "\n--> VPstar = ", λstars)
+	verbose && println("--> VP     = ", λs, "\n--> VP★ = ", λ★s)
 
-	ζs, ζstars = biorthogonalise(ζs, ζstars, verbose)
+	ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
 
 	# differentials should work as we are looking at reals
 	R2(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
@@ -511,7 +511,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	function E(x)
 		out = copy(x)
 		for ii in 1:N
-			out .= out .- dot(x, ζstars[ii]) .* ζs[ii]
+			out .= out .- dot(x, ζ★s[ii]) .* ζs[ii]
 		end
 		out
 	end
@@ -524,7 +524,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	δ = getDelta(prob)
 	R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	for ii in 1:N
-		dgidp[ii] = dot(R01, ζstars[ii])
+		dgidp[ii] = dot(R01, ζ★s[ii])
 	end
 	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp, "\n")
 
@@ -534,7 +534,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
 		Ψ01, flag = ls(Linv, E(R01))
 		~flag && @warn "linear solver did not converge"
-		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζstars[ii])
+		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
 	end
 	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
 
@@ -542,7 +542,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	d2gidxjdxk = zeros(Tvec, N, N, N)
 	for ii in 1:N, jj in 1:N, kk in 1:N
 		b2v = R2(ζs[jj], ζs[kk])
-		d2gidxjdxk[ii, jj, kk] = dot(b2v, ζstars[ii])
+		d2gidxjdxk[ii, jj, kk] = dot(b2v, ζ★s[ii])
 	end
 
 	if verbose
@@ -557,24 +557,24 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	d3gidxjdxkdxl = zeros(Tvec, N, N, N, N)
 	for jj in 1:N, kk in 1:N, ll in 1:N
 		b3v = R3(ζs[jj], ζs[kk], ζs[ll])
-		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζstars[ii])
+		# d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζ★s[ii])
 
 		wst, flag = ls(Linv, E(R2(ζs[ll], ζs[kk])))
 		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[jj], wst)
-		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζstars[ii])
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζ★s[ii])
 
 		wst, flag = ls(Linv, E(R2(ζs[ll], ζs[jj])))
 		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[kk], wst)
-		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζstars[ii])
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζ★s[ii])
 
 		wst, flag = ls(Linv, E(R2(ζs[kk], ζs[jj])))
 		~flag && @warn "linear solver did not converge"
 		b3v .-= R2(ζs[ll], wst)
-		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζstars[ii])
+		# d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζ★s[ii])
 		for ii in 1:N
-			d3gidxjdxkdxl[ii, jj, kk, ll] = dot(b3v, ζstars[ii])
+			d3gidxjdxkdxl[ii, jj, kk, ll] = dot(b3v, ζ★s[ii])
 		end
 	end
 	if verbose
@@ -585,7 +585,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		end
 	end
 
-	return NdBranchPoint(x0, p, parbif, lens, ζs, ζstars, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
+	return NdBranchPoint(x0, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
 
 end
 
@@ -659,7 +659,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose:
 	ω = pt.ω
 	ζ = pt.ζ
 	cζ = conj.(pt.ζ)
-	ζstar = pt.ζstar
+	ζ★ = pt.ζ★
 
 	# jacobian at the bifurcation point
 	# c'est recalcule ici!!!! 2x
@@ -686,11 +686,11 @@ function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose:
 	# a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
 	av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	av .+= 2 .* R2(ζ, Ψ001)
-	a = dot(av, ζstar)
+	a = dot(av, ζ★)
 
 	# b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
 	bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
-	b = dot(bv, ζstar)
+	b = dot(bv, ζ★)
 
 	# return coefficients of the normal form
 	verbose && println((a = a, b = b))
@@ -764,19 +764,19 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
-	ζstar, λstar = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+	ζ★, λ★ = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
-	# check that λstar ≈ conj(λ)
-	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ ≈ $λ,\nλstar ≈ $λstar?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+	# check that λ★ ≈ conj(λ)
+	abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
-	ζstar ./= dot(ζ, ζstar)
-	@assert dot(ζ, ζstar) ≈ 1
+	ζ★ ./= dot(ζ, ζ★)
+	@assert dot(ζ, ζ★) ≈ 1
 
 	hopfpt = Hopf(bifpt.x, bifpt.param,
 		ω,
 		parbif, lens,
-		ζ, ζstar,
+		ζ, ζ★,
 		(a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
 		:SuperCritical
 	)

@@ -20,7 +20,7 @@ for op in (:Cusp, :Bautin, :ZeroHopf, :HopfHopf)
 			ζ::Tevr
 
 			"Left eigenvector"
-			ζstar::Tevl
+			ζ★::Tevl
 
 			"Normal form coefficients"
 			nf::Tnf
@@ -95,7 +95,7 @@ $(TYPEDFIELDS)
 	ζ::Tevr
 
 	"Left eigenvectors"
-	ζstar::Tevl
+	ζ★::Tevl
 
 	"Normal form coefficients (basic)"
 	nf::Tnf

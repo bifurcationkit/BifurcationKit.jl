@@ -84,23 +84,23 @@ function cuspNormalForm(_prob,
 
 	# extract eigen-elements for adjoint(L), needed to build spectral projector
 	if isSymmetric(prob_vf)
-		λstar = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-		ζstar = copy(ζ)
+		λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+		ζ★ = copy(ζ)
 	else
 		_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), eigsolver; nev = nev, verbose = verbose)
+		ζ★, λ★ = getAdjointBasis(_Jt, conj(λ), eigsolver; nev = nev, verbose = verbose)
 	end
 
-	ζstar = real.(ζstar); λstar = real.(λstar)
+	ζ★ = real.(ζ★); λ★ = real.(λ★)
 
-	@assert abs(dot(ζ, ζstar)) > 1e-10 "We got ζ⋅ζstar = $((dot(ζ, ζstar))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
-	ζstar ./= dot(ζ, ζstar)
+	@assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+	ζ★ ./= dot(ζ, ζ★)
 
 	# Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
 	# notations from this paper
 	B(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
 	C(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
-	q = ζ; p = ζstar
+	q = ζ; p = ζ★
 
 	h2 = B(q, q)
 	h2 .= dot(p, h2) .* q .- h2
@@ -112,7 +112,7 @@ function cuspNormalForm(_prob,
 	pt = Cusp(
 		x0, parbif,
 		(getLens(prob_ma), lens),
-		ζ, ζstar,
+		ζ, ζ★,
 		(c = c, ),
 		:none
 	)
@@ -164,12 +164,12 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
 
 	ζ0, ζ1 = pt.ζ
-	ζs0, ζs1 = pt.ζstar
+	ζs0, ζs1 = pt.ζ★
 
-	G = [dot(xs, x) for xs in pt.ζstar, x in pt.ζ]
+	G = [dot(xs, x) for xs in pt.ζ★, x in pt.ζ]
 	norm(G-I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
 
-	G = [dot(xs, apply(L,x)) for xs in pt.ζstar, x in pt.ζ]
+	G = [dot(xs, apply(L,x)) for xs in pt.ζ★, x in pt.ζ]
 	norm(G-[0 1;0 0], Inf) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norm(G-[0 1;0 0], Inf))"
 
 	# second differential
@@ -365,7 +365,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 		F = eigen(A)
 		ind = findall(imag.(F.values) .< 0)
 		hopfvec = F.vectors[:, ind]
-		return bt.ζstar[1] .* hopfvec[1] .+ bt.ζstar[2] .* hopfvec[2]
+		return bt.ζ★[1] .* hopfvec[1] .+ bt.ζ★[2] .* hopfvec[2]
 	end
 
 	# compute point on the Hopf curve
@@ -398,7 +398,7 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; verbose = false
 	end
 	return (fold = FoldCurve,
 			EigenVec = t -> (bt.ζ[1]),
-			EigenVecAd = t -> (bt.ζstar[2]),
+			EigenVecAd = t -> (bt.ζ★[2]),
 			x0 = t -> getx(t) .* bt.ζ[1])
 end
 
@@ -541,17 +541,17 @@ function bogdanovTakensNormalForm(_prob,
 		end
 	end
 	###########################
-	# Construction of the basis (ζ0, ζ1), (ζstar0, ζstar1). We follow the procedure described in Al-Hdaibat et al. 2016 on page 972.
+	# Construction of the basis (ζ0, ζ1), (ζ★0, ζ★1). We follow the procedure described in Al-Hdaibat et al. 2016 on page 972.
 
 	# Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
 	###########################
 	vext = real.(ζs[1])
 	Lᵗ = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
-	_λstar, _evstar, _ = eigsolver(Lᵗ, nev)
-	Ivp = sortperm(_λstar, by = abs)
+	_λ★, _ev★, _ = eigsolver(Lᵗ, nev)
+	Ivp = sortperm(_λ★, by = abs)
 	# in case the prob is HopfMA, we real it
 	zerov = real.(prob_ma.zero)
-	wext = real.(geteigenvector(eigsolver, _evstar, Ivp[1]))
+	wext = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
 	q0, = bls(L, wext, vext, zero(Ty), zerov, one(Ty))
 	p1, = bls(Lᵗ, vext, wext, zero(Ty), zerov, one(Ty))
 	q1, = bls(L, p1, q0, zero(Ty), q0, zero(Ty))
@@ -653,14 +653,14 @@ function bautinNormalForm(_prob,
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-	ζstar, λstar = getAdjointBasis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	ζ★, λ★ = getAdjointBasis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
-	# check that λstar ≈ conj(λ)
-	abs(λ + λstar) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λstar) and $(abs(λ + λstar)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+	# check that λ★ ≈ conj(λ)
+	abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
 
 	# normalise left eigenvector
-	ζstar ./= dot(ζ, ζstar)
-	@assert dot(ζ, ζstar) ≈ 1
+	ζ★ ./= dot(ζ, ζ★)
+	@assert dot(ζ, ζ★) ≈ 1
 
 	# parameters for vector field
 	p = bifpt.param
@@ -671,7 +671,7 @@ function bautinNormalForm(_prob,
 	B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
 	C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
 
-	q0 = ζ; p0 = ζstar
+	q0 = ζ; p0 = ζ★
 	cq0 = conj.(q0)
 
 	H20, = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
@@ -747,7 +747,7 @@ function bautinNormalForm(_prob,
 	pt = Bautin(
 		x0, parbif,
 		(getLens(prob_ma), lens),
-		ζ, ζstar,
+		ζ, ζ★,
 		(;ω, G21, G32, l2 ),
 		:none
 	)
@@ -843,8 +843,8 @@ function zeroHopfNormalForm(_prob,
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-	p0, λstar = getAdjointBasis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-	p1, λstar1 = getAdjointBasis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p0, λ★ = getAdjointBasis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p1, λ★1 = getAdjointBasis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
 	# normalise left eigenvectors
 	p0 ./= dot(p0, q0)
@@ -899,7 +899,7 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
 		return zh.ζ.q1
 	end
 	function EigenVecAd(s)
-		return zh.ζstar.p1
+		return zh.ζ★.p1
 	end
 
 	return (hopf = t -> HopfCurve(t).pars,
@@ -995,8 +995,8 @@ function hopfHopfNormalForm(_prob,
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-	p1, λstar1 = getAdjointBasis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-	p2, λstar2 = getAdjointBasis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p1, λ★1 = getAdjointBasis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+	p2, λ★2 = getAdjointBasis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
 	# normalise left eigenvectors
 	p1 ./= dot(q1, p1)
@@ -1047,7 +1047,7 @@ function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
 		return hh.ζ.q2
 	end
 	function EigenVecAd(s)
-		return hh.ζstar.p2
+		return hh.ζ★.p2
 	end
 
 	return (hopf = t -> HopfCurve(t).pars,

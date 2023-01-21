@@ -126,7 +126,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 			ζ::Tevr
 
 			"Left eigenvector(s)."
-			ζstar::Tevl
+			ζ★::Tevl
 
 			"Normal form coefficients."
 			nf::Tnf
@@ -137,7 +137,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 	end
 end
 
-Pitchfork(x0, p, params, lens, ζ, ζstar, nf) = Pitchfork(x0, p, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+Pitchfork(x0, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 isTranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::Pitchfork) = :Pitchfork
@@ -199,7 +199,7 @@ mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: Abs
 	ζ::Tevr
 
 	"Left eigenvectors"
-	ζstar::Tevl
+	ζ★::Tevl
 
 	"Normal form coefficients"
 	nf::Tnf
@@ -250,7 +250,7 @@ mutable struct Hopf{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: Abstrac
 	ζ::Tevr
 
 	"Left eigenvector"
-	ζstar::Tevl
+	ζ★::Tevl
 
 	"Normal form coefficient ex: (a = 0., b = 1 + 1im)"
 	nf::Tnf
@@ -260,7 +260,7 @@ mutable struct Hopf{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: Abstrac
 end
 
 type(bp::Hopf) = :Hopf
-Hopf(x0, p, ω, params, lens, ζ, ζstar, nf) = Hopf(x0, p, ω, params, lens, ζ, ζstar, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
+Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::Hopf)
 	print(io, bp.type, " - ")
