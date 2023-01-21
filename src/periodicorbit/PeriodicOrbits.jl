@@ -477,25 +477,31 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	# we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
 	pb = deepcopy(br.prob.prob)
 	# In contrast, this is a WrapPO, useful to pass the jacobian to the Floquet eigenvector getter :ExtractEigenVector
-	pbwrap = br.prob
+	# pbwrap = br.prob
 
-	# let us compute the kernel
-	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-	verbose && print("├─ computing nullspace of Periodic orbit problem...")
-	ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-	# we normalize it by the sup norm because it could be too small/big in L2 norm
-	# TODO: user defined scaleζ
-	ζ ./= norm(ζ, Inf)
-	verbose && println("Done!")
+	nf = getNormalForm(br, ind_bif)
+	pred = predictor(nf, δp, ampfactor)
+	orbitguess = pred.orbitguess
+	newp = pred.pnew  # new parameter value
+	pbnew = pred.prob # mofified problem
 
-	# compute the full eigenvector
-	floquetsolver = br.contparams.newtonOptions.eigsolver
-	ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
-	ζs = reduce(vcat, ζ_a)
-
-	## predictor
-	pbnew, orbitguess = predictor(pb, bifpt, ampfactor, real.(ζs), bifpt.type)
-	newp = bifpt.param + δp
+	# # let us compute the kernel
+	# λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
+	# verbose && print("├─ computing nullspace of Periodic orbit problem...")
+	# ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+	# # we normalize it by the sup norm because it could be too small/big in L2 norm
+	# # TODO: user defined scaleζ
+	# ζ ./= norm(ζ, Inf)
+	# verbose && println("Done!")
+	#
+	# # compute the full eigenvector
+	# floquetsolver = br.contparams.newtonOptions.eigsolver
+	# ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+	# ζs = reduce(vcat, ζ_a)
+	#
+	# ## predictor
+	# pbnew, orbitguess = predictor(pb, bifpt, ampfactor, real.(ζs), bifpt.type)
+	# newp = bifpt.param + δp
 
 	# a priori, the following do not overwrite the options in br
 	# hence the results / parameters in br are kept intact
@@ -538,7 +544,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	)
 
 	# create a branch
-	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), getLens(br), ζ, ζ, nothing, :nothing)
+	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), getLens(br), nf.ζ, nf.ζ, nothing, :nothing)
 
 	# return Branch(setproperties(branch; prob = br.prob), bppo)
 	return Branch(branch, bppo)

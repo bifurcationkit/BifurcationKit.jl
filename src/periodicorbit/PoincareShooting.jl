@@ -438,17 +438,3 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 
 	return probPSh, vec(orbitguess_bar)
 end
-
-function predictor(pb::PoincareShootingProblem, bifpt, ampfactor, ζs, bptype::Symbol)
-	@assert bptype in (:bp, :pd)
-	if bptype == :pd
-		@set! pb.section = _duplicate(pb.section)
-		@set! pb.M = pb.section.M
-		orbitguess = copy(bifpt.x) .+ ampfactor .* ζs
-		orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
-	else
-		orbitguess = copy(bifpt.x)
-		orbitguess .+= ampfactor .* ζs
-	end
-	return pb, orbitguess
-end

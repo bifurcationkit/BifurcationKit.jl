@@ -33,7 +33,7 @@ probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r), inplace = tru
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
 br = continuation(probsl, PALC(), optconteq)
 ####################################################################################################
-Ntst = 3
+Ntst = 4
 m = 4
 N = 3
 const Mf = rand(N, N)

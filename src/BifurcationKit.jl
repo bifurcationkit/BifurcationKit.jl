@@ -78,6 +78,8 @@ module BifurcationKit
 	include("periodicorbit/PoincareShooting.jl")
 	include("periodicorbit/ShootingDE.jl")
 	include("periodicorbit/Floquet.jl")
+	include("periodicorbit/BifurcationPoints.jl")
+	include("periodicorbit/NormalForms.jl")
 
 	# wave problem
 	include("wave/WaveProblem.jl")

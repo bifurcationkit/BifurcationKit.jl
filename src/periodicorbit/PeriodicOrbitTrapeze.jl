@@ -1078,28 +1078,3 @@ function reMake(prob::PeriodicOrbitTrapProblem, prob_vf, hopfpt, ζr::AbstractVe
 
 	return probPO, orbitguess
 end
-
-####################################################################################################
-# predictor function close to bifurcations of PO
-function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::Symbol)
-	@assert bptype in (:bp, :pd)
-	if bptype == :bp
-		orbitguess = copy(bifpt.x)
-		orbitguess[1:end-1] .+= ampfactor .*  ζ
-	elseif bptype == :pd
-		# in this case we have that the perturbation w(τ) is such that
-		# w(τ) = v(τ)    if τ ∈ [0,T]
-		# w(τ) = -v(τ-T) if τ ∈ [T,2T]
-		M, N = size(pb)
-		orbitguess0 = copy(bifpt.x)[1:end-1]
-		orbitguess0c = getTimeSlices(pb, copy(bifpt.x))
-		ζc = reshape(ζ, N, M)
-		orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
-		orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
-		orbitguess = vec(orbitguess_c[:,1:2:end])
-
-		# we append twice the period
-		orbitguess = vcat(orbitguess, 2bifpt.x[end])
-	end
-	return pb, orbitguess
-end

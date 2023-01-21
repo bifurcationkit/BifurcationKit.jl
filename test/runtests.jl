@@ -42,7 +42,7 @@ using Test
 		include("stuartLandauSH.jl")
 		include("stuartLandauTrap.jl")
 		include("stuartLandauCollocation.jl")
-		# for testing period doubling:
+		# for testing period doubling aBS
 		include("testLure.jl")
 	end
 
