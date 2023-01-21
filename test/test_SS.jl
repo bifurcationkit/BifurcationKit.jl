@@ -1,9 +1,22 @@
 # using Revise
-using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools
+using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools, Setfield
 const BK = BifurcationKit
 N = 10
 M = 5
 δ = 1e-8
+####################################################################################################
+# test AbstractFlow interface
+struct MyFlow <: BK.AbstractFlow end
+fl = MyFlow()
+x0 = 0
+p0 = 0
+BK.vf(fl,x0,p0)
+BK.evolve(fl, x0,p0,0)
+BK.evolve(fl, Val(:Full), x0,p0,0)
+BK.evolve(fl, Val(:SerialTimeSol), x0,p0,0)
+BK.evolve(fl, Val(:TimeSol), x0,p0,0)
+BK.evolve(fl, Val(:SerialdFlow), x0,p0,0,0)
+BK.evolve(fl, x0,p0,0,0)
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)
@@ -16,7 +29,8 @@ section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
 section(x::BorderedArray, T, dx, dT) = section(vec(x.u[:,:]), T, vec(dx.u[:,:]), dT)
 par = nothing
 
-fl = BK.Flow(vf, flow, dflow)
+fl = BK.Flow(vf, flow, dflow); @set! fl.flowFull = flow
+BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,
 	ds = LinRange(0, 1, M+1) |> diff,

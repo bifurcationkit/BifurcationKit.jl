@@ -117,15 +117,3 @@ mutable struct NeimarkSacker{Tprob, Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl,
 	"Periodic orbit problem"
 	prob::Tprob
 end
-
-type(bp::NeimarkSacker) = :NeimarkSacker
-NeimarkSacker(x0, p, ω, params, lens, ζ, ζ★, nf) = NeimarkSacker(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
-
-function Base.show(io::IO, bp::NeimarkSacker)
-	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
-	println(io, "Frequency ω ≈ ", abs(bp.ω))
-	println(io, "Period at the periodic orbit ≈ ", abs(bp.T))
-	println(io, "Second frequency of the bifurcated torus ≈ ", abs(bp.ω))
-	println(io, "Computed using", typeof(bp.prob).name)
-end
