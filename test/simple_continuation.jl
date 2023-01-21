@@ -22,14 +22,14 @@ BK._displayLine(1, 1, (1,1))
 BK._displayLine(1, nothing, (1,1))
 ####################################################################################################
 # test branch kinds
-FoldCont()
-HopfCont() 
-PDCont() 
+BK.FoldCont()
+BK.HopfCont() 
+BK.PDCont() 
 
 # Codim2 periodic orbit
-FoldPeriodicOrbitCont() 
-PDPeriodicOrbitCont()
-NSPeriodicOrbitCont()
+BK.FoldPeriodicOrbitCont() 
+BK.PDPeriodicOrbitCont()
+BK.NSPeriodicOrbitCont()
 ####################################################################################################
 # test continuation algorithm
 BK.empty(Natural())
