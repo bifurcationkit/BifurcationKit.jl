@@ -310,24 +310,59 @@ end
 """
 $(SIGNATURES)
 
-[INTERNAL] Implementation of phase condition.
+[INTERNAL] Implementation of ∫ < u(t), v(t) > dt.
 # Arguments
 - uj  n x (m + 1)
+- vj  n x (m + 1)
+"""
+@views function ∫(pb::PeriodicOrbitOCollProblem, uc, vc)
+	Ty = eltype(uc)
+	phase = zero(Ty)
+
+	n, m, Ntst = size(pb)
+	L, ∂L = getLs(pb.mesh_cache)
+	ω = pb.mesh_cache.gauss_weight
+	mesh = pb.mesh_cache.mesh
+
+	guj = zeros(Ty, n, m)
+	uj  = zeros(Ty, n, m+1)
+
+	gvj = zeros(Ty, n, m)
+	vj  = zeros(Ty, n, m+1)
+
+	rg = UnitRange(1, m+1)
+	@inbounds for j in 1:Ntst
+		uj .= uc[:, rg]
+		vj .= vc[:, rg]
+		mul!(guj, uj, L')
+		mul!(gvj, vj, L')
+		@inbounds for l in 1:m
+			phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
+		end
+		rg = rg .+ m
+	end
+	return phase
+end
+
+"""
+$(SIGNATURES)
+
+[INTERNAL] Implementation of phase condition.
+# Arguments
+- uj   n x (m + 1)
 - guj  n x m
 """
 @views function phaseCondition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L))
 	Ty = eltype(uc)
 	phase = zero(Ty)
 
-	n, = size(uc)
-	m = pb.mesh_cache.degree
-	Ntst = pb.mesh_cache.Ntst
+	n, m, Ntst = size(pb)
 
-	guj  = zeros(Ty, n, m)
+	guj = zeros(Ty, n, m)
 	uj  = zeros(Ty, n, m+1)
 
 	vc = getTimeSlices(pb.ϕ, size(pb)...)
-	gvj  = zeros(Ty, n, m)
+	gvj = zeros(Ty, n, m)
 	vj  = zeros(Ty, n, m+1)
 
 	ω = pb.mesh_cache.gauss_weight

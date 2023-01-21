@@ -84,10 +84,10 @@ sol(0.1)
 
 	T = getPeriod(pb, u, nothing)
 
-	guj  = zeros(Ty, n, m)
+	guj = zeros(Ty, n, m)
 	uj  = zeros(Ty, n, m+1)
 
-	gvj  = zeros(Ty, n, m)
+	gvj = zeros(Ty, n, m)
 	vj  = zeros(Ty, n, m+1)
 
 	L, ∂L = BK.getLs(pb.mesh_cache)
@@ -133,6 +133,14 @@ for Ntst in 2:10:100
 	@test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
 	# @info phaseCond(prob_col, _ci1, _ci2) / pi
 end
+
+prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
+
+_ci1 = BK.generateSolution(prob_col, t -> [1], 2pi)
+_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
+@test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
+@show BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1),
+					 BK.getTimeSlices(prob_col, _ci2))*2*pi
 
 ####################################################################################################
 Ntst = 50
