@@ -226,6 +226,18 @@ function PeriodicOrbitOCollProblem(Ntst::Int, m::Int, Ty = Float64; kwargs...)
 									kwargs...)
 end
 
+"""
+$(SIGNATURES)
+
+This function change the parameters `Ntst, m` for the collocation problem `pb` and return a new problem.
+"""
+function setCollocationSize(pb::PeriodicOrbitOCollProblem, Ntst, m)
+	pb2 = @set pb.mesh_cache = MeshCollocationCache(Ntst, m, eltype(pb))
+	resize!(pb2.ϕ, length(pb2))
+	resize!(pb2.xπ, length(pb2))
+	pb2
+end
+
 @inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.mesh_cache.Ntst
 
 """
