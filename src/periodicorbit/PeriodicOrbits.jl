@@ -6,7 +6,6 @@ abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 # Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 
-
 # get the number of time slices
 @inline getMeshSize(pb::AbstractPeriodicOrbitProblem) = pb.M
 

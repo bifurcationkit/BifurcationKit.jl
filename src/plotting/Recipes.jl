@@ -22,7 +22,31 @@ end
 
 # https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
 # we don't need to have different colors. Indeed, some bifurcations never occurs together codim1 ∩ codim2 = ∅
-const colorbif = Dict(:fold => :black, :hopf => :red, :bp => :blue, :nd => :magenta, :none => :yellow, :ns => :orange, :pd => :green, :bt => :red, :cusp => :sienna1, :gh => :brown, :zh => :burlywood2, :hh => :green, :user => :darkgoldenrod)
+const colorbif = Dict(:fold => :black,
+						:hopf => :red,
+						:bp => :blue,
+						:nd => :magenta,
+						:none => :yellow,
+						:ns => :orange,
+						:pd => :green,
+						:bt => :red,
+						:cusp => :sienna1,
+						:gh => :brown,
+						:zh => :burlywood2,
+						:hh => :green,
+						:R => :chartreuse4,
+						:R1 => :chartreuse4,
+						:R2 => :chartreuse3,
+						:R3 => :chartreuse1,
+						:R4 => :chartreuse,
+						:foldFlip => :blue4,
+						:ch => :red3,
+						:foldNS => :cyan3,
+						:flipNS => :darkgoldenrod,
+						:pdNS => :maroon,
+						:nsns => :darkorchid,
+						:gpd => :darksalmon,
+						:user => :darkgoldenrod)
 
 function getColor(sp)
 	if sp in keys(colorbif)
