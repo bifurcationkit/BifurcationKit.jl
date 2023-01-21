@@ -122,6 +122,8 @@ end
 @inline getTimeStep(pb::AbstractPOFDProblem, i::Int) = getTimeStep(pb.mesh, i)
 getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)
+@inline getParams(pb::PeriodicOrbitTrapProblem) = getParams(pb.prob_vf)
+@inline getLens(pb::PeriodicOrbitTrapProblem) = getLens(pb.prob_vf)
 @inline function getMassMatrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
 	if returnArray == false
 		return hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(pb.N))

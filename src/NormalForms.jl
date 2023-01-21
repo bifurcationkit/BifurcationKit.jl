@@ -734,7 +734,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	verbose && println("#"^53*"\n--> Hopf Normal form computation")
+	verbose && println("#"^53*"\n--> Hopf normal form computation")
 
 	options = br.contparams.newtonOptions
 

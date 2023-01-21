@@ -461,12 +461,9 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	@assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
-
-	# @assert br.functional isa AbstractShootingProblem
 	@assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
 
 	verbose = get(kwargs, :verbosity, 0) > 0
-
 	verbose && printstyled(color = :green, "#"^61*
 			"\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
 			"\n├─── bif. param  p0 = ", bifpt.param,

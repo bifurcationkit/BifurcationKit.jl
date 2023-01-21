@@ -134,13 +134,16 @@ for Ntst in 2:10:100
 	# @info phaseCond(prob_col, _ci1, _ci2) / pi
 end
 
-prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
 
-_ci1 = BK.generateSolution(prob_col, t -> [1], 2pi)
-_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
-@test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
-@show BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1),
-					 BK.getTimeSlices(prob_col, _ci2))*2*pi
+prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
+_ci1 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 1)
+_ci2 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 1)
+@test BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1), BK.getTimeSlices(prob_col, _ci2)) ≈ 0.5
+
+prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
+_ci1 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 3)
+_ci2 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 3)
+@test BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1), BK.getTimeSlices(prob_col, _ci2), 3) ≈ 3/2
 
 ####################################################################################################
 Ntst = 50

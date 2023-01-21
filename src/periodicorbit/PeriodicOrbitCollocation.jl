@@ -241,6 +241,9 @@ end
 @inline Base.eltype(pb::PeriodicOrbitOCollProblem) = eltype(pb.mesh_cache)
 getLs(pb::PeriodicOrbitOCollProblem) = getLs(pb.mesh_cache)
 
+@inline getParams(pb::PeriodicOrbitOCollProblem) = getParams(pb.prob_vf)
+@inline getLens(pb::PeriodicOrbitOCollProblem) = getLens(pb.prob_vf)
+
 # these functions extract the time slices components
 getTimeSlices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
 # array of size Ntst ⋅ (m+1) ⋅ n
@@ -310,12 +313,12 @@ end
 """
 $(SIGNATURES)
 
-[INTERNAL] Implementation of ∫ < u(t), v(t) > dt.
+[INTERNAL] Implementation of ∫_0^T < u(t), v(t) > dt.
 # Arguments
 - uj  n x (m + 1)
 - vj  n x (m + 1)
 """
-@views function ∫(pb::PeriodicOrbitOCollProblem, uc, vc)
+@views function ∫(pb::PeriodicOrbitOCollProblem, uc, vc, T = one(eltype(uc)))
 	Ty = eltype(uc)
 	phase = zero(Ty)
 
@@ -341,7 +344,7 @@ $(SIGNATURES)
 		end
 		rg = rg .+ m
 	end
-	return phase
+	return phase * T
 end
 
 """

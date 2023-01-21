@@ -150,7 +150,7 @@ end
 
 function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
 	# kwargs is used by AbstractLinearSolver
-	out =  foldMALinearSolver((Jfold.x).u,
+	out = foldMALinearSolver((Jfold.x).u,
 				 (Jfold.x).p,
 				 Jfold.fldpb,
 				 Jfold.params,
@@ -164,6 +164,7 @@ end
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, fldpb = foldpb.prob)
+
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
 ################################################################################################### Newton / Continuation functions
