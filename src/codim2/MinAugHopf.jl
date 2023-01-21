@@ -72,7 +72,7 @@ function hopfMALinearSolver(x, p::T, ω::T, pb::HopfProblemMinimallyAugmented, p
 	################################################################################################
 	# N = length(du) - 2
 	# The Jacobian J of the vector field is expressed at (x, p)
-	# the jacobian expression of the hopf problem Jhopf is
+	# the jacobian expression Jhopf of the hopf problem is
 	#           ┌             ┐
 	#  Jhopf =  │  J  dpF   0 │
 	#           │ σx   σp  σω │

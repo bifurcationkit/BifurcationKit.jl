@@ -128,9 +128,9 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 	# The jacobian has to be passed as a tuple as Jac_bt_MA(u0, pb::BTProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# We solve here Jbt⋅res = rhs := [rhsu, rhsp]
-	# The Jacobian expression of the BT problem is
+	# The Jacobian expression Jbt of the BT problem is
 	#           ┌           ┐
-	#  Jbt.  =  │  J    dpF │
+	#   Jbt  =  │  J    dpF │
 	#           │ σ1x   σ1p │
 	#           │ σ2x   σ2p │
 	#           └           ┘
