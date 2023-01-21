@@ -130,7 +130,7 @@ jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline isSymmetric(prob::WrapPOSh) = false
 
 # newton wrapper
-function buildJacobian(prob::AbstractShootingProblem, orbitguess, par)
+function buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
 	jacobianPO = prob.jacobian
 	if jacobianPO == :autodiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -140,7 +140,9 @@ function buildJacobian(prob::AbstractShootingProblem, orbitguess, par)
 	elseif jacobianPO == :autodiffMF
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
 	elseif jacobianPO == :FiniteDifferencesDense
-		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = 1e-8)
+		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = δ)
+	elseif jacobianPO == :FiniteDifferences
+		jac = (x, p) -> dx -> (prob(x .+ δ .* dx, p) .- prob(x .- δ .* dx, p)) ./ (2δ)
 	else
 		jac = (x, p) -> (dx -> prob(x, p, dx))
 	end
@@ -168,8 +170,9 @@ function newton(prob::AbstractShootingProblem,
 				orbitguess,
 				options::NewtonPar;
 				lens::Union{Lens, Nothing} = nothing,
+				δ = convert(eltype(orbitguess), 1e-8),
 				kwargs...)
-	jac = buildJacobian(prob, orbitguess, getParams(prob))
+	jac = buildJacobian(prob, orbitguess, getParams(prob); δ = δ)
 	probw = WrapPOSh(prob, jac, orbitguess, getParams(prob), lens, nothing, nothing)
 	return newton(probw, options; kwargs...)
 end
