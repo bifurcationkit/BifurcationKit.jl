@@ -28,7 +28,7 @@ ShootingProblem(prob::ODEType, alg, M::Int, section; kwargs...) = ShootingProble
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, par = prob.p, kwargs...)
 	F = getVectorField(prob)
-	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par)./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
+	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
 end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf

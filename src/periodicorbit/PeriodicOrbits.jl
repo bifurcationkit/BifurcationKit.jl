@@ -430,7 +430,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 end
 
 ####################################################################################################
-# Branch switching from Bifs of PO
+# Branch switching from bifurcations of periodic orbits
 """
 $(SIGNATURES)
 
@@ -455,27 +455,25 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 			linearAlgo = nothing,
 			kwargs...) where Tprob
 
-	bppt = br.specialpoint[ind_bif]
-	bptype = bppt.type
+	bifpt = br.specialpoint[ind_bif]
+	bptype = bifpt.type
 	@assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
 
 	# @assert br.functional isa AbstractShootingProblem
-	@assert abs(bppt.δ[1]) == 1 "Only simple bifurcation points are handled"
+	@assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
 
 	verbose = get(kwargs, :verbosity, 0) > 0
 
 	verbose && printstyled(color = :green, "#"^61*
 			"\n┌─ Start branching from $(bptype) point to periodic orbits.
-			 \n├─ Bifurcation type = ", bppt.type,
-			"\n├─── bif. param  p0 = ", bppt.param,
-			"\n├─── period at bif. = ", getPeriod(br.prob.prob, bppt.x, setParam(br, bppt.param)),
-			"\n├─── new param    p = ", bppt.param + δp, ", p - p0 = ", δp,
+			 \n├─ Bifurcation type = ", bifpt.type,
+			"\n├─── bif. param  p0 = ", bifpt.param,
+			"\n├─── period at bif. = ", getPeriod(br.prob.prob, bifpt.x, setParam(br, bifpt.param)),
+			"\n├─── new param    p = ", bifpt.param + δp, ", p - p0 = ", δp,
 			"\n├─── amplitude p.o. = ", ampfactor,
 			"\n")
 
 	_linearAlgo = isnothing(linearAlgo) ? BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
-
-	bifpt = br.specialpoint[ind_bif]
 
 	# we copy the problem for not mutating the one passed by the user
 	pb = deepcopy(br.prob.prob)

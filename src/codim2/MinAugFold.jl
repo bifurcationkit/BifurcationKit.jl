@@ -304,6 +304,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 				jacobian_ma::Symbol = :autodiff,
 			 	computeEigenElements = false,
 				usehessian = true,
+				kind = FoldCont(),
 				kwargs...) where {T, vectype}
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob)
@@ -449,7 +450,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		(@set opt_fold_cont.newtonOptions.eigsolver = eigsolver);
 		linearAlgo = BorderingBLS(solver = opt_fold_cont.newtonOptions.linsolver, checkPrecision = false),
 		kwargs...,
-		kind = FoldCont(),
+		kind = kind,
 		normC = normC,
 		finaliseSolution = updateMinAugFold,
 		event = event

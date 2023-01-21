@@ -23,6 +23,7 @@ const DocStrjacobianPOTrap = """
 - For `jacobian = :FullLU`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
 - For `jacobian = :FullSparseInplace`, this is the same as for `:FullLU` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:FullLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = :Dense`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
+- For `jacobian = :DenseAD`, evaluate the jacobian using ForwardDiff
 - For `jacobian = :BorderedLU`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver.
 - For `jacobian = :BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = :FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
@@ -819,10 +820,10 @@ function _newtonTrap(probPO::PeriodicOrbitTrapProblem,
 	# this hack is for the test to work with CUDA
 	@assert sum(extractPeriodFDTrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
 	jacobianPO = probPO.jacobian
-	@assert jacobianPO in (:Dense, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please choose another one."
+	@assert jacobianPO in (:Dense, :DenseAD, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please choose another one."
 	M, N = size(probPO)
 
-	if jacobianPO in (:Dense, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
+	if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
 		if jacobianPO == :FullLU
 			jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
 		elseif jacobianPO == :FullSparseInplace
@@ -834,8 +835,10 @@ function _newtonTrap(probPO::PeriodicOrbitTrapProblem,
 		elseif jacobianPO == :Dense
 			_J =  probPO(Val(:JacFullSparse), orbitguess, getParams(probPO.prob_vf)) |> Array
 			jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
+		elseif jacobianPO == :DenseAD
+			jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
 		elseif jacobianPO == :FullMatrixFreeAD
-			jac = (x, p) -> dx -> ForwardDiff.derivative(t->probPO(x .+ t .* dx, p), 0)
+			jac = (x, p) -> dx -> ForwardDiff.derivative(t -> probPO(x .+ t .* dx, p), 0)
 		else
 		 	jac = (x, p) -> ( dx -> probPO(x, p, dx))
 		end
@@ -1075,99 +1078,6 @@ function reMake(prob::PeriodicOrbitTrapProblem, prob_vf, hopfpt, ζr::AbstractVe
 end
 
 ####################################################################################################
-# Branch switching from Bifs of PO
-# """
-# $(SIGNATURES)
-#
-# Branch switching at a Bifurcation point of periodic orbits specified by a [`PeriodicOrbitTrapProblem`](@ref). This is still experimental. A deflated Newton-Krylov solver is used to improve the branch switching capabilities.
-#
-# # Arguments
-# - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
-# - `ind_bif` index of the branch point
-# - `_contParams` parameters to be used by a regular [`continuation`](@ref)
-#
-# # Optional arguments
-# - `Jᵗ = (x, p) -> transpose(d_xF(x, p))` jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoid recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`
-# - `δ` used internally to compute derivatives w.r.t the parameter `p`.
-# - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
-# - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-# - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-# - `jacobianPO = :BorderedLU` linear solver used for the Newton-Krylov solver when applied to [`PeriodicOrbitTrapProblem`](@ref).
-# - `recordFromSolution = (u, p) -> u[end]`, print method used in the bifurcation diagram, by default this prints the period of the periodic orbit.
-# - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
-# - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref)
-# - `updateSectionEveryStep = 1` updates the section every when `mod(step, updateSectionEveryStep) == 1` during continuation
-# """
-# function continuationPOTrapFromBif(br::AbstractBranchResult, ind_bif::Int,
-# 	_contParams::ContinuationPar;
-# 	Jᵗ = nothing,
-# 	δ = 1e-8, δp = 0.1,
-# 	ampfactor = 1,
-# 	usedeflation = true,
-# 	jacobianPO = :BorderedLU,
-# 	recordFromSolution = (u,p) -> (period = u[end],),
-# 	linearAlgo = nothing,
-# 	updateSectionEveryStep = 1,
-# 	kwargs...)
-#
-# 	@assert br.functional isa PeriodicOrbitTrapProblem
-# 	@assert abs(br.specialpoint[ind_bif].δ[1]) == 1 "Only simple bifurcation points are handled"
-#
-# 	verbose = get(kwargs, :verbosity, 0) > 0
-# 	_linearAlgo = isnothing(linearAlgo) ?  BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
-#
-# 	bifpt = br.specialpoint[ind_bif]
-#
-# 	# let us compute the kernel
-# 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-# 	verbose && print("--> computing nullspace...")
-# 	ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvec, bifpt.ind_ev)
-# 	# we normalize it by the sup norm because it could be too small/big in L2 norm
-# 	ζ ./= norm(ζ, Inf)
-# 	verbose && println("Done!")
-#
-# 	pb = br.functional
-#
-# 	# compute the full eigenvector
-# 	ζ_a = MonodromyQaD(Val(:ExtractEigenVector), pb, bifpt.x, setParam(br, bifpt.param), real.(ζ))
-# 	ζs = reduce(vcat, ζ_a)
-#
-# 	## predictor
-# 	pbnew, orbitguess = predictor(pb, bifpt, ampfactor, ζs, bifpt.type)
-# 	newp = bifpt.param + δp
-#
-# 	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
-#
-# 	if usedeflation
-# 		verbose && println("\n--> Attempt branch switching\n--> Compute point on the current branch...")
-# 		optn = _contParams.newtonOptions
-# 		# find point on the first branch
-# 		sol0, _, flag, _ = newton(pbnew, bifpt.x, setParam(br, newp), optn; jacobianPO = jacobianPO, kwargs...)
-#
-# 		# find the bifurcated branch using deflation
-# 		deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0]; autodiff = true)
-# 		verbose && println("\n--> Compute point on bifurcated branch...")
-# 		solbif, _, flag, _ = newton(pbnew, orbitguess, setParam(br, newp), (@set optn.maxIter = 10*optn.maxIter), deflationOp; jacobianPO = jacobianPO, kwargs...)
-# 		@assert flag "Deflated newton did not converge"
-# 		orbitguess .= solbif
-# 	end
-#
-# 	# TODO
-# 	# we have to adjust the phase constraint.
-# 	# Right now, it can be quite large.
-#
-# 	# perform continuation
-# 	branch, u, τ = continuation(pbnew, orbitguess, setParam(br, newp), br.lens, _contParams;
-# 		jacobianPO = jacobianPO,
-# 		recordFromSolution = recordFromSolution,
-# 		linearAlgo = _linearAlgo, kwargs...)
-#
-# 	# create a branch
-# 	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), br.lens, ζ, ζ, nothing, :nothing)
-#
-# 	return Branch(setproperties(branch; type = :PeriodicOrbit, functional = br.functional), bppo), u, τ
-# end
-
 # predictor function close to bifurcations of PO
 function predictor(pb::PeriodicOrbitTrapProblem, bifpt, ampfactor, ζ, bptype::Symbol)
 	@assert bptype in (:bp, :pd)

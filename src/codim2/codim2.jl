@@ -61,11 +61,11 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
 			Ty = eltype(α)
 			return $op(prob, a, b, 0*a,
-						complex(zero(Ty)),   # l1
+						complex(zero(Ty)),  # l1
 						real(one(Ty)),		# cp
 						real(one(Ty)),		# bt
 						real(one(Ty)),		# gh
-						1,							# zh
+						1,					# zh
 						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
 		end
 	end
