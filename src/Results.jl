@@ -201,11 +201,6 @@ Function is used to initialize the composite type `ContResult` according to the 
 		kind = kind,
 		prob = prob)
 end
-
-function _ContResult()
-	@assert 1==0 "WIP, really `Any` in  the constructor?"
-	ContResult(branch = StructArray([(a=1,b=2)]), eig = [(eigenvals = Any[], eigenvecs=Any[],step=0)],sol=Any[],contparams = opts_br, lens=(@lens _[1]), bifpoint=Any[]);
-end
 ####################################################################################################
 """
 $(TYPEDEF)

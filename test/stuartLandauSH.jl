@@ -147,6 +147,16 @@ _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 ####################################################################################################
+# test shooting interface M > 1, parallel
+_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
+initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
+res = _pb(initpo, par_hopf)
+res = _pb(initpo, par_hopf, initpo)
+# test the jacobian of the functional in the case M=1
+_Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
+_Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
+@test norm(_Jad - _Jana, Inf) < 1e-7
+####################################################################################################
 # Single Poincaré Shooting with hyperplane parametrization
 normals = [[-1., 0.]]
 centers = [zeros(2)]

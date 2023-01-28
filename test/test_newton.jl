@@ -85,6 +85,14 @@ end
 deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
 prob = BifurcationProblem(F4def, [0.1], nothing; J = J4def)
 defpb = DeflatedProblem(prob, deflationOp, nothing)
+show(defpb)
+BK.isInplace(defpb)
+BK.getVectorType(defpb)
+BK.isSymmetric(defpb)
+BK.getLens(defpb)
+BK.getParam(defpb)
+BK.setParam(defpb, 0.)
+
 @test defpb(rand(_T, 1), nothing) |> eltype == _T
 @test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T
 

@@ -100,7 +100,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <
 	N = size(x, 1)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
 	_epb = setproperties(fl.probMono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
-	sol = solve(_epb, fl.algMono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kwargs...)
+	sol = solve(_epb, fl.algMono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
 	return sol.u
 end
 
@@ -144,7 +144,7 @@ function evolve(fl::FlowDE{T1,T2,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par
 	end
 end
 
-function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; k...) where {T1 <: EnsembleProblem}
+function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; kw...) where {T1 <: EnsembleProblem}
 	dflowMonoSerial(x, p, dx, tm, fl.probMono.prob, fl.algMono; fl.kwargsDE..., kw...)
 end
 

@@ -55,12 +55,12 @@ BK.propertynames(br0)
 BK.computeEigenvalues(opts)
 BK.saveEigenvectors(opts)
 BK.from(br0)
+BK.getProb(br0)
 br0[1]
 br0[end]
 
 branch = Branch(br0, rand(2));
 branch[end]
-
 
 # test with callbacks
 br0 = continuation(prob, PALC(), (@set opts.maxSteps = 3), callbackN = (state; kwargs...)->(true))
@@ -236,6 +236,10 @@ br2 = continuation(prob, x0.u, -1.5, x1.u, -1.45, PALC(tangent = Bordered()), (@
 br3 = continuation(prob, PALC(tangent = Bordered()), opts; bothside = true)
 ####################################################################################################
 # test for deflated continuation
+BK._perturbSolution(1, 0, 1)
+BK._acceptSolution(1, 0)
+BK.DCState(rand(2))
+
 prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
 alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
 	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x)))
@@ -244,3 +248,15 @@ brdc = continuation(prob, alg,
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40, detectBifurcation = 3);
 	plot=false, verbosity = 0,
 	callbackN = BK.cbMaxNorm(1e3))
+
+lastindex(brdc)
+brdc[1]
+length(brdc)
+
+F2(u,p) = @. -u * (p + u * (2-5u)) * (p - .15 - u * (2+20u))
+prob2 = BK.BifurcationProblem(F2, [0.], 0.3, (@lens _))
+brdc = continuation(prob2,
+	BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.], [0.05]]); maxBranches = 6),
+	ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 15), plotEveryStep = 40, detectBifurcation = 3, pMin = -0.8);
+	plot=false, verbosity = 0,
+	callbackN = BK.cbMaxNorm(1e6))
