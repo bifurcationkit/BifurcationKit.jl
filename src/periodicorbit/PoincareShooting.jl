@@ -113,8 +113,7 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 	xc = similar(x_bar, Nm1 + 1, M)
 	outc = similar(xc)
 
-	Th = eltype(x_barc)
-	period = Th(0)
+	period = zero(eltype(x_barc))
 
 	# we extend the state space to be able to call the flow, so we fill xc
 	if ~isParallel(psh)
@@ -393,8 +392,8 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 
 	# create the section
 	if isEmpty(prob.section)
-	normals = [residual(prob_vf, u, hopfpt.params) for u in centers]
-	for n in normals; n ./= norm(n); end
+		normals = [residual(prob_vf, u, hopfpt.params) for u in centers]
+		for n in normals; n ./= norm(n); end
 	else
 		normals = prob.section.normals
 		centers = prob.section.centers
@@ -456,17 +455,29 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generateCIProblem(pb::PoincareShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period; alg = sol.alg, ksh...)
+function generateCIProblem(pb::PoincareShootingProblem,
+						bifprob::AbstractBifurcationProblem,
+						prob_de,
+						sol::AbstractTimeseriesSolution,
+						period;
+						alg = sol.alg,
+						ksh...)
 	u0 = sol(0)
 	@assert u0 isa AbstractVector
 	N = length(u0)
 	M = pb.M
 
-	centers = [copy(sol(t)) for t in LinRange(0, period, M+1)[1:end-1]]
-	normals = [residual(bifprob, c, prob_de.p) for c in centers]
-	probpsh = PoincareShootingProblem(prob_de, alg, centers, normals; lens = getLens(bifprob), ksh...)
+	ts = LinRange(0, period, M+1)[1:end-1]
+	centers = [copy(sol(t)) for t in ts]
+	normals = [residual(bifprob, c, sol.prob.p) for c in centers]
+	# normals = [sol(t, Val{1}) for t in ts]
+	for n in normals; n ./= norm(n); end
+	@assert length(normals) == length(centers) == M
 
-	cipsh = reduce(vcat, [R(probpsh, centers[k], k) for k = 1:M])
+	probpsh = PoincareShootingProblem(remake(prob_de, p = sol.prob.p), alg, normals, centers; lens = getLens(bifprob), par = sol.prob.p, ksh...)
 
-	return probpsh, copy(cipsh)
+	# create initial guess. We have to pass it through the projection R
+	cipsh = reduce(vcat, [R(probpsh, centers[k], k) for k in eachindex(centers)])
+
+	return probpsh, cipsh
 end

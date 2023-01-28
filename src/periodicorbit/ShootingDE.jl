@@ -59,12 +59,11 @@ end
 ####################################################################################################
 function PoincareShootingProblem(prob::ODEProblem, alg, hyp::SectionPS;
 			δ = 1e-8, interp_points = 50, parallel = false, par = prob.p, kwargs...)
-	p = prob.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
 	cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
-	# change the ODEProblem -> EnsembleProblem for the parallel case
+	# change ODEProblem -> EnsembleProblem in the parallel case
 	_M = hyp.M
 	parallel = _M == 1 ? false : parallel
 	_pb = parallel ? EnsembleProblem(prob) : prob
@@ -84,16 +83,16 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-function PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), kwargs...)
+function PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), par = prob.p, kwargs...)
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 	return  PoincareShootingProblem(;
 				M = M,
-				flow = (par = prob.p, prob = prob, alg = alg, kwargs = kwargsDE),
+				flow = (par = par, prob = prob, alg = alg, kwargs = kwargsDE),
 				kwargsSh...,
 				parallel = (M == 1 ? false : parallel),
 				section = section,
-				par = prob.p)
+				par = par)
 end
 
 function PoincareShootingProblem(M::Int,
@@ -104,11 +103,12 @@ function PoincareShootingProblem(M::Int,
 					lens = nothing,
 					updateSectionEveryStep = 0,
 					jacobian = :autodiffDenseAnalytical,
+					par = prob1.p,
 					kwargs...)
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 
-	return PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargsDE), kwargsSh..., parallel = parallel, section = section, par = prob1.p)
+	return PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargsDE), kwargsSh..., parallel = parallel, section = section, par = par)
 end
 
 function PoincareShootingProblem(prob::ODEProblem, alg,
@@ -123,8 +123,11 @@ end
 function PoincareShootingProblem(prob1::ODEProblem, alg1,
 								prob2::ODEProblem, alg2,
 								hyp::SectionPS;
-								δ = 1e-8, interp_points = 50,
-								parallel = false, par = prob1.p, kwargs...)
+								δ = 1e-8,
+								interp_points = 50,
+								parallel = false,
+								par = prob1.p,
+								kwargs...)
 	p = prob1.p # parameters
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
@@ -151,7 +154,10 @@ end
 function PoincareShootingProblem(prob1::ODEProblem, alg1,
 								prob2::ODEProblem, alg2,
 								normals::AbstractVector, centers::AbstractVector;
-								δ = 1e-8, interp_points = 50, parallel = false, kwargs...)
+								δ = 1e-8,
+								interp_points = 50,
+								parallel = false,
+								kwargs...)
 	return PoincareShootingProblem(prob1, alg2, prob2, alg2,
 					SectionPS(normals, centers);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)

@@ -189,7 +189,7 @@ BK.getPeriodicOrbit(probPsh, outpo.u, par_hopf)
 probPsh = PoincareShootingProblem(prob, Rodas4(),
 		# probMono, Rodas4(autodiff=false),
 		normals, centers; abstol = 1e-10, reltol = 1e-9,
-		jacobian = :autodiffDenseAnalytical)
+		lens = (@lens _.r))
 
 probPsh(outpo.u, par_hopf)
 probPsh(outpo.u, par_hopf, outpo.u)
@@ -198,13 +198,10 @@ probPsh([0.30429879744900434], (r = 0.09243096156871472, μ = 0.0, ν = 1.0, c3 
 BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 30, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
-	# br_pok2, = continuation(
-	# 	probPsh, outpo, par_hopf, (@lens _.r),
-	# 	opts_po_cont; verbosity = 2,
-	# 	tangentAlgo = BorderedPred(),
-	# 	jacobianPO = :autodiffDenseAnalytical,
-	# 	plot = false, normC = norminf)
-# plot(br_pok2)
+br_pok2 = continuation(probPsh, outpo.u, PALC(),
+	opts_po_cont; verbosity = 0,
+	plot = false, normC = norminf)
+plot(br_pok2)
 ####################################################################################################
 # normals = [[-1., 0.], [1, -1]]
 # centers = [zeros(2), zeros(2)]
@@ -264,12 +261,11 @@ _Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
-
 outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
 BK.converged(outpo)
 
 for ii=1:length(normals)
-	@show BK.E(probPsh	, [outpo.u[ii]], ii)
+	BK.E(probPsh, [outpo.u[ii]], ii)
 end
 
 getPeriod(probPsh, outpo.u, par_hopf)
