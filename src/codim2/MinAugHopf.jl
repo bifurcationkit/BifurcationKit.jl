@@ -370,10 +370,15 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	# it is called to update the Minimally Augmented problem
 	# by updating the vectors a, b
 	function updateMinAugHopf(z, tau, step, contResult; kUP...)
+		# user-passed finalizer
+		finaliseUser = get(kwargs, :finaliseSolution, nothing)
+
 		# we first check that the continuation step was successful
 		# if not, we do not update the problem with bad information!
 		success = get(kUP, :state, nothing).converged
-		(~modCounter(step, updateMinAugEveryStep) || success == false) && return true
+		if (~modCounter(step, updateMinAugEveryStep) || success == false)
+			return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
+		end
 		x = getVec(z.u, 𝐇)	# hopf point
 		p1, ω = getP(z.u, 𝐇)
 		p2 = z.p		# second parameter
@@ -498,7 +503,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		kind = HopfCont(),
 		linearAlgo = BorderingBLS(solver = opt_hopf_cont.newtonOptions.linsolver, checkPrecision = false),
 		normC = normC,
-		finaliseSolution = updateMinAugHopf,
+		finaliseSolution = updateMinAugEveryStep == 0 ? get(kwargs, :finaliseSolution, finaliseDefault) : updateMinAugHopf,
 		event = event
 	)
 	@assert ~isnothing(br) "Empty branch!"
