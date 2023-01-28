@@ -464,7 +464,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		kwargs...,
 		kind = kind,
 		normC = normC,
-		finaliseSolution = updateMinAugFold,
+		finaliseSolution = updateMinAugEveryStep == 0 ? get(kwargs, :finaliseSolution, finaliseDefault) : updateMinAugFold,
 		event = event
 		)
 		@assert ~isnothing(br) "Empty branch!"
