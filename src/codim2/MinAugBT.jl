@@ -72,17 +72,17 @@ end
 getVec(x, ::BTProblemMinimallyAugmented) = getVec(x)
 getP(x, ::BTProblemMinimallyAugmented) = getP(x)
 
-function (bt::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where T
+function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where T
 	# These are the equations of the minimally augmented (MA) formulation of the bt bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter value `<: Real` at which the jacobian is singular
 	# The jacobian of the MA problem is solved with a BLS method
-	a = bt.a
-	b = bt.b
+	a = 𝐁𝐓.a
+	b = 𝐁𝐓.b
 	# update parameter
-	par = set(params, getLens(bt.prob_vf), p1)
-	par = set(par, bt.lens2, p2)
+	par = set(params, getLens(𝐁𝐓.prob_vf), p1)
+	par = set(par, 𝐁𝐓.lens2, p2)
 	# ┌      ┐┌  ┐   ┌ ┐
 	# │ J  a ││v1│ = │0│
 	# │ b  0 ││σ1│   │1│
@@ -93,39 +93,39 @@ function (bt::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where T
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
-	J = jacobian(bt.prob_vf, x, par)
-	v1, σ1, cv, it = bt.linbdsolver(J, a, b, T(0), bt.zero, n)
+	J = jacobian(𝐁𝐓.prob_vf, x, par)
+	v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, T(0), 𝐁𝐓.zero, n)
 	~cv && @debug "Linear solver for J did not converge."
 	# ┌      ┐┌  ┐   ┌   ┐
 	# │ J  a ││v2│ = │ v1│
 	# │ b  0 ││σ2│   │ 0 │
 	# └      ┘└  ┘   └   ┘
 	# this could be greatly improved by saving the factorization
-	_, σ2, cv, _ = bt.linbdsolver(J, a, b, T(0), v1, zero(T))
+	_, σ2, cv, _ = 𝐁𝐓.linbdsolver(J, a, b, T(0), v1, zero(T))
 	~cv && @debug "Linear solver for J did not converge."
-	return residual(bt.prob_vf, x, par), σ1, σ2
+	return residual(𝐁𝐓.prob_vf, x, par), σ1, σ2
 end
 
 # this function encodes the functional
-function (bt::BTProblemMinimallyAugmented)(x::BorderedArray, params)
-	res = bt(x.u, x.p[1], x.p[2], params)
+function (𝐁𝐓::BTProblemMinimallyAugmented)(x::BorderedArray, params)
+	res = 𝐁𝐓(x.u, x.p[1], x.p[2], params)
 	return BorderedArray(res[1], [res[2], res[3]])
 end
 
-@views function (bt::BTProblemMinimallyAugmented)(x::AbstractVector, params)
-	res = bt(x[1:end-2], x[end-1], x[end], params)
+@views function (𝐁𝐓::BTProblemMinimallyAugmented)(x::AbstractVector, params)
+	res = 𝐁𝐓(x[1:end-2], x[end-1], x[end], params)
 	return vcat(res[1], res[2], res[3])
 end
 ################################################################################
 # Struct to invert the jacobian of the BT MA problem.
 struct BTLinearSolverMinAug <: AbstractLinearSolver; end
 
-function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
+function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented, par,
 							rhsu, rhsp) where T
 	# Recall that the functional we want to solve is
 	#					[F(x,p1,p2), σ1(x,p1,p2), σ2(x,p1,p2)]
 	# where σi(x,p1,p2) is computed in the function above.
-	# The jacobian has to be passed as a tuple as Jac_bt_MA(u0, pb::BTProblemMinimallyAugmented) = (return (u0, pb, d2F::Bool))
+	# The jacobian has to be passed as a tuple as Jac_bt_MA(u0, 𝐁𝐓::BTProblemMinimallyAugmented) = (return (u0, 𝐁𝐓, d2F::Bool))
 	# The Jacobian J of the vector field is expressed at (x, p)
 	# We solve here Jbt⋅res = rhs := [rhsu, rhsp]
 	# The Jacobian expression Jbt of the BT problem is
@@ -138,27 +138,27 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 	# We recall the expression of σ1x = -< w1, ∂J v1> where (w, _) is solution of J'w + b σ2 = 0 with <a, w> = n and
 	#                             σ2x = -< w2, ∂J v1> - < w1, ∂J v2>
 	################### Extraction of function names ###########################
-	a = pb.a
-	b = pb.b
+	a = 𝐁𝐓.a
+	b = 𝐁𝐓.b
 
 	p1, p2 = p
 
 	# parameter axis
-	lens = getLens(pb)
+	lens = getLens(𝐁𝐓)
 	# update parameter
-	par0 = set(par, getLens(pb.prob_vf), p1)
-	par0 = set(par0, pb.lens2, p2)
+	par0 = set(par, getLens(𝐁𝐓.prob_vf), p1)
+	par0 = set(par0, 𝐁𝐓.lens2, p2)
 
 	# par0 = set(par, lens, p)
 
 	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
-	J_at_xp = jacobian(pb.prob_vf, x, par0)
+	J_at_xp = jacobian(𝐁𝐓.prob_vf, x, par0)
 
-	# we do the following in order to avoid computing J_at_xp twice in case pb.Jadjoint is not provided
-	if isSymmetric(pb.prob_vf)
+	# we do the following in order to avoid computing J_at_xp twice in case 𝐁𝐓.Jadjoint is not provided
+	if isSymmetric(𝐁𝐓.prob_vf)
 		JAd_at_xp = J_at_xp
 	else
-		JAd_at_xp = hasAdjoint(pb) ? jad(pb.prob_vf, x, par0) : transpose(J_at_xp)
+		JAd_at_xp = hasAdjoint(𝐁𝐓) ? jad(𝐁𝐓.prob_vf, x, par0) : transpose(J_at_xp)
 	end
 
 	# normalization
@@ -166,70 +166,70 @@ function btMALinearSolver(x, p::Vector{T}, pb::BTProblemMinimallyAugmented, par,
 
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	v1, σ1, cv, itv1 = pb.linbdsolver(J_at_xp, a, b, T(0), pb.zero, n)
+	v1, σ1, cv, itv1 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, T(0), 𝐁𝐓.zero, n)
 	~cv && @debug "Linear solver for J did not converge."
 
-	v2, σ2, cv, itv2 = pb.linbdsolver(J_at_xp, a, b, T(0), v1, zero(T))
+	v2, σ2, cv, itv2 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, T(0), v1, zero(T))
 	~cv && @debug "Linear solver for J did not converge."
 
 	# we solve J'w + b σ2 = 0 with <a, w> = n
 	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-	w1, _, cv, itw1 = pb.linbdsolver(JAd_at_xp, b, a, T(0), pb.zero, n)
+	w1, _, cv, itw1 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, T(0), 𝐁𝐓.zero, n)
 	~cv && @debug "Linear solver for J' did not converge."
 
-	w2, _, cv, itw2 = pb.linbdsolver(JAd_at_xp, b, a, T(0), w1, zero(T))
+	w2, _, cv, itw2 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, T(0), w1, zero(T))
 	~cv && @debug "Linear solver for J' did not converge."
 
-	δ = getDelta(pb.prob_vf)
+	δ = getDelta(𝐁𝐓.prob_vf)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
 	################### computation of σx σp ####################
 	################### and inversion of Jbt ####################
-	lens1, lens2 = getLenses(pb)
-	dp1F = minus(residual(pb.prob_vf, x, set(par, lens1, p1 + ϵ1)),
-				 residual(pb.prob_vf, x, set(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
-	dp2F = minus(residual(pb.prob_vf, x, set(par, lens2, p2 + ϵ1)),
-				 residual(pb.prob_vf, x, set(par, lens2, p2 - ϵ1))); rmul!(dp2F, T(1/(2ϵ1)))
+	lens1, lens2 = getLenses(𝐁𝐓)
+	dp1F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ1)),
+				 residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
+	dp2F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ1)),
+				 residual(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ1))); rmul!(dp2F, T(1/(2ϵ1)))
 
-	dJvdp1 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
-				   apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJvdp1, T(1/(2ϵ3)))
+	dJvdp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
+				   apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJvdp1, T(1/(2ϵ3)))
 	σ1p1 = -dot(w1, dJvdp1) / n
 
-	dJvdp2 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
-				   apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJvdp2, T(1/(2ϵ3)))
+	dJvdp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
+				   apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJvdp2, T(1/(2ϵ3)))
 	σ1p2 = -dot(w1, dJvdp2) / n
 
-	dJv1dp1 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
-				    apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJv1dp1, T(1/(2ϵ3)))
-	dJv2dp1 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 + ϵ3)), v2),
-				    apply(jacobian(pb.prob_vf, x, set(par, lens1, p1 - ϵ3)), v2)); rmul!(dJv2dp1, T(1/(2ϵ3)))
+	dJv1dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
+				    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJv1dp1, T(1/(2ϵ3)))
+	dJv2dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v2),
+				    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v2)); rmul!(dJv2dp1, T(1/(2ϵ3)))
 	σ2p1 = -dot(w2, dJv1dp1) / n - dot(w1, dJv2dp1) / n
 
 
-	dJv1dp2 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
-				    apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJv1dp2, T(1/(2ϵ3)))
-    dJv2dp2 = minus(apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 + ϵ3)), v2),
-				    apply(jacobian(pb.prob_vf, x, set(par, lens2, p2 - ϵ3)), v2)); rmul!(dJv2dp2, T(1/(2ϵ3)))
+	dJv1dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
+				    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJv1dp2, T(1/(2ϵ3)))
+    dJv2dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v2),
+				    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v2)); rmul!(dJv2dp2, T(1/(2ϵ3)))
 	σ2p2 = -dot(w2, dJv1dp2) / n - dot(w1, dJv2dp2) / n
 	σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
 	if 1==1
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
 		# apply Jacobian adjoint
-		u11 = applyJacobian(pb.prob_vf, x + ϵ2 * v1, par0, w1, true)
+		u11 = applyJacobian(𝐁𝐓.prob_vf, x + ϵ2 * v1, par0, w1, true)
 		u12 = apply(JAd_at_xp, w1)
 		σ1x = minus(u12, u11); rmul!(σ1x, 1 / ϵ2)
 
-		u21 = applyJacobian(pb.prob_vf, x + ϵ2 * v1, par0, w2, true)
+		u21 = applyJacobian(𝐁𝐓.prob_vf, x + ϵ2 * v1, par0, w2, true)
 		u22 = apply(JAd_at_xp, w2)
 		σ2x1 = minus(u22, u21); rmul!(σ2x1, 1 / ϵ2)
 
-		u21 = applyJacobian(pb.prob_vf, x + ϵ2 * v2, par0, w1, true)
+		u21 = applyJacobian(𝐁𝐓.prob_vf, x + ϵ2 * v2, par0, w1, true)
 		u22 = apply(JAd_at_xp, w1)
 		σ2x2 = minus(u22, u21); rmul!(σ2x2, 1 / ϵ2)
 		σ2x = σ2x1 + σ2x2
 		########## Resolution of the bordered linear system ########
 		# we invert Jbt
-		dX, dsig, flag, it = pb.linbdsolver(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
+		dX, dsig, flag, it = 𝐁𝐓.linbdsolver(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
 		~flag && @debug "Linear solver for J did not converge."
 	end
 
@@ -296,7 +296,7 @@ function newtonBT(prob::AbstractBifurcationProblem,
 
 	@assert jacobian_ma in (:autodiff, :finitedifferences, :minaug)
 
-	btproblem = BTProblemMinimallyAugmented(
+	𝐁𝐓 = BTProblemMinimallyAugmented(
 		prob,
 		_copy(eigenvec_ad), # a
 		_copy(eigenvec),    # b
@@ -309,14 +309,14 @@ function newtonBT(prob::AbstractBifurcationProblem,
 	Ty = eltype(btpointguess)
 
 	if jacobian_ma == :autodiff
-		prob_f = BifurcationProblem(btproblem, btpointguess, par)
+		prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par)
 		optn_bt = @set options.linsolver = DefaultLS()
 	elseif jacobian_ma == :finitedifferences
-		prob_f = BifurcationProblem(btproblem, btpointguess, par;
-			J = (x, p) -> finiteDifferences(z -> btproblem(z, p), x))
+		prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par;
+			J = (x, p) -> finiteDifferences(z -> 𝐁𝐓(z, p), x))
 		optn_bt = @set options.linsolver = DefaultLS()
 	else
-		prob_f = BTMAProblem(btproblem, jacobian_ma, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
+		prob_f = BTMAProblem(𝐁𝐓, jacobian_ma, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
 		# options for the Newton Solver
 		optn_bt = @set options.linsolver = BTLinearSolverMinAug()
 	end
