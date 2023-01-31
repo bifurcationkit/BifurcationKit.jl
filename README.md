@@ -89,7 +89,7 @@ Most of the plugins are located in the organization [bifurcationkit](https://git
 - **Automatic computation of bifurcation diagrams of equilibria**
 - Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
 - Detection of all codim 2 bifurcations of equilibria and computation of the normal forms of Bogdanov-Takens, Bautin and Cusp
-- Branching from Bogdanov-Takens points to Fold / Hopf curve
+- Branching from Bogdanov-Takens / Zero-Hopf / Hopf-Hopf points to Fold / Hopf curve
 - Periodic orbit computation and continuation using Shooting, Finite Differences or Orthogonal Collocation.
 - Detection of Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point of periodic orbits.
 - Continuation of Fold of periodic orbits
@@ -117,7 +117,5 @@ Custom state means, we can use something else than `AbstractArray`, for example 
 | Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
 | Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
 | Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf point detection | Yes| Yes|  | :heavy_check_mark: |
-| Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf normal forms | Yes| Yes|  | :heavy_check_mark: |
-| Branching from Bogdanov-Takens points to Fold / Hopf curve | Yes | `AbstractVector` | |  |
-| Branching from Zero-Hopf points to Fold / Hopf curve | Yes | `AbstractVector` | |  |
-
+| Bogdanov-Takens / Bautin / Cusp normal forms | Yes| Yes|  | :heavy_check_mark: |
+| Branching from Bogdanov-Takens / Zero-Hopf / Hopf-Hopf to Fold / Hopf curve | Yes | `AbstractVector` | |  |
