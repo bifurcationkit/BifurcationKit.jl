@@ -138,21 +138,23 @@ br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newtonOptions.verbose = fals
 @test br_pok2_s2.period[1] ≈ 2pi rtol = 1e-7
 ####################################################################################################
 # test shooting interface M > 1
+initpo = [0.13, 0., 6.]
 _pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
-# test the jacobian of the functional in the case M=1
+# test the jacobian of the functional
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 ####################################################################################################
 # test shooting interface M > 1, parallel
+initpo = [0.13, 0., 6.]
 _pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
-# test the jacobian of the functional in the case M=1
+# test the jacobian of the functional
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
