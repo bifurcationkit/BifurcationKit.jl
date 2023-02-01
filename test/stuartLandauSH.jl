@@ -213,7 +213,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
 	opts_po_cont; verbosity = 0,
 	plot = false, normC = norminf)
-plot(br_pok2)
+# plot(br_pok2)
 ####################################################################################################
 # normals = [[-1., 0.], [1, -1]]
 # centers = [zeros(2), zeros(2)]
