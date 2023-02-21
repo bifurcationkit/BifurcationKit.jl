@@ -41,20 +41,20 @@ type(bp::PeriodDoublingPO) = :PeriodDoubling
 type(bp::BranchPointPO) = :BranchPoint
 
 function Base.show(io::IO, pd::PeriodDoublingPO)
-	println(io, "Period-Doubling bifurcation point of periodic orbit at\n", getLensSymbol(pd.nf.lens)," ≈ $(pd.nf.p)")
-	println(io, "Period = ", abs(pd.T), " -> ", 2abs(pd.T))
-	println(io, "Problem: ", typeof(pd.prob).name.name)
+	println(io, "Period-Doubling bifurcation point of periodic orbit at\n┌─ ", getLensSymbol(pd.nf.lens)," ≈ $(pd.nf.p)")
+	println(io, "├─ Period = ", abs(pd.T), " -> ", 2abs(pd.T))
+	println(io, "├─ Problem: ", typeof(pd.prob).name.name)
 	if pd.prob isa ShootingProblem
 		show(io, pd.nf)
 	else
-		println(io, "Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf.nf)
+		println(io, "└─ Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf.nf)
 	end
 end
 
 function Base.show(io::IO, bp::BranchPointPO)
-	println(io, type(bp), " bifurcation point of periodic orbit at\n", getLensSymbol(bp.nf.lens)," ≈ $(bp.nf.p)")
-	println(io, "Period = ", abs(bp.T))
-	println(io, "Problem: ", typeof(bp.prob).name.name)
+	println(io, type(bp), " bifurcation point of periodic orbit at\n┌─ ", getLensSymbol(bp.nf.lens)," ≈ $(bp.nf.p)")
+	println(io, "├─ Period = ", abs(bp.T))
+	println(io, "└─ Problem: ", typeof(bp.prob).name.name)
 end
 
 ####################################################################################################
@@ -100,14 +100,14 @@ end
 type(bp::NeimarkSackerPO) = type(bp.nf)
 
 function Base.show(io::IO, bp::NeimarkSackerPO)
-	println(io, bp.nf.type, " - ",type(bp), " bifurcation point of periodic orbit at\n", getLensSymbol(bp.nf.lens)," ≈ $(bp.p).")
-	println(io, "Frequency θ ≈ ", abs(bp.ω))
-	println(io, "Period at the periodic orbit ≈ ", abs(bp.T))
-	println(io, "Second frequency of the bifurcated torus ≈ ", abs(2pi/bp.ω))
-	println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
-	if ~isnothing(bp.nf)
+	println(io, bp.nf.type, " - ",type(bp), " bifurcation point of periodic orbit at\n┌─ ", getLensSymbol(bp.nf.lens)," ≈ $(bp.p).")
+	println(io, "├─ Frequency θ ≈ ", abs(bp.ω))
+	println(io, "├─ Period at the periodic orbit ≈ ", abs(bp.T))
+	println(io, "├─ Second frequency of the bifurcated torus ≈ ", abs(2pi/bp.ω))
+	println(io, "├─ Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+	if ~isnothing(bp.nf.nf)
 		println(io,"- a = ", bp.nf.nf.a)
 		println(io,"- b = ", bp.nf.nf.b)
 	end
-	println(io, "\nPeriodic orbit problem: \n", bp.prob)
+	println(io, "\n└─ Periodic orbit problem: \n", bp.prob)
 end

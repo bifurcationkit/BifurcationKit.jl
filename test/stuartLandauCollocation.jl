@@ -57,7 +57,7 @@ BK.∂(sin, 2)(0.)
 prob_col(_ci, par_sl) #|> scatter
 BK.getTimeSlices(prob_col, _ci)
 # interpolate solution
-sol = BK.POOCollSolution(prob_col, _ci)
+sol = BK.POSolution(prob_col, _ci)
 sol(rand())
 
 # using ForwardDiff
@@ -68,7 +68,7 @@ sol(rand())
 prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
 _ci = BK.generateSolution(prob_col, t -> cos(t) .* ones(1000), 2pi)
 BK.getTimes(prob_col)
-sol = BK.POOCollSolution(prob_col, _ci)
+sol = BK.POSolution(prob_col, _ci)
 sol(0.1)
 ####################################################################################################
 # test precision of phase condition, it must work for non uniform mesh
@@ -186,7 +186,7 @@ prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
 sol_po = newton(prob_col2, _ci, optcontpo.newtonOptions)
 
 # test Solution
-solc = BK.POOCollSolution(prob_col2, sol_po.u)
+solc = BK.POSolution(prob_col2, sol_po.u)
 # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
 let
 	mesh = BK.getMesh(prob_col2)

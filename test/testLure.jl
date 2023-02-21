@@ -50,9 +50,13 @@ Mt = 90 # number of time sections
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
 
-# test showing PD normal form
-show(getNormalForm(br_po, 1; verbose = true))
-show(getNormalForm(br_po, 3; verbose = true))
+# test normal forms
+for _ind in (1,3,16)
+	println("")
+	pt = getNormalForm(br_po, _ind; verbose = true)
+	predictor(pt, 0.1, 1.)
+	show(pt)
+end
 
 # aBS from PD
 br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 51, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
@@ -66,7 +70,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcat
 # plot(br, br_po, br_po_pd, xlims=(0.5,0.65))
 ####################################################################################################
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, pMax = 1.8, pMin=-5., maxSteps = 100, newtonOptions = (@set optn_po.tol = 1e-8), nev = 3, tolStability = 1e-4, detectBifurcation = 3, plotEveryStep = 20, saveSolEveryStep = 1, nInversion = 6)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, pMax = 1.8, pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-8), nev = 3, tolStability = 1e-4, detectBifurcation = 3, plotEveryStep = 20, saveSolEveryStep = 1, nInversion = 6)
 
 br_po = continuation(
 	br, 2, opts_po_cont,
@@ -77,8 +81,12 @@ br_po = continuation(
 	# verbosity = 2,	plot = true,
 	normC = norminf)
 
-pdnf = getNormalForm(br_po, 1, verbose = true)
-predictor(pdnf,1,1)
+# test normal forms
+for _ind in (1,)
+	pt = getNormalForm(br_po, _ind; verbose = true)
+	predictor(pt, 0.1, 1.)
+	show(pt)
+end
 ####################################################################################################
 using OrdinaryDiffEq
 
@@ -87,7 +95,7 @@ probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-10, reltol
 optn_po = NewtonPar(tol = 1e-7, maxIter = 25)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.01, ds= -0.001, dsmin = 1e-4, maxSteps = 130, newtonOptions = (@set optn_po.tol = 1e-8), tolStability = 1e-5, detectBifurcation = 3, plotEveryStep = 10, saveSolEveryStep = 0, nInversion = 6, nev = 3)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, maxSteps = 122, newtonOptions = (@set optn_po.tol = 1e-8), tolStability = 1e-5, detectBifurcation = 3, plotEveryStep = 10, nInversion = 6, nev = 3)
 
 br_po = continuation(
 	br, 2, opts_po_cont,
@@ -110,8 +118,12 @@ br_po = continuation(
 @test br_po.specialpoint[1].param ≈ 0.6273246 rtol = 1e-4
 @test br_po.specialpoint[2].param ≈ 0.5417461 rtol = 1e-4
 
-# test showing PD normal form
-show(getNormalForm(br_po, 1; verbose = true))
+# test showing normal form
+for _ind in (1,3)
+	pt = getNormalForm(br_po, _ind; verbose = true)
+	predictor(pt, 0.1, 1.)
+	show(pt)
+end
 
 # aBS from PD
 br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1, saveSolEveryStep = 1);
@@ -137,8 +149,12 @@ br_po = continuation(br, 2, opts_po_cont_ps,
 
 # plot(br_po, br)
 
-# test showing PD normal form
-show(getNormalForm(br_po, 1; verbose = true))
+# test showing normal form
+for _ind in (1,)
+	pt = getNormalForm(br_po, _ind; verbose = true)
+	predictor(pt, 0.1, 1.)
+	show(pt)
+end
 
 # aBS from PD
 br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);

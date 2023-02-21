@@ -96,8 +96,6 @@ function perioddoublingNormalForm(pbwrap,
 
 end
 
-end
-
 function perioddoublingNormalForm(pbwrap::WrapPOColl,
 								br,
 								ind_bif::Int;
@@ -118,8 +116,8 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
-	par = setParam(br, bifpt.param)
-	T = getPeriod(coll, bifpt.x, par)
+	pars = setParam(br, bifpt.param)
+	T = getPeriod(coll, bifpt.x, pars)
 
 	F(u, p) = residual(coll.prob_vf, u, p)
 	A(u,p,du) = apply(jacobian(coll.prob_vf, u, p), du)
@@ -127,7 +125,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	R3(u,p,du1,du2,du3) = d3F(coll.prob_vf, u,p,du1,du2,du3)
 
 	# we first try to get the floquet eigenvectors for μ = -1
-	jac = jacobian(pbwrap, bifpt.x, par)
+	jac = jacobian(pbwrap, bifpt.x, pars)
 	# remove borders
 	J = jac.jacpb
 	nj = size(J, 1)
@@ -157,11 +155,36 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	v₁ₛ = getTimeSlices(coll, vcat(v₁,0))
 	v₁★ₛ = getTimeSlices(coll, vcat(v₁★,0))
 
-	return NeimarkSackerPO(bifpt.x, T, bifpt.param, ωₙₛ, par, getLens(br), v₁, v₁★, nf, :none, coll)
+	# return PeriodDoublingPO(bifpt.x, T, bifpt.param, par, getLens(br), v₁, v₁★, nf, :none, coll)
+	# normal form for Poincaré map
+	nf = PeriodDoubling(nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
+
+	return PeriodDoublingPO(bifpt.x, T, v₁, v₁★, nf, coll)
 
 end
+####################################################################################################
+function neimarksackerNormalForm(pbwrap,
+							br,
+							ind_bif::Int;
+							nev = length(eigenvalsfrombif(br, ind_bif)),
+							verbose = false,
+							lens = getLens(br),
+							Teigvec = vectortype(br),
+							kwargs_nf...)
+	pb = pbwrap.prob
+	bifpt = br.specialpoint[ind_bif]
+	bptype = bifpt.type
+	pars = setParam(br, bifpt.param)
+	period = getPeriod(pb, bifpt.x, pars)
 
-	return PeriodDoubling(bifpt.x, T, bifpt.param, par, getLens(br), v₁, v₁★, nf, :none, coll)
+	# get the eigenvalue
+	eigRes = br.eig
+	λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+	ωₙₛ = imag(λₙₛ)
+
+	ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getLens(br), nothing, nothing, nothing, :none)
+
+	return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap)
 
 end
 ####################################################################################################
@@ -183,10 +206,15 @@ end
 function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
 	orbitguess = copy(nf.po)
 	orbitguess[1:end-1] .+= ampfactor .*  nf.ζ
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = nf.prob)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
+end
+
+function predictor(nf::NeimarkSackerPO, δp, ampfactor)
+	orbitguess = copy(nf.po)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	N, m, Ntst = size(nf.prob)
 
@@ -208,7 +236,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem}, δp, amp
 	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: ShootingProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)[1:end-1] .+ ampfactor .* ζs
@@ -220,14 +248,14 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem}, δp, ampfactor)
 	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
 end
 
-function predictor(nf::BranchPointPO{ <: ShootingProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: ShootingProblem }, δp, ampfactor)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)
 	orbitguess[1:length(ζs)] .+= ampfactor .* ζs
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = nf.prob)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	ζs = nf.ζ
 
@@ -236,12 +264,12 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem}, δp, ampfa
 	orbitguess = copy(nf.po) .+ ampfactor .* ζs
 	orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
 
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = pbnew)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
 end
 
 function predictor(nf::BranchPointPO{ <: PoincareShootingProblem}, δp, ampfactor)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)
 	orbitguess .+= ampfactor .* ζs
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = nf.prob)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
 end
