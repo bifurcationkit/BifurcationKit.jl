@@ -17,15 +17,13 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 
 	if bifpt.type == :pd
 		return perioddoublingNormalForm(prob, br, id_bif; kwargs_nf...)
-	elseif bifpt.type == :cusp
-		return cuspNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :bp
 		return branchNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :ns
-		return neimarksackerNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
+		return neimarksackerNormalForm(prob, br, id_bif; kwargs_nf...)
 	end
 
-	@assert 1==0
+	throw("Bifurcation point not yet implemented.")
 end
 
 ####################################################################################################
@@ -59,7 +57,7 @@ function branchNormalForm(pbwrap,
 
 	nf = nothing
 
-	return BranchPointPeriodicOrbit(bifpt.x, period, bifpt.param, par, getLens(br), real.(ζs), nothing, nf, :none, pb)
+	return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
 end
 ####################################################################################################
 function perioddoublingNormalForm(pbwrap,
@@ -73,8 +71,8 @@ function perioddoublingNormalForm(pbwrap,
 	pb = pbwrap.prob
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
-	par = setParam(br, bifpt.param)
-	period = getPeriod(pb, bifpt.x, par)
+	pars = setParam(br, bifpt.param)
+	period = getPeriod(pb, bifpt.x, pars)
 
 	# let us compute the kernel
 	λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -92,7 +90,9 @@ function perioddoublingNormalForm(pbwrap,
 
 	nf = nothing
 
-	return PeriodDoubling(bifpt.x, period, bifpt.param, par, getLens(br), real.(ζs), nothing, nf, :none, pb)
+	return PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
+
+end
 
 end
 
@@ -111,7 +111,9 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
 	@assert coll isa PeriodicOrbitOCollProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("#"^53*"\n--> Period-Doubling normal form computation")
+	verbose && println("#"^53*"\n--> Neimark-Sacker normal form computation")
+
+	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	par = setParam(br, bifpt.param)
@@ -158,7 +160,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 
 end
 ####################################################################################################
-function predictor(nf::PeriodDoubling{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
 	pb = nf.prob
 
 	M, N = size(pb)
@@ -170,16 +172,16 @@ function predictor(nf::PeriodDoubling{ <: PeriodicOrbitTrapProblem}, δp, ampfac
 	orbitguess = vec(orbitguess_c[:,1:2:end])
 	# we append twice the period
 	orbitguess = vcat(orbitguess, 2nf.T)
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = pb)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pb)
 end
 
-function predictor(nf::BranchPointPeriodicOrbit{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
 	orbitguess = copy(nf.po)
 	orbitguess[1:end-1] .+= ampfactor .*  nf.ζ
 	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = nf.prob)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoubling{ <: PeriodicOrbitOCollProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem}, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	N, m, Ntst = size(nf.prob)
 
@@ -198,10 +200,10 @@ function predictor(nf::PeriodDoubling{ <: PeriodicOrbitOCollProblem}, δp, ampfa
 	orbitguess = vcat(orbitguess, 2nf.T)
 
 	# no need to change pbnew.cache
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = pbnew)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoubling{ <: ShootingProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: ShootingProblem}, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)[1:end-1] .+ ampfactor .* ζs
@@ -210,18 +212,17 @@ function predictor(nf::PeriodDoubling{ <: ShootingProblem}, δp, ampfactor)
 	@set! pbnew.M = 2nf.prob.M
 	@set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
 	orbitguess[end] *= 2
-	# plot(cumsum(pb.ds) .* orbitguess[end], reshape(orbitguess[1:end-1],3, pb.M)', marker = :d) |> display
-	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = pbnew)
+	return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
 end
 
-function predictor(nf::BranchPointPeriodicOrbit{ <: ShootingProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: ShootingProblem}, δp, ampfactor)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)
 	orbitguess[1:length(ζs)] .+= ampfactor .* ζs
 	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = nf.prob)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoubling{ <: PoincareShootingProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem}, δp, ampfactor)
 	pbnew = deepcopy(nf.prob)
 	ζs = nf.ζ
 
@@ -233,7 +234,7 @@ function predictor(nf::PeriodDoubling{ <: PoincareShootingProblem}, δp, ampfact
 	return (orbitguess = orbitguess, pnew = nf.p + δp, prob = pbnew)
 end
 
-function predictor(nf::BranchPointPeriodicOrbit{ <: PoincareShootingProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: PoincareShootingProblem}, δp, ampfactor)
 	ζs = nf.ζ
 	orbitguess = copy(nf.po)
 	orbitguess .+= ampfactor .* ζs

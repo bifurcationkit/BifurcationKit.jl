@@ -1,4 +1,5 @@
-abstract type AbstractPeriodicOrbitProblem <: AbstractBifurcationProblem end
+abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
+abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 
 # Periodic orbit computations by finite differences
 abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end

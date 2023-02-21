@@ -80,7 +80,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 		M = length(normals)
 		indices = zeros(Int64, M)
 		for ii in 1:M
-			indices[ii] = argmax(abs.(normals[ii]))
+			indices[ii] = _selectIndex(normals[ii])
 		end
 		nbar = [R(normals[ii], indices[ii]) for ii in 1:M]
 		cbar = [R(centers[ii], indices[ii]) for ii in 1:M]

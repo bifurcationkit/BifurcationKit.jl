@@ -302,6 +302,7 @@ function generateSolution(pb::PeriodicOrbitOCollProblem, orbit, period)
 	return vcat(vec(ci), period)
 end
 
+using SciMLBase: AbstractTimeseriesSolution
 """
 $(SIGNATURES)
 
