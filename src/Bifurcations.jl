@@ -61,11 +61,9 @@ end
 """
 Function for coarse detection of bifurcation points.
 """
-function getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T
+function getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
 	# this boolean ensures that edge cases are handled
 	known = false
-
-	contparams = it.contParams
 
 	# get current number of unstable eigenvalues and
 	# unstable eigenvalues with nonzero imaginary part
@@ -88,14 +86,14 @@ function getBifurcationType(it::ContIterable, state, status::Symbol, interval::T
 			tp = :bp
 		elseif δn_imag == 1
 	# Either it is a Hopf bifurcation for a Complex valued system
-			tp = contparams.newtonOptions.eigsolver isa AbstractFloquetSolver ? :pd : :hopf
+			tp = eig isa AbstractFloquetSolver ? :pd : :hopf
 		else # I dont know what bifurcation this is
 			tp = :nd
 		end
 		known = true
 	elseif δn_unstable == 2
 		if δn_imag == 2
-			tp = contparams.newtonOptions.eigsolver isa AbstractFloquetSolver ? :ns : :hopf
+			tp = eig isa AbstractFloquetSolver ? :ns : :hopf
 		else
 			tp = :nd
 		end
@@ -130,6 +128,9 @@ function getBifurcationType(it::ContIterable, state, status::Symbol, interval::T
 	end
 	return known, specialpoint
 end
+
+# this allows for dispatch on eigensolver type
+getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T = getBifurcationType(it, state, status, interval, it.contParams.newtonOptions.eigsolver)
 
 """
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).

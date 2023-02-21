@@ -532,3 +532,5 @@ end
 end
 
 geteigenvector(eig::FoldEigsolver, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
+
+getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::FoldEigsolver) where T = getBifurcationType(it, state, status, interval, eig.eigsolver)
