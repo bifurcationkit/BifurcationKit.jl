@@ -72,6 +72,23 @@ function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 		return vcat(vec(orbitguess_v), period) |> vec
 	end
 end
+
+"""
+Structure to encode the solution associated to a functional like `::PeriodicOrbitOCollProblem` or `::ShootingProblem`. In the particular case of `::PeriodicOrbitOCollProblem`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, one can call
+
+    sol = BifurcationKit.POSolution(prob_coll, x)
+	sol(t)
+
+on any time `t`.
+"""
+struct POSolution{Tpb, Tx, Tp}
+	pb::Tpb
+	x::Tx
+	pars::Tp
+end
+
+# simplified constructor
+POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
 ####################################################################################################
 # this struct allows to have a unified interface with Shooting methods in term of plotting
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
@@ -538,7 +555,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
 	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
-	branch = continuation( pbnew, orbitguess, br.alg, _contParams;
+	branch = continuation( pbnew, orbitguess, alg, _contParams;
 		kwargs..., # put this first to be overwritten just below!
 		linearAlgo = _linearAlgo,
 		kind = br.kind

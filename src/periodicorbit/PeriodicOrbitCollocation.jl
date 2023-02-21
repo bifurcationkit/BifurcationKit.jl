@@ -305,17 +305,37 @@ end
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,1] and half time return `T`.
+Generate a periodic orbit problem from a solution.
+
+## Arguments
+- `pb` a `PeriodicOrbitOCollProblem` which provide basic information, like the number of time slices `M`
+- `bifprob` a bifurcation problem to provide the vector field
+- `sol` basically, and `ODEProblem
+- `period` estimate of the period of the periodic orbit
+
+## Output
+- returns a `PeriodicOrbitOCollProblem` and an initial guess.
 """
-function generateHomoclinicSolution(pb::PeriodicOrbitOCollProblem, orbit, T)
-	n, _m, Ntst = size(pb)
-	ts = getTimes(pb)
-	Nt = length(ts)
-	ci = zeros(eltype(pb), n, Nt)
-	for (l, t) in pairs(ts)
-		ci[:, l] .= orbit(-T + t * (2T))
-	end
-	return vec(ci)
+function generateCIProblem(pb::PeriodicOrbitOCollProblem,
+							bifprob::AbstractBifurcationProblem,
+							sol::AbstractTimeseriesSolution,
+							period)
+	u0 = sol(0)
+	@assert u0 isa AbstractVector
+	N = length(u0)
+
+	n, m, Ntst = size(pb)
+	nunknows = N * (1 + m * Ntst)
+
+	par = sol.prob.p
+	prob_vf = reMake(bifprob, params = par)
+
+	pbcoll = setproperties(pb, N = N, prob_vf = prob_vf, ϕ = zeros(nunknows), xπ = zeros(nunknows), cache = POCollCache(eltype(pb), N, m))
+
+	ci = generateSolution(pbcoll, t -> sol(t), period)
+	pbcoll.ϕ .= @view ci[1:end-1]
+
+	return pbcoll, ci
 end
 
 # @views function phaseCondition(prob::PeriodicOrbitOCollProblem, u)
@@ -490,39 +510,6 @@ function getSolution(prob::WrapPOColl, x)
 	else
 		return x
 	end
-end
-
-using SciMLBase: AbstractTimeseriesSolution
-"""
-$(SIGNATURES)
-
-Generate a periodic orbit problem from a solution.
-
-## Arguments
-- `pb` a `PeriodicOrbitOCollProblem` which provide basic information, like the number of time slices `M`
-- `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically, and `ODEProblem
-- `period` estimate of the period of the periodic orbit
-
-## Output
-- returns a `PeriodicOrbitOCollProblem` and an initial guess.
-"""
-function generateCIProblem(pb::PeriodicOrbitOCollProblem, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period)
-	u0 = sol(0)
-	@assert u0 isa AbstractVector
-	N = length(u0)
-
-	n,m,Ntst = size(pb)
-	probcoll = PeriodicOrbitOCollProblem(Ntst, m ; N = N, prob_vf = bifprob, xπ = copy(u0), ϕ = copy(u0))
-
-	resize!(probcoll.ϕ, length(probcoll))
-	resize!(probcoll.xπ, length(probcoll))
-
-	ci = generateSolution(probcoll, t -> sol(t*period/2-period/4), period)
-	probcoll.ϕ .= @view ci[1:end-1]
-	ci = generateSolution(probcoll, t -> sol(t*period/2), period)
-
-	return probcoll, ci
 end
 ####################################################################################################
 const DocStrjacobianPOColl = """

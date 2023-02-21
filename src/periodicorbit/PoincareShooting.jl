@@ -132,6 +132,17 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 	return period
 end
 
+function getTimeSlices(prob::PoincareShootingProblem, x_bar::AbstractVector)
+	M = getMeshSize(prob); Nm1 = length(x_bar) ÷ M
+	# reshape the period orbit guess
+	x_barc = reshape(x_bar, Nm1, M)
+	xc = similar(x_bar, Nm1 + 1, M)
+	for ii=1:M
+		@views E!(prob.section, xc[:, ii], x_barc[:, ii], ii)
+	end
+	xc
+end
+
 """
 $(SIGNATURES)
 
