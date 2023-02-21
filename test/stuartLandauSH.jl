@@ -19,7 +19,7 @@ function Fsl!(f, u, p, t = 0)
 end
 
 Fsl(x, p) = Fsl!(similar(x), x, p)
-dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
+dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), zero(dx[1]*x[1]))
 
 function FslMono!(f, x, p, t)
 	u = x[1:2]
@@ -37,12 +37,15 @@ prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
 
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
 br = continuation(prob_vf, PALC(), optconteq)
+show(br)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 ####################################################################################################
 sol = solve(probMono, KenCarp4(autodiff=false), abstol=1e-9, reltol=1e-6)
+@info "Solved probMono"
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
+@info "Solved prob"
 # plot(sol[1,:], sol[2,:])
 
 # test generation of initial guess from ODESolution
@@ -50,6 +53,7 @@ generateCIProblem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
 generateCIProblem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
 generateCIProblem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
 generateCIProblem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
+@info "Generated prob"
 ####################################################################################################
 section(x, T) = x[1] #* x[end]
 section(x, T, dx, dT) = dx[1] #* x[end]
@@ -161,6 +165,7 @@ _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 ####################################################################################################
+@info "Single Poincaré Shooting"
 # Single Poincaré Shooting with hyperplane parametrization
 normals = [[-1., 0.]]
 centers = [zeros(2)]
@@ -217,6 +222,7 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(),
 	plot = false, normC = norminf)
 # plot(br_pok2)
 ####################################################################################################
+@info "Multiple Poincaré Shooting"
 # normals = [[-1., 0.], [1, -1]]
 # centers = [zeros(2), zeros(2)]
 # initpo_bar = [1.04, -1.04/√2]
@@ -255,6 +261,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 ####################################################################################################
+@info "Multiple Poincaré Shooting 2"
 normals = [[-1., 0.], [1, 0], [0, 1]]
 centers = [zeros(2), zeros(2), zeros(2)]
 initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
@@ -292,6 +299,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax =
 @test br_hpsh.period[1] ≈ 2pi rtol = 1e-7
 # plot(br_hpsh)
 ####################################################################################################
+@info "Multiple Poincaré Shooting aBS"
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
 br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)

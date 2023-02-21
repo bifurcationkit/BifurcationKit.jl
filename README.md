@@ -56,7 +56,7 @@ To install the bleeding edge version, please run
 
 Most of the plugins are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
 
-- [HclinicBifurcationKit.jl]() computation and bifurcation analysis of homo/hetero clinic orbits of ordinary differential equations (ODE)
+- [HclinicBifurcationKit.jl]() computation and bifurcation analysis of homoclinic / heteroclinic orbits of ordinary differential equations (ODE)
 - [DDEBifurcationKit.jl](https://github.com/bifurcationkit/DDEBifurcationKit.jl) bifurcation analysis of delay differential equations (DDE)
 - [AsymptoticNumericalMethod.jl](https://github.com/bifurcationkit/AsymptoticNumericalMethod.jl) provides the numerical continuation algorithm **Asymptotic Numerical Method** (ANM) which can be used directly in `BifurcationKit.jl`
 - [GridapBifurcationKit.jl](https://github.com/bifurcationkit/GridapBifurcationKit) bifurcation analysis of PDEs solved with the Finite Elements Method (FEM) using the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
