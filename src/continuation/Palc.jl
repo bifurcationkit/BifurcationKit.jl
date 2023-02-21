@@ -68,7 +68,9 @@ $(TYPEDFIELDS)
 	@assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
 end
 getLinsolver(alg::PALC) = alg.bls
-getPredictor(alg::PALC) = alg.tangent
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(alg::PALC, onoroff::Bool) = internalAdaptation!(alg.tangent, onoroff)
+
 
 function Base.empty!(alg::PALC)
 	empty!(alg.tangent)
@@ -156,6 +158,8 @@ function _secantComputation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIt
 	α = sign(ds) / it.dotθ(τ, θ)
 	rmul!(τ, α)
 end
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(::Secant, ::Bool) = nothing
 
 getTangent!(state::AbstractContinuationState,
 			iter::AbstractContinuationIterable,
@@ -165,6 +169,8 @@ getTangent!(state::AbstractContinuationState,
 	Bordered Tangent predictor
 """
 struct Bordered <: AbstractTangentComputation end
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(::Bordered, ::Bool) = nothing
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
@@ -252,6 +258,8 @@ mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <:
 	"Update the predictor by adding the last point (x, p)? This can be disabled in order to just use the polynomial prediction. It is useful when the predictor is called mutiple times during bifurcation detection using bisection."
 	update::Bool
 end
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
 
 function Polynomial(pred, n, k, v0)
 	@assert n<k "k must be larger than the degree of the polynomial"

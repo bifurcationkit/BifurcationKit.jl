@@ -24,6 +24,8 @@ struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgor
 	"(Bordered) linear solver"
 	ls::Tls
 end
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(alg::MoorePenrose, swch::Bool) = internalAdaptation!(alg.tangent, swch)
 
 """
 $(SIGNATURES)

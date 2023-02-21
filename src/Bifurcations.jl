@@ -193,10 +193,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 	biflocated = false
 
 	# for a polynomial tangent predictor, we disable the update of the predictor parameters
-	# TODO Find better way to do this
-	if getPredictor(iter.alg) isa Polynomial
-		iter.alg.predictor.update = false
-	end
+	internalAdaptation!(iter.alg, false)
 
 	# emulate a do-while
 	while true
@@ -274,9 +271,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
 				"\n──────> biflocated                = ", biflocated == true, "\n")
 
 	end
-	if getPredictor(iter.alg) isa Polynomial
-		iter.alg.predictor.update = true
-	end
+	internalAdaptation!(iter.alg, true)
 
 	######## update current state ########
 	# So far we have (possibly) performed an even number of bifurcation crossings

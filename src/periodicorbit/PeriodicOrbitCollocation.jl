@@ -543,7 +543,7 @@ function _newtonPOColl(probPO::PeriodicOrbitOCollProblem,
 		jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
 	end
 
-	prob = WrapPOColl(probPO, jac, orbitguess, getParams(probPO.prob_vf), getLens(probPO.prob_vf), nothing, nothing)
+	prob = WrapPOColl(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), nothing, nothing)
 
 	if isnothing(defOp)
 		return newton(prob, options; kwargs...)
@@ -629,7 +629,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
 	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO.prob_vf), getLens(probPO.prob_vf))
 	_plotsol = modifyPOPlot(probPO, kwargs)
 
-	probwp = WrapPOColl(probPO, jacPO, orbitguess, getParams(probPO.prob_vf), getLens(probPO.prob_vf), _plotsol, _recordsol)
+	probwp = WrapPOColl(probPO, jacPO, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
 
 	br = continuation(probwp, alg,
 					contParams;
@@ -683,7 +683,7 @@ end
 	xc = getTimeSlices(sol.pb, sol.x)
 
 	T = getPeriod(sol.pb, sol.x, nothing)
-	t = t0 / T
+	t = mod(t0, T) / T
 
 	mesh = getMesh(sol.pb)
 	indτ = searchsortedfirst(mesh, t) - 1
@@ -708,11 +708,13 @@ end
 """
 $(SIGNATURES)
 
+Perform mesh adaptation of the periodic orbit problem. Modify `pb` and `x` inplace if the adaptation is successfull.
+
 Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
 
 p. 368
 """
-function computeError(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
+function computeError!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 					normE = norm,
 					verbosity::Bool = false,
 					K = Inf,

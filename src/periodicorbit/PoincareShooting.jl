@@ -399,9 +399,7 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 		centers = prob.section.centers
 	end
 
-	# @assert isEmpty(prob.section) "Specifying its own section for aBS from a Hopf point is not allowed yet."
-
-	@assert ~(prob.flow isa Flow) "Somehow, this method was not called as it should. `prob.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
+	@assert ~(prob.flow isa AbstractFlow) "Somehow, this method was not called as it should. `prob.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
 
 	# update the problem, hacky way to pass parameters
 	if length(prob.flow) == 4

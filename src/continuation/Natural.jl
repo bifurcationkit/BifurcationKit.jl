@@ -6,7 +6,8 @@ struct Natural <: AbstractContinuationAlgorithm
 	bothside::Bool
 end
 Natural() = Natural(false)
-getPredictor(algo::Natural) = ConstantPredictor()
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internalAdaptation!(::Natural, ::Bool) = nothing
 
 function initialize!(state::AbstractContinuationState,
 						iter::AbstractContinuationIterable,

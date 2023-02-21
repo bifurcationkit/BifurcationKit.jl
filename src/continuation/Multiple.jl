@@ -40,6 +40,8 @@ Multiple(alg, x0, α::T, nb) where T = Multiple(alg = alg, τ = BorderedArray(x0
 Multiple(x0, α, nb) = Multiple(PALC(), x0, α, nb)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
 getLinsolver(alg::Multiple) = getLinsolver(alg.alg)
+# important for bisection algorithm
+internalAdaptation!(alg::Multiple, onoroff::Bool) = internalAdaptation!(alg.alg, onoroff)
 
 # callback for newton
 function (algcont::Multiple)(state; kwargs...)

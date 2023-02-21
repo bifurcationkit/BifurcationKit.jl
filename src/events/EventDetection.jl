@@ -88,10 +88,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	eventlocated::Bool = false
 
 	# for a polynomial tangent predictor, we disable the update of the predictor parameters
-	# TODO Find better way to do this
-	if getPredictor(iter.alg) isa Polynomial
-		iter.alg.predictor.update = false
-	end
+	internalAdaptation!(iter.alg, false)
 
 	verbose && printstyled(color=:green, "──> eve (initial) ",
 		_state.eventValue[2], " ──> ",  _state.eventValue[1], "\n")
@@ -185,9 +182,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
 	end
 
-	if getPredictor(iter.alg) isa Polynomial
-		iter.alg.predictor.update = true
-	end
+	internalAdaptation!(iter.alg, true)
 
 	######## update current state ########
 	# So far we have (possibly) performed an even number of event crossings.

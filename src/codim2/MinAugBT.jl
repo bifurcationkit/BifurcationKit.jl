@@ -213,7 +213,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
 	σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
 	if 1==1
-		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
+		# We invert the jacobian of the bt problem when the Hessian of x -> F(x, p) is not known analytically.
 		# apply Jacobian adjoint
 		u11 = applyJacobian(𝐁𝐓.prob_vf, x + ϵ2 * v1, par0, w1, true)
 		u12 = apply(JAd_at_xp, w1)
