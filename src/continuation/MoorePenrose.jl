@@ -10,14 +10,16 @@ Additional information is available on the [website](https://bifurcationkit.gith
 
 `alg = MoorePenrose()`
 
-`alg = MoorePenrose(pred::AbstractPredictor)`
+`alg = MoorePenrose(tangent = PALC())`
+
+# Fields
 
 $(TYPEDFIELDS)
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
 	"Tangent predictor, example `PALC()`"
 	tangent::T
-	"Use a direct linear solver"
+	"Use a direct linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative"
 	method::MoorePenroseLS
 	"(Bordered) linear solver"
 	ls::Tls
@@ -34,7 +36,7 @@ function MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)
 			if tangent isa PALC
 				ls = tangent.bls
 			else
-				ls =  MatrixBLS()
+				ls = MatrixBLS()
 			end
 		end
 	end
@@ -56,6 +58,7 @@ initialize!(state::AbstractContinuationState,
 function getPredictor!(state::AbstractContinuationState,
 						iter::AbstractContinuationIterable,
 						alg::MoorePenrose, nrm = false)
+	(iter.verbosity > 0) && println("Predictor:  MoorePenrose")
 	# we just compute the tangent
 	getPredictor!(state, iter, alg.tangent, nrm)
 end

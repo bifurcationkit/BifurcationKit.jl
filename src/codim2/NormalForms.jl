@@ -227,10 +227,10 @@ function bogdanovTakensNormalForm(prob_ma, L,
 		J2_12 = Jp1p2(p10, p20)
 	else #finite  differences. We need to be carreful here because (1e-8)^2 is really small!!
 		J2_11 = (F(x0, setp(lens1, p10 + ϵ2)) .- 2 .* F(x0, setp(lens1, p10)) .+
-				    F(x0, setp(lens1, p10 - ϵ2)) ) ./ ϵ2^2
+				 F(x0, setp(lens1, p10 - ϵ2)) ) ./ ϵ2^2
 
 		J2_22 = (F(x0, setp(lens2, p20 + ϵ2)) .- 2 .* F(x0, setp(lens2, p20)) .+
-				   F(x0, setp(lens2, p20 - ϵ2)) )./ ϵ2^2
+				 F(x0, setp(lens2, p20 - ϵ2)) )./ ϵ2^2
 
 		J2_12 = (F(x0, setp(p10 + ϵ2, p20 + ϵ2)) .- F(x0, setp(lens1, p10 + ϵ2)) .-
 													F(x0, setp(lens2, p20 + ϵ2)) .+ F(x0, parbif))./ ϵ2^2
@@ -716,7 +716,7 @@ function bautinNormalForm(_prob,
 		dx5r = real.(dx5); dx5i = imag.(dx5);
 		out1 = (D(x0 .+ ϵ2 .* dx5r, dx1, dx2, dx3, dx4) .-
 			    D(x0 .- ϵ2 .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ2)
-	    out2 = (D(x0 .+ ϵ2 .* dx5i, dx1, dx2, dx3, dx4) .-
+		out2 = (D(x0 .+ ϵ2 .* dx5i, dx1, dx2, dx3, dx4) .-
 			    D(x0 .- ϵ2 .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ2)
 		return out1 .+ im .* out2
 	end
@@ -797,10 +797,6 @@ function zeroHopfNormalForm(_prob,
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
 	eigRes = br.eig
-
-	# eigenvalue
-	# ω = abs(getP(bifpt.x, prob)[2])
-	# λ = Complex(0, ω)
 
 	# parameter for vector field
 	p = bifpt.param

@@ -79,7 +79,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar; n
 	while (res > tol) && (it < maxIter) && compute
 		J = jacobian(prob, x, p0)
 		d, cv, itlinear = options.linsolver(J, f)
-        ~cv && @debug "Linear solver for J did not converge."
+		~cv && @debug "Linear solver for J did not converge."
 		itlineartot += sum(itlinear)
 
 		# Update solution: x .= x .- d

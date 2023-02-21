@@ -57,8 +57,14 @@ end
 ####################################################################################################
 ### 									POINCARE SHOOTING
 ####################################################################################################
-function PoincareShootingProblem(prob::ODEProblem, alg, hyp::SectionPS;
-			δ = 1e-8, interp_points = 50, parallel = false, par = prob.p, kwargs...)
+function PoincareShootingProblem(prob::ODEProblem,
+								alg,
+								hyp::SectionPS;
+								δ = 1e-8,
+								interp_points = 50,
+								parallel = false,
+								par = prob.p,
+								kwargs...)
 	pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
 	affect!(integrator, idx) = terminate!(integrator)
 	# we put nothing option to have an upcrossing
@@ -83,7 +89,13 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 # this is a Hack to pass the arguments to construct a Flow. Indeed, we need to provide the
 # appropriate callback for Poincare Shooting to work
-function PoincareShootingProblem(M::Int, prob::ODEProblem, alg; parallel = false, section = SectionPS(M), par = prob.p, kwargs...)
+function PoincareShootingProblem(M::Int,
+							prob::ODEProblem,
+							alg;
+							parallel = false,
+							section = SectionPS(M),
+							par = prob.p,
+							kwargs...)
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 	return  PoincareShootingProblem(;
@@ -111,9 +123,16 @@ function PoincareShootingProblem(M::Int,
 	return PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargsDE), kwargsSh..., parallel = parallel, section = section, par = par)
 end
 
-function PoincareShootingProblem(prob::ODEProblem, alg,
-			normals::AbstractVector, centers::AbstractVector;
-			δ = 1e-8, interp_points = 50, parallel = false, par = prob.p, kwargs...)
+function PoincareShootingProblem(prob::ODEProblem,
+								alg,
+								normals::AbstractVector,
+								centers::AbstractVector;
+								δ = 1e-8,
+								interp_points = 50,
+								parallel = false,
+								radius = Inf,
+								par = prob.p,
+								kwargs...)
 
 	return PoincareShootingProblem(prob, alg,
 					SectionPS(normals, centers);

@@ -121,7 +121,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to use the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
     It is recommanded that you use the option `startWithEigen=true`
@@ -156,7 +156,7 @@ Codimension 2 continuation of Fold / Hopf points. This function turns an initial
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
     It is recommanded that you use the option `startWithEigen = true`
@@ -186,7 +186,7 @@ function continuation(br::AbstractBranchResult,
 	end
 end
 ####################################################################################################
-# branch switching at Bogdanov-Takens bifurcation point
+# branch switching at BT / ZH/ HH bifurcation point
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			options_cont::ContinuationPar = br.contparams;
 			alg = br.alg,
@@ -197,6 +197,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			scaleζ = norm,
 			startWithEigen = false,
 			autodiff = false,
+			detailed = true,
 			kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
 		verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -221,7 +222,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 		Ty = eltype(Teigvec)
 
 		# compute the normal form of the bifurcation point
-		nf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff)
+		nf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed)
 
 		# compute predictor for point on new branch
 		ds = isnothing(δp) ? optionsCont.ds : δp
@@ -274,8 +275,8 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			foldpt = BorderedArray(nf.x0 .+ 0 .* pred.x0(ds), parcont[1])
 
 			# estimates for null eigenvectors
-			ζ = pred.EigenVec(ds)
-			ζstar = pred.EigenVecAd(ds)
+			ζ = pred.EigenVec(ds) |> real
+			ζstar = pred.EigenVecAd(ds) |> real
 
 			# put back original options
 			@set! optionsCont.newtonOptions.eigsolver =

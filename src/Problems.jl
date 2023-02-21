@@ -191,7 +191,7 @@ $(TYPEDFIELDS)
 
 				d3F = isnothing(d3F) ? (x,p,dx1,dx2,dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.) : d3F
 				VF = BifFunction(F, dF, dFad, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, 1e-8, inplace)
-			    return $op(VF, u0, parms, lens, plotSolution, recordFromSolution)
+				return $op(VF, u0, parms, lens, plotSolution, recordFromSolution)
 			end
 		end
 	end
@@ -206,7 +206,7 @@ setParam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)
 recordFromSolution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plotSolution(pb::AbstractBifurcationProblem) = pb.plotSolution
 
-# specifics for AbstractAllJetBifProblem
+# specific to AbstractAllJetBifProblem
 isInplace(pb::AbstractAllJetBifProblem) = isInplace(pb.VF)
 isSymmetric(pb::AbstractAllJetBifProblem) = isSymmetric(pb.VF)
 residual(pb::AbstractAllJetBifProblem, x, p) = residual(pb.VF, x, p)
@@ -274,15 +274,15 @@ function reMake(prob::AbstractBifurcationProblem;
 		lens::Lens = prob.lens,
 		recordFromSolution = prob.recordFromSolution,
 		plotSolution = prob.plotSolution,
-        J = missing,
-        d2F = missing,
+		J = missing,
+		d2F = missing,
 		d3F = missing)
 	prob2 = setproperties(prob; u0 = u0,
 							params = params,
 							lens = lens,
 							recordFromSolution = recordFromSolution,
 							plotSolution = plotSolution)
-    if ~ismissing(J)
+	if ~ismissing(J)
 		@set! prob2.VF.J = J
 	end
 	if ~ismissing(d2F)

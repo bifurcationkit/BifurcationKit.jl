@@ -23,13 +23,13 @@ struct MeshCollocationCache{T}
 	"Collocationn degree, usually called m"
 	degree::Int
 	"Lagrange matrix"
-    lagrange_vals::Matrix{T}
+	lagrange_vals::Matrix{T}
 	"Lagrange matrix for derivative"
-    lagrange_∂::Matrix{T}
+	lagrange_∂::Matrix{T}
 	"Gauss nodes"
 	gauss_nodes::Vector{T}
 	"Gauss weights"
-    gauss_weight::Vector{T}
+	gauss_weight::Vector{T}
 	"Values for the coarse mesh, call τj. This can be adapted."
 	mesh::Vector{T}
 	"Values for collocation poinnts, call σj. These are fixed."
@@ -61,20 +61,20 @@ getMaxTimeStep(pb::MeshCollocationCache) = maximum(diff(getMesh(pb)))
 
 # code from Jacobi.lagrange
 function lagrange(i::Int, x, z)
-    nz = length(z)
-    l = one(z[1])
+	nz = length(z)
+	l = one(z[1])
 	for k in 1:(i-1)
-        l = l * (x - z[k]) / (z[i] - z[k])
-    end
-    for k in (i+1):nz
-        l = l * (x - z[k]) / (z[i] - z[k])
-    end
-    return l
+		l = l * (x - z[k]) / (z[i] - z[k])
+	end
+	for k in (i+1):nz
+		l = l * (x - z[k]) / (z[i] - z[k])
+	end
+	return l
 end
 
 dlagrange(i, x, z) = ForwardDiff.derivative(x -> lagrange(i, x, z), x)
 
-# accept a range, ie σs = LinRange(-1, 1, m + 1)
+# should accept a range, ie σs = LinRange(-1, 1, m + 1)
 function getL(σs::AbstractVector)
 	m = length(σs) - 1
 	zs, = gausslegendre(m)
@@ -160,7 +160,7 @@ Here are some useful methods you can apply to `pb`
 - `getMeshColl(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
 - `getTimes(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
 - `generateSolution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
-- `POOCollSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
+- `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
 
 # Orbit guess
 You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
@@ -289,7 +289,7 @@ end
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,1] and the `period`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`.
 """
 function generateSolution(pb::PeriodicOrbitOCollProblem, orbit, period)
 	n, _m, Ntst = size(pb)

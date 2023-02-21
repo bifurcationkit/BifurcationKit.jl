@@ -30,13 +30,13 @@ end
 
 ####################################################################################################
 function branchNormalForm(pbwrap,
-								br,
-								ind_bif::Int;
-								nev = length(eigenvalsfrombif(br, ind_bif)),
-								verbose = false,
-								lens = getLens(br),
-								Teigvec = vectortype(br),
-								kwargs_nf...)
+							br,
+							ind_bif::Int;
+							nev = length(eigenvalsfrombif(br, ind_bif)),
+							verbose = false,
+							lens = getLens(br),
+							Teigvec = vectortype(br),
+							kwargs_nf...)
 	pb = pbwrap.prob
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type

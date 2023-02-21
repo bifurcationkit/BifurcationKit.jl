@@ -5,6 +5,7 @@ abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 # Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
 
 # get the number of time slices
 @inline getMeshSize(pb::AbstractPeriodicOrbitProblem) = pb.M
@@ -451,7 +452,10 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
-function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int, _contParams::ContinuationPar;
+function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
+			ind_bif::Int,
+			_contParams::ContinuationPar;
+			alg = br.alg,
 			δp = 0.1, ampfactor = 1,
 			usedeflation = false,
 			linearAlgo = nothing,
@@ -475,8 +479,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 
 	# we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
 	pb = deepcopy(br.prob.prob)
-	# In contrast, this is a WrapPO, useful to pass the jacobian to the Floquet eigenvector getter :ExtractEigenVector
-	# pbwrap = br.prob
 
 	nf = getNormalForm(br, ind_bif)
 	pred = predictor(nf, δp, ampfactor)
@@ -534,7 +536,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob}, ind_bif::Int
 	# perform continuation
 	pbnew = setParamsPO(pbnew, setParam(br, newp))
 
-	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO Trap constraint not satisfied"
+	pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
 	branch = continuation( pbnew, orbitguess, br.alg, _contParams;
 		kwargs..., # put this first to be overwritten just below!

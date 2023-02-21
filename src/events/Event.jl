@@ -142,8 +142,12 @@ end
 """
 $(TYPEDEF)
 
-Structure to pass a PairOfEvents function to the continuation algorithm. It is composed of a pair ContinuousEvent / DiscreteEvent.
+Structure to pass a PairOfEvents function to the continuation algorithm. It is composed of a pair ContinuousEvent / DiscreteEvent. A `PairOfEvents`
+is constructed by passing to the constructor a `ContinuousEvent` and a `DiscreteEvent`:
 
+	PairOfEvents(contEvent, discreteEvent)
+
+## Fields
 $(TYPEDFIELDS)
 """
 struct PairOfEvents{Tc <: AbstractContinuousEvent, Td <: AbstractDiscreteEvent}  <: AbstractEvent
@@ -178,7 +182,7 @@ end
 $(TYPEDEF)
 
 Multiple events can be chained together to form a `SetOfEvents`. A `SetOfEvents`
-is constructed by passing the constructor `ContinuousEvent`, `DiscreteEvent` or other `SetOfEvents` instances:
+is constructed by passing to the constructor `ContinuousEvent`, `DiscreteEvent` or other `SetOfEvents` instances:
 
 	SetOfEvents(cb1, cb2, cb3)
 

@@ -314,7 +314,7 @@ function getTangent!(state::AbstractContinuationState,
 		if length(polypred.arclengths) == 0
 			push!(polypred.arclengths, ds)
 		else
-			push!(polypred.arclengths, polypred.arclengths[end]+ds)
+			push!(polypred.arclengths, polypred.arclengths[end] + ds)
 		end
 		push!(polypred.solutions, state.z.u)
 		push!(polypred.parameters, state.z.p)
@@ -405,7 +405,7 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	verbose && displayIteration(it, res)
 	line_step = true
 
-	compute = callback((;x, res_f, res, it, contparams, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
+	compute = callback((;x, res_f, res, it, contparams, z0, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
 
 	while (res > tol) && (it < maxIter) && line_step && compute
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)

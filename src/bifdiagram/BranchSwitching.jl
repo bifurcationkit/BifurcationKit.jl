@@ -207,7 +207,6 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 	optnDf = setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation)
 
 	for (ind, xsol) in pairs(rootsNFp)
-		# print("\n--> attempt to converge zero #$ind")
 		probp = reMake(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
 								params = setParam(br, bpnf.p + ds))
 		solbif = newton(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -217,7 +216,6 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
 	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 	for (ind, xsol) in pairs(rootsNFm)
-		# print("\n--> attempt to converge zero #$ind")
 		probm = reMake(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
 								params = setParam(br, bpnf.p - ds))
 		solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -264,7 +262,7 @@ Automatic branch switching at branch points based on a computation of the normal
 The rest is as the regular `multicontinuation` function.
 """
 function multicontinuation(br::AbstractBranchResult,
-		bpnf::NdBranchPoint, 
+		bpnf::NdBranchPoint,
 		defOpm::DeflationOperator, defOpp::DeflationOperator,
 		optionsCont::ContinuationPar = br.contparams ;
 		alg = br.alg,
@@ -303,7 +301,7 @@ function multicontinuation(br::AbstractBranchResult,
 		# br, = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
 	end
 
-	return branches#, (before = defOpm, after = defOpp)
+	return branches
 end
 
 # same but for a Branch

@@ -51,7 +51,7 @@ Note that you can generate this guess from a function solution using `generateSo
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS, Tpar, Tlens} <: AbstractShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
 	M::Int64 = 0						# number of Poincaré sections
 	flow::Tf = Flow()					# should be a Flow
 	section::Tsection = SectionPS(M)	# Poincaré sections
@@ -71,8 +71,8 @@ function Base.show(io::IO, psh::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting functional for periodic orbits")
 	println(io, "├─ time slices : ", getMeshSize(psh))
 	println(io, "├─ lens        : ", getLensSymbol(psh.lens))
-    println(io, "├─ jacobian    : ", psh.jacobian)
-    println(io, "├─ update section : ", psh.updateSectionEveryStep)
+	println(io, "├─ jacobian    : ", psh.jacobian)
+	println(io, "├─ update section : ", psh.updateSectionEveryStep)
 	if psh.flow isa FlowDE
 		println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
 	end
@@ -406,24 +406,24 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 	# update the problem, hacky way to pass parameters
 	if length(prob.flow) == 4
 		probPSh = PoincareShootingProblem(prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers);
-            parallel = prob.parallel,
-            lens = getLens(prob_vf),
-            par = getParams(prob_vf),
-            updateSectionEveryStep = prob.updateSectionEveryStep,
-            jacobian = prob.jacobian,
-            prob.flow.kwargs...)
+			parallel = prob.parallel,
+			lens = getLens(prob_vf),
+			par = getParams(prob_vf),
+			updateSectionEveryStep = prob.updateSectionEveryStep,
+			jacobian = prob.jacobian,
+			prob.flow.kwargs...)
 	else
 		probPSh = PoincareShootingProblem(prob.flow.prob1,
-            prob.flow.alg1,
-            prob.flow.prob2,
-            prob.flow.alg2,
-            deepcopy(normals),
-            deepcopy(centers);
-            parallel = prob.parallel,
-            lens = getLens(prob_vf),
-            updateSectionEveryStep = prob.updateSectionEveryStep,
-            jacobian = prob.jacobian,
-            prob.flow.kwargs...)
+			prob.flow.alg1,
+			prob.flow.prob2,
+			prob.flow.alg2,
+			deepcopy(normals),
+			deepcopy(centers);
+			parallel = prob.parallel,
+			lens = getLens(prob_vf),
+			updateSectionEveryStep = prob.updateSectionEveryStep,
+			jacobian = prob.jacobian,
+			prob.flow.kwargs...)
 	end
 
 	# create initial guess. We have to pass it through the projection R

@@ -10,7 +10,7 @@ function getAdjointBasis(L★, λs, eigsolver; nev = 3, verbose = false)
 	for (idvp, λ) in enumerate(λs)
 		I = argmin(abs.(λ★ .- λ))
 		abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
-		verbose && println("--> VP[$idvp] paired with VP★[$I]")
+		verbose && println("──> VP[$idvp] paired with VP★[$I]")
 		ζ★ = geteigenvector(eigsolver, ev★, I)
 		push!(ζ★s, copy(ζ★))
 		push!(λ★s, λ★[I])
@@ -28,8 +28,8 @@ Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how m
 function getAdjointBasis(L★, λ::Number, eigsolver; nev = 3, verbose = false)
 	λ★, ev★ = eigsolver(L★, nev)
 	I = argmin(abs.(λ★ .- λ))
-	verbose && (println("--> left eigenvalues = "); display(λ★))
-	verbose && println("--> right eigenvalue = ", λ, ", left eigenvalue = ", λ★[I])
+	verbose && (println("──> left eigenvalues = "); display(λ★))
+	verbose && println("──> right eigenvalue = ", λ, ", left eigenvalue = ", λ★[I])
 	abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
 	ζ★ = geteigenvector(eigsolver, ev★, I)
 	return copy(ζ★), λ★[I]
@@ -52,8 +52,8 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
-	verbose && println("#"^53*"\n--> Normal form Computation for 1d kernel")
-	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
+	verbose && println("#"^53*"\n──> Normal form Computation for 1d kernel")
+	verbose && println("──> analyse bifurcation at p = ", bifpt.param)
 
 	options = br.contparams.newtonOptions
 
@@ -72,7 +72,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 
 	# "zero" eigenvalue at bifurcation point, it must be real
 	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-	verbose && println("--> smallest eigenvalue at bifurcation = ", λ)
+	verbose && println("──> smallest eigenvalue at bifurcation = ", λ)
 
 	# corresponding eigenvector, it must be real
 	if haseigenvector(br) == false
@@ -110,26 +110,26 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	δ = getDelta(prob)
 	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζ★)
-	verbose && println("--> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
-	verbose && println("--> a    = ", a)
+	verbose && println("──> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
+	verbose && println("──> a    = ", a)
 
 	# coefficient of x*p
 	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	Ψ01, _ = ls(L, E(R01))
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
-	verbose && println("--> b1   = ", b1)
+	verbose && println("──> b1   = ", b1)
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
 	b2 = dot(b2v, ζ★)
-	verbose && println("--> b2/2 = ", b2/2)
+	verbose && println("──> b2/2 = ", b2/2)
 
 	# coefficient of x^3, recall b2v = R2(ζ, ζ)
 	wst, _ = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
 	b3 = dot(b3v, ζ★)
-	verbose && println("--> b3/6 = ", b3/6)
+	verbose && println("──> b3/6 = ", b3/6)
 
 	bp = (x0, p, parbif, lens, ζ, ζ★, (a = a, b1 = b1, b2 = b2, b3 = b3), :NA)
 	if abs(a) < tolFold
@@ -165,7 +165,7 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
 	amp = -2ds * b1 / b2 * ampfactor
 	dsfactor = T(1)
 
-	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+	verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
@@ -197,7 +197,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 	# 	amp = ampfactor * abs(ds)
 	# 	pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
 	end
-	verbose && println("--> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+	verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
 	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
@@ -371,7 +371,7 @@ function biorthogonalise(ζs, ζ★s, verbose)
 
 	# test the bi-orthogonalization
 	G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-	verbose && (printstyled(color=:green, "--> Gram matrix = \n");Base.display(G))
+	verbose && (printstyled(color=:green, "──> Gram matrix = \n");Base.display(G))
 	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
 	return ζs, ζ★s
 end
@@ -442,8 +442,8 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 
 	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
 	nev = max(2N, nev)
-	verbose && println("#"^53*"\n--> Normal form Computation for a $N-d kernel")
-	verbose && println("--> analyse bifurcation at p = ", bifpt.param)
+	verbose && println("#"^53*"\n──> Normal form Computation for a $N-d kernel")
+	verbose && println("──> analyse bifurcation at p = ", bifpt.param)
 
 	options = br.contparams.newtonOptions
 	ls = options.linsolver
@@ -468,7 +468,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	rightEv = br.eig[bifpt.idx].eigenvals
 	indev = br.specialpoint[id_bif].ind_ev
 	λs = rightEv[indev-N+1:indev]
-	verbose && println("--> smallest eigenvalues at bifurcation = ", real.(λs))
+	verbose && println("──> smallest eigenvalues at bifurcation = ", real.(λs))
 
 	# and corresponding eigenvectors
 	if isnothing(ζs) # do we have a basis for the kernel?
@@ -476,7 +476,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			@info "No eigenvector recorded, computing them on the fly"
 			# we recompute the eigen-elements if there were not saved during the computation of the branch
 			_λ, _ev, _ = options.eigsolver(L, length(rightEv))
-			verbose && (println("--> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
+			verbose && (println("──> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
 			if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tolStability
 				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
 			end
@@ -499,7 +499,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	end
 	ζ★s = real.(ζ★s); λ★s = real.(λ★s)
 	ζs = real.(ζs); λs = real.(λs)
-	verbose && println("--> VP     = ", λs, "\n--> VP★ = ", λ★s)
+	verbose && println("──> VP     = ", λs, "\n──> VP★ = ", λ★s)
 
 	ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
 
@@ -526,7 +526,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	for ii in 1:N
 		dgidp[ii] = dot(R01, ζ★s[ii])
 	end
-	verbose && printstyled(color=:green,"--> a (∂/∂p) = ", dgidp, "\n")
+	verbose && printstyled(color=:green,"──> a (∂/∂p) = ", dgidp, "\n")
 
 	# coefficients of x*p
 	d2gidxjdpk = zeros(Tvec, N, N)
@@ -536,7 +536,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		~flag && @warn "linear solver did not converge"
 		d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
 	end
-	verbose && (printstyled(color=:green, "\n--> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
+	verbose && (printstyled(color=:green, "\n──> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
 
 	# coefficients of x^2
 	d2gidxjdxk = zeros(Tvec, N, N, N)
@@ -546,9 +546,9 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	end
 
 	if verbose
-		printstyled(color=:green, "\n--> b2 (∂²/∂x²) = \n")
+		printstyled(color=:green, "\n──> b2 (∂²/∂x²) = \n")
 		for ii in 1:N
-			printstyled(color=:blue, "--> component $ii\n")
+			printstyled(color=:blue, "──> component $ii\n")
 			Base.display( d2gidxjdxk[ii,:,:] ./ 2)
 		end
 	end
@@ -578,9 +578,9 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		end
 	end
 	if verbose
-		printstyled(color=:green, "\n--> b3 (∂³/∂x³) = \n")
+		printstyled(color=:green, "\n──> b3 (∂³/∂x³) = \n")
 		for ii in 1:N
-			printstyled(color=:blue, "--> component $ii\n")
+			printstyled(color=:blue, "──> component $ii\n")
 			Base.display( d3gidxjdxkdxl[ii,:,:,:] ./ 6 )
 		end
 	end
@@ -633,8 +633,8 @@ function predictor(bp::NdBranchPoint, δp::T;
 	end
 	rootsNFm =  getRootsNf(-abs(δp))
 	rootsNFp =  getRootsNf(abs(δp))
-	println("\n--> BS from Non simple branch point")
-	printstyled(color=:green, "--> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
+	println("\n──> BS from Non simple branch point")
+	printstyled(color=:green, "──> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
 	return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################
@@ -702,7 +702,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose:
 	else
 		pt.type = :Singular
 	end
-	verbose && printstyled(color = :red,"--> Hopf bifurcation point is: ", pt.type, "\n")
+	verbose && printstyled(color = :red,"──> Hopf bifurcation point is: ", pt.type, "\n")
 	return pt
 end
 
@@ -734,7 +734,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	verbose && println("#"^53*"\n--> Hopf normal form computation")
+	verbose && println("#"^53*"\n──> Hopf normal form computation")
 
 	options = br.contparams.newtonOptions
 

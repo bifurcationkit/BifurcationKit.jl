@@ -181,6 +181,7 @@ end
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
+
 jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
 ################################################################################################### Newton / Continuation functions
 """
@@ -424,7 +425,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		z = getx(state)
 		x = getVec(z, 𝐇)		# hopf point
 		p1, ω = getP(z, 𝐇)		# first parameter
-		p2 = getp(state)			# second parameter
+		p2 = getp(state)	   # second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 

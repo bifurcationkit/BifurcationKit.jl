@@ -360,7 +360,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 
 		x = getVec(z.u)	# fold point
 		p1 = getP(z.u)	# first parameter
-		p2 = z.p	# second parameter
+		p2 = z.p		# second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 
@@ -499,6 +499,7 @@ function continuationFold(prob,
 		# jacobian adjoint at bifurcation point
 		_Jt = hasAdjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
 
+		# computation of zero adjoint eigenvector
 		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
 		eigenvec_ad = real.(ζstar)
 		rmul!(eigenvec_ad, 1/dot(eigenvec, eigenvec_ad))

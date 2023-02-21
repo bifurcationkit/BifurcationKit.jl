@@ -341,10 +341,9 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	# in PALC, z_pred contains the previous solution
 	corrector!(state, it; iterationC = step, z0 = state.z)
 
-	# Successful step
 	if converged(state)
 		if verbose
-			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color=:green)
+			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
 			print("Parameter ", getLensSymbol(it))
 			@printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
 		end
@@ -353,11 +352,11 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		if computeEigenElements(it)
 			# this computes eigen-elements, store them in state and update the stability indices in state
 			it_eigen = computeEigenvalues!(it, state)
-			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1],"\n")
+			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
 		end
 		state.step += 1
 	else
-		verbose && printstyled("Newton correction failed\n", color=:red)
+		verbose && printstyled("Newton correction failed\n", color = :red)
 	end
 
 	# Step size control
@@ -402,7 +401,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				# the boundary of the parameter domain, we disable bisection because it would
 				# lead to infinite looping. Indeed, clamping messes up the `ds`
 				if contParams.detectBifurcation > 2 && ~isOnBoundary(it, getp(state))
-					verbose1 && printstyled(color=:red, "--> Bifurcation detected before p = ", getp(state), "\n")
+					verbose1 && printstyled(color = :red, "--> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end

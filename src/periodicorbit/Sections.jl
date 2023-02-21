@@ -3,7 +3,9 @@ abstract type AbstractSection end
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
 ####################################################################################################
-@views function sectionShooting(x::AbstractVector, T, normal::AbstractVector, center::AbstractVector)
+function sectionShooting(x::AbstractVector, T,
+						normal::AbstractVector,
+						center::AbstractVector)
 	N = length(center)
 	# we only constrain the first point to lie on a specific hyperplane
 	# this avoids the temporary xc - centers
@@ -92,6 +94,7 @@ end
 (hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
 isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
+_selectIndex(v) = argmax(abs.(v))
 # ==================================================================================================
 function _duplicate!(x::AbstractVector)
 	n = length(x)
@@ -116,9 +119,10 @@ function update!(hyp::SectionPS, normals, centers)
 	for ii in 1:M
 		hyp.normals[ii] .= normals[ii]
 		hyp.centers[ii] .= centers[ii]
-		hyp.indices[ii] = argmax(abs.(normals[ii]))
-		R!(hyp.normals_bar[ii], normals[ii], hyp.indices[ii])
-		R!(hyp.centers_bar[ii], centers[ii], hyp.indices[ii])
+		k = _selectIndex(normals[ii])
+		hyp.indices[ii] = k
+		R!(hyp.normals_bar[ii], normals[ii], k)
+		R!(hyp.centers_bar[ii], centers[ii], k)
 	end
 	return hyp
 end
