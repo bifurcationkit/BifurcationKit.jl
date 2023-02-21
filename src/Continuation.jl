@@ -287,7 +287,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	return iterateFromTwoPoints(it, sol₀.u, p₀, sol₁.u, p₀ + ds / η; _verbosity = _verbosity)
 end
 
-# same as previous function but when two (initial guesses) points  are provided
+# same as previous function but when two (initial guesses) points are provided
 function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
 	θ = it.contParams.θ
 	ds = it.contParams.ds

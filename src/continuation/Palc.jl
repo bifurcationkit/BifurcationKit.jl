@@ -125,7 +125,10 @@ updatePredictor!(state::AbstractContinuationState,
 						alg::PALC,
 						nrm = false) = addTangent!(state, nrm)
 
-function corrector!(state::AbstractContinuationState, it::AbstractContinuationIterable, alg::PALC; kwargs...)
+function corrector!(state::AbstractContinuationState,
+					it::AbstractContinuationIterable,
+					alg::PALC;
+					kwargs...)
 	if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
 		state.z_pred.p = clampPredp(state.z_pred.p, it)
 		return corrector!(state, it, Natural(); kwargs...)

@@ -53,6 +53,20 @@ function Base.empty!(alg::MoorePenrose)
 	alg
 end
 
+function update(alg0::MoorePenrose, contParams::ContinuationPar, linearAlgo)
+	tgt = update(alg0.tangent, contParams, linearAlgo)
+	alg = @set alg0.tangent = tgt
+	if isnothing(linearAlgo)
+		if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
+			return @set alg.ls.solver = contParams.newtonOptions.linsolver
+		end
+	else
+		return @set alg.ls = linearAlgo
+	end
+	alg
+end
+
+
 initialize!(state::AbstractContinuationState,
 						iter::AbstractContinuationIterable,
 						alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
@@ -85,7 +99,9 @@ function corrector!(state::AbstractContinuationState,
 	_updatefieldButNotSol!(state, sol)
 
 	# update solution
-	copyto!(state.z, sol.u)
+	if converged(sol)
+		copyto!(state.z, sol.u)
+	end
 
 	return true
 end
@@ -147,6 +163,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	end
 
 	while (res > tol) && (it < maxIter) && line_step && compute
+		it += 1
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
 		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + finDiffEps)))
 		minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
@@ -154,7 +171,6 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))
 		if method == direct || method == pInv
-			@debug method
 			Jb = hcat(J, dFdp)
 			if method == direct
 				dx, flag, converged = linsolver(Jb, res_f)
@@ -172,7 +188,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			# x .= X[1:end-1]; p = X[end]
 			du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(T), one(T), one(T))
 			minus!(x, du)
-		   	p -= dup
+			p -= dup
 			verbose && displayIteration(it, nothing, itlinear1)
 		end
 
@@ -194,7 +210,6 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			itlinear = (itlinear1 .+ itlinear2)
 		end
 		push!(resHist, res)
-		it += 1
 
 		verbose && displayIteration(it, res, itlinear)
 

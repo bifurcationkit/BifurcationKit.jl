@@ -55,7 +55,7 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
 		begin
 			# we first check that the continuation step was successful
-			# if not, we do not update the problem with bad information!
+			# if not, we do not update the problem with bad information
 			success = converged(get(kF, :state, nothing))
 			if success && modCounter(step, updateSectionEveryStep) == 1
 				updateSection!(prob, z.u, setParam(contResult, z.p))
@@ -81,7 +81,7 @@ function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSection
 	_finsol2 = (z, tau, step, contResult; kF...) ->
 		begin
 			# we first check that the continuation step was successful
-			# if not, we do not update the problem with bad information!
+			# if not, we do not update the problem with bad information
 			success = converged(get(kF, :state, nothing))
 			# mesh adaptation
 			if success && prob.meshadapt
