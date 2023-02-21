@@ -43,19 +43,23 @@ using Test
 	end
 
 	@testset "Periodic orbits function SH1" begin
+		@info "Entry in test_SS.jl"
 		include("test_SS.jl")
 	end
 
 	@testset "Periodic orbits function SH2" begin
+		# @info "Entry in poincareMap.jl"
 		# include("poincareMap.jl")
 	end
 
 	@testset "Periodic orbits function SH3" begin
+		@info "Entry in stuartLandauSH.jl"
 		include("stuartLandauSH.jl")
 	end
 
 	@testset "Periodic orbits function SH4" begin
 		# for testing period doubling aBS
+		@info "Entry in testLure.jl"
 		include("testLure.jl")
 	end
 
