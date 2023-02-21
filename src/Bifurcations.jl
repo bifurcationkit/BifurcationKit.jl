@@ -31,19 +31,20 @@ end
 # Test function for Fold bifurcation
 @inline detectFold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
 
-function locateFold!(contparams::ContinuationPar, contres::ContResult, z, τ, normC, printsolution, verbosity)
+function locateFold!(contres::ContResult, iter::ContIterable, state::ContState)
 	branch = contres.branch
 	# Fold point detection based on continuation parameter monotony
-	if contparams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
-		(verbosity > 0) && printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
+	if iter.contParams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
+		(iter.verbosity > 0) && printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
 		npar = length(branch[1]) - 9
 		push!(contres.specialpoint, SpecialPoint(
 			type = :fold,
 			idx = length(branch) - 1,
 			param = branch[end-1].param,
-			norm = normC(z.u),
+			norm = iter.normC(getx(state)),
 			printsol = NamedTuple{keys(branch[end-1])[1:npar]}(values(branch[end-1])[1:npar]),
-			x = _copy(z.u), τ = copy(τ),
+			x = getSolution(iter.prob, _copy(getx(state))),
+			τ = copy(state.τ),
 			ind_ev = 0,
 			# it means the fold occurs between step - 2 and step:
 			step = length(branch) - 1,
@@ -56,8 +57,6 @@ function locateFold!(contparams::ContinuationPar, contres::ContResult, z, τ, no
 		return false
 	end
 end
-
-locateFold!(contres::ContResult, iter::ContIterable, state::ContState) = locateFold!(iter.contParams, contres, getSolution(state), state.τ, iter.normC, iter.prob.recordFromSolution, iter.verbosity)
 ####################################################################################################
 """
 Function for coarse detection of bifurcation points.
