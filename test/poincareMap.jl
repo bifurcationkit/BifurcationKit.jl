@@ -4,8 +4,8 @@ using BifurcationKit, OrdinaryDiffEq, ForwardDiff
 # using Zygote, DiffEqSensitivity
 using LinearAlgebra, Parameters
 	
-using Pkg
-pkg"st OrdinaryDiffEq"
+# using Pkg
+# pkg"st OrdinaryDiffEq"
 
 norminf(x) = norm(x, Inf)
 
