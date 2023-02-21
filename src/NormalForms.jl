@@ -820,3 +820,192 @@ function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 			p = pnew,
 			dsfactor = dsfactor)
 end
+################################################################################
+function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDoubling, ls; verbose::Bool = false)
+
+    x0 = pt.x0
+	p = pt.p
+	lens = pt.lens
+	parbif = set(pt.params, lens, p)
+	ζ = pt.ζ
+	ζ★ = pt.ζ★
+
+	abs(dot(ζ, ζ) - 1)>1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
+	abs(dot(ζ★, ζ) - 1)>1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
+
+	# jacobian at the bifurcation point
+	L = jacobian(prob, x0, parbif)
+
+	# we use BilinearMap to be able to call on complex valued arrays
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
+	E(x) = x .- dot(ζ★, x) .* ζ
+
+	# −LΨ001 = R01
+	δ = getDelta(prob)
+	# coefficient of x*p
+	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	Ψ01, _ = ls(L, E(R01))
+	a = dot(ζ★, R11 .- R2(ζ, Ψ01))
+	verbose && println("──> Normal form:   (-1+ a⋅δμ)⋅x + b3⋅x^3")
+	verbose && println("──> a  = ", a)
+
+	# coefficient of x^2
+	b2v = R2(ζ, ζ)
+	wst, _ = ls(L, E(b2v); a₀ = -1)
+	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
+	b = dot(ζ★, b3v)
+	verbose && println("──> b3 = ", b)
+	nf = (a = a, b3 = b)
+	if real(a) * real(b) < 0
+		type = :SuperCritical
+	elseif real(a) * real(b) > 0
+		type = :SubCritical
+	else
+		type = :Singular
+	end
+	verbose && printstyled(color = :red,"──> Period-doubling bifurcation point is: ", type, "\n")
+	return setproperties(pt, nf = nf, type = type)
+end
+################################################################################
+"""
+$(SIGNATURES)
+
+Compute the Neimark-Sacker normal form.
+
+# Arguments
+- `prob::AbstractBifurcationProblem` bifurcation problem
+- `pt::NeimarkSacker` Neimark-Sacker bifurcation point
+- `ls` linear solver
+
+# Optional arguments
+- `verbose` bool to print information
+"""
+function neimarkSackerNormalForm(prob::AbstractBifurcationProblem, pt::NeimarkSacker, ls; verbose::Bool = false)
+	x0 = pt.x0
+	p = pt.p
+	lens = pt.lens
+	parbif = set(pt.params, lens, p)
+	ω = pt.ω
+	ζ = pt.ζ
+	cζ = conj.(pt.ζ)
+	ζ★ = pt.ζ★
+
+	# jacobian at the bifurcation point
+	L = jacobian(prob, x0, parbif)
+
+	# we use BilinearMap to be able to call on complex valued arrays
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
+
+	# −LΨ001 = R01
+	δ = getDelta(prob)
+	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+	Ψ001, _ = ls(L, -R01)
+
+	# (exp(2iω)−L)Ψ200 = R20(ζ,ζ)
+	R20 = R2(ζ, ζ)
+	Ψ200, _ = ls(L, R20; a₀ = cis(2ω), a₁ = -1)
+	# @assert Ψ200 ≈ (exp(Complex(0, 2ω))*I - L) \ R20
+
+	# (I−L)Ψ110 = 2R20(ζ,cζ).
+	R20 = 2 .* R2(ζ, cζ)
+	Ψ110, _ = ls(L, -R20; a₀ = -1)
+
+	# a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
+	av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	av .+= 2 .* R2(ζ, Ψ001)
+	a = dot(ζ★, av) * cis(-ω)
+	verbose && println("──> a  = ", a)
+
+	# b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
+	bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
+	b = dot(ζ★, bv) * cis(-ω) / 2
+
+	# return coefficients of the normal form
+	verbose && println((a = a, b = b))
+	pt.nf = (a = a, b = b)
+	if real(a) * real(b) < 0
+		pt.type = :SuperCritical
+	elseif real(a) * real(b) > 0
+		pt.type = :SubCritical
+	else
+		pt.type = :Singular
+	end
+	verbose && printstyled(color = :red,"──> Neimark-Sacker bifurcation point is: ", pt.type, "\n")
+	return pt
+end
+
+"""
+$(SIGNATURES)
+
+Compute the Neimark-Sacker normal form.
+
+# Arguments
+- `prob::AbstractBifurcationProblem` bifurcation problem
+- `br` branch result from a call to [`continuation`](@ref)
+- `ind_ns` index of the bifurcation point in `br`
+- `options` options for the Newton solver
+
+# Optional arguments
+- `nev = 5` number of eigenvalues to compute to estimate the spectral projector
+- `verbose` bool to print information
+
+"""
+function neimarkSackerNormalForm(prob::AbstractBifurcationProblem,
+					br::AbstractBranchResult, ind_ns::Int;
+					nev = length(eigenvalsfrombif(br, id_bif)),
+					verbose::Bool = false,
+					lens = getLens(br),
+					Teigvec = getvectortype(br),
+					scaleζ = norm)
+
+	verbose && println("#"^53*"\n──> Neimark-Sacker normal form computation")
+
+	options = br.contparams.newtonOptions
+
+	# bifurcation point
+	bifpt = br.specialpoint[ind_ns]
+	eigRes = br.eig
+
+	# eigenvalue
+	λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+	ω = imag(λ)
+
+	# parameter for vector field
+	p = bifpt.param
+	parbif = set(getParams(br), lens, p)
+	L = jacobian(br.prob, convert(Teigvec, bifpt.x), parbif)
+
+	# right eigenvector
+	if haseigenvector(br) == false
+		# we recompute the eigen-elements if there were not saved during the computation of the branch
+		_λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
+		@assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+		ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
+	else
+		ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+	end
+	ζ ./= scaleζ(ζ)
+
+	# left eigen-elements
+	_Jt = hasAdjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+	ζ★, λ★ = getAdjointBasis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+
+	# check that λ★ ≈ conj(λ)
+	abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+
+	# normalise left eigenvector
+	ζ★ ./= dot(ζ, ζ★)
+	@assert dot(ζ, ζ★) ≈ 1
+
+	nspt = NeimarkSacker(bifpt.x, bifpt.param,
+		ω,
+		parbif, lens,
+		ζ, ζ★,
+		(a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
+		:SuperCritical
+	)
+	return neimarkSackerNormalForm(prob, nspt, options.linsolver ; verbose = verbose)
+end

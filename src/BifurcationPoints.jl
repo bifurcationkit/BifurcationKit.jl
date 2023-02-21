@@ -1,6 +1,7 @@
 abstract type AbstractBifurcationPoint end
 abstract type AbstractBranchPoint <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBranchPoint <: AbstractBranchPoint end
+abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
 
 istranscritical(bp::AbstractBranchPoint) = false
 ####################################################################################################
@@ -97,7 +98,12 @@ end
 ####################################################################################################
 # types for bifurcation point with 1d kernel for the jacobian
 
-for op in (:Pitchfork, :Fold, :Transcritical)
+for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
+					(:Pitchfork, AbstractSimpleBranchPoint),
+					(:Fold, AbstractSimpleBranchPoint),
+					(:Transcritical, AbstractSimpleBranchPoint),
+					(:PeriodDoubling, AbstractSimpleBranchPointForMaps),
+					)
 	@eval begin
 		"""
 		$(TYPEDEF)
@@ -109,7 +115,7 @@ for op in (:Pitchfork, :Fold, :Transcritical)
 		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
 		to find the zeros of the normal form polynomials.
 		"""
-		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractSimpleBranchPoint
+		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: $opt
 			"Bifurcation point."
 			x0::Tv
 
@@ -140,9 +146,11 @@ end
 Pitchfork(x0, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 isTranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
+type(bp::BranchPoint) = :BranchPoint
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
+type(bp::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
@@ -155,6 +163,17 @@ function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif)
 	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
 	println(io, "Normal form x⋅(b1⋅δp + b3⋅x²/6): \n", bp.nf)
 end
+
+function Base.show(io::IO, bp::PeriodDoubling)
+	print(io, bp.type, " - ")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+	println(io, "Normal form x⋅(a⋅δp + c⋅x³)")
+	if ~isnothing(bp.nf)
+		println(io,"- a = ", bp.nf.a)
+		println(io,"- c = ", bp.nf.b3)
+	end
+	end
+
 
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
@@ -268,4 +287,59 @@ function Base.show(io::IO, bp::Hopf)
 	println(io, "Frequency ω ≈ ", abs(bp.ω))
 	println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
 	println(io, "Normal form z⋅(iω + a⋅δp + b⋅|z|²): \n", bp.nf)
+end
+####################################################################################################
+# type for Neimark-Sacker bifurcation (of Maps)
+"""
+$(TYPEDEF)
+
+$(TYPEDFIELDS)
+
+# Associated methods
+
+## Predictor
+
+You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
+"""
+mutable struct NeimarkSacker{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
+	"Neimark-Sacker point"
+	x0::Tv
+
+	"Parameter value at the Neimark-Sacker point"
+	p::T
+
+	"Frequency at the Neimark-Sacker point"
+	ω::Tω
+
+	"Parameters used by the vector field."
+	params::Tpar
+
+	"Parameter axis used to compute the branch on which this Neimark-Sacker point was detected."
+	lens::Tlens
+
+	"Right eigenvector"
+	ζ::Tevr
+
+	"Left eigenvector"
+	ζ★::Tevl
+
+	"Normal form coefficient ex: (a = 0., b = 1 + 1im)"
+	nf::Tnf
+
+	"Type of Hopf bifurcation"
+	type::Symbol
+end
+
+type(bp::NeimarkSacker) = :NeimarkSacker
+
+function Base.show(io::IO, bp::NeimarkSacker)
+	print(io, bp.type, " - ")
+	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+	println(io, "Frequency θ ≈ ", abs(bp.ω))
+	println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
+	println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+	if ~isnothing(bp.nf)
+		println(io,"- a = ", bp.nf.a)
+		println(io,"- b = ", bp.nf.b)
+	end
 end
