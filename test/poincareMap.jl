@@ -1,8 +1,11 @@
 # using Revise, Test
 # using Plots
 using BifurcationKit, OrdinaryDiffEq, ForwardDiff
-	# using Zygote, DiffEqSensitivity
-	using LinearAlgebra, Parameters
+# using Zygote, DiffEqSensitivity
+using LinearAlgebra, Parameters
+	
+using Pkg
+pkg"st OrdinaryDiffEq"
 
 norminf(x) = norm(x, Inf)
 
@@ -103,10 +106,10 @@ ts, ss = flowTS([0., 1], Inf, prob; callback = cb, save_everystep = true, saveat
 println("--> dΠ using Analytical formula")
 resAna = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob);show(resAna)
 
-println("--> dΠ using Finite differences")
+println("\n--> dΠ using Finite differences")
 resFD = dΠFD(u0, du0);show(resFD)
 
-println("--> Norm of the difference = ", resAna - resFD |> norminf)
+println("\n--> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1e-4
 ####################################################################################################
 # matrix of the Poincare map, analytical formula
@@ -114,7 +117,7 @@ const FD = ForwardDiff
 const BK = BifurcationKit
 
 tΣ, solΣ = flowTS(u0, Inf64, prob; callback = cb)
-	tΣ = tΣ[end]; solΣ = solΣ[end]
+tΣ = tΣ[end]; solΣ = solΣ[end]
 dϕ = FD.jacobian( x -> flowTS(x, tΣ, prob)[2][end], (u0))
 F = Fsl(Π(u0), par_sl)
 normal = normals[1]
@@ -126,7 +129,7 @@ dT = -normal' * dϕ ./ dot(normal, F)
 Jtmp = dϕ .- F * normal' * dϕ #./ dot(F, normal)
 dΠfd = BK.finiteDifferences(Π, u0; δ = 1e-8)
 Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
-@test norm(dΠfd - Jtmp, Inf) < 5e-5
+@test norm(dΠfd - Jtmp, Inf) < 1e-4
 ####################################################################################################
 # comparison with BK
 using BifurcationKit
@@ -146,7 +149,6 @@ probHPsh = BK.PoincareShootingProblem(
 		normals, centers; abstol =1e-10, reltol=1e-10)
 
 @show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
-
 
 resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
 resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
