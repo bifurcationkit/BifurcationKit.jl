@@ -75,6 +75,7 @@ resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
 @test norm(resAN - resAD, Inf) < 5e-5
 ####################################################################################################
 # test shooting interface M = 1
+@info "Single Shooting"
 _pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@lens _.r))
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
@@ -116,6 +117,7 @@ _sol(0.1)
 # plot(br_pok2)
 ####################################################################################################
 # test automatic branch switching
+@info "Single Shooting aBS"
 br_pok2 = continuation(br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf, verbosity = 0)
 
 @test br_pok2.prob.prob.jacobian == :autodiffDense
@@ -302,15 +304,15 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
 br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
-@test br_hpsh.prob isa BK.WrapPOSh
-@test br_hpsh.period[1] ≈ 2pi rtol = 1e-7
+@test br_psh.prob isa BK.WrapPOSh
+@test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
 @set! opts_po_cont.newtonOptions.eigsolver.dim = 20
 @set! opts_po_cont.newtonOptions.eigsolver.x₀ = rand(2)
 br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, saveSolEveryStep = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
-@test br_hpsh.prob isa BK.WrapPOSh
-@test br_hpsh.period[1] ≈ 2pi rtol = 1e-7
+@test br_psh.prob isa BK.WrapPOSh
+@test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test MonodromyQaD
 # BK.MonodromyQaD(br_sh.functional, br.sol)
