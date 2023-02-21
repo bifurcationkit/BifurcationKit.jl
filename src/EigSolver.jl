@@ -2,7 +2,9 @@ using IterativeSolvers, Arpack, LinearAlgebra
 import KrylovKit: eigsolve
 
 abstract type AbstractEigenSolver end
-abstract type AbstractMFEigenSolver <: AbstractEigenSolver end
+abstract type AbstractDirectEigenSolver <: AbstractEigenSolver end
+abstract type AbstractIterativeEigenSolver <: AbstractEigenSolver end
+abstract type AbstractMFEigenSolver <: AbstractIterativeEigenSolver end
 abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
@@ -14,7 +16,7 @@ getsolver(eig::AbstractEigenSolver) = eig
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
-@with_kw struct DefaultEig{T} <: AbstractEigenSolver
+@with_kw struct DefaultEig{T} <: AbstractDirectEigenSolver
 	which::T = real		# how do we sort the computed eigenvalues
 end
 
@@ -37,7 +39,7 @@ More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgeb
 
 `EigArpack(sigma = nothing, which = :LR; kwargs...)`
 """
-struct EigArpack{T, Tby, Tw} <: AbstractEigenSolver
+struct EigArpack{T, Tby, Tw} <: AbstractIterativeEigenSolver
 	"Shift for Shift-Invert method with `(J - sigma⋅I)"
 	sigma::T
 
@@ -134,7 +136,7 @@ More information is available at [ArnoldiMethod.jl](https://github.com/haampie/A
 
 `EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...)`
 """
-struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractEigenSolver
+struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractIterativeEigenSolver
 	"Shift for Shift-Invert method"
 	sigma::T
 

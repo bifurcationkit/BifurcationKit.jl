@@ -40,7 +40,7 @@ end
 geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
-	if fl.eigsolver isa DefaultEig
+	if fl.eigsolver isa AbstractDirectEigenSolver
 		# we build the monodromy matrix and compute the spectrum
 		monodromy = MonodromyQaD(J)
 	else
