@@ -466,8 +466,8 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (; zip(lenses, (getP(u, 𝐇)[1], p))..., ω = getP(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH, namedprintsol(recordFromSolution(prob_vf)(getVec(u, 𝐇), p; kw...))...) :
-		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u, 𝐇), p; kw...))..., zip(lenses, (getP(u, 𝐇)[1], p))..., ω = getP(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH)
+		(u, p; kw...) -> (; zip(lenses, (getP(u, 𝐇)[1], p))..., ωₕ = getP(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH, namedprintsol(recordFromSolution(prob_vf)(getVec(u, 𝐇), p; kw...))...) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u, 𝐇), p; kw...))..., zip(lenses, (getP(u, 𝐇)[1], p))..., ωₕ = getP(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH)
 
 	prob_h = reMake(prob_h, recordFromSolution = _printsol2)
 
