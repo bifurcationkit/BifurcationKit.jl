@@ -113,7 +113,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
 	@assert coll isa PeriodicOrbitOCollProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("#"^53*"\n--> Neimark-Sacker normal form computation")
+	verbose && println("#"^53*"\n--> Period-doubling normal form computation")
 
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
@@ -163,7 +163,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	# normal form for Poincaré map
 	nf = PeriodDoubling(nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
 
-	return PeriodDoublingPO(bifpt.x, T, v₁, v₁★, nf, coll)
+	return PeriodDoublingPO(bifpt.x, T, real(v₁), real(v₁★), nf, coll)
 
 end
 ####################################################################################################
