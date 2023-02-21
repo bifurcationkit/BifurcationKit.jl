@@ -55,7 +55,8 @@ function branchNormalForm(pbwrap,
 	ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
 	ζs = reduce(vcat, ζ_a)
 
-	nf = nothing
+	# normal form for Poincaré map
+	nf = BranchPoint(nothing, bifpt.param, par, getLens(br), nothing, nothing, nothing, :none)
 
 	return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
 end
@@ -88,7 +89,8 @@ function perioddoublingNormalForm(pbwrap,
 	ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
 	ζs = reduce(vcat, ζ_a)
 
-	nf = nothing
+	# normal form for Poincaré map
+	nf = PeriodDoubling(nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
 
 	return PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
 
@@ -155,6 +157,9 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	v₁ₛ = getTimeSlices(coll, vcat(v₁,0))
 	v₁★ₛ = getTimeSlices(coll, vcat(v₁★,0))
 
+	return NeimarkSackerPO(bifpt.x, T, bifpt.param, ωₙₛ, par, getLens(br), v₁, v₁★, nf, :none, coll)
+
+end
 
 	return PeriodDoubling(bifpt.x, T, bifpt.param, par, getLens(br), v₁, v₁★, nf, :none, coll)
 

@@ -43,7 +43,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			linbdsolverAdjoint::Sbda
 			"wether to use the hessian of prob_vf"
 			usehessian::Bool
-			"wether to use a mass matrix M for studying M∂tu = F(u), default = I"
+			"wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
 			massmatrix::Tmass
 		end
 

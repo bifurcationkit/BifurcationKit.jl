@@ -69,7 +69,7 @@ $(TYPEDFIELDS)
 
 ## Predictor
 
-You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
+You can call `predictor(bp::NeimarkSackerPO, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
 mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
 	"Bifurcation point (periodic orbit)"
@@ -97,12 +97,17 @@ mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSi
 	prob::Tprob
 end
 
-type(bp::NeimarkSackerPO) = :NeimarkSacker
+type(bp::NeimarkSackerPO) = type(bp.nf)
 
 function Base.show(io::IO, bp::NeimarkSackerPO)
-	println(io, type(bp), " bifurcation point of periodic orbit at\n", getLensSymbol(bp.nf.lens)," ≈ $(bp.p).")
-	println(io, "Frequency ω ≈ ", abs(bp.ω))
+	println(io, bp.nf.type, " - ",type(bp), " bifurcation point of periodic orbit at\n", getLensSymbol(bp.nf.lens)," ≈ $(bp.p).")
+	println(io, "Frequency θ ≈ ", abs(bp.ω))
 	println(io, "Period at the periodic orbit ≈ ", abs(bp.T))
-	println(io, "Second frequency of the bifurcated torus ≈ ", abs(bp.ω))
-	println(io, "Problem: \n", bp.prob)
+	println(io, "Second frequency of the bifurcated torus ≈ ", abs(2pi/bp.ω))
+	println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+	if ~isnothing(bp.nf)
+		println(io,"- a = ", bp.nf.nf.a)
+		println(io,"- b = ", bp.nf.nf.b)
+	end
+	println(io, "\nPeriodic orbit problem: \n", bp.prob)
 end
