@@ -6,6 +6,8 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			lens = getLens(br),
 			Teigvec = getvectortype(br),
 			scaleζ = norm,
+			prm = false,
+			δ = 1e-8,
 			detailed = true,
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
@@ -119,21 +121,23 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 	pars = setParam(br, bifpt.param)
 	T = getPeriod(coll, bifpt.x, pars)
 
-	F(u, p) = residual(coll.prob_vf, u, p)
-	A(u,p,du) = apply(jacobian(coll.prob_vf, u, p), du)
-	R2(u,p,du1,du2) = d2F(coll.prob_vf, u,p,du1,du2)
-	R3(u,p,du1,du2,du3) = d3F(coll.prob_vf, u,p,du1,du2,du3)
+	# get the eigenvalue
+	eigRes = br.eig
+	λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+	ωₙₛ = imag(λₙₛ)
 
 	# we first try to get the floquet eigenvectors for μ = -1
 	jac = jacobian(pbwrap, bifpt.x, pars)
 	# remove borders
-	J = jac.jacpb
+	J = Complex.(jac.jacpb)
 	nj = size(J, 1)
 	J[end, :] .= rand(nj)
 	J[:, end] .= rand(nj)
-	# enforce PD boundary condition
-	J[end-N:end-1, 1:N] .= I(N)
-	rhs = zeros(nj); rhs[end] = 1
+
+	# enforce NS boundary condition
+	J[end-N:end-1, end-N:end-1] .= UniformScaling(exp(λₙₛ))(N)
+
+	rhs = zeros(eltype(J), nj); rhs[end] = 1
 	q = J  \ rhs; q = q[1:end-1]; q ./= norm(q)
 	p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 

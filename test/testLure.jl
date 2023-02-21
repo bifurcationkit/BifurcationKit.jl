@@ -52,10 +52,12 @@ Mt = 90 # number of time sections
 
 # test normal forms
 for _ind in (1,3,16)
-	println("")
-	pt = getNormalForm(br_po, _ind; verbose = true)
-	predictor(pt, 0.1, 1.)
-	show(pt)
+	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+		println("")
+		pt = getNormalForm(br_po, _ind; verbose = true)
+		predictor(pt, 0.1, 1.)
+		show(pt)
+	end
 end
 
 # aBS from PD
@@ -83,9 +85,12 @@ br_po = continuation(
 
 # test normal forms
 for _ind in (1,)
-	pt = getNormalForm(br_po, _ind; verbose = true)
-	predictor(pt, 0.1, 1.)
-	show(pt)
+	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+		println("")
+		pt = getNormalForm(br_po, _ind; verbose = true)
+		predictor(pt, 0.1, 1.)
+		show(pt)
+	end
 end
 ####################################################################################################
 using OrdinaryDiffEq
@@ -120,9 +125,12 @@ br_po = continuation(
 
 # test showing normal form
 for _ind in (1,3)
-	pt = getNormalForm(br_po, _ind; verbose = true)
-	predictor(pt, 0.1, 1.)
-	show(pt)
+	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+		println("")
+		pt = getNormalForm(br_po, _ind; verbose = true)
+		predictor(pt, 0.1, 1.)
+		show(pt)
+	end
 end
 
 # aBS from PD
@@ -151,9 +159,12 @@ br_po = continuation(br, 2, opts_po_cont_ps,
 
 # test showing normal form
 for _ind in (1,)
-	pt = getNormalForm(br_po, _ind; verbose = true)
-	predictor(pt, 0.1, 1.)
-	show(pt)
+	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+		println("")
+		pt = getNormalForm(br_po, _ind; verbose = true)
+		predictor(pt, 0.1, 1.)
+		show(pt)
+	end
 end
 
 # aBS from PD
