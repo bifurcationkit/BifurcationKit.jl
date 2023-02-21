@@ -416,24 +416,13 @@ $(SIGNATURES)
 	return phase / getPeriod(pb, u, nothing)
 end
 
-@views function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
-	uc = getTimeSlices(prob, u)
-	T = getPeriod(prob, u, nothing)
-	result = zero(u)
-	resultc = getTimeSlices(prob, result)
-	functionalColl!(prob, resultc, uc, T, getLs(prob.mesh_cache), pars)
-	# add the phase condition
-	result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache))
-	return result
-end
-
 function _POOCollScheme!(pb::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, tmp)
 	applyF(pb, tmp, u, par)
 	dest .= @. ∂u - h * tmp
 end
 
 # function for collocation problem
-@views function functionalColl!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
+@views function functionalColl_bare!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
 	Ty = eltype(u)
 	n, ntimes = size(u)
 	m = pb.mesh_cache.degree
@@ -461,8 +450,24 @@ end
 		# carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
 		rg = rg .+ m
 	end
+	out
+end
+
+@views function functionalColl!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
+	functionalColl_bare!(pb, out, u, period, (L, ∂L), pars)
 	# add the periodicity condition
 	out[:, end] .= u[:, end] .- u[:, 1]
+end
+
+@views function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
+	uc = getTimeSlices(prob, u)
+	T = getPeriod(prob, u, nothing)
+	result = zero(u)
+	resultc = getTimeSlices(prob, result)
+	functionalColl!(prob, resultc, uc, T, getLs(prob.mesh_cache), pars)
+	# add the phase condition
+	result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache))
+	return result
 end
 
 """
@@ -475,6 +480,15 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 	ts = getTimes(prob)
 	uc = getTimeSlices(prob, u)
 	return SolPeriodicOrbit(t = ts .* T, u = uc)
+end
+
+# same function as above but for coping with mesh adaptation
+@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol), Tuple{Vector{Tp}, Vector{Tp}}}, p) where Tp
+	mesh = x.mesh
+	u = x.sol
+	T = getPeriod(prob, u, p)
+	uc = getTimeSlices(prob, u)
+	return SolPeriodicOrbit(t = mesh .* T, u = uc)
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
