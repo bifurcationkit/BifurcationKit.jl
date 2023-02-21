@@ -5,12 +5,12 @@ const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 ####################################################################################################
 struct EigMaps{T} <: BK.AbstractEigenSolver
-    solver::T
+	solver::T
 end
 
 function (eig::EigMaps)(J, nev; kwargs...)
-    λs, evs, cv, it = eig.solver(J + I, nev; kwargs)
-    return log.(Complex.(λs)), evs, cv, it
+	λs, evs, cv, it = eig.solver(J + I, nev; kwargs)
+	return log.(Complex.(λs)), evs, cv, it
 end
 ####################################################################################################
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20, verbose = false)

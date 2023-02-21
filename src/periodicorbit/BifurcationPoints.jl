@@ -28,7 +28,7 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
 			"Left eigenvector(s)."
 			ζ★::Tevl
 
-			"Normal form coefficients."
+			"Underlying normal form for Poincaré return map"
 			nf::Tnf
 
 			"Periodic orbit problem"
@@ -78,7 +78,7 @@ mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSi
 	"Period"
 	T::T
 
-	"Parameter value at the Hopf point"
+	"Parameter value at the Neimark-Sacker point"
 	p::T
 
 	"Frequency of the Neimark-Sacker point"

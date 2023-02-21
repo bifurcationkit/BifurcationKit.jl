@@ -299,7 +299,7 @@ $(TYPEDFIELDS)
 
 ## Predictor
 
-You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
+You can call `predictor(bp::NeimarkSacker, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
 mutable struct NeimarkSacker{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
 	"Neimark-Sacker point"

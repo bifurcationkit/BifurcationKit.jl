@@ -823,7 +823,7 @@ end
 ################################################################################
 function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDoubling, ls; verbose::Bool = false)
 
-    x0 = pt.x0
+	x0 = pt.x0
 	p = pt.p
 	lens = pt.lens
 	parbif = set(pt.params, lens, p)
@@ -837,8 +837,8 @@ function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDo
 	L = jacobian(prob, x0, parbif)
 
 	# we use BilinearMap to be able to call on complex valued arrays
-	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
-	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3)  )
 	E(x) = x .- dot(ζ★, x) .* ζ
 
 	# −LΨ001 = R01
@@ -853,9 +853,9 @@ function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDo
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
-	wst, _ = ls(L, E(b2v); a₀ = -1)
+	wst, _ = ls(L, (b2v); a₀ = -1)
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
-	b = dot(ζ★, b3v)
+	b = dot(ζ★, b3v) / 6
 	verbose && println("──> b3 = ", b)
 	nf = (a = a, b3 = b)
 	if real(a) * real(b) < 0
@@ -896,8 +896,8 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem, pt::NeimarkSa
 	L = jacobian(prob, x0, parbif)
 
 	# we use BilinearMap to be able to call on complex valued arrays
-	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
-	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
+	R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
+	R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
 	# −LΨ001 = R01
 	δ = getDelta(prob)
@@ -922,10 +922,11 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem, pt::NeimarkSa
 	# b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
 	bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
 	b = dot(ζ★, bv) * cis(-ω) / 2
+	b /= 6
 
 	# return coefficients of the normal form
 	verbose && println((a = a, b = b))
-	pt.nf = (a = a, b = b)
+	@set! pt.nf = (a = a, b = b)
 	if real(a) * real(b) < 0
 		pt.type = :SuperCritical
 	elseif real(a) * real(b) > 0
