@@ -74,7 +74,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
 	if kernelDim(br, ind_bif) > 1
-		return multicontinuation(br, ind_bif, optionsCont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, kwargs...)
+		return multicontinuation(br, ind_bif, optionsCont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, alg = alg, kwargs...)
 	end
 
 	@assert br.specialpoint[ind_bif].type == :bp "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
