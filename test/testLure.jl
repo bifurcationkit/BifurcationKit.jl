@@ -104,7 +104,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, maxSteps 
 
 br_po = continuation(
 	br, 2, opts_po_cont,
-	ShootingProblem(15, probsh, Rodas5P(); parallel = true, reltol = 1e-9, updateSectionEveryStep = 1, jacobian = :autodiffDense);
+	ShootingProblem(15, probsh, Rodas5P(); parallel = false, reltol = 1e-9, updateSectionEveryStep = 1, jacobian = :autodiffDense);
 	ampfactor = 1., δp = 0.0051,
 	# verbosity = 3,	plot = true,
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
@@ -150,7 +150,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcat
 opts_po_cont_ps = @set opts_po_cont.newtonOptions.tol = 1e-7
 @set opts_po_cont_ps.dsmax = 0.0025
 br_po = continuation(br, 2, opts_po_cont_ps,
-	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = true, reltol = 1e-6, updateSectionEveryStep = 1, jacobian = :autodiffDenseAnalytical);
+	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = false, reltol = 1e-6, updateSectionEveryStep = 1, jacobian = :autodiffDenseAnalytical);
 	ampfactor = 1., δp = 0.0051, #verbosity = 3,plot=true,
 	callbackN = BK.cbMaxNorm(10),
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),

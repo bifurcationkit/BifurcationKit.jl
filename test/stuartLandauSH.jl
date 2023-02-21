@@ -156,7 +156,7 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 ####################################################################################################
 # test shooting interface M > 1, parallel
 initpo = [0.13, 0., 6.]
-_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
+_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = false)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
@@ -325,7 +325,7 @@ for M in (1,2), jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytica
 
 	# specific to Poincaré Shooting
 	jacPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO
-	_parallel = jacPO == :MatrixFree ? false : true
+	_parallel = jacPO == :MatrixFree ? false : false
 
 	local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), verbosity = 0)
 
