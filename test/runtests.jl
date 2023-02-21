@@ -36,13 +36,25 @@ using Test
 		include("COModel.jl")
 	end
 
-	@testset "Periodic orbits" begin
+	@testset "Periodic orbits function FD" begin
 		include("test_potrap.jl")
-		include("test_SS.jl")
-		# include("poincareMap.jl")
-		include("stuartLandauSH.jl")
 		include("stuartLandauTrap.jl")
 		include("stuartLandauCollocation.jl")
+	end
+
+	@testset "Periodic orbits function SH1" begin
+		include("test_SS.jl")
+	end
+
+	@testset "Periodic orbits function SH2" begin
+		# include("poincareMap.jl")
+	end
+
+	@testset "Periodic orbits function SH3" begin
+		include("stuartLandauSH.jl")
+	end
+
+	@testset "Periodic orbits function SH4" begin
 		# for testing period doubling aBS
 		include("testLure.jl")
 	end

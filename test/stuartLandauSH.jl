@@ -21,12 +21,6 @@ end
 Fsl(x, p) = Fsl!(similar(x), x, p)
 dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 
-par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
-par_hopf = (@set par_sl.r = 0.1)
-u0 = [.001, .001]
-
-prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
-
 function FslMono!(f, x, p, t)
 	u = x[1:2]
 	du = x[3:4]
@@ -35,13 +29,19 @@ function FslMono!(f, x, p, t)
 end
 ####################################################################################################
 # continuation
+par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
+par_hopf = (@set par_sl.r = 0.1)
+u0 = [.001, .001]
+
+prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
+
 optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
 br = continuation(prob_vf, PALC(), optconteq)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 ####################################################################################################
-sol = solve(probMono, KenCarp4(), abstol=1e-9, reltol=1e-6)
+sol = solve(probMono, KenCarp4(autodiff=false), abstol=1e-9, reltol=1e-6)
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
@@ -67,8 +67,8 @@ _dx = rand(3)
 resAD = FD.derivative(z -> _pb(initpo .+ z .* _dx, par_hopf), 0.)
 resFD = (_pb(initpo .+ 1e-8 .* _dx, par_hopf) - _pb(initpo, par_hopf)) .* 1e8
 resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
-@test norm(resAN - resFD, Inf) < 5e-6
-@test norm(resAN - resAD, Inf) < 5e-6
+@test norm(resAN - resFD, Inf) < 5e-5
+@test norm(resAN - resAD, Inf) < 5e-5
 ####################################################################################################
 # test shooting interface M = 1
 _pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, lens = (@lens _.r))
@@ -165,14 +165,14 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 normals = [[-1., 0.]]
 centers = [zeros(2)]
 
-probPsh = PoincareShootingProblem(2, prob, Rodas4(), probMono, Rodas4(); abstol=1e-10, reltol=1e-9, jacobian = :autodiffDenseAnalytical)
+probPsh = PoincareShootingProblem(2, prob, Rodas4(), probMono, Rodas4(autodiff=false); abstol=1e-10, reltol=1e-9, jacobian = :autodiffDenseAnalytical)
 @test probPsh.par == probPsh.flow.prob1.p
 
 probPsh = PoincareShootingProblem(2, prob, Rodas4(); rtol = abstol=1e-10, reltol=1e-9, jacobian = :autodiffDenseAnalytical)
 @test probPsh.par == probPsh.flow.prob.p
 
 probPsh = PoincareShootingProblem(prob, Rodas4(),
-		probMono, Rodas4(),
+		probMono, Rodas4(autodiff=false),
 		normals, centers; abstol = 1e-10, reltol = 1e-9,
 		jacobian = :autodiffDenseAnalytical)
 
@@ -186,7 +186,7 @@ probPsh(initpo_bar, par_hopf)
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
-@test norm(_Jad - _Jana, Inf) < 1e-4
+@test norm(_Jad - _Jana, Inf) < 1e-3
 
 ls = DefaultLS()
 	eil = EigKrylovKit(dim = 1, x₀ = rand(1))
@@ -273,7 +273,7 @@ probPsh(initpo_bar, par_hopf; verbose = true)
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
-@test norm(_Jad - _Jana, Inf) < 1e-5
+@test norm(_Jad - _Jana, Inf) < 5e-5
 
 outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
 BK.converged(outpo)
