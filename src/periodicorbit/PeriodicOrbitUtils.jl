@@ -78,14 +78,15 @@ end
 # version specific to collocation. Handles mesh adaptation
 function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
 	_finsol = get(kwargs, :finaliseSolution, nothing)
-	_finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
+	_finsol2 = (z, tau, step, contResult; kF...) ->
 		begin
 			# we first check that the continuation step was successful
 			# if not, we do not update the problem with bad information!
 			success = converged(get(kF, :state, nothing))
 			# mesh adaptation
 			if success && prob.meshadapt
-				oldsol = copy(z.u)
+				oldsol = _copy(z)
+				oldmesh = getTimes(prob) .* getPeriod(prob, z.u, nothing)
 				adapt = computeError!(prob, z.u;
 						verbosity = prob.verboseMeshAdapt,
 						par = setParam(contResult, z.p),
@@ -93,34 +94,16 @@ function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSection
 				if ~adapt.success
 					return false
 				end
-				@info norm(oldsol - z.u, Inf)
+				@info norm(oldsol.u - z.u, Inf)
 			end
 			if success && modCounter(step, updateSectionEveryStep) == 1
 				updateSection!(prob, z.u, setParam(contResult, z.p))
 			end
-			return true
-		end :
-		(z, tau, step, contResult; kF...) ->
-		begin
-			# we first check that the continuation step was successful
-			# if not, we do not update the problem with bad information!
-			success = converged(get(kF, :state, nothing))
-			# mesh adaptation
-			if success && prob.meshadapt
-				oldsol = copy(z.u)
-				adapt = computeError(prob, z.u;
-						verbosity = prob.versboseMeshAdap,
-						par = setParam(contResult, z.p),
-						K = prob.K)
-				if ~adapt.success
-					return false
-				end
-				@info norm(oldsol - z.u, Inf)
+			if isnothing(_finsol)
+				return true
+			else
+				return _finsol(z, tau, step, contResult; prob = prob, kF...)
 			end
-			if success && modCounter(step, updateSectionEveryStep) == 1
-				updateSection!(prob, z.u, setParam(contResult, z.p))
-			end
-			return _finsol(z, tau, step, contResult; prob = prob, kF...)
 		end
 	return _finsol2
 end
