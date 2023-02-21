@@ -71,7 +71,7 @@ resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
 @test norm(resAN - resAD, Inf) < 5e-5
 ####################################################################################################
 # test shooting interface M = 1
-_pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, lens = (@lens _.r))
+_pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@lens _.r))
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
 @test _pb.flow.prob.p == _pb.par
@@ -319,9 +319,9 @@ for M in (1,2), jacobianPO in (:autodiffMF, :MatrixFree, :autodiffDenseAnalytica
 	jacPO = jacobianPO == :autodiffMF ? :FiniteDifferencesDense : jacobianPO
 	_parallel = jacPO == :MatrixFree ? false : true
 
-	br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), verbosity = 0)
+	local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), verbosity = 0)
 
-	br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
+	local br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
 	ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2,
 	linearAlgo = BorderingBLS(solver = (@set ls.N = 2M + 1), checkPrecision = false), verbosity = 0)
 end
