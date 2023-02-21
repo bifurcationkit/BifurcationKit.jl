@@ -48,8 +48,8 @@ using Test
 	end
 
 	@testset "Periodic orbits function SH2" begin
-		# @info "Entry in poincareMap.jl"
-		# include("poincareMap.jl")
+		@info "Entry in poincareMap.jl"
+		include("poincareMap.jl")
 	end
 
 	@testset "Periodic orbits function SH3" begin
