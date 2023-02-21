@@ -6,9 +6,9 @@ const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 recordFromSolution(x, p) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
-function lur!(dz, z, p, t)
+function lur!(dz, u, p, t)
 	@unpack α, β = p
-	x, y, z = z
+	x, y, z = u
 	dz[1] = y
 	dz[2] =	z
 	dz[3] = -α * z - β * y - x + x^2

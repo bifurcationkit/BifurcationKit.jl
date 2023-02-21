@@ -665,20 +665,7 @@ end
 ∂(f) = x -> ForwardDiff.derivative(f, x)
 ∂(f, n) = n == 0 ? f : ∂(∂(f), n-1)
 
-"""
-Structure to encode the solution associated to a functional  `::PeriodicOrbitOCollProblem`. In particular, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POOCollSolution`, one can call
-
-    sol = BifurcationKit.POOCollSolution(prob_coll, x)
-	sol(t)
-
-on any time `t`.
-"""
-struct POOCollSolution{Tpb <: PeriodicOrbitOCollProblem, Tx}
-	pb::Tpb
-	x::Tx
-end
-
-@views function (sol::POOCollSolution)(t0)
+@views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
 	n, m, Ntst = size(sol.pb)
 	xc = getTimeSlices(sol.pb, sol.x)
 
@@ -722,7 +709,7 @@ function computeError!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 	n, m, Ntst = size(pb)
 	period = getPeriod(pb, x, nothing)
 	# get solution
-	sol = POOCollSolution(deepcopy(pb), x)
+	sol = POSolution(deepcopy(pb), x)
 	# derivative of degree m, indeed ∂(sol, m+1) = 0
 	dmsol = ∂(sol, m)
 	# we find the values of vm := ∂m(x) at the mid points

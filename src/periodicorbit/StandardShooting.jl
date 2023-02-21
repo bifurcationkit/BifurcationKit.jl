@@ -302,7 +302,7 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
+function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par; kode...)
 	T = getPeriod(prob, x)
 	M = getMeshSize(prob)
 	N = div(length(x) - 1, M)
@@ -312,7 +312,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
-		sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T) for ii in 1:M]
+		sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T; kode...) for ii in 1:M]
 		time = sol[1].t; u = sol[1][:,:]
 		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
@@ -321,7 +321,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 		return SolPeriodicOrbit(t = time, u = u)
 
 	else # threaded version
-		sol = evolve(prob.flow, Val(:Full), xc, par, prob.ds .* T)
+		sol = evolve(prob.flow, Val(:Full), xc, par, prob.ds .* T; kode...)
 		time = sol[1].t; u = sol[1][:,:]
 		for ii in 2:M
 			append!(time, sol[ii].t .+ time[end])
@@ -331,6 +331,43 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par)
 	end
 end
 
+function getPOSolution(prob::ShootingProblem, x, pars; kode...)
+	T = getPeriod(prob, x)
+	M = getMeshSize(prob)
+	N = div(length(x) - 1, M)
+	xv = @view x[1:end-1]
+	xc = reshape(xv, N, M)
+	Th = eltype(x)
+
+	# !!!! we could use @views but then Sundials will complain !!!
+	if ~isParallel(prob)
+		sol_ode = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
+	else # threaded version
+		sol_ode = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
+	end
+
+	sol = (period = T, sol = sol_ode)
+
+	return POSolution(prob, sol, pars)
+end
+
+function (sol::POSolution{ <: ShootingProblem})(t)
+	T = sol.x.period
+	t = mod(t, T)
+	t0 = zero(t)
+	M = getMeshSize(sol.pb)
+	ii = 1
+	while ii <= M
+		tspan = sol.x.sol[ii].prob.tspan
+		if t0 + tspan[1] <= t <= t0 + tspan[2]
+			break
+		else
+			t0 += tspan[2]
+			ii += 1
+		end
+	end
+	sol.x.sol[ii](t-t0)
+end
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
 function reMake(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
@@ -377,5 +414,5 @@ function generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProb
 	cish = reduce(vcat, centers)
 	cish = vcat(cish, period)
 
-	return probsh, copy(cish)
+	return probsh, cish
 end

@@ -18,6 +18,7 @@ using Test
 		include("test-cont-non-vector.jl")
 		include("simple_continuation.jl")
 		include("testNF.jl")
+		include("testNF_maps.jl")
 	end
 
 	@testset "Events / User function" begin

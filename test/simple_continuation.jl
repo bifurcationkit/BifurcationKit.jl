@@ -37,11 +37,10 @@ BK.empty(PALC())
 BK.empty(PALC(tangent = Bordered()))
 BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
-BK.getPredictor(Natural())
 ####################################################################################################
 normInf(x) = norm(x, Inf)
 
-opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false, detectBifurcation = 0)
+opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pMin = -3., saveSolEveryStep = 0, newtonOptions = NewtonPar(tol = 1e-8, verbose = false), saveEigenvectors = false, detectBifurcation = 3)
 x0 = 0.01 * ones(N)
 
 prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
@@ -83,7 +82,7 @@ typeof(contRes)
 # 	 @code_warntype continuation!(iter, state, contRes)
 #####
 
-opts = ContinuationPar(opts; detectBifurcation = 1, saveEigenvectors=true)
+opts = ContinuationPar(opts; detectBifurcation = 3, saveEigenvectors=true)
 br1 = continuation(prob, PALC(), opts) #(14.28 k allocations: 1001.500 KiB)
 show(br1)
 length(br1)
@@ -99,7 +98,7 @@ BK.getParams(br1)
 
 @set! prob.recordFromSolution = (x,p) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
-BK.arcLengthScaling(0.5, PALC(), BorderedArray(rand(2),0.1), true)
+BK.arcLengthScaling(0.5, PALC(), BorderedArray(rand(2), 0.1), true)
 
 # test for different norms
 br3 = continuation(prob, PALC(), opts, normC = normInf)
@@ -132,7 +131,7 @@ br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9)
-	BK.empty!(Multiple(copy(x0), 0.01,13))
+	BK.empty!(Multiple(copy(x0), 0.01, 13))
 	# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
 
 # tangent prediction with Polynomial predictor
@@ -192,8 +191,6 @@ br11 = continuation(prob, BK.MoorePenrose(method = BK.iterative), opts11; verbos
 # plot(br11)
 
 MoorePenrose(method = BK.iterative)
-BK.getPredictor(MoorePenrose(method = BK.iterative))
-BK.getLinsolver(MoorePenrose(method = BK.iterative))
 
 
 # further testing with sparse Jacobian operator

@@ -107,6 +107,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.prob.prob.jacobian == :autodiffDense
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
+_sol = BK.getPOSolution(_pb, outpo.u, BK.getParams(_pb))
+_sol(0.1)
 # plot(br_pok2)
 ####################################################################################################
 # test automatic branch switching
