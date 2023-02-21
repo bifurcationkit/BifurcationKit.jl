@@ -50,9 +50,11 @@ Mt = 90 # number of time sections
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
 
+show(br_po)
+
 # test normal forms
 for _ind in (1,3,16)
-	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+	if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
 		pt = getNormalForm(br_po, _ind; verbose = true)
 		predictor(pt, 0.1, 1.)
@@ -85,7 +87,7 @@ br_po = continuation(
 
 # test normal forms
 for _ind in (1,)
-	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+	if length(br_po.specialpoint) >=1 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
 		pt = getNormalForm(br_po, _ind; verbose = true)
 		predictor(pt, 0.1, 1.)
@@ -117,6 +119,8 @@ br_po = continuation(
 	callbackN = BK.cbMaxNorm(10),
 	normC = norminf)
 
+show(br_po)
+
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
 
@@ -125,7 +129,7 @@ br_po = continuation(
 
 # test showing normal form
 for _ind in (1,3)
-	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+	if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
 		pt = getNormalForm(br_po, _ind; verbose = true)
 		predictor(pt, 0.1, 1.)
@@ -158,9 +162,10 @@ br_po = continuation(br, 2, opts_po_cont_ps,
 
 # plot(br_po, br)
 
+show(br_po)
 # test showing normal form
 for _ind in (1,)
-	if br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+	if length(br_po.specialpoint) >=1 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
 		pt = getNormalForm(br_po, _ind; verbose = true)
 		predictor(pt, 0.1, 1.)
