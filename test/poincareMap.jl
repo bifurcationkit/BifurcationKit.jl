@@ -39,7 +39,6 @@ prob = ODEProblem(Fsl!, u0, (0., 100.), par_sl)
 algsl = KenCarp4()#Rodas4P()
 ####################################################################################################
 sol = solve(prob, algsl, abstol =1e-9, reltol=1e-6)
-# plot(sol[1,:], sol[2,:])
 
 function flowTS(x, t, pb; alg = algsl, kwargs...)
 	_pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
@@ -132,6 +131,7 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 @test norm(dΠfd - Jtmp, Inf) < 1e-4
 ####################################################################################################
 # comparison with BK
+@info "Last bit of poincareMap"
 using BifurcationKit
 const BK = BifurcationKit
 
