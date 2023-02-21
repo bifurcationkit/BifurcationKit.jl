@@ -15,7 +15,7 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 """
 $(TYPEDEF)
 
-This struct is used to provide the bordered linear solver based on the Bordering Method. user the options, you can trigger a sequence of Bordering reductions to meet a precision.
+This struct is used to provide the bordered linear solver based on the Bordering Method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
 
 # Reference
 

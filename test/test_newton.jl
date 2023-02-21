@@ -113,7 +113,7 @@ let
 	deflationOp = DeflationOperator(2, dot, _T(1), [1 .+ 0.01rand(n) for _ in 1:3]; autodiff = true)
 	rhs = rand(n)
 	sol = rand(n)
-	solverdf = BK.DefProbCustomLinearSolver(DefaultLS())
+	solverdf = BK.DeflatedProblemCustomLS(DefaultLS())
 	probdf = DeflatedProblem(prob, deflationOp, Val(:Custom))
 	Jdf = BK.jacobian((@set probdf.jactype = BK.AutoDiff()), sol, nothing)
 	@test Jdf ≈ ForwardDiff.jacobian(z->probdf(z,nothing),sol)

@@ -140,7 +140,7 @@ function corrector!(state::AbstractContinuationState,
 
 	# update solution
 	if converged(sol)
-	copyto!(state.z, sol.u)
+		copyto!(state.z, sol.u)
 	end
 
 	return true

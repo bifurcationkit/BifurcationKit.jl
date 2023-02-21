@@ -29,8 +29,8 @@ $(TYPEDFIELDS)
 	acceptSolution::Tas = _acceptSolution
 	"function to update the deflation operator"
 	updateDeflationOp::Tud = _updateDeflationOp
-	"jacobian for deflated newton. Can be `DefProbCustomLinearSolver()`, or `Val(:autodiff)`, `Val(:fullIterative)`"
-	jacobian::Tk = DefProbCustomLinearSolver()
+	"jacobian for deflated newton. Can be `DeflatedProblemCustomLS()`, or `Val(:autodiff)`, `Val(:fullIterative)`"
+	jacobian::Tk = DeflatedProblemCustomLS()
 end
 
 # iterable which contains the options associated with Deflated Continuation

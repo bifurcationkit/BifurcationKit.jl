@@ -214,14 +214,14 @@ $(TYPEDEF)
 
 Custom linear solver for deflated problem, very close to the Sherman-Morrison formula.
 """
-@with_kw_noshow struct DefProbCustomLinearSolver{T} <: AbstractLinearSolverForDeflation
+@with_kw_noshow struct DeflatedProblemCustomLS{T} <: AbstractLinearSolverForDeflation
 	solver::T = nothing
 end
 
 """
 Implement the custom linear solver for the deflated problem.
 """
-function (dfl::DefProbCustomLinearSolver)(J, rhs)
+function (dfl::DeflatedProblemCustomLS)(J, rhs)
 	# the expression of the Functional is now
 	# F(u) * Π_i(dot(u - root_i, u - root_i)^{-power} + shift) := F(u) * M(u)
 	# the expression of the differential is
@@ -290,7 +290,7 @@ We refer to the regular [`newton`](@ref) for more information. It penalises the 
 Compared to [`newton`](@ref), the only different arguments are
 - `defOp::DeflationOperator` deflation operator
 - `linsolver` linear solver used to invert the Jacobian of the deflated functional.
-    - custom solver `DefProbCustomLinearSolver()` with requires solving two linear systems `J⋅x = rhs`.
+    - custom solver `DeflatedProblemCustomLS()` with requires solving two linear systems `J⋅x = rhs`.
     - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
     - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian of the deflated problem
     - if passed `Val(:fullIterative)`, then a full matrix free method is used.
@@ -298,7 +298,7 @@ Compared to [`newton`](@ref), the only different arguments are
 function newton(prob::AbstractBifurcationProblem,
 				defOp::DeflationOperator{Tp, Tdot, T, vectype},
 				options::NewtonPar{T, L, E},
-				_linsolver::DefProbCustomLinearSolver = DefProbCustomLinearSolver();
+				_linsolver::DeflatedProblemCustomLS = DeflatedProblemCustomLS();
 				kwargs...) where {T, L, E, Tp, Tdot, vectype}
 
 	# we create the new functional
@@ -344,7 +344,7 @@ function newton(prob::AbstractBifurcationProblem,
 				x1::vectype, p0,
 				options::NewtonPar{T, L, E},
 				defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}(), _copy(x0); autodiff = true),
-				linsolver = DefProbCustomLinearSolver();
+				linsolver = DeflatedProblemCustomLS();
 				kwargs...) where {T, vectype, L, E}
 	prob0 = reMake(prob, u0 = x0, params = p0)
 	res0 = newton(prob0, options; kwargs...)
