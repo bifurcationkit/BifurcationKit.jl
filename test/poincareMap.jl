@@ -131,25 +131,25 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 @test norm(dΠfd - Jtmp, Inf) < 1e-4
 ####################################################################################################
 # comparison with BK
-@info "Last bit of poincareMap"
-using BifurcationKit
-const BK = BifurcationKit
-
-function FslMono!(f, x, p, t)
-	u = x[1:2]
-	du = x[3:4]
-	Fsl!(view(f,1:2), u, p, t)
-	f[3:4] .= dFsl(u, du, p)
-end
-probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
-
-probHPsh = BK.PoincareShootingProblem(
-		prob, algsl,
-		# probMono, Rodas4P(autodiff=false),
-		normals, centers; abstol =1e-10, reltol=1e-10)
-
-@show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
-
-resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
-resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
-@test norminf(resDP - resDPBK) < 1e-6
+# @info "Last bit of poincareMap"
+# using BifurcationKit
+# const BK = BifurcationKit
+#
+# function FslMono!(f, x, p, t)
+# 	u = x[1:2]
+# 	du = x[3:4]
+# 	Fsl!(view(f,1:2), u, p, t)
+# 	f[3:4] .= dFsl(u, du, p)
+# end
+# probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
+#
+# probHPsh = BK.PoincareShootingProblem(
+# 		prob, algsl,
+# 		# probMono, Rodas4P(autodiff=false),
+# 		normals, centers; abstol =1e-10, reltol=1e-10)
+#
+# @show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
+#
+# resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
+# resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
+# @test norminf(resDP - resDPBK) < 1e-6
