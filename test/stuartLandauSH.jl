@@ -188,6 +188,7 @@ initpo_bar = BK.R(probPsh, [0, 0.4], 1)
 BK.E(probPsh, [1.0,], 1)
 initpo_bar = [0.4]
 
+@info "Test evaluation"
 probPsh(initpo_bar, par_hopf)
 
 # test of the analytical formula for jacobian of the functional
@@ -195,6 +196,7 @@ _Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-3
 
+@info "Test newton"
 ls = DefaultLS()
 	eil = EigKrylovKit(dim = 1, x₀ = rand(1))
 	optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
@@ -218,6 +220,7 @@ probPsh(outpo.u, par_hopf, outpo.u)
 # probPsh([0.30429879744900434], (r = 0.09243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0))
 # BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
 
+@info "Test continuation"
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 30, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
 	opts_po_cont; verbosity = 0,

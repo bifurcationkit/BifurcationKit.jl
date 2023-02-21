@@ -25,7 +25,7 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	par = set(params, getLens(𝐅), p)
 	# ┌      ┐┌  ┐   ┌ ┐
 	# │ J  a ││v │ = │0│
-	# │ b  0 ││σ1│   │1│
+	# │ b  0 ││σ │   │1│
 	# └      ┘└  ┘   └ ┘
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J
@@ -34,8 +34,8 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
 	n = T(1)
 	J = jacobian(𝐅.prob_vf, x, par)
-	σ1 = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, n)[2]
-	return residual(𝐅.prob_vf, x, par), σ1
+	σ = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, n)[2]
+	return residual(𝐅.prob_vf, x, par), σ
 end
 
 # this function encodes the functional

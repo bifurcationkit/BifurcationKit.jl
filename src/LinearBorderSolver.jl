@@ -334,6 +334,12 @@ $(TYPEDEF)
 
 This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x, p)`.
 
+## Constructor
+
+	MatrixFreeBLS(solver, ::Bool)
+
+## Fields
+
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver

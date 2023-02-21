@@ -392,7 +392,7 @@ $(SIGNATURES)
 Generate a periodic orbit problem from a solution.
 
 ## Arguments
-- `pb` a `ShootingProblem` which provide basic information, like the number of time slices `M`
+- `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically, and `ODEProblem
