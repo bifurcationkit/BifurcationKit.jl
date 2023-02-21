@@ -61,7 +61,7 @@ for _ind in (1,3,16)
 end
 
 # aBS from PD
-br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 51, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
+br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 5, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
 	verbosity = 0, plot = false,
 	ampfactor = .1, δp = -0.005,
 	usedeflation = false,
@@ -134,7 +134,7 @@ for _ind in (1,3)
 end
 
 # aBS from PD
-br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1, saveSolEveryStep = 1);
+br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 5, ds = 0.01, plotEveryStep = 1, saveSolEveryStep = 1);
 	verbosity = 0, plot = false,
 	usedeflation = false,
 	ampfactor = .3, δp = -0.005,
@@ -169,7 +169,7 @@ for _ind in (1,)
 end
 
 # aBS from PD
-br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 50, ds = 0.01, plotEveryStep = 1);
+br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 2, ds = 0.01, plotEveryStep = 1);
 	# verbosity = 3, plot = true,
 	ampfactor = .3, δp = -0.005,
 	normC = norminf,

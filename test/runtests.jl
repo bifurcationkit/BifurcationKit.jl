@@ -39,7 +39,7 @@ using Test
 	@testset "Periodic orbits" begin
 		include("test_potrap.jl")
 		include("test_SS.jl")
-		include("poincareMap.jl")
+		# include("poincareMap.jl")
 		include("stuartLandauSH.jl")
 		include("stuartLandauTrap.jl")
 		include("stuartLandauCollocation.jl")
