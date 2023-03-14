@@ -41,14 +41,14 @@ function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
 	nev_ = max(n + 5, iter.contParams.nev)
 	eiginfo = computeEigenvalues(iter, state, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
 	@unpack isstable, n_unstable, n_imag = isStable(iter.contParams, eiginfo[1])
-	return eiginfo, isstable, n_unstable, n_imag
+	return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
 # same as previous but we save the eigen-elements in state
 function computeEigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
-	eiginfo, _isstable, n_unstable, n_imag = computeEigenvalues(iter, state; kwargs...)
+	eiginfo, _isstable, n_unstable, n_imag, cveig = computeEigenvalues(iter, state; kwargs...)
 	# we update the state
-	updateStability!(state, n_unstable, n_imag)
+	updateStability!(state, n_unstable, n_imag, cveig)
 	if isnothing(state.eigvals) == false
 		state.eigvals = eiginfo[1]
 	end

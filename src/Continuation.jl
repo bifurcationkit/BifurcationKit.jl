@@ -134,6 +134,7 @@ Returns a variable containing the state of the continuation procedure. The field
 	# it is initialized as -1 when unknown
 	n_unstable::Tuple{Int64,Int64}  = (-1, -1)	# (current, previous)
 	n_imag::Tuple{Int64,Int64} 		= (-1, -1)	# (current, previous)
+	convergedEig::Bool				= true
 
 	eigvals::Teigvals = nothing				# current eigenvalues
 	eigvecs::Teigvec = nothing				# current eigenvectors
@@ -205,9 +206,10 @@ function getStateSummary(it, state)
 	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, θ = state.θ, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
-function updateStability!(state::ContState, n_unstable::Int, n_imag::Int)
+function updateStability!(state::ContState, n_unstable::Int, n_imag::Int, converged::Bool)
 	state.n_unstable = (n_unstable, state.n_unstable[1])
 	state.n_imag = (n_imag, state.n_imag[1])
+	state.convergedEig = converged
 end
 
 function save!(br::ContResult, it::AbstractContinuationIterable, state::AbstractContinuationState)
@@ -220,7 +222,7 @@ function save!(br::ContResult, it::AbstractContinuationIterable, state::Abstract
 	# save eigen elements
 	if computeEigenElements(it)
 		if mod(state.step, it.contParams.saveEigEveryStep) == 0
-			push!(br.eig, (eigenvals = state.eigvals, eigenvecs = state.eigvecs, step = state.step))
+			push!(br.eig, (eigenvals = state.eigvals, eigenvecs = state.eigvecs, converged = state.convergedEig, step = state.step))
 		end
 	end
 end
@@ -294,7 +296,7 @@ function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _v
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
 	if computeEigenElements(it)
-		eigvals, eigvecs, = computeEigenvalues(it, nothing, u₀, getParams(it.prob), it.contParams.nev)
+		eigvals, eigvecs, cveig, = computeEigenvalues(it, nothing, u₀, getParams(it.prob), it.contParams.nev)
 		if ~saveEigenvectors(it)
 			eigvecs = nothing
 		end
@@ -308,7 +310,12 @@ function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _v
 						τ = BorderedArray(0*u₁, zero(p₁)),
 						z = BorderedArray(_copy(u₁), p₁),
 						z_old = BorderedArray(_copy(u₀), p₀),
-						converged = true, ds = it.contParams.ds, θ = θ, eigvals = eigvals, eigvecs = eigvecs, eventValue = (cbval, cbval))
+						converged = true,
+						ds = it.contParams.ds,
+						θ = θ,
+						eigvals = eigvals,
+						eigvecs = eigvecs,
+						eventValue = (cbval, cbval))
 
 	# compute the state for the continuation algorithm, at this point the tangent is set up
 	initialize!(state, it)
@@ -316,7 +323,7 @@ function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _v
 	# update stability
 	if computeEigenElements(it)
 		@unpack n_unstable, n_imag = isStable(getContParams(it), eigvals)
-		updateStability!(state, n_unstable, n_imag)
+		updateStability!(state, n_unstable, n_imag, cveig)
 	end
 
 	# we update the event function result

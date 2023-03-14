@@ -43,7 +43,7 @@ $(TYPEDFIELDS)
 	branch::StructArray{Tbr}
 
 	"A vector with eigen-elements at each continuation step."
-	eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :step), Tuple{Teigvals, Teigvec, Int64}}}
+	eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
 
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Tsol
@@ -125,6 +125,7 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
 		println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
 	end
+	~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
 	br.eig[ind+1].eigenvals
 end
 """
@@ -187,9 +188,9 @@ Function is used to initialize the composite type `ContResult` according to the 
 
 	if computeEigElements
 		evvectors = saveEigenvectors(contParams) ? eiginfo[2] : nothing
-		_evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, step = 0)
+		_evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, converged = true, step = 0)
 	else
-		_evvectors = (eigenvals = nothing, eigenvecs = nothing, step = 0)
+		_evvectors = (eigenvals = nothing, eigenvecs = nothing, converged = true, step = 0)
 	end
 	return ContResult(
 		branch = StructArray([br]),
