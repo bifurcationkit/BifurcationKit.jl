@@ -41,13 +41,13 @@ NL(u, p) = NL!(similar(u), u, p)
 Fbr(x, p, t = 0.) = Fbr!(similar(x), x, p)
 dNL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 
-function dFbr(x, p, dx)
-	f = similar(dx)
+function dFbr!(f, x, p, dx)
 	mul!(f, p.Δ, dx)
 
 	nl = dNL(x, p, dx)
 	f .= f .+ nl
 end
+dFbr(x, p, dx) = dFbr!(similar(dx), x, p, dx)
 
 Jbr(x, p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
 ####################################################################################################
@@ -62,7 +62,7 @@ N = 100
 	u0 = cos.(2X)
 	solc0 = vcat(u0, u0)
 
-probBif = BK.BifurcationProblem(Fbr, solc0, par_br, (@lens _.C) ;J = Jbr,
+probBif = BifurcationProblem(Fbr, solc0, par_br, (@lens _.C) ;J = Jbr,
 		recordFromSolution = (x, p) -> norm(x, Inf),
 		plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
@@ -82,24 +82,26 @@ optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurca
 plot(br)
 ####################################################################################################
 # branching from Hopf bp using aBS-Trapezoid
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 120)
+opt_po = NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 60, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, tolStability = 1e-7, detectBifurcation = 3, dsminBisection = 1e-6)
+optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 60, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, tolStability = 1e-4, detectBifurcation = 3, dsminBisection = 1e-6)
 M = 100
-	probFD = PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace,)
 	br_po = @time continuation(
 		# arguments for branch switching from the first
 		# Hopf bifurcation point
 		br, 1,
 		# arguments for continuation
-		optcontpo, probFD;
+		optcontpo,
+		PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace, updateSectionEveryStep = 0);
 		# OPTIONAL parameters
 		# we want to jump on the new branch at phopf + δp
 		# ampfactor is a factor to increase the amplitude of the guess
 		verbosity = 2,
 		plot = true,
+		normN = norminf,
+		callbackN = BK.cbMaxNorm(1e2),
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
 		recordFromSolution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
 		normC = norminf)
@@ -107,7 +109,7 @@ M = 100
 plot(br, br_po, label = "")
 ####################################################################################################
 # branching from PD using aBS
-br_po_pd = @time BK.continuation(
+br_po_pd = @time continuation(
 		# arguments for branch switching from the first
 		# Hopf bifurcation point
 		br_po, 1, setproperties(br_po.contparams; detectBifurcation = 3, plotEveryStep = 1, ds = 0.01);
@@ -117,6 +119,8 @@ br_po_pd = @time BK.continuation(
 		ampfactor = 0.9, δp = -0.01,
 		verbosity = 3,
 		plot = true,
+		normN = norminf,
+		callbackN = BK.cbMaxNorm(1e2),
 		# jacobianPO = :FullSparseInplace,
 		# jacobianPO = :BorderedSparseInplace,
 		plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),

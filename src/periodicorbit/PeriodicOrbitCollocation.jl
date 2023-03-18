@@ -214,8 +214,8 @@ Note that you can generate this guess from a function using `generateSolution`.
 	# verbose mesh adaptation information
 	verboseMeshAdapt::Bool = false
 
-	# parameter for mesh adaptation, control new mesh step size
-	K::Float64 = 500
+	# parameter for mesh adaptation, control maximum mesh step size
+	K::Float64 = 100
 end
 
 # trivial constructor

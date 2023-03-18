@@ -565,13 +565,10 @@ end
 
 function (eig::HopfEig)(Jma, nev; kwargs...)
 	n = min(nev, length(Jma.x.u))
-
 	x = Jma.x.u		# hopf point
 	p1, ω = Jma.x.p	# first parameter
 	newpar = set(Jma.params, getLens(Jma.hopfpb), p1)
-
 	J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
-
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end

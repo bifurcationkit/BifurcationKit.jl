@@ -171,6 +171,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))
 		if method == direct || method == pInv
+			@debug "Moore-Penrose direct/pInv"
 			Jb = hcat(J, dFdp)
 			if method == direct
 				dx, flag, converged = linsolver(Jb, res_f)
@@ -182,7 +183,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			p -= dx[end]
 			itlinear = 1
 		else
-			@debug "Iterative"
+			@debug "Moore-Penrose Iterative"
 			# A = hcat(J, dFdp); A = vcat(A, ϕ')
 			# X .= X .- A \ vcat(res_f, 0)
 			# x .= X[1:end-1]; p = X[end]

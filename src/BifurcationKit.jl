@@ -71,7 +71,6 @@ module BifurcationKit
 	include("periodicorbit/PeriodicOrbits.jl")
 	include("periodicorbit/PeriodicOrbitTrapeze.jl")
 	include("periodicorbit/PeriodicOrbitCollocation.jl")
-	include("periodicorbit/PeriodicOrbitUtils.jl")
 	include("periodicorbit/Flow.jl")
 	include("periodicorbit/FlowDE.jl")
 	include("periodicorbit/StandardShooting.jl")
@@ -79,6 +78,8 @@ module BifurcationKit
 	include("periodicorbit/ShootingDE.jl")
 	include("periodicorbit/Floquet.jl")
 	include("periodicorbit/BifurcationPoints.jl")
+	include("periodicorbit/PeriodicOrbitUtils.jl")
+
 	include("periodicorbit/NormalForms.jl")
 
 	# wave problem
