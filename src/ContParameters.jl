@@ -12,7 +12,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
 - `saveToFile = false`: save to file. A name is automatically generated or can be defined in [`continuation`](@ref). This requires `using JLD2`.
 - `saveSolEveryStep::Int64 = 0` at which continuation steps do we save the current solution
-- `plotEveryStep = 10`
+- `plotEveryStep = 10` at which continuation steps do we plot the current solution
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
@@ -32,7 +32,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `a  = 0.5` aggressiveness factor. It is used to adapt `ds` in order to have a number of newton iterations per continuation step roughly constant. The higher `a` is, the larger the step size `ds` is changed at each continuation step.
 
 ## Handling event detection
-- `detectEvent::Int` ∈ {0, 1, 2} If set to 0, nothing is done. If set to 1, the event locations are seek during the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the event (slower).
+- `detectEvent::Int` ∈ {0, 1, 2} If set to 0, nothing is done. If set to 1, the event locations are sought during the continuation run, but not located precisely. If set to 2, a bisection algorithm is used to locate the event (slower).
 - `tolParamBisectionEvent = 1e-16` tolerance on parameter to locate event
 
 ## Misc

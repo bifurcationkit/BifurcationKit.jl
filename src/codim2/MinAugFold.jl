@@ -49,6 +49,7 @@ end
 	return vcat(res[1], res[2])
 end
 
+###################################################################################################
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -167,7 +168,7 @@ jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, 
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
-################################################################################################### Newton / Continuation functions
+###################################################################################################
 """
 $(SIGNATURES)
 
@@ -336,7 +337,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
 	end
 
-	# this functions allows to tackle the case where the two parameters have the same name
+	# this function allows to tackle the case where the two parameters have the same name
 	lenses = getLensSymbol(lens1, lens2)
 
 	# global variables to save call back
@@ -497,11 +498,11 @@ function continuationFold(prob,
 		rmul!(eigenvec, 1/normC(eigenvec))
 
 		# jacobian adjoint at bifurcation point
-		_Jt = hasAdjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
+		L★ = hasAdjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
 
 		# computation of zero adjoint eigenvector
-		ζstar, λstar = getAdjointBasis(_Jt, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
-		eigenvec_ad = real.(ζstar)
+		ζ★, λ★ = getAdjointBasis(L★, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
+		eigenvec_ad = real.(ζ★)
 		rmul!(eigenvec_ad, 1/dot(eigenvec, eigenvec_ad))
 	end
 
@@ -520,7 +521,7 @@ struct FoldEigsolver{S} <: AbstractCodim2EigenSolver
 end
 
 function (eig::FoldEigsolver)(Jma, nev; kwargs...)
-	n = min(nev, length(Jma.x.u))
+	n = min(nev, length(getVec(Jma.x)))
 	J = jacobian(Jma.fldpb.prob_vf, getVec(Jma.x), set(Jma.params, getLens(Jma.fldpb), getP(Jma.x)))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts

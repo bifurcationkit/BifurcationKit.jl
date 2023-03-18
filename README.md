@@ -78,45 +78,4 @@ Most of the plugins are located in the organization [bifurcationkit](https://git
 
 ## Main features
 
-- Newton-Krylov solver with generic linear / eigen *preconditioned* solver. Idem for the arc-length continuation.
-- Newton-Krylov solver with nonlinear deflation and preconditioner. It can be used for branch switching for example.
-- Continuation written as an [iterator](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
-- Monitoring user functions along curves computed by continuation, see [events](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/)
-- Continuation methods: PALC, Moore Penrose, Deflated continuation, ANM, ...
-- Bifurcation points located with a bisection algorithm
-- Detection of Branch, Fold, Hopf bifurcation point of stationary solutions and computation of their normal form.
-- Automatic branch switching at branch points (whatever the dimension of the kernel)
-- Automatic branch switching at simple Hopf points to periodic orbits
-- **Automatic computation of bifurcation diagrams of equilibria**
-- Fold / Hopf continuation based on Minimally Augmented formulation, with Matrix Free / Sparse Jacobian.
-- Detection of all codim 2 bifurcations of equilibria and computation of the normal forms of Bogdanov-Takens, Bautin and Cusp
-- Branching from Bogdanov-Takens / Zero-Hopf / Hopf-Hopf points to Fold / Hopf curve
-- Periodic orbit computation and continuation using Shooting, Finite Differences or Orthogonal Collocation.
-- Detection of Branch, Fold, Neimark-Sacker, Period Doubling bifurcation point of periodic orbits.
-- Continuation of Fold of periodic orbits
-
-Custom state means, we can use something else than `AbstractArray`, for example your own `struct`.
-
-**Note that you can combine most solvers, like use Deflation for Periodic orbit computation or Fold of periodic orbits family.**
-
-
-|Features|Matrix Free|Custom state| [Tutorial](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/) | GPU |
-|---|---|---|---|---|
-| (Deflated) Krylov-Newton| Yes| Yes| All| :heavy_check_mark:|
-| Continuation PALC (Natural, Secant, Tangent, Polynomial) | Yes| Yes| All |:heavy_check_mark:  |
-| Deflated Continuation | Yes| Yes| [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialCarrier/#Deflated-Continuation-in-the-Carrier-Problem-1) |:heavy_check_mark:  |
-| Bifurcation / Fold / Hopf point detection | Yes| Yes| All / All / [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
-| Fold Point continuation | Yes| Yes| [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials1/#Temperature-model-(simplest-example-for-equilibria)-1), [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
-| Hopf Point continuation | Yes| `AbstractArray` |
-| Bogdanov-Takens Point newton | Yes| `AbstractArray` |
-| Branch point / Fold / Hopf normal form | Yes| Yes|  | :heavy_check_mark: | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials3/#Continuation-of-Hopf-points-1) | |
-| Branch switching at Branch / Hopf points | Yes| `AbstractArray` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | :heavy_check_mark: |
-| <span style="color:red">**Automatic bifurcation diagram computation of equilibria**</span> | Yes| `AbstractArray` |  [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Automatic-bifurcation-diagram-1) | |
-| Periodic Orbit (Trapezoid) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials3/#Brusselator-1d-(automatic)-1), [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark:|
-| Periodic Orbit (Collocation) Newton / continuation | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/ode/tutorialsODE/#Neural-mass-equation-(Hopf-aBS)) | |
-| Periodic Orbit (Parallel Poincaré / Standard Shooting) Newton / continuation | Yes| `AbstractArray` |  [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1) | |
-| Fold, Neimark-Sacker, Period doubling detection | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials/#Bifurcation-diagrams-with-periodic-orbits-1)  | |
-| Continuation of Fold of periodic orbits | Yes| `AbstractVector` | [:arrow_heading_up:](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Complex-Ginzburg-Landau-2d-1) | :heavy_check_mark: |
-| Bogdanov-Takens / Bautin / Cusp / Zero-Hopf / Hopf-Hopf point detection | Yes| Yes|  | :heavy_check_mark: |
-| Bogdanov-Takens / Bautin / Cusp normal forms | Yes| Yes|  | :heavy_check_mark: |
-| Branching from Bogdanov-Takens / Zero-Hopf / Hopf-Hopf to Fold / Hopf curve | Yes | `AbstractVector` | |  |
+The list of capabilities is available [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/capabilities/).

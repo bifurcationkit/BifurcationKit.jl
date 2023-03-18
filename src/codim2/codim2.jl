@@ -126,7 +126,12 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
 !!! tip "startWithEigen"
     It is recommanded that you use the option `startWithEigen=true`
 """
-function newton(br::AbstractBranchResult, ind_bif::Int64; normN = norm, options = br.contparams.newtonOptions, startWithEigen = false, lens2::Lens = (@lens _), kwargs...)
+function newton(br::AbstractBranchResult,
+				ind_bif::Int64; normN = norm,
+				options = br.contparams.newtonOptions,
+				startWithEigen = false,
+				lens2::Lens = (@lens _),
+				kwargs...)
 	@assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
 	if br.specialpoint[ind_bif].type == :hopf
 		return newtonHopf(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
@@ -159,7 +164,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
-    It is recommanded that you use the option `startWithEigen = true`
+    It is recommended that you use the option `startWithEigen = true`
 """
 function continuation(br::AbstractBranchResult,
 					ind_bif::Int64,

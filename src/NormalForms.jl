@@ -1,10 +1,11 @@
 function getAdjointBasis(L★, λs, eigsolver; nev = 3, verbose = false)
 	# we compute the eigen-elements of the adjoint of L
-	λ★, ev★ = eigsolver(L★, nev)
+	λ★, ev★, cv, = eigsolver(L★, nev)
+	~cv && @warn "Eigen Solver did not converge"
 	verbose && Base.display(λ★)
 	# vectors to hold eigen-elements for the adjoint of L
 	λ★s = Vector{eltype(λs)}()
-	# TODO This is a horrible hack to get  the type of the left eigenvectors
+	# TODO This is a horrible hack to get the type of the left eigenvectors
 	ζ★s = Vector{typeof(geteigenvector(eigsolver, ev★, 1))}()
 
 	for (idvp, λ) in enumerate(λs)
@@ -26,10 +27,11 @@ $(SIGNATURES)
 Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more eigenvalues than necessary.
 """
 function getAdjointBasis(L★, λ::Number, eigsolver; nev = 3, verbose = false)
-	λ★, ev★ = eigsolver(L★, nev)
+	λ★, ev★, cv, = eigsolver(L★, nev)
+	~cv && @warn "Eigen Solver did not converge"
 	I = argmin(abs.(λ★ .- λ))
 	verbose && (println("──> left eigenvalues = "); display(λ★))
-	verbose && println("──> right eigenvalue = ", λ, ", left eigenvalue = ", λ★[I])
+	verbose && println("──> right eigenvalue = ", λ, "\n──>  left eigenvalue = ", λ★[I])
 	abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
 	ζ★ = geteigenvector(eigsolver, ev★, I)
 	return copy(ζ★), λ★[I]

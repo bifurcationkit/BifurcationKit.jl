@@ -275,6 +275,7 @@ function reMake(prob::AbstractBifurcationProblem;
 		recordFromSolution = prob.recordFromSolution,
 		plotSolution = prob.plotSolution,
 		J = missing,
+		Jᵗ = missing,
 		d2F = missing,
 		d3F = missing)
 	prob2 = setproperties(prob; u0 = u0,
@@ -284,6 +285,9 @@ function reMake(prob::AbstractBifurcationProblem;
 							plotSolution = plotSolution)
 	if ~ismissing(J)
 		@set! prob2.VF.J = J
+	end
+	if ~ismissing(Jᵗ)
+		@set! prob2.VF.Jᵗ = Jᵗ
 	end
 	if ~ismissing(d2F)
 		@set! prob2.VF.d2F = d2F

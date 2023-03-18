@@ -290,7 +290,7 @@ function bogdanovTakensNormalForm(prob_ma, L,
 
 	# computation of e
 	e = dot(p1, d3F(VF, x0, parbif, q0, q0, q0)) + 2dot(p1, B(q0, H1100)) + dot(p1, B(q1, H2000))
-	e += -2b * dot(p1, H1100) -2a * dot(p1, H0200) - dot(p1, H3000)
+	e += -2b * dot(p1, H1100) - 2a * dot(p1, H0200) - dot(p1, H3000)
 	e /= 2
 
 	# computation of H2001 and a1
@@ -371,8 +371,8 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
 	# compute point on the Hopf curve
 	x0 = getx(ds)
 
-	return (hopf = t->HopfCurve(t).pars,
-			ω = t->HopfCurve(t).ω,
+	return (hopf = t -> HopfCurve(t).pars,
+			ω = t -> HopfCurve(t).ω,
 			EigenVec = EigenVec,
 			EigenVecAd = EigenVecAd,
 			x0 = t -> getx(t) .* bt.ζ[1])

@@ -179,5 +179,5 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
 	Ind = sortperm(λ, by = l.by, rev = true)
 	ncv = length(λ)
 	ncv < nev && @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
-	return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), true, 1
+	return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), ncv >= nev, 1
 end

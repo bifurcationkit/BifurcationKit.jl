@@ -58,6 +58,7 @@ end
 	return vcat(res[1], res[2], res[3])
 end
 
+################################################################################
 # Struct to invert the jacobian of the Hopf MA problem.
 struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -183,7 +184,7 @@ residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
 
 jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
-################################################################################################### Newton / Continuation functions
+###################################################################################################
 """
 $(SIGNATURES)
 
@@ -516,8 +517,9 @@ function continuationHopf(prob,
 						lens2::Lens,
 						options_cont::ContinuationPar = br.contparams;
 						alg = br.alg,
-						startWithEigen = false,
 						normC = norm,
+						nev = br.contparams.nev,
+						startWithEigen = false,
 						kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	ω = hopfpointguess.p[2]
@@ -541,10 +543,10 @@ function continuationHopf(prob,
 		L = jacobian(prob, bifpt.x, parbif)
 
 		# jacobian adjoint at bifurcation point
-		_Jt = ~hasAdjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+		L★ = ~hasAdjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
 
-		ζstar, λstar = getAdjointBasis(_Jt, conj(λ), br.contparams.newtonOptions.eigsolver; nev = br.contparams.nev, verbose = false)
-		ζad .= ζstar ./ dot(ζstar, ζ)
+		ζ★, λ★ = getAdjointBasis(L★, conj(λ), br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
+		ζad .= ζ★ ./ dot(ζ★, ζ)
 	end
 
 	return continuationHopf(br.prob, alg,

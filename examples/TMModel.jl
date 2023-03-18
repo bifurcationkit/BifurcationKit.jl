@@ -75,7 +75,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.0001, dsmin = 1e-4, pMax = 0.,
 
 br_pocoll = @time continuation(
 	br, 4, opts_po_cont,
-	PeriodicOrbitOCollProblem(20, 5, updateSectionEveryStep = 0);
+	PeriodicOrbitOCollProblem(30, 5, updateSectionEveryStep = 0, meshadapt = false);
 	verbosity = 2,	plot = true,
 	args_po...,
 	plotSolution = (x, p; k...) -> begin

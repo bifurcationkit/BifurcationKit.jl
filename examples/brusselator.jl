@@ -275,7 +275,7 @@ br_po2 = BK.continuation(
 	br_po, 1,
 	# arguments for continuation
 	opts_po_cont;
-	δp = 0.01,
+	ampfactor = 1., δp = 0.01,
 	usedeflation = true,
 	verbosity = 3,	plot = true,
 	########
@@ -283,7 +283,10 @@ br_po2 = BK.continuation(
 	########
 	finaliseSolution = (z, tau, step, contResult; k...) ->
 		(Base.display(contResult.eig[end].eigenvals) ;true),
-	plotSolution = (x, p; kwargs...) -> (plot!(br_po,legend = :bottomright, subplot=1)),
+	plotSolution = (x, p; kwargs...) -> begin
+				heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)
+				plot!(br_po,legend = :bottomright, subplot=1)
+			end,
 	normC = norminf)
 push!(branches, br_po2)
 

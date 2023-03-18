@@ -66,7 +66,7 @@ function (lbs::BorderingBLS)(  J, dR,
 
 	dX, dl, cv, itlinear = BEC0(R, n)
 
-	failBLS = true
+	failBLS::Bool = true
 	while lbs.checkPrecision && k < lbs.k && failBLS
 		δX, δl = Residual(dX, dl)
 		failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
@@ -279,7 +279,7 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 	# copyto!(out.u, apply(lbmap.J, x.u))
 	if isnothing(lbmap.shift)
 		out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
-	else
+	else # we do this to fuse for-loops
 		out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
 	end
 	out[end] = lbmap.dot(lbmap.b, xu)  + lbmap.c  * xp
