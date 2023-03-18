@@ -398,23 +398,24 @@ Generate a periodic orbit problem from a solution.
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically, and `ODEProblem
-- `period` estimate of the period of the periodic orbit
+- `tspan::Tuple` estimate of the period of the periodic orbit
 - `k` kwargs arguments passed to the constructor of `ShootingProblem`
 
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period; alg = sol.alg, ksh...)
+function generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, tspan::Tuple; alg = sol.alg, ksh...)
 	u0 = sol(0)
 	@assert u0 isa AbstractVector
 	N = length(u0)
 	M = pb.M
 
-	centers = [copy(sol(t)) for t in LinRange(0, period, M+1)[1:end-1]]
+	centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
 	probsh = ShootingProblem(prob_de, alg, centers; lens = getLens(bifprob), ksh...)
 
 	cish = reduce(vcat, centers)
-	cish = vcat(cish, period)
+	cish = vcat(cish, tspan[2]-tspan[1])
 
 	return probsh, cish
 end
+generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generateCIProblem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)

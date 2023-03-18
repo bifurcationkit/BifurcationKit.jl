@@ -471,7 +471,7 @@ function generateCIProblem(pb::PoincareShootingProblem,
 						bifprob::AbstractBifurcationProblem,
 						prob_de,
 						sol::AbstractTimeseriesSolution,
-						period;
+						tspan::Tuple;
 						alg = sol.alg,
 						ksh...)
 	u0 = sol(0)
@@ -479,7 +479,7 @@ function generateCIProblem(pb::PoincareShootingProblem,
 	N = length(u0)
 	M = pb.M
 
-	ts = LinRange(0, period, M+1)[1:end-1]
+	ts = LinRange(tspan[1], tspan[2], M+1)[1:end-1]
 	centers = [copy(sol(t)) for t in ts]
 	normals = [residual(bifprob, c, sol.prob.p) for c in centers]
 	# normals = [sol(t, Val{1}) for t in ts]
@@ -493,3 +493,5 @@ function generateCIProblem(pb::PoincareShootingProblem,
 
 	return probpsh, cipsh
 end
+
+generateCIProblem(pb::PoincareShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generateCIProblem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)

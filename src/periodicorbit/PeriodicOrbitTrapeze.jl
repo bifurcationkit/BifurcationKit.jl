@@ -1091,31 +1091,35 @@ Generate a periodic orbit problem from a solution.
 - `pb` a `PeriodicOrbitTrapProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `sol` basically, and `ODEProblem
-- `period` estimate of the period of the periodic orbit
+- `tspan = (0,1.)` estimate of the time span (period) of the periodic orbit
 
 ## Output
 - returns a `PeriodicOrbitTrapProblem` and an initial guess.
 """
 function generateCIProblem(pb::PeriodicOrbitTrapProblem,
 							bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution,
-							period)
+							tspan::Tuple; ktrap...)
 	u0 = sol(0)
 	@assert u0 isa AbstractVector
 	N = length(u0)
 
 	par = sol.prob.p
 	prob_vf = reMake(bifprob, params = par)
-	probtrap = PeriodicOrbitTrapProblem(M = pb.M, N = N, prob_vf = prob_vf, xπ = copy(u0), ϕ = copy(u0))
+	probtrap = PeriodicOrbitTrapProblem(;M = pb.M, N = N, prob_vf = prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
 
 	M, N = size(probtrap)
 	resize!(probtrap.ϕ, N * M)
 	resize!(probtrap.xπ, N * M)
 
-	ci = generateSolution(probtrap, t -> sol(t*period/(2pi)), period)
+	period = tspan[2] - tspan[1]
+
+	ci = generateSolution(probtrap, t -> sol(tspan[1] + t*period/(2pi)), period)
 	_sol = getPeriodicOrbit(probtrap, ci, nothing)
 	probtrap.xπ .= 0
 	probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:,i], sol.prob.p) for i=1:probtrap.M])
 
 	return probtrap, ci
 end
+
+generateCIProblem(pb::PeriodicOrbitTrapProblem, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generateCIProblem(pb, bifprob, sol, (zero(period), period); ktrap...)
 ####################################################################################################
