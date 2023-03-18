@@ -12,7 +12,7 @@ contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
 contour3dMakie(ax, x; k...) = (contour(ax, x;  k...))
 contour3dMakie(ax, x::AbstractVector; k...) = contour3dMakie(ax, reshape(x,Nx,Ny,Nz); k...)
-contour3dMakie!(ax, x; k...) = (AbstractPlotting.contour!(ax, x;  k...))
+contour3dMakie!(ax, x; k...) = (contour!(ax, x;  k...))
 contour3dMakie!(ax, x::AbstractVector; k...) = contour3dMakie!(ax, reshape(x,Nx,Ny,Nz); k...)
 
 function Laplacian3D(Nx, Ny, Nz, lx, ly, lz, bc = :Neumann)
@@ -38,6 +38,12 @@ end
 function dF_sh(u, p, du)
 	@unpack l, ν, L1 = p
 	return -(L1 * du) .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
+end
+
+#Jacobian
+function J_sh(u, p)
+	@unpack l, ν, L1 = p
+	return -L1  .+ spdiagm(0 => l .+ 2 .* ν .* u .- 3 .* u.^2)
 end
 
 # various differentials
@@ -127,12 +133,12 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 
 BK.plotBranch(br)
 ####################################################################################################
-getNormalForm(br, 3; nev = 5)
+getNormalForm(br, 3; nev = 25)
 
 br1 = @time continuation(br, 3, setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 0, pMax = 0.1, plotEveryStep = 5, dsmax = 0.01);
 	plot = true, verbosity = 3,
 	δp = 0.005,
-	verbosedeflation = false,
+	verbosedeflation = true,
 	finaliseSolution = (z, tau, step, contResult; k...) -> begin
 		if isnothing(br.eig) == true
 			Base.display(contResult.eig[end].eigenvals)

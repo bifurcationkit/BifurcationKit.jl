@@ -239,12 +239,21 @@ BK.DCState(rand(2))
 
 prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
 alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
-	perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x)))
+	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
 	)
 brdc = continuation(prob, alg,
 	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40, detectBifurcation = 3);
 	plot=false, verbosity = 0,
 	callbackN = BK.cbMaxNorm(1e3))
+
+# test that the saved points are true solutions
+for i in 1:length(brdc)
+	brs = brdc[i]
+	for j=1:length(brs.sol)
+		res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setParam(prob, brs.sol[j].p)) |> norminf
+		@test res < brs.contparams.newtonOptions.tol
+	end
+end
 
 lastindex(brdc)
 brdc[1]
