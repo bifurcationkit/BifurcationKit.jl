@@ -66,6 +66,7 @@ end
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
 @inline getLens(psh::PoincareShootingProblem) = psh.lens
 getParams(prob::PoincareShootingProblem) = prob.par
+setParam(prob::PoincareShootingProblem, p) = set(getParams(prob), getLens(prob), p)
 
 function Base.show(io::IO, psh::PoincareShootingProblem)
 	println(io, "┌─ Poincaré shooting functional for periodic orbits")
@@ -131,6 +132,7 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
 	end
 	return period
 end
+getPeriod(psh::PoincareShootingProblem, x_bar, p::Real) = getPeriod(psh, x_bar, setParam(psh, p))
 
 function getTimeSlices(prob::PoincareShootingProblem, x_bar::AbstractVector)
 	M = getMeshSize(prob); Nm1 = length(x_bar) ÷ M
@@ -170,6 +172,7 @@ function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, 
 		return sol[1]
 	end
 end
+getPeriodicOrbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
 
 function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
 	# this function extracts the amplitude of the cycle

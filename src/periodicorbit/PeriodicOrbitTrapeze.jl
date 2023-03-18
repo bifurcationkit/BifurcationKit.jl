@@ -124,6 +124,7 @@ getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)
 @inline getParams(pb::PeriodicOrbitTrapProblem) = getParams(pb.prob_vf)
 @inline getLens(pb::PeriodicOrbitTrapProblem) = getLens(pb.prob_vf)
+setParam(pb::PeriodicOrbitTrapProblem, p) = set(getParams(pb), getLens(pb), p)
 @inline function getMassMatrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
 	if returnArray == false
 		return hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(pb.N))
@@ -594,13 +595,14 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function getPeriodicOrbit(prob::AbstractPOFDProblem, u::AbstractVector, p)
+@views function getPeriodicOrbit(prob::AbstractPOFDProblem, u, p)
 	T = getPeriod(prob, u, p)
 	M, N = size(prob)
 	uv = u[1:end-1]
 	uc = reshape(uv, N, M)
 	return SolPeriodicOrbit(t = cumsum(T .* collect(prob.mesh)), u = uc)
 end
+getPeriodicOrbit(prob::AbstractPOFDProblem, x, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
 
 """
 $(SIGNATURES)

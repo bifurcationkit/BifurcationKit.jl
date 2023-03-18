@@ -80,6 +80,7 @@ end
 @inline isParallel(sh::ShootingProblem) = sh.parallel
 @inline getLens(sh::ShootingProblem) = sh.lens
 getParams(prob::ShootingProblem) = prob.par
+setParam(prob::ShootingProblem, p) = set(getParams(prob), getLens(prob), p)
 
 function Base.show(io::IO, sh::ShootingProblem)
 	println(io, "┌─ Standard shooting functional for periodic orbits")
@@ -330,6 +331,7 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par; kode...
 		return SolPeriodicOrbit(t = time, u = u)
 	end
 end
+getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, p::Real; kode...) = getPeriodicOrbit(prob, x, setParam(prob, p); kode...)
 
 function getPOSolution(prob::ShootingProblem, x, pars; kode...)
 	T = getPeriod(prob, x)

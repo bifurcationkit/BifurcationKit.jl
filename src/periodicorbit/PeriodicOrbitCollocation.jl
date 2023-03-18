@@ -255,6 +255,7 @@ getLs(pb::PeriodicOrbitOCollProblem) = getLs(pb.mesh_cache)
 
 @inline getParams(pb::PeriodicOrbitOCollProblem) = getParams(pb.prob_vf)
 @inline getLens(pb::PeriodicOrbitOCollProblem) = getLens(pb.prob_vf)
+@inline setParam(pb::PeriodicOrbitOCollProblem, p) = setParam(pb.prob_vf, p)
 
 # these functions extract the time slices components
 getTimeSlices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
@@ -428,7 +429,7 @@ end
 	n, ntimes = size(u)
 	m = pb.mesh_cache.degree
 	Ntst = pb.mesh_cache.Ntst
-	# we want slices at fixed  times, hence gj[:, j] is the fastest
+	# we want slices at fixed times, hence gj[:, j] is the fastest
 	# temporaries to reduce allocations
 	# TODO VIRER CES TMP?
 	gj  = zeros(Ty, n, m)
@@ -446,7 +447,6 @@ end
 		for l in 1:m
 			# out[:, end] serves as buffer for now
 			_POOCollScheme!(pb, out[:, rg[l]], ∂gj[:, l], gj[:, l], pars, period * (mesh[j+1]-mesh[j]) / 2, out[:, end])
-
 		end
 		# carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
 		rg = rg .+ m
@@ -476,12 +476,15 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, u::AbstractVector, p)
+@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, u, p)
 	T = getPeriod(prob, u, p)
 	ts = getTimes(prob)
 	uc = getTimeSlices(prob, u)
 	return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
+
+# simplified function to extract periodic orbit
+getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
 
 # same function as above but for coping with mesh adaptation
 @views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol), Tuple{Vector{Tp}, Vector{Tp}}}, p) where Tp
