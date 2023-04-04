@@ -51,7 +51,7 @@ function vf(fl::FlowDE, x, p)
 end
 
 function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
-	_prob = remake(pb; u0 = x, tspan = (zero(eltype(tm)), tm), p = p)
+	_prob = remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
 	sol = solve(_prob, alg; save_everystep = false, kwargs...)
 	return (t = sol.t[end], u = sol[end])
@@ -77,7 +77,7 @@ end
 ######### Differential of the flow
 function dflowMonoSerial(x::AbstractVector, p, dx, tm, pb::ODEProblem, alg; k...)
 	n = length(x)
-	_prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(eltype(tm)), tm), p = p)
+	_prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = p)
 	# the use of concrete_solve makes it compatible with Zygote
 	sol = solve(_prob, alg, save_everystep = false; k...)[end]
 	return (t = tm, u = sol[1:n], du = sol[n+1:end])
@@ -98,7 +98,7 @@ end
 # differential of the flow when a problem is passed for the Monodromy
 function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: EnsembleProblem}
 	N = size(x, 1)
-	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
+	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = p)
 	_epb = setproperties(fl.probMono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
 	sol = solve(_epb, fl.algMono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
 	return sol.u

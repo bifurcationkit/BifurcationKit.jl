@@ -140,7 +140,7 @@ const DocStrjacobianPOSh = """
     - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`.
     - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
     - For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is formed using a mix of AD and analytical formula.
-    - For `:FiniteDifferences`, use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+    - For `:FiniteDifferences`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 """
 ##########################
 residual(prob::WrapPOSh, x, p) = prob.prob(x, p)

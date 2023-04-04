@@ -38,13 +38,13 @@ opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., 
 
 # arguments for periodic orbits
 args_po = (	recordFromSolution = (x, p) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, @set par_tm.E0 = p.p)
+		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
 		return (max = maximum(xtt[1,:]),
 				min = minimum(xtt[1,:]),
-				period = getPeriod(p.prob, x, @set par_tm.E0 = p.p))
+				period = getPeriod(p.prob, x, p.p))
 	end,
 	plotSolution = (x, p; k...) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, @set par_tm.E0 = p.p)
+		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
 		@show size(xtt[:,:]) maximum(xtt[1,:])
 		plot!(xtt.t, xtt[1,:]; label = "E", k...)
 		plot!(xtt.t, xtt[2,:]; label = "x", k...)

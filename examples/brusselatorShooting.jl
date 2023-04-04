@@ -89,7 +89,9 @@ n = 100
 # different parameters to define the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-probBif = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l); J = Jbru_sp, plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )), recordFromSolution = (x, p) -> x[div(n,2)])
+probBif = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
+		J = Jbru_sp,
+		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )), recordFromSolution = (x, p) -> x[div(n,2)])
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
 # 	xspace = LinRange(0, par_bru.l, n)
 # 	sol0 = vcat(		par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
@@ -188,10 +190,11 @@ eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n), verbose = 0, dim = 40)
 opts_po_cont_floquet = @set opts_po_cont.newtonOptions = NewtonPar(linsolver = ls, eigsolver = eig, tol = 1e-7, verbose = true)
 opts_po_cont_floquet = setproperties(opts_po_cont_floquet; nev = 10, tolStability = 3e-3, detectBifurcation = 0, maxSteps = 40, ds = 0.03, dsmax = 0.03, pMax = 2.0, tolBisectionEigenvalue = 0.)
 
-br_po = @time continuation(probSh, outpo.u, PALC(bls = MatrixFreeBLS(@set ls.N = ls.N+1)),
+br_po = @time continuation(probSh, outpo.u, PALC(),
 		opts_po_cont_floquet;
 		verbosity = 3,
 		plot = true,
+		linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*1),
 		# finaliseSolution = (z, tau, step, contResult; k...) ->
 			# (Base.display(contResult.eig[end].eigenvals) ;true),
 		plotSolution = (x, p; kwargs...) -> BK.plotPeriodicShooting!(x[1:end-1], length(1:dM:M); kwargs...),

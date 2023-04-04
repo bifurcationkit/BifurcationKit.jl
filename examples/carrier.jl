@@ -29,7 +29,6 @@ function Jac_carr!(J, x, p)
 	J[n, n-1] = 0.0
 	J
 end
-	# @time Jac_carr(sol, par_car)
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
 
 N = 200
@@ -91,7 +90,7 @@ alg = DefCont(deflationOperator = deflationOp,
 
 brdc = @time continuation(
 	(@set prob.params.ϵ = 0.6), alg,
-	setproperties(optcont; ds = -0.0021, dsmin=1e-5, maxSteps = 20000,
+	setproperties(optcont; ds = -0.001, dsmin=1e-5, maxSteps = 20000,
 		pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
 		newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
 	;verbosity = 1,

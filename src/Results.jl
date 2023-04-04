@@ -25,7 +25,26 @@ $(TYPEDFIELDS)
 - `length(br)` number of the continuation steps
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
-- `br[k+1]` gives information about the k-th step
+- `br[k+1]` gives information about the k-th step. A typical run yields the following
+```
+julia> br[1]
+(x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
+```
+which provides the value `param` of the parameter of the current point, its stability, information on the newton iterations, etc. The fields can be retrived using `propertynames(br.branch)`. This information is stored in `br.branch` which is a `StructArray`. You can thus extract the vector of parameters along the branch as
+```
+julia> br.param
+10-element Vector{Float64}:
+ 0.1
+ 0.08585786437626905
+ 0.06464466094067263
+ 0.03282485578727799
+-1.2623798512809007e-5
+-0.07160718539365075
+-0.17899902778635765
+-0.3204203840236672
+-0.4618417402609767
+-0.5
+```
 - `getSolx(br, k)` returns the k-th solution on the branch
 - `getSolp(br, k)` returns the parameter  value associated with k-th solution on the branch
 - `getParams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.

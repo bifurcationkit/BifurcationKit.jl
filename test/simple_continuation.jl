@@ -48,7 +48,7 @@ BK.isInplace(prob)
 BK.getVectorType(prob)
 show(prob)
 
-br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts) #(16.12 k allocations: 772.250 KiB)
+br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts) #(17.98 k allocations: 1.155 MiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.computeEigenvalues(opts)
