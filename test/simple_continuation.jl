@@ -247,6 +247,7 @@ brdc = continuation(prob, alg,
 	callbackN = BK.cbMaxNorm(1e3))
 
 # test that the saved points are true solutions
+norminf(x) = norm(x, Inf)
 for i in 1:length(brdc)
 	brs = brdc[i]
 	for j=1:length(brs.sol)
