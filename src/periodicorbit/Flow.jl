@@ -7,8 +7,8 @@ function vf(::AbstractFlow, x, par; k...) end
 # the function implements the flow (or semigroup) `(x, p, t) -> flow(x, p, t)` associated to an autonomous Cauchy problem. Only the last time point must be returned in the form Named Tuple `(u = ..., t = t)`. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, x, par, Inf)`.
 function evolve(::AbstractFlow, x, par, δt; k...) end
 
-# The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
-function evolve(::AbstractFlow, x, par, dx, δt; k...) end
+# The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
+function jvp(::AbstractFlow, x, par, dx, δt; k...) end
 
 # [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
 function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
@@ -19,7 +19,7 @@ function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, δt; k...) end
 # [Optional] Flow which returns the tuple `(t, u(t))`. Optional, mainly used for plotting on the user side.
 function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, δt = Inf; k...) end
 
-# [Optional] Serial version of `dflow`. Used internally when using parallel multiple shooting. Named Tuple `(u = ..., du = ..., t = t)`
+# [Optional] Serial version of `dflow`. Used internally for parallel multiple shooting. Returns a named Tuple `(u = ..., du = ..., t = t)`
 function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, tΣ; kwargs...) end
 
 ####################################################################################################

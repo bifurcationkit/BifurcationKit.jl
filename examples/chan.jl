@@ -1,5 +1,5 @@
 using Revise
-using BifurcationKit, LinearAlgebra, Plots, Setfield, Parameters
+using BifurcationKit, LinearAlgebra, Plots, Parameters
 const BK = BifurcationKit
 
 Nl(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)

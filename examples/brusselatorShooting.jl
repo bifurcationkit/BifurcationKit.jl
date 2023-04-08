@@ -1,6 +1,7 @@
 using Revise
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
 	const BK = BifurcationKit
+	using LoopVectorization
 
 f1(u, v) = u^2 * v
 norminf(x) = norm(x, Inf)

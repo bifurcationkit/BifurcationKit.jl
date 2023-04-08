@@ -1,5 +1,5 @@
 using Revise
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Setfield, Parameters
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
 	const BK = BifurcationKit
 
 f1(u, v) = u * u * v

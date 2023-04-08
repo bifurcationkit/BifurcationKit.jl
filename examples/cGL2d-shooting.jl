@@ -1,6 +1,6 @@
 using Revise
 	using DiffEqOperators, ForwardDiff, DifferentialEquations
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, LoopVectorization
 	const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)

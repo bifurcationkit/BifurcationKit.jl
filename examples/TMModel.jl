@@ -1,4 +1,4 @@
-using Revise, Test, ForwardDiff, Parameters, Setfield, Plots, LinearAlgebra
+using Revise, Test, ForwardDiff, Parameters, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
 

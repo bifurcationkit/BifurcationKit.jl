@@ -1,5 +1,5 @@
 using Revise
-	using SparseArrays, LinearAlgebra, DiffEqOperators, Setfield, Parameters
+	using SparseArrays, LinearAlgebra, DiffEqOperators, Parameters
 	using BifurcationKit
 	using Plots
 	const BK = BifurcationKit

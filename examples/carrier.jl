@@ -1,5 +1,5 @@
 using Revise
-using LinearAlgebra, Parameters, Setfield, SparseArrays, BandedMatrices
+using LinearAlgebra, Parameters, SparseArrays, BandedMatrices
 
 using Plots, BifurcationKit
 const BK = BifurcationKit

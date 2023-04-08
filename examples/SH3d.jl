@@ -1,7 +1,7 @@
 using Revise, Parameters, KrylovKit
 using GLMakie
 using BifurcationKit
-using LinearAlgebra, SparseArrays, LinearMaps, DiffEqOperators, Setfield
+using LinearAlgebra, SparseArrays, LinearMaps, DiffEqOperators
 const BK = BifurcationKit
 
 # GLMakie.inline!(true)

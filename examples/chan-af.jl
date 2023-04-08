@@ -1,5 +1,5 @@
 using Revise
-using ApproxFun, LinearAlgebra, Parameters, Setfield
+using ApproxFun, LinearAlgebra, Parameters
 
 using BifurcationKit, Plots
 const BK = BifurcationKit

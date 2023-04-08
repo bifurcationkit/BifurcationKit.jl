@@ -1,7 +1,7 @@
 # example taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (August 8, 2012): 026201. https://doi.org/10.1103/PhysRevE.86.026201.
 using Revise
 	using DiffEqOperators, ForwardDiff, DifferentialEquations, Sundials
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, Setfield
+	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
 	const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)
@@ -33,8 +33,9 @@ end
 end
 
 function Fbr!(f, u, p, t = 0.)
-	mul!(f, p.Δ, u)
-	f .= f .+ NL(u, p)
+ 	NL!(f, u, p)
+	mul!(f, p.Δ, u,1,1)
+	f
 end
 
 NL(u, p) = NL!(similar(u), u, p)

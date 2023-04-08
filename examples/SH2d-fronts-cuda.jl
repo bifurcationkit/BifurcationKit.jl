@@ -1,5 +1,5 @@
 using Revise
-using LinearAlgebra, Setfield, Parameters, KrylovKit
+using LinearAlgebra, Parameters, KrylovKit
 
 using BifurcationKit
 const BK = BifurcationKit
@@ -149,7 +149,7 @@ deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 
 opt_new = @set opt_new.maxIter = 250
 outdef = @time newton(reMake(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
-			deflationOp, opt_new, normN = x-> maximum(abs.(x)))
+			deflationOp, opt_new, normN = x -> maximum(abs, x))
 		println("--> norm(sol) = ", norm(outdef.u))
 		plotsol(outdef.u) |> display
 		BK.converged(outdef) && push!(deflationOp, outdef.u)
