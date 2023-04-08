@@ -8,7 +8,8 @@ function vf(::AbstractFlow, x, par; k...) end
 function evolve(::AbstractFlow, x, par, δt; k...) end
 
 # The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
-function jvp(::AbstractFlow, x, par, dx, δt; k...) end
+function evolve(::AbstractFlow, x, par, dx, δt; k...) end
+
 
 # [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
 function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
