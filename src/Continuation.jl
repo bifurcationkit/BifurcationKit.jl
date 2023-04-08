@@ -263,7 +263,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
 	T = eltype(it)
 
-	verbose && printstyled("#"^53*"\n────────── ",typeof(getAlg(it)).name.name," ────────────\n\n", bold = true, color = :red)
+	verbose && printstyled("#"^55*"\n"*"─"^17*" ",typeof(getAlg(it)).name.name," "*"─"^17*"\n\n", bold = true, color = :red)
 
 	# Get parameters
 	@unpack pMin, pMax, maxSteps, newtonOptions, η, ds = it.contParams
@@ -273,14 +273,14 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	end
 
 	# Converge initial guess
-	verbose && printstyled("─────────────────  INITIAL GUESS ────────────────────", bold = true, color = :magenta)
+	verbose && printstyled("─"^17*"  INITIAL GUESS "*"─"^17, bold = true, color = :magenta)
 
 	# we pass additional kwargs to newton so that it is sent to the newton callback
 	sol₀ = newton(prob, newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀)
 	@assert converged(sol₀) "Newton failed to converge the initial guess on the branch."
 	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("--> parameter = ", p₀, ", initial step")
-	verbose && printstyled("\n───────────────── INITIAL TANGENT ───────────────────", bold = true, color = :magenta)
+	verbose && printstyled("\n"*"─"^17*" INITIAL TANGENT "*"─"^17, bold = true, color = :magenta)
 	sol₁ = newton(reMake(prob; params = setParam(it, p₀ + ds / η), u0 = sol₀.u),
 			newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
 	@assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."

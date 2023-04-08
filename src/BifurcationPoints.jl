@@ -8,48 +8,61 @@ istranscritical(bp::AbstractBranchPoint) = false
 """
 $(TYPEDEF)
 
-Structure to record a generic special (bifurcation) point.
+Structure to record specials point on the curve. There are two types of specials point that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
 
 $(TYPEDFIELDS)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
-	"Bifurcation type, `:hopf, :bp...`."
+	"Description of the special point. In case of Events, this field records the user passed named to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be the following:
+
+    - :bp Bifurcation point, simple eigenvalue crossing the imaginary axis
+    - :fold Fold point
+    - :hopf Hopf point
+    - :nd not documented bifurcation point. Detected by multiple eigenvalues crossing. Generally occurs in problems with symmetries or in cases where the continuation step size is too large and merge two different bifurcation points.
+    - :cusp Cusp point
+    - :gh Generalized Hopf point
+    - :bt Bogdanov-Takens point
+    - :zh Zero-Hopf point
+    - :hh Hopf-Hopf point
+    - :ns Neimark-Sacker point
+    - :pd Period-doubling point
+	"
 	type::Symbol = :none
 
-	"Index in `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
+	"Index in `br.branch` or `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
 	idx::Int64 = 0
 
-	"Parameter value at the special (bifurcation) point, this is an estimate."
+	"Parameter value at the special point (this is an estimate)."
 	param::T = 0.
 
-	"Norm of the equilibrium at the special (bifurcation) point"
+	"Norm of the equilibrium at the special point"
 	norm::T  = 0.
 
 	"`printsol = recordFromSolution(x, param)` where `recordFromSolution` is one of the arguments to [`continuation`](@ref)"
 	printsol::Tp = 0.
 
-	"Equilibrium at the special (bifurcation) point"
+	"Equilibrium at the special point"
 	x::Tv = Vector{T}(undef, 0)
 
-	"Tangent along the branch at the special (bifurcation) point"
+	"Tangent along the branch at the special point"
 	τ::BorderedArray{Tvτ, T} = BorderedArray(x, T(0))
 
-	"Eigenvalue index responsible for the special (bifurcation) (if applicable)"
+	"Eigenvalue index responsible for detecting the special point (if applicable)"
 	ind_ev::Int64 = 0
 
-	"Continuation step at which the special (bifurcation) occurs"
+	"Continuation step at which the special occurs"
 	step::Int64 = 0
 
-	"`status ∈ {:converged, :guess}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point"
+	"`status ∈ {:converged, :guess, :guessL}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point. If `status == :guess`, the bissection algorithm failed to meet the requirements given in `::ContinuationPar`. Same for `status == :guessL` but the bissection algorithm stopped on the left of the bifurcation point."
 	status::Symbol = :guess
 
 	"`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the special (bifurcation) point."
 	δ::Tuple{Int64, Int64} = (0,0)
 
-	"Precision in the location of the special (bifurcation) point"
+	"Precision in the location of the special point"
 	precision::T = -1
 
-	"Interval containing the special (bifurcation) point"
+	"Interval containing the special point"
 	interval::Tuple{T, T} = (0, 0)
 end
 

@@ -1,3 +1,5 @@
+import GLMakie: Figure, Axis, lines!, scatter!
+
 function GLMakie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars = nothing)
 	ind1, ind2 = getPlotVars(contres, vars)
 	return ([Point2f0(i, j) for (i, j) in zip(getproperty(contres.branch, ind1), getproperty(contres.branch, ind2))],)
@@ -17,8 +19,8 @@ function plotBranchCont(contres::ContResult,
 	xlab, ylab = getAxisLabels(ind1, ind2, contres)
 
 	fig = Figure(resolution = (1200, 700))
-	ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
-	lines!(ax1, contres, color = :blue)
+	ax1 = fig[1, 1] = GLMakie.Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
+	GLMakie.lines!(ax1, contres, color = :blue)
 
 	ax2 = fig[1, 2] = Axis(fig, xlabel = "step", ylabel = String(xlab))
 	lines!(ax2, contres.step, contres.param, color = :blue)

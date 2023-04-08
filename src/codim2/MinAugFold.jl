@@ -30,11 +30,11 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J
 	#       a should be a null vector of J'
+	# n = 1
 	# we solve Jv + a σ1 = 0 with <b, v> = n
 	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
-	n = T(1)
 	J = jacobian(𝐅.prob_vf, x, par)
-	σ = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, n)[2]
+	σ = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, T(1))[2]
 	return residual(𝐅.prob_vf, x, par), σ
 end
 

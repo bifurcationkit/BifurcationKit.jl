@@ -147,6 +147,7 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
 	br.eig[ind+1].eigenvals
 end
+
 """
 $(SIGNATURES)
 
@@ -167,10 +168,10 @@ end
 @inline getLensSymbol(br::AbstractBranchResult) = getLensSymbol(getLens(br))
 
 function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
-	println(io, prefix * "┌─ Number of points: ", length(br.branch))
-	print(io, prefix * "├─ Curve of ")
-	printstyled(io, typeof(br.kind).name.name, comment, color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ Type of vectors: ")
+	print(io, prefix * "┌─ Curve type: ")
+	printstyled(io, typeof(br.kind).name.name, comment, "\n", color=:cyan, bold = true)
+	println(io, prefix * "├─ Number of points: ", length(br.branch))
+	print(io, prefix * "├─ Type of vectors: ")
 	printstyled(io, getvectortype(br), color=:cyan, bold = true)
 	print(io, "\n" * prefix * "├─ Parameter ")
 	printstyled(io, getLensSymbol(br), color=:cyan, bold = true)
