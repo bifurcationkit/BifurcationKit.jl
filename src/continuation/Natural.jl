@@ -12,7 +12,9 @@ internalAdaptation!(::Natural, ::Bool) = nothing
 function initialize!(state::AbstractContinuationState,
 						iter::AbstractContinuationIterable,
 						alg::Natural, nrm = false)
-	return nothing
+	# we want to start at (u0, p0), not at (u1, p1)
+	copyto!(state.z, state.z_old)
+	getPredictor!(state, iter, alg)
 end
 
 # this function mutates the predictor located in z_pred

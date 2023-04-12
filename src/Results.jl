@@ -52,7 +52,7 @@ julia> br.param
 - `getLens(br)` get the lens used for the computation of the branch
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
-	"holds the low-dimensional information about the branch. More precisely, `branch[:, i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, theta, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+	"holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during corrector
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
@@ -67,7 +67,7 @@ julia> br.param
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Tsol
 
-	"The parameters used for the call to `continuation` which produced this branch. Must be a ContinatioPar"
+	"The parameters used for the call to `continuation` which produced this branch. Must be a ContinationPar"
 	contparams::Tparc
 
 	"Type of solutions computed in this branch."

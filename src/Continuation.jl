@@ -337,7 +337,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	verbosity = min(it.verbosity, _verbosity)
 	verbose = verbosity > 0; verbose1 = verbosity > 1
 
-	@unpack step, ds, θ = state
+	@unpack step, ds = state
 
 	if verbose
 		printstyled("──"^35*"\nContinuation Step $step \n", bold = true);
