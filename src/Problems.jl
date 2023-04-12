@@ -96,7 +96,7 @@ for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, 
 """
 $(TYPEDEF)
 
-Structure to hold the bifurcation problem. If don't have parameters, you can pass `nothing`.
+Structure to hold the bifurcation problem.
 
 ## Fields
 
@@ -115,7 +115,7 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`]@ref for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian.
+- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian.
 
 """
 			struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec} <: AbstractAllJetBifProblem

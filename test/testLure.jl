@@ -54,11 +54,13 @@ show(br_po)
 
 # test normal forms
 for _ind in (1,3,16)
-	if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
-		println("")
-		pt = getNormalForm(br_po, _ind; verbose = true)
-		predictor(pt, 0.1, 1.)
-		show(pt)
+	if _ind <= length(br_po.specialpoint) &&
+		length(br_po.specialpoint) >=3 &&
+		br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
+			println("")
+			pt = getNormalForm(br_po, _ind; verbose = true)
+			predictor(pt, 0.1, 1.)
+			show(pt)
 	end
 end
 
