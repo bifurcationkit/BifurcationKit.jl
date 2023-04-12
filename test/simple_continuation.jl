@@ -133,6 +133,14 @@ opts9 = (@set opts.newtonOptions.verbose=false)
 	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9)
 	BK.empty!(Multiple(copy(x0), 0.01, 13))
 	# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
+## same but with failed prediction
+opts9_1 = ContinuationPar(opts9, dsmax = 0.1, maxSteps = 5, ds = 0.1)
+	@set! opts9_1.newtonOptions.tol = 1e-12
+	@set! opts9_1.newtonOptions.verbose = false
+	br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
+	@test length(br9_1) == 6
+	BK.empty!(Multiple(copy(x0), 0.01, 13))
+
 
 # tangent prediction with Polynomial predictor
 polpred = Polynomial(Bordered(), 2, 6, x0)

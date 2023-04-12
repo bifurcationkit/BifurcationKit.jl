@@ -16,7 +16,7 @@ updatePredictor!(state::AbstractContinuationState,
 # default method
 updatePredictor!(state::AbstractContinuationState,
 				iter::AbstractContinuationIterable,
-				alg::AbstractContinuationAlgorithm) = getPredictor!(state, iter, alg)				
+				alg::AbstractContinuationAlgorithm) = getPredictor!(state, iter, alg)
 
 corrector!(state::AbstractContinuationState,
 			iter::AbstractContinuationIterable; kwargs...) = corrector!(state, iter, getAlg(iter); kwargs...)
@@ -49,13 +49,6 @@ function _updatefieldButNotSol!(state::AbstractContinuationState,
 	if converged(sol)
 		copyto!(state.z_old, state.z)
 	end
-end
-
-function update!(state::AbstractContinuationState, sol::BifurcationKit.NonLinearSolution)
-	@assert 1==0
-	_updatefieldNotSol!(state, sol)
-	# update solution
-	copyto!(state.z, sol.u)
 end
 ####################################################################################################
 function stepSizeControl!(state::AbstractContinuationState,

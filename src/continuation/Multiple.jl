@@ -46,9 +46,15 @@ internalAdaptation!(alg::Multiple, onoroff::Bool) = internalAdaptation!(alg.alg,
 # callback for newton
 function (algcont::Multiple)(state; kwargs...)
 	resHist = get(state, :resHist, nothing)
-	iteration = get(state, :iteration, 0)
+	iteration = isnothing(resHist) ? 0 : length(resHist)
+	contparams = get(state, :contparams, nothing)
 	if algcont.currentind > 1
-		return iteration - algcont.pmimax > 0 ? resHist[end] <= algcont.α * resHist[end-algcont.pmimax] : true
+		if iteration - algcont.pmimax > 0
+			out = resHist[end] <= algcont.α * resHist[end-algcont.pmimax]
+			tol = isnothing(contparams) ? Inf : contparams.newtonOptions.tol
+			out = out || resHist[end] < tol
+			return out
+		end
 	end
 	return true
 end
@@ -76,7 +82,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
 	@unpack ds = state
 	(verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─MultiplePred tangent predictor\n")
 	# we combine the callbacks for the newton iterations
-	cb = (state; k...) -> callback(it)(state; k...) & algo(state; k...)
+	cb = (state; k...) -> callback(it)(state; k...) && algo(state; k...)
 	# note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
 	for ii in algo.nb:-1:1
 		(verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
