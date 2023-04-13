@@ -108,6 +108,9 @@ function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
 	end
 end
 
+function is_bifurcation(sp::SpecialPoint)
+	sp.type in (:bp,:fold,:hopf,:nd,:cusp,:gh,:bt,:zh,:hh,:ns,:pd,)
+end
 ####################################################################################################
 # types for bifurcation point with 1d kernel for the jacobian
 

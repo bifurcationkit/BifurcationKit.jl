@@ -222,6 +222,10 @@ Function is used to initialize the composite type `ContResult` according to the 
 		kind = kind,
 		prob = prob)
 end
+
+function bifurcation_points(br::AbstractBranchResult)
+	[sp for sp in br.specialpoint if is_bifurcation(sp)]
+end
 ####################################################################################################
 """
 $(TYPEDEF)

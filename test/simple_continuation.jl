@@ -57,6 +57,7 @@ BK.from(br0)
 BK.getProb(br0)
 br0[1]
 br0[end]
+BK.bifurcation_points(br0)
 
 branch = Branch(br0, rand(2));
 branch[end]
