@@ -27,7 +27,6 @@ prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@lens _.α); 
 
 out = newton( prob, opt_newton)
 
-
 # _J = J_chan(sol, par_chan)
 # heatmap(_J - _J', yflip=true)
 
@@ -91,7 +90,7 @@ Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
-Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
+Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ
 res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)
@@ -125,7 +124,7 @@ Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
-Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, fldpb = pb))
+Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ
 res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs); debugArray = debugTmpForσ)

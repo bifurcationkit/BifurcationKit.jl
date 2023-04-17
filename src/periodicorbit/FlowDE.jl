@@ -136,7 +136,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, p, tm; 
 	_flow(x, p, tm, fl.prob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x),1e-9), kw...) where {T1 <: ODEProblem,T2,T3}
+function evolve(fl::FlowDE{T1,T2,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem,T2,T3}
 	if T3 === Nothing
 		return dflow_fdSerial(x, par, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 	else

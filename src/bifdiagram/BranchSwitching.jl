@@ -67,6 +67,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 		maxIterDeflation::Int = min(50, 15optionsCont.newtonOptions.maxIter),
 		perturb = identity,
 		plotSolution = plotSolution(br.prob),
+		tolFold = 1e-3,
 		kwargs...) where Tprob
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
@@ -84,7 +85,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	Ty = typeof(ds)
 
 	# compute the normal form of the bifurcation point
-	specialpoint = getNormalForm1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ)
+	specialpoint = getNormalForm1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tolFold = tolFold)
 
 	# compute predictor for a point on new branch
 	pred = predictor(specialpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
