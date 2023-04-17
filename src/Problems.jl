@@ -62,7 +62,7 @@ struct BifFunction{Tf, Tdf, Tdfad, Tj, Tjad, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ
 	d3Fc::Td3fc
 	"Whether the jacobian is auto-adjoint."
 	isSymmetric::Tsym
-	"used internally to compute derivatives (with finite differences) w.r.t the parameter `p`."
+	"used internally to compute derivatives (with finite differences), for example for normal form computation and codim 2 continuation."
 	δ::Tδ
 	"optionally sets whether the function is inplace or not"
 	inplace::Bool
@@ -172,6 +172,7 @@ $(TYPEDFIELDS)
 							issymmetric::Bool = false,
 							recordFromSolution = recordSolDefault,
 							plotSolution = plotDefault,
+							delta = 1e-8,
 							inplace = false)
 				J = isnothing(J) ? (x,p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
 				dF = isnothing(dF) ? (x,p,dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
@@ -190,7 +191,7 @@ $(TYPEDFIELDS)
 				end
 
 				d3F = isnothing(d3F) ? (x,p,dx1,dx2,dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.) : d3F
-				VF = BifFunction(F, dF, dFad, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, 1e-8, inplace)
+				VF = BifFunction(F, jvp, vjp, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
 				return $op(VF, u0, parms, lens, plotSolution, recordFromSolution)
 			end
 		end
