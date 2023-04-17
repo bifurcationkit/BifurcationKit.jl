@@ -191,7 +191,7 @@ $(TYPEDFIELDS)
 				end
 
 				d3F = isnothing(d3F) ? (x,p,dx1,dx2,dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.) : d3F
-				VF = BifFunction(F, jvp, vjp, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
+				VF = BifFunction(F, dF, dFad, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
 				return $op(VF, u0, parms, lens, plotSolution, recordFromSolution)
 			end
 		end
