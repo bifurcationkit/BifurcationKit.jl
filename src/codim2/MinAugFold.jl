@@ -153,7 +153,7 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; d
 	# kwargs is used by AbstractLinearSolver
 	out = foldMALinearSolver((Jfold.x).u,
 				 (Jfold.x).p,
-				 Jfold.fldpb,
+				 Jfold.prob,
 				 Jfold.params,
 				 du.u, du.p;
 				 debugArray = debugArray)
@@ -164,7 +164,7 @@ end
 @inline hasAdjoint(foldpb::FoldMAProblem) = hasAdjoint(foldpb.prob)
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
-jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, fldpb = foldpb.prob)
+jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
@@ -522,7 +522,7 @@ end
 
 function (eig::FoldEigsolver)(Jma, nev; kwargs...)
 	n = min(nev, length(getVec(Jma.x)))
-	J = jacobian(Jma.fldpb.prob_vf, getVec(Jma.x), set(Jma.params, getLens(Jma.fldpb), getP(Jma.x)))
+	J = jacobian(Jma.prob.prob_vf, getVec(Jma.x), set(Jma.params, getLens(Jma.prob), getP(Jma.x)))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end

@@ -134,7 +134,7 @@ cbDefault(state; k...) = true
 
 """
     cb = cbMaxNorm(maxres)
-Create a callback used to reject residals larger than `cb.maxres` in the Newton iterations. See docs for [`newton`](@ref).
+Create a callback used to reject residuals larger than `cb.maxres` in the Newton iterations. See docs for [`newton`](@ref).
 """
 struct cbMaxNorm{T}
 	maxres::T

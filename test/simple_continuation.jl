@@ -61,6 +61,13 @@ BK.bifurcation_points(br0)
 
 branch = Branch(br0, rand(2));
 branch[end]
+###### start at pMin and see if it continues the solution
+for alg in (Natural(), PALC(), PALC(tangent = Bordered()), Multiple(copy(x0), 0.01,13), PALC(tangent=Polynomial(Bordered(), 2, 6, copy(x0))), MoorePenrose())
+	br0 = continuation(reMake(prob, params = opts.pMin), alg, opts)
+	@test length(br0) > 10
+	br0 = continuation(reMake(prob, params = opts.pMax), Natural(), ContinuationPar(opts, ds = -0.01))
+	@test length(br0) > 10
+end
 
 # test with callbacks
 br0 = continuation(prob, PALC(), (@set opts.maxSteps = 3), callbackN = (state; kwargs...)->(true))

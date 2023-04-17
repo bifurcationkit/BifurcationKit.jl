@@ -98,7 +98,8 @@ function updatebranch!(dcIter::DefContIterable,
 					callback = it.callbackN,
 					iterationC = step,
 					z0 = state.z)
-	if converged(sol1)# && it.normC(residual(pbnew, sol1.u, getParams(pbnew))) < it.contParams.newtonOptions.tol
+
+	if converged(sol1)
 		# record previous parameter (cheap) and update current solution
 		copyto!(state.z.u, sol1.u); state.z.p = current_param
 		state.z_old.p = current_param

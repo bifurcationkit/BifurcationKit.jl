@@ -223,6 +223,11 @@ Function is used to initialize the composite type `ContResult` according to the 
 		prob = prob)
 end
 
+"""
+$(SIGNATURES)
+
+Return the list of bifurcation points on a branch. It essentially filters the field `specialpoint`.
+"""
 function bifurcation_points(br::AbstractBranchResult)
 	[sp for sp in br.specialpoint if is_bifurcation(sp)]
 end
