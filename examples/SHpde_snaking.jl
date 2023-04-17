@@ -49,7 +49,7 @@ function cb(state; kwargs...)
 	fromNewton = get(kwargs, :fromNewton, false)
 	if ~fromNewton
 		# if the residual is too large or if the parameter jump
-		# is too big, abord continuation step
+		# is too big, abort continuation step
 		return norm(_x.u - state.x) < 20.5 && abs(_x.p - state.p) < 0.05
 	end
 	true

@@ -291,7 +291,7 @@ Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
 pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
-# test of the version with inhomogenous time discretisation
+# test of the version with inhomogeneous time discretisation
 M = 10
 prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
 pbsp = PeriodicOrbitTrapProblem(

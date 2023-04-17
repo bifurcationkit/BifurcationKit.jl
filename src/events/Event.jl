@@ -120,7 +120,7 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
 	"whether the event requires to compute eigen elements"
 	computeEigenElements::Bool
 
-	"Labels used to display information. For example `labels[1]` is used to qualify an event occuring in the first component. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+	"Labels used to display information. For example `labels[1]` is used to qualify an event occurring in the first component. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
 	labels::Tl
 end
 DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; DiscreteEvent(nb, fct, false, labels))
@@ -212,7 +212,7 @@ SetOfEvents(events::Union{AbstractEvent, Nothing}...) = SetOfEvents(split_events
 
 """
     split_events(cs, ds, args...)
-Split comma seperated callbacks into sets of continous and discrete callbacks. Inspired by DiffEqBase.
+Split comma separated callbacks into sets of continuous and discrete callbacks. Inspired by DiffEqBase.
 """
 @inline split_events(cs, ds) = cs, ds
 @inline split_events(cs, ds, c::Nothing, args...) = split_events(cs, ds, args...)

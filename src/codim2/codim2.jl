@@ -41,9 +41,9 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			linbdsolver::Sbd
 			"linear bordered solver for the jacobian adjoint"
 			linbdsolverAdjoint::Sbda
-			"wether to use the hessian of prob_vf"
+			"whether to use the hessian of prob_vf"
 			usehessian::Bool
-			"wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
+			"whether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
 			massmatrix::Tmass
 		end
 
@@ -124,7 +124,7 @@ This function turns an initial guess for a Fold/Hopf point into a solution to th
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "startWithEigen"
-    It is recommanded that you use the option `startWithEigen=true`
+    It is recommended that you use the option `startWithEigen=true`
 """
 function newton(br::AbstractBranchResult,
 				ind_bif::Int64; normN = norm,

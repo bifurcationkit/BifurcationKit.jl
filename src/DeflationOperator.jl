@@ -11,7 +11,7 @@ end
 """
 $(TYPEDEF)
 
-Strcuture for defining a custom distance.
+Structure for defining a custom distance.
 
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
@@ -337,7 +337,7 @@ end
 """
 $(TYPEDEF)
 
-This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous coonverged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
+This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous converged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
 function newton(prob::AbstractBifurcationProblem,
 				x0::vectype,

@@ -331,7 +331,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob_vf)
 
-	# options for the Newton Solver inheritated from the ones the user provided
+	# options for the Newton Solver inherited from the ones the user provided
 	options_newton = options_cont.newtonOptions
 	threshBT = 100options_newton.tol
 

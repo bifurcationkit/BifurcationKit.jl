@@ -4,7 +4,7 @@ using Test
 using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
 ##################################################################
-# The goal of these tests is to test all combinaisons of options
+# The goal of these tests is to test all combinations of options
 ##################################################################
 
 norminf(x) = norm(x, Inf)

@@ -31,7 +31,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 	# type of scalars in iter
 	_T = eltype(iter)
 
-	# we test if the current state is an event, ie satifies the constraint
+	# we test if the current state is an event, ie satisfies the constraint
 	# up to a given tolerance. Very important to detect BT
 	if isOnEvent(event, _state.eventValue[1])
 		return :converged, getinterval(getp(_state), getpreviousp(_state))

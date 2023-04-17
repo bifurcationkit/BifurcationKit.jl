@@ -28,7 +28,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 - For `jacobian = :BorderedSparseInplace`, this is the same as for `:BorderedLU` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = :FullMatrixFree`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
 - For `jacobian = :BorderedMatrixFree`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
-- For `jacobian = :FullMatrixFreeAD`, the evalution map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential.
+- For `jacobian = :FullMatrixFreeAD`, the evaluation map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential.
 """
 
 # method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
@@ -68,7 +68,7 @@ Note that you can generate this guess from a function solution using `generateSo
 - `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
 - `pb(Val(:JacFullSparse), orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess` without the constraints. It is called `A_γ` in the docs.
-- `pb(Val(:JacFullSparseInplace), J, orbitguess, p)`. Same as `pb(Val(:JacFullSparse), orbitguess, p)` but overwrites `J` inplace. Note that the sparsity pattern must be the same independantly of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `pb(Val(:JacFullSparse), orbitguess, p)`.
+- `pb(Val(:JacFullSparseInplace), J, orbitguess, p)`. Same as `pb(Val(:JacFullSparse), orbitguess, p)` but overwrites `J` inplace. Note that the sparsity pattern must be the same independently of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `pb(Val(:JacFullSparse), orbitguess, p)`.
 - `pb(Val(:JacCyclicSparse), orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
 - `pb(Val(:BlockDiagSparse), orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
 
@@ -79,7 +79,7 @@ $DocStrjacobianPOTrap
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extractPeriodFDTrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
 @with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
-	# porblem which contains the vector field F(x, par)
+	# problem which contains the vector field F(x, par)
 	prob_vf::Tprob = nothing
 
 	# variables to define a Section for the phase constraint equation
@@ -925,7 +925,7 @@ This is the continuation routine for computing a periodic orbit using a function
 # Arguments
 - `prob::PeriodicOrbitTrapProblem` encodes the functional G
 - `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `alg` conntinuation algorithm
+- `alg` continuation algorithm
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linearAlgo` same as in [`continuation`](@ref)
 

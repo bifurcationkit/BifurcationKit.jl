@@ -3,7 +3,7 @@ using Test
 	using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
 	const BK = BifurcationKit
 ##################################################################
-# The goal of these tests is to test all combinaisons of options
+# The goal of these tests is to test all combinations of options
 ##################################################################
 
 norminf(x) = norm(x, Inf)
@@ -75,7 +75,7 @@ outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
 _J1 = poTrap(Val(:JacFullSparse), outpo_f.u, par_hopf)
 _Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f.u)
 
-# test of the jacobian againt automatic differentiation
+# test of the jacobian against automatic differentiation
 @test norm(_Jfd - Array(_J1), Inf) < 1e-7
 ####################################################################################################
 # test PeriodicUtils

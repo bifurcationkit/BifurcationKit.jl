@@ -94,7 +94,7 @@ All notable changes to this project will be documented in this file.
 ## [0.0.1] - 2021-01-24
 - ⛳️ add `bothside` kwargs to continuation to compute a branch on both sides of initial guess
 - update the Minimally augmented problem during the continuation. This is helpful otherwise the codim 2 continuation fails.
-- [WIP] detection of Bogdanov-takens and Fold-Hopf bifurcations
+- [WIP] detection of Bogdanov-Takens and Fold-Hopf bifurcations
 - remove field `foldpoint` from ContResult
 
 ## [0.0.1] - 2020-11-29

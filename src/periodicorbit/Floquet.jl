@@ -90,7 +90,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
 	return out
 end
 
-# Compute the monodromy matrix at `x` explicitely, not suitable for large systems
+# Compute the monodromy matrix at `x` explicitly, not suitable for large systems
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
 	sh = JacSH.pb
 	x = JacSH.x
@@ -120,7 +120,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 	return Mono
 end
 
-# Compute the monodromy matrix at `x` explicitely, not suitable for large systems
+# Compute the monodromy matrix at `x` explicitly, not suitable for large systems
 # it is based on a matrix expression of the Jacobian of the shooting functional. We thus
 # just extract the blocks needed to compute the monodromy
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
@@ -343,7 +343,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
 	return out_a
 end
 
-# Compute the monodromy matrix at `u0` explicitely, not suitable for large systems
+# Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
 function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
 
 	poPb = JacFW.pb

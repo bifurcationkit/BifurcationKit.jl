@@ -126,7 +126,7 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 	else
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
 		# we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
-		# !!! Carefull, this method makes the linear system singular
+		# !!! Careful, this method makes the linear system singular
 		x1, x2, cv, it = 𝐅.linsolver(J_at_xp, rhsu, dpF)
 		~cv && @debug "Linear solver for J did not converge."
 
@@ -311,7 +311,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 	@assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
 	@assert lens1 == getLens(prob)
 
-	# options for the Newton Solver inheritated from the ones the user provided
+	# options for the Newton Solver inherited from the ones the user provided
 	options_newton = options_cont.newtonOptions
 
 	𝐅 = FoldProblemMinimallyAugmented(
