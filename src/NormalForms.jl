@@ -362,7 +362,7 @@ function biorthogonalise(ζs, ζ★s, verbose)
 
 	# we switch to another algo if the above fails
 	if norm(G - LinearAlgebra.I, Inf) >= 1e-5
-		@warn "Gram matrix not equal to idendity. Switching to LU algorithm."
+		@warn "Gram matrix not equal to identity. Switching to LU algorithm."
 		println("G (det = $(det(G))) = "); display(G)
 		G = [ dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
 		_F = lu(G; check = true)
@@ -463,7 +463,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	# jacobian at bifurcation point
 	L = jacobian(prob_vf, x0, parbif)
 
-	# we invert L repeatdly, so we try to factorize it
+	# we invert L repeatedly, so we try to factorize it
 	Linv = L isa AbstractMatrix ? factorize(L) : L
 
 	# "zero" eigenvalues at bifurcation point

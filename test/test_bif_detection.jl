@@ -100,7 +100,7 @@ testBranch(br3)
 br4 = continuation((@set prob.params.λ = 0.95), alg, setproperties(optc; detectBifurcation = 3, pMax = 1.95, nInversion = 8, ds = 0.7, dsmax = 1.5, maxBisectionSteps = 1); verbosity = 0)
 testBranch(br4)
 ####################################################################################################
-# this example is to test failures in Newton annd how it affects the bifurcation points labels
+# this example is to test failures in Newton and how it affects the bifurcation points labels
 using ForwardDiff
 F = (x, p; k = 3) -> (@. p * x -  x^k/k)
 Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)

@@ -26,7 +26,7 @@ computeEigenElements(::BifEvent) = true
 @inline hasCustomLabels(::BifEvent) = true
 
 function detectBifurcationEVE(iter, state)
-	# Note that the computation of eigen-elements should have occured before events are called
+	# Note that the computation of eigen-elements should have occurred before events are called
 	# state should be thus up to date at this stage
 	@assert state.n_unstable[1] >=0 "Issue with `detectBifurcationEVE`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
 	# put the max because n_unstable is initialized at -1 at the beginning of the continuation

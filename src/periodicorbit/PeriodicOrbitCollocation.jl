@@ -20,7 +20,7 @@ $(TYPEDFIELDS)
 struct MeshCollocationCache{T}
 	"Coarse mesh size"
 	Ntst::Int
-	"Collocationn degree, usually called m"
+	"Collocation degree, usually called m"
 	degree::Int
 	"Lagrange matrix"
 	lagrange_vals::Matrix{T}

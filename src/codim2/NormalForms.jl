@@ -206,7 +206,7 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	H1100, = Ainv(b .* q1 .+ H2000 .- B(q0, q1))
 	H0200, = Ainv(2 .* H1100 .- B(q1, q1))
 
-	# first order drivatives
+	# first order derivatives
 	pBq(p, q) = 2 .* (applyJacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
 					  applyJacobian(VF, x0, parbif, p, true)) ./ ϵ
 	A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
@@ -225,7 +225,7 @@ function bogdanovTakensNormalForm(prob_ma, L,
 		J2_11 = Jpp(p10, lens1)
 		J2_22 = Jpp(p20, lens2)
 		J2_12 = Jp1p2(p10, p20)
-	else #finite  differences. We need to be carreful here because (1e-8)^2 is really small!!
+	else #finite  differences. We need to be careful here because (1e-8)^2 is really small!!
 		J2_11 = (F(x0, setp(lens1, p10 + ϵ2)) .- 2 .* F(x0, setp(lens1, p10)) .+
 				 F(x0, setp(lens1, p10 - ϵ2)) ) ./ ϵ2^2
 
@@ -865,7 +865,7 @@ function zeroHopfNormalForm(_prob,
 	if autodiff
 		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
 	else
-		# finite differencess
+		# finite differences
 		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
 	end
 
@@ -1016,7 +1016,7 @@ function hopfHopfNormalForm(_prob,
 	if autodiff
 		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
 	else
-		# finite differencess
+		# finite differences
 		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
 	end
 

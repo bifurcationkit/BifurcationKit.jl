@@ -252,7 +252,7 @@ deflationOp = DeflationOperator(2, 1.0, [sol0])
 optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
 
 # eigen-elements close to the second bifurcation point on the branch
-# of homogenous solutions
+# of homogeneous solutions
 vp, ve, _, _= eigls(JFmit(sol0, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:size(ve, 1)

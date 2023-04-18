@@ -22,7 +22,7 @@ end
 """
 Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
 """
-# this constructor takes into accound a parameter passed to the vector field
+# this constructor takes into account a parameter passed to the vector field
 function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
 	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing))
 end
@@ -58,14 +58,14 @@ function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
 end
 
 ######### methods for the flow
-# this function takes into accound a parameter passed to the vector field
+# this function takes into account a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
 function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem}
 	return _flow(x, p, tm, fl.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: EnsembleProblem}
-	# modify the function which asigns new initial conditions
+	# modify the function which assigns new initial conditions
 	# see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
 	_epb = setproperties(fl.prob, output_func = (sol, i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
@@ -116,7 +116,7 @@ function evolve(fl::FlowDE{T1,T2,Nothing,T4,T5,T6}, x::AbstractArray, p, dx, tm;
 end
 ######### Optional methods
 # this gives access to the full solution
-# this function takes into accound a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
+# this function takes into account a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem}
 	_prob = remake(fl.prob; u0 = x, tspan = (zero(tm), tm), p = p)
 	sol = solve(_prob, fl.alg; fl.kwargsDE..., kw...)

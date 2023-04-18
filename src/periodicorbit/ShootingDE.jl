@@ -12,7 +12,7 @@ getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
 ####################################################################################################
 ### 									STANDARD SHOOTING
 ####################################################################################################
-# this constructor takes into accound a parameter passed to the vector field
+# this constructor takes into account a parameter passed to the vector field
 # if M = 1, we disable parallel processing
 function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, par = prob.p, kwargs...)
 	_M = length(ds)

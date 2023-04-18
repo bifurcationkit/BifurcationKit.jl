@@ -27,7 +27,7 @@ mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, 
 	linbdsolverAdjoint::Sbda
 	"second parameter axis"
 	lens2::Tlens
-	"wether to use the hessian of prob_vf"
+	"whether to use the hessian of prob_vf"
 	usehessian::Bool
 end
 

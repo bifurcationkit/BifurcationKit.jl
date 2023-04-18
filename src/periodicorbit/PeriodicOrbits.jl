@@ -170,7 +170,7 @@ end
 $(SIGNATURES)
 
 This is the Newton-Krylov Solver for computing a periodic orbit using (Standard / Poincaré) Shooting method.
-Note that the linear solver has to be apropriately set up in `options`.
+Note that the linear solver has to be appropriately set up in `options`.
 
 # Arguments
 
@@ -502,7 +502,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 	pred = predictor(nf, δp, ampfactor)
 	orbitguess = pred.orbitguess
 	newp = pred.pnew  # new parameter value
-	pbnew = pred.prob # mofified problem
+	pbnew = pred.prob # modified problem
 
 	# # let us compute the kernel
 	# λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])

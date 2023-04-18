@@ -195,7 +195,7 @@ end
 """
 $(SIGNATURES)
 
-Function to detect continuation branches which loop on themselve.
+Function to detect continuation branches which loop on themselves.
 """
 function detectLoop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
 	verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detectLoop, rtol = $rtol\n")

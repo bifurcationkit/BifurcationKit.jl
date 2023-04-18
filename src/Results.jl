@@ -30,7 +30,7 @@ $(TYPEDFIELDS)
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
 ```
-which provides the value `param` of the parameter of the current point, its stability, information on the newton iterations, etc. The fields can be retrived using `propertynames(br.branch)`. This information is stored in `br.branch` which is a `StructArray`. You can thus extract the vector of parameters along the branch as
+which provides the value `param` of the parameter of the current point, its stability, information on the newton iterations, etc. The fields can be retrieved using `propertynames(br.branch)`. This information is stored in `br.branch` which is a `StructArray`. You can thus extract the vector of parameters along the branch as
 ```
 julia> br.param
 10-element Vector{Float64}:
