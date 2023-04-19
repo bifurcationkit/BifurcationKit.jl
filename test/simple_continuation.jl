@@ -142,11 +142,12 @@ opts9 = (@set opts.newtonOptions.verbose=false)
 	BK.empty!(Multiple(copy(x0), 0.01, 13))
 	# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
 ## same but with failed prediction
-opts9_1 = ContinuationPar(opts9, dsmax = 0.1, maxSteps = 5, ds = 0.1)
-	@set! opts9_1.newtonOptions.tol = 1e-12
+opts9_1 = ContinuationPar(opts9, dsmax = 0.2, maxSteps = 125, ds = 0.1)
+	@set! opts9_1.newtonOptions.tol = 1e-14
 	@set! opts9_1.newtonOptions.verbose = false
+	@set! opts9_1.newtonOptions.maxIter = 3
 	br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
-	@test length(br9_1) == 6
+	@test length(br9_1) == 126
 	BK.empty!(Multiple(copy(x0), 0.01, 13))
 
 

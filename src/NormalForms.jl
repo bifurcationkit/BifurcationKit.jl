@@ -396,6 +396,7 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
+- `bls = MatrixBLS()` specify Bordered linear solver. Used only for Bogdanov-Takens bifurcation.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
