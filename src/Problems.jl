@@ -89,7 +89,7 @@ plotDefault(x, p; kwargs...) = nothing
 
 
 # create specific problems where pretty much is available
-for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, :HopfMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW, :BTMAProblem)
+for op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW, :BTMAProblem)
 
 	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin

@@ -10,13 +10,13 @@ struct MyFlow <: BK.AbstractFlow end
 fl = MyFlow()
 x0 = 0
 p0 = 0
-BK.vf(fl,x0,p0)
-BK.evolve(fl, x0,p0,0)
-BK.evolve(fl, Val(:Full), x0,p0,0)
-BK.evolve(fl, Val(:SerialTimeSol), x0,p0,0)
-BK.evolve(fl, Val(:TimeSol), x0,p0,0)
-BK.evolve(fl, Val(:SerialdFlow), x0,p0,0,0)
 BK.evolve(fl, x0,p0,0,0)
+BK.vf(fl,x0, p0)
+BK.evolve(fl, x0, p0, 0)
+BK.evolve(fl, Val(:Full), x0, p0, 0)
+BK.evolve(fl, Val(:SerialTimeSol), x0, p0, 0)
+BK.evolve(fl, Val(:TimeSol), x0, p0, 0)
+BK.evolve(fl, Val(:SerialdFlow), x0, p0, 0, 0)
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)

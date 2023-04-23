@@ -576,7 +576,7 @@ function bogdanovTakensNormalForm(_prob,
 		(K2 = zero(Ty),),
 		:none
 	)
-	return bogdanovTakensNormalForm(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff)
+	return bogdanovTakensNormalForm(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls)
 end
 ####################################################################################################
 function bautinNormalForm(_prob,

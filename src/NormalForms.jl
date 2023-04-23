@@ -414,7 +414,8 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			Teigvec = getvectortype(br),
 			scaleζ = norm,
 			detailed = true,
-			autodiff = true)
+			autodiff = true,
+			bls = MatrixBLS())
 	bifpt = br.specialpoint[id_bif]
 
 	@assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
@@ -427,7 +428,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :cusp
 		return cuspNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :bt
-		return bogdanovTakensNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
+		return bogdanovTakensNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff, bls = bls)
 	elseif bifpt.type == :gh
 		return bautinNormalForm(prob, br, id_bif; kwargs_nf...)
 	elseif bifpt.type == :zh

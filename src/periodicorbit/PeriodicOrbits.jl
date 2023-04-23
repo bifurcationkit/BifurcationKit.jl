@@ -243,8 +243,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 						linearAlgo::AbstractBorderedLinearSolver;
 						δ = convert(eltype(orbitguess), 1e-8),
 						eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
-						kwargs...,
-					)
+						kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert ~isnothing(getLens(probPO)) "You need to provide a lens for your periodic orbit problem."
 	@assert jacobianPO in
@@ -366,6 +365,13 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 	Ty = typeof(ds)
 	pred = predictor(hopfpt, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 
+	# we compute a phase so that the constraint equation
+	# < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
+	ζr = real.(hopfpt.ζ)
+	ζi = imag.(hopfpt.ζ)
+	# this phase is for POTrap problem constraint to be satisfied
+	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
+
 	verbose && printstyled(color = :green, "#"^61*
 			"\n┌─ Start branching from Hopf bif. point to periodic orbits.",
 			"\n├─ Bifurcation type = ", hopfpt.type,
@@ -373,15 +379,9 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 			"\n├─── new param    p = ", pred.p, ", p - p0 = ", pred.p - br.specialpoint[ind_bif].param,
 			"\n├─── amplitude p.o. = ", pred.amp,
 			"\n├─── period       T = ", pred.period,
+			"\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
 			"\n├─ Method = \n", probPO, "\n")
 
-	# we compute a phase so that the constraint equation
-	# < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
-	ζr = real.(hopfpt.ζ)
-	ζi = imag.(hopfpt.ζ)
-	# this phase is for POTrap problem constraint to be satisfied
-	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
-	verbose && printstyled(color = :green, "├─── phase ϕ        = ", ϕ / pi, "⋅π\n")
 
 	M = getMeshSize(probPO)
 	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]

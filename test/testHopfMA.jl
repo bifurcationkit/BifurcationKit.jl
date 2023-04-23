@@ -166,10 +166,10 @@ outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
 br_hopf = continuation(br, ind_hopf, (@lens _.β),
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 
-br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., θ = 0.4, maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
-#################################################################################################### Continuation of Periodic Orbit
+br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+####################################################################################################
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 
@@ -232,7 +232,7 @@ pbwrap = BK.WrapPOTrap(poTrap,:dense,orbitguess_f, par_bru, nothing,nothing,noth
 floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, θ = 0.1, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
 	br_pok2 = continuation(
 		poTrap, orbitguess_f, PALC(), opts_po_cont; jacobianPO = :BorderedLU,
 		plot = false, verbosity = 0)

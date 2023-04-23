@@ -101,11 +101,11 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 	# we use transpose(J_at_xp) because J_at_xp is real
 	JAd_at_xp = hasAdjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
-	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
+	# we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
 	v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
 	~cv && @debug "Linear solver for (J-iω) did not converge."
 
-	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
+	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
 	w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, ω))
 	~cv && @debug "Linear solver for (J+iω)' did not converge."
 
