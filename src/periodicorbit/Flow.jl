@@ -8,8 +8,10 @@ function vf(::AbstractFlow, x, par; k...) end
 function evolve(::AbstractFlow, x, par, δt; k...) end
 
 # The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
-function evolve(::AbstractFlow, x, par, dx, δt; k...) end
+function jvp(::AbstractFlow, x, par, dx, δt; k...) end
 
+# The adjoint differential `vjpflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> vjpflow(x, p, dx, t)`. One important thing is that we require `vjpflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = vjpflow(x, p, dx, t))`, the last component being the value of the derivative of the flow.
+function vjp(::AbstractFlow, x, par, dx, δt; k...) end
 
 # [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
 function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
@@ -49,7 +51,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	fl = Flow(prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tse, Tprob, TprobMono, Tfs, Tcb} <: AbstractFlow
+@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tad, Tse, Tprob, TprobMono, Tfs, Tcb} <: AbstractFlow
 	"The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
 	F::TF = nothing
 
@@ -63,10 +65,13 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 	flowFull::Tff = nothing
 
 	"The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> dflow(x, p, dx, t)`. One important thing is that we require `dflow(x, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = dflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
-	dflow::Td = nothing
+	jvp::Td = nothing
+
+	"The adjoint differential `vjpflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> vjpflow(x, p, dx, t)`. One important thing is that we require `vjpflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = vjpflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
+	vjp::Tad = nothing
 
 	"[Optional] Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
-	dfSerial::Tse = nothing
+	jvpSerial::Tse = nothing
 
 	"[Internal] store the ODEProblem associated to the flow of the Cauchy problem"
 	prob::Tprob = nothing
@@ -82,14 +87,14 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 end
 
 # constructors
-Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, dflow = df, dfSerial = df)
+Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, jvp = df, jvpSerial = df)
 
 vf(fl::Flow, x, p) = fl.F(x, p)
 
 evolve(fl::Flow, x, p, t; k...)                        = fl.flow(x, p, t; k...)
-evolve(fl::Flow, x, p, dx, t; k...)                    = fl.dflow(x, p, dx, t; k...)
+jvp(fl::Flow, x, p, dx, t; k...)                    = fl.jvp(x, p, dx, t; k...)
 evolve(fl::Flow, ::Val{:Full}, x, p, t; k...)          = fl.flowFull(x, p, t; k...)
 
 # for Poincaré Shooting
 evolve(fl::Flow, ::Val{:SerialTimeSol}, x, p, t; k...)   = fl.flowSerial(x, p, t; k...)
-evolve(fl::Flow, ::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.dfSerial(x, p, dx, t; k...)
+evolve(fl::Flow, ::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.jvpSerial(x, p, dx, t; k...)

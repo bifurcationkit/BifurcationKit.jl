@@ -174,7 +174,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 end
 
 # jacobian of the shooting functional
-function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =convert(eltype(x), 1e-8))
+function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
 	# period of the cycle
 	# Sundials does not like @views :(
 	dT = getPeriod(sh, dx)
