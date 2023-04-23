@@ -125,7 +125,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 		vr = real(v); vi = imag(v)
 		u1r = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω).jacpb' * cw
 		u1i = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω).jacpb' * cw
-		u2 = JNS★.jacpb * cw
+		u2 = apply(JNS★, cw)
 		σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
 		σxv2i = @. -(u1i - u2) / ϵ2
 		σx = @. σxv2r + Complex{T}(0, 1) * σxv2i
@@ -220,7 +220,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
 			usehessian = usehessian)
 
-	@assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
+	@assert jacobian_ma in (:autodiff, :minaug)
 
 	# Jacobian for the NS problem
 	if jacobian_ma == :autodiff
@@ -252,12 +252,18 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 
 		#############
 		ns0 = NeimarkSacker(copy(x), p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
-		if pbwrap.prob isa ShootingProblem
-			sh = pbwrap.prob
+		# test if we jumped to PD branch
+		pdjump = abs(ω - pi) > 10options_newton.tol
+		if ~pdjump && pbwrap.prob isa ShootingProblem
 			ns = neimarksackerNormalForm(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
 			prob_ns.l1 = ns.nf.nf.b
 			prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
 			#############
+		end
+		if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
+			ns = neimarksackerNormalFormPRM(pbwrap, ns0, NewtonPar(options_newton, verbose = true,); verbose = false)
+			prob_ns.l1 = ns.nf.nf.b
+			prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
 		end
 
 		return real(prob_ns.l1)

@@ -25,10 +25,13 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		return neimarksackerNormalForm(prob, br, id_bif; kwargs_nf...)
 	end
 
-	throw("Bifurcation point not yet implemented.")
+	throw("Normal form for $(bifpt.type) not yet implemented.")
 end
 
 ####################################################################################################
+"""
+[WIP] note that the computation of the normal form is not implemented yet.
+"""
 function branchNormalForm(pbwrap,
 							br,
 							ind_bif::Int;

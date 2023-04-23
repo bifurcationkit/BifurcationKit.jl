@@ -215,7 +215,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
 			usehessian = usehessian)
 
-	@assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
+	@assert jacobian_ma in (:autodiff, :minaug)
 
 	# Jacobian for the PD problem
 	if jacobian_ma == :autodiff
