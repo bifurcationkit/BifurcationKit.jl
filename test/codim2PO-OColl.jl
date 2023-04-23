@@ -72,7 +72,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 # pt = getNormalForm(brpo_pd, 1, prm = false)
 
 # codim 2 Fold
-opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 120, pMin = 0., pMax=1.2, nInversion = 4, plotEveryStep = 10)
+opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 12, pMin = 0., pMax=1.2, nInversion = 4)
 @set! opts_pocoll_fold.newtonOptions.tol = 1e-12
 fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
 		verbosity = 0, plot = false,
@@ -85,11 +85,11 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
 @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 20, pMin = -1., plotEveryStep = 10, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 3, pMin = -1., plotEveryStep = 10, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-9
 pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,
-		detectCodim2Bifurcation = 0,
+		detectCodim2Bifurcation = 1,
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
@@ -127,14 +127,14 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 	argspo...,
 	bothside = true,
 	)
-# getNormalForm(brpo_pd, 2, prm = true)
+getNormalForm(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 40, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,
-		detectCodim2Bifurcation = 0,
+		detectCodim2Bifurcation = 1,
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
@@ -146,45 +146,10 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		)
 
-# ns = getNormalForm(brpo_ns, 1)
-
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 0, maxSteps = 20, pMin = 0., plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 20, pMin = 0., plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
 ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
 		verbosity = 0, plot = false,
-		detectCodim2Bifurcation = 0,
-		startWithEigen = false,
-		usehessian = false,
-		jacobian_ma = :minaug,
-		# jacobian_ma = :autodiff,
-		# jacobian_ma = :finiteDifferences,
-		normN = norminf,
-		callbackN = BK.cbMaxNorm(10),
-		bothside = true,
-		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
-		)
-
-#####
-# find the PD case
-par_pop2 = @set par_pop.b0 = 0.45
-sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
-# plot(sol2, xlims= (8,10))
-
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
-
-prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
-brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
-	verbosity = 0, plot = false,
-	argspo...,
-	bothside = true,
-	)
-
-# codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 40, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = -1e-3)
-@set! opts_pocoll_pd.newtonOptions.tol = 1e-10
-pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
-		verbosity = 0, plot = false,
-		detectCodim2Bifurcation = 0,
+		detectCodim2Bifurcation = 1,
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,

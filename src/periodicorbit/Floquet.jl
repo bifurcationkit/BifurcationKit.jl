@@ -1,4 +1,4 @@
-# This function is very important for the computation of Floquet multipliers and checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behaviour which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be missed.
+# This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behaviour which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
 function checkFloquetOptions(eigls::AbstractEigenSolver)
 	if eigls isa DefaultEig
 		return @set eigls.which = abs
@@ -16,8 +16,6 @@ end
 # see https://discourse.julialang.org/t/uniform-scaling-inplace-addition-with-matrix/59928/5
 
 ####################################################################################################
-# Computation of Floquet Coefficients for periodic orbit problems
-
 """
 	floquet = FloquetQaD(eigsolver::AbstractEigenSolver)
 
@@ -41,10 +39,9 @@ geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenv
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
 	if fl.eigsolver isa AbstractDirectEigenSolver
-		# we build the monodromy matrix and compute the spectrum
 		monodromy = MonodromyQaD(J)
 	else
-		# we use a Matrix Free version
+		# Matrix Free version
 		monodromy = dx -> MonodromyQaD(J, dx)
 	end
 	vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
@@ -439,9 +436,9 @@ Computation of Floquet coefficients for the orthogonal collocation method. The m
 This is much faster than `FloquetCollGEV` but less precise. The best version uses a Periodic Schur decomposition instead of the product of `Ntst` matrices. This is provided in the package `PeriodicSchurBifurcationKit.jl`.
 
 ## References
-[1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. « NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS ». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
+[1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
 
-[2] Lust, Kurt. « Improved Numerical Floquet Multipliers ». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
+[2] Lust, Kurt. «Improved Numerical Floquet Multipliers». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
 """
 struct FloquetColl{E <: AbstractEigenSolver} <: AbstractFloquetSolver
 	eigsolver::E

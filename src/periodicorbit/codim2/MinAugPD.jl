@@ -320,7 +320,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 			#############
 		end
 		if pbwrap.prob isa PeriodicOrbitOCollProblem
-			pd = perioddoublingNormalForm(pbwrap, pd0; verbose = false)
+			pd = perioddoublingNormalFormPRM(pbwrap, pd0, NewtonPar(options_newton, verbose = false); verbose = false)
 			prob_pd.GPD = pd.nf.nf.b3
 		end
 

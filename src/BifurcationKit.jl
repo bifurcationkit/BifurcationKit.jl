@@ -82,6 +82,7 @@ module BifurcationKit
 	include("periodicorbit/BifurcationPoints.jl")
 	include("periodicorbit/PeriodicOrbitUtils.jl")
 
+	include("periodicorbit/PoincareRM.jl")
 	include("periodicorbit/NormalForms.jl")
 
 	include("periodicorbit/codim2/codim2.jl")
