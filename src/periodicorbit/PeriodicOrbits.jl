@@ -468,6 +468,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 # Optional arguments
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `detailed = false` fully compute the normal form
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `recordFromSolution = (u, p) -> u[end]`, record method used in the bifurcation diagram, by default this records the period of the periodic orbit.
 - `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
@@ -480,6 +481,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 			δp = 0.1, ampfactor = 1,
 			usedeflation = false,
 			linearAlgo = nothing,
+			detailed = false,
 			kwargs...) where Tprob
 
 	bifpt = br.specialpoint[ind_bif]

@@ -35,7 +35,7 @@ u0 = [.001, .001]
 
 prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
 
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 4)
+optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
 show(br)
 ####################################################################################################
@@ -43,9 +43,7 @@ prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 ####################################################################################################
 sol = solve(probMono, KenCarp4(autodiff=false), abstol=1e-9, reltol=1e-6)
-@info "Solved probMono"
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
-@info "Solved prob"
 # plot(sol[1,:], sol[2,:])
 
 # test generation of initial guess from ODESolution
@@ -53,7 +51,6 @@ generateCIProblem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
 generateCIProblem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
 generateCIProblem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
 generateCIProblem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
-@info "Generated prob"
 ####################################################################################################
 section(x, T) = x[1] #* x[end]
 section(x, T, dx, dT) = dx[1] #* x[end]

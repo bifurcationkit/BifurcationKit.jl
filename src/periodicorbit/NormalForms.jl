@@ -8,7 +8,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			scaleζ = norm,
 			prm = false,
 			δ = 1e-8,
-			detailed = true,
+			detailed = true, # to get detailed normal form
 			autodiff = true)
 	bifpt = br.specialpoint[id_bif]
 

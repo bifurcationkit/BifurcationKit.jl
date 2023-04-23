@@ -48,9 +48,13 @@ end
 ####################################################################################################
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
-function sectionHyp!(out, x, normals, centers)
+function sectionHyp!(out, x, normals, centers, radius)
 	for ii in eachindex(normals)
-		out[ii] = dot(normals[ii], x) - dot(normals[ii], centers[ii])
+		if norm(x-centers[ii]) < radius
+			out[ii] = dot(normals[ii], x) - dot(normals[ii], centers[ii])
+		else
+			out[ii] = 1.
+		end
 	end
 	out
 end
@@ -66,7 +70,7 @@ $(TYPEDFIELDS)
     SectionPS(normals::Vector{Tv}, centers::Vector{Tv})
 
 """
-struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
+struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
 	M::Int64				# number of hyperplanes
 	normals::Tn 			# normals to define hyperplanes
 	centers::Tc 			# representative point on each hyperplane
@@ -75,7 +79,9 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 	normals_bar::Tnb
 	centers_bar::Tcb
 
-	function SectionPS(normals, centers)
+	radius::Tr
+
+	function SectionPS(normals, centers; radius = Inf)
 		@assert length(normals) == length(centers)
 		M = length(normals)
 		indices = zeros(Int64, M)
@@ -85,13 +91,13 @@ struct SectionPS{Tn, Tc, Tnb, Tcb} <: AbstractSection
 		nbar = [R(normals[ii], indices[ii]) for ii in 1:M]
 		cbar = [R(centers[ii], indices[ii]) for ii in 1:M]
 
-		return new{typeof(normals), typeof(centers), typeof(nbar), typeof(cbar)}(M, normals, centers, indices, nbar, cbar)
+		return new{typeof(normals), typeof(centers), typeof(nbar), typeof(cbar), typeof(radius)}(M, normals, centers, indices, nbar, cbar, radius)
 	end
 
-	SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing}(M, nothing, nothing, Int64[], nothing, nothing)
+	SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Float64}(M, nothing, nothing, Int64[], nothing, nothing, 100.)
 end
 
-(hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers)
+(hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
 isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
 _selectIndex(v) = argmax(abs.(v))

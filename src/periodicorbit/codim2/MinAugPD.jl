@@ -116,7 +116,6 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
 	# # we solve Nᵗ[w, σ2] = [0, 1]
 	w, σ2, cv, itw = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)
 	~cv && @debug "Linear solver for Nᵗ did not converge."
-	@debug size(JPD★.jacpb) size(w)
 
 	δ = getDelta(POWrap)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -133,7 +132,7 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
 		# We invert the jacobian of the PD problem when the Hessian of x -> F(x, p) is not known analytically.
 		# apply Jacobian adjoint
 		u1 = applyJacobianPeriodDoubling(POWrap, x .+ ϵ2 .* vcat(v,0), par0, w, true)
-		u2 = apply(JPD★, w) #TODO C"EST CONNU COMME VALEUR CA!!!
+		u2 = apply(JPD★, w) #TODO this has been already computed !!!
 		σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
 
 		# a bit of a Hack
@@ -141,9 +140,8 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
 		σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / ϵ1
 		########## Resolution of the bordered linear system ########
 		# we invert Jpd
-		# @debug typeof(JPO_at_xp.jacpb) typeof(rhsp) size(JPO_at_xp.jacpb) size(dₚF) size(σₓ)
 		_Jpo = jacobian(POWrap, x, par0)
-		dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ,σₜ), σₚ, rhsu, rhsp)
+		dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ, σₜ), σₚ, rhsu, rhsp)
 		~flag && @debug "Linear solver for J did not converge."
 
 		# Jfd = finiteDifferences(z->𝐏𝐝(z,par0),vcat(x,p))

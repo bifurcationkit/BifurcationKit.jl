@@ -487,7 +487,7 @@ end
 getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
 
 # same function as above but for coping with mesh adaptation
-@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol), Tuple{Vector{Tp}, Vector{Tp}}}, p) where Tp
+@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}}}, p) where Tp
 	mesh = x.mesh
 	u = x.sol
 	T = getPeriod(prob, u, p)

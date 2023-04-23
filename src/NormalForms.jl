@@ -402,6 +402,12 @@ Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities a
 
 # Available method
 
+You can directly call 
+
+    getNormalForm(br, ind_bif) ; kwargs...)	
+
+which is a shortcut for `getNormalForm(getProb(br), br, ind_bif) ; kwargs...)`.
+
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating periodic orbit.v
 
 """

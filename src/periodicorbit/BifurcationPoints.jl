@@ -105,9 +105,10 @@ function Base.show(io::IO, bp::NeimarkSackerPO)
 	println(io, "├─ Period at the periodic orbit ≈ ", abs(bp.T))
 	println(io, "├─ Second frequency of the bifurcated torus ≈ ", abs(2pi/bp.ω))
 	println(io, "├─ Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+	println(io, "└─ Periodic orbit problem: \n")
+	show(io, bp.prob)
 	if ~isnothing(bp.nf.nf)
-		println(io,"- a = ", bp.nf.nf.a)
+		println(io,"\n- a = ", bp.nf.nf.a)
 		println(io,"- b = ", bp.nf.nf.b)
 	end
-	println(io, "\n└─ Periodic orbit problem: \n", bp.prob)
 end

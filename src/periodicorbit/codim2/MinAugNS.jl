@@ -27,15 +27,6 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::T, ω::T, para
 	b = 𝐍𝐒.b
 	# update parameter
 	par = set(params, getLens(𝐍𝐒), p)
-	# ┌      ┐┌  ┐   ┌ ┐
-	# │ J  a ││v │ = │0│
-	# │ b  0 ││σ1│   │1│
-	# └      ┘└  ┘   └ ┘
-	# In the notations of Govaerts 2000, a = w, b = v
-	# Thus, b should be a null vector of J
-	#       a should be a null vector of J'
-	# we solve Jv + a σ1 = 0 with <b, v> = 1
-	# the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
 	J = jacobianNeimarkSacker(𝐍𝐒.prob_vf, x, par, ω)
 	σ1 = nstest(J, a, b, T(0), 𝐍𝐒.zero, T(1); lsbd = 𝐍𝐒.linbdsolver)[2]
 	return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
@@ -135,7 +126,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 		rmul!(dJvdt, T(1/(2ϵ3)))
 		σt = -dot(w, dJvdt) 
 
-		_Jpo = jacobian(POWrap, x, par0).jacpb
+		_Jpo = jacobian(POWrap, x, par0)
 		x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
 
 		σxx1 = dot(vcat(σx,σt), x1)
@@ -159,7 +150,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 
 		# @debug "" norm(Jns-Jfd, Inf) dp dω
 
-		# Jns .= Jfd 
+		# Jns .= Jfd
 		
 		return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 	else

@@ -1,4 +1,4 @@
-using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback
+using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback, ContinuousCallback
 const ODEType = Union{ODEProblem, DAEProblem}
 
 function getVectorField(prob::Union{ODEProblem, DAEProblem})
@@ -146,7 +146,7 @@ function PoincareShootingProblem(prob::ODEProblem,
 								kwargs...)
 
 	psh = PoincareShootingProblem(prob, alg,
-					SectionPS(normals, centers); # radius = radius);
+					SectionPS(normals, centers; radius = radius);
 					δ = δ, interp_points = interp_points, parallel = parallel, par = par, kwargs...)
 	# set jacobian for the flow too
 	_sync_jacobian!(psh)
@@ -194,7 +194,7 @@ function PoincareShootingProblem(prob1::ODEProblem, alg1,
 								radius = Inf,
 								kwargs...)
 	psh = PoincareShootingProblem(prob1, alg2, prob2, alg2,
-					SectionPS(normals, centers); #radius = radius);
+					SectionPS(normals, centers; radius = radius);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
 	# set jacobian for the flow too
 	_sync_jacobian!(psh)

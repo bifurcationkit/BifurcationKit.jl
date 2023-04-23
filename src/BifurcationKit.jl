@@ -84,6 +84,9 @@ module BifurcationKit
 
 	include("periodicorbit/NormalForms.jl")
 
+	include("periodicorbit/codim2/MinAugPD.jl")
+	include("periodicorbit/codim2/MinAugNS.jl")
+
 	# wave problem
 	include("wave/WaveProblem.jl")
 	include("wave/EigSolver.jl")
@@ -208,7 +211,7 @@ module BifurcationKit
 	export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
 	# normal form
-	export getNormalForm, predictor
+	export getNormalForm, hopfNormalForm, predictor
 
 	# automatic bifurcation diagram
 	export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
