@@ -826,16 +826,15 @@ function predictor(hp::Hopf, ds::T; verbose = false, ampfactor = T(1) ) where T
 end
 ################################################################################
 function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDoubling, ls; verbose::Bool = false)
-
 	x0 = pt.x0
 	p = pt.p
 	lens = pt.lens
 	parbif = set(pt.params, lens, p)
-	ζ = pt.ζ
-	ζ★ = pt.ζ★
+	ζ = pt.ζ |> real
+	ζ★ = pt.ζ★ |> real
 
-	abs(dot(ζ, ζ) - 1)>1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
-	abs(dot(ζ★, ζ) - 1)>1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
+	abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
+	abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
 
 	# jacobian at the bifurcation point
 	L = jacobian(prob, x0, parbif)

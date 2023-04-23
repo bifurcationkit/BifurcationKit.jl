@@ -64,7 +64,7 @@ or
 	pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p), dF(x,p)\\cdot y)``.
 """
-@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Ts, Tsection, Tpar, Tlens} <: AbstractShootingProblem
+@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractShootingProblem
 	M::Int64 = 0							# number of sections
 	flow::Tf = Flow()						# should be a Flow
 	ds::Ts = diff(LinRange(0, 1, M + 1))	# difference of times for multiple shooting
@@ -73,7 +73,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
 	par::Tpar = nothing
 	lens::Tlens = nothing
 	updateSectionEveryStep::Int = 1
-	jacobian::Symbol = :autodiffDense
+	jacobian::Tjac = AutoDiffDense()
 end
 
 @inline isSimple(sh::ShootingProblem) = getMeshSize(sh) == 1
@@ -191,13 +191,13 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =c
 	if ~isParallel(sh)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
-			# call jacobian of the flow
 			tmp = evolve(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
+			# call jacobian of the flow, jacobian-vector product
 			outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	else
-		# call jacobian of the flow
 		solOde = evolve(sh.flow, xc, par, dxc, sh.ds .* T)
+		# call jacobian of the flow, jacobian-vector product
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]

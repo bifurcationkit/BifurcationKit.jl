@@ -283,7 +283,7 @@ br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifur
 	# for aBS from period doubling, we double the sections
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2probPO.M*n+2),
 	plotSolution = (x, p; kwargs...) -> begin
-		outt = BK.getPeriodicOrbit(p.prob, x, (@set par_br_hopf.C = p.p))
+		outt = BK.getPeriodicOrbit(p.prob, x, p.p)
 		heatmap!(outt[:,:]'; color = :viridis, subplot = 3)
 		plot!(br_po; legend=false, subplot=1)
 	end,

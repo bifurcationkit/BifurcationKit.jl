@@ -298,7 +298,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 							@error "Same solution found for identical parameter value!!"
 							_success = false
 						end
-						if _success
+						if _success && dcIter.alg.acceptSolution(sol1.u, current_param)
 							verbosity>=1 && printstyled(color=:green, "--> new solution for branch $idb \n")
 							push!(deflationOp.roots, sol1.u)
 

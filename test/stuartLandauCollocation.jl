@@ -182,7 +182,7 @@ optcontpo = setproperties(optconteq; detectBifurcation = 2, tolStability = 1e-7)
 @set! optcontpo.newtonOptions.verbose = false
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
-@set! prob_col2.jacobian = :autodiffDense
+@set! prob_col2.jacobian = BK.AutoDiffDense()
 sol_po = newton(prob_col2, _ci, optcontpo.newtonOptions)
 
 # test Solution
@@ -205,14 +205,14 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 ####################################################################################################
 # test  Hopf aBS
 br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = :autodiffDense, updateSectionEveryStep = 1);
+	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
 	δp = 0.1,
 	usedeflation = true,
 	eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
 	)
 
 br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = :autodiffDense, updateSectionEveryStep = 1);
+	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
 	δp = 0.1,
 	usedeflation = true,
 	eigsolver = BK.FloquetColl(),
@@ -226,7 +226,7 @@ end
 
 # test mesh adaptation
 br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = :autodiffDense, updateSectionEveryStep = 1, meshadapt = true);
+	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1, meshadapt = true);
 	δp = 0.1,
 	usedeflation = true,
 	eigsolver = BK.FloquetColl(),

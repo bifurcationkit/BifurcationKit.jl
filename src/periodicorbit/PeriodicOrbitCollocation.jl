@@ -175,7 +175,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 
 - `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
 """
-@with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, vectype, Tmass, Tmcache <: MeshCollocationCache, Tcache} <: AbstractPODiffProblem
+@with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, vectype, Tmass, Tmcache <: MeshCollocationCache, Tcache} <: AbstractPODiffProblem
 	# Function F(x, par)
 	prob_vf::Tprob = nothing
 
@@ -199,7 +199,7 @@ Note that you can generate this guess from a function using `generateSolution`.
 	updateSectionEveryStep::Int = 1
 
 	# symbol to control the way the jacobian of the functional is computed
-	jacobian::Symbol = :autodiffDense
+	jacobian::Tjac = AutoDiffDense()
 
 	# collocation mesh cache
 	mesh_cache::Tmcache = nothing
@@ -542,9 +542,9 @@ function _newtonPOColl(probPO::PeriodicOrbitOCollProblem,
 			kwargs...) where {T, Tf, vectype}
 	jacobianPO = probPO.jacobian
 	@assert jacobianPO in
-			(:autodiffDense, ) "This jacobian $jacobianPO is not defined. Please chose another one."
+			(AutoDiffDense(), ) "This jacobian $jacobianPO is not defined. Please chose another one."
 
-	if jacobianPO == :autodiffDense
+	if jacobianPO isa AutoDiffDense
 		jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
 	end
 
@@ -613,7 +613,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
 					kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert jacobianPO in
-			(:autodiffDense,) "This jacobian is not defined. Please chose another one."
+			(AutoDiffDense(),) "This jacobian is not defined. Please chose another one."
 
 	_J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
  	jacPO = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)

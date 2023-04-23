@@ -135,7 +135,7 @@ probSh = ShootingProblem(
 	prob_sp, ETDRK2(krylov = true),
 	[sol[:, end]], abstol = 1e-10, reltol = 1e-8,
 	lens = (@lens _.r),
-	jacobian = :FiniteDifferences)
+	jacobian = BK.FiniteDifferencesMF())
 
 @assert BK.getParams(probSh) == @set par_cgl.r = 1.2
 
@@ -172,7 +172,9 @@ br_po = continuation(
 	br, 2,
 	# arguments for continuation
 	opts_po_cont,
-	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = :FiniteDifferences) ;
+	ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8,
+			jacobian = BK.FiniteDifferencesMF(),
+			) ;
 	verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
 	# callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
 	linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),

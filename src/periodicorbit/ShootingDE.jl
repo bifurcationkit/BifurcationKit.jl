@@ -12,6 +12,8 @@ getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
 ####################################################################################################
 ### 									STANDARD SHOOTING
 ####################################################################################################
+_sync_jacobian!(sh) = @set! sh.flow.jacobian = sh.jacobian
+
 # this constructor takes into account a parameter passed to the vector field
 # if M = 1, we disable parallel processing
 function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, par = prob.p, kwargs...)
@@ -20,15 +22,18 @@ function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, par 
 	_pb = parallel ? EnsembleProblem(prob) : prob
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(ShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
-
-	return ShootingProblem(;M = _M, flow = Flow(_pb, alg; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+	sh = ShootingProblem(;M = _M, flow = Flow(_pb, alg; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+	# set jacobian for the flow too
+	_sync_jacobian!(sh)
 end
 
 ShootingProblem(prob::ODEType, alg, M::Int, section; kwargs...) = ShootingProblem(prob, alg, diff(LinRange(0, 1, M + 1)), section; kwargs...)
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, par = prob.p, kwargs...)
 	F = getVectorField(prob)
-	ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
+	sh = ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
+	# set jacobian for the flow too
+	_sync_jacobian!(sh)
 end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
@@ -42,7 +47,9 @@ function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section
 	_pb2 = parallel ? EnsembleProblem(prob2) : prob2
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(ShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
-	ShootingProblem(;M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+	sh = ShootingProblem(;M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+	# set jacobian for the flow too
+	_sync_jacobian!(sh)
 end
 
 ShootingProblem(M::Int, prob1::ODEType, alg1, prob2::ODEType, alg2; kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, M, nothing; kwargs...)
@@ -52,7 +59,9 @@ ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; kwa
 function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; kwargs...)
 	F = getVectorField(prob1)
 	p = prob1.p # parameters
-	ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); kwargs...)
+	sh = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); kwargs...)
+	# set jacobian for the flow too
+	_sync_jacobian!(sh)
 end
 ####################################################################################################
 ### 									POINCARE SHOOTING
@@ -77,13 +86,15 @@ function PoincareShootingProblem(prob::ODEProblem,
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 
-	return PoincareShootingProblem(;
+	psh = PoincareShootingProblem(;
 				flow = Flow(_pb, alg; callback = cb, kwargsDE...),
 				kwargsSh...,
 				M = hyp.M,
 				section = hyp,
 				parallel = parallel,
 				par = par)
+	# set jacobian for the flow too
+	_sync_jacobian!(psh)
 end
 
 # this is the "simplest" constructor to use in automatic branching from Hopf
@@ -98,7 +109,7 @@ function PoincareShootingProblem(M::Int,
 							kwargs...)
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
-	return  PoincareShootingProblem(;
+	psh = PoincareShootingProblem(;
 				M = M,
 				flow = (par = par, prob = prob, alg = alg, kwargs = kwargsDE),
 				kwargsSh...,
@@ -120,7 +131,7 @@ function PoincareShootingProblem(M::Int,
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 
-	return PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargsDE), kwargsSh..., parallel = parallel, section = section, par = par)
+	psh = PoincareShootingProblem(M = M, flow = (par = prob1.p, prob1 = prob1, alg1 = alg1, prob2 = prob2, alg2 = alg2, kwargs = kwargsDE), kwargsSh..., parallel = parallel, section = section, par = par)
 end
 
 function PoincareShootingProblem(prob::ODEProblem,
@@ -134,9 +145,11 @@ function PoincareShootingProblem(prob::ODEProblem,
 								par = prob.p,
 								kwargs...)
 
-	return PoincareShootingProblem(prob, alg,
-					SectionPS(normals, centers);
+	psh = PoincareShootingProblem(prob, alg,
+					SectionPS(normals, centers); # radius = radius);
 					δ = δ, interp_points = interp_points, parallel = parallel, par = par, kwargs...)
+	# set jacobian for the flow too
+	_sync_jacobian!(psh)
 end
 
 function PoincareShootingProblem(prob1::ODEProblem, alg1,
@@ -161,13 +174,15 @@ function PoincareShootingProblem(prob1::ODEProblem, alg1,
 	kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShootingProblem)]
 	kwargsDE = setdiff(kwargs, kwargsSh)
 
-	return PoincareShootingProblem(;
+	psh = PoincareShootingProblem(;
 		M = hyp.M,
 		flow = Flow(_pb1, alg1, _pb2, alg2; callback = cb, kwargsDE...), kwargsSh...,
 		section = hyp,
 		δ = δ,
 		parallel = parallel,
 		par = par)
+	# set jacobian for the flow too
+	_sync_jacobian!(psh)
 end
 
 function PoincareShootingProblem(prob1::ODEProblem, alg1,
@@ -176,8 +191,11 @@ function PoincareShootingProblem(prob1::ODEProblem, alg1,
 								δ = 1e-8,
 								interp_points = 50,
 								parallel = false,
+								radius = Inf,
 								kwargs...)
-	return PoincareShootingProblem(prob1, alg2, prob2, alg2,
-					SectionPS(normals, centers);
+	psh = PoincareShootingProblem(prob1, alg2, prob2, alg2,
+					SectionPS(normals, centers); #radius = radius);
 					δ = δ, interp_points = interp_points, parallel = parallel, kwargs...)
+	# set jacobian for the flow too
+	_sync_jacobian!(psh)
 end

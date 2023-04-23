@@ -34,7 +34,7 @@ hopfpt = getNormalForm(br, 4)
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 8)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 110, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, tolStability = 1e-6, detectBifurcation = 2, plotEveryStep = 20, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, tolStability = 1e-6, detectBifurcation = 2, plotEveryStep = 20, saveSolEveryStep=1)
 
 # arguments for periodic orbits
 args_po = (	recordFromSolution = (x, p) -> begin
@@ -75,7 +75,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.0001, dsmin = 1e-4, pMax = 0.,
 
 br_pocoll = @time continuation(
 	br, 4, opts_po_cont,
-	PeriodicOrbitOCollProblem(30, 5, updateSectionEveryStep = 0, meshadapt = false);
+	PeriodicOrbitOCollProblem(30, 5, updateSectionEveryStep = 0, meshadapt = true);
 	verbosity = 2,	plot = true,
 	args_po...,
 	plotSolution = (x, p; k...) -> begin
@@ -98,14 +98,14 @@ using DifferentialEquations#, TaylorIntegration
 # this is the ODEProblem used with `DiffEqBase.solve`
 probsh = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-10, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(dsmax = 0.09, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 12, newtonOptions = NewtonPar(optn_po; tol = 1e-6, maxIter = 7), nev = 3, tolStability = 1e-8, detectBifurcation = 2, plotEveryStep = 10, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.09, ds= -0.0001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = NewtonPar(optn_po; tol = 1e-6, maxIter = 7), nev = 3, tolStability = 1e-8, detectBifurcation = 2, plotEveryStep = 10, saveSolEveryStep=1)
 
 br_posh = @time continuation(
 	br, 4,
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Standard Shooting
-	ShootingProblem(15, probsh, Rodas4P(), parallel = true, updateSectionEveryStep = 1, jacobian = :autodiffDense,);
+	ShootingProblem(15, probsh, Rodas4P(), parallel = true, updateSectionEveryStep = 1, jacobian = BK.AutoDiffDense(),);
 	# ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
 	ampfactor = 1.0, δp = 0.0005,
 	usedeflation = true,

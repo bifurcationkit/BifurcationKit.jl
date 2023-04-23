@@ -20,9 +20,9 @@ par_lur = (α = 1.0, β = 0.)
 z0 = zeros(3)
 prob = BK.BifurcationProblem(lur, z0, par_lur, (@lens _.β); recordFromSolution = recordFromSolution)
 
-opts_br = ContinuationPar(pMin = -0.4, pMax = 1.8, ds = -0.01, dsmax = 0.01, nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, plotEveryStep = 20, maxSteps = 1000, θ = 0.3)
+opts_br = ContinuationPar(pMin = -0.4, pMax = 1.8, ds = -0.01, dsmax = 0.01, nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, plotEveryStep = 20, maxSteps = 1000)
 	opts_br = @set opts_br.newtonOptions.verbose = false
-	br = continuation(prob, PALC(tangent = Bordered()), opts_br;
+	br = continuation(prob, PALC(tangent = Bordered(), θ = 0.3), opts_br;
 	bothside = true, normC = norminf)
 
 # plot(br)
@@ -99,16 +99,16 @@ end
 ####################################################################################################
 using OrdinaryDiffEq
 
-probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-10, reltol = 1e-7)
+probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-12, reltol = 1e-10)
 
-optn_po = NewtonPar(tol = 1e-7, maxIter = 25)
+optn_po = NewtonPar(tol = 1e-12, maxIter = 25)
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, maxSteps = 122, newtonOptions = (@set optn_po.tol = 1e-8), tolStability = 1e-5, detectBifurcation = 3, plotEveryStep = 10, nInversion = 6, nev = 3)
 
 br_po = continuation(
 	br, 2, opts_po_cont,
-	ShootingProblem(15, probsh, Rodas5P(); parallel = false, reltol = 1e-9, updateSectionEveryStep = 1, jacobian = :autodiffDense);
+	ShootingProblem(15, probsh, Rodas5P(); parallel = false, updateSectionEveryStep = 1, jacobian = BK.AutoDiffDense());
 	ampfactor = 1., δp = 0.0051,
 	# verbosity = 3,	plot = true,
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
@@ -156,7 +156,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcat
 opts_po_cont_ps = @set opts_po_cont.newtonOptions.tol = 1e-7
 @set opts_po_cont_ps.dsmax = 0.0025
 br_po = continuation(br, 2, opts_po_cont_ps,
-	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = false, reltol = 1e-6, updateSectionEveryStep = 1, jacobian = :autodiffDenseAnalytical);
+	PoincareShootingProblem(2, probsh, Rodas4P(); parallel = false, reltol = 1e-6, updateSectionEveryStep = 1, jacobian = BK.AutoDiffDenseAnalytical());
 	ampfactor = 1., δp = 0.0051, #verbosity = 3,plot=true,
 	callbackN = BK.cbMaxNorm(10),
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),

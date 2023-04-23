@@ -133,14 +133,19 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 
 ####################################################################################################
+# different jacobian types which parametrize the way jacobians of PO are computed
+struct AutoDiffDense <: AbstractJacobianMatrix end
+struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
+struct MatrixFree <: AbstractJacobianMatrix end
+####################################################################################################
 const DocStrjacobianPOSh = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `[:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences, :FiniteDifferencesDense]`. This is used to select a way of inverting the jacobian dG
-    - For `:MatrixFree`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
-    - For `:autodiffMF`, we use Automatic Differentiation (AD) to compute the (matrix-free) derivative of `x -> prob(x, p)` using a directional derivative. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
-    - For `:autodiffDense`. Same as for `:autodiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one.
-    - For `:FiniteDifferencesDense`, same as for `:autodiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
-    - For `:autodiffDenseAnalytical`. Same as for `:autodiffDense` but the jacobian is formed using a mix of AD and analytical formula.
-    - For `:FiniteDifferences`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+    - For `MatrixFree()`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
+    - For `AutoDiffMF()`, we use Automatic Differentiation (AD) to compute the (matrix-free) derivative of `x -> prob(x, p)` using a directional derivative. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
+    - For `AutodiffDense()`. Same as for `AutoDiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one.
+    - For `FiniteDifferences()`, same as for `AutoDiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
+    - For `AutoDiffDenseAnalytical()`. Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
+    - For `FiniteDifferencesMF()`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 """
 ##########################
 residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
@@ -149,16 +154,16 @@ jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
 	jacobianPO = prob.jacobian
-	if jacobianPO == :autodiffDenseAnalytical
+	if jacobianPO isa AutoDiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
 		jac = (x, p) -> prob(Val(:JacobianMatrixInplace), _J, x, p)
-	elseif jacobianPO == :autodiffDense
+	elseif jacobianPO isa AutoDiffDense
 		jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
-	elseif jacobianPO == :autodiffMF
+	elseif jacobianPO isa AutoDiffMF
 		jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
-	elseif jacobianPO == :FiniteDifferencesDense
+	elseif jacobianPO isa FiniteDifferences
 		jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = δ)
-	elseif jacobianPO == :FiniteDifferences
+	elseif jacobianPO isa FiniteDifferencesMF
 		jac = (x, p) -> dx -> (prob(x .+ δ .* dx, p) .- prob(x .- δ .* dx, p)) ./ (2δ)
 	else
 		jac = (x, p) -> (dx -> prob(x, p, dx))
@@ -246,8 +251,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 						kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert ~isnothing(getLens(probPO)) "You need to provide a lens for your periodic orbit problem."
-	@assert jacobianPO in
-			(:autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferencesDense, :FiniteDifferences) "This jacobian is not defined. Please chose another one."
+	@assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = eigsolver
@@ -260,16 +264,16 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
 	_plotsol = modifyPOPlot(probPO, kwargs)
 
-	if jacobianPO == :autodiffDenseAnalytical
+	if jacobianPO isa AutoDiffDenseAnalytical
 		_J = probPO(Val(:JacobianMatrix), orbitguess, getParams(probPO))
 		jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
-	elseif jacobianPO == :autodiffDense
+	elseif jacobianPO isa AutoDiffDense
 		jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
-	elseif jacobianPO == :FiniteDifferencesDense
+	elseif jacobianPO isa FiniteDifferences
 		jac = (x, p) -> FloquetWrapper(probPO, finiteDifferences(z -> probPO(z, p), x), x, p)
-	elseif jacobianPO == :autodiffMF
+	elseif jacobianPO isa AutoDiffMF
 		jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
-	elseif jacobianPO == :FiniteDifferences
+	elseif jacobianPO isa FiniteDifferencesMF
 		jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x .- δ .* dx, p)) ./ (2δ), x, p)
 	else
 		jac = (x, p) -> FloquetWrapper(probPO, x, p)

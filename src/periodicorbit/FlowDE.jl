@@ -1,6 +1,6 @@
 using SciMLBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 
-struct FlowDE{Tprob, Talg, TprobMono, TalgMono, Tkwde, Tcb} <: AbstractFlow
+struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp} <: AbstractFlow
 	"Store the ODEProblem associated to the flow of the Cauchy problem"
 	prob::Tprob
 
@@ -16,6 +16,12 @@ struct FlowDE{Tprob, Talg, TprobMono, TalgMono, Tkwde, Tcb} <: AbstractFlow
 
 	"Store possible callback"
 	callback::Tcb
+
+	"How the monodromy is computed"
+	jacobian::Tjac
+
+	"adjoint of the monodromy (Matrix-Free)."
+	vjp::Tvjp
 end
 ####################################################################################################
 # constructors
@@ -24,11 +30,11 @@ Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The 
 """
 # this constructor takes into account a parameter passed to the vector field
 function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
-	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing))
+	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing), nothing, nothing)
 end
 
 function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing))
+	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), jacobian, nothing)
 end
 ####################################################################################################
 _getVectorField(prob::ODEProblem, o, x, p) = prob.f(o, x, p, prob.tspan[1])
@@ -95,6 +101,10 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <
 	dflowMonoSerial(x, p, dx, tm, fl.probMono, fl.algMono; fl.kwargsDE..., kw...)
 end
 
+function vjp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: ODEProblem}
+	fl.vjp(x, p, dx, tm)
+end
+
 # differential of the flow when a problem is passed for the Monodromy
 function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: EnsembleProblem}
 	N = size(x, 1)
@@ -105,7 +115,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function evolve(fl::FlowDE{T1,T2,Nothing,T4,T5,T6}, x::AbstractArray, p, dx, tm;  δ = convert(eltype(x),1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},T2, T4,T5,T6}
+function jvp(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, x::AbstractArray, p, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},T2,T4,T5,T6,Tjac}
 	if T1 <: ODEProblem
 		return dflow_fdSerial(x, p, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 	else
@@ -136,7 +146,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, p, tm; 
 	_flow(x, p, tm, fl.prob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem,T2,T3}
+function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem,T2,Tjac,T3}
 	if T3 === Nothing
 		return dflow_fdSerial(x, par, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 	else
@@ -148,6 +158,6 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, 
 	dflowMonoSerial(x, p, dx, tm, fl.probMono.prob, fl.algMono; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6}
+function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
 	dflow_fdSerial(x, par, dx, tm, fl.prob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end

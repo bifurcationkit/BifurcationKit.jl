@@ -9,6 +9,7 @@ module BifurcationKit
 	using ForwardDiff
 
 	include("Problems.jl")
+	include("jacobianTypes.jl")
 
 	# we put this here to be used in LinearBorderSolver and Continuation
 	abstract type AbstractContinuationAlgorithm end

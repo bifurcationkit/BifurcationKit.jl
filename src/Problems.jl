@@ -7,16 +7,6 @@ abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 getVectorType(::AbstractBifurcationProblem) = Nothing
 isInplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
-"""
-Singleton type to trigger the computation of the jacobian using ForwardDiff.jl. It can be used for example in newton or in deflated newton.
-"""
-struct AutoDiff end
-
-"""
-Singleton type to trigger the computation of the jacobian using finite differences. It can be used for example in newton or in deflated newton.
-"""
-struct FiniteDifferences end
-
 # function to save the full solution on the branch. It is useful to define This
 # in order to allow for redefinition. Indeed, some problem are mutable (adaptive
 # mesh for periodic orbit) and this approach seems efficient
@@ -232,6 +222,16 @@ for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
 end
 
 function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transposeJac = false)
+function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
+	print(io, prefix * "┌─ Bifurcation Problem with uType ")
+	printstyled(io, getVectorType(prob), color=:cyan, bold = true)
+	print(io, prefix * "\n├─ Inplace:  ")
+	printstyled(io, isInplace(prob), color=:cyan, bold = true)
+	print(io, "\n" * prefix * "├─ Symmetric: ")
+	printstyled(io, isSymmetric(prob), color=:cyan, bold = true)
+	print(io, "\n" * prefix * "└─ Parameter: ")
+	printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
+end
 	if isSymmetric(pb)
 		# return apply(pb.J(x, par), dx)
 		return dF(pb, x, par, dx)
@@ -247,17 +247,6 @@ function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transposeJac 
 			end
 		end
 	end
-end
-
-function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
-	print(io, prefix * "┌─ Bifurcation Problem with uType ")
-	printstyled(io, getVectorType(prob), color=:cyan, bold = true)
-	print(io, prefix * "\n├─ Inplace:  ")
-	printstyled(io, isInplace(prob), color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ Symmetric: ")
-	printstyled(io, isSymmetric(prob), color=:cyan, bold = true)
-	print(io, "\n" * prefix * "└─ Parameter: ")
-	printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
 end
 
 """

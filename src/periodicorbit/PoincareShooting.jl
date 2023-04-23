@@ -51,7 +51,7 @@ Note that you can generate this guess from a function solution using `generateSo
 !!! tip "Tip"
     You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw_noshow struct PoincareShootingProblem{Tf, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tjac <: AbstractJacobianType, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
 	M::Int64 = 0						# number of Poincaré sections
 	flow::Tf = Flow()					# should be a Flow
 	section::Tsection = SectionPS(M)	# Poincaré sections
@@ -60,7 +60,7 @@ Note that you can generate this guess from a function solution using `generateSo
 	par::Tpar = nothing
 	lens::Tlens = nothing
 	updateSectionEveryStep::Int = 1
-	jacobian::Symbol = :autodiffDenseAnalytical
+	jacobian::Tjac = AutoDiffDenseAnalytical()
 end
 
 @inline isParallel(psh::PoincareShootingProblem) = psh.parallel
@@ -446,6 +446,8 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 	for ii in 1:length(normals)
 		orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)
 	end
+	# set jacobian for the flow too
+	_sync_jacobian!(probPSh)
 
 	return probPSh, vec(orbitguess_bar)
 end
