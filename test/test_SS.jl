@@ -10,7 +10,7 @@ struct MyFlow <: BK.AbstractFlow end
 fl = MyFlow()
 x0 = 0
 p0 = 0
-BK.evolve(fl, x0,p0,0,0)
+BK.jvp(fl, x0,p0,0,0)
 BK.vf(fl,x0, p0)
 BK.evolve(fl, x0, p0, 0)
 BK.evolve(fl, Val(:Full), x0, p0, 0)
@@ -144,7 +144,7 @@ section(x, T) = dot(x[1:2], [1, 0])
 # section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
 par = nothing
 
-fl = BK.Flow(F = vf, flow = Π, flowSerial = Π2, dfSerial = dflow)
+fl = BK.Flow(F = vf, flow = Π, flowSerial = Π2, jvpSerial = dflow)
 sectionps = SectionPS(normals, centers)
 probPSh = PoincareShootingProblem(flow = fl, M = M, section = sectionps)
 

@@ -223,7 +223,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
 			# call jacobian of the flow
-			tmp = evolve(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
+			tmp = jvp(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
 			out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
 		end
 	else
