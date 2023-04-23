@@ -67,7 +67,7 @@ using Test
 		include("codim2PO-shooting.jl")
 	end
 
-	@testset "codim 2 PO Shooting" begin
+	@testset "codim 2 PO Collocation" begin
 		include("codim2PO-OColl.jl")
 	end
 

@@ -26,7 +26,7 @@ prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution 
 
 opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
 ################################################################################
-using DifferentialEquations
+using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
 sol = solve(prob_de, alg)
@@ -49,13 +49,13 @@ argspo = (recordFromSolution = (x, p) -> begin
 ######    Shooting ########
 probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
 
-solpo = newton(probsh, cish, NewtonPar(verbose = true))
+solpo = newton(probsh, cish, NewtonPar(verbose = false))
 @test BK.converged(solpo)
 
 _sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3)
+opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, tolStability = 1e-3)
 @set! opts_po_cont.newtonOptions.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
 	verbosity = 0, plot = false,

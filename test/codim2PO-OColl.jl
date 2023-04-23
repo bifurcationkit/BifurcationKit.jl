@@ -28,7 +28,7 @@ opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInv
 @set! opts_br.newtonOptions.verbose = false
 
 ################################################################################
-using DifferentialEquations
+using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
 # alg = Vern9()
