@@ -31,18 +31,17 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J - iω
 	#       a should be a null vector of J'+ iω
-	# we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = n
-	n = T(1)
+	# we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
 	# note that the shift argument only affect J in this call:
-	_, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))
+	_, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
 	~cv && @debug "Linear solver for (J-iω) did not converge."
 
-	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
+	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = 1
 	# we find sigma2 = conj(sigma1)
-	# w, σ2, _ = fp.linbdsolver(fp.Jadjoint(x, p) - Complex(0, ω) * I, b, a, 0., zeros(N), n)
+	# w, σ2, _ = fp.linbdsolver(fp.Jadjoint(x, p) - Complex(0, ω) * I, b, a, 0., zeros(N), T(1))
 
-	# the constraint is σ = <w, Jv> / n
-	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v)) / n
+	# the constraint is σ = <w, Jv>
+	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v))
 	# we should have σ = σ1
 
 	return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
@@ -99,17 +98,15 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 	J_at_xp = jacobian(𝐇.prob_vf, x, par0)
 
 	# we do the following to avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
+	# we use transpose(J_at_xp) because J_at_xp is real
 	JAd_at_xp = hasAdjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
-	# normalization
-	n = T(1)
-
 	# we solve (J-iω)v + a σ1 = 0 with <b, v> = n
-	v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))
+	v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
 	~cv && @debug "Linear solver for (J-iω) did not converge."
 
 	# we solve (J+iω)'w + b σ1 = 0 with <a, w> = n
-	w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
+	w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, ω))
 	~cv && @debug "Linear solver for (J+iω)' did not converge."
 
 	δ = getDelta(𝐇.prob_vf)
@@ -120,11 +117,11 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 			 residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / T(2ϵ1)
 	dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
 			 apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
-	σp = -dot(w, dJvdp) / n
+	σp = -dot(w, dJvdp)
 
 	# case of sigma_omega
-	# σω = dot(w, Complex{T}(0, 1) * v) / n
-	σω = Complex{T}(0, 1) * dot(w, v) / n
+	# σω = dot(w, Complex{T}(0, 1) * v)
+	σω = Complex{T}(0, 1) * dot(w, v)
 
 	# we solve J⋅x1 = duu and J⋅x2 = dpF
 	x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dpF)
@@ -149,9 +146,9 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 		σxx2 = dot(σx, x2)
 	else
 		d2Fv = d2Fc(𝐇.prob_vf, x, par0, v, x1)
-		σxx1 = -conj(dot(w, d2Fv) / n)
+		σxx1 = -conj(dot(w, d2Fv))
 		d2Fv = d2Fc(𝐇.prob_vf, x, par0, v, x2)
-		σxx2 = -conj(dot(w, d2Fv) / n)
+		σxx2 = -conj(dot(w, d2Fv))
 	end
 	# we need to be carefull here because the dot produces conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
 	dp, dω = [real(σp - σxx2) real(σω);
@@ -474,7 +471,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 	prob_h = reMake(prob_h, recordFromSolution = _printsol2)
 
 	# eigen solver
-	eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver))
+	eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver), prob_h)
 
 	# define event for detecting bifurcations. Coupled it with user passed events
 	# event for detecting codim 2 points
@@ -560,8 +557,9 @@ function continuationHopf(prob,
 end
 
 # structure to compute the eigenvalues along the Hopf branch
-struct HopfEig{S} <: AbstractCodim2EigenSolver
+struct HopfEig{S, P} <: AbstractCodim2EigenSolver
 	eigsolver::S
+	prob::P
 end
 
 function (eig::HopfEig)(Jma, nev; kwargs...)

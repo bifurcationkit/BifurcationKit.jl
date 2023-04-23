@@ -501,17 +501,17 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `contParams` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:
-- `plot = false` whether to plot the solution/branch/spectrum while computing
+- `plot = false` whether to plot the solution/branch/spectrum while computing the branch
 - `bothside = true` compute the branches on the two sides of `p0`, merge them and return it.
-- `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)``, `tau` is the tangent at `z`, `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
-- `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information then the previous one:
+- `finaliseSolution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)`` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau` is the tangent at `z`, `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
+- `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contParams.newtonOptions.verbose = false`, the following is valid (Otherwise the newton iterations are shown). Each case prints more information than the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events
-    - case 3: print information during bisection to locate bifurcation / events
+    - case 3: print information during bisection to locate bifurcations / events
 - `normC = norm` norm used in the Newton solves
 - `dotPALC = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
-- `filename` name of a file to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
+- `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). For example, it can be used to change preconditioners.
 - `kind::AbstractContinuationKind` [Internal] flag to describe continuation kind (equilibrium, codim 2, ...). Default = `EquilibriumCont()`
 

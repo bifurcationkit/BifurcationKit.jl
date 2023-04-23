@@ -30,9 +30,8 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
 	# In the notations of Govaerts 2000, a = w, b = v
 	# Thus, b should be a null vector of J
 	#       a should be a null vector of J'
-	# n = 1
-	# we solve Jv + a σ1 = 0 with <b, v> = n
-	# the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
+	# we solve Jv + a σ1 = 0 with <b, v> = 1
+	# the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
 	J = jacobian(𝐅.prob_vf, x, par)
 	σ = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, T(1))[2]
 	return residual(𝐅.prob_vf, x, par), σ
@@ -70,7 +69,7 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 	# where σx := ∂_xσ and σp := ∂_pσ
 	# We recall the expression of
 	#			σx = -< w, d2F(x,p)[v, x2]>
-	# where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
+	# where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = 1
 	########################## Extraction of function names ########################################
 	a = 𝐅.a
 	b = 𝐅.b
@@ -90,17 +89,15 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 		JAd_at_xp = hasAdjoint(𝐅) ? jad(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
 	end
 
-	# normalization
-	n = T(1)
-
-	# we solve Jv + a σ1 = 0 with <b, v> = n
-	# the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-	v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, T(0), 𝐅.zero, n)
+	# we solve Jv + a σ1 = 0 with <b, v> = 1
+	# the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
+	v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, T(0), 𝐅.zero, T(1))
 	~cv && @debug "Linear solver for J did not converge."
 
-	# we solve J'w + b σ2 = 0 with <a, w> = n
-	# the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-		w, σ2, _, itw = 𝐅.linbdsolver(JAd_at_xp, b, a, T(0), 𝐅.zero, n)
+	# we solve J'w + b σ2 = 0 with <a, w> = 1
+	# the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
+		w, σ2, cv, itw = 𝐅.linbdsolver(JAd_at_xp, b, a, T(0), 𝐅.zero, T(1))
+		~cv && @debug "Linear solver for J' did not converge."
 
 	δ = getDelta(𝐅.prob_vf)
 	ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -111,7 +108,7 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 	dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
 				  apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
 	rmul!(dJvdp, T(1/(2ϵ3)))
-	σp = -dot(w, dJvdp) / n
+	σp = -dot(w, dJvdp)
 
 	if hasHessian(𝐅) == false || 𝐅.usehessian == false
 		# We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
@@ -131,10 +128,10 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 		~cv && @debug "Linear solver for J did not converge."
 
 		d2Fv = d2F(𝐅.prob_vf, x, par0, x1, v)
-		σx1 = -dot(w, d2Fv ) / n
+		σx1 = -dot(w, d2Fv )
 
 		copyto!(d2Fv, d2F(𝐅.prob_vf, x, par0, x2, v))
-		σx2 = -dot(w, d2Fv ) / n
+		σx2 = -dot(w, d2Fv )
 
 		dsig = (rhsp - σx1) / (σp - σx2)
 
@@ -443,7 +440,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u), p; kw...))..., zip(lenses, (getP(u, 𝐅), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH,)
 
 	# eigen solver
-	eigsolver = FoldEigsolver(getsolver(opt_fold_cont.newtonOptions.eigsolver))
+	eigsolver = FoldEig(getsolver(opt_fold_cont.newtonOptions.eigsolver), prob_f)
 
 	prob_f = reMake(prob_f, recordFromSolution = _printsol2)
 
@@ -516,22 +513,24 @@ function continuationFold(prob,
 end
 
 # structure to compute eigen-elements along branch of Fold points
-struct FoldEigsolver{S} <: AbstractCodim2EigenSolver
+struct FoldEig{S, P} <: AbstractCodim2EigenSolver
 	eigsolver::S
+	prob::P
 end
+FoldEig(solver) = FoldEig(solver, nothing)
 
-function (eig::FoldEigsolver)(Jma, nev; kwargs...)
+function (eig::FoldEig)(Jma, nev; kwargs...)
 	n = min(nev, length(getVec(Jma.x)))
 	J = jacobian(Jma.prob.prob_vf, getVec(Jma.x), set(Jma.params, getLens(Jma.prob), getP(Jma.x)))
 	eigenelts = eig.eigsolver(J, n; kwargs...)
 	return eigenelts
 end
 
-@views function (eig::FoldEigsolver)(Jma::AbstractMatrix, nev; kwargs...)
+@views function (eig::FoldEig)(Jma::AbstractMatrix, nev; kwargs...)
 	eigenelts = eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
 	return eigenelts
 end
 
-geteigenvector(eig::FoldEigsolver, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
+geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)
 
-getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::FoldEigsolver) where T = getBifurcationType(it, state, status, interval, eig.eigsolver)
+getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::FoldEig) where T = getBifurcationType(it, state, status, interval, eig.eigsolver)

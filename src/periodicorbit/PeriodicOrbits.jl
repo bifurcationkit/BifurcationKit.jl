@@ -101,7 +101,7 @@ Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 """
 $(TYPEDEF)
 
-Define a structure to interface the Jacobian of the periodic orbits Problem with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver that it should not use the jacobian but the monodromy matrix instead.
+Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver that it should not use the jacobian but the monodromy matrix instead.
 
 $(TYPEDFIELDS)
 """
@@ -116,12 +116,12 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 # jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
 
-# this is for use with BorderingBLS with checkPrecision = true
+# this is to use with BorderingBLS with checkPrecision = true
 apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
 
 # specific linear solver to dispatch
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
-	solver::T # use solver as a field is good for BLS
+	solver::T # the use of field `solver` is good for BLS
 end
 # this constructor prevents from having FloquetWrapperLS(FloquetWrapperLS(ls))
 FloquetWrapperLS(ls::FloquetWrapperLS) = ls
@@ -129,7 +129,7 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 (ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.solver(J.jacpb, rhs; kwargs...)
 (ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.solver(J.jacpb, rhs1, rhs2)
 
-# this is for the use of MatrixBLS
+# this is to use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 
 ####################################################################################################
@@ -147,7 +147,6 @@ residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline isSymmetric(prob::WrapPOSh) = false
 
-# newton wrapper
 function buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
 	jacobianPO = prob.jacobian
 	if jacobianPO == :autodiffDenseAnalytical
@@ -169,7 +168,7 @@ end
 """
 $(SIGNATURES)
 
-This is the Newton-Krylov Solver for computing a periodic orbit using (Standard / Poincaré) Shooting method.
+This is the Newton-Krylov Solver for computing a periodic orbit using the (Standard / Poincaré) Shooting method.
 Note that the linear solver has to be appropriately set up in `options`.
 
 # Arguments
