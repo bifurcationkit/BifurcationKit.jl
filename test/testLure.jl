@@ -92,23 +92,23 @@ for _ind in (1,)
 	if length(br_po.specialpoint) >=1 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
 		pt = getNormalForm(br_po, _ind; verbose = true)
-		predictor(pt, 0.1, 1.)
+		# predictor(pt, 0.1, 1.)
 		show(pt)
 	end
 end
 ####################################################################################################
 using OrdinaryDiffEq
 
-probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-12, reltol = 1e-10)
+probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-10, reltol = 1e-8)
 
 optn_po = NewtonPar(tol = 1e-12, maxIter = 25)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, maxSteps = 122, newtonOptions = (@set optn_po.tol = 1e-8), tolStability = 1e-5, detectBifurcation = 3, plotEveryStep = 10, nInversion = 6, nev = 3)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, maxSteps = 122, newtonOptions = (@set optn_po.tol = 1e-12), tolStability = 1e-5, detectBifurcation = 3, plotEveryStep = 10, nInversion = 6, nev = 3)
 
 br_po = continuation(
 	br, 2, opts_po_cont,
-	ShootingProblem(15, probsh, Rodas5P(); parallel = false, updateSectionEveryStep = 1, jacobian = BK.AutoDiffDense());
+	ShootingProblem(15, probsh, Rodas5P(); parallel = false, updateSectionEveryStep = 1);
 	ampfactor = 1., δp = 0.0051,
 	# verbosity = 3,	plot = true,
 	recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),

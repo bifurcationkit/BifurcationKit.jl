@@ -216,7 +216,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 	ev₋₁p = Fp.vectors[:, ind₋₁]
 	####
 
-	@debug "" F.values Fp.values
+	@debug "" Fₘ.values F.values Fp.values
 
 	# @info "Essai de VP"
 	# dP * ζ₋₁ + ζ₋₁ |> display # not good, need projector E
