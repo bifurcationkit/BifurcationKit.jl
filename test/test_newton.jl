@@ -40,10 +40,10 @@ function test_newton_palc(x0, p0::T) where T
 	τ0 = BorderedArray(rand(T, N), convert(typeof(p0), 0.2))
 	zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
 	optn = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
-	optc = ContinuationPar{T, DefaultLS, DefaultEig}(newtonOptions = optn, ds = 0.001, θ = θ)
+	optc = ContinuationPar{T, DefaultLS, DefaultEig}(newtonOptions = optn, ds = 0.001,)
 
 	prob = BifurcationProblem(F, x0, p0, (@lens _); J = Jac)
-	iter = ContIterable(prob, PALC(), optc)
+	iter = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T}(θ = θ), optc)
 	state = iterate(iter)[1]
 	newtonPALC(iter, state)
 end

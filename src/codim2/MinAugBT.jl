@@ -281,7 +281,7 @@ The parameters / options are as usual except that you have to pass the branch `b
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
+    For ODE problems, it is more efficient to pass the option `jacobian_ma = :autodiff`
 """
 function newtonBT(prob::AbstractBifurcationProblem,
 				btpointguess, par,

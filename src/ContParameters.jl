@@ -6,7 +6,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 # Arguments
 - `dsmin, dsmax` are the minimum, maximum arclength allowed value. It controls the density of points in the computed branch of solutions.
 - `ds = 0.01` is the initial arclength.
-- `θ` is a parameter in the arclength constraint. It is very **important** to tune it. See the docs of [`continuation`](@ref). We quote them here "It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
 - `pMin, pMax` allowed parameter range for `p`
 - `maxSteps = 100` maximum number of continuation steps
 - `newtonOptions::NewtonPar`: options for the Newton algorithm
@@ -53,7 +52,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	@assert dsmax > 0
 
 	# parameters for continuation
-	θ::T	= 0.5 		# parameter in the dot product of the extended system
 	a::T	= 0.5  		# aggressiveness factor
 
 	# parameters bound
@@ -98,7 +96,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
 	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
 	detectLoop::Bool = false				# detect if the branch loops
-	@assert 0 <= θ <=1 "θ must belong to [0, 1]"
 	@assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
 	@assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
 end

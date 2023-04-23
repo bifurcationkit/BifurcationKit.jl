@@ -295,7 +295,7 @@ end
 
 # same as previous function but when two (initial guesses) points are provided
 function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
-	θ = it.contParams.θ
+	θ = it.alg isa PALC ? it.alg.θ : T(0.5)
 	ds = it.contParams.ds
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult

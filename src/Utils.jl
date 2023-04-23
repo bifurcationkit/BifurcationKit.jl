@@ -1,12 +1,12 @@
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
-norm2sqr(x) = dot(x,x)
+norm2sqr(x) = dot(x, x)
 ####################################################################################################
 # display eigenvals with color
 function displayEV(eigenvals, color = :black)
 	for r in eigenvals
-		printstyled(color=color, r, "\n")
+		printstyled(color = color, r, "\n")
 	end
 end
 ####################################################################################################

@@ -34,7 +34,8 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = n
 	n = T(1)
 	# note that the shift argument only affect J in this call:
-	σ1 = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))[2]
+	_, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))
+	~cv && @debug "Linear solver for (J-iω) did not converge."
 
 	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = n
 	# we find sigma2 = conj(sigma1)
@@ -69,7 +70,7 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 	 						duu, dup, duω;
 							debugArray = nothing) where T
 	################################################################################################
-	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is used
+	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
 	################################################################################################
 	# N = length(du) - 2
 	# The Jacobian J of the vector field is expressed at (x, p)

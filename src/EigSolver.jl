@@ -9,6 +9,7 @@ abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
 geteigenvector(eigsolve::ES, vecs, n::Union{Int, Array{Int64,1}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
+
 getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
 # Solvers for default \ operator (backslash)

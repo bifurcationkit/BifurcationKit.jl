@@ -57,7 +57,7 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 							rhsu, rhsp;
 							debugArray = nothing) where T
 	################################################################################################
-	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is used
+	# debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
 	################################################################################################
 	# Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the function above.
 	# The Jacobian Jfold of the vector field is expressed at (x, p)

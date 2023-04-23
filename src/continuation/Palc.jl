@@ -51,8 +51,10 @@ $(TYPEDFIELDS)
 @with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T} <: AbstractContinuationAlgorithm
 	"Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
 	tangent::Ttang = Secant()
+	"`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
+	θ::T						= 0.5 		# parameter in the dot product of the extended system
 	"[internal], "
-	bothside::Bool = false
+	_bothside::Bool = false
 	"Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
 	bls::Tbls = MatrixBLS()
 	# parameters for scaling arclength step size
@@ -63,9 +65,10 @@ $(TYPEDFIELDS)
 	"Unused for now, "
 	gMax::T						= 0.8
 	"Unused for now, "
-	θMin::T						= 1.0e-3
+	θMin::T						= 0.001
 
 	@assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
+	@assert 0 <= θ <=1 "θ must belong to [0, 1]"
 end
 getLinsolver(alg::PALC) = alg.bls
 # important for bisection algorithm, switch on / off internal adaptive behavior
