@@ -1,3 +1,13 @@
+function d2PO(f, x, dx1, dx2)
+   return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0.), 0.)
+end
+
+struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver
+	solver::T # use solver as a field is good for BLS
+end
+(ls::FloquetWrapperBLS)(J, args...; k...) = ls.solver(J, args...; k...)
+(ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(J.jacpb, args...; k...)
+Base.transpose(J::FloquetWrapper) = transpose(J.jacpb)
 
 for op in (:NeimarkSackerProblemMinimallyAugmented,
 			:PeriodDoublingProblemMinimallyAugmented)
@@ -66,4 +76,22 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
 						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
 		end
 	end
+end
+
+function correctBifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont}})
+	if contres.prob.prob isa FoldProblemMinimallyAugmented
+		conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd)
+	elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
+		conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2,)
+	elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
+		conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS,)
+	else
+		throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
+	end
+	for (ind, bp) in pairs(contres.specialpoint)
+		if bp.type in keys(conversion)
+			@set! contres.specialpoint[ind].type = conversion[bp.type]
+		end
+	end
+	return contres
 end

@@ -10,10 +10,25 @@ function NSPoint(br::AbstractBranchResult, index::Int)
 	ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
 	return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
 end
+
+function applyJacobianNeimarkSacker(pb, x, par, ω, dx, _transpose = false)
+	if _transpose == false
+		@assert 1==0
+		return jacobianNeimarkSackerMatrixFree(pb, x, par, ω, dx)
+	else
+		# if matrix-free:
+		if hasAdjoint(pb)
+			return jacobianAdjointNeimarkSackerMatrixFree(pb, x, par, ω, dx)
+		else
+			return apply(adjoint(jacobianNeimarkSacker(pb, x, par, ω)), dx)
+		end
+	end
+end
 ####################################################################################################
 @inline getVec(x, ::NeimarkSackerProblemMinimallyAugmented) = extractVecBLS(x, 2)
 @inline getP(x, ::NeimarkSackerProblemMinimallyAugmented) = extractParBLS(x, 2)
 
+# test function for NS bifurcation
 nstest(JacNS, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
 
 # this function encodes the functional
@@ -114,8 +129,10 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 	if hasHessian(𝐍𝐒) == false || 𝐍𝐒.usehessian == false
 		cw = conj(w)
 		vr = real(v); vi = imag(v)
-		u1r = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω).jacpb' * cw
-		u1i = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω).jacpb' * cw
+		# u1r = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω).jacpb' * cw
+		# u1i = jacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω).jacpb' * cw
+		u1r = applyJacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω, cw, true)
+		u1i = applyJacobianNeimarkSacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω, cw, true)
 		u2 = apply(JNS★, cw)
 		σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
 		σxv2i = @. -(u1i - u2) / ϵ2
@@ -244,7 +261,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		#############
 		ns0 = NeimarkSacker(copy(x), p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
 		# test if we jumped to PD branch
-		pdjump = abs(ω - pi) > 10options_newton.tol
+		pdjump = abs(ω - pi) < 100options_newton.tol
 		if ~pdjump && pbwrap.prob isa ShootingProblem
 			ns = neimarksackerNormalForm(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
 			prob_ns.l1 = ns.nf.nf.b

@@ -10,11 +10,15 @@ function PDPoint(br::AbstractBranchResult, index::Int)
 	return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 
-function applyJacobianPeriodDoubling(pb, x, par, dx, transpose_jac = false)
-	if transpose_jac == false
-		# return apply(pb.J(x, par), dx)
-		# dF(pb, x, par, dx)
-		return jvp(pb, x, par, dx)
+function applyJacobianPeriodDoubling(pb, x, par, dx, _transpose = false)
+	if _transpose == false
+		# THIS CASE IS NOT REALLY USED
+		# if hasJvp(pb)
+		# 	return jvp(pb, x, par, dx)
+		# else
+		# 	return apply(jacobianPeriodDoubling(pb, x, par), dx)
+		# end
+		@assert 1==0 "Please report to the website of BifurcationKit"
 	else
 		# if matrix-free:
 		if hasAdjoint(pb)

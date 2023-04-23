@@ -63,6 +63,14 @@ using Test
 		include("testLure.jl")
 	end
 
+	@testset "codim 2 PO Shooting" begin
+		include("codim2PO-shooting.jl")
+	end
+
+	@testset "codim 2 PO Shooting" begin
+		include("codim2PO-OColl.jl")
+	end
+
 	@testset "Wave" begin
 		include("test_wave.jl")
 	end
