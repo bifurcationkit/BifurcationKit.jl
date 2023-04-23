@@ -26,6 +26,7 @@ $(TYPEDFIELDS)
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
 - `br[k+1]` gives information about the k-th step. A typical run yields the following
+- `getNormalForm(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])

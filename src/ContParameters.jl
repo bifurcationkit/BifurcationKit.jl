@@ -67,7 +67,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	η::T = 150.								# parameter to estimate tangent at first point
 
 	saveToFile::Bool = false 				# save to file?
-	saveSolEveryStep::Int64 = 0				# at what steps do we save the current solution
+	saveSolEveryStep::Int64 = 1				# at what steps do we save the current solution
 
 	# parameters for eigenvalues
 	nev::Int64 = 3 							# number of eigenvalues

@@ -522,9 +522,9 @@ jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
 @inline isSymmetric(prob::WrapPOColl) = isSymmetric(prob.prob)
 
 # for recording the solution in a branch
-function getSolution(prob::WrapPOColl, x)
-	if prob.prob.meshadapt
-		return (mesh = copy(getTimes(prob.prob)), sol = x)
+function getSolution(wrap::WrapPOColl, x)
+	if wrap.prob.meshadapt
+		return (mesh = copy(getTimes(wrap.prob)), sol = x, _mesh = copy(wrap.prob.mesh_cache.mesh))
 	else
 		return x
 	end
