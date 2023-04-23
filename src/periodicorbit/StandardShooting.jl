@@ -191,12 +191,12 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ =c
 	if ~isParallel(sh)
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1
-			tmp = evolve(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
+			tmp = jvp(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
 			# call jacobian of the flow, jacobian-vector product
 			outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
 		end
 	else
-		solOde = evolve(sh.flow, xc, par, dxc, sh.ds .* T)
+		solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
 		# call jacobian of the flow, jacobian-vector product
 		for ii in 1:M
 			ip1 = (ii == M) ? 1 : ii+1

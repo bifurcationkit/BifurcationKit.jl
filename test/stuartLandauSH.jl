@@ -61,6 +61,7 @@ section(x, T, dx, dT) = dx[1] #* x[end]
 M = 1
 dM = 1
 _pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9)
+BifurcationKit.hasMonoDE(_pb.flow)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
@@ -158,7 +159,7 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 ####################################################################################################
 # test shooting interface M > 1, parallel
 initpo = [0.13, 0., 6.]
-_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = false)
+_pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)

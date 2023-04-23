@@ -39,7 +39,7 @@ end
 # this is the "simplest" constructor to use in automatic branching from Hopf
 ShootingProblem(M::Int, prob::ODEType, alg; kwargs...) = ShootingProblem(prob, alg, M, nothing; kwargs...)
 
-# idem but with an ODEproblem to define the derivative of the flow
+# idem but with an ODEProblem to define the derivative of the flow
 function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, par = prob1.p, kwargs...)
 	_M = length(ds)
 	parallel = _M == 1 ? false : parallel

@@ -23,6 +23,8 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp} <: Abstr
 	"adjoint of the monodromy (Matrix-Free)."
 	vjp::Tvjp
 end
+
+hasMonoDE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
 ####################################################################################################
 # constructors
 """
@@ -34,7 +36,7 @@ function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs.
 end
 
 function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), jacobian, nothing)
+	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), nothing, nothing)
 end
 ####################################################################################################
 _getVectorField(prob::ODEProblem, o, x, p) = prob.f(o, x, p, prob.tspan[1])
@@ -62,7 +64,7 @@ function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
 	sol = solve(_prob, alg; save_everystep = false, kwargs...)
 	return (t = sol.t[end], u = sol[end])
 end
-
+####################################################################################################
 ######### methods for the flow
 # this function takes into account a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
@@ -79,7 +81,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: Ens
 	# sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
 	return sol.u
 end
-
+####################################################################################################
 ######### Differential of the flow
 function dflowMonoSerial(x::AbstractVector, p, dx, tm, pb::ODEProblem, alg; k...)
 	n = length(x)
@@ -97,7 +99,8 @@ end
 
 # function used to compute the derivative of the flow, so pb encodes the variational equation
 # differential of the flow when a problem is passed for the Monodromy
-function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: ODEProblem}
+# default behaviour (the FD case is handled by dispatch)
+function jvp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: ODEProblem}
 	dflowMonoSerial(x, p, dx, tm, fl.probMono, fl.algMono; fl.kwargsDE..., kw...)
 end
 
@@ -106,7 +109,7 @@ function vjp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: O
 end
 
 # differential of the flow when a problem is passed for the Monodromy
-function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: EnsembleProblem}
+function jvp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: EnsembleProblem}
 	N = size(x, 1)
 	_prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = p)
 	_epb = setproperties(fl.probMono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
@@ -115,7 +118,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, x::AbstractArray, p, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},T2,T4,T5,T6,Tjac}
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, p, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
 	if T1 <: ODEProblem
 		return dflow_fdSerial(x, p, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 	else

@@ -217,7 +217,7 @@ function save!(br::ContResult, it::AbstractContinuationIterable, state::Abstract
 	push!(br.branch, getStateSummary(it, state))
 	# save solution
 	if it.contParams.saveSolEveryStep > 0 && (modCounter(state.step, it.contParams.saveSolEveryStep) || ~done(it, state))
-		push!(br.sol, (x = getSolution(it.prob, copy(getx(state))), p = getp(state), step = state.step))
+		push!(br.sol, (x = getSolution(it.prob, _copy(getx(state))), p = getp(state), step = state.step))
 	end
 	# save eigen elements
 	if computeEigenElements(it)

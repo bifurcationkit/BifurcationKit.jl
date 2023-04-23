@@ -221,7 +221,6 @@ for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
 	end
 end
 
-function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transposeJac = false)
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
 	print(io, prefix * "┌─ Bifurcation Problem with uType ")
 	printstyled(io, getVectorType(prob), color=:cyan, bold = true)
@@ -232,6 +231,8 @@ function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
 	print(io, "\n" * prefix * "└─ Parameter: ")
 	printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
 end
+
+function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transposeJac = false)
 	if isSymmetric(pb)
 		# return apply(pb.J(x, par), dx)
 		return dF(pb, x, par, dx)
