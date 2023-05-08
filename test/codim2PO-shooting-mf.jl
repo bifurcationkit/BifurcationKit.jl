@@ -37,6 +37,7 @@ sol = solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol = 1e-12)
 sol = solve(prob_de, Rodas5())
 ################################################################################
+@info "plotting function"
 argspo = (recordFromSolution = (x, p) -> begin
 		xtt = BK.getPeriodicOrbit(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p))
 		return (max = maximum(xtt[1,:]),
@@ -91,8 +92,10 @@ end
 
 # AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getParams(probsh)), cish)(cish)[1]
 
+@info "set AD"
 @set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
+@info "Newton"
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
 	eigpo = EigKrylovKit(x₀ = rand(4))
 	optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
@@ -101,6 +104,7 @@ lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, 
 _sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
+@info "PO cont1"
 opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3, newtonOptions = optnpo)
 @set! opts_po_cont.newtonOptions.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
@@ -109,6 +113,7 @@ br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont
 	argspo...)
 # pt = getNormalForm(br_fold_sh, 1)
 
+@info "PO cont2"
 probsh2 = @set probsh.lens = @lens _.ϵ
 brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 	# verbosity = 3, plot = true,
