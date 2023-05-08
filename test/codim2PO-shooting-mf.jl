@@ -46,8 +46,9 @@ argspo = (recordFromSolution = (x, p) -> begin
 	end,)
 ################################################################################
 @info "import AD"
-import AbstractDifferentiation as AD
-using Zygote, SciMLSensitivity
+# import AbstractDifferentiation as AD
+@info "import Zygote"
+# using Zygote, SciMLSensitivity
 
 @info "generate shooting problem"
 
@@ -112,16 +113,16 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 0, m
 
 # codim 2 PD
 @info "--> PD curve"
-opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 4, pMin = -1.)
+opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 0, maxSteps = 4, pMin = -1.)
 	@set! opts_posh_pd.newtonOptions.tol = 1e-8
 	pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
 		# verbosity = 2, plot = true,
 		detectCodim2Bifurcation = 0,
 		usehessian = false,
-		jacobian_ma = :minaug,
+		# jacobian_ma = :minaug,
+		jacobian_ma = :finiteDifferencesMF,
 		bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
 		startWithEigen = false,
-		bothside = true,
 		callbackN = BK.cbMaxNorm(1),
 		)
 
@@ -157,13 +158,13 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSt
 opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSteps = 4, pMin = -0., pMax = 1.2)
 @set! opts_posh_ns.newtonOptions.tol = 1e-9
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
-		# verbosity = 2, plot = true,
+		# verbosity = 3, plot = true,
 		detectCodim2Bifurcation = 0,
 		startWithEigen = false,
 		usehessian = false,
-		jacobian_ma = :minaug,
+		# jacobian_ma = :minaug,
+		jacobian_ma = :finiteDifferencesMF,
 		normN = norminf,
-		bothside = false,
 		callbackN = BK.cbMaxNorm(1),
 		bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+2),
 		)
