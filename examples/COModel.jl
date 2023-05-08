@@ -23,7 +23,7 @@ z0 = [0.001137, 0.891483, 0.062345]
 prob = BK.BifurcationProblem(COm, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
-	@set! opts_br.newtonOptions.verbose = true
+	@set! opts_br.newtonOptions.verbose = false
 	br = @time continuation(prob, PALC(), opts_br;
 		# plot = false, verbosity = 0,
 		normC = norminf,

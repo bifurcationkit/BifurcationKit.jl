@@ -204,14 +204,14 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 	)
 ####################################################################################################
 # test  Hopf aBS
-br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
+br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
 	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
 	δp = 0.1,
 	usedeflation = true,
 	eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
 	)
 
-br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1).newtonOptions.verbose = false),
+br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
 	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
 	δp = 0.1,
 	usedeflation = true,

@@ -63,6 +63,11 @@ using Test
 		include("testLure.jl")
 	end
 
+	@testset "codim 2 PO Shooting MF" begin
+		@info "Entry in codim2PO-shooting-mf.jl"
+		include("codim2PO-shooting-mf.jl")
+	end
+
 	@testset "codim 2 PO Shooting" begin
 		@info "Entry in codim2PO-shooting.jl"
 		include("codim2PO-shooting.jl")
@@ -71,11 +76,6 @@ using Test
 	@testset "codim 2 PO Collocation" begin
 		@info "Entry in codim2PO-OColl.jl"
 		include("codim2PO-OColl.jl")
-	end
-
-	@testset "codim 2 PO Shooting MF" begin
-		@info "Entry in codim2PO-shooting-mf.jl"
-		include("codim2PO-shooting-mf.jl")
 	end
 
 	@testset "Wave" begin

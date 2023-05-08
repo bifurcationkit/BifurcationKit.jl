@@ -110,7 +110,7 @@ BK.getAmplitude(_pb, outpo.u, par_hopf)
 BK.getMaximum(_pb, outpo.u, par_hopf)
 BK.getPeriodicOrbit(_pb, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 30, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), tolStability = 1e-5)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 5, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), tolStability = 1e-5)
 	br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
 		opts_po_cont;
 		verbosity = 0, plot = false,
@@ -233,7 +233,7 @@ probPsh(outpo.u, par_hopf, outpo.u)
 # BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
 
 @info "Test continuation"
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 30, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 5, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
 	opts_po_cont; verbosity = 0,
 	plot = false, normC = norminf)
@@ -275,7 +275,7 @@ ls = DefaultLS()
 
 getPeriod(probPsh, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 50, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 3, nev = 2)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 5, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 3, nev = 2)
 	br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
 		opts_po_cont; verbosity = 0,
 		plot = false, normC = norminf)

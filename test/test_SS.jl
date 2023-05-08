@@ -136,7 +136,7 @@ _out2 = BK.dE(hyper, dx, 1)
 # we consider the ODE dr = r⋅(1-r), dθ = 1 [2π]
 # the flow is given by Φ(r0,θ0,t) = (r0 e^{t}/(1-r0+r0 e^{t}),θ+t)
 vf(x, p) = [x[1]*(1-x[1]), 1.]
-flow(x, p, t; k...) = (t = t, u = [exp(t) .* x[1] / (1-x[1]+x[1]*exp(t)),x[2]+t])
+flow(x, p, t; k...) = (t = t, u = [exp(t) .* x[1] / (1-x[1]+x[1]*exp(t)), x[2]+t])
 Π2(x, p, t = 0) = (t = 2pi -x[2], u = flow(x, p, 2pi-x[2]).u)
 Π(x, p, t = 0) = flow(x, p, 2pi-x[2])	# return map
 dflow(x, p, dx, t; k...) = (t = t, u = flow(x, p, t).u, du = ForwardDiff.derivative( z -> flow(x .+ z .* dx, p, t).u, 0),)

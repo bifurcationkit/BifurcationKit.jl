@@ -122,20 +122,20 @@ optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15
 		normC = norminf,
 		event = BK.FoldDetectEvent,
 		# finaliseSolution = (z, tau, step, contResult; k...) -> begin
-		# if length(contResult) == 1
-		# 	pretty_table(contResult.branch)
-		# else
-		# 	pretty_table(contResult.branch, overwrite = true,)
+		# 	if length(contResult) == 1
+		# 		pretty_table(contResult.branch)
+		# 	else
+		# 		pretty_table(contResult.branch, overwrite = true,)
+		# 	end
+		# 	true
 		# end
-		# true
-	# end
 		)
 
 BK.plotBranch(br)
 ####################################################################################################
 getNormalForm(br, 3; nev = 25)
 
-br1 = @time continuation(br, 3, setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 0, pMax = 0.1, plotEveryStep = 5, dsmax = 0.01);
+br1 = @time continuation(br, 3, setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 3, pMax = 0.1, plotEveryStep = 5, dsmax = 0.01);
 	plot = true, verbosity = 3,
 	δp = 0.005,
 	verbosedeflation = true,
