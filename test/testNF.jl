@@ -51,8 +51,10 @@ BK.getfirstusertype(br2)
 @test length(br2) == 12
 # plot(br,br2)
 
-br3 = continuation(br, 1, setproperties(opts_br; ds = -0.01); verbosity = 0, usedeflation = false)
+br3 = continuation(br, 1, setproperties(opts_br; ds = -0.01); verbosity = 0, usedeflation = true)
 # plot(br,br2,br3)
+@test isnothing(BK.multicontinuation(br, 1))
+
 
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(prob, PALC(tangent=Bordered()), 2,

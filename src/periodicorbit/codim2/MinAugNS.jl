@@ -196,7 +196,8 @@ end
 ###################################################################################################
 residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
 
-jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob)
+# we add :hopfpb in order to use HopfEig
+jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 
 jacobian(nspb::NSMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
 ###################################################################################################
@@ -251,7 +252,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		z = getx(state)
 		x = getVec(z, 𝐍𝐒)		# NS point
 		p1, ω = getP(z, 𝐍𝐒)	# first parameter
-		p2 = getp(state)	   # second parameter
+		p2 = getp(state)	  # second parameter
 		newpar = set(par, lens1, p1)
 		newpar = set(newpar, lens2, p2)
 
@@ -307,5 +308,5 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		event = event,
 		normC = normC,
 		)
-	(br_ns_po)
+	correctBifurcation(br_ns_po)
 end

@@ -94,7 +94,8 @@ opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, max
 @set! opts_posh_pd.newtonOptions.verbose = false
 pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
 		verbosity = 0, plot = false,
-		detectCodim2Bifurcation = 0,
+		detectCodim2Bifurcation = 1,
+		updateMinAugEveryStep = 1,
 		jacobian_ma = :minaug,
 		# jacobian_ma = :autodiff,
 		usehessian = false,
@@ -103,6 +104,11 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
 		bothside = true,
 		callbackN = BK.cbMaxNorm(1),
 		)
+
+_pdma = pd_po_sh.prob
+BK.isSymmetric(_pdma)
+BK.hasAdjoint(_pdma.prob)
+BK.isInplace(_pdma)
 
 # plot(pd_po_sh)
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
@@ -131,7 +137,7 @@ BK.type(ns)
 @test ns isa BifurcationKit.NeimarkSackerPO
 
 # codim 2 NS
-opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSteps = 1, pMin = -0., pMax = 1.2)
+opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 1, maxSteps = 1, pMin = -0., pMax = 1.2)
 @set! opts_posh_ns.newtonOptions.tol = 1e-12
 @set! opts_posh_ns.newtonOptions.verbose = false
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
@@ -147,7 +153,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
 		bothside = false,
 		callbackN = BK.cbMaxNorm(1),
 		)
-@test ns_po_sh.kind isa BK.NSPeriodicOrbitCont	
+@test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
 
 # plot(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
 # 	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")

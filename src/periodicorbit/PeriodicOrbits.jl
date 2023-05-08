@@ -279,7 +279,6 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 		jac = (x, p) -> FloquetWrapper(probPO, x, p)
 	end
 
-	# VERIFIER LE LINEARALGO VS COLLOCATION PAR EXAMPLE
 
 	# we have to change the Bordered linearsolver to cope with our type FloquetWrapper
 	linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
@@ -509,24 +508,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 	newp = pred.pnew  # new parameter value
 	pbnew = pred.prob # modified problem
 
-	# # let us compute the kernel
-	# λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-	# verbose && print("├─ computing nullspace of Periodic orbit problem...")
-	# ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-	# # we normalize it by the sup norm because it could be too small/big in L2 norm
-	# # TODO: user defined scaleζ
-	# ζ ./= norm(ζ, Inf)
-	# verbose && println("Done!")
-	#
-	# # compute the full eigenvector
-	# floquetsolver = br.contparams.newtonOptions.eigsolver
-	# ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
-	# ζs = reduce(vcat, ζ_a)
-	#
-	# ## predictor
-	# pbnew, orbitguess = predictor(pb, bifpt, ampfactor, real.(ζs), bifpt.type)
-	# newp = bifpt.param + δp
-
 	# a priori, the following do not overwrite the options in br
 	# hence the results / parameters in br are kept intact
 	if pb isa AbstractShootingProblem
@@ -545,10 +526,11 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 		# find point on the first branch
 		pbnew = setParamsPO(pbnew, setParam(br, newp))
 		sol0 = newton(pbnew, bifpt.x, optn; kwargs...)
+		@assert converged(sol0) "The first guess did not converge"
 
 		# find the bifurcated branch using deflation
 		@assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method or ShootingProblem"
-		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0.u]; autodiff = true)
+		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
 		verbose && println("\n--> Compute point on bifurcated branch...")
 		solbif = newton(pbnew, orbitguess, deflationOp,
 			(@set optn.maxIter = 10 * optn.maxIter) ; kwargs...,)

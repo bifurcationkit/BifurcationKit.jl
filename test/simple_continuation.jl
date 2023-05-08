@@ -138,7 +138,7 @@ br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=false)
 	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9)
+	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
 	BK.empty!(Multiple(copy(x0), 0.01, 13))
 	# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
 ## same but with failed prediction

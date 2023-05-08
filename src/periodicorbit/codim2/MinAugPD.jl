@@ -280,7 +280,6 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 		copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))
 		# do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
 		copyto!(𝐏𝐝.b, newb); rmul!(𝐏𝐝.b, 1/normC(newb))
-		@info "Update MinAugPD"
 		return true
 	end
 

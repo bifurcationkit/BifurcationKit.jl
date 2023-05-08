@@ -18,7 +18,7 @@ function Fsl!(f, u, p, t = 0)
 	return f
 end
 
-Fsl(x, p) = Fsl!(similar(x), x, p)
+Fsl(x, p, t = 0) = Fsl!(similar(x), x, p, t)
 dFsl(x, dx, p) = FD.derivative(t -> Fsl(x .+ t .* dx, p), zero(dx[1]*x[1]))
 
 function FslMono!(f, x, p, t)
@@ -41,6 +41,8 @@ show(br)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
+BK._getVectorField(ODEProblem(Fsl, u0, (0., 100.), par_hopf), u0, par_sl)
+BK._getVectorField(EnsembleProblem(ODEProblem(Fsl, u0, (0., 100.), par_hopf)), u0, par_sl)
 ####################################################################################################
 sol = solve(probMono, KenCarp4(autodiff=false), abstol=1e-9, reltol=1e-6)
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
@@ -62,6 +64,12 @@ BifurcationKit.hasMonoDE(_pb.flow)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
+
+# test the flowDE interface
+_pb_par = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9, parallel = true)
+_flow = _pb_par.flow; @set! _flow.vjp = (args...; kw...) -> nothing
+BK.vjp(_flow, initpo, par_hopf, initpo, 0.1)
+BK.jvp(_pb_par.flow, initpo, par_hopf, initpo, 0.1)
 
 # test of the differential of the shooting method
 
@@ -164,6 +172,11 @@ res = _pb(initpo, par_hopf, initpo)
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
+
+# test flowDE interface
+_pb2_par = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
+BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
+
 ####################################################################################################
 @info "Single Poincaré Shooting"
 # Single Poincaré Shooting with hyperplane parametrization
@@ -326,9 +339,10 @@ br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, saveSolEve
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
 @set! opts_po_cont.detectBifurcation = 0
 @set! opts_po_cont.newtonOptions.linsolver = ls
+@set! opts_po_cont.saveSolEveryStep = 1
 
 for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDenseAnalytical(), BK.FiniteDifferences())
-	@info M, jacobianPO, "PS"
+	@info M, jacobianPO
 
 	# specific to Poincaré Shooting
 	jacPO = jacobianPO isa BK.AutoDiffMF ? BK.FiniteDifferences() : jacobianPO
@@ -339,4 +353,7 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
 	local br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
 	ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2,
 	linearAlgo = BorderingBLS(solver = (@set ls.N = 2M + 1), checkPrecision = false), verbosity = 0)
+
+	# test different versions of newton
+	newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newtonOptions)
 end

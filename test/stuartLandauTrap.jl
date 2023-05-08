@@ -40,6 +40,11 @@ poTrap = PeriodicOrbitTrapProblem(
 	10, 2)
 
 show(poTrap)
+BK.isInplace(poTrap)
+try
+	BK.hasHessian(poTrap)
+catch
+end
 
 # guess for the periodic orbit
 orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])

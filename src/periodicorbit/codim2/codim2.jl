@@ -78,7 +78,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
 	end
 end
 
-function correctBifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont}})
+function correctBifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
 	if contres.prob.prob isa FoldProblemMinimallyAugmented
 		conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd)
 	elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented

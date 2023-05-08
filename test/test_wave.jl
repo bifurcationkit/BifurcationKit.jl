@@ -178,9 +178,9 @@ continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_b
 @set! opt_cont_br.newtonOptions.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
 continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :FullLU, verbosity = 0)
 
-# BK.GEigArpack(nothing, :LR)
-# @set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
-# continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+BK.GEigArpack(nothing, :LR)
+@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
+continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
 @set! opt_cont_br.newtonOptions.linsolver = GMRESIterativeSolvers(N = 2n+1)
 @set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))

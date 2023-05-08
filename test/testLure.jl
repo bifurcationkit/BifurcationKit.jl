@@ -67,8 +67,8 @@ end
 # aBS from PD
 br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 3, maxSteps = 5, ds = 0.01, dsmax = 0.01, plotEveryStep = 10);
 	verbosity = 0, plot = false,
-	ampfactor = .1, δp = -0.005,
-	usedeflation = false,
+	ampfactor = .2, δp = -0.005,
+	usedeflation = true,
 	recordFromSolution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
 	normC = norminf
 	)
