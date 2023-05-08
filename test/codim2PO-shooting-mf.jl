@@ -26,12 +26,12 @@ z0 = [0.1,0.1,1,0]
 
 prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
-opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
+opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4)
 @set! opts_br.newtonOptions.verbose = true
 
 ################################################################################
 using OrdinaryDiffEq
-prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
+prob_de = ODEProblem(Pop!, z0, (0, 600.), par_pop)
 alg = Rodas5()
 sol = solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol = 1e-12)
@@ -43,54 +43,25 @@ argspo = (recordFromSolution = (x, p) -> begin
 		return (max = maximum(xtt[1,:]),
 				min = minimum(xtt[1,:]),
 				period = getPeriod(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p)))
-	end,
-	plotSolution = (x, p; k...) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p))
-		plot!(xtt.t, xtt[1,:]; label = "x", k...)
-		plot!(xtt.t, xtt[2,:]; label = "y", k...)
-		# plot!(br; subplot = 1, putspecialptlegend = false)
-	end)
+	end,)
 ################################################################################
+@info "import AD"
 import AbstractDifferentiation as AD
 using Zygote, SciMLSensitivity
 
-probsh0 = ShootingProblem(M=1)
+@info "generate shooting problem"
 
-probshMatrix, = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5())
-probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(),
-			jacobian = BK.AutoDiffMF()
-			# jacobian = BK.FiniteDifferencesMF()
-			)
-# ######
-# # il faut un jvp precis pour la monodromy sinon ca ne marche pas bien
-# @error "c'est pas bon ca car flowDE n'as pas de structure pour les fonctions"
-# ######
+probsh, cish = generateCIProblem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
+	jacobian = BK.AutoDiffMF()
+	# jacobian = BK.FiniteDifferencesMF()
+	)
+
 function flow(x0, prob0, tm, p = prob0.p)
 	prob = remake(prob0, u0 = x0, tspan = (0, tm), p = p)
 	sol = solve(prob, Rodas5())
 	return sol[end]
 end
 
-# sol0_f = rand(4)
-# flow(rand(4), prob_de, 1)
-
-# dϕ = ForwardDiff.jacobian(x->flow(x, prob_de, 1), sol0_f)
-# # jvp
-# res1 = ForwardDiff.derivative(t->flow(sol0_f .+ t .* sol0_f, prob_de, 1), zero(eltype(sol0_f)))
-# @test norm(res1 - dϕ * sol0_f, Inf) < 1e-8
-
-# res1, = AD.pushforward_function(AD.ForwardDiffBackend(), x->flow(x, prob_de, 1), sol0_f)(sol0_f)
-# @test norm(res1 - dϕ * sol0_f, Inf) < 1e-7
-
-# # vjp
-# res1, = Zygote.pullback(x->flow(x,prob_de,1), sol0_f)[2](sol0_f)
-# @test norm(res1 - dϕ' * sol0_f, Inf) < 1e-8
-
-# res1 = AD.pullback_function(AD.ZygoteBackend(), x->flow(x, prob_de,1), sol0_f)(sol0_f)[1]
-# @test norm(res1 - dϕ' * sol0_f, Inf) < 1e-8
-######
-
-# AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getParams(probsh)), cish)(cish)[1]
 
 @info "set AD"
 @set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]

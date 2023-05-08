@@ -41,13 +41,7 @@ argspo = (recordFromSolution = (x, p) -> begin
 		return (max = maximum(xtt[1,:]),
 				min = minimum(xtt[1,:]),
 				period = getPeriod(p.prob, x, p.p))
-	end,
-	plotSolution = (x, p; k...) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
-		plot!(xtt.t, xtt[1,:]; label = "x", k...)
-		plot!(xtt.t, xtt[2,:]; label = "y", k...)
-		# plot!(br; subplot = 1, putspecialptlegend = false)
-	end)
+	end,)
 ################################################################################
 probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
 
@@ -72,7 +66,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 # pt = getNormalForm(brpo_pd, 1, prm = false)
 
 # codim 2 Fold
-opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 12, pMin = 0., pMax=1.2, nInversion = 4)
+opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 3, pMin = 0., pMax=1.2, nInversion = 4)
 @set! opts_pocoll_fold.newtonOptions.tol = 1e-12
 fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
 		verbosity = 0, plot = false,
@@ -85,7 +79,7 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
 @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 3, pMin = -1., plotEveryStep = 10, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 3, pMin = -1., dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-9
 pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,
@@ -93,12 +87,9 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
-		# jacobian_ma = :autodiff,
-		# jacobian_ma = :finiteDifferences,
 		normN = norminf,
 		callbackN = BK.cbMaxNorm(10),
 		bothside = true,
-		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		)
 
 @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
@@ -109,14 +100,12 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
-# plot(sol2, xlims= (8,10))
 
 probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
 	verbosity = 0, plot = false,
 	argspo...,
-	# bothside = true,
 	)
 
 getNormalForm(brpo_ns, 1)
@@ -130,7 +119,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 getNormalForm(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 1.e-2, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,
@@ -138,25 +127,20 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
-		# jacobian_ma = :autodiff,
-		# jacobian_ma = :finiteDifferences,
 		normN = norminf,
 		callbackN = BK.cbMaxNorm(1),
 		bothside = true,
-		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		)
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 20, pMin = 0., plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 0., dsmax = 1e-2, ds = 1e-3)
 ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
 		verbosity = 0, plot = false,
 		detectCodim2Bifurcation = 1,
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
-		# jacobian_ma = :autodiff,
-		# jacobian_ma = :finiteDifferences,
 		normN = norminf,
 		callbackN = BK.cbMaxNorm(10),
 		bothside = true,
-		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		)
+ 
