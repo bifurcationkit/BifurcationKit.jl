@@ -60,3 +60,4 @@ nf = BK.neimarkSackerNormalForm(prob, br, 1; nev = 2, verbose = true)
 @test nf.nf.a ≈ pars_ns.a
 @test nf.nf.b ≈ pars_ns.c3
 show(nf)
+####################################################################################################
