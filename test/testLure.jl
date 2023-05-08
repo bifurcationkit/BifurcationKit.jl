@@ -133,7 +133,8 @@ show(br_po)
 for _ind in (1,3)
 	if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
 		println("")
-		pt = getNormalForm(br_po, _ind; verbose = true)
+		pt = getNormalForm(br_po, _ind; verbose = true, δ = 1e-5) # bizarre pour le vecteur propre PD
+		show(pt)
 		predictor(pt, 0.1, 1.)
 		show(pt)
 	end

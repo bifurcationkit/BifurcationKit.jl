@@ -202,6 +202,7 @@ ls = DefaultLS()
 	outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
 	@test BK.converged(outpo)
 
+
 BK.getPeriod(probPsh, outpo.u, par_hopf)
 BK.getAmplitude(probPsh, outpo.u, par_hopf)
 BK.getMaximum(probPsh, outpo.u, par_hopf)
@@ -224,6 +225,10 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(),
 	opts_po_cont; verbosity = 0,
 	plot = false, normC = norminf)
 # plot(br_pok2)
+BK.setParam(br_pok2.prob, 1.)
+BK.getPeriod(br_pok2.prob.prob, br_pok2.sol[1].x, br_pok2.sol[1].p)
+BK.getTimeSlices(br_pok2.prob.prob, br_pok2.sol[1].x)
+BK.getPeriodicOrbit(br_pok2, 1)
 ####################################################################################################
 @info "Multiple Poincaré Shooting"
 # normals = [[-1., 0.], [1, -1]]
@@ -304,7 +309,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 @info "Multiple Poincaré Shooting aBS"
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
+br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @lens _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 

@@ -61,6 +61,7 @@ br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont
 	verbosity = 0, plot = false,
 	argspo...)
 pt = getNormalForm(br_fold_sh, 1)
+show(pt)
 @test pt isa BK.BranchPointPO
 
 probsh2 = @set probsh.lens = @lens _.ϵ
@@ -69,6 +70,8 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 	argspo...
 	)
 pt = getNormalForm(brpo_pd_sh, 1)
+show(pt)
+BK.type(pt)
 @test pt isa BifurcationKit.PeriodDoublingPO
 
 # codim 2 Fold
@@ -122,6 +125,9 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSt
 	)
 
 ns = getNormalForm(brpo_ns, 1)
+show(ns)
+BK.type(ns)
+
 @test ns isa BifurcationKit.NeimarkSackerPO
 
 # codim 2 NS
