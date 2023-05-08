@@ -187,6 +187,8 @@ jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) w
 
 jacobian(pdpb::PDMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
 
+
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ################################################################################################### Newton / Continuation functions
 ###################################################################################################
 function continuationPD(prob, alg::AbstractContinuationAlgorithm,
@@ -217,13 +219,17 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 			@set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
 			usehessian = usehessian)
 
-	@assert jacobian_ma in (:autodiff, :minaug)
+	@assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
 
 	# Jacobian for the PD problem
 	if jacobian_ma == :autodiff
 		pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
 		prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
 		opt_pd_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+	elseif jacobian_ma == :finiteDifferencesMF
+		pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
+		prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		opt_pd_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	else
 		prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
 		opt_pd_cont = @set options_cont.newtonOptions.linsolver = PDLinearSolverMinAug()
