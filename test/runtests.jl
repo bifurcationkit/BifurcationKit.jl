@@ -71,6 +71,10 @@ using Test
 		include("codim2PO-OColl.jl")
 	end
 
+	@testset "codim 2 PO Shooting MF" begin
+		include("codim2PO-shooting-mf.jl")
+	end
+
 	@testset "Wave" begin
 		include("test_wave.jl")
 	end
