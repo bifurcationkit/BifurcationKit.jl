@@ -121,7 +121,7 @@ sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 
 probshns, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
-brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 5, ds = -0.001);
+brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
 	verbosity = 0, plot = false,
 	argspo...,
 	# bothside = true,

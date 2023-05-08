@@ -165,6 +165,8 @@ jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, 
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
+
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)
@@ -327,7 +329,7 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 		opt_fold_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
 	elseif jacobian_ma == :finiteDifferencesMF
 		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-		prob_f = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+		prob_f = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
 		opt_fold_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	else
 		prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
