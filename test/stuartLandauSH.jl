@@ -41,8 +41,8 @@ show(br)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
-BK._getVectorField(ODEProblem(Fsl, u0, (0., 100.), par_hopf), u0, par_sl)
-BK._getVectorField(EnsembleProblem(ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_hopf)), u0, par_sl)
+BK._getVectorField(ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
+BK._getVectorField(EnsembleProblem(ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
 ####################################################################################################
 sol = solve(probMono, KenCarp4(autodiff=false), abstol=1e-9, reltol=1e-6)
 sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
