@@ -47,6 +47,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 			massmatrix::Tmass
 		end
 
+		@inline getDelta(pb::$op) = getDelta(pb.prob_vf)
 		@inline hasHessian(pb::$op) = hasHessian(pb.prob_vf)
 		@inline isSymmetric(pb::$op) = isSymmetric(pb.prob_vf)
 		@inline hasAdjoint(pb::$op) = hasAdjoint(pb.prob_vf)

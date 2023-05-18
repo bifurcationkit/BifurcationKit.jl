@@ -161,6 +161,7 @@ opt_newton0 = NewtonPar(tol = 1e-10, maxIter = 5, verbose = false, linsolver = l
 prob = BK.BifurcationProblem(Fr,
 		RecursiveVec([1 .+ 0.1*rand(1) for _ = 1:2]),
 		(r = 1.0, s = 1.), (@lens _.r);
+		delta = 1e-8,
 		J  = (x, p) -> JacobianR(x, p.s),
 		Jᵗ = (x, p) -> JacobianR(x, p.s),
 		d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))

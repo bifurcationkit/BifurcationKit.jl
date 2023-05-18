@@ -177,6 +177,7 @@ end
 # define a problem <: AbstractBifurcationProblem
 @inline hasAdjoint(hopfpb::HopfMAProblem) = hasAdjoint(hopfpb.prob)
 @inline isSymmetric(hopfpb::HopfMAProblem) = isSymmetric(hopfpb.prob)
+@inline getDelta(hopfpb::HopfMAProblem) = getDelta(hopfpb.prob)
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)

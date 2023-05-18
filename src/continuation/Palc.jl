@@ -189,7 +189,7 @@ function getTangent!(state::AbstractContinuationState,
 					it::AbstractContinuationIterable,
 					tgtalgo::Bordered)
 	(it.verbosity > 0) && println("Predictor: Bordered")
-	ϵ = it.contParams.finDiffEps
+	ϵ = getDelta(it.prob)
 	τ = state.τ
 	θ = state.θ
 	T = eltype(it)
@@ -375,6 +375,7 @@ function newtonPALC(iter::AbstractContinuationIterable,
 					kwargs...)
 	prob = iter.prob
 	par = getParams(prob)
+	ϵ = getDelta(prob)
 	paramlens = getLens(iter)
 	contparams = getContParams(iter)
 	dotθ = iter.dotθ
@@ -385,7 +386,7 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	@unpack z_pred, ds, θ = state
 
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
-	@unpack finDiffEps, pMin, pMax = contparams
+	@unpack pMin, pMax = contparams
 	linsolver = getLinsolver(iter)
 
 	# we record the damping parameter
@@ -406,10 +407,10 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	dp = zero(T)
 	up = zero(T)
 
-	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
-	dFdp = _copy(residual(prob, x, set(par, paramlens, p + finDiffEps)))
+	# dFdp = (F(x, p + ϵ) - res_f) / ϵ
+	dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
 	minus!(dFdp, res_f)						# dFdp = dFdp - res_f
-	rmul!(dFdp, one(T) / finDiffEps)
+	rmul!(dFdp, one(T) / ϵ)
 
 	res     = normAC(res_f, res_n)
 	resHist = [res]
@@ -423,8 +424,8 @@ function newtonPALC(iter::AbstractContinuationIterable,
 
 	while (res > tol) && (it < maxIter) && line_step && compute
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + finDiffEps)))
-			minus!(dFdp, res_f); rmul!(dFdp, one(T) / finDiffEps)
+		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+			minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
 
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))

@@ -11,7 +11,7 @@ $(TYPEDFIELDS)
 
 # Constructor
 
-	 MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
+	MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
 
 - `Ntst` number of time steps
 - `m` degree of the collocation polynomials
@@ -43,10 +43,10 @@ function MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
 	σs = LinRange{Ty}(-1, 1, m + 1)
 	L, ∂L = getL(σs)
 	zg, wg = gausslegendre(m)
-	prob = MeshCollocationCache(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(Ty, 1 + m * Ntst))
+	cache = MeshCollocationCache(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(Ty, 1 + m * Ntst))
 	# put the mesh where we removed redundant timing
-	prob.full_mesh .= getTimes(prob)
-	return prob
+	cache.full_mesh .= getTimes(cache)
+	return cache
 end
 
 @inline Base.eltype(pb::MeshCollocationCache{T}) where T = T
@@ -271,6 +271,9 @@ getMaxTimeStep(pb::PeriodicOrbitOCollProblem) = getMaxTimeStep(pb.mesh_cache)
 updateMesh!(pb::PeriodicOrbitOCollProblem, mesh) = updateMesh!(pb.mesh_cache, mesh)
 @inline isInplace(pb::PeriodicOrbitOCollProblem) = isInplace(pb.prob_vf)
 @inline isSymmetric(pb::PeriodicOrbitOCollProblem) = isSymmetric(pb.prob_vf)
+@inline getDelta(pb::PeriodicOrbitOCollProblem) = getDelta(pb.prob_vf)
+
+@inline getDelta(pb::WrapPOColl) = getDelta(pb.prob)
 
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
@@ -425,16 +428,16 @@ end
 
 # function for collocation problem
 @views function functionalColl_bare!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
-	Ty = eltype(u)
+	𝒯 = eltype(u)
 	n, ntimes = size(u)
 	m = pb.mesh_cache.degree
 	Ntst = pb.mesh_cache.Ntst
 	# we want slices at fixed times, hence gj[:, j] is the fastest
 	# temporaries to reduce allocations
 	# TODO VIRER CES TMP?
-	gj  = zeros(Ty, n, m)
-	∂gj = zeros(Ty, n, m)
-	uj  = zeros(Ty, n, m+1)
+	gj  = zeros(𝒯, n, m)
+	∂gj = zeros(𝒯, n, m)
+	uj  = zeros(𝒯, n, m+1)
 
 	mesh = getMesh(pb)
 	# range for locating time slices

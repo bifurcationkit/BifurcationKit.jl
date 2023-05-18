@@ -181,6 +181,7 @@ end
 ###################################################################################################
 @inline hasAdjoint(pdpb::PDMAProblem) = hasAdjoint(pdpb.prob)
 @inline isSymmetric(pdpb::PDMAProblem) = isSymmetric(pdpb.prob)
+@inline getDelta(pdpb::PDMAProblem) = getDelta(pdpb.prob)
 residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)

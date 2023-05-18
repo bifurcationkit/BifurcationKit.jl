@@ -159,6 +159,7 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; d
 end
 ###################################################################################################
 @inline hasAdjoint(foldpb::FoldMAProblem) = hasAdjoint(foldpb.prob)
+@inline getDelta(foldpb::FoldMAProblem) = getDelta(foldpb.prob)
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)

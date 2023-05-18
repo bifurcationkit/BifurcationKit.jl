@@ -1,7 +1,6 @@
 @inline hasAdjoint(::WrapPOColl) = false
 @inline hasAdjointMF(::WrapPOColl) = false
 @inline hasHessian(::WrapPOColl) = false
-@inline getDelta(::WrapPOColl) = 1e-8
 
 d2F(pbwrap::WrapPOColl, x, p, dx1, dx2) = d2PO(z -> pbwrap.prob(z, p), x, dx1, dx2)
 

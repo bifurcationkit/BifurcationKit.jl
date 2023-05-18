@@ -119,7 +119,7 @@ $(TYPEDFIELDS)
 				lens::Tl
 				"user function to plot solutions during continuation. Signature: `plotSolution(x, p; kwargs...)`"
 				plotSolution::Tplot
-				"`recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU...). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` (see below). Finally, the first component is used to plot in the continuation curve."
+				"`recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
 				recordFromSolution::Trec
 			end
 
@@ -162,7 +162,7 @@ $(TYPEDFIELDS)
 							issymmetric::Bool = false,
 							recordFromSolution = recordSolDefault,
 							plotSolution = plotDefault,
-							delta = 1e-8,
+							delta = convert(eltype(u0), 1e-8),
 							inplace = false)
 				J = isnothing(J) ? (x,p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
 				dF = isnothing(dF) ? (x,p,dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
@@ -232,12 +232,12 @@ function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
 	printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
 end
 
-function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transposeJac = false)
+function applyJacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)
 	if isSymmetric(pb)
 		# return apply(pb.J(x, par), dx)
 		return dF(pb, x, par, dx)
 	else
-		if transposeJac == false
+		if transpose_jac == false
 			# return apply(pb.J(x, par), dx)
 			return dF(pb, x, par, dx)
 		else

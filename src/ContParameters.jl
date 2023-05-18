@@ -36,7 +36,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Misc
 - `η = 150.` parameter to estimate tangent at first point with parameter  p₀ + ds / η
-- `finDiffEps  = 1e-9` ε used in finite differences computations
 - `detectLoop` [WORK IN PROGRESS] detect loops in the branch and stop the continuation
 
 !!! tip "Mutating"
@@ -62,7 +61,6 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 	maxSteps::Int64  = 100
 
 	# Newton solver parameters
-	finDiffEps::T  = 1e-9 					# constant for finite differences
 	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
 	η::T = 150.								# parameter to estimate tangent at first point
 

@@ -124,6 +124,7 @@ getTimes(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)
 @inline getParams(pb::PeriodicOrbitTrapProblem) = getParams(pb.prob_vf)
 @inline getLens(pb::PeriodicOrbitTrapProblem) = getLens(pb.prob_vf)
+@inline getDelta(pb::PeriodicOrbitTrapProblem) = getDelta(pb.prob_vf)
 setParam(pb::PeriodicOrbitTrapProblem, p) = set(getParams(pb), getLens(pb), p)
 @inline function getMassMatrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
 	if returnArray == false
@@ -814,6 +815,7 @@ end
 residual(prob::WrapPOTrap, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOTrap, x, p) = prob.jacobian(x, p)
 getPeriodicOrbit(prob::WrapPOTrap, u::AbstractVector, p) = getPeriodicOrbit(prob.prob, u, p)
+@inline getDelta(pb::WrapPOTrap) = getDelta(pb.prob)
 ##########################
 # newton wrappers
 function _newtonTrap(probPO::PeriodicOrbitTrapProblem,

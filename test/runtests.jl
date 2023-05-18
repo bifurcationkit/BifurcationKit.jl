@@ -10,7 +10,6 @@ using Test
 
 	@testset "Newton" begin
 		include("test_newton.jl")
-		# include("test-bordered-problem.jl")
 	end
 
 	@testset "Continuation" begin

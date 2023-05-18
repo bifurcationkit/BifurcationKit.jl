@@ -1,6 +1,5 @@
 # if the jacobian is matrix based, use transpose
 @inline hasAdjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
-@inline getDelta(::WrapPOSh) = 1e-8
 @inline hasHessian(::WrapPOSh) = true
 @inline hasJvp(wrap::WrapPOSh) = hasJvp(wrap.prob)
 

@@ -112,6 +112,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 					callback = cbDefault, kwargs...)
 	prob = iter.prob
 	par = getParams(prob)
+	ϵ = getDelta(prob)
 	paramlens = getLens(iter)
 	contparams = getContParams(iter)
 	dotθ = iter.dotθ
@@ -125,7 +126,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	ds = state.ds; θ = state.θ
 
 	@unpack tol, maxIter, verbose = contparams.newtonOptions
-	@unpack finDiffEps, pMin, pMax = contparams
+	@unpack pMin, pMax = contparams
 	linsolver = iter.alg.ls
 
 	# Initialise iterations
@@ -137,9 +138,9 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	res_f = residual(prob, x, set(par, paramlens, p))
 
 	dX = _copy(res_f) # copy(res_f)
-	# dFdp = (F(x, p + finDiffEps) - res_f) / finDiffEps
-	dFdp = _copy(residual(prob, x, set(par, paramlens, p + finDiffEps)))
-	minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
+	# dFdp = (F(x, p + ϵ) - res_f) / ϵ
+	dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
+	minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
 
 	res     = normN(res_f)
 	resHist = [res]
@@ -165,8 +166,8 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	while (res > tol) && (it < maxIter) && line_step && compute
 		it += 1
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + finDiffEps)))
-		minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
+		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+		minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
 
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))
@@ -200,8 +201,8 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		if method == iterative
 			# compute jacobian
 			J = jacobian(prob, x, set(par, paramlens, p))
-			copyto!(dFdp, residual(prob, x, set(par, paramlens, p + finDiffEps)))
-			minus!(dFdp, res_f); rmul!(dFdp, T(1) / finDiffEps)
+			copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+			minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
 			# A = hcat(J, dFdp); A = vcat(A, ϕ')
 			# ϕ .= A \ vcat(zero(x),1)
 			u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(T), one(T), one(T))

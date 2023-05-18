@@ -339,7 +339,6 @@ function getPOSolution(prob::ShootingProblem, x, pars; kode...)
 	N = div(length(x) - 1, M)
 	xv = @view x[1:end-1]
 	xc = reshape(xv, N, M)
-	Th = eltype(x)
 
 	# !!!! we could use @views but then Sundials will complain !!!
 	if ~isParallel(prob)
