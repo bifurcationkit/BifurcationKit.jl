@@ -182,13 +182,13 @@ end
 
 function Base.show(io::IO, bp::PeriodDoubling)
 	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+	println(io, "Period-Doubling bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
 	println(io, "Normal form x⋅(a⋅δp + c⋅x³)")
 	if ~isnothing(bp.nf)
 		println(io,"- a = ", bp.nf.a)
 		println(io,"- c = ", bp.nf.b3)
 	end
-	end
+end
 
 
 ####################################################################################################

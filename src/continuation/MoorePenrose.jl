@@ -26,7 +26,7 @@ struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgor
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internalAdaptation!(alg::MoorePenrose, swch::Bool) = internalAdaptation!(alg.tangent, swch)
-
+@inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 """
 $(SIGNATURES)
 """
@@ -93,7 +93,7 @@ function corrector!(state::AbstractContinuationState,
 		state.z_pred.p = clampPredp(state.z_pred.p, it)
 		return corrector!(state, it, Natural(); kwargs...)
 	end
-	sol = newtonMoorePenrose(it, state; normN = it.normC, callback = it.callbackN, kwargs...)
+	sol = newtonMoorePenrose(it, state, getdot(algo); normN = it.normC, callback = it.callbackN, kwargs...)
 
 	# update fields
 	_updatefieldButNotSol!(state, sol)
@@ -107,7 +107,7 @@ function corrector!(state::AbstractContinuationState,
 end
 
 function newtonMoorePenrose(iter::AbstractContinuationIterable,
-					state::AbstractContinuationState;
+					state::AbstractContinuationState, dotθ;
 					normN = norm,
 					callback = cbDefault, kwargs...)
 	prob = iter.prob
@@ -115,7 +115,6 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	ϵ = getDelta(prob)
 	paramlens = getLens(iter)
 	contparams = getContParams(iter)
-	dotθ = iter.dotθ
 	T = eltype(iter)
 
 	@unpack method = iter.alg

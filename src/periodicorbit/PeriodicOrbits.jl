@@ -550,9 +550,5 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 		kind = br.kind
 	)
 
-	# create a branch
-	bppo = Pitchfork(bifpt.x, bifpt.param, setParam(br, bifpt.param), getLens(br), nf.ζ, nf.ζ, nothing, :nothing)
-
-	# return Branch(setproperties(branch; prob = br.prob), bppo)
-	return Branch(branch, bppo)
+	return Branch(branch, nf)
 end

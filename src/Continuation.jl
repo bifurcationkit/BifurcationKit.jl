@@ -14,7 +14,7 @@ $(TYPEDEF)
 - `isInDomain(iter, p)` whether `p` in is domain [pMin, pMax]. (See [`ContinuationPar`](@ref))
 - `isOnBoundary(iter, p)` whether `p` in is {pMin, pMax}
 """
-@with_kw_noshow struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+@with_kw_noshow struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
 	kind::Tkind
 	prob::Tprob
 	alg::Talg
@@ -22,7 +22,6 @@ $(TYPEDEF)
 	plot::Bool = false
 	event::Tevent = nothing
 	normC::TnormC
-	dotθ::Tdot
 	finaliseSolution::Tfinalisesolution
 	callbackN::TcallbackN
 	verbosity::Int64 = 2
@@ -40,7 +39,6 @@ function ContIterable(prob::AbstractBifurcationProblem,
 					filename = "branch-" * string(Dates.now()),
 					plot = false,
 					normC = norm,
-					dotPALC = DotTheta(),
 					finaliseSolution = finaliseDefault,
 					callbackN = cbDefault,
 					event = nothing,
@@ -53,7 +51,6 @@ function ContIterable(prob::AbstractBifurcationProblem,
 				contParams = contParams,
 				plot = plot,
 				normC = normC,
-				dotθ = dotPALC,
 				finaliseSolution = finaliseSolution,
 				callbackN = callbackN,
 				event = event,
@@ -61,9 +58,9 @@ function ContIterable(prob::AbstractBifurcationProblem,
 				filename = filename)
 end
 
-Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent}) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} = T
+Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent}) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} = T
 
-setParam(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent}, p0::T) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tdot, Tfinalisesolution, TcallbackN, Tevent} = setParam(it.prob, p0)
+setParam(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent}, p0::T) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} = setParam(it.prob, p0)
 
 # getters
 @inline getLens(it::ContIterable) = getLens(it.prob)
@@ -510,7 +507,6 @@ Compute the continuation curve associated to the functional `F` which is stored 
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events
     - case 3: print information during bisection to locate bifurcations / events
 - `normC = norm` norm used in the Newton solves
-- `dotPALC = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callbackN` callback for newton iterations. See docs for [`newton`](@ref). For example, it can be used to change preconditioners.
 - `kind::AbstractContinuationKind` [Internal] flag to describe continuation kind (equilibrium, codim 2, ...). Default = `EquilibriumCont()`

@@ -36,7 +36,8 @@ function Base.show(io::IO, bp::Cusp)
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
-	println(io, "Cusp bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
+	printstyled(io, "Cusp", color=:cyan, bold = true)
+	print(io, "bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).\n")
 	# avoid aliasing with user defined parameters
 	p1 = :β1 == getLensSymbol(lens1) ? :p1 : :β1
 	p2 = :β2 == getLensSymbol(lens2) ? :p2 : :β2
@@ -45,15 +46,16 @@ function Base.show(io::IO, bp::Cusp)
 	println(io, "Normal form coefficients:\n c = $c")
 end
 
-function Base.show(io::IO, bp::Bautin)
+function Base.show(io::IO, bp::Bautin; prefix = "")
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
-	println(io, "Bautin bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
-	println(io, "ω = ", bp.nf.ω)
-	println(io, "Second lyapunov coefficient l2 = ", bp.nf.l2)
-	println(io, "Normal form: i⋅ω⋅u + l2⋅u⋅|u|⁴")
-	println(io, "Normal form coefficients (detailed):")
+	printstyled(io, "Bautin", color=:cyan, bold = true)
+	print(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).\n")
+	println(io, prefix*"ω = ", bp.nf.ω)
+	println(io, prefix*"Second lyapunov coefficient l₂ = ", bp.nf.l2)
+	println(io, prefix*"Normal form: i⋅ω⋅u + l₂⋅u⋅|u|⁴")
+	println(io, prefix*"Normal form coefficients (detailed):")
 	println(io, bp.nf)
 end
 
@@ -61,7 +63,8 @@ function Base.show(io::IO, bp::ZeroHopf)
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
-	println(io, "Zero-Hopf bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
+	printstyled(io, "Zero-Hopf", color=:cyan, bold = true)
+	print(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).\n")
 	println(io, "null eigenvalue ≈ ", bp.nf.λ0)
 	println(io, "ω = ", bp.nf.ω)
 end
@@ -70,7 +73,8 @@ function Base.show(io::IO, bp::HopfHopf)
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
-	println(io, "Hopf-Hopf bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
+	printstyled(io, "Hopf-Hopf", color=:cyan, bold = true)
+	println(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
 	println(io, "λ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
 	println(io, bp.nf)
 end
@@ -113,7 +117,8 @@ function Base.show(io::IO, bp::BogdanovTakens)
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
-	println(io, "Bogdanov-Takens bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
+	printstyled(io, "Bogdanov-Takens", color=:cyan, bold = true)
+	println(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
 	# avoid aliasing with user defined parameters
 	p1 = :β1 == getLensSymbol(lens1) ? :p1 : :β1
 	p2 = :β2 == getLensSymbol(lens2) ? :p2 : :β2

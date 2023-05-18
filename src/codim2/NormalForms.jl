@@ -32,8 +32,8 @@ function cuspNormalForm(_prob,
 	prob_vf = prob_ma.prob_vf
 
 	# scalar type
-	T = eltype(Teigvec)
-	ϵ2 = T(δ)
+	𝒯 = eltype(Teigvec)
+	ϵ2 = 𝒯(δ)
 
 	# linear solvers
 	ls = prob_ma.linsolver
@@ -104,7 +104,7 @@ function cuspNormalForm(_prob,
 
 	h2 = B(q, q)
 	h2 .= dot(p, h2) .* q .- h2
-	H2, = bls(L, q, p, zero(T), h2, zero(T))
+	H2, = bls(L, q, p, zero(𝒯), h2, zero(𝒯))
 
 	c = dot(p, C(q, q, q)) + 3dot(p, B(q, H2))
 	c /= 6
@@ -509,7 +509,7 @@ function bogdanovTakensNormalForm(_prob,
 	else
 		x0 = convert(Teigvec, getVec(bifpt.x , prob_ma))
 	end
-	Ty = eltype(Teigvec)
+	𝒯 = eltype(Teigvec)
 	L = jacobian(prob_vf, x0, parbif)
 
 	# "zero" eigenvalues at bifurcation point
@@ -552,10 +552,10 @@ function bogdanovTakensNormalForm(_prob,
 	# in case the prob is HopfMA, we real it
 	zerov = real.(prob_ma.zero)
 	wext = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
-	q0, = bls(L, wext, vext, zero(Ty), zerov, one(Ty))
-	p1, = bls(Lᵗ, vext, wext, zero(Ty), zerov, one(Ty))
-	q1, = bls(L, p1, q0, zero(Ty), q0, zero(Ty))
-	p0, = bls(Lᵗ, q0, p1, zero(Ty), p1, zero(Ty))
+	q0, = bls(L, wext, vext, zero(𝒯), zerov, one(𝒯))
+	p1, = bls(Lᵗ, vext, wext, zero(𝒯), zerov, one(𝒯))
+	q1, = bls(L, p1, q0, zero(𝒯), q0, zero(𝒯))
+	p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1, zero(𝒯))
 	# we want
 	# A⋅q0 = 0, A⋅q1 = q0
 	# At⋅p1 = 0, At⋅p0 = p1
@@ -572,8 +572,8 @@ function bogdanovTakensNormalForm(_prob,
 	pt = BogdanovTakens(
 		x0, parbif, (getLens(prob_ma), lens),
 		(;q0, q1), (;p0, p1),
-		(a = zero(Ty), b = zero(Ty) ),
-		(K2 = zero(Ty),),
+		(a = zero(𝒯), b = zero(𝒯) ),
+		(K2 = zero(𝒯),),
 		:none
 	)
 	return bogdanovTakensNormalForm(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls)
@@ -587,7 +587,8 @@ function bautinNormalForm(_prob,
 		ζs = nothing,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
-		scaleζ = norm)
+		scaleζ = norm,
+		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
 	verbose && println("#"^53*"\n--> Bautin Normal form computation")
@@ -598,8 +599,8 @@ function bautinNormalForm(_prob,
 	prob_vf = prob_ma.prob_vf
 
 	# scalar type
-	T = eltype(Teigvec)
-	ϵ2 = T(δ)
+	𝒯 = eltype(Teigvec)
+	ϵ = 𝒯(δ)
 
 	# functional
 	@assert prob_ma isa HopfProblemMinimallyAugmented
@@ -623,7 +624,7 @@ function bautinNormalForm(_prob,
 	ω = abs(getP(bifpt.x, prob_ma)[2])
 	λ = Complex(0, ω)
 
-	# parameter for vector field
+	# parameters for vector field
 	p = bifpt.param
 	parbif = set(getParams(br), lens, p)
 	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
@@ -662,17 +663,14 @@ function bautinNormalForm(_prob,
 	ζ★ ./= dot(ζ, ζ★)
 	@assert dot(ζ, ζ★) ≈ 1
 
-	# parameters for vector field
-	p = bifpt.param
-	parbif = set(getParams(br), lens, p)
-	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
-
 	# second order differential, to be in agreement with Kuznetsov et al.
 	B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
 	C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
 
 	q0 = ζ; p0 = ζ★
 	cq0 = conj.(q0)
+
+	# normal form computation based on Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
 	H20, = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
 	H11, = ls(L, -B(q0, cq0))
@@ -681,12 +679,12 @@ function bautinNormalForm(_prob,
 	h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
 	G21 = dot(p0, h21)
 	h21 .= G21 .* q0 .- h21
-	H21, = bls(L, q0, p0, zero(T), h21, zero(T); shift = Complex{T}(0, -ω))
+	H21, = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
 	# sol = [L-λ*I q0; p0' 0] \ [h21..., 0]
 
 	# 4-th order coefficient
-	d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ2 .* dx4, parbif, dx1, dx2, dx3) .-
-								   d3F(prob_vf, x0 .- ϵ2 .* dx4, parbif, dx1, dx2, dx3)) ./(2ϵ2)
+	d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ .* dx4, parbif, dx1, dx2, dx3) .-
+								   d3F(prob_vf, x0 .- ϵ .* dx4, parbif, dx1, dx2, dx3)) ./(2ϵ)
 
 	# implement 4th order differential with finite differences
 	function D(x0, dx1, dx2, dx3, dx4)
@@ -714,10 +712,10 @@ function bautinNormalForm(_prob,
 	# implement 5th order differential with finite differences
 	function E(dx1, dx2, dx3, dx4, dx5)
 		dx5r = real.(dx5); dx5i = imag.(dx5);
-		out1 = (D(x0 .+ ϵ2 .* dx5r, dx1, dx2, dx3, dx4) .-
-			    D(x0 .- ϵ2 .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ2)
-		out2 = (D(x0 .+ ϵ2 .* dx5i, dx1, dx2, dx3, dx4) .-
-			    D(x0 .- ϵ2 .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ2)
+		out1 = (D(x0 .+ ϵ .* dx5r, dx1, dx2, dx3, dx4) .-
+			    D(x0 .- ϵ .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ)
+		out2 = (D(x0 .+ ϵ .* dx5i, dx1, dx2, dx3, dx4) .-
+			    D(x0 .- ϵ .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ)
 		return out1 .+ im .* out2
 	end
 
@@ -768,8 +766,8 @@ function zeroHopfNormalForm(_prob,
 	verbose && println("#"^53*"\n--> Zero-Hopf Normal form computation")
 
 	# scalar type
-	T = eltype(Teigvec)
-	ϵ2 = T(δ)
+	𝒯 = eltype(Teigvec)
+	ϵ2 = 𝒯(δ)
 
 	# get the MA problem
 	prob_ma = _prob.prob

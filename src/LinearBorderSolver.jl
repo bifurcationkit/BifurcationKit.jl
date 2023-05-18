@@ -132,7 +132,7 @@ end
 								state.τ.u, state.τ.p,
 								R, n,
 								state.θ, one(T) - state.θ;
-								shift = shift, dotp = iter.dotθ.dot)
+								shift = shift, dotp = getdot(iter).dot)
 
 # specific version with b,c,d being matrices / tuples of vectors
 # ┌         ┐
@@ -226,7 +226,6 @@ end
 								state.τ.u, state.τ.p,
 								R, n,
 								state.θ, one(T) - state.θ;
-								shift = shift, applyξu! = iter.dotθ.apply!)
 
 # version used for normal form computation
 # specific version with a,b,c being matrices / tuples of vectors
@@ -378,7 +377,7 @@ end
 								state.τ.u, state.τ.p,
 								R, n,
 								state.θ, one(T) - state.θ;
-								shift = shift, dotp = iter.dotθ.dot)
+								shift = shift, dotp = getdot(iter).dot)
 
 # version for blocks
 function (lbs::MatrixFreeBLS)(::Val{:Block}, J, a,

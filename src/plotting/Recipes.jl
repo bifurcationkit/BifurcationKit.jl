@@ -81,7 +81,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 	branchlabel = "",
 	linewidthunstable = 1.0,
 	linewidthstable = 2linewidthunstable,
-	plotcirclesbif = false,
+	plotcirclesbif = true,
 	applytoY = identity,
 	applytoX = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
@@ -217,7 +217,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
 							branchlabel = "",
 							linewidthunstable = 1.0,
 							linewidthstable = 2linewidthunstable,
-							plotcirclesbif = false,
+							plotcirclesbif = true,
 							applytoY = identity,
 							applytoX = identity)
 	for (id, res) in pairs(brs.branches)
@@ -346,7 +346,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
 	branchlabel = "",
 	linewidthunstable = 1.0,
 	linewidthstable = 2linewidthunstable,
-	plotcirclesbif = false,
+	plotcirclesbif = true,
 	_basicplot = true,
 	applytoY = identity,
 	applytoX = identity) where {Tk <: TwoParamCont, Tprob}

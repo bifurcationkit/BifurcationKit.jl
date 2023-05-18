@@ -394,9 +394,9 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
-- `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
-- `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
-- `bls = MatrixBLS()` specify Bordered linear solver. Used only for Bogdanov-Takens bifurcation.
+- `autodiff = true` Whether to use ForwardDiff for the many differentiations that are required to compute the normal form. Used for example for Bogdanov-Takens point.
+- `detailed = true` Whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
+- `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
@@ -404,9 +404,9 @@ Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities a
 
 You can directly call 
 
-    getNormalForm(br, ind_bif) ; kwargs...)	
+    getNormalForm(br, ind_bif ; kwargs...)	
 
-which is a shortcut for `getNormalForm(getProb(br), br, ind_bif) ; kwargs...)`.
+which is a shortcut for `getNormalForm(getProb(br), br, ind_bif ; kwargs...)`.
 
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating periodic orbit.v
 
@@ -672,7 +672,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose:
 	ζ★ = pt.ζ★
 
 	# jacobian at the bifurcation point
-	# c'est recalcule ici!!!! 2x
+	# c'est recalculé ici!!!! 2x
 	L = jacobian(prob, x0, parbif)
 
 	# we use BilinearMap to be able to call on complex valued arrays
