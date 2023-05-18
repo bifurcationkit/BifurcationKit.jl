@@ -3,6 +3,9 @@ abstract type AbstractFlow end
 # The vector field `F(x, p)` associated to a Cauchy problem ẋ = F(x, p). Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
 function vf(::AbstractFlow, x, par; k...) end
 
+# return a real number (like 1e-8) used to compute derivative w.r.t. the parameter by finite differences. This is used for example in PALC, Moore-Penrose, etc.
+function getDelta(::AbstractFlow) end
+
 # these functions are used in the Standard Shooting method
 # the function implements the flow (or semigroup) `(x, p, t) -> flow(x, p, t)` associated to an autonomous Cauchy problem. Only the last time point must be returned in the form Named Tuple `(u = ..., t = t)`. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, x, par, Inf)`.
 function evolve(::AbstractFlow, x, par, δt; k...) end

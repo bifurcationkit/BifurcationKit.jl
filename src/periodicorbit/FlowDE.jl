@@ -1,6 +1,6 @@
 using SciMLBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
 
-struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp} <: AbstractFlow
+struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: AbstractFlow
 	"Store the ODEProblem associated to the flow of the Cauchy problem"
 	prob::Tprob
 
@@ -17,14 +17,19 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp} <: Abstr
 	"Store possible callback"
 	callback::Tcb
 
+	# SHOULD BE USED!!!
 	"How the monodromy is computed"
 	jacobian::Tjac
 
 	"adjoint of the monodromy (Matrix-Free)."
 	vjp::Tvjp
+
+	"delta used in finite differences wrt to parameter. Used for example in PALC."
+	delta::Tδ
 end
 
 hasMonoDE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
+getDelta(fl::FlowDE) = fl.delta
 ####################################################################################################
 # constructors
 """
@@ -32,11 +37,11 @@ Creates a Flow variable based on a `prob::ODEProblem` and ODE solver `alg`. The 
 """
 # this constructor takes into account a parameter passed to the vector field
 function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
-	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing), nothing, nothing)
+	return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing), nothing, nothing, 1e-8)
 end
 
 function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
-	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), nothing, nothing)
+	return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), nothing, nothing, 1e-8)
 end
 ####################################################################################################
 _getVectorField(prob::ODEProblem, o, x, p) = prob.f(o, x, p, prob.tspan[1])
