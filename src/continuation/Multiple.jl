@@ -43,6 +43,7 @@ getLinsolver(alg::Multiple) = getLinsolver(alg.alg)
 getdot(alg::Multiple) = getdot(alg.alg)
 # important for bisection algorithm
 internalAdaptation!(alg::Multiple, onoroff::Bool) = internalAdaptation!(alg.alg, onoroff)
+@inline getθ(alg::Multiple) = getθ(alg.alg)
 
 # callback for newton
 function (algcont::Multiple)(state; kwargs...)

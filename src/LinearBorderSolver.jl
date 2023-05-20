@@ -131,7 +131,7 @@ end
 	  					  (lbs)(J, dR,
 								state.τ.u, state.τ.p,
 								R, n,
-								state.θ, one(T) - state.θ;
+								getθ(iter), one(T) - getθ(iter);
 								shift = shift, dotp = getdot(iter).dot)
 
 # specific version with b,c,d being matrices / tuples of vectors
@@ -225,7 +225,7 @@ end
 	  					  (lbs)(J, dR,
 								state.τ.u, state.τ.p,
 								R, n,
-								state.θ, one(T) - state.θ;
+								getθ(iter), one(T) - getθ(iter);
 
 # version used for normal form computation
 # specific version with a,b,c being matrices / tuples of vectors
@@ -376,7 +376,7 @@ end
 	  					  (lbs)(J, dR,
 								state.τ.u, state.τ.p,
 								R, n,
-								state.θ, one(T) - state.θ;
+								getθ(iter), one(T) - getθ(iter);
 								shift = shift, dotp = getdot(iter).dot)
 
 # version for blocks

@@ -74,8 +74,10 @@ $(TYPEDFIELDS)
 end
 getLinsolver(alg::PALC) = alg.bls
 @inline getdot(alg::PALC) = alg.dotθ
+@inline getθ(alg::PALC) = alg.θ
 # we also extend this for a ContIterable
 @inline getdot(it::ContIterable) = getdot(it.alg)
+@inline getθ(it::ContIterable) = getθ(it.alg)
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internalAdaptation!(alg::PALC, onoroff::Bool) = internalAdaptation!(alg.tangent, onoroff)
@@ -176,7 +178,7 @@ internalAdaptation!(::Secant, ::Bool) = nothing
 getTangent!(state::AbstractContinuationState,
 			iter::AbstractContinuationIterable,
 			algo::Secant,
-			dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, state.θ, iter.verbosity, dotθ)
+			dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
 ###############################################
 """
 	Bordered Tangent predictor
@@ -198,7 +200,7 @@ function getTangent!(state::AbstractContinuationState,
 	(it.verbosity > 0) && println("Predictor: Bordered")
 	ϵ = getDelta(it.prob)
 	τ = state.τ
-	θ = state.θ
+	θ = getθ(it)
 	T = eltype(it)
 
 	# dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
@@ -387,10 +389,11 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	paramlens = getLens(iter)
 	contparams = getContParams(iter)
 	T = eltype(iter)
+	θ = getθ(iter)
 
 	z0 = getSolution(state)
 	τ0 = state.τ
-	@unpack z_pred, ds, θ = state
+	@unpack z_pred, ds = state
 
 	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
 	@unpack pMin, pMax = contparams

@@ -98,7 +98,6 @@ Returns a variable containing the state of the continuation procedure. The field
 - `itnewton` Number of newton iteration (in corrector)
 - `step` current continuation step
 - `ds` step size
-- `theta` theta parameter for constraint equation in PALC
 - `stopcontinuation` Boolean to stop continuation
 
 # Useful functions
@@ -122,7 +121,6 @@ Returns a variable containing the state of the continuation procedure. The field
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
-	θ::T									# theta parameter for constraint equation in PALC
 
 	stopcontinuation::Bool = false			# Boolean to stop continuation
 	stepsizecontrol::Bool = true			# Perform step size adaptation
@@ -149,7 +147,6 @@ function Base.copy(state::ContState)
 		itnewton 	= state.itnewton,
 		step 		= state.step,
 		ds 			= state.ds,
-		θ	 		= state.θ,
 		stopcontinuation = state.stopcontinuation,
 		stepsizecontrol  = state.stepsizecontrol,
 		n_unstable 		 = state.n_unstable,
@@ -169,7 +166,6 @@ function Base.copyto!(dest::ContState, src::ContState)
 		dest.itnewton 	= src.itnewton
 		dest.step 		= src.step
 		dest.ds 		= src.ds
-		dest.θ 			= src.θ
 		dest.stopcontinuation = src.stopcontinuation
 		dest.stepsizecontrol  = src.stepsizecontrol
 		dest.n_unstable 	  = src.n_unstable
@@ -200,7 +196,7 @@ function getStateSummary(it, state)
 	p = getp(state)
 	pt = recordFromSolution(it)(x, p)
 	stable = computeEigenElements(it) ? isStable(state) : nothing
-	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, θ = state.θ, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
+	return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
 end
 
 function updateStability!(state::ContState, n_unstable::Int, n_imag::Int, converged::Bool)
@@ -292,7 +288,6 @@ end
 
 # same as previous function but when two (initial guesses) points are provided
 function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
-	θ = it.alg isa PALC ? it.alg.θ : T(0.5)
 	ds = it.contParams.ds
 
 	# compute eigenvalues to get the type. Necessary to give a ContResult
@@ -313,7 +308,6 @@ function iterateFromTwoPoints(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _v
 						z_old = BorderedArray(_copy(u₀), p₀),
 						converged = true,
 						ds = it.contParams.ds,
-						θ = θ,
 						eigvals = eigvals,
 						eigvecs = eigvecs,
 						eventValue = (cbval, cbval))

@@ -27,6 +27,8 @@ end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internalAdaptation!(alg::MoorePenrose, swch::Bool) = internalAdaptation!(alg.tangent, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
+@inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
+
 """
 $(SIGNATURES)
 """
@@ -122,7 +124,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	z0 = getSolution(state)
 	τ0 = state.τ
 	z_pred = state.z_pred
-	ds = state.ds; θ = state.θ
+	ds = state.ds
 
 	@unpack tol, maxIter, verbose = contparams.newtonOptions
 	@unpack pMin, pMax = contparams
