@@ -157,7 +157,7 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
 
 		~flag && @debug "Linear solver for J did not converge."
 	else
-		@assert 1==0 "WIP"
+		@assert 1==0 "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
 	end
 
 	if debugArray isa AbstractArray
@@ -225,14 +225,14 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 	# Jacobian for the PD problem
 	if jacobian_ma == :autodiff
 		pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-		prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_pd_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
 	elseif jacobian_ma == :finiteDifferencesMF
 		pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-		prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_pd_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	else
-		prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_pd_cont = @set options_cont.newtonOptions.linsolver = PDLinearSolverMinAug()
 	end
 
@@ -346,7 +346,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 
 	event = ContinuousEvent(2, testForGPD_CP, computeEigenElements, ("gpd", "cusp"), 0)
 
-	# solve the P equations
+	# solve the PD equations
 	br_pd_po = continuation(
 		prob_f, alg,
 		(@set opt_pd_cont.newtonOptions.eigsolver = eigsolver);

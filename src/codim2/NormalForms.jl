@@ -977,7 +977,6 @@ function zeroHopfNormalForm(_prob,
 		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
 	end
 
-
 	dFp = [dot(p0, Jp(p10, lens1)) dot(p0, Jp(p20, lens2)); dot(p1, Jp(p10, lens1)) dot(p1, Jp(p20, lens2))]
 
 	pt = ZeroHopf(
@@ -1266,7 +1265,7 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
 	par0 = [p1, p2]
 
 
-	# formula in section "2.3.1. Generalized Hopf"
+	# formula in section "2.1.3. Double-Hopf"
 	x1 = @. hh.x0 + ϵ^2 * real(h₁₁₀₀ - (h₀₀₀₀₁₀ * ns1.α[1] + h₀₀₀₀₀₁ * ns1.α[2]))
 	x2 = @. hh.x0 + ϵ^2 * real(h₀₀₁₁ - (h₀₀₀₀₁₀ * ns2.α[1] + h₀₀₀₀₀₁ * ns2.α[2]))
 
@@ -1275,6 +1274,15 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
 
 	ω1 = imag(λ1)
 	ω2 = imag(λ2)
+
+	ω11 = ω1 + ns1.dω1 * ϵ^2
+	ω12 = ω2 + ns1.dω2 * ϵ^2
+	ω21 = ω1 + ns2.dω1 * ϵ^2
+	ω22 = ω2 + ns2.dω2 * ϵ^2
+
+	# Floquet multipliers for NS associated to the periodic orbit 
+	k1 = ω22 / ω11 * 2pi
+	k2 = ω11 / ω22 * 2pi
 
 	function NS1(θ)
 		@. x1 + 2ϵ * real(q1 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))
@@ -1288,12 +1296,14 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
 			ns2 = t -> NS2(t),
 			params1 = (@. par0 - ns1.α * ϵ^2),
 			params2 = (@. par0 - ns2.α * ϵ^2),
-			ω11 = ω1 + ns1.dω1 * ϵ^2,
-			ω12 = ω2 + ns1.dω2 * ϵ^2,
-			ω21 = ω1 + ns2.dω1 * ϵ^2,
-			ω22 = ω2 + ns2.dω2 * ϵ^2,
-			T1 = 2pi / (ω1 + ns1.dω1 * ϵ^2),
-			T2 = 2pi / (ω2 + ns2.dω2 * ϵ^2),
+			ω11 = ω11,
+			ω12 = ω12,
+			ω21 = ω21,
+			ω22 = ω22,
+			T1 = 2pi / ω11,
+			T2 = 2pi / ω22,
+			k1 = k1,
+			k2 = k2,
 	)
 end
 

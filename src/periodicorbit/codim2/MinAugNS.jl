@@ -43,7 +43,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::T, ω::T, para
 	# update parameter
 	par = set(params, getLens(𝐍𝐒), p)
 	J = jacobianNeimarkSacker(𝐍𝐒.prob_vf, x, par, ω)
-	σ1 = nstest(J, a, b, T(0), 𝐍𝐒.zero, T(1); lsbd = 𝐍𝐒.linbdsolver)[2]
+	σ1 = nstest(J, a, b, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)[2]
 	return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
 
@@ -98,17 +98,17 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 	par0 = set(par, lens, p)
 
 	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
-	JNS = jacobianNeimarkSacker(POWrap, x, par0, ω) # jacobian with period doubling boundary condition
+	JNS = jacobianNeimarkSacker(POWrap, x, par0, ω) # jacobian with period NS boundary condition
 
 	# we do the following in order to avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
 	JNS★ = hasAdjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, par0, ω) : adjoint(JNS)
 
 	# we solve N[v, σ1] = [0, 1]
-	v, σ1, cv, itv = nstest(JNS, a, b, T(0), 𝐍𝐒.zero, T(1); lsbd = 𝐍𝐒.linbdsolver)
+	v, σ1, cv, itv = nstest(JNS, a, b, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)
 	~cv && @debug "Linear solver for N did not converge."
 
-	# # we solve Nᵗ[w, σ2] = [0, 1]
-	w, σ2, cv, itw = nstest(JNS★, b, a, T(0), 𝐍𝐒.zero, T(1); lsbd = 𝐍𝐒.linbdsolver)
+	# we solve Nᵗ[w, σ2] = [0, 1]
+	w, σ2, cv, itw = nstest(JNS★, b, a, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)
 	~cv && @debug "Linear solver for Nᵗ did not converge."
 
 	δ = getDelta(POWrap)
@@ -171,7 +171,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 		
 		return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 	else
-		@assert 1==0 "WIP"
+		@assert 1==0 "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
 	end
 
 	if debugArray isa AbstractArray
@@ -236,14 +236,14 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 	# Jacobian for the NS problem
 	if jacobian_ma == :autodiff
 		nspointguess = vcat(nspointguess.u, nspointguess.p...)
-		prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_ns_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
 	elseif jacobian_ma == :finiteDifferencesMF
 		nspointguess = vcat(nspointguess.u, nspointguess.p...)
-		prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_ns_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	else
-		prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plotDefault, prob.recordFromSolution)
+		prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_ns_cont = @set options_cont.newtonOptions.linsolver = NSLinearSolverMinAug()
 	end
 
@@ -265,7 +265,6 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		prob_ns = iter.prob.prob
 		pbwrap = prob_ns.prob_vf
 
-		#############
 		ns0 = NeimarkSacker(copy(x), p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
 		# test if we jumped to PD branch
 		pdjump = abs(ω - pi) < 100options_newton.tol
@@ -304,7 +303,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		event = PairOfEvents(ContinuousEvent(1, testCH, computeEigenElements, ("ch",), 0), event_user)
 	end
 
-	# solve the P equations
+	# solve the NS equations
 	br_ns_po = continuation(
 		prob_ns, alg,
 		(@set opt_ns_cont.newtonOptions.eigsolver = eigsolver);

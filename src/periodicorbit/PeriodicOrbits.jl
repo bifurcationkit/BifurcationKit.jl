@@ -358,7 +358,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 					kwargs...)
 	# compute the normal form of the branch point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
-	verbose && (println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
+	verbose && (println("──> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
 	cb = get(kwargs, :callbackN, cbDefault)
 
@@ -428,7 +428,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 			deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, 1.0, [sol0.u]; autodiff = true)
 		end
 
-		verbose && println("\n--> Compute point on bifurcated branch...")
+		verbose && println("\n──> Compute point on bifurcated branch...")
 		solbif = newton(probPO, orbitguess, deflationOp, (@set optn.maxIter = 10 * optn.maxIter); callback = cb, kwargs...)
 		@assert converged(solbif) "Deflated newton did not converge"
 		orbitguess .= solbif.u

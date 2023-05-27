@@ -394,8 +394,8 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
-- `autodiff = true` Whether to use ForwardDiff for the many differentiations that are required to compute the normal form. Used for example for Bogdanov-Takens point.
-- `detailed = true` Whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
+- `autodiff = true` whether to use ForwardDiff for the many differentiations that are required to compute the normal form. Used for example for Bogdanov-Takens point.
+- `detailed = true` whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
 
 Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
@@ -438,7 +438,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :gh
 		return bautinNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed)
 	elseif bifpt.type == :zh
-		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
+		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
 	elseif bifpt.type == :hh
 		return hopfHopfNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
@@ -513,7 +513,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 
 	ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
 
-	# differentials should work as we are looking at reals
+	# these differentials should as is work as we are using real valued vectors
 	R2(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
 	R3(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
 

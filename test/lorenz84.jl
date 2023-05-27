@@ -60,7 +60,7 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), 
 	detectCodim2Bifurcation = 1,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-    recordFromSolution = recordFromSolutionLor,
+	recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS(),
 	)
 
