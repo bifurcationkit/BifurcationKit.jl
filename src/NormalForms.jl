@@ -440,7 +440,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :zh
 		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
 	elseif bifpt.type == :hh
-		return hopfHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
+		return hopfHopfNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
 		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
 	end

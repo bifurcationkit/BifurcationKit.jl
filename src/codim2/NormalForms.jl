@@ -870,7 +870,8 @@ function zeroHopfNormalForm(_prob,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
 		scaleζ = norm,
-		autodiff = true)
+		autodiff = true,
+		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
 	verbose && println("#"^53*"\n--> Zero-Hopf Normal form computation")
@@ -1028,8 +1029,8 @@ function hopfHopfNormalForm(_prob,
 	verbose && println("#"^53*"\n--> Hopf-Hopf Normal form computation")
 
 	# scalar type
-	T = eltype(Teigvec)
-	ϵ2 = T(δ)
+	𝒯 = eltype(Teigvec)
+	ϵ = 𝒯(δ)
 
 	# get the MA problem
 	prob_ma = _prob.prob
@@ -1095,7 +1096,27 @@ function hopfHopfNormalForm(_prob,
 	else
 		@assert 1==0 "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
 	end
+
+	# for easier debugging, we normalise the case to ω1 > ω2 > 0
+	if imag(λ1) < 0
+		λ1 = conj(λ1)
+		q1 = conj(q1)
+	end
+
+	if imag(λ2) < 0
+		λ2 = conj(λ2)
+		q2 = conj(q2)
+	end
+
+	if imag(λ1) < imag(λ2)
+		q1, q2 = q2, q1
+		λ1, λ2 = λ2, λ1
+	end
 	q1 ./= scaleζ(q1)
+	q2 ./= scaleζ(q2)
+
+	cq1 = conj(q1); cq2 = conj(q2)
+	ω1 = imag(λ1); ω2 = imag(λ2);
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
@@ -1135,6 +1156,82 @@ function hopfHopfNormalForm(_prob,
 		(;λ1 = λ1, λ2 = λ2),
 		:none
 	)
+
+	# case of simplified normal form
+	if detailed == false
+		return pt
+	end
+
+	# second order differential, to be in agreement with Kuznetsov et al.
+	B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
+	C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
+
+	# REF1: Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
+
+	# REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
+
+	# second order, formulas 9.2 - 9.6 in REF1
+	h₂₀₀₀, = ls(-L, B(q1, q1), a₀ = 2λ1)
+	h₀₀₂₀, = ls(-L, B(q2, q2), a₀ = 2λ2)
+
+	h₁₀₁₀, = ls(-L, B(q1, q2),  a₀ = Complex(0, ω1 + ω2))
+	h₁₀₀₁, = ls(-L, B(q1, cq2), a₀ = Complex(0, ω1 - ω2))
+
+	h₁₁₀₀, = ls(L, B(q1, cq1)); h₁₁₀₀ .*= -1
+	h₀₀₁₁, = ls(L, B(q2, cq2)); h₀₀₁₁ .*= -1
+
+
+	# for implementing forumla 28 in REF2, we need G2100, G1110 from REF1, on page 1117
+	tmp2100 = C(q1, q1, cq1) .+ B(h₂₀₀₀, cq1) .+ 2 .* B(h₁₁₀₀, q1)
+	G2100 = dot(p1, tmp2100)
+	tmp0021 = C(q2, q2, cq2) .+ B(h₀₀₂₀, cq2) .+ 2 .* B(h₀₀₁₁, q2)
+	G0021 = dot(p2, tmp0021)
+	tmp1110 = C(q1, cq1, q2) .+ B(h₁₁₀₀, q2) .+ B(h₁₀₁₀, cq1) .+ B(conj(h₁₀₀₁), q1)
+	G1110 = dot(p2, tmp1110)
+	tmp1011 = C(q1, q2, cq2) .+ B(h₁₀₁₀, cq2) .+ B(h₁₀₀₁, q2) .+ B(h₀₀₁₁, q1)
+	G1011 = dot(p1, tmp1011)
+
+	# implement formula 26 from REF2
+	VF = prob_ma.prob_vf
+	F(x, p) = residual(prob_vf, x, p)
+
+	lens1, lens2 = pt.lens
+	getp(l::Lens) = get(parbif, l)
+	setp(l::Lens, p::Number) = set(parbif, l, p)
+	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+	_A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+	 				  applyJacobian(VF, x0, parbif, q)) ./ϵ
+	A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
+	A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
+	Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
+	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+	J1 = lens -> F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+
+	h₀₀₀₀₁₀, = ls(L, J1(lens1)); h₀₀₀₀₁₀ .*= -1
+	h₀₀₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₀₀₁ .*= -1
+
+	γ₁₁₀ = dot(p1, B(q1, h₀₀₀₀₁₀) .+ A1(q1, lens1))
+	γ₂₁₀ = dot(p2, B(q2, h₀₀₀₀₁₀) .+ A1(q2, lens1))
+	γ₁₀₁ = dot(p1, B(q1, h₀₀₀₀₀₁) .+ A1(q1, lens2))
+	γ₂₀₁ = dot(p2, B(q2, h₀₀₀₀₀₁) .+ A1(q2, lens2))
+
+	Γ = [γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]
+	
+	# formula (22) for Neimark-Sacker1
+	f2100 = real(G2100)/2
+	α = real.(Γ) \ [f2100, real(G1110)]
+	dω1 = imag(G2100)/2 - imag.(Γ[1,:])' * α
+	dω2 = imag(G1110) - imag.(Γ[2,:])' * α
+	ns1 = (; dω1, dω2, α)
+
+	# formula (22) for Neimark-Sacker2
+	f0021 = real(G0021)/2
+	α = real.(Γ) \ [real(G1011), f0021]
+	dω1 = imag(G1011) - imag.(Γ[1,:])' * α
+	dω2 = imag(G0021)/2 - imag.(Γ[2,:])' * α
+	ns2 = (; dω1, dω2, α)
+
+	return @set pt.nf = (;λ1 = λ1, λ2 = λ2, G2100, G0021, G1110, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
 end
 
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
@@ -1160,3 +1257,43 @@ function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
 			EigenVecAd = EigenVecAd,
 			x0 = t -> 0)
 end
+
+function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor = T(1)) where T
+	@unpack λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2 = hh.nf
+	lens1, lens2 = hh.lens
+	p1 = get(hh.params, lens1)
+	p2 = get(hh.params, lens2)
+	par0 = [p1, p2]
+
+
+	# formula in section "2.3.1. Generalized Hopf"
+	x1 = @. hh.x0 + ϵ^2 * real(h₁₁₀₀ - (h₀₀₀₀₁₀ * ns1.α[1] + h₀₀₀₀₀₁ * ns1.α[2]))
+	x2 = @. hh.x0 + ϵ^2 * real(h₀₀₁₁ - (h₀₀₀₀₁₀ * ns2.α[1] + h₀₀₀₀₀₁ * ns2.α[2]))
+
+	q1 = hh.ζ.q1
+	q2 = hh.ζ.q2
+
+	ω1 = imag(λ1)
+	ω2 = imag(λ2)
+
+	function NS1(θ)
+		@. x1 + 2ϵ * real(q1 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))
+	end
+
+	function NS2(θ)
+		@. x2 + 2ϵ * real(q2 * cis(θ)) + 2ϵ^2 * real(h₀₀₂₀ * cis(2θ))
+	end
+	
+	return (ns1 = t -> NS1(t),
+			ns2 = t -> NS2(t),
+			params1 = (@. par0 - ns1.α * ϵ^2),
+			params2 = (@. par0 - ns2.α * ϵ^2),
+			ω11 = ω1 + ns1.dω1 * ϵ^2,
+			ω12 = ω2 + ns1.dω2 * ϵ^2,
+			ω21 = ω1 + ns2.dω1 * ϵ^2,
+			ω22 = ω2 + ns2.dω2 * ϵ^2,
+			T1 = 2pi / (ω1 + ns1.dω1 * ϵ^2),
+			T2 = 2pi / (ω2 + ns2.dω2 * ϵ^2),
+	)
+end
+
