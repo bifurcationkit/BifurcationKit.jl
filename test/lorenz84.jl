@@ -308,6 +308,12 @@ nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true)
 
 @test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
 @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
+@test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im atol = 1e-3
+@test nf.nf.γ₁₀₁ ≈ 0.41675854806948004 - 0.3691568377673768im atol = 1e-3
+@test nf.nf.γ₁₁₀ ≈ 0.03210697158629905 + 0.34913987438180344im atol = 1e-3
+@test nf.nf.γ₂₀₁ ≈ 6.5060917177185535 - 1.276445931785017im atol = 1e-3
+@test nf.nf.γ₂₁₀ ≈ -2.005158175714135 - 1.8446801200912402im atol = 1e-3
+
 
 # locate BT point with newton algorithm
 _bt = BK.BTPoint(hp_codim2_1, 2)
