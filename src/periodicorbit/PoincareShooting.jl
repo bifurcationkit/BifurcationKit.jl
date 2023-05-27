@@ -21,7 +21,10 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 $DocStrjacobianPOSh
 
 ## Simplified constructors
-- A simpler way is to create a functional is
+- The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points
+	pb = PoincareShootingProblem(M::Int, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
+
+- A convenient way is to create a functional is
 
 `pb = PoincareShootingProblem(prob::ODEProblem, alg, section; kwargs...)`
 

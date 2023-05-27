@@ -48,7 +48,10 @@ Note that you can generate this guess from a function solution using `generateSo
 $DocStrjacobianPOSh
 
 ## Simplified constructors
-- A simpler way to build the functional is to use
+- The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points
+	pb = ShootingProblem(M::Int, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
+
+- A convenient way to build the functional is to use
 	pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
 where `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `parallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 

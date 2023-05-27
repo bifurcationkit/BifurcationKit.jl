@@ -990,9 +990,9 @@ function continuationPOTrap(prob::PeriodicOrbitTrapProblem,
 
 		probwp = WrapPOTrap(prob, jac, orbitguess, getParams(prob.prob_vf), getLens(prob.prob_vf), _plotsol, _recordsol)
 
-		br = continuation(
-			probwp, alg,
-			contParams2; kwargs...,
+		br = continuation(probwp, alg,
+			contParams2; 
+			kwargs...,
 			kind = PeriodicOrbitCont(),
 			finaliseSolution = _finsol,
 			)

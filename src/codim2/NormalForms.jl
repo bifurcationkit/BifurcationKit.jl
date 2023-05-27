@@ -402,7 +402,7 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; verbose = false
 			x0 = t -> getx(t) .* bt.ζ[1])
 end
 
-function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T; verbose = false, ampfactor = 	one(T)) where T
+function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T; verbose = false, ampfactor = one(T)) where T
 	# we follow
 	# Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
 
@@ -454,7 +454,7 @@ Compute the Bogdanov-Takens normal form.
 - `options` options for the Newton solver
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences
+- `δ = 1e-8` used for finite differences for parameters
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
@@ -603,7 +603,7 @@ function bautinNormalForm(_prob,
 	ϵ = 𝒯(δ)
 
 	# functional
-	@assert prob_ma isa HopfProblemMinimallyAugmented
+	@assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of of Hopf points."
 	ls = prob_ma.linsolver
 	bls = prob_ma.linbdsolver
 
@@ -613,7 +613,7 @@ function bautinNormalForm(_prob,
 	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
 	nev = max(N, nev)
 
-	# Newton parameters
+	# newton parameters
 	optionsN = br.contparams.newtonOptions
 
 	# bifurcation point
@@ -629,12 +629,13 @@ function bautinNormalForm(_prob,
 	parbif = set(getParams(br), lens, p)
 	parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
 
-	# jacobian at bifurcation point
 	if Teigvec <: BorderedArray
 		x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
 	else
 		x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
 	end
+
+	# jacobian at bifurcation point
 	L = jacobian(prob_vf, x0, parbif)
 
 	# right eigenvector
@@ -645,7 +646,7 @@ function bautinNormalForm(_prob,
 		_λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
 		_ind = argmin(abs.(_λ .- λ))
 		@info "The eigenvalue is $(_λ[_ind])"
-		@warn abs(_λ[_ind] - λ) < br.contparams.newtonOptions.tol "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+		abs(_λ[_ind] - λ) > 10br.contparams.newtonOptions.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
 		ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
 	else
 		ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
@@ -668,7 +669,7 @@ function bautinNormalForm(_prob,
 	C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
 
 	q0 = ζ; p0 = ζ★
-	cq0 = conj.(q0)
+	cq0 = conj(q0)
 
 	# normal form computation based on Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
@@ -740,15 +741,124 @@ function bautinNormalForm(_prob,
 	# second Lyapunov coefficient
 	l2 = real(G32) / 12
 
-	# the unfolding are in meijer. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
-
 	pt = Bautin(
 		x0, parbif,
 		(getLens(prob_ma), lens),
 		ζ, ζ★,
-		(;ω, G21, G32, l2 ),
+		(;ω, G21, G32, l2),
 		:none
 	)
+
+	# case of simplified normal form
+	if detailed == false
+		return pt
+	end
+
+	###########################
+	# computation of the unfolding
+	# the unfolding are in meijer. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
+
+	# this part is for branching to Fold of limit cycles
+	VF = prob_ma.prob_vf
+	F(x, p) = residual(prob_vf, x, p)
+
+	lens1, lens2 = pt.lens
+	getp(l::Lens) = get(parbif, l)
+	setp(l::Lens, p::Number) = set(parbif, l, p)
+	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+	_A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+	 				  applyJacobian(VF, x0, parbif, q)) ./ϵ
+	A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
+	A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
+	Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
+	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+	J1 = lens -> F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+	h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
+	h₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₁ .*= -1
+	γ₁₁₀ = dot(p0, A1(q0, lens1) + B(q0, h₀₀₁₀))
+	γ₁₀₁ = dot(p0, A1(q0, lens2) + B(q0, h₀₀₀₁))
+
+	# compute the lyapunov coefficient l1, conform to notations from above paper
+	h₂₀₀₀ = H20
+	h₁₁₀₀ = H11
+	l1 = G21/2
+	h₂₁₀₀ = H21
+
+	Ainv(dx) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); shift = -λ)
+	h₁₀₁₀, = Ainv(γ₁₁₀ .* q0 .- A1(q0, lens1) .- B(q0, h₀₀₁₀) )
+	h₁₀₀₁, = Ainv(γ₁₀₁ .* q0 .- A1(q0, lens2) .- B(q0, h₀₀₀₁) )
+
+	tmp2010 = (2γ₁₁₀) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₁₀) .+ 2 .* B(q0, h₁₀₁₀) .+ B(h₂₀₀₀, h₀₀₁₀) .+ B1(q0, q0, lens1) .+ A1(h₂₀₀₀, lens1))
+	h₂₀₁₀, = ls(L, tmp2010; a₀ = Complex(0, -2ω) )
+
+	tmp2001 = (2γ₁₀₁) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₀₁) .+ 2 .* B(q0, h₁₀₀₁) .+ B(h₂₀₀₀, h₀₀₀₁) .+ B1(q0, q0, lens2) .+ A1(h₂₀₀₀, lens2))
+	h₂₀₀₁, = ls(L, tmp2001; a₀ = Complex(0, -2ω) )
+
+	tmp1110 = 2real(γ₁₁₀) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₁₀) .+ B(h₁₁₀₀, h₀₀₁₀) .+ 2 .* real(B(cq0, h₁₀₁₀)) .+ B1(q0, cq0, lens1) .+ A1(h₁₁₀₀, lens1))
+	h₁₁₁₀, = ls(L, tmp1110)
+
+	tmp1101 = 2real(γ₁₀₁) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₀₁) .+ B(h₁₁₀₀, h₀₀₀₁) .+ 2 .* real(B(cq0, h₁₀₀₁)) .+ B1(q0, cq0, lens2) .+ A1(h₁₁₀₀, lens2))
+	h₁₁₀₁, = ls(L, tmp1101)
+
+	_C1(pars) = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, pars, dx1, dx2, dx3) )
+	C1(dx1, dx2, dx3, l) = (_C1(setp(l, getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
+
+	tmp2110 = D(x0, q0, q0, cq0, h₀₀₁₀) .+
+			2 .* C(q0, h₁₁₀₀, h₀₀₁₀) .+
+			2 .* C(q0, cq0, h₁₀₁₀) .+
+			C(q0, q0, conj(h₁₀₁₀)) .+
+			C(h₂₀₀₀, cq0, h₀₀₁₀) .+
+			2 .* B(q0, h₁₁₁₀) .+
+			2 .* B(h₁₁₀₀, h₁₀₁₀) .+
+			B(h₂₀₀₀, conj(h₁₀₁₀)) .+
+			B(h₂₁₀₀, h₀₀₁₀) .+
+			B(cq0, h₂₀₁₀) .+
+			C1(q0, q0, cq0, lens1) .+
+			2 .* B1(h₁₁₀₀, q0, lens1) .+ B1(h₂₀₀₀, cq0, lens1) .+ A1(h₂₁₀₀, lens1)
+
+		
+	tmp2101 = D(x0, q0, q0, cq0, h₀₀₀₁) .+
+			2 .* C(q0, h₁₁₀₀, h₀₀₀₁) .+
+			2 .* C(q0, cq0, h₁₀₀₁) .+
+			C(q0, q0, conj(h₁₀₀₁)) .+
+			C(h₂₀₀₀, cq0, h₀₀₀₁) .+
+			2 .* B(q0, h₁₁₀₁) .+
+			2 .* B(h₁₁₀₀, h₁₀₀₁) .+
+			B(h₂₀₀₀, conj(h₁₀₀₁)) .+
+			B(h₂₁₀₀, h₀₀₀₁) .+
+			B(cq0, h₂₀₀₁) .+
+			C1(q0, q0, cq0, lens2) .+
+			2 .* B1(h₁₁₀₀, q0, lens2) .+ B1(h₂₀₀₀, cq0, lens2) .+ A1(h₂₁₀₀, lens2)
+	
+	γ₂₁₀ = dot(p0, tmp2110)/2
+	γ₂₀₁ = dot(p0, tmp2101)/2
+
+	# formula (22)
+	α = real.([γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]) \ [0, 1]
+
+	@set pt.nf = (;ω, G21, G32, l2, l1, h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, α )
+end
+
+function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; verbose = false, ampfactor = T(1)) where T
+	@unpack h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁ = gh.nf
+	lens1, lens2 = gh.lens
+	p1 = get(gh.params, lens1)
+	p2 = get(gh.params, lens2)
+	par0 = [p1, p2]
+	
+	# periodic orbit on the fold
+	# formula in section "2.3.1. Generalized Hopf"
+	x0 = @. gh.x0 + ϵ^2 * real(h₁₁₀₀ - 2l2 * (h₀₀₁₀ * α[1] + h₀₀₀₁ * α[2]))
+	q0 = gh.ζ
+
+	function FoldPO(θ)
+		@. x0 + 2ϵ * real(q0 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))
+	end
+
+	return (orbit = t -> FoldPO(t),
+			ω = ω + (-2l2 * imag(α[1] * γ₁₁₀ + α[2] * γ₁₀₁) + imag(l1)) * ϵ^2,
+			params = (@. par0 - 2l2 * α * ϵ^2),
+			x0 = t -> x0)
 end
 ####################################################################################################
 function zeroHopfNormalForm(_prob,
@@ -842,7 +952,6 @@ function zeroHopfNormalForm(_prob,
 
 	# normalise left eigenvectors
 	p0 ./= dot(p0, q0)
-	@show dot(p1, q1)
 	p1 ./= dot(q1, p1)
 	@assert dot(p0, q0) ≈ 1
 	@assert dot(p1, q1) ≈ 1
@@ -983,7 +1092,7 @@ function hopfHopfNormalForm(_prob,
 		@info "The second eigenvalue is $(λ2)"
 		q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
 	else
-		@assert 1==0 "Not done"
+		@assert 1==0 "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
 	end
 	q1 ./= scaleζ(q1)
 
@@ -995,8 +1104,8 @@ function hopfHopfNormalForm(_prob,
 	# normalise left eigenvectors
 	p1 ./= dot(q1, p1)
 	p2 ./= dot(q2, p2)
-	@assert dot(p1, q1) ≈ 1 "we found $(dot(p1, q1))"
-	@assert dot(p2, q2) ≈ 1 "we found $(dot(p2, q2))"
+	@assert dot(p1, q1) ≈ 1 "we found $(dot(p1, q1)) instead of 1."
+	@assert dot(p2, q2) ≈ 1 "we found $(dot(p2, q2)) instead of 1."
 
 	# parameters for vector field
 	p = bifpt.param

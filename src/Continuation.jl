@@ -275,14 +275,14 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 		display(sol₀.residuals)
 		throw("")
 	end
-	verbose && (print("\n--> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = ", p₀, ", initial step")
+	verbose && (print("\n──> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("──> parameter = ", p₀, ", initial step")
 	verbose && printstyled("\n"*"─"^17*" INITIAL TANGENT "*"─"^17, bold = true, color = :magenta)
 	sol₁ = newton(reMake(prob; params = setParam(it, p₀ + ds / η), u0 = sol₀.u),
 			newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
 	@assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
-	verbose && (print("\n--> convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("--> parameter = ", p₀ + ds/η, ", initial step (bis)")
+	verbose && (print("\n──> convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("──> parameter = ", p₀ + ds/η, ", initial step (bis)")
 	return iterateFromTwoPoints(it, sol₀.u, p₀, sol₁.u, p₀ + ds / η; _verbosity = _verbosity)
 end
 
@@ -345,7 +345,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 
 	if converged(state)
 		if verbose
-			verbose1 && printstyled("--> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
+			verbose1 && printstyled("──> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
 			print("Parameter ", getLensSymbol(it))
 			@printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
 		end
@@ -354,7 +354,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		if computeEigenElements(it)
 			# this computes eigen-elements, store them in state and update the stability indices in state
 			it_eigen = computeEigenvalues!(it, state)
-			verbose1 && printstyled(color=:green,"--> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
+			verbose1 && printstyled(color=:green,"──> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
 		end
 		state.step += 1
 	else

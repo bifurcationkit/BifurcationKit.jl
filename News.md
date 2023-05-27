@@ -3,6 +3,19 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.8] - 2023-05-18
+- add getDelta to the interface of AbstractFlow
+- remove finDiffEps from ContinuationPar. 
+
+## [0.2.8] - 2023-04-23
+- use jvp function name in Flow interface
+- add radius to section of Poincare Shooting
+- add _mesh field to reconstruct POColl problem (adapted mesh) from previous solution
+- add new jacobian parametrisation using structs instead of Symbol 
+- remove θ from ContinuationPar
+
+## [0.2.8] - 2023-04-17
+- add delta keyword to BifurcationProblem constructor
 ## [0.2.0] - 2022-07-23
 - new interface based on the problem `BifurcationProblem`
 

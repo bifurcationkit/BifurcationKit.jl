@@ -595,6 +595,15 @@ newton(probPO::PeriodicOrbitOCollProblem,
 				options::NewtonPar;
 				kwargs...) =
 	_newtonPOColl(probPO, orbitguess, options; defOp = defOp, kwargs...)
+
+
+function buildJacobian(probPO::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+	jacobianPO = probPO.jacobian
+	@assert jacobianPO in (AutoDiffDense(),) "This jacobian is not defined. Please chose another one."
+	_J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
+ 	jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)
+end
+
 """
 $(SIGNATURES)
 
@@ -612,14 +621,11 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
 					alg::AbstractContinuationAlgorithm,
 					_contParams::ContinuationPar,
 					linearAlgo::AbstractBorderedLinearSolver;
+					δ = convert(eltype(orbitguess), 1e-8),
 					eigsolver = FloquetColl(),
 					kwargs...)
-	jacobianPO = probPO.jacobian
-	@assert jacobianPO in
-			(AutoDiffDense(),) "This jacobian is not defined. Please chose another one."
 
-	_J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
- 	jacPO = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)
+ 	jacPO = buildJacobian(probPO, orbitguess, getParams(probPO); δ = δ)
 
 	linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
 	options = _contParams.newtonOptions

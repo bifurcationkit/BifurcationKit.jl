@@ -445,13 +445,13 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
 		# compute new a
 		JAd_at_xp = hasAdjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-		ζstar = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex(0, ω))[1]
+		ζ★ = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex(0, ω))[1]
 		# test function for Bogdanov-Takens
 		probhopf.BT = ω
-		BT2 = real( dot(ζstar ./ normC(ζstar), ζ) )
-		ζstar ./= dot(ζ, ζstar)
-
-		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζstar, (a = Complex{T}(0,0), b = Complex{T}(0,0)), :hopf)
+		BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
+		ζ★ ./= dot(ζ, ζ★)
+	
+		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
 		hopfNormalForm(prob_vf, hp, options_newton.linsolver, verbose = false)
 
 		# lyapunov coefficient

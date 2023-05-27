@@ -46,7 +46,6 @@ Additional information is available on the [website](https://bifurcationkit.gith
 
 $(TYPEDFIELDS)
 
-# Associated methods
 """
 @with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot} <: AbstractContinuationAlgorithm
 	"Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "

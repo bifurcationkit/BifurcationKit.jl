@@ -399,7 +399,7 @@ hopf_codim2 = continuation(br, 1, (@lens _.c3), ContinuationPar(opts_br, detectB
 	)
 @test hopf_codim2.specialpoint[1].type == :gh
 
-bautin = BifurcationKit.getNormalForm(hopf_codim2, 1; nev = 2)
+bautin = BK.getNormalForm(hopf_codim2, 1; nev = 2)
 show(bautin)
 BK.type(bautin)
 

@@ -46,7 +46,7 @@ function Base.show(io::IO, bp::Cusp)
 	println(io, "Normal form coefficients:\n c = $c")
 end
 
-function Base.show(io::IO, bp::Bautin; prefix = "")
+function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)
 	lens1, lens2 = bp.lens
 	p1 = get(bp.params, lens1)
 	p2 = get(bp.params, lens2)
@@ -55,8 +55,9 @@ function Base.show(io::IO, bp::Bautin; prefix = "")
 	println(io, prefix*"ω = ", bp.nf.ω)
 	println(io, prefix*"Second lyapunov coefficient l₂ = ", bp.nf.l2)
 	println(io, prefix*"Normal form: i⋅ω⋅u + l₂⋅u⋅|u|⁴")
-	println(io, prefix*"Normal form coefficients (detailed):")
-	println(io, bp.nf)
+	detailed && println(io, prefix*"Normal form coefficients (detailed):")
+	detailed && println(io, bp.nf)
+	nothing
 end
 
 function Base.show(io::IO, bp::ZeroHopf)

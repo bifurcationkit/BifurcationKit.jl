@@ -153,7 +153,7 @@ residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline isSymmetric(prob::WrapPOSh) = false
 
-function buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function _buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
 	jacobianPO = prob.jacobian
 	if jacobianPO isa AutoDiffDenseAnalytical
 		_J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -195,7 +195,7 @@ function newton(prob::AbstractShootingProblem,
 				lens::Union{Lens, Nothing} = nothing,
 				δ = convert(eltype(orbitguess), 1e-8),
 				kwargs...)
-	jac = buildJacobian(prob, orbitguess, getParams(prob); δ = δ)
+	jac = _buildJacobian(prob, orbitguess, getParams(prob); δ = δ)
 	probw = WrapPOSh(prob, jac, orbitguess, getParams(prob), lens, nothing, nothing)
 	return newton(probw, options; kwargs...)
 end
@@ -222,7 +222,7 @@ function newton(prob::AbstractShootingProblem,
 				lens::Union{Lens, Nothing} = nothing,
 				kwargs...,
 			) where {T, Tp, Tdot, vectype, S, E}
-	jac = buildJacobian(prob, orbitguess, getParams(prob))
+	jac = _buildJacobian(prob, orbitguess, getParams(prob))
 	probw = WrapPOSh(prob, jac, orbitguess, getParams(prob), lens, nothing, nothing)
 	return newton(probw, defOp, options; kwargs...)
 end
@@ -260,7 +260,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 
 	options = contParams.newtonOptions
 
-	# change the user provided finalise function by passing probPO in its parameters
+	# change the user provided functions by passing probPO in its parameters
 	_finsol = modifyPOFinalise(probPO, kwargs, probPO.updateSectionEveryStep)
 	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
 	_plotsol = modifyPOPlot(probPO, kwargs)
@@ -385,7 +385,6 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 			"\n├─── period       T = ", pred.period,
 			"\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
 			"\n├─ Method = \n", probPO, "\n")
-
 
 	M = getMeshSize(probPO)
 	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]

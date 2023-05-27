@@ -192,7 +192,7 @@ function continuation(br::AbstractBranchResult,
 	end
 end
 ####################################################################################################
-# branch switching at BT / ZH/ HH bifurcation point
+# branch switching at BT / ZH / HH bifurcation point
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			options_cont::ContinuationPar = br.contparams;
 			alg = br.alg,
