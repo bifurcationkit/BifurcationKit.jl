@@ -304,7 +304,7 @@ getNormalForm(hp_codim2_1, 2)
 # plot!(hp_codim2_1, vars=(:X,:U))
 
 getNormalForm(hp_codim2_1, 2; nev = 4, verbose=true)
-nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true)
+nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true, detailed = true)
 
 @test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
 @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3

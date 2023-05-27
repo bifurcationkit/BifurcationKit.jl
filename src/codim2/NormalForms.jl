@@ -758,7 +758,7 @@ function bautinNormalForm(_prob,
 	# computation of the unfolding
 	# the unfolding are in meijer. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
 
-	# this part is for branching to Fold of limit cycles
+	# this part is for branching to Fold of periodic orbits
 	VF = prob_ma.prob_vf
 	F(x, p) = residual(prob_vf, x, p)
 
@@ -1021,7 +1021,8 @@ function hopfHopfNormalForm(_prob,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
 		scaleζ = norm,
-		autodiff = true)
+		autodiff = true,
+		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
 	verbose && println("#"^53*"\n--> Hopf-Hopf Normal form computation")

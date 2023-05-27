@@ -436,7 +436,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :bt
 		return bogdanovTakensNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff, bls = bls)
 	elseif bifpt.type == :gh
-		return bautinNormalForm(prob, br, id_bif; kwargs_nf...)
+		return bautinNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed)
 	elseif bifpt.type == :zh
 		return zeroHopfNormalForm(prob, br, id_bif; kwargs_nf...,  autodiff = autodiff)
 	elseif bifpt.type == :hh
