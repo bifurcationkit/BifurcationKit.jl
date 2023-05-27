@@ -316,6 +316,10 @@ nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true, detailed = true)
 _pred = BK.predictor(nf, Val(:FoldPeriodicOrbitCont), 0.1)
 _pred.orbit(0.1)
 
+nf = getNormalForm(hp_codim2_1, 4; nev = 4, verbose=true, detailed = true)
+_pred = predictor(nf, Val(:NS), .01)
+_pred.ns1(0.1)
+_pred.ns2(0.1)
 
 # locate BT point with newton algorithm
 _bt = BK.BTPoint(hp_codim2_1, 2)
