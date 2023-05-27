@@ -226,6 +226,8 @@ end
 								state.τ.u, state.τ.p,
 								R, n,
 								getθ(iter), one(T) - getθ(iter);
+								shift = shift,
+								applyξu! = getdot(iter).apply!);
 
 # version used for normal form computation
 # specific version with a,b,c being matrices / tuples of vectors
