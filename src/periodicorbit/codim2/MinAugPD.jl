@@ -254,8 +254,9 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 		# if not, we do not update the problem with bad information!
 		success = get(kUP, :state, nothing).converged
 		if (~modCounter(step, updateMinAugEveryStep) || success == false)
-			return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
+			return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
 		end
+		@debug "Update a / b dans PD"
 
 		x = getVec(z.u)	# PD point
 		p1 = getP(z.u)	# first parameter

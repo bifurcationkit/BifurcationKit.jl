@@ -404,3 +404,80 @@ show(bautin)
 BK.type(bautin)
 
 @test bautin.nf.l2 ≈ par_sl.c5 * 4
+####################################################################################################
+# test of the Zero-Hopf normal form
+function Fzh(u, p)
+	@unpack β1, β2, G200, G011, G300, G111, G110, G210, G021 = p
+	w0, u1, u2 = u
+	ua = u1^2 + u2^2
+	w1 = complex(u1, u2)
+
+	f = similar(u)
+	f[1] = β1 + G200/2 * w0^2 + G011 * ua + G300/6 * w0^3 + G111 * w0 * ua
+
+	tmp = (β2 + complex(0,1)) * w1 + G110 * w0 * w1 + G210/2 * w0^2 * w1 + G021/2 * w1 * ua
+
+	f[2] = real(tmp)
+	f[3] = imag(tmp)
+
+	return f
+end
+
+par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
+prob = BK.BifurcationProblem(Fzh, [0.05, 0.0, 0.0], par_zh, (@lens _.β1), recordFromSolution = (x,p;k...) -> x[1])
+br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, maxSteps = 90), verbosity = 0, detectBifurcation=3, nInversion = 2)
+
+_cparams = br.contparams
+opts2 = @set _cparams.newtonOptions.verbose = false
+opts2 = setproperties(opts2 ; nInversion = 10, ds = 0.001)
+br_codim2 = continuation(br, 2, (@lens _.β2), opts2; verbosity = 0, startWithEigen = true, detectCodim2Bifurcation = 0, updateMinAugEveryStep = 1)
+
+@test br_codim2.specialpoint[1].type == :zh
+zh = getNormalForm(br_codim2, 1, autodiff = false, detailed = true)
+@test zh.nf.G200 ≈ par_zh.G200
+@test zh.nf.G110 ≈ par_zh.G110
+@test zh.nf.G011/2 ≈ par_zh.G011
+
+pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
+pred.EigenVec(0.1)
+pred.EigenVecAd(0.1)
+pred.fold(0.1)
+####################################################################################################
+# test of the Hopf-Hopf normal form
+function Fhh(u, p)
+	@unpack β1, β2, ω1, ω2, G2100, G1011, G3100, G2111, G1022, G1110, G0021, G2210, G1121, G0032 = p
+	w1 = complex(u[1], u[2])
+	w2 = complex(u[3], u[4])
+
+	ua1 = abs2(w1)
+	ua2 = abs2(w2)
+
+	f = similar(u)
+
+	tmp1 = (β1 + complex(0, ω1)) * w1 + G2100/2 * w1 * ua1 + G1011 * w1 * ua2 + G3100/12 * w1 * ua1^2 + G2111/2 * w1 * ua1 * ua2 + G1022/4 * w1 * ua2^2
+
+	f[1] = real(tmp1)
+	f[2] = imag(tmp1)
+
+	tmp2 = (β2 + complex(0, ω2)) * w2 + G1110 * w2 * ua2 + G0021/2 * w2 * ua2 + G2210/4 * w2 * ua1^2 + G1121/2 * w2 * ua1 * ua2 + G0032/12 * w2 * ua2^2
+
+	f[3] = real(tmp2)
+	f[4] = imag(tmp2)
+
+	return f
+end
+
+
+par_hh = (β1 = 0.1, β2 = -0.3, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
+prob = BK.BifurcationProblem(Fhh, zeros(4), par_hh, (@lens _.β1), recordFromSolution = (x,p;k...) -> x[1])
+br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, maxSteps = 90), verbosity = 0, detectBifurcation=3, nInversion = 2)
+
+@set! opts2.newtonOptions.verbose = false
+br_codim2 = continuation(br, 1, (@lens _.β2), opts2; verbosity = 0, startWithEigen = true, detectCodim2Bifurcation = 2, updateMinAugEveryStep = 1)
+
+@test br_codim2.specialpoint[1].type == :hh
+hh = getNormalForm(br_codim2, 1, autodiff = false, detailed = true)
+# @test hh.nf.G2100 == par_hh.G2100
+# @test hh.nf.G0021 == par_hh.G0021
+# @test hh.nf.G1110 == par_hh.G1110
+# @test hh.nf.G1011 == par_hh.G1011

@@ -35,15 +35,6 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
 	# note that the shift argument only affect J in this call:
 	_, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
 	~cv && @debug "Linear solver for (J-iω) did not converge."
-
-	# we solve (J+iω)'w + b σ2 = 0 with <a, w> = 1
-	# we find sigma2 = conj(sigma1)
-	# w, σ2, _ = fp.linbdsolver(fp.Jadjoint(x, p) - Complex(0, ω) * I, b, a, 0., zeros(N), T(1))
-
-	# the constraint is σ = <w, Jv>
-	# σ = -dot(w, apply(fp.J(x, p) + Complex(0, ω) * I, v))
-	# we should have σ = σ1
-
 	return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
 
@@ -94,7 +85,7 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 	# update parameter
 	par0 = set(par, lens, p)
 
-	# we define the following jacobian. It is used at least 3 times below. This avoid doing 3 times the possibly costly building of J(x, p)
+	# we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the possibly costly building of J(x, p)
 	J_at_xp = jacobian(𝐇.prob_vf, x, par0)
 
 	# we do the following to avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided

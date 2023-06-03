@@ -151,7 +151,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	itlinear = 0
 	itlineartot = 0
 
-	verbose && printNonlinearStep(it, res)
+	verbose && printNonlinearStep(step, res)
 	line_step = true
 
 	compute = callback((;x, res_f, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)

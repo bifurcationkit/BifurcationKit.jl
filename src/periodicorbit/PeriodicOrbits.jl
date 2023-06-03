@@ -376,7 +376,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 	# this phase is for POTrap problem constraint to be satisfied
 	ϕ = atan(dot(ζr, ζr), dot(ζi, ζr))
 
-	verbose && printstyled(color = :green, "#"^61*
+	verbose && printstyled(color = :green, "━"^61*
 			"\n┌─ Start branching from Hopf bif. point to periodic orbits.",
 			"\n├─ Bifurcation type = ", hopfpt.type,
 			"\n├─── Hopf param  p0 = ", br.specialpoint[ind_bif].param,
@@ -489,7 +489,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 	@assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
 
 	verbose = get(kwargs, :verbosity, 0) > 0
-	verbose && printstyled(color = :green, "#"^61*
+	verbose && printstyled(color = :green, "━"^61*
 			"\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
 			"\n├─── bif. param  p0 = ", bifpt.param,
 			"\n├─── period at bif. = ", getPeriod(br.prob.prob, bifpt.x, setParam(br, bifpt.param)),

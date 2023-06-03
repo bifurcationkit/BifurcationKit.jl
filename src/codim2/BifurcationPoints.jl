@@ -68,6 +68,10 @@ function Base.show(io::IO, bp::ZeroHopf)
 	print(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).\n")
 	println(io, "null eigenvalue ≈ ", bp.nf.λ0)
 	println(io, "ω = ", bp.nf.ω)
+	hasnf = get(bp.nf, :hasNS, nothing)
+	if ~isnothing(hasnf)
+		println(io, "There is a curve of NS of periodic orbits: ", hasnf)
+	end
 end
 
 function Base.show(io::IO, bp::HopfHopf)
@@ -76,7 +80,7 @@ function Base.show(io::IO, bp::HopfHopf)
 	p2 = get(bp.params, lens2)
 	printstyled(io, "Hopf-Hopf", color=:cyan, bold = true)
 	println(io, " bifurcation point at ", getLensSymbol(lens1, lens2)," ≈ ($p1, $p2).")
-	println(io, "λ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
+	println(io, "Eignevalues:\nλ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
 	println(io, bp.nf)
 end
 ####################################################################################################

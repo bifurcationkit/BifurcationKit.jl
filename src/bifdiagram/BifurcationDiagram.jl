@@ -91,7 +91,7 @@ end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
 function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; kwargs...)
-	printstyled(color = :magenta, "#"^50 * "\n───> Automatic computation of bifurcation diagram\n\n")
+	printstyled(color = :magenta, "━"^50 * "\n───> Automatic computation of bifurcation diagram\n\n")
 	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", kwargs...)
 end
 

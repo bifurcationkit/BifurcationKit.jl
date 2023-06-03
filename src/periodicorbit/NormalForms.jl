@@ -116,7 +116,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh,
 								Teigvec = vectortype(br),
 								detailed = true,
 								kwargs_nf...)
-	verbose && println("#"^53*"\n──> Period-doubling normal form computation")
+	verbose && println("━"^53*"\n──> Period-doubling normal form computation")
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	pars = setParam(br, bifpt.param)
@@ -250,7 +250,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 								prm = true,
 								kwargs_nf...)
 	# first, get the bifurcation point parameters
-	verbose && println("#"^53*"\n──> Period-Doubling normal form computation")
+	verbose && println("━"^53*"\n──> Period-Doubling normal form computation")
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	par = setParam(br, bifpt.param)
@@ -344,7 +344,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
 	@assert coll isa PeriodicOrbitOCollProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("#"^53*"\n──> Period-doubling normal form computation")
+	verbose && println("━"^53*"\n──> Period-doubling normal form computation")
 
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
@@ -485,7 +485,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 	# first, get the bifurcation point parameters
 	sh = pbwrap.prob
 	@assert sh isa ShootingProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("#"^53*"\n──> Neimark-Sacker normal form computation")
+	verbose && println("━"^53*"\n──> Neimark-Sacker normal form computation")
 
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]

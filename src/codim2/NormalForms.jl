@@ -23,7 +23,7 @@ function cuspNormalForm(_prob,
 		scaleζ = norm)
 	@assert br.specialpoint[ind_bif].type == :cusp "The provided index does not refer to a Cusp Point"
 
-	verbose && println("#"^53*"\n──> Cusp Normal form computation")
+	verbose && println("━"^53*"\n──▶ Cusp Normal form computation")
 
 	# MA problem formulation
 	prob_ma = _prob.prob
@@ -489,7 +489,7 @@ function bogdanovTakensNormalForm(_prob,
 
 	# in case nev = 0 (number of requested eigenvalues), we increase nev to avoid bug
 	nev = max(2N, nev)
-	verbose && println("#"^53*"\n──> Bogdanov-Takens Normal form computation")
+	verbose && println("━"^53*"\n──▶ Bogdanov-Takens Normal form computation")
 
 	# Newton parameters
 	optionsN = br.contparams.newtonOptions
@@ -525,7 +525,7 @@ function bogdanovTakensNormalForm(_prob,
 			_λ0, _ev, _ = eigsolver(L, nev)
 			Ivp = sortperm(_λ0, by = abs)
 			_λ = _λ0[Ivp]
-			verbose && (println("──> (λs, λs (recomputed)) = "); display(( _λ[1:N])))
+			verbose && (println("──▶ (λs, λs (recomputed)) = "); display(( _λ[1:N])))
 			if norm(_λ[1:N] .- 0, Inf) > br.contparams.tolStability
 				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
 				display(_λ[1:N] .- 0)
@@ -536,7 +536,7 @@ function bogdanovTakensNormalForm(_prob,
 			Ind = sortperm(abs.(rightEv))
 			ind0 = Ind[1]
 			ind1 = Ind[2]
-			verbose && (println("────> eigenvalues = ", rightEv[Ind[1:2]]))
+			verbose && (println("────▶ eigenvalues = ", rightEv[Ind[1:2]]))
 			ζs = [copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
 		end
 	end
@@ -591,7 +591,7 @@ function bautinNormalForm(_prob,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
-	verbose && println("#"^53*"\n──> Bautin Normal form computation")
+	verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
 	# get the MA problem
 	prob_ma = _prob.prob
@@ -888,15 +888,16 @@ function zeroHopfNormalForm(_prob,
 		lens = getLens(br),
 		Teigvec = getvectortype(br),
 		scaleζ = norm,
+		bls = _prob.prob.linbdsolver,
 		autodiff = true,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
-	verbose && println("#"^53*"\n──> Zero-Hopf Normal form computation")
+	verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
 
 	# scalar type
 	𝒯 = eltype(Teigvec)
-	ϵ2 = 𝒯(δ)
+	ϵ = 𝒯(δ)
 
 	# get the MA problem
 	prob_ma = _prob.prob
@@ -962,7 +963,15 @@ function zeroHopfNormalForm(_prob,
 		@assert 1==0 "Not done"
 		ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
 	end
+
+	# normalise for easier debugging
+	if imag(λI) < 0
+		λI = conj(λI)
+		q1 = conj(q1)
+	end
+
 	q0 ./= scaleζ(q0)
+	cq1 = conj(q1)
 
 	# left eigen-elements
 	_Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
@@ -992,7 +1001,7 @@ function zeroHopfNormalForm(_prob,
 		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
 	else
 		# finite differences
-		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
+		Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ)) .- residual(prob_vf, x0, setp(l, p - ϵ)) ) ./ (2ϵ)
 	end
 
 	dFp = [dot(p0, Jp(p10, lens1)) dot(p0, Jp(p20, lens2)); dot(p1, Jp(p10, lens1)) dot(p1, Jp(p20, lens2))]
@@ -1004,6 +1013,113 @@ function zeroHopfNormalForm(_prob,
 		(;ω = λI, λ0 = _λ[_ind0], dFp),
 		:none
 	)
+
+	if ~detailed
+		return pt
+	end
+
+	# second order differential, to be in agreement with Kuznetsov et al.
+	B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
+	C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
+	Ainv0(dx; kw...) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); kw...)
+	Ainv1(dx; kw...) = bls(L, q1, p1, zero(𝒯), dx, zero(𝒯); kw...)
+
+	# REF1: Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
+
+	# REF2: “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
+	
+	ω = imag(λI)
+
+	# formula (8.2) in REF1
+	G200 = dot(p0, B(q0, q0)) |> real # it is real anyway
+	G110 = dot(p1, B(q0, q1))
+	G011 = dot(p0, B(q1, cq1)) |> real # it is real anyway
+
+	# second order terms
+	# formula (8.3) in REF1
+	tmp200 = -B(q0, q0) .+ dot(p0, B(q0, q0)) .* q0
+	h200, = Ainv0(tmp200)
+
+	# formula (8.4) in REF1
+	h020, = ls(L, B(q1, q1); a₀ = Complex(0, -2ω)); h020 .*= -1
+
+	# formula (8.5) in REF1
+	tmp110 = B(q0, q1) .- dot(p1, B(q0, q1)) .* q1
+	h110, = Ainv1(tmp110; shift = Complex(0, -ω)); h110 .*= -1
+
+	# formula (8.6) in REF1
+	tmp011 = B(q1, cq1) .- dot(p0, B(q1, cq1)) .* q0
+	h011, = Ainv0(tmp011); h011 .*= -1
+
+	# third order terms
+	# G300 and G210 are not needed so not computed
+	tmp111 = C(q0, q1, q1) .+ B(q0, h011) .+ B(q1, conj(h110)) .+ B(cq1, h110)
+	G111 = dot(p0, tmp111)
+
+	# G021 needed for formula 10 in REF2
+	tmp021 = C(q1, q1, cq1) .+ 2 .* B(q1, h011) .+ B(cq1, h020)
+	G021 = dot(p1, tmp021)
+
+	# adapt to notations of REF2
+	f011 = G011
+	g021 = G021/2
+	f111 = G111
+	g110 = G110
+
+	# Boolean for whether the curve of NS exists
+	hasNS = real(g110)*f011 < 0 
+
+	# additional definitions for the parameter unfolding
+	VF = prob_ma.prob_vf
+	F(x, p) = residual(prob_vf, x, p)
+
+	lens1, lens2 = pt.lens
+	_A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+	 				  applyJacobian(VF, x0, parbif, q)) ./ϵ
+	A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
+	A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
+	Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
+	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+	J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+
+	# compute change in Parameters
+	# formulas (24) in REF2
+	s1 = [dot(p0, J1(lens1)), dot(p0, J1(lens2))]
+	s2 = [-s1[2], s1[1]]
+	s1 ./= dot(s1,s1)
+
+	# computation of the matrix LL in REF2
+	# there is a typo in this formula, A1(q1, r1) -> A1(q1, s1)
+	# H. Meijer personal communication
+	r1, = Ainv0(q0 .- J1(lens1) .* s1[1] - J1(lens2) .* s1[2]); #r1 .*= -1
+	r2, = Ainv0(J1(lens1) .* s2[1] .+ J1(lens2) .* s2[2])
+	LL = zeros(Complex{𝒯}, 2, 2)
+	
+	LL[1, 1] = dot(p0, B(q0, r2) .+ A1(q0, lens1) .* s2[1] .+ A1(q0, lens2) .* s2[2])
+	LL[2, 1] = dot(p1, B(q1, r2) .+ A1(q1, lens1) .* s2[1] .+ A1(q1, lens2) .* s2[2])
+	f200 = G200 / 2
+	LL[1, 2] = 2*f200
+	LL[2, 2] = G110
+
+	# formula (25) in REF2 
+	δ₁, δ₃ = LL \ [ -dot(p0, B(q0, r1) .+ A1(q0, lens1) .* s1[1] .+ A1(q0, lens2) .* s1[2]), 
+					-dot(p1, B(q1, r1) .+ A1(q1, lens1) .* s1[1] .+ A1(q1, lens2) .* s1[2])]
+
+	δ₂, δ₄ = real.(LL) \ [0, 1]
+
+	# formula (24) in REF2
+	v10 = @. s1 + δ₁ * s2
+	v01 = @. δ₂ * s2
+
+	h00010 = @. r1 + δ₁ * r2 + δ₃ * q1
+	h00001 = @. δ₂ * r2 + δ₄ * q1
+
+	# formula (10) in REF2
+	x = -(f111 + 2*g021) / (2*f200)
+	β1 = -f011
+	β2 = (2real(g021)*(real(g110)-f200) + real(g110)*f111) / (2*f200)
+	
+	@set pt.nf = (;ω = λI, λ0 = _λ[_ind0], dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011 )
 end
 
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
@@ -1029,6 +1145,54 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
 			EigenVecAd = EigenVecAd,
 			x0 = t -> 0)
 end
+
+function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
+	@unpack ω, λ0 = zh.nf
+	lens1, lens2 = zh.lens
+	p1 = get(zh.params, lens1)
+	p2 = get(zh.params, lens2)
+	par0 = [p1, p2]
+	function FoldCurve(s)
+		return (pars = par0 , λ0 = λ0)
+	end
+	# compute eigenvector corresponding to the Hopf branch
+	function EigenVec(s)
+		return zh.ζ.q0
+	end
+	function EigenVecAd(s)
+		return zh.ζ★.p0
+	end
+
+	return (fold = t -> FoldCurve(t).pars,
+			λ0   = t -> FoldCurve(t).λ0,
+			EigenVec = EigenVec,
+			EigenVecAd = EigenVecAd,
+			x0 = t -> 0)
+end
+
+function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor = T(1)) where T
+	@unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, hasNS = zh.nf
+	lens1, lens2 = zh.lens
+	p1 = get(zh.params, lens1)
+	p2 = get(zh.params, lens2)
+	par0 = [p1, p2]
+
+	q0 = zh.ζ.q0
+	q1 = zh.ζ.q1
+
+	# formula (27) in REF2. There is a typo for the coefficient of β2
+	x = @. zh.x0 + ϵ^2 * (h00010 * β1 + h00001 * β2 + x * q0 + h011)
+
+	function NS(θ)
+		@. x + 2ϵ * real(q1 * cis(θ)) + 2ϵ^2 * real(h020 * cis(2θ))
+	end
+	
+	return (orbit = t -> NS(t),
+			hasNS = hasNS,
+			params = (@. par0 + (β1 * v10 + β2 * v01) * ϵ^2),
+			T = 2pi / (ω),
+	)
+end
 ####################################################################################################
 function hopfHopfNormalForm(_prob,
 		br::AbstractBranchResult, ind_bif::Int;
@@ -1043,7 +1207,7 @@ function hopfHopfNormalForm(_prob,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
-	verbose && println("#"^53*"\n──> Hopf-Hopf Normal form computation")
+	verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
 
 	# scalar type
 	𝒯 = eltype(Teigvec)
@@ -1197,7 +1361,6 @@ function hopfHopfNormalForm(_prob,
 	h₁₁₀₀, = ls(L, B(q1, cq1)); h₁₁₀₀ .*= -1
 	h₀₀₁₁, = ls(L, B(q2, cq2)); h₀₀₁₁ .*= -1
 
-
 	# for implementing forumla 28 in REF2, we need G2100, G1110 from REF1, on page 1117
 	tmp2100 = C(q1, q1, cq1) .+ B(h₂₀₀₀, cq1) .+ 2 .* B(h₁₁₀₀, q1)
 	G2100 = dot(p1, tmp2100)
@@ -1249,7 +1412,7 @@ function hopfHopfNormalForm(_prob,
 	dω1, dω2 = [imag(G1011), imag(G0021)/2] .- (imag.(Γ) * α) # formula (28) in REF2
 	ns2 = (; dω1, dω2, α)
 
-	return @set pt.nf = (;λ1 = λ1, λ2 = λ2, G2100, G0021, G1110, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
+	return @set pt.nf = (;λ1 = λ1, λ2 = λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
 end
 
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T

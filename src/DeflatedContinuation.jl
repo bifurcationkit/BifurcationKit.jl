@@ -194,7 +194,7 @@ function continuation(prob::AbstractBifurcationProblem,
 	# we make a copy of the deflation operator
 	deflationOp = copy(defOp)
 
-	verbosity > 0 && printstyled(color=:magenta, "#"^51*"\n")
+	verbosity > 0 && printstyled(color=:magenta, "━"^51*"\n")
 	verbosity > 0 && printstyled(color=:magenta, "──> There are $(length(deflationOp)) branche(s)\n")
 
 	# underlying continuation iterator
@@ -369,11 +369,11 @@ end
 # 	end
 # 	# @assert doneBranch(brs[1]) "error"
 #
-# 	printstyled(color=:blue,"#"^50*"\n")
+# 	printstyled(color=:blue,"━"^50*"\n")
 # 	iterbrs = 0
 #
 # 	while doneBranch(brs) < length(brs) && iterbrs < iterbrsmax
-# 		printstyled(color=:green, "#"^50*" - $iterbrs, #br = $(length(brs)) \n")
+# 		printstyled(color=:green, "━"^50*" - $iterbrs, #br = $(length(brs)) \n")
 # 		for (id, br) in pairs(brs)
 # 			print("──> branch $id, # = ", length(br), ", isdone = ")
 # 			printstyled("$(doneBranch(br)) \n", color = (doneBranch(br) ? :green : :red))

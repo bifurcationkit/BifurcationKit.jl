@@ -54,7 +54,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
-	verbose && println("#"^53*"\n──> Normal form Computation for 1d kernel")
+	verbose && println("━"^53*"\n──> Normal form Computation for 1d kernel")
 	verbose && println("──> analyse bifurcation at p = ", bifpt.param)
 
 	options = br.contparams.newtonOptions
@@ -373,7 +373,7 @@ function biorthogonalise(ζs, ζ★s, verbose)
 
 	# test the bi-orthogonalization
 	G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-	verbose && (printstyled(color=:green, "──> Gram matrix = \n");Base.display(G))
+	verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
 	@assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
 	return ζs, ζ★s
 end
@@ -452,7 +452,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 
 	# in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
 	nev = max(2N, nev)
-	verbose && println("#"^53*"\n──> Normal form Computation for a $N-d kernel")
+	verbose && println("━"^53*"\n──> Normal form Computation for a $N-d kernel")
 	verbose && println("──> analyse bifurcation at p = ", bifpt.param)
 
 	options = br.contparams.newtonOptions
@@ -744,7 +744,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	verbose && println("#"^53*"\n──> Hopf normal form computation")
+	verbose && println("━"^53*"\n──> Hopf normal form computation")
 
 	options = br.contparams.newtonOptions
 
@@ -971,7 +971,7 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 
-	verbose && println("#"^53*"\n──> Neimark-Sacker normal form computation")
+	verbose && println("━"^53*"\n──> Neimark-Sacker normal form computation")
 
 	options = br.contparams.newtonOptions
 
