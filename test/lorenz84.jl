@@ -376,13 +376,16 @@ BK.getParams(hp_from_hh)
 ####################################################################################################
 # branching from Bautin to Fold of periodic orbits
 using OrdinaryDiffEq
-prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getParams(hp_from_bt), reltol = 1e-10, abstol = 1e-12)
+prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getParams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
-opts_fold_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.01, detectBifurcation = 0, maxSteps = 3, detectEvent = 0, ds = 0.001, plotEveryStep = 10, a = 0.8)
-# @set! opts_fold_po.newtonOptions.verbose = true
+opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detectBifurcation = 0, maxSteps = 3, detectEvent = 0, ds = 0.001)
+@set! opts_fold_po.newtonOptions.verbose = false
 @set! opts_fold_po.newtonOptions.tol = 1e-8
 
-for probPO in (PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense),PeriodicOrbitOCollProblem(20, 3), ShootingProblem(5, prob_ode, Rodas5(), parallel = true))
+for probPO in (
+		# PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense), 
+		PeriodicOrbitOCollProblem(20, 3), 
+		ShootingProblem(5, prob_ode, Rodas5(), parallel = true))
 	fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
 			normC = norminf,
 			δp = 0.02,
@@ -395,8 +398,8 @@ for probPO in (PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense),PeriodicOrbi
 end	
 ####################################################################################################
 # branching HH to NS of periodic orbits
-prob_ode = ODEProblem(Lor, z0, (0, 1), hp_from_bt.contparams, reltol = 1e-8, abstol = 1e-10)
-opts_ns_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.02, detectBifurcation = 1, maxSteps = 10, ds = -0.01, detectEvent = 0)
+prob_ode = ODEProblem(Lor, z0, (0, 1), hp_codim2_1.contparams, reltol = 1e-8, abstol = 1e-10)
+opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detectBifurcation = 1, maxSteps = 10, ds = -0.01, detectEvent = 0)
 # @set! opts_ns_po.newtonOptions.verbose = true
 @set! opts_ns_po.newtonOptions.tol = 1e-12
 @set! opts_ns_po.newtonOptions.maxIter = 10

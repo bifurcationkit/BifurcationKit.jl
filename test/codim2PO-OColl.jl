@@ -154,7 +154,8 @@ _p2 = pd_po_coll2.sol[end].p
 _param= BK.setParam(pd_po_coll2, _p1)
 _param = set(_param, (@lens _.ϵ), _p2)
 
-_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+# _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+_Jpdad = BK.finiteDifferences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jpdad)
 _duu = rand(length(_x.u))
@@ -162,8 +163,8 @@ _sol = BK.PDMALinearSolver(_solpo, _p1, _probpd.prob, _param, _duu, 1.; debugArr
 _solfd = _Jpdad \ vcat(_duu, 1)
 
 @test norm(_Jpdad - _Jma, Inf) < 1e-6
-@test norm(_solfd[1:end-1] - _sol[1], Inf) < 1e-6
-@test abs(_solfd[end] - _sol[2]) < 1e-6
+@test norm(_solfd[1:end-1] - _sol[1], Inf) < 1e-4
+@test abs(_solfd[end] - _sol[2]) < 1e-4
 #########
 # test of the implementation of the jacobian for the NS case
 _probns = ns_po_coll.prob
@@ -174,7 +175,8 @@ _p2 = ns_po_coll.sol[end].p
 _param= BK.setParam(ns_po_coll, _p1[1])
 _param = set(_param, (@lens _.ϵ), _p2)
 
-_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+# _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+_Jnsad = BK.finiteDifferences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jnsad)
 _dp = rand()
@@ -182,6 +184,6 @@ _sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _
 _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
 @test norm(_Jnsad - _Jma, Inf) < 1e-6
-@test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-6
-@test abs(_solfd[end-1] - _sol[2]) < 1e-6
-@test abs(_solfd[end] - _sol[3]) < 1e-6
+@test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-4
+@test abs(_solfd[end-1] - _sol[2]) < 1e-4
+@test abs(_solfd[end] - _sol[3]) < 1e-4

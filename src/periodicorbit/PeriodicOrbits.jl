@@ -25,6 +25,7 @@ setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 getPeriodicOrbit(prob::WrapPOColl, u, p) = getPeriodicOrbit(prob.prob, u, p)
 getPeriodicOrbit(prob::WrapPOSh, u, p) = getPeriodicOrbit(prob.prob, u, p)
 @inline getDelta(prob::WrapPOSh) = getDelta(prob.prob.flow)
+@inline hasHessian(::WrapPOSh) = true
 
 # update a problem with arguments
 function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end

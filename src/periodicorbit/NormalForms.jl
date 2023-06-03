@@ -104,7 +104,7 @@ function perioddoublingNormalForm(pbwrap,
 
 	# normal form for Poincaré map
 	nf = PeriodDoubling(nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
-	PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
+	PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
 
 function perioddoublingNormalForm(pbwrap::WrapPOSh,
@@ -138,7 +138,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh,
 	pd0 = PeriodDoubling(bifpt.x, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
 	if ~detailed
 		period = getPeriod(pbwrap.prob, pd0.x0, pd0.params)
-		return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, pbwrap.prob)
+		return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, pbwrap.prob, true)
 	end
 
 	# newton parameter
@@ -157,7 +157,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: PoincareShootingProblem }
 								kwargs_nf...)
 	psh = pbwrap.prob
 	period = getPeriod(psh, pd0.x0, pd0.params)
-	PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, psh)
+	PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, psh, true)
 end
 
 function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
@@ -325,7 +325,7 @@ function perioddoublingNormalFormPRM(pbwrap::WrapPOColl,
 
 	pd1 = PeriodDoubling(xₛ, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
 	pd = periodDoublingNormalForm(probΠ, pd1, DefaultLS(); verbose = verbose)
-	return PeriodDoublingPO(pd0.x0, pd0.x0[end], nothing, nothing, pd, coll)
+	return PeriodDoublingPO(pd0.x0, pd0.x0[end], nothing, nothing, pd, coll, true)
 end
 ####################################################################################################
 function neimarksackerNormalForm(pbwrap::WrapPOColl,
