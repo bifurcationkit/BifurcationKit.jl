@@ -476,7 +476,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		end
 		# careful here, we need to adjust the tolerance for stability to avoid
 		# spurious ZH or HH bifurcations
-		@set! opt_hopf_cont.tolStability = 10opt_hopf_cont.newtonOptions.tol
+		@set! opt_hopf_cont.tolStability = max(10opt_hopf_cont.newtonOptions.tol, opt_hopf_cont.tolStability)
 	else
 		if isnothing(event_user)
 			event = ContinuousEvent(2, testBT_GH, false, ("bt", "gh"), threshBT)
@@ -510,6 +510,7 @@ function continuationHopf(prob,
 						normC = norm,
 						nev = br.contparams.nev,
 						startWithEigen = false,
+						bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
 						kwargs...)
 	hopfpointguess = HopfPoint(br, ind_hopf)
 	ω = hopfpointguess.p[2]
@@ -528,7 +529,8 @@ function continuationHopf(prob,
 
 	if startWithEigen
 		# computation of adjoint eigenvalue
-		λ = Complex(0, ω)
+		λ = Complex(0, -ω)
+		λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
 		# jacobian at bifurcation point
 		L = jacobian(prob, bifpt.x, parbif)
 
@@ -545,6 +547,7 @@ function continuationHopf(prob,
 					ζ, ζad,
 					options_cont ;
 					normC = normC,
+					bdlinsolver = bdlinsolver,
 					kwargs...)
 end
 
