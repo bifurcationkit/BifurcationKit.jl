@@ -257,6 +257,56 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 	𝒯 = eltype(𝒯b)
 	𝐍𝐒.l1 = Complex{𝒯}(0, 0)
 
+	# this function is used as a Finalizer
+	# it is called to update the Minimally Augmented problem
+	# by updating the vectors a, b
+	function updateMinAugNS(z, tau, step, contResult; kUP...)
+		# user-passed finalizer
+		finaliseUser = get(kwargs, :finaliseSolution, nothing)
+
+		# we first check that the continuation step was successful
+		# if not, we do not update the problem with bad information!
+		success = get(kUP, :state, nothing).converged
+		if (modCounter(step, 1) && success)
+			resFin = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
+			if ~resFin
+				return false
+			end
+		end
+
+		if ~modCounter(step, updateMinAugEveryStep)
+			return true
+		end
+		@debug "Update a / b dans NS"
+
+		x = getVec(z.u, 𝐍𝐒)	  # NS point
+		p1, ω = getP(z.u, 𝐍𝐒)
+		p2 = z.p				# second parameter
+		newpar = set(par, lens1, p1)
+		newpar = set(newpar, lens2, p2)
+
+		a = 𝐍𝐒.a
+		b = 𝐍𝐒.b
+
+		# get the PO functional
+		POWrap = 𝐍𝐒.prob_vf
+
+		# compute new b
+		JNS = jacobianNeimarkSacker(POWrap, x, newpar, ω)
+		newb = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[1]
+
+		# compute new a
+		JNS★ = hasAdjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, newpar, ω) : adjoint(JNS)
+		@debug hasAdjoint(𝐍𝐒)
+		newa = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[1]
+
+		𝐍𝐒.a .= newa ./ normC(newa)
+		# do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
+		𝐍𝐒.b .= newb ./ normC(newb)
+
+		return true
+	end
+
 	function testCH(iter, state)
 		z = getx(state)
 		x = getVec(z, 𝐍𝐒)		# NS point
@@ -315,6 +365,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		kind = kind,
 		event = event,
 		normC = normC,
+		finaliseSolution = updateMinAugNS,
 		)
 	correctBifurcation(br_ns_po)
 end
