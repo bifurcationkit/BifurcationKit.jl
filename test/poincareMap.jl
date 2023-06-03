@@ -102,13 +102,13 @@ ts, ss = flowTS([0., 1], Inf, prob; callback = cb, save_everystep = true, saveat
 # gives completely wrong answer
 # Zygote.pullback(t->Π(u0 .+ t.* du0), 0.)[1] |> Base.show
 
-println("--> dΠ using Analytical formula")
+println("──> dΠ using Analytical formula")
 resAna = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob);show(resAna)
 
-println("\n--> dΠ using Finite differences")
+println("\n──> dΠ using Finite differences")
 resFD = dΠFD(u0, du0);show(resFD)
 
-println("\n--> Norm of the difference = ", resAna - resFD |> norminf)
+println("\n──> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1e-4
 ####################################################################################################
 # matrix of the Poincare map, analytical formula

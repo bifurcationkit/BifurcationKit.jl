@@ -94,7 +94,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 		_state.eventValue[2], " ──> ",  _state.eventValue[1], "\n")
 	if verbose && ~isnothing(_state.eigvals)
 		printstyled(color=:green, "\n──> eigvals = \n")
-		displayEV(_state.eigvals, :green)
+		printEV(_state.eigvals, :green)
 		# calcul des VP et determinant
 	end
 
@@ -121,7 +121,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
 		if verbose && ~isnothing(state.eigvals)
 			printstyled(color=:blue, "────> eigvals = \n")
-			displayEV(state.eigvals, :blue)
+			printEV(state.eigvals, :blue)
 		end
 
 		if nsigns[end] == nsigns[end-1]

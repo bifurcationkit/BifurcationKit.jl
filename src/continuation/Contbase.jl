@@ -69,7 +69,7 @@ function _stepSizeControl!(state, contparams::ContinuationPar, verbosity)
 			return
 		end
 		dsnew = sign(ds) * max(abs(ds) / 2, contparams.dsmin);
-		(verbosity > 0) && printstyled("Halving continuation step, ds=$(dsnew)\n", color=:red)
+		(verbosity > 0) && printstyled("Halve ds = $(dsnew)\n", color = :red)
 
 	else
 		# control to have the same number of Newton iterations

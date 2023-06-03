@@ -72,7 +72,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
-	verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
+	verbose && println("──> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
 	if kernelDim(br, ind_bif) > 1
 		return multicontinuation(br, ind_bif, optionsCont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, alg = alg, plotSolution = plotSolution, kwargs...)
@@ -91,10 +91,10 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	pred = predictor(specialpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 	if isnothing(pred); return nothing; end
 
-	verbose && printstyled(color = :green, "\n--> Start branch switching. \n--> Bifurcation type = ", type(specialpoint), "\n----> newp = ", pred.p, ", δp = ", br.specialpoint[ind_bif].param - pred.p, "\n")
+	verbose && printstyled(color = :green, "\n──> Start branch switching. \n──> Bifurcation type = ", type(specialpoint), "\n────> newp = ", pred.p, ", δp = ", br.specialpoint[ind_bif].param - pred.p, "\n")
 
 	if usedeflation
-		verbose && println("\n----> Compute point on the current branch with nonlinear deflation...")
+		verbose && println("\n────> Compute point on the current branch with nonlinear deflation...")
 		optn = optionsCont.newtonOptions
 		bifpt = br.specialpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
@@ -211,7 +211,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 	cbnewton = get(kwargs, :callbackN, cbDefault)
 	normn = get(kwargs, :normN, norm)
 
-	printstyled(color = :magenta, "--> Looking for solutions after the bifurcation point...\n")
+	printstyled(color = :magenta, "──> Looking for solutions after the bifurcation point...\n")
 	defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 	optnDf = setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation)
 
@@ -222,7 +222,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 		converged(solbif) && push!(defOpp, solbif.u)
 	end
 
-	printstyled(color = :magenta, "--> Looking for solutions before the bifurcation point...\n")
+	printstyled(color = :magenta, "──> Looking for solutions before the bifurcation point...\n")
 	defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 	for (ind, xsol) in pairs(rootsNFm)
 		probm = reMake(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
@@ -230,7 +230,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 		solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
 		converged(solbif) && push!(defOpm, solbif.u)
 	end
-	printstyled(color=:magenta, "--> we find $(length(defOpp)) (resp. $(length(defOpm))) roots after (resp. before) the bifurcation point.\n")
+	printstyled(color=:magenta, "──> we find $(length(defOpp)) (resp. $(length(defOpm))) roots after (resp. before) the bifurcation point.\n")
 	return (before = defOpm, after = defOpp, bpm = bpnf.p - ds, bpp = bpnf.p + ds)
 end
 

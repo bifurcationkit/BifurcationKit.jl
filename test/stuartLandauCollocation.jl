@@ -1,4 +1,4 @@
-# using Revise
+# using Revise, AbbreviatedStackTraces
 # using Plots
 using Test
 using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays

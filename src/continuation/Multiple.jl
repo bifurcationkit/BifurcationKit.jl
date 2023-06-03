@@ -47,14 +47,14 @@ internalAdaptation!(alg::Multiple, onoroff::Bool) = internalAdaptation!(alg.alg,
 
 # callback for newton
 function (algcont::Multiple)(state; kwargs...)
-	resHist = get(state, :resHist, nothing)
-	iteration = isnothing(resHist) ? 0 : length(resHist)
+	residuals = get(state, :residuals, nothing)
+	iteration = isnothing(residuals) ? 0 : length(residuals)
 	contparams = get(state, :contparams, nothing)
 	if algcont.currentind > 1
 		if iteration - algcont.pmimax > 0
-			out = resHist[end] <= algcont.α * resHist[end-algcont.pmimax]
+			out = residuals[end] <= algcont.α * residuals[end-algcont.pmimax]
 			tol = isnothing(contparams) ? Inf : contparams.newtonOptions.tol
-			out = out || resHist[end] < tol
+			out = out || residuals[end] < tol
 			return out
 		end
 	end

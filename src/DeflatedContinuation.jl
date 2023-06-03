@@ -195,7 +195,7 @@ function continuation(prob::AbstractBifurcationProblem,
 	deflationOp = copy(defOp)
 
 	verbosity > 0 && printstyled(color=:magenta, "#"^51*"\n")
-	verbosity > 0 && printstyled(color=:magenta, "--> There are $(length(deflationOp)) branche(s)\n")
+	verbosity > 0 && printstyled(color=:magenta, "──> There are $(length(deflationOp)) branche(s)\n")
 
 	# underlying continuation iterator
 	# we "hack" the saveSolEveryStep option because we always want to record the first point on each branch
@@ -256,7 +256,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 
 		verbosity > 0 && println("──"^51)
 		nactive = mapreduce(isActive, +, dcstates)
-		verbosity > 0 && println("--> step = $nstep has $(nactive)/$(length(branches)) active branche(s), p = $current_param")
+		verbosity > 0 && println("──> step = $nstep has $(nactive)/$(length(branches)) active branche(s), p = $current_param")
 
 		# we empty the set of known solutions
 		empty!(deflationOp)
@@ -270,10 +270,10 @@ function deflatedContinuation(dcIter::DefContIterable,
 					current_param = current_param,
 					step = nstep)
 			(verbosity>=2 && isActive(dcstate)) && println("----> Continuation of branch $idb in $itnewton Iterations")
-			(verbosity>=1 && ~flag && isActive(dcstate)) && printstyled(color=:red, "--> Fold for branch $idb) ?\n")
+			(verbosity>=1 && ~flag && isActive(dcstate)) && printstyled(color=:red, "──> Fold for branch $idb) ?\n")
 		end
 
-		verbosity>1 && printstyled(color = :magenta,"--> looking for new branches\n")
+		verbosity>1 && printstyled(color = :magenta,"──> looking for new branches\n")
 		# number of branches
 		nbrs = length(dcstates)
 		# number of active branches
@@ -299,7 +299,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 							_success = false
 						end
 						if _success && dcIter.alg.acceptSolution(sol1.u, current_param)
-							verbosity>=1 && printstyled(color=:green, "--> new solution for branch $idb \n")
+							verbosity>=1 && printstyled(color=:green, "──> new solution for branch $idb \n")
 							push!(deflationOp.roots, sol1.u)
 
 							# create a new iterator and iterate it once to set up the ContState
@@ -375,10 +375,10 @@ end
 # 	while doneBranch(brs) < length(brs) && iterbrs < iterbrsmax
 # 		printstyled(color=:green, "#"^50*" - $iterbrs, #br = $(length(brs)) \n")
 # 		for (id, br) in pairs(brs)
-# 			print("--> branch $id, # = ", length(br), ", isdone = ")
+# 			print("──> branch $id, # = ", length(br), ", isdone = ")
 # 			printstyled("$(doneBranch(br)) \n", color = (doneBranch(br) ? :green : :red))
 # 			if ~doneBranch(br) && length(br) > 1 # if there is a single point, discard
-# 				printstyled(color=:magenta,"--> branch $id not finished\n")
+# 				printstyled(color=:magenta,"──> branch $id not finished\n")
 # 				# we found an un-finished branch
 # 				iterbr = 0
 # 				# we use as starting point the one
@@ -399,12 +399,12 @@ end
 # 					idp = findfirst(x -> x.p > startingpoint.p, _ps)
 # 					@show  idp
 # 					pspan = (startingpoint.p, ~isnothing(idp) ? _ps[idp].p : pMax)
-# 					printstyled(color=:blue, "--> to the right\n")
+# 					printstyled(color=:blue, "──> to the right\n")
 # 				else
 # 					@assert 1==1 "searchsorted?"
 # 					idp = findfirst(x -> x.p < startingpoint.p, _ps)
 # 					pspan = (~isnothing(idp) ? _ps[idp].p : pMin, startingpoint.p)
-# 					printstyled(color=:green, "--> to the left\n")
+# 					printstyled(color=:green, "──> to the left\n")
 # 				end
 #
 # 				# we define the parameter span
@@ -412,17 +412,17 @@ end
 # 				while ~doneBranch(brs[id]) && iterbr < 1
 # 					brright, = continuation(iter2)
 # 					brs[id] = _merge(br, brright)
-# 					println("--> branch from ",brs[id].sol[1].p," to ", brright.sol[end].p)
+# 					println("──> branch from ",brs[id].sol[1].p," to ", brright.sol[end].p)
 # 					# return brright
 #
 # 					res = intersectBranch(brs, brright.sol[end].x, brright.sol[end].p,id)
 # 					if res[1]  #we found a curve to merge with
-# 							printstyled(color=:red, "--> Merge branch with ", res[2],"\n")
+# 							printstyled(color=:red, "──> Merge branch with ", res[2],"\n")
 # 						brs[id] = _merge(brs[res[2]], brs[id])
-# 							printstyled(color=:green,"\n--> the branch is complete = ", doneBranch(brs[id]),"\n")
+# 							printstyled(color=:green,"\n──> the branch is complete = ", doneBranch(brs[id]),"\n")
 # 						# we remove the other branch that we merged
 # 						deleteat!(brs, res[2])
-# 							println("--> #br = $(length(brs))\n")
+# 							println("──> #br = $(length(brs))\n")
 # 					end
 # 					iterbr += 1
 # 				end
@@ -432,5 +432,5 @@ end
 # 		end
 # 		iterbrs += 1
 # 	end
-# 	iterbrs < iterbrsmax && printstyled("--> Merge computed!!!", color=:green)
+# 	iterbrs < iterbrsmax && printstyled("──> Merge computed!!!", color=:green)
 # end

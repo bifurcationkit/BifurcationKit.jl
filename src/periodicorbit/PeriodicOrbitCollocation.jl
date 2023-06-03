@@ -387,23 +387,23 @@ end
 """
 $(SIGNATURES)
 
-[INTERNAL] Implementation of phase condition.
+[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt.
 # Arguments
 - uj   n x (m + 1)
 - guj  n x m
 """
-@views function phaseCondition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L))
-	Ty = eltype(uc)
-	phase = zero(Ty)
+@views function phaseCondition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L), period)
+	𝒯 = eltype(uc)
+	phase = zero(𝒯)
 
 	n, m, Ntst = size(pb)
 
-	guj = zeros(Ty, n, m)
-	uj  = zeros(Ty, n, m+1)
+	guj = zeros(𝒯, n, m)
+	uj  = zeros(𝒯, n, m+1)
 
 	vc = getTimeSlices(pb.ϕ, size(pb)...)
-	gvj = zeros(Ty, n, m)
-	vj  = zeros(Ty, n, m+1)
+	gvj = zeros(𝒯, n, m)
+	vj  = zeros(𝒯, n, m+1)
 
 	ω = pb.mesh_cache.gauss_weight
 
@@ -418,7 +418,7 @@ $(SIGNATURES)
 		end
 		rg = rg .+ m
 	end
-	return phase / getPeriod(pb, u, nothing)
+	return phase / period
 end
 
 function _POOCollScheme!(pb::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, tmp)
@@ -469,8 +469,8 @@ end
 	result = zero(u)
 	resultc = getTimeSlices(prob, result)
 	functionalColl!(prob, resultc, uc, T, getLs(prob.mesh_cache), pars)
-	# add the phase condition
-	result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache))
+	# add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt
+	result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache), T)
 	return result
 end
 
@@ -668,7 +668,7 @@ end
 	# update the reference point
 	prob.xπ .= 0
 
-	# update the normals
+	# update the "normals"
 	prob.ϕ .= x[1:end-1]
 	return true
 end
@@ -779,14 +779,15 @@ function computeError!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 
 	if verbosity
 		h = maximum(diff(newmesh))
-		printstyled(color = :magenta, "----> Mesh adaptation
-		 \n ------> min(hi)       = ", minimum(diff(newmesh)),
-		"\n ------> h = max(hi)   = ", h,
-		"\n ------> K = max(h/hi) = ", maximum(h ./ diff(newmesh)),
-		"\n ------> θ             = ", θ,
-		"\n ------> min(ϕ)        = ", minimum(ϕ),
-		"\n ------> max(ϕ)        = ", maximum(ϕ),
-		"\n ------> θ             = ", θ,
+		printstyled(color = :magenta, 
+		"   ┌─ Mesh adaptation",
+		"\n   ├─── min(hi)       = ", minimum(diff(newmesh)),
+		"\n   ├─── h = max(hi)   = ", h,
+		"\n   ├─── K = max(h/hi) = ", maximum(h ./ diff(newmesh)),
+		"\n   ├─── θ             = ", θ,
+		"\n   ├─── min(ϕ)        = ", minimum(ϕ),
+		"\n   ├─── max(ϕ)        = ", maximum(ϕ),
+		"\n   └─── θ             = ", θ,
 		"\n")
 	end
 

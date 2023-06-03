@@ -4,13 +4,17 @@ const BK = BifurcationKit
 
 function test_newton(x0)
 	Ty = eltype(x0)
-
-	F(x, p) = x.^3 .- 1
-	Jac(x, p) = diagm(0 => 3 .* x.^2)
+	F(x, p) = @. x^3 - 1
+	J0 = zeros(length(x0), length(x0))
+	function Jac(x, p)
+		for i in eachindex(x)
+			J0[i,i] = 3 * x[i]^2
+		end
+		J0
+	end
+	norminf(x) = norm(x, Inf)
 
 	opts = NewtonPar( tol = Ty(1e-8), verbose = false)
-	# newton(F, Jac, x0, nothing, opts, normN = x->norm(x,Inf), callback = BK.cbMaxNorm(100.0))
-	# newton version with AbstractBifurcationFunction
 	prob = BifurcationProblem(F, x0, nothing; J = Jac)
 	newton(prob, opts; callback = BK.cbMaxNorm(100.0), normN = x->norm(x,Inf))
 end
@@ -33,7 +37,7 @@ function test_newton_palc(x0, p0::T) where T
 	θ = T(0.5)
 	dotθ = BK.DotTheta(dot)
 
-	F(x, p) = x.^3 .- 13 .* x .- p
+	F(x, p) = @. x^3 - 13 * x - p
 	Jac(x, p) = diagm(0 => 3 .* x.^2 .- 13)
 
 	z0 = BorderedArray(x0, p0)

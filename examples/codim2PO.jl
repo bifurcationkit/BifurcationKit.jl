@@ -1,4 +1,4 @@
-using Revise
+using Revise, AbbreviatedStackTraces
 using Test, ForwardDiff, Parameters, Plots, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
@@ -38,18 +38,24 @@ sol = solve(prob_de, Rodas5())
 
 plot(sol)
 ################################################################################
-argspo = (recordFromSolution = (x, p) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
-		return (max = maximum(xtt[1,:]),
-				min = minimum(xtt[1,:]),
-				period = getPeriod(p.prob, x, p.p))
-	end,
-	plotSolution = (x, p; k...) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
-		plot!(xtt.t, xtt[1,:]; label = "x", k...)
-		plot!(xtt.t, xtt[2,:]; label = "y", k...)
-		# plot!(br; subplot = 1, putspecialptlegend = false)
-	end)
+function recordFromSolution(x, p)
+	xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+	return (max = maximum(xtt[1,:]),
+			min = minimum(xtt[1,:]),
+			period = getPeriod(p.prob, x, p.p))
+end
+
+function plotSolution(X, p; k...)
+	x = X isa BorderedArray ? X.u : X
+	xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+	plot!(xtt.t, xtt[1,:]; label = "x", k...)
+	plot!(xtt.t, xtt[2,:]; label = "y", k...)
+	# plot!(br; subplot = 1, putspecialptlegend = false)
+end
+
+argspo = (recordFromSolution = recordFromSolution,
+	plotSolution = plotSolution
+	)
 ################################################################################
 probtrap, ci = generateCIProblem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, updateSectionEveryStep = 0), prob, sol, 2.)
 
@@ -377,7 +383,7 @@ plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 
 #####
-# find the PD NS case
+# find the NS case
 par_pop2 = @set par_pop.b0 = 0.45
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
@@ -395,7 +401,7 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSt
 ns = getNormalForm(brpo_ns, 1)
 
 # codim 2 NS
-opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSteps = 1, pMin = -0., pMax = 1.2)
+opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSteps = 10, pMin = -0., pMax = 1.2)
 @set! opts_posh_ns.newtonOptions.tol = 1e-12
 @set! opts_posh_ns.newtonOptions.verbose = true
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;

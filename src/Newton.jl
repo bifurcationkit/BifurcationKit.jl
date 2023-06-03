@@ -45,7 +45,7 @@ struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
 	residuals::Tres
 	"has algorithm converged?"
 	converged::Bool
-	"number of newton iterations"
+	"number of newton steps"
 	itnewton::Int
 	"total number of linear iterations"
 	itlineartot::Titlin
@@ -55,68 +55,70 @@ end
 ####################################################################################################
 function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
 	# Extract parameters
-	@unpack tol, maxIter, verbose, α, αmin, linesearch = options
+	@unpack tol, maxIter, verbose = options
 
 	x = _copy(x0)
-	f = residual(prob, x, p0)
-	d = _copy(f)
+	fx = residual(prob, x, p0)
+	u = _copy(fx)
 
-	res = normN(f)
-	resHist = [res]
+	res = normN(fx)
+	residuals = [res]
 
-	# iterations count
-	it = 0
+	# newton step
+	step = 0
 
 	# total number of linear iterations
 	itlineartot = 0
 
-	# Displaying results
-	verbose && displayIteration(it, res)
+	verbose && printNonlinearStep(step, res)
 
 	# invoke callback before algo really starts
-	compute = callback((;x, f, nothing, res, it, options, x0, resHist); fromNewton = true, kwargs...)
-	# Main loop
-	while (res > tol) && (it < maxIter) && compute
+	compute = callback((;x, fx, nothing, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
+	
+	while (step < maxIter) && (res > tol) && compute
 		J = jacobian(prob, x, p0)
-		d, cv, itlinear = options.linsolver(J, f)
+		u, cv, itlinear = options.linsolver(J, fx)
 		~cv && @debug "Linear solver for J did not converge."
 		itlineartot += sum(itlinear)
 
-		# Update solution: x .= x .- d
-		minus!(x, d)
+		# x = x - J \ fx
+		minus!(x, u)
 
-		f = residual(prob, x, p0)
-		res = normN(f)
+		fx = residual(prob, x, p0)
+		res = normN(fx)
 
-		push!(resHist, res)
-		it += 1
+		push!(residuals, res)
+		step += 1
 
-		verbose && displayIteration(it, res, itlinear)
+		verbose && printNonlinearStep(step, res, itlinear)
 
-		compute = callback((;x, f, J, res, it, itlinear, options, x0, resHist); fromNewton = true, kwargs...)
+		compute = callback((;x, fx, J, residual=res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
 	end
-	((resHist[end] > tol) && verbose) && @error("\n--> Newton algorithm failed to converge, residual = $(res[end])")
-	flag = (resHist[end] < tol) & callback((;x, f, res, it, options, x0, resHist); fromNewton = true, kwargs...)
-	verbose && displayIteration(0, res, 0, true) # display last line of the table
-	return NonLinearSolution(x, prob, resHist, flag, it, itlineartot)
+	((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
+	flag = (residuals[end] < tol) & callback((;x, fx, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
+	verbose && printNonlinearStep(0, res, 0, true) # display last line of the table
+	return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
+end
+	return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
 
 """
-		newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, f, J, res, iteration, itlinear, optionsN; kwargs...) -> true, kwargs...)
+		newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
 
 This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers (LS)](@ref) for more informations.
 
 # Arguments:
 - `prob` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault((x, f, J, res, it, itlinear, options); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
     - `x` current solution
-    - `f` current residual
+    - `fx` current residual
     - `J` current jacobian
-    - `res` current norm of the residual
-    - `iteration` current newton iteration
+    - `residual` current norm of the residual
+    - `step` current newton step
     - `itlinear` number of iterations to solve the linear system
-    - `optionsN` a copy of the argument `options` passed to `newton`
+    - `options` a copy of the argument `options` passed to `newton`
+	- `residuals` the history of residuals
     - `kwargs` kwargs arguments, contain your initial guess `x0`
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
@@ -139,4 +141,4 @@ Create a callback used to reject residuals larger than `cb.maxres` in the Newton
 struct cbMaxNorm{T}
 	maxres::T
 end
-(cb::cbMaxNorm)(state; k...) = (return state.res < cb.maxres)
+(cb::cbMaxNorm)(state; k...) = (return state.residual < cb.maxres)

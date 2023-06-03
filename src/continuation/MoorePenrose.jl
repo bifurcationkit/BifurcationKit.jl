@@ -130,12 +130,10 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	@unpack pMin, pMax = contparams
 	linsolver = iter.alg.ls
 
-	# Initialise iterations
+	# initialise variables
 	x = _copy(z_pred.u)
 	p = z_pred.p
 	x_pred = _copy(x)
-
-	# Initialise residuals
 	res_f = residual(prob, x, set(par, paramlens, p))
 
 	dX = _copy(res_f) # copy(res_f)
@@ -143,20 +141,20 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 	dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
 	minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
 
-	res     = normN(res_f)
-	resHist = [res]
+	res = normN(res_f)
+	residuals = [res]
 
-	# iterations count
-	it = 0
+	# step count
+	step = 0
 
 	# total number of linear iterations
 	itlinear = 0
 	itlineartot = 0
 
-	verbose && displayIteration(it, res)
+	verbose && printNonlinearStep(it, res)
 	line_step = true
 
-	compute = callback((;x, res_f, res, it, contparams, p, resHist, z0); fromNewton = false, kwargs...)
+	compute = callback((;x, res_f, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 
 	X = BorderedArray(x, p)
 	if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
@@ -164,8 +162,8 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		rmul!(ϕ,  T(1) / norm(ϕ))
 	end
 
-	while (res > tol) && (it < maxIter) && line_step && compute
-		it += 1
+	while (step < maxIter) && (res > tol) && line_step && compute
+		step += 1
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
 		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
 		minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
@@ -192,7 +190,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(T), one(T), one(T))
 			minus!(x, du)
 			p -= dup
-			verbose && displayIteration(it, nothing, itlinear1)
+			verbose && printNonlinearStep(step, nothing, itlinear1)
 		end
 
 		p = clamp(p, pMin, pMax)
@@ -212,14 +210,14 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 			# rmul!(ϕ,  T(1) / norm(ϕ))
 			itlinear = (itlinear1 .+ itlinear2)
 		end
-		push!(resHist, res)
+		push!(residuals, res)
 
-		verbose && displayIteration(it, res, itlinear)
+		verbose && printNonlinearStep(step, res, itlinear)
 
-		# shall we break the loop?
-		compute = callback((;x, res_f, J, res, it, itlinear, contparams, p, resHist, z0); fromNewton = false, kwargs...)
+		# break the while-loop?
+		compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 	end
-	verbose && displayIteration(it, res, 0, true) # display last line of the table
-	flag = (resHist[end] < tol) & callback((;x, res_f, nothing, res, it, contparams, p, resHist, z0); fromNewton = false, kwargs...)
-	return NonLinearSolution(BorderedArray(x, p), prob, resHist, flag, it, itlineartot)
+	verbose && printNonlinearStep(it, res, 0, true) # display last line of the table
+	flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
+	return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end

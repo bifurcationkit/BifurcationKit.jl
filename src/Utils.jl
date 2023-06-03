@@ -4,32 +4,32 @@ getinterval(a, b) = (min(a, b), max(a, b))
 norm2sqr(x) = dot(x, x)
 ####################################################################################################
 # display eigenvals with color
-function displayEV(eigenvals, color = :black)
+function printEV(eigenvals, color = :black)
 	for r in eigenvals
 		printstyled(color = color, r, "\n")
 	end
 end
 ####################################################################################################
-function displayIteration(i, residual, itlinear = 0, lastRow = false)
+function printNonlinearStep(step, residual, itlinear = 0, lastRow = false)
 	if lastRow
 		lastRow && println("└─────────────┴──────────────────────┴────────────────┘")
 	else
-		if i == 0
+		if step == 0
 			println("\n┌─────────────────────────────────────────────────────┐")
-			  println("│ Newton Iterations      f(x)      Linear Iterations  │")
+			  println("│ Newton step         residual     linear iterations  │")
 			  println("├─────────────┬──────────────────────┬────────────────┤")
 		end
-		_displayLine(i, residual, itlinear)
+		_printLine(step, residual, itlinear)
 	end
-end
+end 
 
-@inline _displayLine(i::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", i, residual, itlinear[1], itlinear[2])
+@inline _printLine(step::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", step, residual, itlinear[1], itlinear[2])
 
-@inline _displayLine(i::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", i, residual, itlinear)
+@inline _printLine(step::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", step, residual, itlinear)
 
-@inline _displayLine(i::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", i, itlinear)
+@inline _printLine(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
 
-@inline _displayLine(i::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", i, itlinear[1], itlinear[2])
+@inline _printLine(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
 function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contParams.nev; kwargs...)
 	return it.contParams.newtonOptions.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)

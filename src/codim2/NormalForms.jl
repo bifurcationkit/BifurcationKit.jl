@@ -23,7 +23,7 @@ function cuspNormalForm(_prob,
 		scaleζ = norm)
 	@assert br.specialpoint[ind_bif].type == :cusp "The provided index does not refer to a Cusp Point"
 
-	verbose && println("#"^53*"\n--> Cusp Normal form computation")
+	verbose && println("#"^53*"\n──> Cusp Normal form computation")
 
 	# MA problem formulation
 	prob_ma = _prob.prob
@@ -489,7 +489,7 @@ function bogdanovTakensNormalForm(_prob,
 
 	# in case nev = 0 (number of requested eigenvalues), we increase nev to avoid bug
 	nev = max(2N, nev)
-	verbose && println("#"^53*"\n--> Bogdanov-Takens Normal form computation")
+	verbose && println("#"^53*"\n──> Bogdanov-Takens Normal form computation")
 
 	# Newton parameters
 	optionsN = br.contparams.newtonOptions
@@ -525,7 +525,7 @@ function bogdanovTakensNormalForm(_prob,
 			_λ0, _ev, _ = eigsolver(L, nev)
 			Ivp = sortperm(_λ0, by = abs)
 			_λ = _λ0[Ivp]
-			verbose && (println("--> (λs, λs (recomputed)) = "); display(( _λ[1:N])))
+			verbose && (println("──> (λs, λs (recomputed)) = "); display(( _λ[1:N])))
 			if norm(_λ[1:N] .- 0, Inf) > br.contparams.tolStability
 				@warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
 				display(_λ[1:N] .- 0)
@@ -536,7 +536,7 @@ function bogdanovTakensNormalForm(_prob,
 			Ind = sortperm(abs.(rightEv))
 			ind0 = Ind[1]
 			ind1 = Ind[2]
-			verbose && (println("----> eigenvalues = ", rightEv[Ind[1:2]]))
+			verbose && (println("────> eigenvalues = ", rightEv[Ind[1:2]]))
 			ζs = [copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
 		end
 	end
@@ -591,7 +591,7 @@ function bautinNormalForm(_prob,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
-	verbose && println("#"^53*"\n--> Bautin Normal form computation")
+	verbose && println("#"^53*"\n──> Bautin Normal form computation")
 
 	# get the MA problem
 	prob_ma = _prob.prob
@@ -671,17 +671,24 @@ function bautinNormalForm(_prob,
 	q0 = ζ; p0 = ζ★
 	cq0 = conj(q0)
 
-	# normal form computation based on Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
+	# normal form computation based on 
+	# REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
+	# formula (7.2) in REF1
 	H20, = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+
+	# formula (7.3) in REF1
 	H11, = ls(L, -B(q0, cq0))
+
+	# formula (7.4) in REF1
 	H30, = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
 
+	# formula (7.5) in REF1
 	h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
-	G21 = dot(p0, h21)
-	h21 .= G21 .* q0 .- h21
+	G21 = dot(p0, h21) 		# (7.6)
+	h21 .= G21 .* q0 .- h21 # (7.7)
+	# formula (7.7) in REF1
 	H21, = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
-	# sol = [L-λ*I q0; p0' 0] \ [h21..., 0]
 
 	# 4-th order coefficient
 	d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ .* dx4, parbif, dx1, dx2, dx3) .-
@@ -698,6 +705,7 @@ function bautinNormalForm(_prob,
 		return out1 .+ im .* out2
 	end
 
+	# h40 is not needed, so we compute the next formula on page 1114 in REF1
 	h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
 	h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
 	H31, = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
@@ -756,7 +764,8 @@ function bautinNormalForm(_prob,
 
 	###########################
 	# computation of the unfolding
-	# the unfolding are in meijer. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
+	# the unfolding are in 
+	# REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
 
 	# this part is for branching to Fold of periodic orbits
 	VF = prob_ma.prob_vf
@@ -772,37 +781,46 @@ function bautinNormalForm(_prob,
 	A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
 	Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
 	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-	J1 = lens -> F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+	J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+
+	# formula 17 in REF2
 	h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
 	h₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₁ .*= -1
 	γ₁₁₀ = dot(p0, A1(q0, lens1) + B(q0, h₀₀₁₀))
 	γ₁₀₁ = dot(p0, A1(q0, lens2) + B(q0, h₀₀₀₁))
 
 	# compute the lyapunov coefficient l1, conform to notations from above paper
+	# formulas (15a - 15c) in REF2
 	h₂₀₀₀ = H20
 	h₁₁₀₀ = H11
 	l1 = G21/2
 	h₂₁₀₀ = H21
 
+	# formula (19) in REF2
 	Ainv(dx) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); shift = -λ)
 	h₁₀₁₀, = Ainv(γ₁₁₀ .* q0 .- A1(q0, lens1) .- B(q0, h₀₀₁₀) )
 	h₁₀₀₁, = Ainv(γ₁₀₁ .* q0 .- A1(q0, lens2) .- B(q0, h₀₀₀₁) )
 
+	# formula (20a) in REF2
 	tmp2010 = (2γ₁₁₀) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₁₀) .+ 2 .* B(q0, h₁₀₁₀) .+ B(h₂₀₀₀, h₀₀₁₀) .+ B1(q0, q0, lens1) .+ A1(h₂₀₀₀, lens1))
 	h₂₀₁₀, = ls(L, tmp2010; a₀ = Complex(0, -2ω) )
 
+	# formula (20a) in REF2
 	tmp2001 = (2γ₁₀₁) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₀₁) .+ 2 .* B(q0, h₁₀₀₁) .+ B(h₂₀₀₀, h₀₀₀₁) .+ B1(q0, q0, lens2) .+ A1(h₂₀₀₀, lens2))
 	h₂₀₀₁, = ls(L, tmp2001; a₀ = Complex(0, -2ω) )
 
+	# formula (20b) in REF2
 	tmp1110 = 2real(γ₁₁₀) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₁₀) .+ B(h₁₁₀₀, h₀₀₁₀) .+ 2 .* real(B(cq0, h₁₀₁₀)) .+ B1(q0, cq0, lens1) .+ A1(h₁₁₀₀, lens1))
 	h₁₁₁₀, = ls(L, tmp1110)
 
+	# formula (20b) in REF2
 	tmp1101 = 2real(γ₁₀₁) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₀₁) .+ B(h₁₁₀₀, h₀₀₀₁) .+ 2 .* real(B(cq0, h₁₀₀₁)) .+ B1(q0, cq0, lens2) .+ A1(h₁₁₀₀, lens2))
 	h₁₁₀₁, = ls(L, tmp1101)
 
 	_C1(pars) = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, pars, dx1, dx2, dx3) )
 	C1(dx1, dx2, dx3, l) = (_C1(setp(l, getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
 
+	# formula (21) in REF2
 	tmp2110 = D(x0, q0, q0, cq0, h₀₀₁₀) .+
 			2 .* C(q0, h₁₁₀₀, h₀₀₁₀) .+
 			2 .* C(q0, cq0, h₁₀₁₀) .+
@@ -812,11 +830,11 @@ function bautinNormalForm(_prob,
 			2 .* B(h₁₁₀₀, h₁₀₁₀) .+
 			B(h₂₀₀₀, conj(h₁₀₁₀)) .+
 			B(h₂₁₀₀, h₀₀₁₀) .+
-			B(cq0, h₂₀₁₀) .+
+			B(h₂₀₁₀, cq0) .+
 			C1(q0, q0, cq0, lens1) .+
 			2 .* B1(h₁₁₀₀, q0, lens1) .+ B1(h₂₀₀₀, cq0, lens1) .+ A1(h₂₁₀₀, lens1)
 
-		
+	# formula (21) in REF2	
 	tmp2101 = D(x0, q0, q0, cq0, h₀₀₀₁) .+
 			2 .* C(q0, h₁₁₀₀, h₀₀₀₁) .+
 			2 .* C(q0, cq0, h₁₀₀₁) .+
@@ -826,7 +844,7 @@ function bautinNormalForm(_prob,
 			2 .* B(h₁₁₀₀, h₁₀₀₁) .+
 			B(h₂₀₀₀, conj(h₁₀₀₁)) .+
 			B(h₂₁₀₀, h₀₀₀₁) .+
-			B(cq0, h₂₀₀₁) .+
+			B(h₂₀₀₁, cq0) .+
 			C1(q0, q0, cq0, lens2) .+
 			2 .* B1(h₁₁₀₀, q0, lens2) .+ B1(h₂₀₀₀, cq0, lens2) .+ A1(h₂₁₀₀, lens2)
 	
@@ -874,7 +892,7 @@ function zeroHopfNormalForm(_prob,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
-	verbose && println("#"^53*"\n--> Zero-Hopf Normal form computation")
+	verbose && println("#"^53*"\n──> Zero-Hopf Normal form computation")
 
 	# scalar type
 	𝒯 = eltype(Teigvec)
@@ -1025,7 +1043,7 @@ function hopfHopfNormalForm(_prob,
 		detailed = false)
 	@assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
-	verbose && println("#"^53*"\n--> Hopf-Hopf Normal form computation")
+	verbose && println("#"^53*"\n──> Hopf-Hopf Normal form computation")
 
 	# scalar type
 	𝒯 = eltype(Teigvec)
@@ -1190,7 +1208,7 @@ function hopfHopfNormalForm(_prob,
 	tmp1011 = C(q1, q2, cq2) .+ B(h₁₀₁₀, cq2) .+ B(h₁₀₀₁, q2) .+ B(h₀₀₁₁, q1)
 	G1011 = dot(p1, tmp1011)
 
-	# implement formula 26 from REF2
+	# some more definitions
 	VF = prob_ma.prob_vf
 	F(x, p) = residual(prob_vf, x, p)
 
@@ -1204,30 +1222,31 @@ function hopfHopfNormalForm(_prob,
 	A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
 	Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
 	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-	J1 = lens -> F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+	J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
 
+	# implement formula 26 from REF2
 	h₀₀₀₀₁₀, = ls(L, J1(lens1)); h₀₀₀₀₁₀ .*= -1
 	h₀₀₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₀₀₁ .*= -1
-
+	
+	# implement formula 26 from REF2, Fredholm alternative
 	γ₁₁₀ = dot(p1, B(q1, h₀₀₀₀₁₀) .+ A1(q1, lens1))
 	γ₂₁₀ = dot(p2, B(q2, h₀₀₀₀₁₀) .+ A1(q2, lens1))
 	γ₁₀₁ = dot(p1, B(q1, h₀₀₀₀₀₁) .+ A1(q1, lens2))
 	γ₂₀₁ = dot(p2, B(q2, h₀₀₀₀₀₁) .+ A1(q2, lens2))
 
+	# this matrix is written V in 2.3.3 Double Hopf
 	Γ = [γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]
 	
-	# formula (22) for Neimark-Sacker1
-	f2100 = real(G2100)/2
-	α = real.(Γ) \ [f2100, real(G1110)]
-	dω1 = imag(G2100)/2 - imag.(Γ[1,:])' * α
-	dω2 = imag(G1110) - imag.(Γ[2,:])' * α
+	# formula (22) for Neimark-Sacker1, from formula (12)
+	f2100 = real(G2100)/2 # conform to notations of REF2
+	α = real.(Γ) \ [f2100, real(G1110)] # formula (22)
+	dω1, dω2 =  [imag(G2100)/2, imag(G1110)] .- (imag.(Γ) * α) # formula (28) in REF2
 	ns1 = (; dω1, dω2, α)
 
-	# formula (22) for Neimark-Sacker2
-	f0021 = real(G0021)/2
-	α = real.(Γ) \ [real(G1011), f0021]
-	dω1 = imag(G1011) - imag.(Γ[1,:])' * α
-	dω2 = imag(G0021)/2 - imag.(Γ[2,:])' * α
+	# formula (22) for Neimark-Sacker2, from formula (13)
+	f0021 = real(G0021)/2 # conform to notations of REF2
+	α = real.(Γ) \ [real(G1011), f0021] # formula (22)
+	dω1, dω2 = [imag(G1011), imag(G0021)/2] .- (imag.(Γ) * α) # formula (28) in REF2
 	ns2 = (; dω1, dω2, α)
 
 	return @set pt.nf = (;λ1 = λ1, λ2 = λ2, G2100, G0021, G1110, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)

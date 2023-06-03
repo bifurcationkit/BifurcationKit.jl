@@ -401,7 +401,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 
 	if usedeflation
 		verbose &&
-			println("\n├─ Attempt branch switching\n--> Compute point on the current branch...")
+			println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
 		probPO isa PoincareShootingProblem &&
 			@warn "Poincaré Shooting does not work very well with stationary states."
 		optn = _contParams.newtonOptions
@@ -521,7 +521,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 	end
 
 	if usedeflation
-		verbose && println("\n├─ Attempt branch switching\n--> Compute point on the current branch...")
+		verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
 		optn = _contParams.newtonOptions
 		# find point on the first branch
 		pbnew = setParamsPO(pbnew, setParam(br, newp))
@@ -531,7 +531,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 		# find the bifurcated branch using deflation
 		@assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method or ShootingProblem"
 		deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
-		verbose && println("\n--> Compute point on bifurcated branch...")
+		verbose && println("\n──> Compute point on bifurcated branch...")
 		solbif = newton(pbnew, orbitguess, deflationOp,
 			(@set optn.maxIter = 10 * optn.maxIter) ; kwargs...,)
 		@assert converged(solbif) "Deflated newton did not converge"

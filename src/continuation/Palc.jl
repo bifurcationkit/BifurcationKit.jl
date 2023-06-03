@@ -398,14 +398,14 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	@unpack pMin, pMax = contparams
 	linsolver = getLinsolver(iter)
 
-	# we record the damping parameter
+	# record the damping parameter
 	α0 = α
 
 	# N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
 	N(u, _p) = arcLengthEq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
 	normAC(resf, resn) = max(normN(resf), abs(resn))
 
-	# Initialise iterations
+	# initialise variables
 	x = _copy(z_pred.u)
 	p = z_pred.p
 	x_pred = _copy(x)
@@ -421,23 +421,24 @@ function newtonPALC(iter::AbstractContinuationIterable,
 	minus!(dFdp, res_f)						# dFdp = dFdp - res_f
 	rmul!(dFdp, one(T) / ϵ)
 
-	res     = normAC(res_f, res_n)
-	resHist = [res]
-	it = 0
+	res       = normAC(res_f, res_n)
+	residuals = [res]
+	step = 0
 	itlineartot = 0
 
-	verbose && displayIteration(it, res)
+	verbose && printNonlinearStep(step, res)
 	line_step = true
 
-	compute = callback((;x, res_f, res, it, contparams, z0, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
+	compute = callback((;x, res_f, residual=res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
-	while (res > tol) && (it < maxIter) && line_step && compute
+	while (step < maxIter) && (res > tol) && line_step && compute
 		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
 		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
 			minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
 
 		# compute jacobian
 		J = jacobian(prob, x, set(par, paramlens, p))
+		
 		# solve linear system
 		# ┌            ┐┌  ┐   ┌     ┐
 		# │ J     dFdp ││u │ = │res_f│
@@ -459,8 +460,8 @@ function newtonPALC(iter::AbstractContinuationIterable,
 				res_n  = N(x_pred, p_pred)
 				res = normAC(res_f, res_n)
 
-				if res < resHist[end]
-					if (res < resHist[end] / 4) && (α < 1)
+				if res < residuals[end]
+					if (res < residuals[end] / 4) && (α < 1)
 						α *= 2
 					end
 					line_step = true
@@ -483,15 +484,15 @@ function newtonPALC(iter::AbstractContinuationIterable,
 			res_n  = N(x, p); res = normAC(res_f, res_n)
 		end
 
-		push!(resHist, res)
-		it += 1
+		push!(residuals, res)
+		step += 1
 
-		verbose && displayIteration(it, res, itlinear)
+		verbose && printNonlinearStep(step, res, itlinear)
 
 		# shall we break the loop?
-		compute = callback((;x, res_f, J, res, it, itlinear, contparams, z0, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
+		compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 	end
-	verbose && displayIteration(it, res, 0, true) # display last line of the table
-	flag = (resHist[end] < tol) & callback((;x, res_f, res, it, contparams, p, resHist, options = (;linsolver)); fromNewton = false, kwargs...)
-	return NonLinearSolution(BorderedArray(x, p), prob, resHist, flag, it, itlineartot)
+	verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
+	flag = (residuals[end] < tol) & callback((;x, res_f, residual=res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+	return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end

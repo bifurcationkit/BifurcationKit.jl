@@ -256,17 +256,17 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
 	T = eltype(it)
 
-	verbose && printstyled("#"^55*"\n"*"─"^17*" ",typeof(getAlg(it)).name.name," "*"─"^17*"\n\n", bold = true, color = :red)
+	verbose && printstyled("━"^55*"\n"*"─"^17*" ",typeof(getAlg(it)).name.name," "*"─"^17*"\n\n", bold = true, color = :red)
 
-	# Get parameters
+	# newton parameters
 	@unpack pMin, pMax, maxSteps, newtonOptions, η, ds = it.contParams
 	if !(pMin <= p₀ <= pMax)
 		@error "Initial parameter $p₀ must be within bounds [$pMin, $pMax]"
 		return nothing
 	end
 
-	# Converge initial guess
-	verbose && printstyled("─"^17*"  INITIAL GUESS "*"─"^17, bold = true, color = :magenta)
+	# apply Newton algo to initial guess
+	verbose && printstyled("━"^17*"  INITIAL GUESS "*"━"^17, bold = true, color = :magenta)
 
 	# we pass additional kwargs to newton so that it is sent to the newton callback
 	sol₀ = newton(prob, newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀)
@@ -277,7 +277,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 	end
 	verbose && (print("\n──> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
 	verbose && println("──> parameter = ", p₀, ", initial step")
-	verbose && printstyled("\n"*"─"^17*" INITIAL TANGENT "*"─"^17, bold = true, color = :magenta)
+	verbose && printstyled("\n"*"━"^17*" INITIAL TANGENT "*"━"^17, bold = true, color = :magenta)
 	sol₁ = newton(reMake(prob; params = setParam(it, p₀ + ds / η), u0 = sol₀.u),
 			newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
 	@assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
@@ -361,11 +361,11 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		verbose && printstyled("Newton correction failed\n", color = :red)
 	end
 
-	# Step size control
-	# we update the parameters ds and theta stored in state
+	# step size control
+	# we update the parameters ds stored in state
 	stepSizeControl!(state, it)
 
-	# Predictor: state.z_pred. The following method only mutates z_pred and τ
+	# predictor: state.z_pred. The following method only mutates z_pred and τ
 	getPredictor!(state, it)
 
 	return state, state
@@ -379,7 +379,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 	next = (state, state)
 
 	while ~isnothing(next)
-		# we get the current state
+		# get the current state
 		_, state = next
 		########################################################################################
 		# the new solution has been successfully computed
@@ -436,17 +436,17 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				end
 			end
 
-			# Saving Solution to File
+			# save solution to file
 			contParams.saveToFile && saveToFile(it, getx(state), getp(state), state.step, contRes)
 
-			# Call user saved finaliseSolution function. If returns false, stop continuation
+			# call user saved finaliseSolution function. If returns false, stop continuation
 			# we put a OR to stop continuation if the stop was required before
 			state.stopcontinuation |= ~it.finaliseSolution(getSolution(state), state.τ, state.step, contRes; state = state, iter = it)
 
-			# Save current state in the branch
+			# save current state in the branch
 			save!(contRes, it, state)
 
-			# Plotting
+			# plot current state
 			plotBranchCont(contRes, state, it)
 		end
 		########################################################################################
@@ -517,7 +517,7 @@ function continuation(prob::AbstractBifurcationProblem,
 						linearAlgo = nothing,
 						bothside::Bool = false,
 						kwargs...)
-	# Create a bordered linear solver using the newton linear solver provided by the user
+	# create a bordered linear solver using the newton linear solver provided by the user
 	alg = update(alg, contParams, linearAlgo)
 
 	# perform continuation

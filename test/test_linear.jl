@@ -4,8 +4,8 @@ const BK = BifurcationKit
 ####################################################################################################
 BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))
-BK.displayEV(rand(2))
-BK._displayLine(1,nothing,1)
+BK.printEV(rand(2))
+BK._printLine(1,nothing,1)
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
 z_pred = BorderedArray(rand(10),1.0)

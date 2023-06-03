@@ -18,8 +18,8 @@ BK.mergefromuser(rand(2), (a = 1,))
 BK.mergefromuser((1, 2), (a = 1,))
 
 BK.Fold(rand(2), 0.1, 0.1, (@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
-BK._displayLine(1, 1, (1,1))
-BK._displayLine(1, nothing, (1,1))
+BK._printLine(1, 1, (1,1))
+BK._printLine(1, nothing, (1,1))
 ####################################################################################################
 # test branch kinds
 BK.FoldCont()
