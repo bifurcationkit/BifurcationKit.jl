@@ -76,6 +76,20 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
 						1,					# flip-ns
 						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
 		end
+
+		# empty constructor, mainly used for dispatch
+		function $op(prob ;linsolve = DefaultLS(), linbdsolver = MatrixBLS(), usehessian = true, massmatrix = LinearAlgebra.I)
+			a = b = 0.
+			α = norm(a) 
+			Ty = eltype(α)
+			return $op(prob, a, b, 0*a,
+						complex(zero(Ty)),  # l1
+						real(one(Ty)),		# cp
+						real(one(Ty)),		# fold-ns
+						real(one(Ty)),		# gpd
+						1,					# flip-ns
+						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+		end
 	end
 end
 
@@ -95,4 +109,255 @@ function correctBifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, 
 		end
 	end
 	return contres
+end
+####################################################################################################
+function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
+			options_cont::ContinuationPar,
+			probPO::AbstractPeriodicOrbitProblem;
+			detectCodim2Bifurcation::Int = 0,
+			kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+	# compute the normal form of the bifurcation point
+	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+	verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
+
+	nf = getNormalForm(getProb(br), br, ind_bif; detailed = true)
+
+	# options to detect codim2 bifurcations
+	_contParams = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+	@set! _contParams.newtonOptions.eigsolver = getsolver(_contParams.newtonOptions.eigsolver)
+	return _continuation(nf, br, _contParams, probPO; kwargs...)
+end
+
+function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
+			_contParams::ContinuationPar,
+			probPO::AbstractPeriodicOrbitProblem;
+			alg = br.alg,
+			linearAlgo = nothing,
+			δp = nothing, ampfactor::Real = 1,
+			nev = _contParams.nev,
+			detectCodim2Bifurcation::Int = 0,
+			Teigvec = getvectortype(br),
+			scaleζ = norm,
+			# startWithEigen = false,
+			Jᵗ = nothing,
+			bdlinsolver::AbstractBorderedLinearSolver = getProb(br).prob.linbdsolver,
+			kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+	# compute predictor for point on new branch
+	ds = isnothing(δp) ? _contParams.ds : δp |> abs
+	𝒯 = typeof(ds)
+	pred = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose = verbose, ampfactor = 𝒯(ampfactor))
+	pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont), 0; verbose = verbose, ampfactor = 𝒯(ampfactor))
+
+	M = getMeshSize(probPO)
+	ϕ = 0
+	orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
+
+	# extract the vector field and use it possibly to affect the PO functional
+	lens1, lens2 = gh.lens
+	newparams = set(gh.params, lens1, pred.params[1])
+	newparams = set(newparams, lens2, pred.params[2])
+
+	prob_ma = getProb(br).prob
+	prob_vf = reMake(prob_ma.prob_vf, params = newparams)
+
+	# build the variable to hold the functional for computing PO based on finite differences
+	probPO, orbitguess = reMake(probPO, prob_vf, gh, gh.ζ, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+
+	verbose && printstyled(color = :green, "━"^61*
+			"\n┌─ Start branching from Bautin bif. point to folds of periodic orbits.",
+			"\n├─── Bautin params = ", pred0.params,
+			"\n├─── new params  p = ", pred.params, ", p - p0 = ", pred.params - pred0.params,
+			"\n├─── period      T = ", 2pi / pred.ω, " (from T = $(2pi / pred0.ω))",
+			"\n├─ Method = \n", probPO, "\n")
+
+	if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
+		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
+	end
+
+	# change the user provided functions by passing probPO in its parameters
+	_finsol = modifyPO_2ParamsFinalise(probPO, kwargs, FoldProblemMinimallyAugmented(probPO))
+	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
+	_plotsol = modifyPOPlot(probPO, kwargs)
+
+	jac = buildJacobian(probPO, orbitguess, getParams(probPO); δ = getDelta(prob_vf))
+	pbwrap = wrap(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
+
+	# we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+	options = _contParams.newtonOptions
+	_linearAlgo = isnothing(linearAlgo) ?  MatrixBLS() : linearAlgo
+	linearAlgo = @set _linearAlgo.solver = FloquetWrapperLS(_linearAlgo.solver)
+	alg = update(alg, _contParams, linearAlgo)
+
+	contParams = (@set _contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver));
+
+	# set second derivative
+	probshFold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getParams(pbwrap), getLens(pbwrap);
+				J = (x, p) -> jacobian(pbwrap, x, p),
+				Jᵗ = Jᵗ,
+				d2F = (x, p, dx1, dx2) -> d2PO(z -> probPO(z, p), x, dx1, dx2),
+				recordFromSolution = _recordsol,
+				plotSolution = _plotsol,
+				)
+
+	# create fold point guess
+	foldpointguess = BorderedArray(orbitguess, get(newparams, lens1))
+	
+	# get the approximate null vectors
+	jacpo = jacobian(probshFold, orbitguess, getParams(probshFold)).jacpb
+	ls = DefaultLS()
+	nj = length(orbitguess)
+	p = rand(nj); q = rand(nj)
+	rhs = zero(orbitguess); #rhs[end] = 1
+	q, = bdlinsolver(jacpo, p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
+	p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
+
+	q, = bdlinsolver(jacpo, p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
+	p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
+
+	@assert sum(isnan, q) == 0 "Please report this error to the website."
+
+	# perform continuation
+	branch = continuationFold(probshFold, alg,
+		foldpointguess, getParams(probshFold),
+		lens1, lens2,
+		p, q,
+		# q, p,
+		contParams;
+		kind = FoldPeriodicOrbitCont(),
+		kwargs...,
+		bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+		# linearAlgo = linearAlgo,
+		finaliseSolution = _finsol
+	)
+	return Branch(branch, gh)
+end
+
+wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
+wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
+wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
+
+function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
+			_contParams::ContinuationPar,
+			probPO::AbstractPeriodicOrbitProblem;
+			whichns::Int = 1,
+			alg = br.alg,
+			linearAlgo = nothing,
+			δp = nothing, ampfactor::Real = 1,
+			nev = _contParams.nev,
+			detectCodim2Bifurcation::Int = 0,
+			Teigvec = getvectortype(br),
+			scaleζ = norm,
+			Jᵗ = nothing,
+			eigsolver = FloquetQaD(getsolver(_contParams.newtonOptions.eigsolver)),
+			bdlinsolver::AbstractBorderedLinearSolver = getProb(br).prob.linbdsolver,
+			kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+	@assert whichns in (1, 2) "This parameter must belong to {1,2}."		
+	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+	
+	# compute predictor for point on new branch
+	ds = isnothing(δp) ? _contParams.ds : δp |> abs
+	𝒯 = typeof(ds)
+	pred = predictor(hh, Val(:NS), ds; verbose = verbose, ampfactor = 𝒯(ampfactor))
+	pred0 = predictor(hh, Val(:NS), 0; verbose = verbose, ampfactor = 𝒯(ampfactor))
+
+	_orbit = whichns == 1 ? pred.ns1 : pred.ns2
+	period = whichns == 1 ? pred.T1 : pred.T2
+	period0 = whichns == 1 ? pred0.T1 : pred0.T2
+
+	M = getMeshSize(probPO)
+	ϕ = 0
+	orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
+
+	# extract the vector field and use it possibly to affect the PO functional
+	lens1, lens2 = hh.lens
+	_params = whichns == 1 ? pred.params1 : pred.params2
+	newparams = set(hh.params, lens1, _params[1])
+	newparams = set(newparams, lens2, _params[2])
+
+	prob_ma = getProb(br).prob
+	prob_vf = reMake(prob_ma.prob_vf, params = newparams)
+
+	@assert lens1 == getLens(prob_vf) "Please open an issue on the website of BifurcationKit"
+
+	# build the variable to hold the functional for computing PO based on finite differences
+	probPO, orbitguess = reMake(probPO, prob_vf, hh, hh.ζ.q1, orbitguess_a, period; orbit = _orbit)
+
+	verbose && printstyled(color = :green, "━"^61*
+		"\n┌─ Start branching from Hopf-Hopf bif. point to curve of Neimark-Sacker bifurcations of periodic orbits.",
+		"\n├─── Hopf-Hopf params = ", pred0.params1,
+		"\n├─── new params     p = ", _params, ", p - p0 = ", _params - pred0.params1,
+		"\n├─── period         T = ", period, " (from T = $(period0))",
+		"\n├─ Method = \n", probPO, "\n")
+
+	if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
+		_contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
+	end
+
+	contParams = computeEigenElements(_contParams) ? (@set _contParams.newtonOptions.eigsolver = eigsolver) : _contParams
+
+	# change the user provided functions by passing probPO in its parameters
+	_finsol = modifyPO_2ParamsFinalise(probPO, kwargs, NeimarkSackerProblemMinimallyAugmented(probPO))
+	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
+	_plotsol = modifyPOPlot(probPO, kwargs)
+
+	jac = buildJacobian(probPO, orbitguess, getParams(probPO); δ = getDelta(prob_vf))
+	pbwrap = wrap(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
+
+	# we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+	options = _contParams.newtonOptions
+	_linearAlgo = isnothing(linearAlgo) ?  MatrixBLS() : linearAlgo
+	linearAlgo = @set _linearAlgo.solver = FloquetWrapperLS(_linearAlgo.solver)
+	alg = update(alg, _contParams, linearAlgo)
+
+	contParams = (@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver));
+
+	# create fold point guess
+	ωₙₛ = whichns == 1 ? pred.k1 : pred.k2
+	nspointguess = BorderedArray(_copy(orbitguess), [get(newparams, lens1), ωₙₛ])
+	
+	# get the approximate null vectors
+	if pbwrap isa WrapPOColl
+		@debug "Collocation, get borders"
+		jac = jacobian(pbwrap, orbitguess, getParams(pbwrap))
+		J = Complex.(copy(jac.jacpb))
+		nj = size(J, 1)
+		J[end, :] .= rand(nj) #must be close to eigensapce
+		J[:, end] .= rand(nj)
+		J[end, end] = 0
+		# enforce NS boundary condition
+		N, m, Ntst = size(probPO)
+		J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
+
+		rhs = zeros(nj); rhs[end] = 1
+		q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) #≈ ker(J)
+		p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+
+		@set! contParams.newtonOptions.eigsolver = FloquetColl()
+	else
+		@debug "Shooting, get borders"
+		J = jacobianNeimarkSacker(pbwrap, orbitguess, getParams(pbwrap), ωₙₛ)
+		nj = length(orbitguess)-1
+		q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(rand(nj)), 0, Complex.(zeros(nj)), 1)
+		q ./= norm(q)
+		p = conj(q)
+	end
+
+	@assert sum(isnan, q) == 0 "Please report this error to the website."
+
+	# perform continuation
+	branch = continuationNS(pbwrap, alg,
+			nspointguess, getParams(pbwrap),
+			lens1, lens2,
+			p, q,
+			# q, p,
+			contParams;
+			kind = NSPeriodicOrbitCont(),
+			kwargs...,
+			# linearAlgo = linearAlgo,
+			plotSolution = _plotsol,
+			bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+			finaliseSolution = _finsol
+	)
+	return Branch(branch, hh)
 end

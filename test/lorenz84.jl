@@ -6,7 +6,7 @@ const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)
 ####################################################################################################
-function Lor(u, p)
+function Lor(u, p, t = 0)
     @unpack α,β,γ,δ,G,F,T = p
 	X,Y,Z,U = u
 	[
@@ -373,3 +373,42 @@ hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, ds
 # test getters for branches
 BK.getLens(hp_from_hh)
 BK.getParams(hp_from_hh)
+####################################################################################################
+# branching from Bautin to Fold of periodic orbits
+using OrdinaryDiffEq
+prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getParams(hp_from_bt), reltol = 1e-10, abstol = 1e-12)
+
+opts_fold_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.01, detectBifurcation = 0, maxSteps = 3, detectEvent = 0, ds = 0.001, plotEveryStep = 10, a = 0.8)
+# @set! opts_fold_po.newtonOptions.verbose = true
+@set! opts_fold_po.newtonOptions.tol = 1e-8
+
+for probPO in (PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense),PeriodicOrbitOCollProblem(20, 3), ShootingProblem(5, prob_ode, Rodas5(), parallel = true))
+	fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
+			normC = norminf,
+			δp = 0.02,
+			updateMinAugEveryStep = 0,
+			jacobian_ma = :minaug,
+			# callbackN =  BK.cbMaxNormAndΔp(1e1, 0.025),
+			# verbosity = 3, plot = true,
+			)
+	@test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
+end	
+####################################################################################################
+# branching HH to NS of periodic orbits
+opts_ns_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.02, detectBifurcation = 0, maxSteps = 2, detectEvent = 0, ds = -0.01, plotEveryStep = 10)
+# @set! opts_ns_po.newtonOptions.verbose = true
+@set! opts_ns_po.newtonOptions.tol = 1e-12
+@set! opts_ns_po.newtonOptions.maxIter = 10
+for probPO in (PeriodicOrbitOCollProblem(20, 3, updateSectionEveryStep = 1), ShootingProblem(5, prob_ode, Rodas5(), parallel = true, updateSectionEveryStep = 1))
+	ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
+		probPO;
+		usehessian = false,
+		detectCodim2Bifurcation = 0,
+		δp = 0.02,
+		updateMinAugEveryStep = 1,
+		whichns = 2,
+		jacobian_ma = :minaug,
+		# callbackN =  BK.cbMaxNormAndΔp(1e0, 1.0),
+		# verbosity = 3, plot = true,
+		)
+end
