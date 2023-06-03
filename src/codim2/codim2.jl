@@ -69,6 +69,20 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 						1,					# zh
 						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
 		end
+
+		# empty constructor, mainly used for dispatch
+		function $op(prob ;linsolve = DefaultLS(), linbdsolver = MatrixBLS(), usehessian = true, massmatrix = LinearAlgebra.I)
+			a = b = 0.
+			α = norm(a) 
+			Ty = eltype(α)
+			return $op(prob, a, b, 0*a,
+						complex(zero(Ty)),  # l1
+						real(one(Ty)),		# cp
+						real(one(Ty)),		# bt
+						real(one(Ty)),		# gh
+						1,					# zh
+						linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+		end
 	end
 end
 

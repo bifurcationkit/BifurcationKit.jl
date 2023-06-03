@@ -394,11 +394,9 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
-- `autodiff = true` whether to use ForwardDiff for the many differentiations that are required to compute the normal form. Used for example for Bogdanov-Takens point.
+- `autodiff = true` whether to use ForwardDiff for the differentiations w.r.t the parameters that are required to compute the normal form. Used for example for Bogdanov-Takens point. You can set to `autodiff = false` if you wish.
 - `detailed = true` whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
-
-Based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
 # Available method
 
@@ -408,7 +406,7 @@ You can directly call
 
 which is a shortcut for `getNormalForm(getProb(br), br, ind_bif ; kwargs...)`.
 
-Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating periodic orbit.v
+Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
 
 """
 function getNormalForm(prob::AbstractBifurcationProblem,

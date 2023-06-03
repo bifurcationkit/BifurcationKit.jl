@@ -39,6 +39,11 @@ hpnf = getNormalForm(br, 5)
 
 hpnf = getNormalForm(br, 2)
 @test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2
+
+BK.FoldProblemMinimallyAugmented(prob)
+BK.HopfProblemMinimallyAugmented(prob)
+BK.PeriodDoublingProblemMinimallyAugmented(prob)
+BK.NeimarkSackerProblemMinimallyAugmented(prob)
 ####################################################################################################
 # different tests for the Fold point
 snpt = getNormalForm(br, 3)

@@ -1463,8 +1463,8 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
 	ω22 = ω2 + ns2.dω2 * ϵ^2
 
 	# Floquet multipliers for NS associated to the periodic orbit 
-	k1 = ω22 / ω11 * 2pi
-	k2 = ω11 / ω22 * 2pi
+	k1 = mod(ω22 / ω11 * 2pi, 2pi)
+	k2 = mod(ω11 / ω22 * 2pi, 2pi)
 
 	function NS1(θ)
 		@. x1 + 2ϵ * real(q1 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))

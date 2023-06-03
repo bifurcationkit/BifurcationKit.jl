@@ -389,13 +389,14 @@ for probPO in (PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense),PeriodicOrbi
 			updateMinAugEveryStep = 0,
 			jacobian_ma = :minaug,
 			# callbackN =  BK.cbMaxNormAndΔp(1e1, 0.025),
-			# verbosity = 3, plot = true,
+			# verbosity = 2, plot = true,
 			)
 	@test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
 end	
 ####################################################################################################
 # branching HH to NS of periodic orbits
-opts_ns_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.02, detectBifurcation = 0, maxSteps = 2, detectEvent = 0, ds = -0.01, plotEveryStep = 10)
+prob_ode = ODEProblem(Lor, z0, (0, 1), hp_from_bt.contparams, reltol = 1e-8, abstol = 1e-10)
+opts_ns_po = ContinuationPar(hp_from_bt.contparams, dsmax = 0.02, detectBifurcation = 1, maxSteps = 10, ds = -0.01, detectEvent = 0)
 # @set! opts_ns_po.newtonOptions.verbose = true
 @set! opts_ns_po.newtonOptions.tol = 1e-12
 @set! opts_ns_po.newtonOptions.maxIter = 10
@@ -408,7 +409,8 @@ for probPO in (PeriodicOrbitOCollProblem(20, 3, updateSectionEveryStep = 1), Sho
 		updateMinAugEveryStep = 1,
 		whichns = 2,
 		jacobian_ma = :minaug,
-		# callbackN =  BK.cbMaxNormAndΔp(1e0, 1.0),
 		# verbosity = 3, plot = true,
 		)
+	# test that the Floquet coefficients equal 	ns_po.ωₙₛ
+	@test abs(imag(ns_po.eig[end].eigenvals[2])) ≈ ns_po[end].ωₙₛ
 end
