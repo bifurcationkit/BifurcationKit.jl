@@ -99,8 +99,6 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar; n
 	verbose && printNonlinearStep(0, res, 0, true) # display last line of the table
 	return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
-	return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
-end
 
 """
 		newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
