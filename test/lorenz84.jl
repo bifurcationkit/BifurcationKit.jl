@@ -303,9 +303,9 @@ getNormalForm(hp_codim2_1, 2)
 # plot(sn_codim2, vars=(:X,:U))
 # plot!(hp_codim2_1, vars=(:X,:U))
 
-getNormalForm(hp_codim2_1, 2; nev = 4, verbose=true)
+getNormalForm(hp_codim2_1, 2; nev = 4, verbose = true)
 
-nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true, detailed = true)
+nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
 @test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
 @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
 @test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im atol = 1e-3
@@ -316,7 +316,7 @@ nf = getNormalForm(hp_codim2_1, 3; nev = 4, verbose=true, detailed = true)
 _pred = BK.predictor(nf, Val(:FoldPeriodicOrbitCont), 0.1)
 _pred.orbit(0.1)
 
-nf = getNormalForm(hp_codim2_1, 4; nev = 4, verbose=true, detailed = true)
+nf = getNormalForm(hp_codim2_1, 4; nev = 4, verbose = true, detailed = true)
 _pred = predictor(nf, Val(:NS), .01)
 _pred.ns1(0.1)
 _pred.ns2(0.1)
@@ -383,9 +383,9 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detectBifur
 @set! opts_fold_po.newtonOptions.tol = 1e-8
 
 for probPO in (
-		# PeriodicOrbitTrapProblem(M = 301, jacobian = :Dense), 
 		PeriodicOrbitOCollProblem(20, 3), 
-		ShootingProblem(5, prob_ode, Rodas5(), parallel = true))
+		ShootingProblem(9, prob_ode, Rodas5(), parallel = true))
+	@info probPO
 	fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
 			normC = norminf,
 			δp = 0.02,
@@ -394,6 +394,7 @@ for probPO in (
 			# callbackN =  BK.cbMaxNormAndΔp(1e1, 0.025),
 			# verbosity = 2, plot = true,
 			)
+	
 	@test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
 end	
 ####################################################################################################

@@ -41,7 +41,7 @@ sn_codim2 = continuation(br, 3, (@lens _.k),
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
-	recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
+	# recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
 	bothside = true,
 	)
 
@@ -83,7 +83,7 @@ hp_codim2 = continuation(brh, 2, (@lens _.k), ContinuationPar(opts_br, pMin = 0.
 	# verbosity = 3, plot = true,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
-	recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
+	# recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
 	startWithEigen = true,
 	bothside = true,
 	bdlinsolver = MatrixBLS())
@@ -115,7 +115,7 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
 		normC = norminf,
 		updateMinAugEveryStep = 1,
 		bothside = true,
-		recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
+		# recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
 		)
 
 @test hp_from_bt.kind == BK.HopfCont()

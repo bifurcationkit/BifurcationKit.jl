@@ -16,6 +16,9 @@ using Test
 		include("test_bif_detection.jl")
 		include("test-cont-non-vector.jl")
 		include("simple_continuation.jl")
+	end
+
+	@testset "Normal forms" begin
 		include("testNF.jl")
 		include("testNF_maps.jl")
 	end

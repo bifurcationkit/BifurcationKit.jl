@@ -78,7 +78,7 @@ br1r = BK._reverse(br1)
 testBranch(BK._reverse(br1))
 
 
-br2 = continuation(prob, alg, setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot=false, verbosity = 0)
+br2 = continuation(prob, alg, setproperties(optc; detectBifurcation = 3, pMax = 10.3, nInversion = 4, tolBisectionEigenvalue = 1e-7); plot = false, verbosity = 0)
 testBranch(br2)
 for bp in br2.specialpoint
 	@test bp.interval[1] <= bp.param <= bp.interval[2]
@@ -101,7 +101,6 @@ br4 = continuation((@set prob.params.λ = 0.95), alg, setproperties(optc; detect
 testBranch(br4)
 ####################################################################################################
 # this example is to test failures in Newton and how it affects the bifurcation points labels
-using ForwardDiff
 F = (x, p; k = 3) -> (@. p * x -  x^k/k)
 Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
@@ -111,7 +110,6 @@ prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@lens _); J = Jac_m, recordFro
 br4 = continuation(prob4, alg, opts; verbosity = 0, plot=false)
 testBranch(br4)
 ####################################################################################################
-using ForwardDiff
 function Ftb(X, p)
 	p1, p2, k = p
 	x, y = X
@@ -121,12 +119,11 @@ function Ftb(X, p)
 	out
 end
 
-Jtb2 = (X, p) -> ForwardDiff.jacobian(z -> Ftb(z,p), X)
 par = (p1 = -3., p2=-3., k=3)
 
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 135, pMin = -3., pMax = 4.0, newtonOptions = NewtonPar(maxIter = 5), detectBifurcation = 3, nInversion = 6, dsminBisection = 1e-9, maxBisectionSteps = 15, nev = 2)
 
-prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@lens _.p1); J = Jtb2, recordFromSolution = (x,p)->x[1])
+prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@lens _.p1); recordFromSolution = (x,p)->x[1])
 br = continuation(prob, alg, (@set opts.detectBifurcation = 3);
 	plot = false, verbosity = 0,)
 	show(br)

@@ -39,7 +39,6 @@ solfold = newton(br0, 2)
 	# flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.specialpoint[2].param, "\n")
 
 @test BK.converged(solfold)
-
 ####################################################################################################
 # Here is a more involved example
 

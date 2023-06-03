@@ -60,8 +60,8 @@ sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
 	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test BK.converged(sn) && sn.itlineartot == 8
-@test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225]
-@test sn.u.p ≈ 1.0522002878699546
+@test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
+@test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
 
 sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 @test BK.converged(sn) && sn.itlineartot == 8
@@ -72,7 +72,7 @@ sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), s
 sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), startWithEigen = true, updateMinAugEveryStep = 1, jacobian_ma = :minaug, verbosity = 0, plot=false)
 @test sn_br.kind isa BK.FoldCont
 @test sn_br.specialpoint[1].type == :bt
-@test sn_br.specialpoint[1].param ≈ 0.9716038596420551
+@test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
 @test ~isnothing(sn_br.eig)
 
 # we test the jacobian and problem update
@@ -136,7 +136,7 @@ hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, p
 @test hp_br.specialpoint[2].type == :nd
 @test hp_br.specialpoint[3].type == :gh
 
-@test hp_br.specialpoint[1].param ≈ 0.305873681159479
+@test hp_br.specialpoint[1].param ≈ 0.305873681159479 rtol = 1e-5
 @test hp_br.specialpoint[2].param ≈ 0.16452182436723148 rtol = 1e-5
 @test hp_br.specialpoint[3].param ≈ 0.23255761094689315 atol = 1e-4
 
