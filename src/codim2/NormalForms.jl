@@ -1082,7 +1082,7 @@ function zeroHopfNormalForm(_prob,
 	B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
 	J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
 
-	# compute change in Parameters
+	# compute change in parameters
 	# formulas (24) in REF2
 	s1 = [dot(p0, J1(lens1)), dot(p0, J1(lens2))]
 	s2 = [-s1[2], s1[1]]

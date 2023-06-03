@@ -192,6 +192,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 		optionsCont::ContinuationPar = br.contparams ;
 		δp = nothing,
 		Teigvec = getvectortype(br),
+		usedeflation = true,
 		verbosedeflation = false,
 		maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
 		lsdefop = DeflatedProblemCustomLS(),
@@ -218,7 +219,11 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 	for (ind, xsol) in pairs(rootsNFp)
 		probp = reMake(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
 								params = setParam(br, bpnf.p + ds))
-		solbif = newton(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
+		if usedeflation
+			solbif = newton(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
+		else
+			solbif = newton(probp, optnDf; callback = cbnewton, normN = normn)
+		end
 		converged(solbif) && push!(defOpp, solbif.u)
 	end
 
@@ -227,7 +232,11 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
 	for (ind, xsol) in pairs(rootsNFm)
 		probm = reMake(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
 								params = setParam(br, bpnf.p - ds))
-		solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
+		if usedeflation
+			solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
+		else
+			solbif = newton(probm, optnDf; callback = cbnewton, normN = normn)
+		end
 		converged(solbif) && push!(defOpm, solbif.u)
 	end
 	printstyled(color=:magenta, "──> we find $(length(defOpp)) (resp. $(length(defOpm))) roots after (resp. before) the bifurcation point.\n")

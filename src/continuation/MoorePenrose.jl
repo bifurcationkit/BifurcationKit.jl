@@ -217,7 +217,7 @@ function newtonMoorePenrose(iter::AbstractContinuationIterable,
 		# break the while-loop?
 		compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 	end
-	verbose && printNonlinearStep(it, res, 0, true) # display last line of the table
+	verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
 	flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 	return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end
