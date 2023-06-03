@@ -6,7 +6,7 @@ const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
-	@unpack r,K,a,ϵ,b0,e,d, = p
+	@unpack r,K,a,ϵ,b0,e,d = p
 	x, y, u, v = X
 	p = a * x / (b0 * (1 + ϵ * u) + x)
 	du[1] = r * (1 - x/K) * x - p * y
@@ -135,7 +135,7 @@ BK.type(ns)
 @test ns isa BifurcationKit.NeimarkSackerPO
 
 # codim 2 NS
-opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 1, maxSteps = 1, pMin = -0., pMax = 1.2)
+opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 1, maxSteps = 5, pMin = -0., pMax = 1.2)
 @set! opts_posh_ns.newtonOptions.tol = 1e-12
 @set! opts_posh_ns.newtonOptions.verbose = false
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
@@ -150,6 +150,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
 		callbackN = BK.cbMaxNorm(1),
 		)
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
+BK.getProb(ns_po_sh)
 
 # plot(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
 # 	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
@@ -157,6 +158,24 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
 # 	plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")
 
 #########
+# test of the implementation of the jacobian for the NS case
+using ForwardDiff
+_probns = ns_po_sh.prob
+_x = ns_po_sh.sol[end].x
+_solpo = ns_po_sh.sol[end].x.u
+_p1 = ns_po_sh.sol[end].x.p
+_p2 = ns_po_sh.sol[end].p
+_param= BK.setParam(ns_po_sh, _p1[1])
+_param = set(_param, (@lens _.ϵ), _p2)
+
+_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+
+_Jma = zero(_Jnsad)
+BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.; debugArray = _Jma )
+
+@test norm(_Jnsad - _Jma, Inf) < 1e-6
+#########
+
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
@@ -188,8 +207,26 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		bothside = true,
 		# bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
 		)
+BK.getProb(pd_po_sh2)
 
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 # 	plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
 # 	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 # 	plot!(pd_po_sh2, vars = (:ϵ, :b0), branchlabel = "PD2")
+
+#####
+# test of the implementation of the jacobian for the PD case
+_probpd = pd_po_sh2.prob
+_x = pd_po_sh2.sol[end].x
+_solpo = pd_po_sh2.sol[end].x.u
+_p1 = pd_po_sh2.sol[end].x.p
+_p2 = pd_po_sh2.sol[end].p
+_param= BK.setParam(pd_po_sh2, _p1)
+_param = set(_param, (@lens _.ϵ), _p2)
+
+_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+
+_Jma = zero(_Jpdad)
+BK.PDMALinearSolver(_solpo, _p1, _probpd.prob, _param, copy(_x.u), 1.; debugArray = _Jma )
+
+@test norm(_Jpdad - _Jma, Inf) < 1e-6

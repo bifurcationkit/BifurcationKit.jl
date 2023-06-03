@@ -221,6 +221,16 @@ for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
 	end
 end
 
+for (op,txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
+	@eval begin
+		function Base.show(io::IO, pb::$op)
+			printstyled(io, "Problem wrap for curve of " *$txt* " of periodic orbits.\n", bold = true)
+			println("Based on the formulation:")
+			show(io, pb.prob.prob_vf)
+		end
+	end
+end
+
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
 	print(io, prefix * "┌─ Bifurcation Problem with uType ")
 	printstyled(io, getVectorType(prob), color=:cyan, bold = true)

@@ -194,7 +194,7 @@ function continuation(prob::AbstractBifurcationProblem,
 	# we make a copy of the deflation operator
 	deflationOp = copy(defOp)
 
-	verbosity > 0 && printstyled(color=:magenta, "━"^51*"\n")
+	verbosity > 0 && printstyled(color=:magenta, "━"^31*"\n")
 	verbosity > 0 && printstyled(color=:magenta, "──▶ There are $(length(deflationOp)) branche(s)\n")
 
 	# underlying continuation iterator
@@ -254,7 +254,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 		# we update the parameter value
 		current_param = clampPredp(current_param + contParams.ds, contIt)
 
-		verbosity > 0 && println("──"^51)
+		verbosity > 0 && println("──"^31)
 		nactive = mapreduce(isActive, +, dcstates)
 		verbosity > 0 && println("── step = $nstep has $(nactive)/$(length(branches)) active branche(s), p = $current_param")
 

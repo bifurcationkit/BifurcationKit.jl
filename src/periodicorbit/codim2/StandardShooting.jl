@@ -67,7 +67,7 @@ function jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par,
 			end
 		end
 	else
-		@assert 1==0
+		@assert 1==0 "WIP! No parallel matrix-free shooting for curve of PD/NS"
 		# call jacobian of the flow, jacobian-vector product
 		solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
 		for ii in 1:M
@@ -150,7 +150,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
 	biftype = br.specialpoint[ind_bif].type
 
 	# options to detect codim2 bifurcations
-	computeEigenElements = options_cont.detectBifurcation > 0
 	_options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
 	if biftype == :bp

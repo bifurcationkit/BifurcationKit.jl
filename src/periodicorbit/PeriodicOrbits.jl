@@ -277,8 +277,6 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 		contParams = @set contParams.newtonOptions.eigsolver = eigsolver
 	end
 
-	options = contParams.newtonOptions
-
 	# change the user provided functions by passing probPO in its parameters
 	_finsol = modifyPOFinalise(probPO, kwargs, probPO.updateSectionEveryStep)
 	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
@@ -290,6 +288,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 	alg = update(alg, contParams, linearAlgo)
 
 	probwp = WrapPOSh(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
+	options = contParams.newtonOptions
 
 	br = continuation(
 		probwp, alg,

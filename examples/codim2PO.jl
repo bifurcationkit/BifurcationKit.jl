@@ -6,7 +6,7 @@ const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
-	@unpack r,K,a,ϵ,b0,e,d, = p
+	@unpack r,K,a,ϵ,b0,e,d = p
 	x, y, u, v = X
 	p = a * x / (b0 * (1 + ϵ * u) + x)
 	du[1] = r * (1 - x/K) * x - p * y
@@ -150,7 +150,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 	verbosity = 3, plot = true,
 	argspo...
 	)
-pt = getNormalForm(brpo_pd, 1, prm = false)
+pt = getNormalForm(brpo_pd, 1, prm = true)
 
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 120, pMin = 0., pMax=1.2, nInversion = 4, plotEveryStep = 10)
@@ -457,8 +457,8 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		)
 
 plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
-	plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
-	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+	# plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
+	# plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 	plot!(pd_po_sh2, vars = (:ϵ, :b0), branchlabel = "PD2")
 ################################################################################
 ###### Poincare Shooting ########

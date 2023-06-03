@@ -6,7 +6,7 @@ const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
-	@unpack r,K,a,ϵ,b0,e,d, = p
+	@unpack r,K,a,ϵ,b0,e,d = p
 	x, y, u, v = X
 	p = a * x / (b0 * (1 + ϵ * u) + x)
 	du[1] = r * (1 - x/K) * x - p * y
@@ -87,13 +87,12 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 		startWithEigen = false,
 		usehessian = false,
 		jacobian_ma = :minaug,
-		normN = norminf,
+		normC = norminf,
 		callbackN = BK.cbMaxNorm(10),
 		bothside = true,
 		)
 
 @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
-
 
 #####
 # find the NS case
@@ -143,4 +142,46 @@ ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
 		callbackN = BK.cbMaxNorm(10),
 		bothside = true,
 		)
- 
+
+#####
+# test of the implementation of the jacobian for the PD case
+using ForwardDiff
+_probpd = pd_po_coll2.prob
+_x = pd_po_coll2.sol[end].x
+_solpo = pd_po_coll2.sol[end].x.u
+_p1 = pd_po_coll2.sol[end].x.p
+_p2 = pd_po_coll2.sol[end].p
+_param= BK.setParam(pd_po_coll2, _p1)
+_param = set(_param, (@lens _.ϵ), _p2)
+
+_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+
+_Jma = zero(_Jpdad)
+_duu = rand(length(_x.u))
+_sol = BK.PDMALinearSolver(_solpo, _p1, _probpd.prob, _param, _duu, 1.; debugArray = _Jma )
+_solfd = _Jpdad \ vcat(_duu, 1)
+
+@test norm(_Jpdad - _Jma, Inf) < 1e-6
+@test norm(_solfd[1:end-1] - _sol[1], Inf) < 1e-6
+@test abs(_solfd[end] - _sol[2]) < 1e-6
+#########
+# test of the implementation of the jacobian for the NS case
+_probns = ns_po_coll.prob
+_x = ns_po_coll.sol[end].x
+_solpo = ns_po_coll.sol[end].x.u
+_p1 = ns_po_coll.sol[end].x.p
+_p2 = ns_po_coll.sol[end].p
+_param= BK.setParam(ns_po_coll, _p1[1])
+_param = set(_param, (@lens _.ϵ), _p2)
+
+_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+
+_Jma = zero(_Jnsad)
+_dp = rand()
+_sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _dp, 1.; debugArray = _Jma )
+_solfd = _Jnsad \ vcat(_duu, _dp, 1)
+
+@test norm(_Jnsad - _Jma, Inf) < 1e-6
+@test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-6
+@test abs(_solfd[end-1] - _sol[2]) < 1e-6
+@test abs(_solfd[end] - _sol[3]) < 1e-6

@@ -75,7 +75,7 @@ end
 function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 	if detectCodim2Bifurcation > 0
 		if get(kwargs, :updateMinAugEveryStep, 0) == 0
-			@error "You ask for detection of codim 2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
+			@error "You asked for detection of codim 2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
 		end
 		return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
 	else

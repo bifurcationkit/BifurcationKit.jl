@@ -161,7 +161,7 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
 	end
 
 	if debugArray isa AbstractArray
-		debugArray .= [jacobian(POWrap, x, par0) dₚF ; σₓ' σₚ]
+		debugArray .= [jacobian(POWrap, x, par0).jacpb dₚF ; vcat(σₓ,σₜ)' σₚ]
 	end
 
 	return dX, dsig, true, sum(it) + sum(itv) + sum(itw)

@@ -28,11 +28,14 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
 			"Left eigenvector(s)."
 			ζ★::Tevl
 
-			"Underlying normal form for Poincaré return map"
+			"Normal form"
 			nf::Tnf
 
 			"Periodic orbit problem"
 			prob::Tprob
+
+			"Normal form computed using Poincaré return map"
+			prm::Bool
 		end
 	end
 end
@@ -47,7 +50,11 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
 	if pd.prob isa ShootingProblem
 		show(io, pd.nf)
 	else
-		println(io, "└─ Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf.nf)
+		if ~pd.prm
+			println(io, "└─ Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf.nf)
+		else
+			show(io, pd.nf)
+		end
 	end
 end
 
@@ -95,6 +102,9 @@ mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSi
 
 	"Periodic orbit problem"
 	prob::Tprob
+
+	"Normal form computed using Poincaré return map"
+	prm::Bool
 end
 
 type(bp::NeimarkSackerPO) = type(bp.nf)

@@ -337,6 +337,10 @@ sn_from_bt = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, 
 @test sn_from_bt.kind isa BK.FoldCont
 
 # curve of Hopf points from ZH
+zh = getNormalForm(sn_codim2, 2, detailed = true)
+_pred = BK.predictor(zh, Val(:NS), 0.1)
+_pred.orbit(0.1)
+
 hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, detectBifurcation = 1, maxSteps = 100) ;
 	plot = false, verbosity = 0,
 	normC = norminf,

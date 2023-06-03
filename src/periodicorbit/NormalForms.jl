@@ -71,7 +71,7 @@ function branchNormalForm(pbwrap,
 	# normal form for Poincaré map
 	nf = BranchPoint(nothing, bifpt.param, par, getLens(br), nothing, nothing, nothing, :none)
 
-	return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb)
+	return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
 ####################################################################################################
 function perioddoublingNormalForm(pbwrap,
@@ -239,7 +239,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 	pd1 = PeriodDoubling(xₛ, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
 	# normal form computation
 	pd = periodDoublingNormalForm(probΠ, pd1, DefaultLS(); verbose = verbose)
-	return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd, sh)
+	return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd, sh, true)
 end
 
 function perioddoublingNormalForm(pbwrap::WrapPOColl,
@@ -418,7 +418,7 @@ function neimarksackerNormalForm(pbwrap,
 
 
 	ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getLens(br), nothing, nothing, nothing, :none)
-	return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap)
+	return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
 end
 
 function neimarksackerNormalFormPRM(pbwrap::WrapPOColl,
@@ -470,7 +470,7 @@ function neimarksackerNormalFormPRM(pbwrap::WrapPOColl,
 
 	ns1 = NeimarkSacker(xₛ, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
 	ns = neimarkSackerNormalForm(probΠ, ns1, DefaultLS(); verbose = verbose)
-	return NeimarkSackerPO(ns0.x0, T, 0., 0., real.(1), nothing, ns, coll)
+	return NeimarkSackerPO(ns0.x0, T, 0., 0., real.(1), nothing, ns, coll, true)
 end
 
 function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
@@ -556,7 +556,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 	# normal form computation
 	ns = neimarkSackerNormalForm(probΠ, ns1, DefaultLS(); verbose = verbose)
 
-	return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh)
+	return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)

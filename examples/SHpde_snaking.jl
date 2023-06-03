@@ -5,33 +5,34 @@ using Revise
 	const BK = BifurcationKit
 ################################################################################
 # case of the SH equation
-Nx = 200; Lx = 6.;
-X = -Lx .+ 2Lx/Nx*(0:Nx-1) |> collect
-hx = X[2]-X[1]
+N = 200
+l = 6.
+X = -l .+ 2l/N*(0:N-1) |> collect
+h = X[2]-X[1]
 
 norminf(x) = norm(x, Inf64)
-const _weight = rand(Nx)
+const _weight = rand(N)
 normweighted(x) = norm(_weight .* x)
 
-# Q = Neumann0BC(hx)
-Q = Dirichlet0BC(hx |> typeof)
-Dxx = sparse(CenteredDifference(2, 2, hx, Nx) * Q)[1]
-Lsh = -(I + Dxx)^2
+# Q = Neumann0BC(h)
+Q = Dirichlet0BC(h |> typeof)
+Δ = sparse(CenteredDifference(2, 2, h, N) * Q)[1]
+L1 = -(I + Δ)^2
 
 function R_SH(u, par)
-	@unpack l, ν, L1 = par
+	@unpack λ, ν, L1 = par
 	out = similar(u)
-	out .= L1 * u .+ l .* u .+ ν .* u.^3 - u.^5
+	out .= L1 * u .+ λ .* u .+ ν .* u.^3 - u.^5
 end
 
-Jac_sp(u, par) = par.L1 + spdiagm(0 => par.l .+ 3 .* par.ν .* u.^2 .- 5 .* u.^4)
+Jac_sp(u, par) = par.L1 + spdiagm(0 => par.λ .+ 3 .* par.ν .* u.^2 .- 5 .* u.^4)
 d2R(u,p,dx1,dx2) = @. p.ν * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
 d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
 
-parSH = (l = -0.1, ν = 2., L1 = Lsh)
+parSH = (λ = -0.1, ν = 2., L1 = L1)
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 
-prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.l); J = Jac_sp,
+prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.λ); J = Jac_sp,
 	recordFromSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
 ####################################################################################################
@@ -70,13 +71,13 @@ plot(brflat, putspecialptlegend = false)
 function optrec(x, p, l; opt = opts)
 	level =  l
 	if level <= 2
-		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = Nx, detectLoop = false)
+		return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = N, detectLoop = false)
 	else
-		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = Nx, detectLoop = true)
+		return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = N, detectLoop = true)
 	end
 end
 
-diagram = @time bifurcationdiagram(reMake(prob, params = @set parSH.l = -0.1), PALC(), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = false)
+diagram = @time bifurcationdiagram(reMake(prob, params = @set parSH.λ = -0.1), PALC(), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = false)
 
 code = ()
 	vars = (:param, :n2)
@@ -88,10 +89,10 @@ diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.getBranch(diagram, (2,)), 3, 
 
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol1.u])
-algdc = BK.DefCont(deflationOperator = deflationOp, maxBranches = 150, perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
+algdc = BK.DefCont(deflationOperator = deflationOp, maxBranches = 50, perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
 
 br = @time continuation(
-	reMake(prob, params = @set parSH.l = -0.1), algdc,
+	reMake(prob, params = @set parSH.λ = -0.1), algdc,
 	setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 0.25, pMin = -1., newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 0);
 	verbosity = 1,
 	normN = x -> norm(x, Inf64),

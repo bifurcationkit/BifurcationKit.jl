@@ -40,7 +40,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
 	biftype = br.specialpoint[ind_bif].type
 
 	# options to detect codim2 bifurcations
-	computeEigenElements = options_cont.detectBifurcation > 0
 	_options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
 	if biftype == :bp

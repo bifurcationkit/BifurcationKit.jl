@@ -33,7 +33,7 @@ nstest(JacNS, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, 
 
 # this function encodes the functional
 function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
-	# These are the equations of the minimally augmented (MA) formulation of the Period-Doubling bifurcation point
+	# These are the equations of the minimally augmented (MA) formulation of the Neimark-Sacker bifurcation point
 	# input:
 	# - x guess for the point at which the jacobian is singular
 	# - p guess for the parameter value `<: Real` at which the jacobian is singular
@@ -168,14 +168,17 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 		# @debug "" norm(Jns-Jfd, Inf) dp dω
 
 		# Jns .= Jfd
+
+		if debugArray isa AbstractArray
+			Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
+			Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
+			Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
+			debugArray .= Jns
+		end
 		
 		return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 	else
 		@assert 1==0 "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
-	end
-
-	if debugArray isa AbstractArray
-		debugArray .= [_Jpo dₚF ; σₓ' σₚ]
 	end
 
 	return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
