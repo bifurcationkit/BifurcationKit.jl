@@ -1320,9 +1320,9 @@ function hopfHopfNormalForm(_prob,
 	lens1, lens2 = lenses
 	p10 = get(parbif, lens1); p20 = get(parbif, lens2);
 
-	getp(l::Lens) = get(parbif, l)
-	setp(l::Lens, p::Number) = set(parbif, l, p)
-	setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+	# getp(l::Lens) = get(parbif, l)
+	# setp(l::Lens, p::Number) = set(parbif, l, p)
+	# setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
 	if autodiff
 		Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
 	else

@@ -68,7 +68,6 @@ function update(alg0::MoorePenrose, contParams::ContinuationPar, linearAlgo)
 	alg
 end
 
-
 initialize!(state::AbstractContinuationState,
 						iter::AbstractContinuationIterable,
 						alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)

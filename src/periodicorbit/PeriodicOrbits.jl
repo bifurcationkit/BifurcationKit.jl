@@ -229,6 +229,24 @@ end
 
 ####################################################################################################
 # Continuation for shooting problems
+function buildJacobian(probPO::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+	jacobianPO = probPO.jacobian
+	@assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
+	if jacobianPO isa AutoDiffDenseAnalytical
+		_J = probPO(Val(:JacobianMatrix), orbitguess, getParams(probPO))
+		jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
+	elseif jacobianPO isa AutoDiffDense
+		jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
+	elseif jacobianPO isa FiniteDifferences
+		jac = (x, p) -> FloquetWrapper(probPO, finiteDifferences(z -> probPO(z, p), x), x, p)
+	elseif jacobianPO isa AutoDiffMF
+		jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
+	elseif jacobianPO isa FiniteDifferencesMF
+		jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x .- δ .* dx, p)) ./ (2δ), x, p)
+	else
+		jac = (x, p) -> FloquetWrapper(probPO, x, p)
+	end
+end
 
 """
 $(SIGNATURES)
@@ -252,7 +270,8 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 						kwargs...)
 	jacobianPO = probPO.jacobian
 	@assert ~isnothing(getLens(probPO)) "You need to provide a lens for your periodic orbit problem."
-	@assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
+
+	jac = buildJacobian(probPO, orbitguess, getParams(probPO); δ = δ)
 
 	if computeEigenElements(contParams)
 		contParams = @set contParams.newtonOptions.eigsolver = eigsolver
@@ -264,21 +283,6 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
 	_finsol = modifyPOFinalise(probPO, kwargs, probPO.updateSectionEveryStep)
 	_recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
 	_plotsol = modifyPOPlot(probPO, kwargs)
-
-	if jacobianPO isa AutoDiffDenseAnalytical
-		_J = probPO(Val(:JacobianMatrix), orbitguess, getParams(probPO))
-		jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
-	elseif jacobianPO isa AutoDiffDense
-		jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
-	elseif jacobianPO isa FiniteDifferences
-		jac = (x, p) -> FloquetWrapper(probPO, finiteDifferences(z -> probPO(z, p), x), x, p)
-	elseif jacobianPO isa AutoDiffMF
-		jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
-	elseif jacobianPO isa FiniteDifferencesMF
-		jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x .- δ .* dx, p)) ./ (2δ), x, p)
-	else
-		jac = (x, p) -> FloquetWrapper(probPO, x, p)
-	end
 
 
 	# we have to change the Bordered linearsolver to cope with our type FloquetWrapper

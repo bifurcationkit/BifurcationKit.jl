@@ -115,15 +115,15 @@ Returns a variable containing the state of the continuation procedure. The field
 	z::Tv									# current solution
 	z_old::Tv								# previous solution
 
-	converged::Bool							# Boolean for newton correction
-	itnewton::Int64 = 0						# Number of newton iteration (in corrector)
-	itlinear::Int64 = 0						# Number of linear iteration (in newton corrector)
+	converged::Bool							# boolean for newton correction
+	itnewton::Int64 = 0						# number of newton iteration (in corrector)
+	itlinear::Int64 = 0						# number of linear iteration (in newton corrector)
 
 	step::Int64 = 0							# current continuation step
 	ds::T									# step size
 
-	stopcontinuation::Bool = false			# Boolean to stop continuation
-	stepsizecontrol::Bool = true			# Perform step size adaptation
+	stopcontinuation::Bool = false			# boolean to stop continuation
+	stepsizecontrol::Bool = true			# perform step size adaptation
 
 	# the following values encode the current, previous number of unstable (resp. imaginary) eigen values
 	# it is initialized as -1 when unknown
@@ -275,14 +275,14 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 		display(sol₀.residuals)
 		throw("")
 	end
-	verbose && (print("\n──> convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("──> parameter = ", p₀, ", initial step")
+	verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("──▶ parameter = ", p₀, ", initial step")
 	verbose && printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
 	sol₁ = newton(reMake(prob; params = setParam(it, p₀ + ds / η), u0 = sol₀.u),
 			newtonOptions; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
 	@assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
-	verbose && (print("\n──> convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
-	verbose && println("──> parameter = ", p₀ + ds/η, ", initial step (bis)")
+	verbose && (print("\n──▶ convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
+	verbose && println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
 	return iterateFromTwoPoints(it, sol₀.u, p₀, sol₁.u, p₀ + ds / η; _verbosity = _verbosity)
 end
 
@@ -335,7 +335,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 	@unpack step, ds = state
 
 	if verbose
-		printstyled("──"^35*"\nContinuation Step $step \n", bold = true);
+		printstyled("─"^55*"\nContinuation Step $step \n", bold = true);
 		@printf("Step size = %2.4e\n", ds); print("Parameter ", getLensSymbol(it))
 		@printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clampPredp(state.z_pred.p, it))
 	end
@@ -403,7 +403,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				# the boundary of the parameter domain, we disable bisection because it would
 				# lead to infinite looping. Indeed, clamping messes up the `ds`
 				if contParams.detectBifurcation > 2 && ~isOnBoundary(it, getp(state))
-					verbose1 && printstyled(color = :red, "--> Bifurcation detected before p = ", getp(state), "\n")
+					verbose1 && printstyled(color = :red, "──> Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end
@@ -419,8 +419,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			if isEventActive(it)
 				# check if an event occurred between the 2 continuation steps
 				eveDetected = updateEvent!(it, state)
-				verbose1 && printstyled(color = :blue, "--> Event values: ", state.eventValue[2], "\n"*" "^14*"--> ", state.eventValue[1],"\n")
-				eveDetected && (verbose && printstyled(color=:red, "--> Event detected before p = ", getp(state), "\n"))
+				verbose1 && printstyled(color = :blue, "──> Event values: ", state.eventValue[2], "\n"*" "^14*"──> ", state.eventValue[1],"\n")
+				eveDetected && (verbose && printstyled(color=:red, "──> Event detected before p = ", getp(state), "\n"))
 				# save the event if detected and / or use bisection to locate it precisely
 				if eveDetected
 					_T = eltype(it); status = :guess; intervalevent = (_T(0),_T(0))

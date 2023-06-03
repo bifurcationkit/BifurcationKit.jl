@@ -85,11 +85,14 @@ module BifurcationKit
 	include("periodicorbit/PoincareRM.jl")
 	include("periodicorbit/NormalForms.jl")
 
+	# periodic orbit codim 2
+	include("periodicorbit/codim2/utils.jl")
 	include("periodicorbit/codim2/codim2.jl")
-	include("periodicorbit/codim2/MinAugPD.jl")
-	include("periodicorbit/codim2/MinAugNS.jl")
+	include("periodicorbit/codim2/PeriodicOrbitTrapeze.jl")
 	include("periodicorbit/codim2/PeriodicOrbitCollocation.jl")
 	include("periodicorbit/codim2/StandardShooting.jl")
+	include("periodicorbit/codim2/MinAugPD.jl")
+	include("periodicorbit/codim2/MinAugNS.jl")
 
 	# wave problem
 	include("wave/WaveProblem.jl")

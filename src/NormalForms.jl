@@ -624,7 +624,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 	function getRootsNf(_ds)
 		deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
 		prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-									rand(n) .* 1.1, _ds)
+									(rand(n) .- 0.5) .* 1.1, _ds)
 		if ~isnothing(J)
 			@set! prob.VF.J = J
 		end
@@ -637,7 +637,7 @@ function predictor(bp::NdBranchPoint, δp::T;
 			else
 				failures += 1
 			end
-			prob.u0 .= outdef1.u .+ 0.1 .* rand(n)
+			prob.u0 .= outdef1.u .+ 0.1 .* (rand(n) .- 0.5)
 		end
 		return deflationOp.roots
 	end
@@ -712,7 +712,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose:
 	else
 		pt.type = :Singular
 	end
-	verbose && printstyled(color = :red,"──> Hopf bifurcation point is: ", pt.type, "\n")
+	verbose && printstyled(color = :red,"──▶ Hopf bifurcation point is: ", pt.type, "\n")
 	return pt
 end
 
@@ -744,7 +744,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 	@assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
-	verbose && println("━"^53*"\n──> Hopf normal form computation")
+	verbose && println("━"^53*"\n──▶ Hopf normal form computation")
 
 	options = br.contparams.newtonOptions
 
@@ -857,15 +857,15 @@ function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDo
 	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	Ψ01, _ = ls(L, E(R01))
 	a = dot(ζ★, R11 .- R2(ζ, Ψ01))
-	verbose && println("──> Normal form:   (-1+ a⋅δμ)⋅x + b3⋅x^3")
-	verbose && println("──> a  = ", a)
+	verbose && println("──▶ Normal form:   (-1+ a⋅δμ)⋅x + b3⋅x^3")
+	verbose && println("──▶ a  = ", a)
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
 	wst, _ = ls(L, (b2v); a₀ = -1)
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
 	b = dot(ζ★, b3v) / 6
-	verbose && println("──> b3 = ", b)
+	verbose && println("──▶ b3 = ", b)
 	nf = (a = a, b3 = b)
 	if real(a) * real(b) < 0
 		type = :SuperCritical
@@ -874,7 +874,7 @@ function periodDoublingNormalForm(prob::AbstractBifurcationProblem, pt::PeriodDo
 	else
 		type = :Singular
 	end
-	verbose && printstyled(color = :red,"──> Period-doubling bifurcation point is: ", type, "\n")
+	verbose && printstyled(color = :red,"──▶ Period-doubling bifurcation point is: ", type, "\n")
 	return setproperties(pt, nf = nf, type = type)
 end
 ################################################################################
@@ -926,7 +926,7 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem, pt::NeimarkSa
 	av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 	av .+= 2 .* R2(ζ, Ψ001)
 	a = dot(ζ★, av) * cis(-ω)
-	verbose && println("──> a  = ", a)
+	verbose && println("──▶ a  = ", a)
 
 	# b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
 	bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
@@ -943,7 +943,7 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem, pt::NeimarkSa
 	else
 		pt.type = :Singular
 	end
-	verbose && printstyled(color = :red,"──> Neimark-Sacker bifurcation point is: ", pt.type, "\n")
+	verbose && printstyled(color = :red,"──▶ Neimark-Sacker bifurcation point is: ", pt.type, "\n")
 	return pt
 end
 
@@ -971,7 +971,7 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem,
 					Teigvec = getvectortype(br),
 					scaleζ = norm)
 
-	verbose && println("━"^53*"\n──> Neimark-Sacker normal form computation")
+	verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
 	options = br.contparams.newtonOptions
 

@@ -175,7 +175,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
 	end
 
 	if debugArray isa AbstractArray
-		debugArray .= [jacobian(POWrap, x, par0) dₚF ; σₓ' σₚ]
+		debugArray .= [_Jpo dₚF ; σₓ' σₚ]
 	end
 
 	return dX, dsig, true, sum(it) + sum(itv) + sum(itw)

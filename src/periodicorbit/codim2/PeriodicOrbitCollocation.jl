@@ -1,4 +1,3 @@
-@inline hasAdjoint(::WrapPOColl) = false
 @inline hasAdjointMF(::WrapPOColl) = false
 @inline hasHessian(::WrapPOColl) = false
 

@@ -1,6 +1,5 @@
 # if the jacobian is matrix based, use transpose
 @inline hasAdjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
-@inline hasHessian(::WrapPOSh) = true
 @inline hasJvp(wrap::WrapPOSh) = hasJvp(wrap.prob)
 
 function Base.transpose(J::FloquetWrapper{ <: ShootingProblem })

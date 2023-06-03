@@ -274,7 +274,7 @@ updateMesh!(pb::PeriodicOrbitOCollProblem, mesh) = updateMesh!(pb.mesh_cache, me
 @inline getDelta(pb::PeriodicOrbitOCollProblem) = getDelta(pb.prob_vf)
 
 @inline getDelta(pb::WrapPOColl) = getDelta(pb.prob)
-
+@inline hasAdjoint(::WrapPOColl) = false #c'est dans problems.jl
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 	N, m, Ntst = size(pb)

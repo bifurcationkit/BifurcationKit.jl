@@ -63,7 +63,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
 		@inline getLens(pb::$op) = getLens(pb.prob_vf)
 		jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
-		# constructor
+		# constructors
 		function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true, massmatrix = LinearAlgebra.I)
 			# determine scalar type associated to vectors a and b
 			α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1

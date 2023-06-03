@@ -85,8 +85,8 @@ prob = BK.BifurcationProblem(Fmit, sol0, par_mit, (@lens _.λ);
 eigls = EigArpack(20.5, :LM)
 # eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
-	opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
-	sol = newton(prob, opt_newton, normN = norminf)
+opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+sol = newton(prob, opt_newton, normN = norminf)
 
 plotsol(sol.u)
 ####################################################################################################
@@ -118,12 +118,11 @@ kwargsC = (verbosity = 3,
 
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, tolStability = 1e-6, nInversion = 6, maxBisectionSteps = 25)
 
-	br = @time continuation(prob, PALC(), opts_br; kwargsC...)
+br = @time continuation(prob, PALC(), opts_br; kwargsC...)
 
 plot(br)
 ####################################################################################################
 # automatic branch switching
-
 br1 = continuation(br, 3; kwargsC...)
 
 plot(br, br1, plotfold=false)
@@ -146,6 +145,7 @@ end
 diagram = @time bifurcationdiagram(prob, PALC(), 3, optionsCont; kwargsC...,
 	usedeflation = true,
 	halfbranch = true,
+	verbosity = 0
 	)
 
 bifurcationdiagram!(prob, getBranch(diagram, (2,1)), 4, optionsCont;

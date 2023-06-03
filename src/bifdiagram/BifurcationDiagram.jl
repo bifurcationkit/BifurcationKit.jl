@@ -2,14 +2,14 @@ mutable struct BifDiagNode{Tγ, Tc}
 	# current level of recursion
 	level::Int64
 
-	# code for finding this node in the tree, this is the index of the bifurcation point
+	# code for finding the current node in the tree, this is the index of the bifurcation point
 	# from which γ branches off
 	code::Int64
 
 	# branch associated to the current node
 	γ::Tγ
 
-	# childs of current node. These are the different branches off the bifurcation points
+	# children of current node. These are the different branches off the bifurcation point
 	# in γ
 	child::Tc
 end
@@ -91,7 +91,7 @@ end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
 function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; kwargs...)
-	printstyled(color = :magenta, "━"^50 * "\n───> Automatic computation of bifurcation diagram\n\n")
+	printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
 	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", kwargs...)
 end
 
@@ -139,7 +139,6 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 			nev = optscont.nev, kwargs...,
 			ampfactor = _ampfactor,
 			usedeflation = usedeflation,
-			plotSolution = plotSolBD
 		)
 	end
 
@@ -147,10 +146,10 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 		# we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
 		if pt.step > 1 && pt.type in (:bp, :nd)
 			try
-				println("─"^80*"\n──> New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
+				println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
 				γ = letsbranch(id, pt, level)
 				add!(node, γ, level+1, id)
-				 ~isnothing(γ) && printstyled(color = :green, "────> From ", type(from(γ)), "\n")
+				 ~isnothing(γ) && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
 
 				# in the case of a Transcritical bifurcation, we compute the other branch
 				if ~isnothing(γ) && ~(γ isa Vector)
