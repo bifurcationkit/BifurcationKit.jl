@@ -1,5 +1,5 @@
 # using Revise
-using Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
+using Test, ForwardDiff, Parameters, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
@@ -73,7 +73,7 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), 
 
 @test sn_codim2_test.eig[1].eigenvecs != nothing
 
-hp_codim2_test = continuation(br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1) ;
+hp_codim2_test = continuation(br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, maxSteps = 100) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
@@ -250,7 +250,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T),
 @test sn_codim2.specialpoint[2].type == Symbol("save-2")
 @test sn_codim2.specialpoint[3].type == Symbol("save-1")
 
-hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
+hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1, maxSteps = 100)  ;
 	# verbosity = 3, plot = true,
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
@@ -277,7 +277,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T),
 	recordFromSolution = recordFromSolutionLor,
 	bdlinsolver = MatrixBLS())
 
-hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1)  ;
+hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, nInversion = 6, saveSolEveryStep = 1, detectBifurcation = 1, maxSteps = 100)  ;
 	verbosity = 0,
 	normC = norminf,
 	detectCodim2Bifurcation = 2,

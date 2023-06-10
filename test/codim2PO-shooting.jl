@@ -24,7 +24,7 @@ z0 = [0.1,0.1,1,0]
 
 prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
-opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
+opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 200)
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
@@ -55,7 +55,7 @@ solpo = newton(probsh, cish, NewtonPar(verbose = false))
 _sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, tolStability = 1e-3)
+opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, tolStability = 1e-3)
 @set! opts_po_cont.newtonOptions.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
 	verbosity = 0, plot = false,
@@ -75,7 +75,7 @@ BK.type(pt)
 @test pt isa BifurcationKit.PeriodDoublingPO
 
 # codim 2 Fold
-opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 3, maxSteps = 5, pMin = 0.01, pMax = 1.2)
+opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 0.01, pMax = 1.2)
 @set! opts_posh_fold.newtonOptions.tol = 1e-12
 fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
 		verbosity = 0, plot = false,
@@ -89,7 +89,7 @@ fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
 @test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
-opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 5, pMin = -1.)
+opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 2, pMin = -1.)
 @set! opts_posh_pd.newtonOptions.tol = 1e-12
 @set! opts_posh_pd.newtonOptions.verbose = false
 pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
@@ -121,7 +121,7 @@ sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 
 probshns, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
-brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
+brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 20, ds = -0.001);
 	verbosity = 0, plot = false,
 	argspo...,
 	# bothside = true,
@@ -194,7 +194,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 getNormalForm(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 5, pMin = 1.e-2, plotEveryStep = 10, dsmax = 1e-2, ds = -1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 1.e-2, plotEveryStep = 10, dsmax = 1e-2, ds = -1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-12
 pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,

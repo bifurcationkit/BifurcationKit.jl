@@ -50,7 +50,7 @@ solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 
 _sol = BK.getPeriodicOrbit(probcoll, solpo.u,1)
 
-opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, tolStability = 1e-8)
+opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, tolStability = 1e-8)
 @set! opts_po_cont.newtonOptions.verbose = false
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
 	verbosity = 0, plot = false,
@@ -102,7 +102,7 @@ sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 
 probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
 
-brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
+brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 20, ds = -0.001);
 	verbosity = 0, plot = false,
 	argspo...,
 	)
@@ -118,7 +118,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 getNormalForm(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 1.e-2, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 1.e-2, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		verbosity = 0, plot = false,
@@ -131,7 +131,7 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
 		bothside = true,
 		)
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 4, pMin = 0., dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 0., dsmax = 1e-2, ds = 1e-3)
 ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
 		verbosity = 0, plot = false,
 		detectCodim2Bifurcation = 1,

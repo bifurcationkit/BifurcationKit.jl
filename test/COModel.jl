@@ -1,6 +1,6 @@
 # using Revise
 # using Plots
-using Test, ForwardDiff, Parameters, Setfield, LinearAlgebra
+using Test, ForwardDiff, Parameters, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
@@ -24,7 +24,7 @@ z0 = [0.001137, 0.891483, 0.062345]
 prob = BK.BifurcationProblem(COm, z0, par_com, (@lens _.q2);
 		recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
-opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
+opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 100)
 
 br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
 
@@ -37,7 +37,7 @@ br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
 @set! opts_br.newtonOptions = NewtonPar(maxIter = 10, tol = 1e-12)
 
 sn_codim2 = continuation(br, 3, (@lens _.k),
-	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., ds = -0.001, dsmax = 0.05, nInversion = 8) ;
+	ContinuationPar(opts_br, pMax = 2.2, pMin = 0., ds = -0.001, dsmax = 0.05, nInversion = 8, maxSteps = 50) ;
 	normC = norminf,
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,

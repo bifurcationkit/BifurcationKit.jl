@@ -1,6 +1,6 @@
 # using Revise
 # using Plots, Test
-using BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff, Parameters
+using BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff, Parameters
 const BK = BifurcationKit
 norminf(x) = norm(x, Inf)
 
@@ -9,7 +9,7 @@ Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2],
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20, verbose = false)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
 
-prob = BK.BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@lens _.μ); recordFromSolution = (x, p) -> x[1])
+prob = BK.BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@lens _.μ))
 br = continuation(prob, PALC(), opts_br; normC = norminf, verbosity = 0)
 
 @test br.specialpoint[1].interval[1] ≈ -2.136344567951428e-5
@@ -147,8 +147,7 @@ bp2d = BK.getNormalForm(br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 ####################################################################################################
 # vector field to test nearby secondary bifurcations
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
-prob = BK.BifurcationProblem(FbpSecBif, [0.0], -0.2,  (@lens _);
-			recordFromSolution = (x, p) -> x[1])
+prob = BK.BifurcationProblem(FbpSecBif, [0.0], -0.2,  (@lens _))
 
 br_snd1 = BK.continuation(prob, PALC(),
 	setproperties(opts_br; pMin = -1.0, pMax = .3, ds = 0.001, dsmax = 0.005, nInversion = 8, detectBifurcation=3); plot = false, normC = norminf)
@@ -187,8 +186,7 @@ function FbpD6(x, p)
 			 p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c * (x[3]^2 + x[1]^2) * x[2]),
 			 p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c * (x[2]^2 + x[1]^2) * x[3])]
 end
-probD6 = BK.BifurcationProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@lens _.μ),;
-		recordFromSolution = (x, p) -> norminf(x),)
+probD6 = BK.BifurcationProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@lens _.μ),)
 
 br = BK.continuation(probD6, PALC(), setproperties(opts_br; nInversion = 6, ds = 0.001); normC = norminf)
 
@@ -207,7 +205,7 @@ BK.nf(bp2d)
 x0 = rand(3); @test norm(FbpD6(x0, BK.setParam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
 br1 = BK.continuation(br, 1,
-	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 300, pMax = 1.); plot = false, verbosity = 0, normC = norminf, verbosedeflation = false)
+	setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 100, pMax = 1.); plot = false, verbosity = 0, normC = norminf, verbosedeflation = false)
 	# plot(br1..., br, plotfold=false, putbifptlegend=false)
 
 bp2d = BK.getNormalForm(br, 1)
@@ -218,7 +216,6 @@ bdiag = bifurcationdiagram(probD6, PALC(), 3,
 	(args...) -> setproperties(opts_br; pMin = -0.250, pMax = .4, ds = 0.001, dsmax = 0.005, nInversion = 4, detectBifurcation = 3, dsminBisection =1e-18, tolBisectionEigenvalue=1e-11, maxBisectionSteps=20, newtonOptions = (@set opt_newton.verbose=false));
 	plot = false, verbosity = 0, normC = norminf)
 
-@warn "on n'est pas bon ici"
 # plot(bdiag; putspecialptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
 
 ####################################################################################################
@@ -238,7 +235,7 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
 par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
-probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@lens _.r); recordFromSolution = (x, p) -> norminf(x),)
+probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@lens _.r))
 
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, pMax = 0.1, pMin = -0.3, detectBifurcation = 3, nev = 2, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 100)
@@ -289,7 +286,7 @@ Fbt(x, p) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
 par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
 prob  = BK.BifurcationProblem(Fbt, [0.01, 0.01], par, (@lens _.β1))
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 40, verbose = false)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, pMax = 0.5, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 8, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9, saveSolEveryStep = 1)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, pMax = 0.5, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 80, nInversion = 8, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9, saveSolEveryStep = 1)
 
 br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
 
@@ -335,10 +332,10 @@ btpt1 = getNormalForm(sn_codim2, 1; nev = 2, autodiff = false)
 @test mapreduce(isapprox, &, btpt.nfsupp, btpt1.nfsupp)
 
 HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
-	HC.hopf(0.)
+HC.hopf(0.)
 SN = BK.predictor(btpt, Val(:FoldCurve), 0.)
 Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
-	Hom.orbit(0,0)
+Hom.orbit(0,0)
 
 # plot(sn_codim2, branchlabel = ["Fold"], vars = (:β1, :β2))
 # 	_S = LinRange(-0.06, 0.06, 1000)
@@ -352,8 +349,8 @@ Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
 
 
 # plot of the homoclinic orbit
-hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
-hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
+# hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
+# hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
 # plot(hom1, hom2)
 
 # branch switching from BT from Fold
@@ -391,7 +388,7 @@ opts_br = setproperties(opts_br;nInversion = 10, maxBisectionSteps = 25)
 
 br = continuation(prob, PALC(), opts_br)
 
-hopf_codim2 = continuation(br, 1, (@lens _.c3), ContinuationPar(opts_br, detectBifurcation = 0, saveSolEveryStep = 1, maxSteps = 40, pMin = -2., pMax = 2., ds = -0.001) ;
+hopf_codim2 = continuation(br, 1, (@lens _.c3), ContinuationPar(opts_br, detectBifurcation = 0, saveSolEveryStep = 1, maxSteps = 15, pMin = -2., pMax = 2., ds = -0.001) ;
 	detectCodim2Bifurcation = 2,
 	startWithEigen = true,
 	updateMinAugEveryStep = 1,
@@ -424,8 +421,8 @@ function Fzh(u, p)
 end
 
 par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
-prob = BK.BifurcationProblem(Fzh, [0.05, 0.0, 0.0], par_zh, (@lens _.β1), recordFromSolution = (x,p;k...) -> x[1])
-br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, maxSteps = 90), verbosity = 0, detectBifurcation=3, nInversion = 2)
+prob = BK.BifurcationProblem(Fzh, [0.05, 0.0, 0.0], par_zh, (@lens _.β1))
+br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, maxSteps = 70), verbosity = 0, detectBifurcation=3, nInversion = 2)
 
 _cparams = br.contparams
 opts2 = @set _cparams.newtonOptions.verbose = false
@@ -469,8 +466,8 @@ end
 
 
 par_hh = (β1 = 0.1, β2 = -0.3, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
-prob = BK.BifurcationProblem(Fhh, zeros(4), par_hh, (@lens _.β1), recordFromSolution = (x,p;k...) -> x[1])
-br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, maxSteps = 90), verbosity = 0, detectBifurcation=3, nInversion = 2)
+prob = BK.BifurcationProblem(Fhh, zeros(4), par_hh, (@lens _.β1))
+br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, maxSteps = 20), verbosity = 0, detectBifurcation=3, nInversion = 2)
 
 @set! opts2.newtonOptions.verbose = false
 br_codim2 = continuation(br, 1, (@lens _.β2), opts2; verbosity = 0, startWithEigen = true, detectCodim2Bifurcation = 2, updateMinAugEveryStep = 1)

@@ -8,8 +8,8 @@ BK.printEV(rand(2))
 BK._printLine(1,nothing,1)
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
-z_pred = BorderedArray(rand(10),1.0)
-tau_pred = BorderedArray(rand(10),2.0)
+z_pred = BorderedArray(rand(10), 1.0)
+tau_pred = BorderedArray(rand(10), 2.0)
 BK.minus!(z_pred, tau_pred)
 BK.eltype(z_pred)
 

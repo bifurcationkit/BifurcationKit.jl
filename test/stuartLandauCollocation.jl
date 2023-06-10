@@ -1,7 +1,6 @@
-# using Revise, AbbreviatedStackTraces
-# using Plots
+# using Revise, AbbreviatedStackTraces, Plots, Plots
 using Test
-using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
+using BifurcationKit, Parameters, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
@@ -204,30 +203,32 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 	)
 ####################################################################################################
 # test  Hopf aBS
-br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
-	δp = 0.1,
-	usedeflation = true,
-	eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
-	)
+let 
+	br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
+		PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
+		δp = 0.1,
+		usedeflation = true,
+		eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
+		)
 
-br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
-	δp = 0.1,
-	usedeflation = true,
-	eigsolver = BK.FloquetColl(),
-	)
+	br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
+		PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
+		δp = 0.1,
+		usedeflation = true,
+		eigsolver = BK.FloquetColl(),
+		)
 
-# we test that the 2 methods give the same floquet exponents
-for i=1:length(br_po)-1
-	@info i
-	@test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+	# we test that the 2 methods give the same floquet exponents
+	for i=1:length(br_po)-1
+		@info i
+		@test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+	end
+
+	# test mesh adaptation
+	br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
+		PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1, meshadapt = true);
+		δp = 0.1,
+		usedeflation = true,
+		eigsolver = BK.FloquetColl(),
+		)
 end
-
-# test mesh adaptation
-br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
-	PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1, meshadapt = true);
-	δp = 0.1,
-	usedeflation = true,
-	eigsolver = BK.FloquetColl(),
-	)

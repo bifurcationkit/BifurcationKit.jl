@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, LinearAlgebra, Setfield
+using Test, BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 function test_newton(x0)
@@ -30,7 +30,7 @@ for T in (Float64, Float32, Float16)
 	@test eltype(sol) == T
 end
 ####################################################################################################
-function test_newton_palc(x0, p0::T) where T
+function test_newton_palc(x0::Vector{T}, p0::T) where T
 	@assert eltype(x0) == T
 	N = length(x0)
 
@@ -52,7 +52,7 @@ function test_newton_palc(x0, p0::T) where T
 	newtonPALC(iter, state)
 end
 
-test_newton_palc(-ones(10) .*0.04, 0.5)
+test_newton_palc(-ones(10) .* 0.04, 0.5)
 
 # test type
 for T in (Float64, Float32, Float16)

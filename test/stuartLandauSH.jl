@@ -1,8 +1,8 @@
 # using Revise, Plots
 using OrdinaryDiffEq, ForwardDiff, Test
-	using BifurcationKit, LinearAlgebra, Parameters, Setfield
-	const BK = BifurcationKit
-	const FD = ForwardDiff
+using BifurcationKit, LinearAlgebra, Parameters
+const BK = BifurcationKit
+const FD = ForwardDiff
 
 norminf(x) = norm(x, Inf)
 
@@ -111,10 +111,10 @@ BK.getMaximum(_pb, outpo.u, par_hopf)
 BK.getPeriodicOrbit(_pb, outpo.u, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 5, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), tolStability = 1e-5)
-	br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
-		opts_po_cont;
-		verbosity = 0, plot = false,
-		normC = norminf)
+br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
+	opts_po_cont;
+	# verbosity = 0, plot = false,
+	normC = norminf)
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
@@ -124,14 +124,15 @@ _sol(0.1)
 ####################################################################################################
 # test automatic branch switching
 @info "Single Shooting aBS"
-br_pok2 = continuation(br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf, verbosity = 0)
+_probsh = ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r))
+br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0)
 
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # idem with deflation
-br_pok2 = continuation(br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf, usedeflation = true)
+br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, usedeflation = true)
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
@@ -140,7 +141,7 @@ br_pok2 = continuation(br, 1, opts_po_cont, ShootingProblem(1, prob, KenCarp4();
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detectBifurcation = 0
-br_pok2 = continuation(br,1, opts_po_contMF, ShootingProblem(1, prob, Rodas4(); abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf)
+br_pok2 = continuation(br,1, opts_po_contMF, _probsh; normC = norminf)
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
