@@ -290,10 +290,10 @@ We refer to the regular [`newton`](@ref) for more information. It penalises the 
 Compared to [`newton`](@ref), the only different arguments are
 - `defOp::DeflationOperator` deflation operator
 - `linsolver` linear solver used to invert the Jacobian of the deflated functional.
-    - custom solver `DeflatedProblemCustomLS()` with requires solving two linear systems `J⋅x = rhs`.
+    - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
     - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
-    - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian of the deflated problem
-    - if passed `Val(:fullIterative)`, then a full matrix free method is used.
+    - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
+    - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 function newton(prob::AbstractBifurcationProblem,
 				defOp::DeflationOperator{Tp, Tdot, T, vectype},
@@ -319,18 +319,15 @@ function newton(prob::AbstractBifurcationProblem,
 				::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(prob, defOp, AutoDiff())
-
 	return newton(deflatedPb, options; kwargs...)
 end
 
 function newton(prob::AbstractBifurcationProblem,
 				defOp::DeflationOperator{Tp, Tdot, T, vectype},
 				options::NewtonPar{T, L, E},
-				::Val{:fullIterative};
-				kwargs...) where {Tp, T, Tdot, vectype, L, E}
+				::Val{:fullIterative}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
 	# we create the new functional
 	deflatedPb = DeflatedProblem(prob, defOp, Val(:fullIterative))
-
 	return newton(deflatedPb, options; kwargs...)
 end
 

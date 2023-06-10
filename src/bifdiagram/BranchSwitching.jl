@@ -91,7 +91,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	pred = predictor(specialpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 	if isnothing(pred); return nothing; end
 
-	verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(specialpoint), "\n────▶ newp = ", pred.p, ", δp = ", br.specialpoint[ind_bif].param - pred.p, "\n")
+	verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(specialpoint), "\n────▶ newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, "\n")
 
 	if usedeflation
 		verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
