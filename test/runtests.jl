@@ -18,8 +18,9 @@ using Test
 		include("simple_continuation.jl")
 	end
 
-	@testset "Normal forms" begin
 	GC.gc()
+	
+	@testset "Normal forms" begin
 		include("testNF.jl")
 		include("testNF_maps.jl")
 	end
@@ -33,8 +34,9 @@ using Test
 		include("codim2.jl")
 	end
 
-	@testset "Hopf Codim 2" begin
 	GC.gc()
+	
+	@testset "Hopf Codim 2" begin
 		include("testHopfMA.jl")
 		include("lorenz84.jl")
 		include("COModel.jl")
@@ -66,21 +68,24 @@ using Test
 		@info "Entry in testLure.jl"
 		include("testLure.jl")
 	end
+	
+	GC.gc()
 
 	@testset "codim 2 PO Shooting MF" begin
-	GC.gc()
 		@info "Entry in codim2PO-shooting-mf.jl"
 		include("codim2PO-shooting-mf.jl")
 	end
 
-	@testset "codim 2 PO Shooting" begin
 	GC.gc()
+	
+	@testset "codim 2 PO Shooting" begin
 		@info "Entry in codim2PO-shooting.jl"
 		include("codim2PO-shooting.jl")
 	end
 
-	@testset "codim 2 PO Collocation" begin
 	GC.gc()
+
+	@testset "codim 2 PO Collocation" begin
 		@info "Entry in codim2PO-OColl.jl"
 		include("codim2PO-OColl.jl")
 	end
