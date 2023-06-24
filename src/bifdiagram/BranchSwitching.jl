@@ -50,8 +50,9 @@ Automatic branch switching at branch points based on a computation of the normal
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
+- `verbosedeflation` print deflated newton iterations
 - `plotSolution` change plot solution method in the problem `br.prob`
-- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
+- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`getNormalForm`](@ref).
 
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
@@ -69,7 +70,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 		plotSolution = plotSolution(br.prob),
 		tolFold = 1e-3,
 		kwargs...) where Tprob
-	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this one but compute the Lyapunov-Schmidt decomposition instead and solve the polynomial equation instead.
+	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
 	verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 	verbose && println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
@@ -85,13 +86,13 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 	Ty = typeof(ds)
 
 	# compute the normal form of the bifurcation point
-	specialpoint = getNormalForm1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tolFold = tolFold)
+	bp = getNormalForm1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tolFold = tolFold)
 
 	# compute predictor for a point on new branch
-	pred = predictor(specialpoint, ds; verbose = verbose, ampfactor = Ty(ampfactor))
+	pred = predictor(bp, ds; verbose = verbose, ampfactor = Ty(ampfactor))
 	if isnothing(pred); return nothing; end
 
-	verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(specialpoint), "\n────▶ newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, "\n")
+	verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(bp), "\n────▶ newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, "\n")
 
 	if usedeflation
 		verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
@@ -104,11 +105,11 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 
 	# perform continuation
 	branch = continuation(reMake(br.prob, plotSolution=plotSolution),
-			specialpoint.x0, specialpoint.params,	# first point on the branch
+			bp.x0, bp.params,	# first point on the branch
 			pred.x, pred.p,							# second point on the branch
 			alg, getLens(br),
 			optionsCont; kwargs...)
-	return Branch(branch, specialpoint)
+	return Branch(branch, bp)
 end
 
 # same but for a Branch

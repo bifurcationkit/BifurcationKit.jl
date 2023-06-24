@@ -218,13 +218,14 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			startWithEigen = false,
 			autodiff = false,
 			detailed = true,
+			bdlinsolver::AbstractBorderedLinearSolver = getProb(br).prob.linbdsolver,
 			kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
 		verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 		verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
 		bif_type = br.specialpoint[ind_bif].type
-		@assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf (for now)"
+		@assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf is allowed (for now)"
 
 		if bif_type == :hh
 			@assert Tkind <: HopfCont
@@ -242,7 +243,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 		Ty = eltype(Teigvec)
 
 		# compute the normal form of the bifurcation point
-		nf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed)
+		nf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed, bls = bdlinsolver)
 
 		# compute predictor for point on new branch
 		ds = isnothing(δp) ? optionsCont.ds : δp

@@ -34,7 +34,7 @@ hopfpt = getNormalForm(br, 4)
 optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 8)
 
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-7), nev = 3, tolStability = 1e-6, detectBifurcation = 2, plotEveryStep = 20, saveSolEveryStep=1)
+opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-8), nev = 3, tolStability = 1e-6, detectBifurcation = 2, plotEveryStep = 20, saveSolEveryStep=1)
 
 # arguments for periodic orbits
 args_po = (	recordFromSolution = (x, p) -> begin
@@ -54,12 +54,12 @@ args_po = (	recordFromSolution = (x, p) -> begin
 	normC = norminf)
 
 Mt = 200 # number of sections
-	br_potrap = continuation(br, 4, opts_po_cont,
-					PeriodicOrbitTrapProblem(M = Mt, jacobian = :Dense, updateSectionEveryStep = 0);
-					verbosity = 2,	plot = true,
-					args_po...,
-					callbackN = BK.cbMaxNorm(1000.),
-					)
+br_potrap = continuation(br, 4, opts_po_cont,
+	PeriodicOrbitTrapProblem(M = Mt, jacobian = :Dense, updateSectionEveryStep = 0);
+	verbosity = 2,	plot = true,
+	args_po...,
+	callbackN = BK.cbMaxNorm(1000.),
+	)
 
 plot(br, br_potrap, markersize = 3)
 	plot!(br_potrap.param, br_potrap.min, label = "")
@@ -136,8 +136,9 @@ br_popsh = @time continuation(
 	# arguments for continuation
 	opts_po_cont,
 	# this is where we tell that we want Poincaré Shooting
-	# PoincareShootingProblem(Mt, probsh, Rodas5(), probmono, Rodas4P(), parallel = false);
-	PoincareShootingProblem(1, probsh, Rodas5(); parallel = false, updateSectionEveryStep = 2);
+	# PoincareShootingProblem(5, probsh, Rodas5(), probmono, Rodas4P(), parallel = false, updateSectionEveryStep = 1, jacobian = :autodiffDenseAnalytical);
+	PoincareShootingProblem(5, probsh, Rodas4P(); parallel = false, updateSectionEveryStep = 1, jacobian = BK.AutodiffDenseAnalytical());
+	alg = PALC(tangent = Bordered()),
 	# PoincareShootingProblem(Mt, probsh, RadauIIA3(); parallel = false, abstol = 1e-10, reltol = 1e-9);
 	ampfactor = 1.0, δp = 0.005,
 	# usedeflation = true,

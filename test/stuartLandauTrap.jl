@@ -51,11 +51,11 @@ orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in Lin
 push!(orbitguess_f, 2pi)
 
 optn_po = NewtonPar()
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 25, newtonOptions = optn_po, saveSolEveryStep = 1, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 3, newtonOptions = optn_po, saveSolEveryStep = 1, detectBifurcation = 0)
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
-for (ind, jacobianPO) in enumerate((:Dense, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :FullMatrixFreeAD, :BorderedMatrixFree))
+for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :FullMatrixFreeAD, :BorderedMatrixFree))
 	@show jacobianPO, ind
 	_ls = ind > 5 ? lsit : lsdef
 	outpo_f = newton((@set poTrap.jacobian = jacobianPO),
@@ -73,15 +73,17 @@ for (ind, jacobianPO) in enumerate((:Dense, :FullLU, :BorderedLU, :FullSparseInp
 	BK.getPeriodicOrbit(br_po, 1)
 end
 
-outpo_f = newton((@set poTrap.jacobian = :Dense), orbitguess_f, optn_po)
-outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
+let
+	outpo_f = @time newton((@set poTrap.jacobian = :Dense), orbitguess_f, optn_po);
+	outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
 
-# computation of the Jacobian at out_pof
-_J1 = poTrap(Val(:JacFullSparse), outpo_f.u, par_hopf)
-_Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f.u)
+	# computation of the Jacobian at out_pof
+	_J1 = poTrap(Val(:JacFullSparse), outpo_f.u, par_hopf)
+	_Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f.u)
 
-# test of the jacobian against automatic differentiation
-@test norm(_Jfd - Array(_J1), Inf) < 1e-7
+	# test of the jacobian against automatic differentiation
+	@test norm(_Jfd - Array(_J1), Inf) < 1e-7
+end
 ####################################################################################################
 # test PeriodicUtils
 BK.amplitude(rand(10,10),3)

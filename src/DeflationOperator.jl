@@ -344,16 +344,16 @@ function newton(prob::AbstractBifurcationProblem,
 				linsolver = DeflatedProblemCustomLS();
 				kwargs...) where {T, vectype, L, E}
 	prob0 = reMake(prob, u0 = x0, params = p0)
-	res0 = newton(prob0, options; kwargs...)
-	@assert converged(res0) "Newton did not converge to the trivial solution x0."
-	push!(defOp, res0.u)
+	sol0 = newton(prob0, options; kwargs...)
+	@assert converged(sol0) "Newton did not converge to the trivial solution x0."
+	push!(defOp, sol0.u)
 	prob1 = reMake(prob0, u0 = x1)
-	res1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
-	~converged(res1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
-	@debug "deflated Newton" x0 res0.u res1.u
+	sol1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
+	~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
+	@debug "deflated Newton" x0 x1 sol0.u sol1.u
 	# we test if the two solutions are different. We first get the norm
 	normN = get(kwargs, :normN, norm)
-	flag = normN(minus(res0.u, res0.u)) < options.tol
-	@assert flag "Did not find a non trivial solution"
-	return res1, res0, flag
+	flag = normN(minus(sol0.u, sol0.u)) < options.tol
+	@assert flag "Did not find a non trivial solution using deflated newton"
+	return sol1, sol0, flag
 end

@@ -954,7 +954,7 @@ function zeroHopfNormalForm(_prob,
 		tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
 		# imaginary eigenvalue iω1
 		_ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
-		verbose && @info "EV" _λ _ind2
+		verbose && (@info "EV" _λ _ind2)
 		_indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
 		λI = _λ[_ind2[_indIm]]
 		q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
@@ -970,6 +970,7 @@ function zeroHopfNormalForm(_prob,
 		q1 = conj(q1)
 	end
 
+	q0 = real(q0)
 	q0 ./= scaleζ(q0)
 	cq1 = conj(q1)
 
@@ -1119,7 +1120,7 @@ function zeroHopfNormalForm(_prob,
 	β1 = -f011
 	β2 = (2real(g021)*(real(g110)-f200) + real(g110)*f111) / (2*f200)
 	
-	@set pt.nf = (;ω = λI, λ0 = _λ[_ind0], dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011 )
+	@set pt.nf = (;ω = imag(λI), λ0 = _λ[_ind0], dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011, g110, f011 )
 end
 
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
@@ -1171,7 +1172,7 @@ function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; verbose = false, ampf
 end
 
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor = T(1)) where T
-	@unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, hasNS = zh.nf
+	@unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS = zh.nf
 	lens1, lens2 = zh.lens
 	p1 = get(zh.params, lens1)
 	p2 = get(zh.params, lens2)

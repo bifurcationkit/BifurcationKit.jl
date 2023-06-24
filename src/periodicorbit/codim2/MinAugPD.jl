@@ -283,7 +283,6 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 		# # we solve Nᵗ[w, σ2] = [0, 1]
 		newa, σ2, cv, itw = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, n)
 		~cv && @debug "Linear solver for Nᵗ did not converge."
-		@debug size(JPD★.jacpb) size(w)
 
 		copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))
 		# do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
@@ -337,8 +336,8 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 	# the following allows to append information specific to the codim 2 continuation to the user data
 	_printsol = get(kwargs, :recordFromSolution, nothing)
 	_printsol2 = isnothing(_printsol) ?
-		(u, p; kw...) -> (; zip(lenses, (getP(u), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(recordFromSolution(prob)(getVec(u), p; kw...))...) :
-		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u), p; kw...))..., zip(lenses, (getP(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD	,)
+		(u, p; kw...) -> (; zip(lenses, (getP(u, 𝐏𝐝), (p = p, prob = prob)))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(recordFromSolution(prob)(getVec(u), p; kw...))...) :
+		(u, p; kw...) -> (; namedprintsol(_printsol(getVec(u, 𝐏𝐝), (p = p, prob = prob); kw...))..., zip(lenses, (getP(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
 
 	# eigen solver
 	eigsolver = FoldEig(getsolver(opt_pd_cont.newtonOptions.eigsolver))

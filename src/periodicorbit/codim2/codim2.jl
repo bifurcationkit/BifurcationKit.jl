@@ -115,12 +115,13 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 			options_cont::ContinuationPar,
 			probPO::AbstractPeriodicOrbitProblem;
 			detectCodim2Bifurcation::Int = 0,
+			autodiff = true,
 			kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
 	# compute the normal form of the bifurcation point
 	verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 	verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-	nf = getNormalForm(getProb(br), br, ind_bif; detailed = true)
+	nf = getNormalForm(getProb(br), br, ind_bif; detailed = true, autodiff = autodiff)
 
 	# options to detect codim2 bifurcations
 	_contParams = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)

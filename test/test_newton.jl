@@ -21,7 +21,7 @@ end
 ####################################################################################################
 # we test the regular newton algorithm
 # simple case
-sol = test_newton(ones(10) .+ rand(10) * 0.1)
+test_newton(ones(10) .+ rand(10) * 0.1)
 
 # test types for newton
 # test type
@@ -56,7 +56,7 @@ test_newton_palc(-ones(10) .* 0.04, 0.5)
 
 # test type
 for T in (Float64, Float32, Float16)
-	sol = test_newton_palc(T.(-ones(10) .*0.04), T(0.5)).u
+	local sol = test_newton_palc(T.(-ones(10) .*0.04), T(0.5)).u
 	@test typeof(sol) == BorderedArray{Vector{T}, T}
 end
 ####################################################################################################

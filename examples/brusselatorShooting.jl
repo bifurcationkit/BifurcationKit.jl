@@ -151,14 +151,19 @@ prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 sol = @time solve(prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, progress = true)
 ####################################################################################################
 M = 10
-dM = 10
+dM = 5
 orbitsection = Array(orbitguess_f2[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.0)
 
+sol = @time solve(remake(prob, u0=vec(orbitsection), tspan = (0,4.)), QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
+
 BK.plotPeriodicShooting(initpo[1:end-1], length(1:dM:M));title!("")
 
-probSh = ShootingProblem(prob, Rodas4P(),
+probSh = ShootingProblem(prob,
+	QNDF(),
+	# QBDF(),#linsolve = KrylovJL_GMRES(verbose=0, rtol = 1e-5), concrete_jac = false),
+	# Rodas4P2(),#linsolve = KrylovJL_GMRES(), concrete_jac = false),
 	[orbitguess_f2[:,ii] for ii=1:dM:M];
 	abstol = 1e-11, reltol = 1e-9,
 	parallel = true,
@@ -218,7 +223,10 @@ Mt = 2
 br_po = continuation(
 	br, 1,
 	# arguments for continuation
-	opts_po_cont, ShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = true, jacobian = :FiniteDifferences, updateSectionEveryStep = 1);
+	opts_po_cont, ShootingProblem(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false,
+				jacobian = BK.FiniteDifferences(),
+				# jacobian = BK.AutoDiffMF(),
+				updateSectionEveryStep = 1);
 	ampfactor = 1., δp = 0.0075,
 	verbosity = 3,	plot = true,
 	linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
@@ -303,7 +311,7 @@ Mt = 2
 	br_po = continuation(
 	br, 1,
 	# arguments for continuation
-	opts_po_cont, PoincareShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = :FiniteDifferences);
+	opts_po_cont, PoincareShootingProblem(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = :FiniteDifferences);
 	linearAlgo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
 	ampfactor = 1.0, δp = 0.005,
 	verbosity = 3,	plot = true,

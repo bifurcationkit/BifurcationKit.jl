@@ -304,7 +304,8 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		# do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
 		𝐍𝐒.b .= newb ./ normC(newb)
 
-		return true
+		# test if we jumped to PD branch
+		return ~pdjump
 	end
 
 	function testCH(iter, state)
@@ -320,7 +321,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 
 		ns0 = NeimarkSacker(copy(x), p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
 		# test if we jumped to PD branch
-		pdjump = abs(ω - pi) < 100options_newton.tol
+		pdjump = abs(abs(ω) - pi) < 100options_newton.tol
 		if ~pdjump && pbwrap.prob isa ShootingProblem
 			ns = neimarksackerNormalForm(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
 			prob_ns.l1 = ns.nf.nf.b

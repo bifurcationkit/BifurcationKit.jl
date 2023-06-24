@@ -54,8 +54,8 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
-	verbose && println("━"^53*"\n──> Normal form Computation for 1d kernel")
-	verbose && println("──> analyse bifurcation at p = ", bifpt.param)
+	verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
+	verbose && println("├─ analyse bifurcation at p = ", bifpt.param)
 
 	options = br.contparams.newtonOptions
 
@@ -74,7 +74,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 
 	# "zero" eigenvalue at bifurcation point, it must be real
 	λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-	verbose && println("──> smallest eigenvalue at bifurcation = ", λ)
+	verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
 	# corresponding eigenvector, it must be real
 	if haseigenvector(br) == false
@@ -112,28 +112,28 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	δ = getDelta(prob)
 	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
 	a = dot(R01, ζ★)
-	verbose && println("──> Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6")
-	verbose && println("──> a    = ", a)
+	Ψ01, _ = ls(L, E(R01))
+	verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
+	verbose && println("├─── a    = ", a)
 
 	# coefficient of x*p
 	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-	Ψ01, _ = ls(L, E(R01))
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
-	verbose && println("──> b1   = ", b1)
+	verbose && println("├─── b1   = ", b1)
 
 	# coefficient of x^2
 	b2v = R2(ζ, ζ)
 	b2 = dot(b2v, ζ★)
-	verbose && println("──> b2/2 = ", b2/2)
+	verbose && println("├─── b2/2 = ", b2/2)
 
 	# coefficient of x^3, recall b2v = R2(ζ, ζ)
 	wst, _ = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
 	b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
 	b3 = dot(b3v, ζ★)
-	verbose && println("──> b3/6 = ", b3/6)
+	verbose && println("└─── b3/6 = ", b3/6)
 
-	bp = (x0, p, parbif, lens, ζ, ζ★, (a = a, b1 = b1, b2 = b2, b3 = b3), :NA)
+	bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01), :NA)
 	if abs(a) < tolFold
 		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else

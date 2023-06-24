@@ -14,7 +14,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `plotEveryStep = 10` at which continuation steps do we plot the current solution
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
-- `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points](@ref) for more informations.
+- `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points of Equilibria](@ref) for more informations.
 - `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
 - `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
 

@@ -24,6 +24,8 @@ setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 getPeriodicOrbit(prob::WrapPOColl, u, p) = getPeriodicOrbit(prob.prob, u, p)
 getPeriodicOrbit(prob::WrapPOSh, u, p) = getPeriodicOrbit(prob.prob, u, p)
+getPeriod(prob::WrapPOColl, u, p) = getPeriod(prob.prob, u, p)
+getPeriod(prob::WrapPOSh, u, p) = getPeriod(prob.prob, u, p)
 @inline getDelta(prob::WrapPOSh) = getDelta(prob.prob.flow)
 @inline hasHessian(::WrapPOSh) = true
 

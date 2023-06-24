@@ -7,7 +7,7 @@ function modifyPO_2ParamsFinalise(prob, kwargs, probMA)
 				z = Z.u
 				# we first check that the continuation step was successful
 				# if not, we do not update the problem with bad information
-				success = converged(get(kF, :state, nothing))
+				success = converged(get(kF, :state, nothing)) && ~get(kF, :bisection, false)
 				if success && modCounter(step, updateSectionEveryStep) == 1
 					updateSection!(prob, getVec(z, probMA), setParam(contResult, Z.p))
 				end
@@ -18,7 +18,7 @@ function modifyPO_2ParamsFinalise(prob, kwargs, probMA)
 			begin
 				# we first check that the continuation step was successful
 				# if not, we do not update the problem with bad information!
-				success = converged(get(kF, :state, nothing))
+				success = converged(get(kF, :state, nothing)) && ~get(kF, :bisection, false)
 				if success && modCounter(step, updateSectionEveryStep) == 1
 					z = Z.u
 					updateSection!(prob, getVec(z, probMA), setParam(contResult, Z.p))
@@ -35,7 +35,7 @@ function modifyPO_2ParamsFinalise(prob::PeriodicOrbitOCollProblem, kwargs, probM
 		begin
 			# we first check that the continuation step was successful
 			# if not, we do not update the problem with bad information
-			success = converged(get(kF, :state, nothing))
+			success = converged(get(kF, :state, nothing)) && ~get(kF, :bisection, false)
 			# mesh adaptation
 			z = Z.u
 			if success && prob.meshadapt

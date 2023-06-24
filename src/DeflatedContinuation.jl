@@ -27,7 +27,7 @@ $(TYPEDFIELDS)
 	perturbSolution::Tps = _perturbSolution
 	"accept (solution) function"
 	acceptSolution::Tas = _acceptSolution
-	"function to update the deflation operator"
+	"function to update the deflation operator, ie pushing new solutions"
 	updateDeflationOp::Tud = _updateDeflationOp
 	"jacobian for deflated newton. Can be `DeflatedProblemCustomLS()`, or `Val(:autodiff)`, `Val(:fullIterative)`"
 	jacobian::Tk = DeflatedProblemCustomLS()
@@ -112,6 +112,10 @@ function updatebranch!(dcIter::DefContIterable,
 
 		# compute stability and bifurcation points
 		computeEigenElements(it.contParams) && computeEigenvalues!(it, state)
+
+		# verbose stability
+		(it.verbosity > 0) && printstyled(color=:green,"├─ Computed ", length(state.eigvals), " eigenvalues, #unstable = ", state.n_unstable[1], "\n")
+
 		if it.contParams.detectBifurcation > 1 && detectBifucation(state)
 			# we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
 			if detectBifucation(state)
@@ -254,9 +258,9 @@ function deflatedContinuation(dcIter::DefContIterable,
 		# we update the parameter value
 		current_param = clampPredp(current_param + contParams.ds, contIt)
 
-		verbosity > 0 && println("──"^31)
+		verbosity > 0 && println("├"*"──"^31)
 		nactive = mapreduce(isActive, +, dcstates)
-		verbosity > 0 && println("── step = $nstep has $(nactive)/$(length(branches)) active branche(s), p = $current_param")
+		verbosity > 0 && println("├─ step = $nstep has $(nactive)/$(length(branches)) active branche(s), p = $current_param")
 
 		# we empty the set of known solutions
 		empty!(deflationOp)
@@ -269,11 +273,11 @@ function deflatedContinuation(dcIter::DefContIterable,
 			flag, itnewton = updatebranch!(dcIter, dcstate, branches[idb], deflationOp;
 					current_param = current_param,
 					step = nstep)
-			(verbosity>=2 && isActive(dcstate)) && println("──── Continuation of branch $idb in $itnewton Iterations")
+			(verbosity>=2 && isActive(dcstate)) && println("├─── Continuation of branch $idb in $itnewton Iterations")
 			(verbosity>=1 && ~flag && isActive(dcstate)) && printstyled(color=:red, "──▶ Fold for branch $idb) ?\n")
 		end
 
-		verbosity>1 && printstyled(color = :magenta,"── looking for new branches\n")
+		verbosity>1 && printstyled(color = :magenta,"├─ looking for new branches\n")
 		# number of branches
 		nbrs = length(dcstates)
 		# number of active branches
@@ -290,7 +294,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 				if isActive(dcstate) && (n_active < alg.maxBranches)
 					n_active += 1
 					_success = true
-					verbosity >= 2 && println("────▶ Deflating branch $idb")
+					verbosity >= 2 && println("├───▶ Deflating branch $idb")
 					while _success
 						sol1 = getNewSolution(dcstate, current_param, idb)
 						_success = converged(sol1)
@@ -299,7 +303,7 @@ function deflatedContinuation(dcIter::DefContIterable,
 							_success = false
 						end
 						if _success && dcIter.alg.acceptSolution(sol1.u, current_param)
-							verbosity>=1 && printstyled(color=:green, "──▶ new solution for branch $idb \n")
+							verbosity>=1 && printstyled(color=:green, "├───▶ new solution for branch $idb \n")
 							push!(deflationOp.roots, sol1.u)
 
 							# create a new iterator and iterate it once to set up the ContState

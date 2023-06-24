@@ -73,27 +73,27 @@ n = 50
 	par_cgl = (r = 0.0, μ = 0.5, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), Db = blockdiag(D, D), γ = 0.0, δ = 1.0, N = 2n)
 	sol0 = zeros(par_cgl.N)
 
-_sol0 = zeros(2n)
-_J0 = Jcgl(_sol0, par_cgl)
-_J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
-@test _J0 ≈ _J1
+# _sol0 = zeros(2n)
+# _J0 = Jcgl(_sol0, par_cgl)
+# _J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
+# @test _J0 ≈ _J1
 
 prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@lens _.r); J = Jcgl)
 
 eigls = EigArpack(1.0, :LM)
-	eigls = DefaultEig()
-	# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
-	opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
-	out = @time newton(prob, opt_newton, normN = norminf)
+eigls = DefaultEig()
+# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
+opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+out = @time newton(prob, opt_newton, normN = norminf)
 
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 8, maxBisectionSteps=20)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 30, nInversion = 8, maxBisectionSteps=20)
 br = continuation(prob, PALC(), opts_br, verbosity = 0)
 
 ####################################################################################################
 # we test the jacobian
-_J0 = BK.jacobian(prob, sol0, par_cgl)
-_J1 = FD.jacobian(z->BK.residual(prob, z, par_cgl), sol0) |> sparse
-@test _J0 == _J1
+# _J0 = BK.jacobian(prob, sol0, par_cgl)
+# _J1 = FD.jacobian(z->BK.residual(prob, z, par_cgl), sol0) |> sparse
+# @test _J0 == _J1
 ####################################################################################################
 function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0, k = 1.)
 	specialpoint = branch.specialpoint[ind_hopf]

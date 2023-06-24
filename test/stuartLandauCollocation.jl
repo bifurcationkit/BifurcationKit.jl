@@ -108,29 +108,31 @@ sol(0.1)
 	return phase / T
 end
 
-for Ntst in 2:10:100
-	# @info "Ntst" Ntst
-	prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
+let
+	for Ntst in 2:10:100
+		# @info "Ntst" Ntst
+		prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
 
-	_ci1 = BK.generateSolution(prob_col, t -> [1], 2pi)
-	_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
-	@test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
-	# @info phaseCond(prob_col, _ci1, _ci2)/pi
+		_ci1 = BK.generateSolution(prob_col, t -> [1], 2pi)
+		_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
+		@test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
+		# @info phaseCond(prob_col, _ci1, _ci2)/pi
 
-	_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-	_ci2 = BK.generateSolution(prob_col, t -> [sin(t)], 2pi)
-	@test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-8
-	# @info phaseCond(prob_col, _ci1, _ci2)/pi-1
+		_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
+		_ci2 = BK.generateSolution(prob_col, t -> [sin(t)], 2pi)
+		@test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-8
+		# @info phaseCond(prob_col, _ci1, _ci2)/pi-1
 
-	_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-	_ci2 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-	@test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
-	# @info phaseCond(prob_col, _ci1, _ci2) / pi
+		_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
+		_ci2 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
+		@test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
+		# @info phaseCond(prob_col, _ci1, _ci2) / pi
 
-	_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-	_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
-	@test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
-	# @info phaseCond(prob_col, _ci1, _ci2) / pi
+		_ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
+		_ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
+		@test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
+		# @info phaseCond(prob_col, _ci1, _ci2) / pi
+	end
 end
 
 
