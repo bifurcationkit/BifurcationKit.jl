@@ -46,11 +46,15 @@ Automatic branch switching at branch points based on a computation of the normal
 
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
-- `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
-- `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
+- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
+- `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
+- `maxIterDeflation` number of newton steps in deflated newton
+- `perturn = identity` which perturbation function to use during deflated newton
+- `Teigvec = getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
+- `scaleζ = norm` pass a norm to normalize vectors during normal form computation
 - `plotSolution` change plot solution method in the problem `br.prob`
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`getNormalForm`](@ref).
 
@@ -62,12 +66,12 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 		δp = nothing, ampfactor::Real = 1,
 		nev = optionsCont.nev,
 		usedeflation::Bool = false,
-		Teigvec = getvectortype(br),
-		scaleζ = norm,
 		verbosedeflation::Bool = false,
 		maxIterDeflation::Int = min(50, 15optionsCont.newtonOptions.maxIter),
 		perturb = identity,
 		plotSolution = plotSolution(br.prob),
+		Teigvec = getvectortype(br),
+		scaleζ = norm,
 		tolFold = 1e-3,
 		kwargs...) where Tprob
 	# The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.

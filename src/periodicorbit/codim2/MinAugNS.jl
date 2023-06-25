@@ -305,6 +305,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		𝐍𝐒.b .= newb ./ normC(newb)
 
 		# test if we jumped to PD branch
+		pdjump = abs(abs(ω) - pi) < 100options_newton.tol
 		return ~pdjump
 	end
 
