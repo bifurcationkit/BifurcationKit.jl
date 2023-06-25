@@ -1,5 +1,5 @@
-# using Revise
-# using Plots, Test
+# using Revise, Plots
+using Test
 using BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff, Parameters
 const BK = BifurcationKit
 norminf(x) = norm(x, Inf)

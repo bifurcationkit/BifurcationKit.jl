@@ -340,7 +340,6 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
 	# on page 1243
 
 	# first, get the bifurcation point parameters
-	
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
 	@assert coll isa PeriodicOrbitOCollProblem "Something is wrong. Please open an issue on the website"
@@ -456,9 +455,9 @@ function neimarksackerNormalFormPRM(pbwrap::WrapPOColl,
 
 	δ2 = √δ
 	δ3 = δ^(1/3)
-	d1Π(x,p,dx) = (@debug "d1F"; (Π(x .+ δ .* dx, p).u .- Π(x .- δ .* dx, p).u) ./ (2δ))
-	d2Π(x,p,dx1,dx2) = (@debug "d2F"; (d1Π(x .+ δ2 .* dx2, p, dx1) .- d1Π(x .- δ2 .* dx2, p, dx1)) ./ (2δ2))
-	d3Π(x,p,dx1,dx2,dx3) = (@debug "d3F"; (d2Π(x .+ δ3 .* dx3, p, dx1, dx2) .- d2Π(x .- δ3 .* dx3, p, dx1, dx2)) ./ (2δ3))
+	d1Π(x,p,dx) = ((Π(x .+ δ .* dx, p).u .- Π(x .- δ .* dx, p).u) ./ (2δ))
+	d2Π(x,p,dx1,dx2) = ((d1Π(x .+ δ2 .* dx2, p, dx1) .- d1Π(x .- δ2 .* dx2, p, dx1)) ./ (2δ2))
+	d3Π(x,p,dx1,dx2,dx3) = ((d2Π(x .+ δ3 .* dx3, p, dx1, dx2) .- d2Π(x .- δ3 .* dx3, p, dx1, dx2)) ./ (2δ3))
 
 	probΠ = BifurcationProblem(
 			(x,p) -> Π(x,p).u,

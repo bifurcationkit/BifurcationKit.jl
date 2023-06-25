@@ -131,9 +131,12 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 		You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
 		to find the zeros of the normal form polynomials.
 		"""
-		mutable struct $op{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: $opt
+		mutable struct $op{Tv, Tτ, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: $opt
 			"Bifurcation point."
 			x0::Tv
+
+			"Tangent of the curve at the bifurcation point."
+			τ::Tτ
 
 			"Parameter value at the bifurcation point."
 			p::T
@@ -159,7 +162,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 	end
 end
 
-Pitchfork(x0, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 isTranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::BranchPoint) = :BranchPoint
@@ -217,9 +220,12 @@ You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zero
 
 - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
 """
-mutable struct NdBranchPoint{Tv, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractBranchPoint
+mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractBranchPoint
 	"Bifurcation point"
 	x0::Tv
+
+	"Tangent of the curve at the bifurcation point."
+	τ::Tτ
 
 	"Parameter value at the bifurcation point"
 	p::T
@@ -265,9 +271,12 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct Hopf{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
+mutable struct Hopf{Tv, Tτ, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
 	"Hopf point"
 	x0::Tv
+
+	"Tangent of the curve at the bifurcation point."
+	τ::Tτ
 
 	"Parameter value at the Hopf point"
 	p::T
@@ -317,9 +326,12 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp::NeimarkSacker, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct NeimarkSacker{Tv, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
+mutable struct NeimarkSacker{Tv, Tτ, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
 	"Neimark-Sacker point"
 	x0::Tv
+
+	"Tangent of the curve at the bifurcation point."
+	τ::Tτ
 
 	"Parameter value at the Neimark-Sacker point"
 	p::T

@@ -51,6 +51,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 					tolFold = 1e-3,
 					scaleζ = norm)
 	bifpt = br.specialpoint[ind_bif]
+	τ = bifpt.τ 
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
 	@assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
@@ -133,7 +134,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	b3 = dot(b3v, ζ★)
 	verbose && println("└─── b3/6 = ", b3/6)
 
-	bp = (x0, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01), :NA)
+	bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01, wst), :NA)
 	if abs(a) < tolFold
 		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else
@@ -443,6 +444,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
 	end
 
+	τ = bifpt.τ
 	prob_vf = prob
 
 	# kernel dimension:
@@ -593,8 +595,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 		end
 	end
 
-	return NdBranchPoint(x0, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
-
+	return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
 getNormalForm(br::ContResult, id_bif::Int; kwargs...) = getNormalForm(br.prob, br, id_bif; kwargs...)
@@ -781,7 +782,7 @@ function hopfNormalForm(prob::AbstractBifurcationProblem,
 	ζ★ ./= dot(ζ, ζ★)
 	@assert dot(ζ, ζ★) ≈ 1
 
-	hopfpt = Hopf(bifpt.x, bifpt.param,
+	hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
 		ω,
 		parbif, lens,
 		ζ, ζ★,
@@ -1008,7 +1009,7 @@ function neimarkSackerNormalForm(prob::AbstractBifurcationProblem,
 	ζ★ ./= dot(ζ, ζ★)
 	@assert dot(ζ, ζ★) ≈ 1
 
-	nspt = NeimarkSacker(bifpt.x, bifpt.param,
+	nspt = NeimarkSacker(bifpt.x, bifpt.τ, bifpt.param,
 		ω,
 		parbif, lens,
 		ζ, ζ★,

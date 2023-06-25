@@ -27,7 +27,7 @@ br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
 prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@lens _.μ))
 
-pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getLens(br), [1.], [1.], nothing, :none)
+pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getLens(br), [1.], [1.], nothing, :none)
 
 nf = BK.periodDoublingNormalForm(prob, pd, DefaultLS(), verbose = false)
 @test nf.nf.a ≈ pars_pd.a
@@ -52,7 +52,7 @@ prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, 
 br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
 
 prob = BK.BifurcationProblem(Fns, [0.0], pars_pd, (@lens _.μ))
-ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getLens(br), [1.], [1.], nothing, :none)
+ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getLens(br), [1.], [1.], nothing, :none)
 
 nf = BK.neimarkSackerNormalForm(prob, br, 1; nev = 2, verbose = true)
 @test nf.nf.a ≈ pars_ns.a
