@@ -170,15 +170,31 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 - `ampfactor = 1` factor multiplying prediction
 """
 function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
+	# this is the predictor from a Transcritical bifurcation. After computing the normal form, we have an issue. We need to determine if the already computed branch corresponds to the solution x = 0 of the normal form. This leads to the two cases below.
 	nf = bp.nf
-	a, b1, b2, b3 = nf
+	τ = bp.τ
+	a, b1, b2, b3, Ψ01 = nf
 	pnew = bp.p + ds
 	# we solve b1 * ds + b2 * amp / 2 = 0
 	amp = -2ds * b1 / b2 * ampfactor
 	dsfactor = T(1)
 
+	# x0  next point on the branch
+	# x1  next point on the bifurcated branch
+	# xm1 previous point on bifurcated branch 
+	if norm(τ.u)>0 && abs(dot(bp.ζ, τ.u)) >= 0.9*norm(τ.u)
+		@debug "Constant predictor in Transcritical"
+		x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01  = L \ R01 and GS Vol 1 uses w = -L\R01
+		xm1 = bp.x0
+		x0  = bp.x0 .+ ds/τ.p .* τ.u
+	else
+		x0  = bp.x0
+		x1  = bp.x0 .+ amp .* real.(bp.ζ) .- ds .* Ψ01
+		xm1 = bp.x0 .- amp .* real.(bp.ζ) .+ ds .* Ψ01
+	end
+
 	verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
+	return (x0 = x0, x1 = x1, xm1 = xm1, p = pnew, pm1 = bp.p - ds, dsfactor = dsfactor, amp = amp)
 end
 
 """
@@ -210,7 +226,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 	# 	pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
 	end
 	verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-	return (x = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
+	return (x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T

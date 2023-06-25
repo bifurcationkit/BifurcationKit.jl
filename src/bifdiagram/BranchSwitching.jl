@@ -99,14 +99,14 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 		optn = optionsCont.newtonOptions
 		bifpt = br.specialpoint[ind_bif]
 		# find the bifurcated branch using nonlinear deflation
-		solbif = newton(br.prob, convert(Teigvec, bifpt.x), pred.x, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
-		copyto!(pred.x, solbif.u)
+		solbif = newton(br.prob, convert(Teigvec, pred.x0), pred.x1, setParam(br, pred.p), setproperties(optn; verbose = verbose = verbosedeflation); kwargs...)[1]
+		copyto!(pred.x1, solbif.u)
 	end
 
 	# perform continuation
 	branch = continuation(reMake(br.prob, plotSolution=plotSolution),
 			bp.x0, bp.params,	# first point on the branch
-			pred.x, pred.p,							# second point on the branch
+			pred.x1, pred.p,	# second point on the branch
 			alg, getLens(br),
 			optionsCont; kwargs...)
 	return Branch(branch, bp)
