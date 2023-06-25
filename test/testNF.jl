@@ -20,7 +20,7 @@ bp = BK.getNormalForm(br, 1; verbose=false)
 @test BK.isTranscritical(bp) == true
 
 prob2 = @set prob.VF.J = (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x)
-bp = BK.getNormalForm(prob2, br, 1; verbose=false)
+bp = BK.getNormalForm(prob2, br, 1; verbose = false, autodiff = false)
 @test BK.isTranscritical(bp) == true
 show(bp)
 

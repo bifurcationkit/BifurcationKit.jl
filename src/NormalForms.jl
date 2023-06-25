@@ -49,7 +49,8 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 					lens = getLens(br),
 					Teigvec = vectortype(br),
 					tolFold = 1e-3,
-					scaleζ = norm)
+					scaleζ = norm,
+					autodiff = false)			
 	bifpt = br.specialpoint[ind_bif]
 	τ = bifpt.τ 
 	@assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
@@ -111,14 +112,22 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	# we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 	# coefficient of p
 	δ = getDelta(prob)
-	R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+	if autodiff
+		R01 = ForwardDiff.derivative(z->residual(prob, x0, set(parbif, lens, z)),p)
+	else
+		R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+	end
 	a = dot(R01, ζ★)
 	Ψ01, _ = ls(L, E(R01))
 	verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
 	verbose && println("├─── a    = ", a)
 
 	# coefficient of x*p
-	R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	if autodiff
+		R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
+	else
+		R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+	end
 
 	b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
 	verbose && println("├─── b1   = ", b1)
@@ -419,7 +428,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 			Teigvec = getvectortype(br),
 			scaleζ = norm,
 			detailed = true,
-			autodiff = true,
+			autodiff = false,
 			bls = MatrixBLS())
 	bifpt = br.specialpoint[id_bif]
 
@@ -441,7 +450,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
 	elseif bifpt.type == :hh
 		return hopfHopfNormalForm(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
 	elseif abs(bifpt.δ[1]) == 1 # simple branch point
-		return getNormalForm1d(prob, br, id_bif ; kwargs_nf...)
+		return getNormalForm1d(prob, br, id_bif ; autodiff = autodiff, kwargs_nf...)
 	end
 
 	τ = bifpt.τ
