@@ -116,7 +116,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh,
 								Teigvec = vectortype(br),
 								detailed = true,
 								kwargs_nf...)
-	verbose && println("━"^53*"\n──> Period-doubling normal form computation")
+	verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	pars = setParam(br, bifpt.param)
@@ -249,7 +249,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
 								prm = true,
 								kwargs_nf...)
 	# first, get the bifurcation point parameters
-	verbose && println("━"^53*"\n──> Period-Doubling normal form computation")
+	verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
 	bifpt = br.specialpoint[ind_bif]
 	bptype = bifpt.type
 	par = setParam(br, bifpt.param)
@@ -342,7 +342,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
 	coll = pbwrap.prob
 	N, m, Ntst = size(coll)
 	@assert coll isa PeriodicOrbitOCollProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("━"^53*"\n──> Period-doubling normal form computation")
+	verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
 
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]
@@ -373,16 +373,16 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
 	J[end, 1:end-1] .= q
 	J[1:end-1, end] .= p
 
-	wext = J' \ rhs
-	vext = J  \ rhs
+	vl = J' \ rhs
+	vr = J  \ rhs
 
-	v₁ = @view vext[1:end-1]
-	v₁★ = @view wext[1:end-1]
+	v₁ = @view vr[1:end-1]
+	v₁★ = @view vl[1:end-1]
 
-	ζₛ = getTimeSlices(coll, vext)
-	vext ./= sqrt(∫(coll, ζₛ, ζₛ, 1))
+	ζₛ = getTimeSlices(coll, vr)
+	vr ./= sqrt(∫(coll, ζₛ, ζₛ, 1))
 
-	ζ★ₛ = getTimeSlices(coll, wext)
+	ζ★ₛ = getTimeSlices(coll, vl)
 	v₁★ ./= 2∫(coll, ζ★ₛ, ζₛ, 1)
 
 	v₁ₛ = getTimeSlices(coll, vcat(v₁,0))
@@ -483,7 +483,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 	# first, get the bifurcation point parameters
 	sh = pbwrap.prob
 	@assert sh isa ShootingProblem "Something is wrong. Please open an issue on the website"
-	verbose && println("━"^53*"\n──> Neimark-Sacker normal form computation")
+	verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
 	# bifurcation point
 	bifpt = br.specialpoint[ind_bif]

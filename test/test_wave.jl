@@ -67,11 +67,11 @@ Fcgl(u, p, t = 0) = Fcgl!(similar(u), u, p)
 end
 ####################################################################################################
 n = 50
-	l = pi
+l = pi
 
-	Δ, D = Laplacian1D(n, l, :Periodic)
-	par_cgl = (r = 0.0, μ = 0.5, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), Db = blockdiag(D, D), γ = 0.0, δ = 1.0, N = 2n)
-	sol0 = zeros(par_cgl.N)
+Δ, D = Laplacian1D(n, l, :Periodic)
+par_cgl = (r = 0.0, μ = 0.5, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), Db = blockdiag(D, D), γ = 0.0, δ = 1.0, N = 2n)
+sol0 = zeros(par_cgl.N)
 
 # _sol0 = zeros(2n)
 # _J0 = Jcgl(_sol0, par_cgl)

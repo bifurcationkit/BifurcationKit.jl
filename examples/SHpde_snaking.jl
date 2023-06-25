@@ -37,9 +37,9 @@ prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.λ); J = Jac_sp,
 	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
 ####################################################################################################
 optnew = NewtonPar(verbose = false, tol = 1e-12)
-	# allocations 357, 0.8ms
-	sol1 = @time newton(prob, optnew)
-	Plots.plot(X, sol1.u)
+# allocations 357, 0.8ms
+sol1 = @time newton(prob, optnew)
+Plots.plot(X, sol1.u)
 
 opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,
 		newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMax = 1.,
@@ -63,7 +63,7 @@ kwargsC = (verbosity = 3,
 	callbackN = cb
 	)
 
-brflat = @time continuation(prob, PALC(), opts; kwargsC...)
+brflat = @time continuation(prob, PALC(), opts; kwargsC..., verbosity = 0)
 
 plot(brflat, putspecialptlegend = false)
 ####################################################################################################

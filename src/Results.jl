@@ -23,12 +23,13 @@ $(TYPEDFIELDS)
 
 # Associated methods
 - `length(br)` number of the continuation steps
+- `show(br)` display information about the branch
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
-- `br[k+1]` gives information about the k-th step. A typical run yields the following
 - `getNormalForm(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`
 - `getLens(br)` return the parameter axis used for the branch
 - `getLenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD)
+- `br[k+1]` gives information about the k-th step. A typical run yields the following
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
@@ -53,14 +54,17 @@ julia> br.param
 - `getParams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
 - `setParam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`
 - `getLens(br)` get the lens used for the computation of the branch
+- `continuation(br, ind)` performs automatic branch switching (aBS) from ind-th bifurcation point. Typically branching from equilibrium to equilibrium, or periodic orbit to periodic orbit.
+- `continuation(br, ind, lens2)` performs two parameters `(getLens(br), lens2)` continuation of the  ind-th bifurcation point.
+- `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
 	"holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
-  - `itlinear` total number of linear iterations during corrector
+  - `itlinear` total number of linear iterations during newton (corrector)
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
-  - `n_imag` number of eigenvalues with positive real part and non zero imaginary part for each continuation step (to detect Hopf bifurcation).
-  - `stable`  stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
+  - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
+  - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)"
 	branch::StructArray{Tbr}
 
@@ -70,16 +74,16 @@ julia> br.param
 	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
 	sol::Tsol
 
-	"The parameters used for the call to `continuation` which produced this branch. Must be a ContinationPar"
+	"The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)"
 	contparams::Tparc
 
 	"Type of solutions computed in this branch."
 	kind::Tkind = EquilibriumCont()
 
-	"Structure associated to the functional, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
+	"Bifurcation problem used to compute the branch, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
 	prob::Tprob = nothing
 
-	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a description of the fields."
+	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a list of special points."
 	specialpoint::Vector{Biftype}
 
 	"Continuation algorithm used for the computation of the branch"
@@ -115,11 +119,22 @@ getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 setParam(br::AbstractBranchResult, p0) = setParam(br.prob, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvecs = haseigenvector(br) ? br.eig[k].eigenvecs : nothing)
 Base.lastindex(br::ContResult) = length(br)
+
+"""
+$(SIGNATURES)
+
+Return the solution for the ind-th point stored in br.sol
+"""
 @inline function getSolx(br::ContResult, ind::Int)
 	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
 	return br.sol[ind].x
 end
 
+"""
+$(SIGNATURES)
+
+Return the parameter for the ind-th point stored in br.sol
+"""
 @inline function getSolp(br::ContResult, ind::Int)
 	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
 	return br.sol[ind].p
@@ -143,9 +158,9 @@ Return the eigenvalues of the ind-th continuation step. `verbose` is used to tel
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
 	if verbose
-		println("--> For ", getLensSymbol(br), " = ", br.branch[ind].param)
-		println("--> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-		println("--> Eigenvalues for continuation step ", br.eig[ind+1].step)
+		println("──> For ", getLensSymbol(br), " = ", br.branch[ind].param)
+		println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
+		println("──> Eigenvalues for continuation step ", br.eig[ind+1].step)
 	end
 	~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
 	br.eig[ind+1].eigenvals

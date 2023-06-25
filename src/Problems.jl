@@ -17,14 +17,13 @@ $(TYPEDEF)
 
 Structure to hold the vector field and its derivatives. It should rarely be called directly. Also, in essence, it is very close to `SciMLBase.ODEFunction`.
 
-
 ## Fields
 
 $(TYPEDFIELDS)
 
 ## Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
-- `jacobian(pb::BifFunction, x, p)` calls  `pb.J(x, p)`
+- `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
 - `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x,p,dx)`
 - etc
 """
@@ -94,6 +93,7 @@ $(TYPEDFIELDS)
 
 ## Methods
 
+- `reMake(pb; kwargs...)` modify a bifurcation problem
 - `getu0(pb)` calls `pb.u0`
 - `getParams(pb)` calls `pb.params`
 - `getLens(pb)` calls `pb.lens`
@@ -104,8 +104,8 @@ $(TYPEDFIELDS)
 - `isSymmetric(pb)` calls `isSymmetric(pb.prob)`
 
 ## Constructors
-
-- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian.
+- `BifurcationProblem(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
+- `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`.
 
 """
 			struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec} <: AbstractAllJetBifProblem

@@ -665,6 +665,7 @@ end
 
 # this function updates the section during the continuation run
 @views function updateSection!(prob::PeriodicOrbitOCollProblem, x, par; stride = 0)
+	@debug "Update section Collocation"
 	# update the reference point
 	prob.xπ .= 0
 

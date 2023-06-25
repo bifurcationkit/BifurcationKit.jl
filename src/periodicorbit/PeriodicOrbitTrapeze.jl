@@ -648,6 +648,7 @@ end
 
 # this function updates the section during the continuation run
 @views function updateSection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
+	@debug "Update section TRAP"
 	M, N = size(prob)
 	xc = getTimeSlices(prob, x)
 	T = extractPeriodFDTrap(prob, x)

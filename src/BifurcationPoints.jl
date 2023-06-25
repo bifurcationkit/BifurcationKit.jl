@@ -8,24 +8,34 @@ istranscritical(bp::AbstractBranchPoint) = false
 """
 $(TYPEDEF)
 
-Structure to record specials point on the curve. There are two types of specials point that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
+Structure to record special points on a curve. There are two types of special points that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
 
 $(TYPEDFIELDS)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
-	"Description of the special point. In case of Events, this field records the user passed named to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be the following:
+	"Description of the special points. In case of Events, this field records the user passed named to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following:
 
     - :bp Bifurcation point, simple eigenvalue crossing the imaginary axis
     - :fold Fold point
     - :hopf Hopf point
     - :nd not documented bifurcation point. Detected by multiple eigenvalues crossing. Generally occurs in problems with symmetries or in cases where the continuation step size is too large and merge two different bifurcation points.
     - :cusp Cusp point
-    - :gh Generalized Hopf point
+    - :gh Generalized Hopf point (also called Bautin point)
     - :bt Bogdanov-Takens point
     - :zh Zero-Hopf point
     - :hh Hopf-Hopf point
     - :ns Neimark-Sacker point
     - :pd Period-doubling point
+    - :R1 Strong resonance 1:1 of periodic orbits
+    - :R2 Strong resonance 1:2 of periodic orbits
+    - :R3 Strong resonance 1:3 of periodic orbits
+    - :R4 Strong resonance 1:4 of periodic orbits
+    - :foldFlip Fold / Flip of periodic orbits
+    - :foldNS Fold / Neimark-Sacker of periodic orbits
+    - :pdNS  Period-Doubling / Neimark-Sacker of periodic orbits
+    - :gpd Generalized Period-Doubling of periodic orbits
+    - :nsns Double Neimark-Sacker of periodic orbits
+    - :ch Chenciner bifurcation of periodic orbits
 	"
 	type::Symbol = :none
 
@@ -62,7 +72,7 @@ $(TYPEDFIELDS)
 	"Precision in the location of the special point"
 	precision::T = -1
 
-	"Interval containing the special point"
+	"Interval parameter containing the special point"
 	interval::Tuple{T, T} = (0, 0)
 end
 
@@ -98,7 +108,7 @@ SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, i
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
 	if bp.type == :none ; return; end
 	if bp.type == :endpoint
-		@printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                     step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
+		@printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                      step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
 		return
 	end
 	if bp.status == :converged

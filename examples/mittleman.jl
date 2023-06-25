@@ -158,7 +158,7 @@ code = ()
 	title!("#branches = $(size(getBranch(diagram, code)))")
 	# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
-plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false, vars = (:param, :x))
+plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false, vars = (:param, :n2))
 
 getBranch(diagram, (2,1)) |> plot
 
@@ -211,7 +211,6 @@ res = BK.continuation(br, 2,
 	)
 
 plot(res..., br ;plotfold= false)
-
 
 δp = 0.005
 	deflationOp = DeflationOperator(2, 1.0, [zeros(2)])

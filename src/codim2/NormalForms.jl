@@ -545,15 +545,15 @@ function bogdanovTakensNormalForm(_prob,
 
 	# Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
 	###########################
-	vext = real.(ζs[1])
+	vr = real.(ζs[1])
 	Lᵗ = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
 	_λ★, _ev★, _ = eigsolver(Lᵗ, nev)
 	Ivp = sortperm(_λ★, by = abs)
 	# in case the prob is HopfMA, we real it
 	zerov = real.(prob_ma.zero)
-	wext = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
-	q0, = bls(L, wext, vext, zero(𝒯), zerov, one(𝒯))
-	p1, = bls(Lᵗ, vext, wext, zero(𝒯), zerov, one(𝒯))
+	vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+	q0, = bls(L, vl, vr, zero(𝒯), zerov, one(𝒯))
+	p1, = bls(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
 	q1, = bls(L, p1, q0, zero(𝒯), q0, zero(𝒯))
 	p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1, zero(𝒯))
 	# we want

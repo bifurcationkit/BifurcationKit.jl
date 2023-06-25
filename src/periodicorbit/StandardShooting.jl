@@ -99,6 +99,7 @@ end
 
 # this function updates the section during the continuation run
 function updateSection!(sh::ShootingProblem, x, par)
+	@debug "Update section shooting"
 	xt = getTimeSlices(sh, x)
 	@views update!(sh.section, vf(sh.flow, xt[:, 1], par), xt[:, 1])
 	sh.section.normal ./= norm(sh.section.normal)
