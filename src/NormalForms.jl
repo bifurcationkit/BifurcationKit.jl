@@ -133,7 +133,7 @@ function getNormalForm1d(prob::AbstractBifurcationProblem,
 	b3 = dot(b3v, ζ★)
 	verbose && println("└─── b3/6 = ", b3/6)
 
-	bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01), :NA)
+	bp = (x0, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01), :NA)
 	if abs(a) < tolFold
 		return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
 	else
