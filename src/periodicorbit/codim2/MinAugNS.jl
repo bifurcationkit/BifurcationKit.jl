@@ -320,7 +320,7 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		prob_ns = iter.prob.prob
 		pbwrap = prob_ns.prob_vf
 
-		ns0 = NeimarkSacker(copy(x), p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
+		ns0 = NeimarkSacker(copy(x), nothing, p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
 		# test if we jumped to PD branch
 		pdjump = abs(abs(ω) - pi) < 100options_newton.tol
 		if ~pdjump && pbwrap.prob isa ShootingProblem

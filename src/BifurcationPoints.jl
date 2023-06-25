@@ -172,6 +172,13 @@ type(bp::Transcritical) = :Transcritical
 type(bp::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
+function printnf1d(io, nf; prefix = "")
+	println(io, prefix * "┌─ a  = ", nf.a)
+	println(io, prefix * "├─ b1 = ", nf.b1)
+	println(io, prefix * "├─ b2 = ", nf.b2)
+	println(io, prefix * "└─ b3 = ", nf.b3)
+end
+
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
 	printstyled(io, type(bp), color=:cyan, bold = true)
 	println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
@@ -179,13 +186,6 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint)
 	if ~isnothing(bp.nf)
 		printnf1d(io, bp.nf)
 	end
-end
-
-function printnf1d(io, nf; prefix = "")
-	println(io, prefix * "┌─ a  = ", nf.a)
-	println(io, prefix * "├─ b1 = ", nf.b1)
-	println(io, prefix * "├─ b2 = ", nf.b2)
-	println(io, prefix * "└─ b3 = ", nf.b3)
 end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
@@ -378,8 +378,8 @@ end
 type(bp::NeimarkSacker) = :NeimarkSacker
 
 function Base.show(io::IO, bp::NeimarkSacker)
-	print(io, bp.type, " - ")
-	println(io, type(bp), " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+	printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
+	println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
 	println(io, "Frequency θ ≈ ", abs(bp.ω))
 	println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
 	println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")

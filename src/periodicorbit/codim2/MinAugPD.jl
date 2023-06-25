@@ -319,7 +319,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
 		ζ★ = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, n)[1]
 		ζ★ ./= norm(ζ★)
 		#############
-		pd0 = PeriodDoubling(copy(x), p1, newpar, lens1, nothing, nothing, nothing, :none)
+		pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
 		if pbwrap.prob isa ShootingProblem
 			pd = perioddoublingNormalForm(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
 			prob_pd.GPD = pd.nf.nf.b3

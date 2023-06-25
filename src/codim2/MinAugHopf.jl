@@ -442,7 +442,7 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
 		ζ★ ./= dot(ζ, ζ★)
 	
-		hp = Hopf(x, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
+		hp = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
 		hopfNormalForm(prob_vf, hp, options_newton.linsolver, verbose = false)
 
 		# lyapunov coefficient
