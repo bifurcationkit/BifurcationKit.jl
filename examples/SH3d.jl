@@ -1,7 +1,7 @@
 using Revise, Parameters, KrylovKit
 using GLMakie
 using BifurcationKit
-using LinearAlgebra, SparseArrays, LinearMaps, DiffEqOperators
+using LinearAlgebra, SparseArrays, DiffEqOperators, LinearMaps
 const BK = BifurcationKit
 
 # GLMakie.inline!(true)
@@ -68,9 +68,9 @@ sol0 = [(cos(x) .* cos(y )) for x in X, y in Y, z in Z]
 	sol0 .*= 1.7
 
 # parameters for PDE
-Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann)
-L1 = (I + Δ)^2
-par = (l = 0.1, ν = 1.2, L1 = L1)
+Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann);
+L1 = (I + Δ)^2;
+par = (l = 0.1, ν = 1.2, L1 = L1);
 
 Pr = cholesky(L1)
 using SuiteSparse
@@ -107,9 +107,10 @@ prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@lens _.l),
 	issymmetric = true)
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, linsolver = @set ls.verbose = 0)
-	@set! optnew.eigsolver = eigSH3d
-	sol_hexa = @time newton(prob, optnew)
-	println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
+@set! optnew.eigsolver = eigSH3d
+@set! optnew.linsolver = DefaultLS()
+sol_hexa = @time newton(prob, optnew)
+println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 
 contour3dMakie(sol0)
 contour3dMakie(sol_hexa.u)

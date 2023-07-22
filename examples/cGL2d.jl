@@ -1,7 +1,7 @@
 using Revise
-	using DiffEqOperators, ForwardDiff, IncompleteLU
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
-	const BK = BifurcationKit
+using DiffEqOperators, ForwardDiff, IncompleteLU
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
+const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)
 
@@ -94,14 +94,14 @@ end
 ####################################################################################################
 factor = 1
 Nx = 41*factor
-	Ny = 21*factor
-	n = Nx*Ny
-	lx = pi
-	ly = pi/2
+Ny = 21*factor
+n = Nx*Ny
+lx = pi
+ly = pi/2
 
-	Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
-	par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), γ = 0.)
-	sol0 = zeros(2Nx, Ny)
+Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), γ = 0.)
+sol0 = zeros(2Nx, Ny)
 
 # we group the differentials together
 prob = BK.BifurcationProblem(Fcgl, vec(sol0), par_cgl, (@lens _.r); J = Jcgl)
@@ -118,7 +118,7 @@ eigls = EigArpack(1.0, :LM)
 # norm(J0 - J1, Inf)
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 6)
-	br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
+br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
 hopfpt = getNormalForm(br, 2)
@@ -163,7 +163,7 @@ brfold = continuation(br_hopf, indbt, setproperties(br_hopf.contparams; detectBi
 br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
 plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
-getNormalForm(brfold, 4; autodiff = false)
+getNormalForm(brfold, 4; autodiff = false, nev = 15)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -215,17 +215,17 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2
 			verbosity = 2,	plot = true,
 			plotSolution = (x ;kwargs...) -> plotPeriodicPOTrap(x, M, Nx, Ny; kwargs...),
 			recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
-####################################################################################################
+###################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
-Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
+Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
 
-Precilu = @time ilu(Jpo, τ = 0.005) # 2 sec
+Precilu = @time ilu(Jpo, τ = 0.005); # 2 sec
 # P = @time lu(Jpo) # 97 sec
 
 # @time Jpo \ rand(ls.N) # 97 sec
 
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
-	ls(Jpo, rand(ls.N))
+ls(Jpo, rand(ls.N))
 
 # ls = GMRESKrylovKit(verbose = 0, Pl = Precilu, rtol = 1e-3)
 	# @time ls(Jpo, rand(size(Jpo,1)))
@@ -237,7 +237,7 @@ opt_po = @set opt_newton.verbose = true
 outpo_f = @time newton(poTrapMF, orbitguess_f, opt_po; normN = norminf,
 			# callback = (x, f, J, res, iteration, options) -> (println("--> amplitude = ", BK.amplitude(x, Nx*Ny, M; ratio = 2));true)
 			)
-	BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, Nx*Ny, M; ratio = 2),"\n")
+BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, Nx*Ny, M; ratio = 2),"\n")
 plot();BK.plotPeriodicPOTrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)

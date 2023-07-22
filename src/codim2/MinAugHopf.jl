@@ -174,6 +174,10 @@ residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
 
 jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
+
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
+
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)
@@ -284,7 +288,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `options_cont` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
-
+- `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `computeEigenElements = false` whether to compute eigenelements. If `options_cont.detecttEvent>0`, it allows the detection of ZH, HH points.
@@ -341,6 +345,10 @@ function continuationHopf(prob_vf, alg::AbstractContinuationAlgorithm,
 		prob_h = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
 		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
 	elseif jacobian_ma == :finiteDifferencesMF
+		hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
+		prob_h = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+	elseif jacobian_ma == :finiteDifferences
 		hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
 		prob_h = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
 		opt_hopf_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver

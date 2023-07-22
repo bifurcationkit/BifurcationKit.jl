@@ -30,8 +30,8 @@ function getAdjointBasis(L★, λ::Number, eigsolver; nev = 3, verbose = false)
 	λ★, ev★, cv, = eigsolver(L★, nev)
 	~cv && @warn "Eigen Solver did not converge"
 	I = argmin(abs.(λ★ .- λ))
-	verbose && (println("──> left eigenvalues = "); display(λ★))
-	verbose && println("──> right eigenvalue = ", λ, "\n──>  left eigenvalue = ", λ★[I])
+	verbose && (println("┌── left eigenvalues = "); display(λ★))
+	verbose && println( "├── right eigenvalue = ", λ, "\n└──  left eigenvalue = ", λ★[I])
 	abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
 	ζ★ = geteigenvector(eigsolver, ev★, I)
 	return copy(ζ★), λ★[I]

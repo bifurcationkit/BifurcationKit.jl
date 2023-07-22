@@ -76,7 +76,7 @@ bt = getNormalForm(sn_codim2, 2; autodiff = true)
 @test isapprox(abs(bt.nfsupp.a1), abs( -0.8618 ); rtol = 1e-3)
 @test isapprox(abs(bt.nfsupp.b1), abs( -7.1176 ); rtol = 1e-3)
 
-# on est tres proche de bT, arreter event location a 1e-12
+# very cloe to BT, stop event location at 1e-12
 brh = (@set br.alg.tangent = Bordered())
 hp_codim2 = continuation(brh, 2, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 1, ds = -0.0001, dsmax = 0.02, dsmin = 1e-4, nInversion = 12, maxSteps = 150, maxBisectionSteps = 35 ) ;
 	normC = norminf,

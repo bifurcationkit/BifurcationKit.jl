@@ -39,7 +39,7 @@ $(TYPEDFIELDS)
 struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
 	"solution"
 	u::Tu
-	"nonlinear problem"
+	"nonlinear problem, typically a `BifurcationProblem`"
 	prob::Tprob
 	"sequence of residuals"
 	residuals::Tres

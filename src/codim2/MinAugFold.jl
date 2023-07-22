@@ -162,10 +162,13 @@ end
 @inline getDelta(foldpb::FoldMAProblem) = getDelta(foldpb.prob)
 @inline isSymmetric(foldpb::FoldMAProblem) = isSymmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
+jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
+
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
-jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
+
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences( z -> foldpb.prob(z, p), x; δ = 1e-8)
 
 jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
@@ -275,6 +278,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
+- `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `updateMinAugEveryStep` update vectors `a, b` in Minimally Formulation every `updateMinAugEveryStep` steps
 - `computeEigenElements = false` whether to compute eigenelements. If `options_cont.detecttEvent>0`, it allows the detection of ZH points.
@@ -331,6 +335,10 @@ function continuationFold(prob, alg::AbstractContinuationAlgorithm,
 	elseif jacobian_ma == :finiteDifferencesMF
 		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
 		prob_f = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+		opt_fold_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+	elseif jacobian_ma == :finiteDifferences
+		foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
+		prob_f = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
 		opt_fold_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	else
 		prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)

@@ -1,7 +1,7 @@
 using Revise
-	using DiffEqOperators, ForwardDiff, DifferentialEquations
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, LoopVectorization
-	const BK = BifurcationKit
+using DiffEqOperators, ForwardDiff, DifferentialEquations
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, LoopVectorization
+const BK = BifurcationKit
 
 norminf(x) = norm(x, Inf)
 
@@ -106,7 +106,7 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, pMax = 2., detectBifurcation = 3, nev = 15, newtonOptions = (@set opt_newton.verbose = false), nInversion = 6)
 
-	br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
+br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 
 plot(br)
 ####################################################################################################

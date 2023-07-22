@@ -1,8 +1,8 @@
 using Revise
-	using SparseArrays, LinearAlgebra, DiffEqOperators, Parameters
-	using BifurcationKit
-	using Plots
-	const BK = BifurcationKit
+using SparseArrays, LinearAlgebra, DiffEqOperators, Parameters
+using BifurcationKit
+using Plots
+const BK = BifurcationKit
 ################################################################################
 # case of the SH equation
 N = 200

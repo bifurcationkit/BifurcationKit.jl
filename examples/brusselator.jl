@@ -5,6 +5,7 @@ using Revise
 f1(u, v) = u * u * v
 norminf(x) = norm(x, Inf)
 
+# for Plots.jl
 function plotsol(x; kwargs...)
 	@show typeof(x)
 	N = div(length(x), 2)
@@ -90,7 +91,11 @@ n = 500
 # different parameters to define the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l); J = Jbru_sp, plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )), recordFromSolution = (x, p) -> x[div(n,2)])
+prob = BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l); 
+		J = Jbru_sp, 
+		#plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
+		plotSolution = (ax, x, p) -> plotsol(ax, x), 
+		recordFromSolution = (x, p) -> x[div(n,2)])
 # # parameters for an isola of stationary solutions
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
 # 	xspace = LinRange(0, par_bru.l, n)
@@ -109,11 +114,11 @@ prob = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l); J = Jbru_sp, plot
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-20, maxBisectionSteps = 30)
 
-	br = @time continuation(
-		prob, PALC(),
-		opts_br_eq, verbosity = 0,
-		plot = true,
-		normC = norminf)
+br = @time continuation(
+	prob, PALC(),
+	opts_br_eq, verbosity = 0,
+	plot = true,
+	normC = norminf)
 ####################################################################################################
 hopfpt = getNormalForm(br, 1; verbose = true)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
@@ -142,11 +147,12 @@ hopfpoint = @time newton(
 if 1==1
 	br_hopf = @time continuation(
 		br, ind_hopf, (@lens _.β),
-		ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew); plot = false,
+		ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew);
 		updateMinAugEveryStep = 1,
 		startWithEigen = true,
 		detectCodim2Bifurcation = 2,
 		jacobian_ma = :minaug,
+		plot = true,
 		verbosity = 2, normC = norminf, bothside = true)
 end
 
@@ -191,8 +197,8 @@ outpo_f = @time newton(poTrap,
 		normN = norminf,
 		callback = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true)
 		)
-	BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, n, M; ratio = 2),"\n")
-	BK.plotPeriodicPOTrap(outpo_f.u, n, M; ratio = 2)
+BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, n, M; ratio = 2),"\n")
+BK.plotPeriodicPOTrap(outpo_f.u, n, M; ratio = 2)
 
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
 opt_po = @set opt_po.eigsolver = DefaultEig()

@@ -204,6 +204,9 @@ residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
 jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 
 jacobian(nspb::NSMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
+
+jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences(z -> nspb.prob(z, p), x; δ = 1e-8)
+
 jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 function continuationNS(prob, alg::AbstractContinuationAlgorithm,
@@ -241,6 +244,10 @@ function continuationNS(prob, alg::AbstractContinuationAlgorithm,
 		nspointguess = vcat(nspointguess.u, nspointguess.p...)
 		prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
 		opt_ns_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+	elseif jacobian_ma == :finiteDifferences
+		nspointguess = vcat(nspointguess.u, nspointguess.p...)
+		prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
+		opt_ns_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
 	elseif jacobian_ma == :finiteDifferencesMF
 		nspointguess = vcat(nspointguess.u, nspointguess.p...)
 		prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)

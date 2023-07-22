@@ -1,7 +1,7 @@
 using Revise
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
-	const BK = BifurcationKit
-	using LoopVectorization
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
+const BK = BifurcationKit
+using LoopVectorization
 
 f1(u, v) = u^2 * v
 norminf(x) = norm(x, Inf)
@@ -92,7 +92,8 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 	sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 probBif = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
 		J = Jbru_sp,
-		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )), recordFromSolution = (x, p) -> x[div(n,2)])
+		plotSolution = (x, p; kwargs...) -> (plotsol(x; label="", kwargs... )),
+		recordFromSolution = (x, p) -> x[div(n,2)])
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
 # 	xspace = LinRange(0, par_bru.l, n)
 # 	sol0 = vcat(		par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
@@ -110,11 +111,11 @@ probBif = BK.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, pMax = 1.7, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), nInversion = 4)
 
-	br = @time continuation(
-		probBif, PALC(),
-		opts_br_eq, verbosity = 0,
-		plot = false,
-		recordFromSolution = (x, p) -> x[n÷2], normC = norminf)
+br = @time continuation(
+	probBif, PALC(),
+	opts_br_eq, verbosity = 0,
+	plot = false,
+	recordFromSolution = (x, p) -> x[n÷2], normC = norminf)
 #################################################################################################### Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1

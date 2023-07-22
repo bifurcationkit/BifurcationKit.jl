@@ -345,7 +345,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 
 	if converged(state)
 		if verbose
-			verbose1 && printstyled("──> Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
+			verbose1 && printstyled("──▶ Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
 			print("Parameter ", getLensSymbol(it))
 			@printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
 		end
@@ -354,7 +354,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
 		if computeEigenElements(it)
 			# this computes eigen-elements, store them in state and update the stability indices in state
 			it_eigen = computeEigenvalues!(it, state)
-			verbose1 && printstyled(color=:green,"──> Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
+			verbose1 && printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
 		end
 		state.step += 1
 	else
@@ -403,7 +403,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 				# the boundary of the parameter domain, we disable bisection because it would
 				# lead to infinite looping. Indeed, clamping messes up the `ds`
 				if contParams.detectBifurcation > 2 && ~isOnBoundary(it, getp(state))
-					verbose1 && printstyled(color = :red, "──> Bifurcation detected before p = ", getp(state), "\n")
+					verbose1 && printstyled(color = :red, "──▶ Bifurcation detected before p = ", getp(state), "\n")
 					# locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
 					status, interval = locateBifurcation!(it, state, it.verbosity > 2)
 				end
@@ -419,8 +419,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 			if isEventActive(it)
 				# check if an event occurred between the 2 continuation steps
 				eveDetected = updateEvent!(it, state)
-				verbose1 && printstyled(color = :blue, "──> Event values: ", state.eventValue[2], "\n"*" "^14*"──> ", state.eventValue[1],"\n")
-				eveDetected && (verbose && printstyled(color=:red, "──> Event detected before p = ", getp(state), "\n"))
+				verbose1 && printstyled(color = :blue, "──▶ Event values: ", state.eventValue[2], "\n"*" "^14*"──▶ ", state.eventValue[1],"\n")
+				eveDetected && (verbose && printstyled(color=:red, "──▶ Event detected before p = ", getp(state), "\n"))
 				# save the event if detected and / or use bisection to locate it precisely
 				if eveDetected
 					_T = eltype(it); status = :guess; intervalevent = (_T(0),_T(0))

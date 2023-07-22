@@ -22,8 +22,8 @@ z0 = [0.238616, 0.982747, 0.367876 ]
 prob = BK.BifurcationProblem(TMvf, z0, par_tm, (@lens _.E0); recordFromSolution = (x, p) -> (E = x[1], x = x[2], u = x[3]),)
 
 opts_br = ContinuationPar(pMin = -10.0, pMax = -0.9, ds = 0.04, dsmax = 0.125, nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
-	opts_br = @set opts_br.newtonOptions.verbose = false
-	br = continuation(prob, PALC(tangent=Bordered()), opts_br;
+opts_br = @set opts_br.newtonOptions.verbose = false
+br = continuation(prob, PALC(tangent=Bordered()), opts_br;
 	plot = true, normC = norminf)
 
 plot(br, plotfold=false, markersize=4, legend=:topleft)
@@ -37,20 +37,21 @@ optn_po = NewtonPar(verbose = true, tol = 1e-8,  maxIter = 8)
 opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.001, dsmin = 1e-4, pMax = 0., pMin=-5., maxSteps = 120, newtonOptions = (@set optn_po.tol = 1e-8), nev = 3, tolStability = 1e-6, detectBifurcation = 2, plotEveryStep = 20, saveSolEveryStep=1)
 
 # arguments for periodic orbits
+function plotSolution(x, p; k...)
+	xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+	@show size(xtt[:,:]) maximum(xtt[1,:])
+	plot!(xtt.t, xtt[1,:]; label = "E", k...)
+	plot!(xtt.t, xtt[2,:]; label = "x", k...)
+	plot!(xtt.t, xtt[3,:]; label = "u", k...)
+	plot!(br; subplot = 1, putspecialptlegend = false)
+end
 args_po = (	recordFromSolution = (x, p) -> begin
 		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
 		return (max = maximum(xtt[1,:]),
 				min = minimum(xtt[1,:]),
 				period = getPeriod(p.prob, x, p.p))
 	end,
-	plotSolution = (x, p; k...) -> begin
-		xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
-		@show size(xtt[:,:]) maximum(xtt[1,:])
-		plot!(xtt.t, xtt[1,:]; label = "E", k...)
-		plot!(xtt.t, xtt[2,:]; label = "x", k...)
-		plot!(xtt.t, xtt[3,:]; label = "u", k...)
-		plot!(br; subplot = 1, putspecialptlegend = false)
-		end,
+	plotSolution = plotSolution,
 	normC = norminf)
 
 Mt = 200 # number of sections
@@ -62,7 +63,7 @@ br_potrap = continuation(br, 4, opts_po_cont,
 	)
 
 plot(br, br_potrap, markersize = 3)
-	plot!(br_potrap.param, br_potrap.min, label = "")
+plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
 # based on collocation
 hopfpt = getNormalForm(br, 4)

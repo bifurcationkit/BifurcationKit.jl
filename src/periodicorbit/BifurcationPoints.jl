@@ -44,14 +44,15 @@ type(bp::PeriodDoublingPO) = :PeriodDoubling
 type(bp::BranchPointPO) = :BranchPoint
 
 function Base.show(io::IO, pd::PeriodDoublingPO)
-	println(io, "Period-Doubling bifurcation point of periodic orbit at\n┌─ ", getLensSymbol(pd.nf.lens)," ≈ $(pd.nf.p)")
+	printstyled(io, "Period-Doubling", color=:cyan, bold = true)
+	println(io, " bifurcation point of periodic orbit at\n┌─ ", getLensSymbol(pd.nf.lens)," ≈ $(pd.nf.p)")
 	println(io, "├─ Period = ", abs(pd.T), " -> ", 2abs(pd.T))
 	println(io, "├─ Problem: ", typeof(pd.prob).name.name)
 	if pd.prob isa ShootingProblem
 		show(io, pd.nf)
 	else
 		if ~pd.prm
-			println(io, "└─ Normal form:\n∂τ = 1 + a⋅ξ²\n∂ξ = c⋅ξ³\n", pd.nf.nf)
+			println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅ξ²\n├\t∂ξ = c⋅ξ³\n└─ ", pd.nf.nf)
 		else
 			show(io, pd.nf)
 		end
