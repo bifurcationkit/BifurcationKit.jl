@@ -1,74 +1,4 @@
 using RecipesBase
-using Setfield
-getLensSymbol(lens) = :p
-getLensSymbol(lens::Setfield.PropertyLens{F}) where F = F
-getLensSymbol(lens::Setfield.ComposedLens) = getLensSymbol(lens.inner)
-getLensSymbol(::Setfield.IdentityLens) = :p
-getLensSymbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
-
-function getLensSymbol(lens1::Lens, lens2::Lens)
-	p1 = getLensSymbol(lens1)
-	p2 = getLensSymbol(lens2)
-	out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
-end
-
-function getPlotVars(contres, vars)
-	if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}
-		return vars
-	else
-		return :param, getfirstusertype(contres)
-	end
-end
-
-# https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl
-# we don't need to have different colors. Indeed, some bifurcations never occurs together codim1 ∩ codim2 = ∅
-const colorbif = Dict(:fold => :black,
-						:hopf => :red,
-						:bp => :blue,
-						:nd => :magenta,
-						:none => :yellow,
-						:ns => :orange,
-						:pd => :green,
-						:bt => :red,
-						:cusp => :sienna1,
-						:gh => :brown,
-						:zh => :burlywood2,
-						:hh => :green,
-						:R => :chartreuse4,
-						:R1 => :chartreuse4,
-						:R2 => :chartreuse3,
-						:R3 => :chartreuse2,
-						:R4 => :chartreuse1,
-						:foldFlip => :blue4,
-						:ch => :red3,
-						:foldNS => :cyan3,
-						:flipNS => :darkgoldenrod,
-						:pdNS => :maroon,
-						:nsns => :darkorchid,
-						:gpd => :darksalmon,
-						:user => :darkgoldenrod)
-
-function getColor(sp)
-	if sp in keys(colorbif)
-		return colorbif[sp]
-	else
-		return :darkgoldenrod
-	end
-end
-
-function getAxisLabels(ind1, ind2, br)
-	xguide = ""
-	yguide = ""
-	if ind1 == 1 || ind1 == :param
-		xguide = String(getLensSymbol(br))
-	elseif ind1 isa Symbol
-		xguide = String(ind1)
-	end
-	if ind2 isa Symbol
-		yguide = String(ind2)
-	end
-	return xguide, yguide
-end
 
 # allow to plot a single branch
 RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
@@ -81,7 +11,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 	branchlabel = "",
 	linewidthunstable = 1.0,
 	linewidthstable = 2linewidthunstable,
-	plotcirclesbif = true,
+	plotcirclesbif = false,
 	applytoY = identity,
 	applytoX = identity)
 	# Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
@@ -217,7 +147,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
 							branchlabel = "",
 							linewidthunstable = 1.0,
 							linewidthstable = 2linewidthunstable,
-							plotcirclesbif = true,
+							plotcirclesbif = false,
 							applytoY = identity,
 							applytoX = identity)
 	for (id, res) in pairs(brs.branches)
@@ -236,63 +166,35 @@ RecipesBase.@recipe function Plots(brs::DCResult;
 		end
 	end
 end
-####################################################################################################
-function filterBifurcations(bifpt)
-	# this function filters Fold points and Branch points which are located at the same/previous/next point
-	length(bifpt) == 0 && return bifpt
-	res = [(type = :none, idx = 1, param = 1., printsol = bifpt[1].printsol, status = :guess)]
-	ii = 1
-	while ii <= length(bifpt) - 1
-		if (abs(bifpt[ii].idx - bifpt[ii+1].idx) <= 1) && bifpt[ii].type ∈ [:fold, :bp]
-			if (bifpt[ii].type == :fold && bifpt[ii].type == :bp) ||
-				(bifpt[ii].type == :bp && bifpt[ii].type == :fold)
-				push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
-			else
-				push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
-				push!(res, (type = bifpt[ii+1].type, idx = bifpt[ii+1].idx, param = bifpt[ii+1].param, printsol = bifpt[ii+1].printsol,status = bifpt[ii].status) )
-			end
-			ii += 2
-		else
-			push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
-			ii += 1
-		end
-	end
-	0 < ii <= length(bifpt) &&	push!(res, (type = bifpt[ii].type, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )
 
-	return res[2:end]
-end
-####################################################################################################
-# plot recipes for the bifurcation diagram
-RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
-	for b in bd
-		@series begin
-			level --> level
-			code --> code
-			b
-		end
-	end
-end
+"""
+Plot the branch of solutions during the continuation
+"""
+function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
+	l = computeEigenElements(contparms) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
+	plot(layout = l )
 
-RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
-	if ~hasbranch(bd); return; end
-	_bd = getBranch(bd, code)
-	@series begin
-		level --> level
-		code --> ()
-		_bd.child
-	end
-	# !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
-	if level[1] <= _bd.level <= level[2]
-		@series begin
-			_bd.γ
-		end
-	end
-end
+	plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
+		xlabel = getLensSymbol(contres),
+		ylabel = getfirstusertype(contres),
+		label = "", plotfold = false, subplot = 1)
 
-# this might well be type piracy
-# TODO try to remove it
-RecipesBase.@recipe function f(bd::Nothing)
-	nothing
+	plotuserfunction(sol.u, sol.p; subplot = 3)
+
+	# put arrow to indicate the order of computation
+	length(contres) > 1 &&	plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
+
+	if computeEigenElements(contparms)
+		eigvals = contres.eig[end].eigenvals
+		scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
+		# add stability boundary
+		maxIm = maximum(imag, eigvals)
+		minIm = minimum(imag, eigvals)
+		plot!([0, 0], [maxIm, minIm], subplot=4, label = "", color = :blue)
+	end
+
+	plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = getLensSymbol(contres), label = "", subplot = 2) |> display
+
 end
 
 ####################################################################################################
@@ -334,6 +236,39 @@ function plotPeriodicShooting(x, M; kwargs...)
 	plot();plotPeriodicShooting!(x, M; kwargs...)
 end
 ####################################################################################################
+# plot recipes for the bifurcation diagram
+RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
+	for b in bd
+		@series begin
+			level --> level
+			code --> code
+			b
+		end
+	end
+end
+
+RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
+	if ~hasbranch(bd); return; end
+	_bd = getBranch(bd, code)
+	@series begin
+		level --> level
+		code --> ()
+		_bd.child
+	end
+	# !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
+	if level[1] <= _bd.level <= level[2]
+		@series begin
+			_bd.γ
+		end
+	end
+end
+
+# this might well be type piracy
+RecipesBase.@recipe function f(bd::Nothing)
+	nothing
+end
+
+####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
 RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
@@ -346,7 +281,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
 	branchlabel = "",
 	linewidthunstable = 1.0,
 	linewidthstable = 2linewidthunstable,
-	plotcirclesbif = true,
+	plotcirclesbif = false,
 	_basicplot = true,
 	applytoY = identity,
 	applytoX = identity) where {Tk <: TwoParamCont, Tprob}
