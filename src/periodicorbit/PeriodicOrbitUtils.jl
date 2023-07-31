@@ -127,7 +127,14 @@ function modifyPORecord(probPO, kwargs, par, lens)
 	end
 end
 
-function modifyPOPlot(probPO, kwargs)
+function modifyPOPlot(::Union{BK_NoPlot, BK_Plots}, probPO, kwargs)
 	_plotsol = get(kwargs, :plotSolution, nothing)
 	_plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 end
+
+function modifyPOPlot(::BK_Makie, probPO, kwargs)
+	_plotsol = get(kwargs, :plotSolution, nothing)
+	_plotsol2 = isnothing(_plotsol) ? (ax, x, p; k...) -> nothing : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
+end
+
+modifyPOPlot(probPO, kwargs) = modifyPOPlot(get_plot_backend(), probPO, kwargs)

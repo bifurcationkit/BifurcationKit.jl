@@ -117,7 +117,7 @@ $(TYPEDFIELDS)
 				params::Tp
 				"Typically a `Setfield.Lens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`."
 				lens::Tl
-				"user function to plot solutions during continuation. Signature: `plotSolution(x, p; kwargs...)`"
+				"user function to plot solutions during continuation. Signature: `plotSolution(x, p; kwargs...)` for Plot.jl and `plotSolution(ax, x, p; kwargs...)` for the Makie package(s)."
 				plotSolution::Tplot
 				"`recordFromSolution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
 				recordFromSolution::Trec

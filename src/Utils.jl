@@ -1,3 +1,13 @@
+# plot backends
+# this is important because we need to define plotting functions from the user provided ones ; for
+# example to plot periodic orbits. However, Plots.jl and Makie.jl have different semantics 
+# (plot(x;subplot = 1) instead of plot(ax, x)) which makes the above procedure difficult to implement.
+abstract type AbstractPlotBackend end
+struct BK_NoPlot <: AbstractPlotBackend end
+struct BK_Plots <: AbstractPlotBackend end
+struct BK_Makie <: AbstractPlotBackend end
+get_plot_backend() = BK_NoPlot()
+####################################################################################################
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))

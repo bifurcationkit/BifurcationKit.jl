@@ -111,6 +111,7 @@ module BifurcationKit
 		@require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
 			using .Plots
 			include("plotting/RecipesPlots.jl")
+			get_plot_backend() = BK_Plots()
 		end
 		@require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
 			using .AbstractPlotting: @recipe, layoutscene, Figure, Axis, lines!
@@ -121,6 +122,7 @@ module BifurcationKit
 			@info "Loading GLMakie code in BifurcationKit"
 			using .GLMakie: @recipe, Figure, Axis, lines!, PointBased, Point2f0, scatter!
 			include("plotting/RecipesMakie.jl")
+			get_plot_backend() = BK_Makie()
 		end
 
 		@require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
