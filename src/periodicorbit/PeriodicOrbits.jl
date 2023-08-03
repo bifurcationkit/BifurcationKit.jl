@@ -508,7 +508,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 	# we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
 	pb = deepcopy(br.prob.prob)
 
-	nf = getNormalForm(br, ind_bif)
+	nf = getNormalForm(br, ind_bif; detailed = detailed)
 	pred = predictor(nf, δp, ampfactor)
 	orbitguess = pred.orbitguess
 	newp = pred.pnew  # new parameter value

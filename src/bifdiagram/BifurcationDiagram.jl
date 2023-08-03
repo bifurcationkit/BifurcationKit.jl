@@ -90,9 +90,10 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem, alg::AbstractConti
 end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
-function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; kwargs...)
-	printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
-	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", kwargs...)
+function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; verbosediagram = false, kwargs...)
+	verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
+	verbose && printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
+	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram = verbosediagram, kwargs...)
 end
 
 """
@@ -108,7 +109,8 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 # Optional arguments
 - `code = "0"` code used to display iterations
 - `usedeflation = false`
-- `halfbranch = false` for Pitchfork/Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
+- `halfbranch = false` for Pitchfork / Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
+- `verbosediagram` verbose specific to bifurcation diagram. Print information about the branches as they are being computed.
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
@@ -118,8 +120,10 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 		code = "0",
 		usedeflation = false,
 		halfbranch = false,
+		verbosediagram = false,
 		kwargs...)
 	if node.level >= maxlevel || isnothing(node.γ); return node; end
+	verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
 
 	# current level of recursion
 	level = node.level
@@ -144,12 +148,13 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
 	for (id, pt) in enumerate(node.γ.specialpoint)
 		# we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
-		if pt.step > 1 && pt.type in (:bp, :nd)
+		if pt.step > 1 && (pt.type in (:bp, :nd))
 			try
-				println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
+				verbose && println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
 				γ = letsbranch(id, pt, level)
 				add!(node, γ, level+1, id)
-				 ~isnothing(γ) && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
+				~isnothing(γ) && (verbose && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n"))
+				verbose && _show(stdout, node.γ.specialpoint[id], id)
 
 				# in the case of a Transcritical bifurcation, we compute the other branch
 				if ~isnothing(γ) && ~(γ isa Vector)
@@ -170,7 +175,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 		end
 	end
 	for (ii, _node) in enumerate(node.child)
-		bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", kwargs...)
+		bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", verbosediagram = verbosediagram, kwargs...)
 	end
 	return node
 end
