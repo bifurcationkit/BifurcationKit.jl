@@ -1,10 +1,8 @@
 using Revise, Test, ForwardDiff, Parameters, Plots, LinearAlgebra
 using BifurcationKit
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ####################################################################################################
-function TMvf!(dz, z, p, t)
+function TMvf!(dz, z, p, t = 0)
 	@unpack J, α, E0, τ, τD, τF, U0 = p
 	E, x, u = z
 	SS0 = J * u * x * E + E0

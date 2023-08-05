@@ -3,7 +3,6 @@ using Revise
 	using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
 	const BK = BifurcationKit
 
-norminf(x) = norm(x, Inf)
 normbratu(x) = norm(x .* w) / sqrt(length(x))
 ##########################################################################################
 # plotting function

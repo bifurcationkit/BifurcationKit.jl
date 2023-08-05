@@ -1,15 +1,15 @@
 using Revise
-	using DiffEqOperators, Parameters
-	using BifurcationKit, LinearAlgebra, Plots, SparseArrays
-	const BK = BifurcationKit
+using DiffEqOperators, Parameters
+using BifurcationKit, Plots, SparseArrays, LinearAlgebra
+const BK = BifurcationKit
 
 plotsol(x, Nx=Nx, Ny=Ny) = heatmap(reshape(Array(x), Nx, Ny)', color=:viridis)
 plotsol!(x, Nx=Nx, Ny=Ny; kwargs...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, kwargs...)
 
 Nx = 151
-	Ny = 100
-	lx = 8pi
-	ly = 2*2pi/sqrt(3)
+Ny = 100
+lx = 8pi
+ly = 2*2pi/sqrt(3)
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
 	hx = 2lx/Nx

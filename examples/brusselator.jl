@@ -3,7 +3,6 @@ using Revise
 	const BK = BifurcationKit
 
 f1(u, v) = u * u * v
-norminf(x) = norm(x, Inf)
 
 # for Plots.jl
 function plotsol(x; kwargs...)

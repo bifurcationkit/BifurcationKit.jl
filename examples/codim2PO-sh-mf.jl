@@ -4,8 +4,6 @@ using BifurcationKit, Test
 const BK = BifurcationKit
 
 using ComponentArrays # this is for SciMLSensitivity and adjoint of flow
-
-norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
 	@unpack r,K,a,ϵ,b0,e,d, = p
@@ -24,7 +22,7 @@ par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, 
 
 z0 = [0.1,0.1,1,0]
 
-prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
 @set! opts_br.newtonOptions.verbose = true

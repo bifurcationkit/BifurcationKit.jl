@@ -1,10 +1,7 @@
 using Revise
 using ApproxFun, LinearAlgebra, Parameters
-
 using BifurcationKit, Plots
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf64)
 ####################################################################################################
 # specific methods for ApproxFun
 import Base: eltype, similar, copyto!, length
@@ -29,7 +26,6 @@ rmul!(y::ApproxFun.Fun, b::Bool) = b == true ? y : (y.coefficients .*= 0; y)
 copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( (x.coefficients = copy(y.coefficients);x))
 
 ####################################################################################################
-
 N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 

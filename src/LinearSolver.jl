@@ -1,5 +1,6 @@
 using IterativeSolvers, LinearAlgebra
 import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
+norminf(x) = LinearAlgebra.norm(x, Inf)
 
 abstract type AbstractLinearSolver end
 abstract type AbstractDirectLinearSolver <: AbstractLinearSolver end

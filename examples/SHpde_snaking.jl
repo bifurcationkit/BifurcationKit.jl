@@ -10,7 +10,6 @@ l = 6.
 X = -l .+ 2l/N*(0:N-1) |> collect
 h = X[2]-X[1]
 
-norminf(x) = norm(x, Inf64)
 const _weight = rand(N)
 normweighted(x) = norm(_weight .* x)
 

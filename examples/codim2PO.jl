@@ -2,8 +2,6 @@ using Revise, AbbreviatedStackTraces
 using Test, ForwardDiff, Parameters, Plots, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
 	@unpack r,K,a,ϵ,b0,e,d = p

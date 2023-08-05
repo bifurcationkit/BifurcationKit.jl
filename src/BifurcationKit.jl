@@ -181,6 +181,8 @@ module BifurcationKit
 	end
 
 	# linear solvers
+	export norminf
+	
 	export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit,
 			DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 

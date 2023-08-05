@@ -6,8 +6,6 @@ const BK = BifurcationKit
 
 # GLMakie.inline!(true)
 
-norminf(x) = norm(x, Inf)
-
 contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
 contour3dMakie(ax, x; k...) = (contour(ax, x;  k...))

@@ -1,9 +1,9 @@
 using Revise
-using Test, ForwardDiff, Parameters, Plots, LinearAlgebra
+using Test, ForwardDiff, Parameters
+# using Plots
+using GLMakie; Makie.inline!(true)
 using BifurcationKit, Test
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ####################################################################################################
 function COm!(du, u, p, t = 0)
 	@unpack q1,q2,q3,q4,q5,q6,k = p
@@ -20,14 +20,13 @@ par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-prob = BK.BifurcationProblem(COm, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
+prob = BifurcationProblem(COm!, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
-@set! opts_br.newtonOptions.verbose = false
 br = @time continuation(prob, PALC(), opts_br;
 	# plot = false, verbosity = 0,
 	normC = norminf,
-bothside = true)
+	bothside = true)
 show(br)
 
 plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
@@ -47,7 +46,7 @@ sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2
 	normC = norminf,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+	# recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	bothside=true,
 	bdlinsolver = MatrixBLS()
 	)
@@ -68,7 +67,7 @@ hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@lens _.k), Con
 	detectCodim2Bifurcation = 2,
 	updateMinAugEveryStep = 1,
 	startWithEigen = true,
-	recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+	# recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
 	bothside = true,
 	bdlinsolver = MatrixBLS())
 
