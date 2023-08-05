@@ -36,7 +36,7 @@ n = 101
 par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
-prob = BK.BifurcationProblem(F_chan, sol0, par, (@lens _.α); plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
+prob = BifurcationProblem(F_chan, sol0, par, (@lens _.α); plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
 # ca fait dans les 63.59k Allocations

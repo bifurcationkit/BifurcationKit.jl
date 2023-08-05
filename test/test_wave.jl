@@ -4,7 +4,6 @@ using BifurcationKit, SparseArrays, Parameters, LinearAlgebra, Setfield, Forward
 const BK = BifurcationKit
 const FD = ForwardDiff
 
-norminf(x) = norm(x, Inf)
 function Laplacian1D(N, lx, bc = :none)
 	hx = 2lx/N
 	Δ = spdiagm(0 => -2ones(N), 1 => ones(N-1), -1 => ones(N-1) )

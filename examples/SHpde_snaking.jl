@@ -33,7 +33,8 @@ sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 
 prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.λ); J = Jac_sp,
 	recordFromSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
-	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...)))
+	plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
+	)
 ####################################################################################################
 optnew = NewtonPar(verbose = false, tol = 1e-12)
 # allocations 357, 0.8ms

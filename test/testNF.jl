@@ -2,7 +2,6 @@
 using Test
 using BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff, Parameters
 const BK = BifurcationKit
-norminf(x) = norm(x, Inf)
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
 ####################################################################################################

@@ -4,9 +4,7 @@ using Test
 using BifurcationKit, Setfield, ForwardDiff
 
 const BK = BifurcationKit
-
-
-####################################################################################################
+###################################################################################################
 _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
 _eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
 @test BK.hasCustomLabels(_eve) == false

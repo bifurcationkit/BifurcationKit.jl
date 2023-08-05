@@ -135,7 +135,6 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 
 # this is to use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
-
 ####################################################################################################
 # different jacobian types which parametrize the way jacobians of PO are computed
 struct AutoDiffDense <: AbstractJacobianMatrix end

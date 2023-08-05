@@ -3,8 +3,6 @@ using Test, ForwardDiff, Parameters, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ####################################################################################################
 function Lor(u, p, t = 0)
     @unpack α,β,γ,δ,G,F,T = p

@@ -4,8 +4,6 @@ using BifurcationKit, LinearAlgebra, Parameters
 const BK = BifurcationKit
 const FD = ForwardDiff
 
-norminf(x) = norm(x, Inf)
-
 function Fsl!(f, u, p, t = 0)
 	@unpack r, μ, ν, c3, c5 = p
 	u1 = u[1]

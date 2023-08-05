@@ -73,7 +73,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 		vars = nothing,
 		plotstability = true,
 		plotspecialpoints = true,
-		branchlabel = fill("",length(brs)),
+		branchlabel = fill("", length(brs)),
 		linewidthunstable = 1.0,
 		linewidthstable = 2linewidthunstable,
 		applytoY = identity,

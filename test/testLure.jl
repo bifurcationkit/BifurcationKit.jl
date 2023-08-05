@@ -1,9 +1,8 @@
 # using Revise, Plots
-using Parameters, Setfield, LinearAlgebra, Test
+using Parameters, LinearAlgebra, Test
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-norminf(x) = norm(x, Inf)
 recordFromSolution(x, p) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
 function lur!(dz, u, p, t)
@@ -18,7 +17,7 @@ end
 lur(z, p) = lur!(similar(z), z, p, 0)
 par_lur = (α = 1.0, β = 0.)
 z0 = zeros(3)
-prob = BK.BifurcationProblem(lur, z0, par_lur, (@lens _.β); recordFromSolution = recordFromSolution)
+prob = BifurcationProblem(lur, z0, par_lur, (@lens _.β); recordFromSolution = recordFromSolution)
 
 opts_br = ContinuationPar(pMin = -0.4, pMax = 1.8, ds = -0.01, dsmax = 0.01, nInversion = 8, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, plotEveryStep = 20, maxSteps = 1000)
 	opts_br = @set opts_br.newtonOptions.verbose = false

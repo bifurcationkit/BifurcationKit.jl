@@ -111,6 +111,7 @@ end
 function modifyPORecord(probPO, kwargs, par, lens)
 	if :recordFromSolution in keys(kwargs)
 		_recordsol0 = get(kwargs, :recordFromSolution, nothing)
+		@assert ~isnothing(_recordsol0) "Please open an issue on the website."
 		return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
 	else
 		if probPO isa AbstractPODiffProblem

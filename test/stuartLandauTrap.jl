@@ -1,12 +1,10 @@
 # using Revise, Plots
 using Test
-	using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
-	const BK = BifurcationKit
+using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
+const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
-
-norminf(x) = norm(x, Inf)
 
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ν, c3 = p

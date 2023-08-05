@@ -7,8 +7,6 @@ using LinearAlgebra, Parameters
 # using Pkg
 # pkg"st OrdinaryDiffEq"
 
-norminf(x) = norm(x, Inf)
-
 function Fsl!(f, u, p, t)
 	@unpack r, μ, ω, c3 = p
 	u1 = u[1]

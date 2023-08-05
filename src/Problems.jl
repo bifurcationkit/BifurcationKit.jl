@@ -3,6 +3,7 @@ abstract type AbstractBifurcationProblem end
 # this type is based on the type BifFunction, see below
 # it provides all derivatives
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+using SciMLBase: numargs
 
 getVectorType(::AbstractBifurcationProblem) = Nothing
 isInplace(::Union{AbstractBifurcationProblem, Nothing}) = false
@@ -11,6 +12,15 @@ isInplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 # in order to allow for redefinition. Indeed, some problem are mutable (adaptive
 # mesh for periodic orbit) and this approach seems efficient
 @inline getSolution(::AbstractBifurcationProblem, x) = x
+
+"""
+Determine if the vector field is of the form `f!(out,z,p)`.
+"""
+function isinplace(f)
+	m = minimum(numargs(f))
+	@assert 1<m<4 "You have too many/few arguments in your vector field F. It should be of the form `F(x,p)` or `F!(x,p)`."
+	return m == 3
+end
 
 """
 $(TYPEDEF)
@@ -124,6 +134,8 @@ $(TYPEDFIELDS)
 			end
 
 			getVectorType(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
+			plotSolution(prob::$op) = prob.plotSolution
+			recordFromSolution(prob::$op) = prob.recordFromSolution
 		end
 	else
         """
@@ -152,7 +164,7 @@ $(TYPEDFIELDS)
 	# forward getters
 	if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
 		@eval begin
-			function $op(F, u0, parms, lens = (@lens _);
+			function $op(_F, u0, parms, lens = (@lens _);
 							dF = nothing,
 							dFad = nothing,
 							J = nothing,
@@ -164,6 +176,12 @@ $(TYPEDFIELDS)
 							plotSolution = plotDefault,
 							delta = convert(eltype(u0), 1e-8),
 							inplace = false)
+				if inplace
+					F = _F
+				else
+					iip = isinplace(_F)
+					F = iip ? (x,p) -> _F(similar(x),x,p) : _F	
+				end
 				J = isnothing(J) ? (x,p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
 				dF = isnothing(dF) ? (x,p,dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
 				d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> F(x .+ t .* dx1, p), zero(eltype(dx1)))
@@ -210,6 +228,7 @@ d3F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2, dx3) = d3F(pb.VF, x, p, dx1, d
 d3Fc(pb::AbstractAllJetBifProblem, x, p, dx1, dx2, dx3) = d3Fc(pb.VF, x, p, dx1, dx2, dx3)
 hasHessian(pb::AbstractAllJetBifProblem) = hasHessian(pb.VF)
 hasAdjoint(pb::AbstractAllJetBifProblem) = hasAdjoint(pb.VF)
+hasAdjointMF(pb::AbstractAllJetBifProblem) = hasAdjointMF(pb.VF)
 getDelta(pb::AbstractAllJetBifProblem) = getDelta(pb.VF)
 
 for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)

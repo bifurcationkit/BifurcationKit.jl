@@ -1,7 +1,7 @@
 # using Revise
 # using Plots
 using Test
-using BifurcationKit, LinearAlgebra, Setfield, SparseArrays
+using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
 k = 2

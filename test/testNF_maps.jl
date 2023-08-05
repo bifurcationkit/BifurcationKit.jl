@@ -2,7 +2,6 @@
 # using Plots, Test
 using BifurcationKit, LinearAlgebra, ForwardDiff, Parameters
 const BK = BifurcationKit
-norminf(x) = norm(x, Inf)
 ####################################################################################################
 struct EigMaps{T} <: BK.AbstractEigenSolver
 	solver::T

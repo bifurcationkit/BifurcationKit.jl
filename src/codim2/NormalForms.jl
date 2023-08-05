@@ -245,7 +245,6 @@ function bogdanovTakensNormalForm(prob_ma, L,
 	A22 = [[pAq(p1, q0, lens1), pAq(p0, q0, lens1)+pAq(p1, q1, lens1)] [pAq(p1, q0, lens2), pAq(p0, q0, lens2)+pAq(p1, q1, lens2)] ]
 
 	# solving the linear system of size n+2
-	# @infiltrate
 	c = 3dot(p0, H1100) - dot(p0, B(q1, q1))
 	H0010, K10, cv, it = bls(Val(:Block), L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
 	@assert size(H0010) == size(x0)

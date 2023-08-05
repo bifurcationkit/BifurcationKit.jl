@@ -14,13 +14,13 @@ function Pop!(du, X, p, t = 0)
 	du[4] = 2pi * u + v - s * v
 	du
 end
-Pop(u,p) = Pop!(similar(u),u,p,0)
+# Pop(u,p) = Pop!(similar(u),u,p,0)
 
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
 @set! opts_br.newtonOptions.verbose = true
@@ -236,7 +236,7 @@ getNormalForm(brpo_pd, 2, prm = true)
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 40, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
-		verbosity = 3, plot = true,
+		verbosity = 3, plot = false,
 		detectCodim2Bifurcation = 2,
 		startWithEigen = false,
 		usehessian = false,
@@ -294,7 +294,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 40, pMin = 1.e-2, plotEveryStep = 1, dsmax = 1e-2, ds = -1e-3)
 @set! opts_pocoll_pd.newtonOptions.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
-		verbosity = 3, plot = true,
+		verbosity = 3, plot = false,
 		detectCodim2Bifurcation = 2,
 		startWithEigen = false,
 		usehessian = false,
@@ -336,7 +336,7 @@ pt = getNormalForm(brpo_pd_sh, 1)
 
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 3, maxSteps = 200, pMin = 0.01, pMax = 1.2)
-@error "ce foire la precision si cette tol est trop petite"
+@error "ça foire la precision si cette tol est trop petite"
 @set! opts_posh_fold.newtonOptions.tol = 1e-12
 fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
 		verbosity = 2, plot = true,
@@ -361,7 +361,7 @@ fold_po_sh2 = continuation(br_fold_sh, 1, (@lens _.ϵ), opts_posh_fold;
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 40, pMin = -1.)
 @set! opts_posh_pd.newtonOptions.tol = 1e-12
-@error "ce foire la precision si cette tol est trop petite"
+@error "ça foire la precision si cette tol est trop petite"
 @set! opts_posh_pd.newtonOptions.verbose = true
 pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
 		verbosity = 3, plot = true,
@@ -378,7 +378,7 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
 plot(pd_po_sh)
 
 plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
-	plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 
 #####
 # find the NS case

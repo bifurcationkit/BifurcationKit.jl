@@ -14,6 +14,7 @@ function plot!(ax1, contres::AbstractBranchResult;
 				linewidthunstable = 1.0,
 				linewidthstable = 3.0linewidthunstable,
 				plotcirclesbif = true,
+				branchlabel = "",
 				applytoY = identity,
 				applytoX = identity)
 	
@@ -26,7 +27,11 @@ function plot!(ax1, contres::AbstractBranchResult;
 	if hasstability(contres) && plotstability
 		linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
 	end
-	lines!(ax1, contres, linewidth = linewidth)
+	if branchlabel == ""
+		lines!(ax1, contres, linewidth = linewidth)
+	else
+		lines!(ax1, contres, linewidth = linewidth, label = branchlabel)
+	end
 
 	# display bifurcation points
 	bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
@@ -142,17 +147,19 @@ function plot(contres::AbstractBranchResult;
 	fig
 end
 
-function plot(contresV::AbstractBranchResult...; kP...)
-	if length(contresV) == 0; return ;end
+function plot(brs::AbstractBranchResult...; 
+		branchlabel = fill("", length(brs)),
+		kP...)
+	if length(brs) == 0; return ;end
 	fig = Figure(resolution = (1200, 700))
 	ax1 = fig[1, 1] = Axis(fig)
 
-	for (id, contres) in pairs(contresV)
+	for (id, contres) in pairs(brs)
 
 		ind1, ind2 = getPlotVars(contres, nothing)
 		xlab, ylab = getAxisLabels(ind1, ind2, contres)
 
-		plot!(ax1, contres; kP...)
+		plot!(ax1, contres; branchlabel = branchlabel[id], kP...)
 
 	end
 	GLMakie.axislegend(ax1, merge = true, unique = true)
@@ -235,3 +242,4 @@ function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-
 		_plot_bifdiag_makie!(ax, b; code, level )
 	end
 end
+####################################################################################################

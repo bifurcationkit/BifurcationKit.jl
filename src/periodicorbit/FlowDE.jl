@@ -1,4 +1,4 @@
-using SciMLBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace
+using SciMLBase: remake, solve, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace as isinplace_sciml
 
 struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: AbstractFlow
 	"Store the ODEProblem associated to the flow of the Cauchy problem"
@@ -50,8 +50,8 @@ _getVectorField(prob::ODEProblem, x, p) = prob.f(x, p, prob.tspan[1])
 _getVectorField(prob::EnsembleProblem, x, p) = _getVectorField(prob.prob, x, p)
 _getVectorField(prob::EnsembleProblem, o, x, p) = _getVectorField(prob.prob, o, x, p)
 
-@inline _isinplace(pb::ODEProblem) = isinplace(pb)
-@inline _isinplace(pb::EnsembleProblem) = isinplace(pb.prob)
+@inline _isinplace(pb::ODEProblem) = isinplace_sciml(pb)
+@inline _isinplace(pb::EnsembleProblem) = isinplace_sciml(pb.prob)
 
 function vf(fl::FlowDE, x, p)
 	if _isinplace(fl.prob)

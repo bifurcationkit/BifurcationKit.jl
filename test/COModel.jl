@@ -3,8 +3,6 @@
 using Test, ForwardDiff, Parameters, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ####################################################################################################
 function COm(u, p)
 	@unpack q1, q2, q3, q4, q5, q6, k = p
@@ -21,7 +19,7 @@ par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-prob = BK.BifurcationProblem(COm, z0, par_com, (@lens _.q2);
+prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2);
 		recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(pMin = 0.5, pMax = 2.3, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 100)

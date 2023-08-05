@@ -2,7 +2,7 @@ using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, Vec
 const ODEType = Union{ODEProblem, DAEProblem}
 
 function getVectorField(prob::Union{ODEProblem, DAEProblem})
-	if isinplace(prob)
+	if isinplace_sciml(prob)
 		return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
 	else
 		return (x, p) -> prob.f(x, p, prob.tspan[1])

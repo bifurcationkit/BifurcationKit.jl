@@ -2,8 +2,6 @@
 using Test, ForwardDiff, Parameters, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
-
-norminf(x) = norm(x, Inf)
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
 	@unpack r,K,a,ϵ,b0,e,d = p
@@ -16,13 +14,12 @@ function Pop!(du, X, p, t = 0)
 	du[4] = 2pi * u + v - s * v
 	du
 end
-Pop(u,p) = Pop!(similar(u),u,p,0)
 
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BK.BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
 @set! opts_br.newtonOptions.verbose = false

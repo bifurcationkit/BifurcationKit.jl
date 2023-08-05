@@ -6,8 +6,6 @@ const BK = BifurcationKit
 # The goal of these tests is to test all combinations of options
 ##################################################################
 
-norminf(x) = norm(x, Inf)
-
 function Fsl!(f, u, p, t = 0)
 	@unpack r, μ, ν, c3 = p
 	u1 = u[1]
