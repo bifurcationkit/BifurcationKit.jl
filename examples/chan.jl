@@ -7,36 +7,23 @@ dNl(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 d2Nl(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
 function F_chan(x, p)
-	@unpack α, β = p
-	f = similar(x)
-	n = length(x)
-	f[1] = x[1] - β
-	f[n] = x[n] - β
-	for i=2:n-1
-		f[i] = (x[i-1] - 2 * x[i] + x[i+1]) * (n-1)^2 + α * Nl(x[i], b = β)
-	end
-	return f
-end
-
-function Jac_mat(u, p)
-	@unpack α, β = p
-	n = length(u)
-	J = zeros(n, n)
-	J[1, 1] = 1.0
-	J[n, n] = 1.0
-	for i = 2:n-1
-		J[i, i-1] = (n-1)^2
-		J[i, i+1] = (n-1)^2
-		J[i, i] = -2 * (n-1)^2 + α * dNl(u[i], b = β)
-	end
-	return J
+    @unpack α, β = p
+    f = similar(x)
+    n = length(x)
+    f[1] = x[1] - β
+    f[n] = x[n] - β
+    for i=2:n-1
+        f[i] = (x[i-1] - 2 * x[i] + x[i+1]) * (n-1)^2 + α * Nl(x[i], b = β)
+    end
+    return f
 end
 
 n = 101
 par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
-prob = BifurcationProblem(F_chan, sol0, par, (@lens _.α); plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
+prob = BifurcationProblem(F_chan, sol0, par, (@lens _.α); 
+    plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
 # ca fait dans les 63.59k Allocations
@@ -63,8 +50,8 @@ outdef1 = newton(reMake(prob; u0 = sol.u .* (1 .+ 0.1*sol0)), deflationOp, optde
 outdef1 = newton(reMake(prob; u0 = sol.u .* (1 .+ 0.1*sol0)), deflationOp, optdef, Val(:autodiff))
 
 plot(sol.u, label="newton")
-	plot!(sol0, label="init guess")
-	plot!(outdef1.u, label="deflation-1")
+    plot!(sol0, label="init guess")
+    plot!(outdef1.u, label="deflation-1")
 
 #save newly found point to look for new ones
 push!(deflationOp, outdef1.u)
@@ -77,14 +64,14 @@ optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; 
 indfold = 2
 
 outfold = @time newton(br, indfold)
-	BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
+BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300, detectBifurcation = 0)
-	foldbranch = @time continuation(br, indfold, (@lens _.β),
-		plot = false, verbosity = 0,
-		jacobian_ma = :minaug,
-		startWithEigen = true,
-		optcontfold)
+foldbranch = @time continuation(br, indfold, (@lens _.β),
+    plot = false, verbosity = 0,
+    jacobian_ma = :minaug,
+    startWithEigen = true,
+    optcontfold)
 plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p.α .* d2Nl.(x; b = b) .* u .* v
@@ -92,7 +79,7 @@ d2F(x, p, u, v; b = 0.01) = p.α .* d2Nl.(x; b = b) .* u .* v
 prob2 = reMake(prob, d2F = d2F)
 
 outfold = @time newton((@set br.prob = prob2), indfold)
-	BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
+    BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 1300, detectBifurcation = 0)
 
@@ -100,15 +87,15 @@ outfoldco = continuation((@set br.prob = prob2), indfold, (@lens _.β), optcontf
 ###################################################################################################
 # Matrix Free example
 function dF_chan(x, dx, p)
-	@unpack α, β = p
-	out = similar(x)
-	n = length(x)
-	out[1] = dx[1]
-	out[n] = dx[n]
-	for i=2:n-1
-		out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dNl(x[i], b = β) * dx[i]
-	end
-	return out
+    @unpack α, β = p
+    out = similar(x)
+    n = length(x)
+    out[1] = dx[1]
+    out[n] = dx[n]
+    for i=2:n-1
+        out[i] = (dx[i-1] - 2 * dx[i] + dx[i+1]) * (n-1)^2 + α * dNl(x[i], b = β) * dx[i]
+    end
+    return out
 end
 
 ls = GMRESKrylovKit(dim = 100)

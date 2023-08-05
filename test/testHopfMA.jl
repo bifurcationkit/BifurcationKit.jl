@@ -5,63 +5,63 @@ const BK = BifurcationKit
 f1(u, v) = u^2 * v
 
 function Fbru!(f, x, p)
-	@unpack α, β, D1, D2, l = p
-	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
-	c1 = D1 / l^2 / h2
-	c2 = D2 / l^2 / h2
+    @unpack α, β, D1, D2, l = p
+    n = div(length(x), 2)
+    h = 1.0 / n; h2 = h*h
+    c1 = D1 / l^2 / h2
+    c2 = D2 / l^2 / h2
 
-	u = @view x[1:n]
-	v = @view x[n+1:2n]
+    u = @view x[1:n]
+    v = @view x[n+1:2n]
 
-	# Dirichlet boundary conditions
-	f[1]   = c1 * (α	  - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
-	f[end] = c2 * (v[n-1] - 2v[n] + β / α)			 + β * u[n] - f1(u[n], v[n])
+    # Dirichlet boundary conditions
+    f[1]   = c1 * (α      - 2u[1] + u[2] ) + α - (β + 1) * u[1] + f1(u[1], v[1])
+    f[end] = c2 * (v[n-1] - 2v[n] + β / α)           + β * u[n] - f1(u[n], v[n])
 
-	f[n]   = c1 * (u[n-1] - 2u[n] +  α  )  + α - (β + 1) * u[n] + f1(u[n], v[n])
-	f[n+1] = c2 * (β / α  - 2v[1] + v[2])			 + β * u[1] - f1(u[1], v[1])
+    f[n]   = c1 * (u[n-1] - 2u[n] +  α  )  + α - (β + 1) * u[n] + f1(u[n], v[n])
+    f[n+1] = c2 * (β / α  - 2v[1] + v[2])            + β * u[1] - f1(u[1], v[1])
 
-	for i=2:n-1
-		  f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
-		f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])			  + β * u[i] - f1(u[i], v[i])
-	end
-	return f
+    for i=2:n-1
+          f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
+        f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])           + β * u[i] - f1(u[i], v[i])
+    end
+    return f
 end
 
 Fbru(x, p) = Fbru!(similar(x), x, p)
 
 function Jbru_sp(x, p)
-	@unpack α, β, D1, D2, l = p
-	# compute the Jacobian using a sparse representation
-	n = div(length(x), 2)
-	h = 1.0 / n; h2 = h*h
+    @unpack α, β, D1, D2, l = p
+    # compute the Jacobian using a sparse representation
+    n = div(length(x), 2)
+    h = 1.0 / n; h2 = h*h
 
-	c1 = D1 / p.l^2 / h2
-	c2 = D2 / p.l^2 / h2
+    c1 = D1 / p.l^2 / h2
+    c2 = D2 / p.l^2 / h2
 
-	u = @view x[1:n]
-	v = @view x[n+1:2n]
+    u = @view x[1:n]
+    v = @view x[n+1:2n]
 
-	diag   = zeros(eltype(x), 2n)
-	diagp1 = zeros(eltype(x), 2n-1)
-	diagm1 = zeros(eltype(x), 2n-1)
+    diag   = zeros(eltype(x), 2n)
+    diagp1 = zeros(eltype(x), 2n-1)
+    diagm1 = zeros(eltype(x), 2n-1)
 
-	diagpn = zeros(eltype(x), n)
-	diagmn = zeros(eltype(x), n)
+    diagpn = zeros(eltype(x), n)
+    diagmn = zeros(eltype(x), n)
 
-	@. diagmn = β - 2 * u * v
-	@. diagm1[1:n-1] = c1
-	@. diagm1[n+1:end] = c2
+    @. diagmn = β - 2 * u * v
+    @. diagm1[1:n-1] = c1
+    @. diagm1[n+1:end] = c2
 
-	@. diag[1:n]    = -2c1 - (β + 1) + 2 * u * v
-	@. diag[n+1:2n] = -2c2 - u * u
+    @. diag[1:n]    = -2c1 - (β + 1) + 2 * u * v
+    @. diag[n+1:2n] = -2c2 - u * u
 
-	@. diagp1[1:n-1] = c1
-	@. diagp1[n+1:end] = c2
+    @. diagp1[1:n-1] = c1
+    @. diagp1[n+1:end] = c2
 
-	@. diagpn = u * u
-	J = spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
-	return J
+    @. diagpn = u * u
+    J = spdiagm(0 => diag, 1 => diagp1, -1 => diagm1, n => diagpn, -n => diagmn)
+    return J
 end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
@@ -70,8 +70,8 @@ n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
-		J = Jbru_ana,
-		recordFromSolution = (x, p) -> norminf(x))
+        J = Jbru_ana,
+        recordFromSolution = (x, p) -> norminf(x))
 
 # test that the jacobian is well computed
 @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
@@ -95,12 +95,12 @@ ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
-					(@set prob.VF.d2F = nothing), # this is for debug array
-					conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
-					(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
-					# av,
-					# bv,
-					opts_br0.newtonOptions.linsolver)
+                    (@set prob.VF.d2F = nothing), # this is for debug array
+                    conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
+                    (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
+                    # av,
+                    # bv,
+                    opts_br0.newtonOptions.linsolver)
 
 hopfvariable(hopfpt, par_bru) |> norm
 
@@ -141,21 +141,21 @@ outhopf = newton(br, 1)
 @test BK.converged(outhopf)
 
 pbgopfperso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
-				hopfpt, par_bru;
-				J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
+                hopfpt, par_bru;
+                J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
 outhopf = newton(pbgopfperso, NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
 @test BK.converged(outhopf)
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
-	n = div(length(x),2)
-	out = similar(du1)
-	@views out[1:n] .= 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
-				2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
-				2 .* x[1:n] .* du2[1:n] .* du1[1:n]
-	@inbounds for ii=1:n
-		out[ii+n] = -out[ii]
-	end
-	return out
+    n = div(length(x),2)
+    out = similar(du1)
+    @views out[1:n] .= 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
+                2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
+                2 .* x[1:n] .* du2[1:n] .* du1[1:n]
+    @inbounds for ii=1:n
+        out[ii+n] = -out[ii]
+    end
+    return out
 end
 
 # add specific hessian
@@ -165,7 +165,7 @@ outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
 br_hopf = continuation(br, ind_hopf, (@lens _.β),
-			ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 
 br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, a = 2., maxSteps = 3, newtonOptions = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 ####################################################################################################
@@ -173,7 +173,7 @@ ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 
 l_hopf = hopfpt.p[1]
-ωH	   = hopfpt.p[2] |> abs
+ωH       = hopfpt.p[2] |> abs
 M = 20
 
 
@@ -181,8 +181,8 @@ orbitguess = zeros(2n, M)
 phase = []; scalphase = []
 vec_hopf = geteigenvector(opt_newton.eigsolver, br.eig[br.specialpoint[ind_hopf].idx][2], br.specialpoint[ind_hopf].ind_ev-1)
 for ii=1:M
-	t = (ii-1)/(M-1)
-	orbitguess[:, ii] .= real.(hopfpt.u + 26*0.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .252)))
+    t = (ii-1)/(M-1)
+    orbitguess[:, ii] .= real.(hopfpt.u + 26*0.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .252)))
 end
 
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
@@ -191,10 +191,10 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
 prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
-		J = Jbru_sp,
-		recordFromSolution = (x, p) -> norminf(x))
+        J = Jbru_sp,
+        recordFromSolution = (x, p) -> norminf(x))
 
-poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n	)
+poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n    )
 
 jac_PO_fd = BK.finiteDifferences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -214,7 +214,7 @@ _prob = BK.BifurcationProblem((x, p) -> poTrap(x, p), copy(orbitguess_f), (@set 
 opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 150)
 outpo_f = @time newton(_prob, opt_po)
 @test BK.converged(outpo_f)
-	# println("--> T = ", outpo_f[end])
+    # println("--> T = ", outpo_f[end])
 # flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
 outpo_f = newton(poTrap, orbitguess_f, opt_po; jacobianPO = :FullLU)
@@ -232,27 +232,27 @@ floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, pMax = 2.3, maxSteps = 3, newtonOptions = NewtonPar(verbose = false), detectBifurcation = 1)
-	br_pok2 = continuation(
-		poTrap, orbitguess_f, PALC(), opts_po_cont; jacobianPO = :BorderedLU,
-		plot = false, verbosity = 0)
+    br_pok2 = continuation(
+        poTrap, orbitguess_f, PALC(), opts_po_cont; jacobianPO = :BorderedLU,
+        plot = false, verbosity = 0)
 
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
 # opt_po = NewtonPar(tol = 1e-8, verbose = false, maxIter = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, pMax = 3.0, maxSteps = 3, newtonOptions = (@set opt_po.verbose = false), nev = 2, tolStability = 1e-8, detectBifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
-	@show linalgo
-	# with deflation
-	@time newton((@set poTrap.jacobian = linalgo),
-			copy(orbitguess_f), deflationOp, opt_po; normN = norminf)
-	# classic Newton-Krylov
-	outpo_f = @time newton((@set poTrap.jacobian = linalgo),
-			copy(orbitguess_f), opt_po; normN = norminf)
-	# continuation
-	br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
-			copy(orbitguess_f), PALC(),
-			opts_po_cont; verbosity = 0,
-			plot = false, normC = norminf)
+    @show linalgo
+    # with deflation
+    @time newton((@set poTrap.jacobian = linalgo),
+            copy(orbitguess_f), deflationOp, opt_po; normN = norminf)
+    # classic Newton-Krylov
+    outpo_f = @time newton((@set poTrap.jacobian = linalgo),
+            copy(orbitguess_f), opt_po; normN = norminf)
+    # continuation
+    br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
+            copy(orbitguess_f), PALC(),
+            opts_po_cont; verbosity = 0,
+            plot = false, normC = norminf)
 end
 
 # test of Matrix free computation of Floquet exponents

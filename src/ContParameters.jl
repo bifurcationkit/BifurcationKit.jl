@@ -1,5 +1,5 @@
-	"""
-	options = ContinuationPar(dsmin = 1e-4,...)
+    """
+    options = ContinuationPar(dsmin = 1e-4,...)
 
 Returns a variable containing parameters to affect the `continuation` algorithm used to solve `F(x,p) = 0`.
 
@@ -15,8 +15,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 
 ## Handling eigen elements, their computation is triggered by the argument `detectBifurcation` (see below)
 - `nev = 3` number of eigenvalues to be computed. It is automatically increased to have at least `nev` unstable eigenvalues. To be set for proper  bifurcation detection. See [Detection of bifurcation points of Equilibria](@ref) for more informations.
-- `saveEigEveryStep = 1`	record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
-- `saveEigenvectors	= true`	**Important** for memory limited resource, *e.g.* GPU.
+- `saveEigEveryStep = 1` record eigen vectors every specified steps. **Important** for memory limited resource, *e.g.* GPU.
+- `saveEigenvectors = true` **Important** for memory limited resource, *e.g.* GPU.
 
 ## Handling bifurcation detection
 - `tolStability = 1e-10` lower bound on the real part of the eigenvalues to test for stability of equilibria and periodic orbits
@@ -42,60 +42,60 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
 """
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
-	# parameters for arclength continuation
-	dsmin::T	= 1e-3
-	dsmax::T	= 1e-1
-	@assert dsmax >= dsmin "You must provide a valid interval (ordered) for ds"
-	ds::T		= 1e-2;		@assert dsmax >= abs(ds) >= dsmin
-	@assert dsmin > 0 "The interval for ds must be positive"
-	@assert dsmax > 0
+    # parameters for arclength continuation
+    dsmin::T    = 1e-3
+    dsmax::T    = 1e-1
+    @assert dsmax >= dsmin "You must provide a valid interval (ordered) for ds"
+    ds::T        = 1e-2; @assert dsmax >= abs(ds) >= dsmin
+    @assert dsmin > 0 "The interval for ds must be positive"
+    @assert dsmax > 0
 
-	# parameters for continuation
-	a::T	= 0.5  		# aggressiveness factor
+    # parameters for continuation
+    a::T    = 0.5 # aggressiveness factor
 
-	# parameters bound
-	pMin::T	= -1.0
-	pMax::T	=  1.0
+    # parameters bound
+    pMin::T    = -1.0
+    pMax::T    =  1.0
 
-	# maximum number of continuation steps
-	maxSteps::Int64  = 100
+    # maximum number of continuation steps
+    maxSteps::Int64  = 100
 
-	# Newton solver parameters
-	newtonOptions::NewtonPar{T, S, E} = NewtonPar()
-	η::T = 150.								# parameter to estimate tangent at first point
+    # Newton solver parameters
+    newtonOptions::NewtonPar{T, S, E} = NewtonPar()
+    η::T = 150.                        # parameter to estimate tangent at first point
 
-	saveToFile::Bool = false 				# save to file?
-	saveSolEveryStep::Int64 = 1				# at what steps do we save the current solution
+    saveToFile::Bool = false           # save to file?
+    saveSolEveryStep::Int64 = 1        # at what steps do we save the current solution
 
-	# parameters for eigenvalues
-	nev::Int64 = 3 							# number of eigenvalues
-	saveEigEveryStep::Int64 = 1				# what steps do we keep the eigenvectors
-	saveEigenvectors::Bool	= true			# useful options because if puts a high memory pressure
+    # parameters for eigenvalues
+    nev::Int64 = 3                     # number of eigenvalues
+    saveEigEveryStep::Int64 = 1        # what steps do we keep the eigenvectors
+    saveEigenvectors::Bool    = true   # useful options because if puts a high memory pressure
 
-	plotEveryStep::Int64 = 10
+    plotEveryStep::Int64 = 10
 
-	# handling bifurcation points
-	tolStability::T = 1e-10					# lower bound for stability of equilibria and periodic orbits
-	detectFold::Bool = true 				# detect fold points?
-	detectBifurcation::Int64 = 3			# detect other bifurcation points?
-	dsminBisection::T = 1e-16				# dsmin for the bisection algorithm when locating bifurcation points
-	nInversion::Int64 = 2					# number of sign inversions in bisection algorithm
-	maxBisectionSteps::Int64 = 15			# maximum number of bisection steps
-	tolBisectionEigenvalue::T = 1e-16 		# tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+    # handling bifurcation points
+    tolStability::T = 1e-10            # lower bound for stability of equilibria and periodic orbits
+    detectFold::Bool = true            # detect fold points?
+    detectBifurcation::Int64 = 3       # detect other bifurcation points?
+    dsminBisection::T = 1e-16          # dsmin for the bisection algorithm when locating bifurcation points
+    nInversion::Int64 = 2              # number of sign inversions in bisection algorithm
+    maxBisectionSteps::Int64 = 15      # maximum number of bisection steps
+    tolBisectionEigenvalue::T = 1e-16  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
-	# handling event detection
-	detectEvent::Int64 = 0					# event location
-	tolParamBisectionEvent::T = 1e-16		# tolerance on value of parameter
+    # handling event detection
+    detectEvent::Int64 = 0             # event location
+    tolParamBisectionEvent::T = 1e-16  # tolerance on value of parameter
 
-	@assert pMax >= pMin "You must provide a valid interval [pMin, pMax]"
-	@assert iseven(nInversion) "The option `nInversion` number must be even"
-	@assert 0 <= detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
-	@assert 0 <= detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
-	@assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
-	@assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
-	detectLoop::Bool = false				# detect if the branch loops
-	@assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
-	@assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
+    @assert pMax >= pMin "You must provide a valid interval [pMin, pMax]"
+    @assert iseven(nInversion) "The option `nInversion` number must be even"
+    @assert 0 <= detectBifurcation <= 3 "The option `detectBifurcation` must belong to {0,1,2,3}"
+    @assert 0 <= detectEvent <= 2 "The option `detectEvent` must belong to {0,1,2}"
+    @assert (detectBifurcation > 1 && detectEvent == 0) || (detectBifurcation <= 1 && detectEvent >= 0)  "One of these options must be disabled detectBifurcation = $detectBifurcation and detectEvent = $detectEvent"
+    @assert tolBisectionEigenvalue >= 0 "The option `tolBisectionEigenvalue` must be positive"
+    detectLoop::Bool = false                # detect if the branch loops
+    @assert plotEveryStep > 0 "plotEveryStep must be positive. You can turn off plotting by passing plot = false to `continuation`"
+    @assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
 end
 
 @inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0

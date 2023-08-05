@@ -15,93 +15,102 @@ $(TYPEDFIELDS)
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
-	"absolute tolerance for `F(x)`"
-	tol::T			 = 1e-12
-	"number of Newton iterations"
-	maxIter::Int64 	 = 25
-	"display Newton iterations?"
-	verbose::Bool    = false
-	"linear solver, must be `<: AbstractLinearSolver`"
-	linsolver::L 	 = DefaultLS()
-	"eigen solver, must be `<: AbstractEigenSolver`"
-	eigsolver::E 	 = DefaultEig()
-	linesearch::Bool = false
-	α::T             = convert(typeof(tol), 1.0)        # damping
-	αmin::T          = convert(typeof(tol), 0.001)      # minimal damping
-	@assert 0 <= α <= 1
+    "absolute tolerance for `F(x)`"
+    tol::T = 1e-12
+    "number of Newton iterations"
+    maxIter::Int64 = 25
+    "display Newton iterations?"
+    verbose::Bool = false
+    "linear solver, must be `<: AbstractLinearSolver`"
+    linsolver::L = DefaultLS()
+    "eigen solver, must be `<: AbstractEigenSolver`"
+    eigsolver::E = DefaultEig()
+    linesearch::Bool = false
+    α::T = convert(typeof(tol), 1.0)        # damping
+    αmin::T = convert(typeof(tol), 0.001)      # minimal damping
+    @assert 0 <= α <= 1
 end
 
 """
-Structure to hold the solution from application of Newton-Krylov algorithm to a nonlinear problem.
+Structure which holds the solution from application of Newton-Krylov algorithm to a nonlinear problem.
+
+For example
+
+    sol = newton(prob, NewtonPar())
+
+## Fields
 
 $(TYPEDFIELDS)
 """
 struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
-	"solution"
-	u::Tu
-	"nonlinear problem, typically a `BifurcationProblem`"
-	prob::Tprob
-	"sequence of residuals"
-	residuals::Tres
-	"has algorithm converged?"
-	converged::Bool
-	"number of newton steps"
-	itnewton::Int
-	"total number of linear iterations"
-	itlineartot::Titlin
+    "solution"
+    u::Tu
+    "nonlinear problem, typically a `BifurcationProblem`"
+    prob::Tprob
+    "sequence of residuals"
+    residuals::Tres
+    "has algorithm converged?"
+    converged::Bool
+    "number of newton steps"
+    itnewton::Int
+    "total number of linear iterations"
+    itlineartot::Titlin
 end
 @inline converged(sol::NonLinearSolution) = sol.converged
 
 ####################################################################################################
-function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar; normN = norm, callback = cbDefault, kwargs...)
-	# Extract parameters
-	@unpack tol, maxIter, verbose = options
+function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
+                    normN = norm,
+                    callback = cbDefault,
+                    kwargs...)
+    # Extract parameters
+    @unpack tol, maxIter, verbose = options
 
-	x = _copy(x0)
-	fx = residual(prob, x, p0)
-	u = _copy(fx)
+    x = _copy(x0)
+    fx = residual(prob, x, p0)
+    u = _copy(fx)
 
-	res = normN(fx)
-	residuals = [res]
+    res = normN(fx)
+    residuals = [res]
 
-	# newton step
-	step = 0
+    # newton step
+    step = 0
 
-	# total number of linear iterations
-	itlineartot = 0
+    # total number of linear iterations
+    itlineartot = 0
 
-	verbose && printNonlinearStep(step, res)
+    verbose && printNonlinearStep(step, res)
 
-	# invoke callback before algo really starts
-	compute = callback((;x, fx, nothing, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
-	
-	while (step < maxIter) && (res > tol) && compute
-		J = jacobian(prob, x, p0)
-		u, cv, itlinear = options.linsolver(J, fx)
-		~cv && @debug "Linear solver for J did not converge."
-		itlineartot += sum(itlinear)
+    # invoke callback before algo really starts
+    compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
-		# x = x - J \ fx
+    while (step < maxIter) && (res > tol) && compute
+        J = jacobian(prob, x, p0)
+        u, cv, itlinear = options.linsolver(J, fx)
+        ~cv && @debug "Linear solver for J did not converge."
+        itlineartot += sum(itlinear)
+
+        # x = x - J \ fx
 		minus!(x, u)
 
-		fx = residual(prob, x, p0)
-		res = normN(fx)
+        fx = residual(prob, x, p0)
+        res = normN(fx)
 
-		push!(residuals, res)
-		step += 1
+        push!(residuals, res)
+        step += 1
 
-		verbose && printNonlinearStep(step, res, itlinear)
+        verbose && printNonlinearStep(step, res, itlinear)
 
-		compute = callback((;x, fx, J, residual=res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
-	end
-	((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
-	flag = (residuals[end] < tol) & callback((;x, fx, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
-	verbose && printNonlinearStep(0, res, 0, true) # display last line of the table
-	return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
+        compute = callback((;x, fx, J, residual=res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
+    end
+    ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
+    flag = (residuals[end] < tol) & callback((;x, fx, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
+    verbose && printNonlinearStep(0, res, 0, true) # display last line of the table
+    return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
 
 """
-		newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
+        newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
 
 This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. The function `normN` allows to specify a norm for the convergence criteria. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers (LS)](@ref) for more informations.
 
@@ -116,7 +125,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
     - `step` current newton step
     - `itlinear` number of iterations to solve the linear system
     - `options` a copy of the argument `options` passed to `newton`
-	- `residuals` the history of residuals
+    - `residuals` the history of residuals
     - `kwargs` kwargs arguments, contain your initial guess `x0`
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
@@ -137,6 +146,6 @@ cbDefault(state; k...) = true
 Create a callback used to reject residuals larger than `cb.maxres` in the Newton iterations. See docs for [`newton`](@ref).
 """
 struct cbMaxNorm{T}
-	maxres::T
+    maxres::T
 end
 (cb::cbMaxNorm)(state; k...) = (return state.residual < cb.maxres)

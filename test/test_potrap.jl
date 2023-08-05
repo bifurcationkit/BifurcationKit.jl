@@ -5,29 +5,29 @@ const BK = BifurcationKit
 n = 250*150
 M = 30
 par = nothing
-sol0 = rand(2n)				# 585.977 KiB
-orbitguess_f = rand(2n*M+1)	# 17.166MiB
+sol0 = rand(2n)             # 585.977 KiB
+orbitguess_f = rand(2n*M+1) # 17.166MiB
 
 prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> (dx -> 2 .* dx))
 probi = BK.BifurcationProblem((o, x, p) -> o .= x.^2, sol0, par; J = ((o, x, p, dx) -> o .= 2 .* dx), inplace = true)
 
 pb = PeriodicOrbitTrapProblem(
-			prob,
-			rand(2n*M),
-			rand(2n*M),
-			rand(M-1))
+            prob,
+            rand(2n*M),
+            rand(2n*M),
+            rand(M-1))
 
 pbg = PeriodicOrbitTrapProblem(
-			prob,
-			pb.ϕ,
-			pb.xπ,
-			pb.mesh.ds ; ongpu = true)
+            prob,
+            pb.ϕ,
+            pb.xπ,
+            pb.mesh.ds ; ongpu = true)
 
 pbi = PeriodicOrbitTrapProblem(
-			probi,
-			pb.ϕ,
-			pb.xπ,
-			pb.mesh.ds)
+            probi,
+            pb.ϕ,
+            pb.xπ,
+            pb.mesh.ds)
 @test BK.isInplace(pb) == false
 # @time BK.POTrapFunctional(pb, res, orbitguess_f)
 # @time BK.POTrapFunctional(pbi, res, orbitguess_f)
@@ -50,11 +50,11 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
-# @btime pb($orbitguess_f, $par); 								# 17.825 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $par); 								# 12.768 ms (2 allocations: 17.17 MiB)
-# @btime pb($orbitguess_f, $par, $orbitguess_f) 					# 28.427 ms (122 allocations: 51.50 MiB)
-# @btime pbi($orbitguess_f, $par, $orbitguess_f)  				# 14.170 ms (2 allocations: 17.17 MiB)
-# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) 	# 7.117 ms (0 allocations: 0 bytes)
+# @btime pb($orbitguess_f, $par);                               # 17.825 ms (62 allocations: 34.33 MiB)
+# @btime pbi($orbitguess_f, $par);                              # 12.768 ms (2 allocations: 17.17 MiB)
+# @btime pb($orbitguess_f, $par, $orbitguess_f)                 # 28.427 ms (122 allocations: 51.50 MiB)
+# @btime pbi($orbitguess_f, $par, $orbitguess_f)                # 14.170 ms (2 allocations: 17.17 MiB)
+# @btime BK.POTrapFunctional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
 # @btime BK.POTrapFunctionalJac!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) #  13.117 ms (0 allocations: 0 bytes)
 
 #
@@ -87,62 +87,62 @@ resi = @time pbi(orbitguess_f, par, orbitguess_f)
 ####################################################################################################
 # test whether we did not make any mistake in the improved version of the PO functional
 function _functional(poPb, u0, p)
-	M, N = size(poPb)
-	T = u0[end]
-	h = T * BK.getTimeStep(poPb, 1)
-	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
+    M, N = size(poPb)
+    T = u0[end]
+    h = T * BK.getTimeStep(poPb, 1)
+    Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
-	u0c = BK.getTimeSlices(poPb, u0)
-	outc = similar(u0c)
+    u0c = BK.getTimeSlices(poPb, u0)
+    outc = similar(u0c)
 
-	outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
+    outc[:, 1] .= Mass * (u0c[:, 1] .- u0c[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
 
-	for ii = 2:M-1
-		h = T * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= Mass * (u0c[:, ii] .- u0c[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
-	end
+    for ii = 2:M-1
+        h = T * BK.getTimeStep(poPb, ii)
+        outc[:, ii] .= Mass * (u0c[:, ii] .- u0c[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
+    end
 
-	# closure condition ensuring a periodic orbit
-	outc[:, M] .= u0c[:, M] .- u0c[:, 1]
+    # closure condition ensuring a periodic orbit
+    outc[:, M] .= u0c[:, M] .- u0c[:, 1]
 
-	return vcat(vec(outc),
-			dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
+    return vcat(vec(outc),
+            dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
 end
 
 function _dfunctional(poPb, u0, p, du)
-	# jacobian of the functional
+    # jacobian of the functional
 
-	M, N = size(poPb)
-	T = u0[end]
-	dT = du[end]
-	h = T * BK.getTimeStep(poPb, 1)
-	dh = dT * BK.getTimeStep(poPb, 1)
-	Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
+    M, N = size(poPb)
+    T = u0[end]
+    dT = du[end]
+    h = T * BK.getTimeStep(poPb, 1)
+    dh = dT * BK.getTimeStep(poPb, 1)
+    Mass = BifurcationKit.hasmassmatrix(poPb) ? poPb.massmatrix : I(poPb.N)
 
-	u0c = BK.getTimeSlices(poPb, u0)
-	duc = BK.getTimeSlices(poPb, du)
-	outc = similar(u0c)
+    u0c = BK.getTimeSlices(poPb, u0)
+    duc = BK.getTimeSlices(poPb, du)
+    outc = similar(u0c)
 
-	outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.prob_vf.VF.J(u0c[:, M-1], p)(duc[:, M-1]))
+    outc[:, 1] .= Mass * (duc[:, 1] .- duc[:, M-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, 1], p)(duc[:, 1]) .+ poPb.prob_vf.VF.J(u0c[:, M-1], p)(duc[:, M-1]))
 
-	for ii = 2:M-1
-		h = T * BK.getTimeStep(poPb, ii)
-		dh = dT * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .= Mass * (duc[:, ii] .- duc[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.prob_vf.VF.J(u0c[:, ii-1], p)(duc[:, ii-1]))
-	end
+    for ii = 2:M-1
+        h = T * BK.getTimeStep(poPb, ii)
+        dh = dT * BK.getTimeStep(poPb, ii)
+        outc[:, ii] .= Mass * (duc[:, ii] .- duc[:, ii-1]) .- (h/2) .* (poPb.prob_vf.VF.J(u0c[:, ii], p)(duc[:, ii]) .+ poPb.prob_vf.VF.J(u0c[:, ii-1], p)(duc[:, ii-1]))
+    end
 
-	dh = dT * BK.getTimeStep(poPb, 1)
-	outc[:, 1] .-=  dh/2 .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
-	for ii = 2:M-1
-		dh = dT * BK.getTimeStep(poPb, ii)
-		outc[:, ii] .-= dh/2 .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
-	end
+    dh = dT * BK.getTimeStep(poPb, 1)
+    outc[:, 1] .-=  dh/2 .* (poPb.prob_vf.VF.F(u0c[:, 1], p) .+ poPb.prob_vf.VF.F(u0c[:, M-1], p))
+    for ii = 2:M-1
+        dh = dT * BK.getTimeStep(poPb, ii)
+        outc[:, ii] .-= dh/2 .* (poPb.prob_vf.VF.F(u0c[:, ii], p) .+ poPb.prob_vf.VF.F(u0c[:, ii-1], p))
+    end
 
-	# closure condition ensuring a periodic orbit
-	outc[:, M] .= duc[:, M] .- duc[:, 1]
+    # closure condition ensuring a periodic orbit
+    outc[:, M] .= duc[:, M] .- duc[:, 1]
 
-	return vcat(vec(outc),
-			dot(du[1:end-1], poPb.ϕ)) # this is the phase condition
+    return vcat(vec(outc),
+            dot(du[1:end-1], poPb.ϕ)) # this is the phase condition
 
 end
 
@@ -171,10 +171,10 @@ _res = _dfunctional(pbmass, orbitguess_f, par, _du)
 n = 50
 prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
 pbsp = PeriodicOrbitTrapProblem(
-			prob,
-			rand(2n*10),
-			rand(2n*10),
-			10)
+            prob,
+            rand(2n*10),
+            rand(2n*10),
+            10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
 Jfd = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
@@ -247,10 +247,10 @@ Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
 n = 1000
 prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> spdiagm(0 => 2 .* x))
 pbsp = PeriodicOrbitTrapProblem(
-			prob,
-			rand(2n*M),
-			rand(2n*M),
-			M)
+            prob,
+            rand(2n*M),
+            rand(2n*M),
+            M)
 
 sol0 = rand(2n)
 orbitguess_f = rand(2n*M+1)
@@ -295,16 +295,16 @@ pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updatebord
 M = 10
 prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
 pbsp = PeriodicOrbitTrapProblem(
-			prob,
-			rand(2n*M),
-			rand(2n*M),
-			M)
+            prob,
+            rand(2n*M),
+            rand(2n*M),
+            M)
 
 pbspti = PeriodicOrbitTrapProblem(
-			prob,
-			pbsp.ϕ,
-			pbsp.xπ,
-			ones(9) ./ 10)
+            prob,
+            pbsp.ϕ,
+            pbsp.xπ,
+            ones(9) ./ 10)
 
 BK.getMeshSize(pbspti)
 orbitguess_f = rand(2n*10+1)

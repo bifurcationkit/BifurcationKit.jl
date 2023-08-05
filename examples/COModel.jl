@@ -6,13 +6,13 @@ using BifurcationKit, Test
 const BK = BifurcationKit
 ####################################################################################################
 function COm!(du, u, p, t = 0)
-	@unpack q1,q2,q3,q4,q5,q6,k = p
-	x, y, s = u
-	z = 1-x-y-s
-	du[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
-	du[2] = q2 * z - q6 * y - q3 * x * y
-	du[3] = q4 * (z - k * s)
-	du
+    @unpack q1,q2,q3,q4,q5,q6,k = p
+    x, y, s = u
+    z = 1-x-y-s
+    du[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
+    du[2] = q2 * z - q6 * y - q3 * x * y
+    du[3] = q4 * (z - k * s)
+    du
 end
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
@@ -41,47 +41,47 @@ hp = newton(br, 2; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),sta
 hpnf = getNormalForm(br, 2)
 
 sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 0, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 6, detectEvent = 2, detectFold = false) ; plot = true,
-	verbosity = 3,
-	normC = norminf,
-	updateMinAugEveryStep = 1,
-	startWithEigen = true,
-	# recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
-	bothside=true,
-	bdlinsolver = MatrixBLS()
-	)
+    verbosity = 3,
+    normC = norminf,
+    updateMinAugEveryStep = 1,
+    startWithEigen = true,
+    # recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+    bothside=true,
+    bdlinsolver = MatrixBLS()
+    )
 
 using Test
-@test sn_codim2.specialpoint[2].printsol.k 	≈ 0.971397 rtol = 1e-4
+@test sn_codim2.specialpoint[2].printsol.k     ≈ 0.971397 rtol = 1e-4
 @test sn_codim2.specialpoint[2].printsol.q2 ≈ 1.417628 rtol = 1e-4
-@test sn_codim2.specialpoint[4].printsol.k 	≈ 0.722339 rtol = 1e-4
+@test sn_codim2.specialpoint[4].printsol.k     ≈ 0.722339 rtol = 1e-4
 @test sn_codim2.specialpoint[4].printsol.q2 ≈ 1.161199 rtol = 1e-4
 
-plot(sn_codim2)#, real.(sn_codim2.BT), ylims = (-1,1), xlims=(0,2))
+BK.plot(sn_codim2)#, real.(sn_codim2.BT), ylims = (-1,1), xlims=(0,2))
 
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
+BK.plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
 
 hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 0, ds = -0.0001, dsmax = 0.08, dsmin = 1e-4, nInversion = 6, detectEvent = 2, detectLoop = true, maxSteps = 50, detectFold=false) ; plot = true,
-	verbosity = 3,
-	normC = norminf,
-	detectCodim2Bifurcation = 2,
-	updateMinAugEveryStep = 1,
-	startWithEigen = true,
-	# recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
-	bothside = true,
-	bdlinsolver = MatrixBLS())
+    verbosity = 3,
+    normC = norminf,
+    detectCodim2Bifurcation = 2,
+    updateMinAugEveryStep = 1,
+    startWithEigen = true,
+    # recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+    bothside = true,
+    bdlinsolver = MatrixBLS())
 
-@test hp_codim2.branch[6].l1 |> real 		≈ 33.15920 rtol = 1e-1
-@test hp_codim2.specialpoint[3].printsol.k 	≈ 0.305879 rtol = 1e-3
+@test hp_codim2.branch[6].l1 |> real         ≈ 33.15920 rtol = 1e-1
+@test hp_codim2.specialpoint[3].printsol.k     ≈ 0.305879 rtol = 1e-3
 @test hp_codim2.specialpoint[3].printsol.q2 ≈ 0.924255 rtol = 1e-3
-@test hp_codim2.specialpoint[4].printsol.k 	≈ 0.23248736 rtol = 1e-4
+@test hp_codim2.specialpoint[4].printsol.k     ≈ 0.23248736 rtol = 1e-4
 @test hp_codim2.specialpoint[4].printsol.q2 ≈ 0.8913189828755895 rtol = 1e-4
 
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotcirclesbif = true)
-	plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf",plotcirclesbif = true)
-	plot!(br,xlims=(0.6,1.5))
+BK.plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotcirclesbif = true)
+    plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf",plotcirclesbif = true)
+    plot!(br,xlims=(0.6,1.5))
 
 plot(sn_codim2, vars=(:k, :q2), branchlabel = "Fold")
-	plot!(hp_codim2, vars=(:k, :q2), branchlabel = "Hopf",)
+    plot!(hp_codim2, vars=(:k, :q2), branchlabel = "Hopf",)
 
 plot(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 ####################################################################################################

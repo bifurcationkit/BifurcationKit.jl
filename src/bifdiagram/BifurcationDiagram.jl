@@ -1,17 +1,17 @@
 mutable struct BifDiagNode{Tγ, Tc}
-	# current level of recursion
-	level::Int64
+    # current level of recursion
+    level::Int64
 
-	# code for finding the current node in the tree, this is the index of the bifurcation point
-	# from which γ branches off
-	code::Int64
+    # code for finding the current node in the tree, this is the index of the bifurcation point
+    # from which γ branches off
+    code::Int64
 
-	# branch associated to the current node
-	γ::Tγ
+    # branch associated to the current node
+    γ::Tγ
 
-	# children of current node. These are the different branches off the bifurcation point
-	# in γ
-	child::Tc
+    # children of current node. These are the different branches off the bifurcation point
+    # in γ
+    child::Tc
 end
 
 # getters
@@ -26,11 +26,11 @@ getContResult(br::Branch) = br.γ
 getAlg(tree::BifDiagNode) = tree.γ.alg
 
 function Base.show(io::IO, tree::BifDiagNode)
-	println(io, "[Bifurcation diagram]")
-	println(io, " ┌─ From $(tree.code)-th bifurcation point.")
-	println(io, " ├─ Children number: $(length(tree.child))" );
-	println(io, " └─ Root (recursion level $(tree.level))")
-	show(io, tree.γ; prefix = "      ")
+    println(io, "[Bifurcation diagram]")
+    println(io, " ┌─ From $(tree.code)-th bifurcation point.")
+    println(io, " ├─ Children number: $(length(tree.child))" );
+    println(io, " └─ Root (recursion level $(tree.level))")
+    show(io, tree.γ; prefix = "      ")
 end
 
 # total size of the tree
@@ -49,8 +49,8 @@ $(SIGNATURES)
 Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
 """
 function getBranch(tree::BifDiagNode, code)
-	isempty(code) && return tree
-	return getBranch(tree.child[code[1]], code[2:end])
+    isempty(code) && return tree
+    return getBranch(tree.child[code[1]], code[2:end])
 end
 
 """
@@ -59,9 +59,9 @@ $(SIGNATURES)
 Return the part of the tree corresponding to the indbif-th bifurcation point on the root branch.
 """
 function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
-	# parameter value at the bp
-	p = tree.γ.specialpoint[indbif].param
-	return BifDiagNode[br for br in tree.child if from(br).p == p]
+    # parameter value at the bp
+    p = tree.γ.specialpoint[indbif].param
+    return BifDiagNode[br for br in tree.child if from(br).p == p]
 end
 
 """
@@ -85,15 +85,15 @@ We also provide the method
 where `br` is a branch computed after a call to [`continuation`](@ref) from which we want to compute the bifurcating branches recursively.
 """
 function bifurcationdiagram(prob::AbstractBifurcationProblem, alg::AbstractContinuationAlgorithm, level::Int, options; kwargs...)
-	γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs...)
-	bifurcationdiagram(prob, γ, level, options; code = "0", kwargs...)
+    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs...)
+    bifurcationdiagram(prob, γ, level, options; code = "0", kwargs...)
 end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
 function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; verbosediagram = false, kwargs...)
-	verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
-	verbose && printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
-	bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram = verbosediagram, kwargs...)
+    verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
+    verbose && printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
+    bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram = verbosediagram, kwargs...)
 end
 
 """
@@ -114,68 +114,63 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
-		node::BifDiagNode,
-		maxlevel::Int,
-		options;
-		code = "0",
-		usedeflation = false,
-		halfbranch = false,
-		verbosediagram = false,
-		kwargs...)
-	if node.level >= maxlevel || isnothing(node.γ); return node; end
-	verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
+        node::BifDiagNode,
+        maxlevel::Int,
+        options;
+        code = "0",
+        usedeflation = false,
+        halfbranch = false,
+        verbosediagram = false,
+        kwargs...)
+    if node.level >= maxlevel || isnothing(node.γ); return node; end
+    verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
 
-	# current level of recursion
-	level = node.level
+    # current level of recursion
+    level = node.level
 
-	# convenient function for branching
-	function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-		plotfunc = get(kwargs, :plotSolution, (x, p; kws...) -> plot!(x; kws...))
-		optscont = options(_pt.x, _pt.param, _level + 1)
-		@set! optscont.ds *= _dsfactor
+    # convenient function for branching
+    function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
+        plotfunc = get(kwargs, :plotSolution, (x, p; kws...) -> plot!(x; kws...))
+        optscont = options(_pt.x, _pt.param, _level + 1)
+        @set! optscont.ds *= _dsfactor
 
-		function plotSolBD(x, p; kws...)
-			plotfunc(x, p; ylabel = code*"-$_id", xlabel = "level = $(_level+1), dim = $(kernelDim(_pt))", label="", kws...)
-			plot!(node.γ; subplot = 1, legend=:topleft, putspecialptlegend = false, markersize = 2)
-		end
+        continuation(getContResult(node.γ), _id, optscont;
+            nev = optscont.nev, kwargs...,
+            ampfactor = _ampfactor,
+            usedeflation = usedeflation,
+        )
+    end
 
-		continuation(getContResult(node.γ), _id, optscont;
-			nev = optscont.nev, kwargs...,
-			ampfactor = _ampfactor,
-			usedeflation = usedeflation,
-		)
-	end
+    for (id, pt) in enumerate(node.γ.specialpoint)
+        # we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
+        if pt.step > 1 && (pt.type in (:bp, :nd))
+            try
+                verbose && println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
+                γ = letsbranch(id, pt, level)
+                add!(node, γ, level+1, id)
+                ~isnothing(γ) && (verbose && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n"))
+                verbose && _show(stdout, node.γ.specialpoint[id], id)
 
-	for (id, pt) in enumerate(node.γ.specialpoint)
-		# we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
-		if pt.step > 1 && (pt.type in (:bp, :nd))
-			try
-				verbose && println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
-				γ = letsbranch(id, pt, level)
-				add!(node, γ, level+1, id)
-				~isnothing(γ) && (verbose && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n"))
-				verbose && _show(stdout, node.γ.specialpoint[id], id)
+                # in the case of a Transcritical bifurcation, we compute the other branch
+                if ~isnothing(γ) && ~(γ isa Vector)
+                    if ~halfbranch && from(γ) isa Transcritical
+                        γ = letsbranch(id, pt, level; _dsfactor = -1)
+                        add!(node, γ, level+1, id)
+                    end
+                    if ~halfbranch && from(γ) isa Pitchfork
+                        γ = letsbranch(id, pt, level; _ampfactor = -1)
+                        add!(node, γ, level+1, id)
+                    end
+                end
 
-				# in the case of a Transcritical bifurcation, we compute the other branch
-				if ~isnothing(γ) && ~(γ isa Vector)
-					if ~halfbranch && from(γ) isa Transcritical
-						γ = letsbranch(id, pt, level; _dsfactor = -1)
-						add!(node, γ, level+1, id)
-					end
-					if ~halfbranch && from(γ) isa Pitchfork
-						γ = letsbranch(id, pt, level; _ampfactor = -1)
-						add!(node, γ, level+1, id)
-					end
-				end
-
-			catch ex
-				# @error ex
-			# 	return node
-			end
-		end
-	end
-	for (ii, _node) in enumerate(node.child)
-		bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", verbosediagram = verbosediagram, kwargs...)
-	end
-	return node
+            catch ex
+            #     @error ex
+            #     return node
+            end
+        end
+    end
+    for (ii, _node) in enumerate(node.child)
+        bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", verbosediagram = verbosediagram, kwargs...)
+    end
+    return node
 end

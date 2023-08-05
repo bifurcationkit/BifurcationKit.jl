@@ -5,7 +5,7 @@ $(TYPEDFIELDS)
 
 This parametric type allows to define a new dot product from the one saved in `dt::dot`. More precisely:
 
-	dt(u1, u2, p1::T, p2::T, theta::T) where {T <: Real}
+    dt(u1, u2, p1::T, p2::T, theta::T) where {T <: Real}
 
 computes, the weighted dot product ``\\langle (u_1,p_1), (u_2,p_2)\\rangle_\\theta = \\theta \\Re \\langle u_1,u_2\\rangle  +(1-\\theta)p_1p_2`` where ``u_i\\in\\mathbb R^N``. The ``\\Re`` factor is put to ensure a real valued result despite possible complex valued arguments.
 
@@ -13,10 +13,10 @@ computes, the weighted dot product ``\\langle (u_1,p_1), (u_2,p_2)\\rangle_\\the
     This is used in the pseudo-arclength constraint with the dot product ``\\frac{1}{N} \\langle u_1, u_2\\rangle,\\quad u_i\\in\\mathbb R^N``
 """
 struct DotTheta{Tdot, Ta}
-	"dot product used in pseudo-arclength constraint"
-	dot::Tdot
-	"Linear operator associated with dot product, i.e. dot(x, y) = <x, Ay>, where <,> is the standard dot product on R^N. You must provide an inplace function which evaluates A. For example `x -> rmul!(x, 1/length(x))`."
-	apply!::Ta
+    "dot product used in pseudo-arclength constraint"
+    dot::Tdot
+    "Linear operator associated with dot product, i.e. dot(x, y) = <x, Ay>, where <,> is the standard dot product on R^N. You must provide an inplace function which evaluates A. For example `x -> rmul!(x, 1/length(x))`."
+    apply!::Ta
 end
 
 DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x))   )
@@ -48,28 +48,28 @@ $(TYPEDFIELDS)
 
 """
 @with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot} <: AbstractContinuationAlgorithm
-	"Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
-	tangent::Ttang = Secant()
-	"`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
-	θ::T						= 0.5 		# parameter in the dot product of the extended system
-	"[internal], "
-	_bothside::Bool = false
-	"Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
-	bls::Tbls = MatrixBLS()
-	# parameters for scaling arclength step size
-	"Unused for now, "
-	doArcLengthScaling::Bool  	= false
-	"Unused for now, "
-	gGoal::T					= 0.5
-	"Unused for now, "
-	gMax::T						= 0.8
-	"Unused for now, "
-	θMin::T						= 0.001
-	"`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)"
-	dotθ::Tdot                  = DotTheta()
+    "Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
+    tangent::Ttang = Secant()
+    "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
+    θ::T                        = 0.5 # parameter in the dot product of the extended system
+    "[internal], "
+    _bothside::Bool = false
+    "Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
+    bls::Tbls = MatrixBLS()
+    # parameters for scaling arclength step size
+    "Unused for now, "
+    doArcLengthScaling::Bool = false
+    "Unused for now, "
+    gGoal::T                 = 0.5
+    "Unused for now, "
+    gMax::T                  = 0.8
+    "Unused for now, "
+    θMin::T                  = 0.001
+    "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)"
+    dotθ::Tdot                  = DotTheta()
 
-	@assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
-	@assert 0 <= θ <=1 "θ must belong to [0, 1]"
+    @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
+    @assert 0 <= θ <=1 "θ must belong to [0, 1]"
 end
 getLinsolver(alg::PALC) = alg.bls
 @inline getdot(alg::PALC) = alg.dotθ
@@ -83,104 +83,104 @@ internalAdaptation!(alg::PALC, onoroff::Bool) = internalAdaptation!(alg.tangent,
 
 
 function Base.empty!(alg::PALC)
-	empty!(alg.tangent)
-	alg
+    empty!(alg.tangent)
+    alg
 end
 
 function update(alg::PALC, contParams::ContinuationPar, linearAlgo)
-	if isnothing(linearAlgo)
-		if isnothing(alg.bls.solver)
-			return @set alg.bls.solver = contParams.newtonOptions.linsolver
-		end
-	else
-		return @set alg.bls = linearAlgo
-	end
-	alg
+    if isnothing(linearAlgo)
+        if isnothing(alg.bls.solver)
+            return @set alg.bls.solver = contParams.newtonOptions.linsolver
+        end
+    else
+        return @set alg.bls = linearAlgo
+    end
+    alg
 end
 
 function initialize!(state::AbstractContinuationState,
-						iter::AbstractContinuationIterable,
-						alg::PALC,
-						nrm = false)
-	# for the initialisation step, we do not use a Bordered predictor which fails at bifurcation points
-	getTangent!(state, iter, Secant(), getdot(alg))
-	# we want to start at (u0, p0), not at (u1, p1)
-	copyto!(state.z, state.z_old)
-	# then update the predictor state.z_pred
-	addTangent!(state::AbstractContinuationState, nrm)
+                        iter::AbstractContinuationIterable,
+                        alg::PALC,
+                        nrm = false)
+    # for the initialisation step, we do not use a Bordered predictor which fails at bifurcation points
+    getTangent!(state, iter, Secant(), getdot(alg))
+    # we want to start at (u0, p0), not at (u1, p1)
+    copyto!(state.z, state.z_old)
+    # then update the predictor state.z_pred
+    addTangent!(state::AbstractContinuationState, nrm)
 end
 
 function getPredictor!(state::AbstractContinuationState,
-						iter::AbstractContinuationIterable,
-						alg::PALC,
-						nrm = false)
-	# we first compute the tangent
-	getTangent!(state, iter, alg.tangent, getdot(alg))
-	# then update the predictor state.z_pred
-	addTangent!(state::AbstractContinuationState, nrm)
+                        iter::AbstractContinuationIterable,
+                        alg::PALC,
+                        nrm = false)
+    # we first compute the tangent
+    getTangent!(state, iter, alg.tangent, getdot(alg))
+    # then update the predictor state.z_pred
+    addTangent!(state::AbstractContinuationState, nrm)
 end
 
 # this function only mutates z_pred
 # the nrm argument allows to just the increment z_pred.p by ds
 function addTangent!(state::AbstractContinuationState, nrm = false)
-	# we perform z_pred = z + ds * τ
-	copyto!(state.z_pred, state.z)
-	ds = state.ds
-	ρ = nrm ? ds / state.τ.p : ds
-	axpy!(ρ, state.τ, state.z_pred)
+    # we perform z_pred = z + ds * τ
+    copyto!(state.z_pred, state.z)
+    ds = state.ds
+    ρ = nrm ? ds / state.τ.p : ds
+    axpy!(ρ, state.τ, state.z_pred)
 end
 
 updatePredictor!(state::AbstractContinuationState,
-						iter::AbstractContinuationIterable,
-						alg::PALC,
-						nrm = false) = addTangent!(state, nrm)
+                        iter::AbstractContinuationIterable,
+                        alg::PALC,
+                        nrm = false) = addTangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
-					it::AbstractContinuationIterable,
-					alg::PALC;
-					kwargs...)
-	if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
-		state.z_pred.p = clampPredp(state.z_pred.p, it)
-		return corrector!(state, it, Natural(); kwargs...)
-	end
-	sol = newtonPALC(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callbackN, kwargs...)
+                    it::AbstractContinuationIterable,
+                    alg::PALC;
+                    kwargs...)
+    if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
+        state.z_pred.p = clampPredp(state.z_pred.p, it)
+        return corrector!(state, it, Natural(); kwargs...)
+    end
+    sol = newtonPALC(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callbackN, kwargs...)
 
-	# update fields
-	_updatefieldButNotSol!(state, sol)
+    # update fields
+    _updatefieldButNotSol!(state, sol)
 
-	# update solution
-	if converged(sol)
-		copyto!(state.z, sol.u)
-	end
+    # update solution
+    if converged(sol)
+        copyto!(state.z, sol.u)
+    end
 
-	return true
+    return true
 end
 
 ###############################################
 """
-	Secant Tangent predictor
+    Secant Tangent predictor
 """
 struct Secant <: AbstractTangentComputation end
 
 # This function is used for initialisation in iterateFromTwoPoints
 function _secantComputation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIterable, ds, θ, verbosity, dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
-	(verbosity > 0) && println("Predictor:  Secant")
-	# secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
-	copyto!(τ, z₁)
-	minus!(τ, z₀)
-	α = sign(ds) / dotθ(τ, θ)
-	rmul!(τ, α)
+    (verbosity > 0) && println("Predictor:  Secant")
+    # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
+    copyto!(τ, z₁)
+    minus!(τ, z₀)
+    α = sign(ds) / dotθ(τ, θ)
+    rmul!(τ, α)
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internalAdaptation!(::Secant, ::Bool) = nothing
 
 getTangent!(state::AbstractContinuationState,
-			iter::AbstractContinuationIterable,
-			algo::Secant,
-			dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
+            iter::AbstractContinuationIterable,
+            algo::Secant,
+            dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
 ###############################################
 """
-	Bordered Tangent predictor
+    Bordered Tangent predictor
 """
 struct Bordered <: AbstractTangentComputation end
 # important for bisection algorithm, switch on / off internal adaptive behavior
@@ -194,179 +194,179 @@ internalAdaptation!(::Bordered, ::Bool) = nothing
 # └                           ┘└  ┘   └   ┘
 # it is updated inplace
 function getTangent!(state::AbstractContinuationState,
-					it::AbstractContinuationIterable,
-					tgtalgo::Bordered, dotθ)
-	(it.verbosity > 0) && println("Predictor: Bordered")
-	ϵ = getDelta(it.prob)
-	τ = state.τ
-	θ = getθ(it)
-	T = eltype(it)
+                    it::AbstractContinuationIterable,
+                    tgtalgo::Bordered, dotθ)
+    (it.verbosity > 0) && println("Predictor: Bordered")
+    ϵ = getDelta(it.prob)
+    τ = state.τ
+    θ = getθ(it)
+    T = eltype(it)
 
-	# dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-	dFdl = residual(it.prob, state.z.u, setParam(it, state.z.p + ϵ))
-	minus!(dFdl, residual(it.prob, state.z.u, setParam(it, state.z.p)))
-	rmul!(dFdl, 1/ϵ)
+    # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
+    dFdl = residual(it.prob, state.z.u, setParam(it, state.z.p + ϵ))
+    minus!(dFdl, residual(it.prob, state.z.u, setParam(it, state.z.p)))
+    rmul!(dFdl, 1/ϵ)
 
-	# compute jacobian
-	J = jacobian(it.prob, state.z.u, setParam(it, state.z.p))
+    # compute jacobian
+    J = jacobian(it.prob, state.z.u, setParam(it, state.z.p))
 
-	# extract tangent as solution of the above bordered linear system
-	τu, τp, flag, itl = getLinsolver(it)( it, state,
-										J, dFdl,
-										0*state.z.u, one(T)) # Right-hand side
+    # extract tangent as solution of the above bordered linear system
+    τu, τp, flag, itl = getLinsolver(it)( it, state,
+                                        J, dFdl,
+                                        0*state.z.u, one(T)) # Right-hand side
 
-	~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
+    ~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
 
-	# we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
-	α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
-	α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
+    # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
+    α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
+    α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
 
-	copyto!(τ.u, τu)
-	τ.p = τp
-	rmul!(τ, α)
+    copyto!(τ.u, τu)
+    τ.p = τp
+    rmul!(τ, α)
 end
 ####################################################################################################
 """
-	Polynomial Tangent predictor
+    Polynomial Tangent predictor
 
 $(TYPEDFIELDS)
 
 # Constructor(s)
 
-	Polynomial(pred, n, k, v0)
+    Polynomial(pred, n, k, v0)
 
-	Polynomial(n, k, v0)
+    Polynomial(n, k, v0)
 
 - `n` order of the polynomial
 - `k` length of the last solutions vector used for the polynomial fit
 - `v0` example of solution to be stored. It is only used to get the `eltype` of the tangent!!
 """
 mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <: AbstractTangentComputation
-	"Order of the polynomial"
-	n::Int64
+    "Order of the polynomial"
+    n::Int64
 
-	"Length of the last solutions vector used for the polynomial fit"
-	k::Int64
+    "Length of the last solutions vector used for the polynomial fit"
+    k::Int64
 
-	"Matrix for the interpolation"
-	A::Matrix{T}
+    "Matrix for the interpolation"
+    A::Matrix{T}
 
-	"Algo for tangent when polynomial predictor is not possible"
-	tangent::Ttg
+    "Algo for tangent when polynomial predictor is not possible"
+    tangent::Ttg
 
-	"Vector of solutions"
-	solutions::CircularBuffer{Tvec}
+    "Vector of solutions"
+    solutions::CircularBuffer{Tvec}
 
-	"Vector of parameters"
-	parameters::CircularBuffer{T}
+    "Vector of parameters"
+    parameters::CircularBuffer{T}
 
-	"Vector of arclengths"
-	arclengths::CircularBuffer{T}
+    "Vector of arclengths"
+    arclengths::CircularBuffer{T}
 
-	"Coefficients for the polynomials for the solution"
-	coeffsSol::Vector{Tvec}
+    "Coefficients for the polynomials for the solution"
+    coeffsSol::Vector{Tvec}
 
-	"Coefficients for the polynomials for the parameter"
-	coeffsPar::Vector{T}
+    "Coefficients for the polynomials for the parameter"
+    coeffsPar::Vector{T}
 
-	"Update the predictor by adding the last point (x, p)? This can be disabled in order to just use the polynomial prediction. It is useful when the predictor is called mutiple times during bifurcation detection using bisection."
-	update::Bool
+    "Update the predictor by adding the last point (x, p)? This can be disabled in order to just use the polynomial prediction. It is useful when the predictor is called mutiple times during bifurcation detection using bisection."
+    update::Bool
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internalAdaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
 
 function Polynomial(pred, n, k, v0)
-	@assert n<k "k must be larger than the degree of the polynomial"
-	Polynomial(n,k,zeros(eltype(v0), k, n+1), pred,
-		CircularBuffer{typeof(v0)}(k),  # solutions
-		CircularBuffer{eltype(v0)}(k),  # parameters
-		CircularBuffer{eltype(v0)}(k),  # arclengths
-		Vector{typeof(v0)}(undef, n+1), # coeffsSol
-		Vector{eltype(v0)}(undef, n+1), # coeffsPar
-		true)
+    @assert n<k "k must be larger than the degree of the polynomial"
+    Polynomial(n,k,zeros(eltype(v0), k, n+1), pred,
+        CircularBuffer{typeof(v0)}(k),  # solutions
+        CircularBuffer{eltype(v0)}(k),  # parameters
+        CircularBuffer{eltype(v0)}(k),  # arclengths
+        Vector{typeof(v0)}(undef, n+1), # coeffsSol
+        Vector{eltype(v0)}(undef, n+1), # coeffsPar
+        true)
 end
 Polynomial(n, k, v0) = Polynomial(Secant(), n, k, v0)
 
 isready(ppd::Polynomial) = length(ppd.solutions) >= ppd.k
 
 function Base.empty!(ppd::Polynomial)
-	empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
+    empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
 end
 
 function getStats(polypred::Polynomial)
-	Sbar = sum(polypred.arclengths) / length(polypred.arclengths)
-	σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / length(polypred.arclengths))
-	# return 0,1
-	return Sbar, σ
+    Sbar = sum(polypred.arclengths) / length(polypred.arclengths)
+    σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / length(polypred.arclengths))
+    # return 0,1
+    return Sbar, σ
 end
 
 function (polypred::Polynomial)(ds::T) where T
-	sbar, σ = getStats(polypred)
-	s = polypred.arclengths[end] + ds
-	snorm = (s-sbar)/σ
-	# vector of powers of snorm
-	S = Vector{T}(undef, polypred.n+1); S[1] = T(1)
-	for jj = 1:polypred.n; S[jj+1] = S[jj] * snorm; end
-	p = sum(S .* polypred.coeffsPar)
-	x = sum(S .* polypred.coeffsSol)
-	return x, p
+    sbar, σ = getStats(polypred)
+    s = polypred.arclengths[end] + ds
+    snorm = (s-sbar)/σ
+    # vector of powers of snorm
+    S = Vector{T}(undef, polypred.n+1); S[1] = T(1)
+    for jj = 1:polypred.n; S[jj+1] = S[jj] * snorm; end
+    p = sum(S .* polypred.coeffsPar)
+    x = sum(S .* polypred.coeffsSol)
+    return x, p
 end
 
 function updatePred!(polypred::Polynomial)
-	Sbar, σ = getStats(polypred)
-	# re-scale the previous arclengths so that the Vandermond matrix is well conditioned
-	Ss = (polypred.arclengths .- Sbar) ./ σ
-	# construction of the Vandermond Matrix
-	polypred.A[:, 1] .= 1
-	for jj in 1:polypred.n; polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss; end
-	# invert linear system for least square fitting
-	B = (polypred.A' * polypred.A) \ polypred.A'
-	mul!(polypred.coeffsSol, B, polypred.solutions)
-	mul!(polypred.coeffsPar, B, polypred.parameters)
-	return true
+    Sbar, σ = getStats(polypred)
+    # re-scale the previous arclengths so that the Vandermond matrix is well conditioned
+    Ss = (polypred.arclengths .- Sbar) ./ σ
+    # construction of the Vandermond Matrix
+    polypred.A[:, 1] .= 1
+    for jj in 1:polypred.n; polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss; end
+    # invert linear system for least square fitting
+    B = (polypred.A' * polypred.A) \ polypred.A'
+    mul!(polypred.coeffsSol, B, polypred.solutions)
+    mul!(polypred.coeffsPar, B, polypred.parameters)
+    return true
 end
 
 function getTangent!(state::AbstractContinuationState,
-					it::AbstractContinuationIterable,
-					polypred::Polynomial, dotθ)
-	(it.verbosity > 0) && println("Predictor: Polynomial")
-	ds = state.ds
-	# do we update the predictor with last converged point?
-	if polypred.update
-		if length(polypred.arclengths) == 0
-			push!(polypred.arclengths, ds)
-		else
-			push!(polypred.arclengths, polypred.arclengths[end] + ds)
-		end
-		push!(polypred.solutions, state.z.u)
-		push!(polypred.parameters, state.z.p)
-	end
+                    it::AbstractContinuationIterable,
+                    polypred::Polynomial, dotθ)
+    (it.verbosity > 0) && println("Predictor: Polynomial")
+    ds = state.ds
+    # do we update the predictor with last converged point?
+    if polypred.update
+        if length(polypred.arclengths) == 0
+            push!(polypred.arclengths, ds)
+        else
+            push!(polypred.arclengths, polypred.arclengths[end] + ds)
+        end
+        push!(polypred.solutions, state.z.u)
+        push!(polypred.parameters, state.z.p)
+    end
 
-	if ~isready(polypred) || ~polypred.update
-		return getTangent!(state, it, polypred.tangent, dotθ)
-	else
-		return polypred.update ? updatePred!(polypred) : true
-	end
+    if ~isready(polypred) || ~polypred.update
+        return getTangent!(state, it, polypred.tangent, dotθ)
+    else
+        return polypred.update ? updatePred!(polypred) : true
+    end
 end
 
 
 ####################################################################################################
 function arcLengthScaling(θ, alg, τ::M, verbosity) where {M <: BorderedArray}
-	# the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee,
-	# Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D
-	# Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,
-	# ” March 1, 2002. https://doi.org/10.2172/800778.
-	thetanew = θ
-	g = abs(τ.p * θ)
-	(verbosity > 0) && print("Theta changes from $(θ) to ")
-	if (g > alg.gMax)
-		thetanew = alg.gGoal / τ.p * sqrt( abs(1.0 - g^2) / abs(1.0 - τ.p^2) )
-		if (thetanew < alg.thetaMin)
-		  thetanew = alg.thetaMin;
-		end
-	end
-	(verbosity > 0) && print("$(thetanew)\n")
-	return thetanew
+    # the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee,
+    # Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D
+    # Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,
+    # ” March 1, 2002. https://doi.org/10.2172/800778.
+    thetanew = θ
+    g = abs(τ.p * θ)
+    (verbosity > 0) && print("Theta changes from $(θ) to ")
+    if (g > alg.gMax)
+        thetanew = alg.gGoal / τ.p * sqrt( abs(1.0 - g^2) / abs(1.0 - τ.p^2) )
+        if (thetanew < alg.thetaMin)
+          thetanew = alg.thetaMin;
+        end
+    end
+    (verbosity > 0) && print("$(thetanew)\n")
+    return thetanew
 end
 
 ####################################################################################################
@@ -377,122 +377,122 @@ with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1-θ) ⋅ (p - p0
 The initial guess for the newton method is located in `state.z_pred`
 """
 function newtonPALC(iter::AbstractContinuationIterable,
-					state::AbstractContinuationState,
-					dotθ = getdot(iter);
-					normN = norm,
-					callback = cbDefault,
-					kwargs...)
-	prob = iter.prob
-	par = getParams(prob)
-	ϵ = getDelta(prob)
-	paramlens = getLens(iter)
-	contparams = getContParams(iter)
-	T = eltype(iter)
-	θ = getθ(iter)
+                    state::AbstractContinuationState,
+                    dotθ = getdot(iter);
+                    normN = norm,
+                    callback = cbDefault,
+                    kwargs...)
+    prob = iter.prob
+    par = getParams(prob)
+    ϵ = getDelta(prob)
+    paramlens = getLens(iter)
+    contparams = getContParams(iter)
+    T = eltype(iter)
+    θ = getθ(iter)
 
-	z0 = getSolution(state)
-	τ0 = state.τ
-	@unpack z_pred, ds = state
+    z0 = getSolution(state)
+    τ0 = state.τ
+    @unpack z_pred, ds = state
 
-	@unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
-	@unpack pMin, pMax = contparams
-	linsolver = getLinsolver(iter)
+    @unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
+    @unpack pMin, pMax = contparams
+    linsolver = getLinsolver(iter)
 
-	# record the damping parameter
-	α0 = α
+    # record the damping parameter
+    α0 = α
 
-	# N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
-	N(u, _p) = arcLengthEq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
-	normAC(resf, resn) = max(normN(resf), abs(resn))
+    # N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
+    N(u, _p) = arcLengthEq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
+    normAC(resf, resn) = max(normN(resf), abs(resn))
 
-	# initialise variables
-	x = _copy(z_pred.u)
-	p = z_pred.p
-	x_pred = _copy(x)
+    # initialise variables
+    x = _copy(z_pred.u)
+    p = z_pred.p
+    x_pred = _copy(x)
 
-	res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
+    res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
 
-	dX = _copy(res_f)
-	dp = zero(T)
-	up = zero(T)
+    dX = _copy(res_f)
+    dp = zero(T)
+    up = zero(T)
 
-	# dFdp = (F(x, p + ϵ) - res_f) / ϵ
-	dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-	minus!(dFdp, res_f)						# dFdp = dFdp - res_f
-	rmul!(dFdp, one(T) / ϵ)
+    # dFdp = (F(x, p + ϵ) - res_f) / ϵ
+    dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
+    minus!(dFdp, res_f) # dFdp = dFdp - res_f
+    rmul!(dFdp, one(T) / ϵ)
 
-	res       = normAC(res_f, res_n)
-	residuals = [res]
-	step = 0
-	itlineartot = 0
+    res       = normAC(res_f, res_n)
+    residuals = [res]
+    step = 0
+    itlineartot = 0
 
-	verbose && printNonlinearStep(step, res)
-	line_step = true
+    verbose && printNonlinearStep(step, res)
+    line_step = true
 
-	compute = callback((;x, res_f, residual=res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    compute = callback((;x, res_f, residual=res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
-	while (step < maxIter) && (res > tol) && line_step && compute
-		# dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-		copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-			minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
+    while (step < maxIter) && (res > tol) && line_step && compute
+        # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
+        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+            minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
 
-		# compute jacobian
-		J = jacobian(prob, x, set(par, paramlens, p))
-		
-		# solve linear system
-		# ┌            ┐┌  ┐   ┌     ┐
-		# │ J     dFdp ││u │ = │res_f│
-		# │ τ0.u  τ0.p ││up│   │res_n│
-		# └            ┘└  ┘   └     ┘
-		u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
-		~flag && @debug "Linear solver for J did not converge."
-		itlineartot += sum(itlinear)
+        # compute jacobian
+        J = jacobian(prob, x, set(par, paramlens, p))
+        
+        # solve linear system
+        # ┌            ┐┌  ┐   ┌     ┐
+        # │ J     dFdp ││u │ = │res_f│
+        # │ τ0.u  τ0.p ││up│   │res_n│
+        # └            ┘└  ┘   └     ┘
+        u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
+        ~flag && @debug "Linear solver for J did not converge."
+        itlineartot += sum(itlinear)
 
-		if linesearch
-			line_step = false
-			while !line_step && (α > αmin)
-				# x_pred = x - α * u
-				copyto!(x_pred, x); axpy!(-α, u, x_pred)
+        if linesearch
+            line_step = false
+            while !line_step && (α > αmin)
+                # x_pred = x - α * u
+                copyto!(x_pred, x); axpy!(-α, u, x_pred)
 
-				p_pred = p - α * up
-				copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                p_pred = p - α * up
+                copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
-				res_n  = N(x_pred, p_pred)
-				res = normAC(res_f, res_n)
+                res_n  = N(x_pred, p_pred)
+                res = normAC(res_f, res_n)
 
-				if res < residuals[end]
-					if (res < residuals[end] / 4) && (α < 1)
-						α *= 2
-					end
-					line_step = true
-					copyto!(x, x_pred)
+                if res < residuals[end]
+                    if (res < residuals[end] / 4) && (α < 1)
+                        α *= 2
+                    end
+                    line_step = true
+                    copyto!(x, x_pred)
 
-					# p = p_pred
-					p  = clamp(p_pred, pMin, pMax)
-				else
-					α /= 2
-				end
-			end
-			# we put back the initial value
-			α = α0
-		else
-			minus!(x, u)
-			p = clamp(p - up, pMin, pMax)
+                    # p = p_pred
+                    p  = clamp(p_pred, pMin, pMax)
+                else
+                    α /= 2
+                end
+            end
+            # we put back the initial value
+            α = α0
+        else
+            minus!(x, u)
+            p = clamp(p - up, pMin, pMax)
 
-			copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
 
-			res_n  = N(x, p); res = normAC(res_f, res_n)
-		end
+            res_n  = N(x, p); res = normAC(res_f, res_n)
+        end
 
-		push!(residuals, res)
-		step += 1
+        push!(residuals, res)
+        step += 1
 
-		verbose && printNonlinearStep(step, res, itlinear)
+        verbose && printNonlinearStep(step, res, itlinear)
 
-		# shall we break the loop?
-		compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
-	end
-	verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
-	flag = (residuals[end] < tol) & callback((;x, res_f, residual=res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
-	return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
+        # shall we break the loop?
+        compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    end
+    verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
+    flag = (residuals[end] < tol) & callback((;x, res_f, residual=res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end

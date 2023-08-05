@@ -5,14 +5,14 @@ using Test, Parameters, Setfield, LinearAlgebra
 const BK = BifurcationKit
 ####################################################################################################
 function COm(u, p)
-	@unpack q1,q2,q3,q4,q5,q6,k = p
-	x, y, s = u
-	z = 1-x-y-s
-	out = similar(u)
-	out[1] = 2 * q1 * z^2 - 2 * q5 * x^2 - q3 * x * y
-	out[2] = q2 * z - q6 * y - q3 * x * y
-	out[3] = q4 * z - k * q4 * s
-	out
+    @unpack q1,q2,q3,q4,q5,q6,k = p
+    x, y, s = u
+    z = 1-x-y-s
+    out = similar(u)
+    out[1] = 2 * q1 * z^2 - 2 * q5 * x^2 - q3 * x * y
+    out[2] = q2 * z - q6 * y - q3 * x * y
+    out[3] = q4 * z - k * q4 * s
+    out
 end
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
@@ -22,11 +22,11 @@ prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2); recordFromSolution = (
 
 opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInversion = 4, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
 
-	# @set! opts_br.newtonOptions.verbose = true
-	alg = PALC()
-	br = @time continuation(prob, alg, opts_br;
-	plot = false, verbosity = 0, normC = norminf,
-	bothside = true)
+    # @set! opts_br.newtonOptions.verbose = true
+    alg = PALC()
+    br = @time continuation(prob, alg, opts_br;
+    plot = false, verbosity = 0, normC = norminf,
+    bothside = true)
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################
@@ -56,7 +56,7 @@ snpt = getNormalForm(br, 3)
 
 sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
-	# plot(br);scatter!([sn.x.p], [sn.x.u[1]])
+    # plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test BK.converged(sn) && sn.itlineartot == 8
 @test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
 @test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
@@ -120,9 +120,9 @@ ind = argmin(abs.(_eigvals .- Complex(0, ω)))
 @test pb.b ≈ ζ atol = 1e-3
 
 hp = newton(br, 2;
-	options = NewtonPar( opts_br.newtonOptions; maxIter = 10),
-	startWithEigen = true,
-	bdlinsolver = MatrixBLS())
+    options = NewtonPar( opts_br.newtonOptions; maxIter = 10),
+    startWithEigen = true,
+    bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
 # plot(br);scatter!([hp.p[1]], [hp.u[1]])
 

@@ -84,7 +84,8 @@ isInplace(pb::BifFunction) = pb.inplace
 getDelta(pb::BifFunction) = pb.δ
 
 recordSolDefault(x, p; kwargs...) = norm(x)
-plotDefault(x, p; kwargs...) = nothing
+plotDefault(x, p; kwargs...) = nothing              # for Plots.jl
+plotDefault(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
 
 # create specific problems where pretty much is available

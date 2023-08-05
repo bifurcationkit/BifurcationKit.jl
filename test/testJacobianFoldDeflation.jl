@@ -6,15 +6,15 @@ source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
 limits(x,i,N, b) = (i<1||i>N) ? b : x[i]
 
 function F_chan(x, p)
-	α, β = p
-	N = length(x)
-	f = similar(x)
-	N = length(x)
-	ind(x,i) = limits(x,i,N,β)
-	for i=1:N
-		f[i] = (ind(x,i-1) - 2 * x[i] + ind(x,i+1)) * (N-1)^2 + α * source_term(x[i], b = β)
-	end
-	return f
+    α, β = p
+    N = length(x)
+    f = similar(x)
+    N = length(x)
+    ind(x,i) = limits(x,i,N,β)
+    for i=1:N
+        f[i] = (ind(x,i-1) - 2 * x[i] + ind(x,i+1)) * (N-1)^2 + α * source_term(x[i], b = β)
+    end
+    return f
 end
 
 par_chan = (α = 3.3, β = 0.01)
@@ -66,15 +66,15 @@ outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@lens _.β), 
 indfold = 1
 foldpt = FoldPoint(br, indfold)
 foldpb = FoldProblemMinimallyAugmented(
-		(@set prob.VF.d2F = nothing), # this is for debug array
-		br.specialpoint[indfold].x,
-		br.specialpoint[indfold].x,
-		opts_br0.newtonOptions.linsolver)
+        (@set prob.VF.d2F = nothing), # this is for debug array
+        br.specialpoint[indfold].x,
+        br.specialpoint[indfold].x,
+        opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, par_chan) |> norm
 
 outfold = newtonFold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(verbose=false))
 # @test BK.converged(outfold)
-	# println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
+    # println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
 
 # user defined Fold Problem
 indfold = 1

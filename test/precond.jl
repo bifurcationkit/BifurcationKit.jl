@@ -26,4 +26,4 @@ decomp, history = ArnoldiMethod.partialschur(Jmap, nev = 110, tol=1e-9, which=LM
 #
 # using Plots
 # scatter(real.(vals), imag.(vals), label = "")
-# 	scatter!(real.(decomp.eigenvalues), imag.(decomp.eigenvalues), label = "", marker=:cross)
+#     scatter!(real.(decomp.eigenvalues), imag.(decomp.eigenvalues), label = "", marker=:cross)

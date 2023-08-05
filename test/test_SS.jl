@@ -34,16 +34,16 @@ fl = BK.Flow(vf, flow, dflow); @set! fl.flowFull = flow
 BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,
-	ds = LinRange(0, 1, M+1) |> diff,
-	section = section)
+    ds = LinRange(0, 1, M+1) |> diff,
+    section = section)
 
 show(probSh)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
-	po = BorderedArray(poguess, 1.)
+    po = BorderedArray(poguess, 1.)
 
 dpoguess = VectorOfArray([rand(N) for ii=1:M])
-	dpo = BorderedArray(dpoguess, 2.)
+    dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractArray structure
 pov = vcat(vec(po.u), po.p)
@@ -71,14 +71,14 @@ dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 fl = BK.Flow(vf, flow, dflow)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,
-	ds = LinRange(0,1,M+1) |> diff ,
-	section = section)
+    ds = LinRange(0,1,M+1) |> diff ,
+    section = section)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
-	po = BorderedArray(poguess, 1.)
+    po = BorderedArray(poguess, 1.)
 
 dpoguess = VectorOfArray([rand(N) for ii=1:M])
-	dpo = BorderedArray(dpoguess, 2.)
+    dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractArray structure
 pov = vcat(vec(po.u), po.p)
@@ -102,7 +102,7 @@ dres = probSh(po, par, dpo; δ = δ)
 M = 1
 normals = [rand(2) for ii=1:M]
 for ii=1:M
-	normals[ii] /= norm(normals[ii])
+    normals[ii] /= norm(normals[ii])
 end
 centers = [rand(2) for ii=1:M]
 
@@ -113,11 +113,11 @@ x = rand(2)
 xb = BK.R(hyper, x, 1)
 # test
 for ii=1:M
-	x2 = BK.E(hyper, xb, ii)
-	# test that x2 in Sigma2
-	@test dot(x2 - centers[ii], normals[ii]) < 1e-14
-	# that we have Rk∘Ek = Id and Ek∘Rk = IdΣ
-	@test BK.R(hyper, x2, ii) ≈ xb
+    x2 = BK.E(hyper, xb, ii)
+    # test that x2 in Sigma2
+    @test dot(x2 - centers[ii], normals[ii]) < 1e-14
+    # that we have Rk∘Ek = Id and Ek∘Rk = IdΣ
+    @test BK.R(hyper, x2, ii) ≈ xb
 end
 
 # test of the derivatives of E and R
@@ -139,7 +139,7 @@ _out2 = BK.dE(hyper, dx, 1)
 vf(x, p) = [x[1]*(1-x[1]), 1.]
 flow(x, p, t; k...) = (t = t, u = [exp(t) .* x[1] / (1-x[1]+x[1]*exp(t)), x[2]+t])
 Π2(x, p, t = 0) = (t = 2pi -x[2], u = flow(x, p, 2pi-x[2]).u)
-Π(x, p, t = 0) = flow(x, p, 2pi-x[2])	# return map
+Π(x, p, t = 0) = flow(x, p, 2pi-x[2])    # return map
 dflow(x, p, dx, t; k...) = (t = t, u = flow(x, p, t).u, du = ForwardDiff.derivative( z -> flow(x .+ z .* dx, p, t).u, 0),)
 section(x, T) = dot(x[1:2], [1, 0])
 # section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
@@ -174,10 +174,10 @@ display(_out1)
 
 # test the analytical version of the functional
 _out0 = probPSh(ci, par, dci)
-	δ = 1e-6
-	_out2 = (probPSh(ci .+ δ .* dci, par) .- probPSh(ci, par)) ./ δ
-	_out1 = ForwardDiff.derivative(z -> probPSh(ci .+ z .* dci, par), 0)
-	display(_out0)
-	display(_out1)
-	display(_out2)
-	_out0 - _out1 |> display
+    δ = 1e-6
+    _out2 = (probPSh(ci .+ δ .* dci, par) .- probPSh(ci, par)) ./ δ
+    _out1 = ForwardDiff.derivative(z -> probPSh(ci .+ z .* dci, par), 0)
+    display(_out0)
+    display(_out1)
+    display(_out2)
+    _out0 - _out1 |> display

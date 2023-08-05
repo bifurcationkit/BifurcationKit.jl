@@ -30,30 +30,30 @@ N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 
 function F_chan(u, p)
-	@unpack α, β = p
-	return [Fun(u(0.), domain(u)) - β,
-			Fun(u(1.), domain(u)) - β,
-			Δ * u + α * N(u, b = β)]
+    @unpack α, β = p
+    return [Fun(u(0.), domain(u)) - β,
+            Fun(u(1.), domain(u)) - β,
+            Δ * u + α * N(u, b = β)]
 end
 
 function dF_chan(u, v, p)
-	@unpack α, β = p
-	return [Fun(v(0.), domain(u)),
-			Fun(v(1.), domain(u)),
-			Δ * v + α * dN(u, b = β) * v]
+    @unpack α, β = p
+    return [Fun(v(0.), domain(u)),
+            Fun(v(1.), domain(u)),
+            Δ * v + α * dN(u, b = β) * v]
 end
 
 function Jac_chan(u, p)
-	@unpack α, β = p
-	return [Evaluation(u.space, 0.),
-			Evaluation(u.space, 1.),
-			Δ + α * dN(u, b = β)]
+    @unpack α, β = p
+    return [Evaluation(u.space, 0.),
+            Evaluation(u.space, 1.),
+            Δ + α * dN(u, b = β)]
 end
 
 function finalise_solution(z, tau, step, contResult)
-	printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
-	chop!(z.u, 1e-14);chop!(tau.u, 1e-14)
-	true
+    printstyled(color=:red,"--> AF length = ", (z, tau) .|> length ,"\n")
+    chop!(z.u, 1e-14);chop!(tau.u, 1e-14)
+    true
 end
 
 sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
@@ -62,16 +62,16 @@ par_af = (α = 3., β = 0.01)
 prob = BK.BifurcationProblem(F_chan, sol0, par_af, (@lens _.α); J = Jac_chan, plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
-	sol = @time BK.newton(prob, optnew, normN = norminf)
+    sol = @time BK.newton(prob, optnew, normN = norminf)
 
 plot(sol.u, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, detectBifurcation = 0)
 
-	br = @time continuation(
-		prob, PALC(bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
-		plot = true, verbosity = 2,
-		normC = norminf)
+    br = @time continuation(
+        prob, PALC(bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+        plot = true, verbosity = 2,
+        normC = norminf)
 ####################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [sol.u])
@@ -80,13 +80,13 @@ par_def = @set par_af.α = 3.3
 optdef = setproperties(optnew; tol = 1e-9, maxIter = 1000)
 
 solp = copy(sol.u)
-	solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
+    solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
 
 plot(sol.u);plot!(solp)
 
 outdef1 = @time BK.newton(
-	BK._remake(prob, u0 = solp), deflationOp, optdef)
-	BK.converged(outdef1) && push!(deflationOp, outdef1.u)
+    BK._remake(prob, u0 = solp), deflationOp, optdef)
+    BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(deflationOp.roots)
 ####################################################################################################
@@ -95,21 +95,21 @@ plot(deflationOp.roots)
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = true), maxSteps = 300, θ = 0.2, detectBifurcation = 0)
 
-	br = @time continuation(
-		prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
-		dotPALC = BK.DotTheta(dot),
-		plot = true,
-		verbosity = 2,
-		normC = norminf)
+    br = @time continuation(
+        prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+        dotPALC = BK.DotTheta(dot),
+        plot = true,
+        verbosity = 2,
+        normC = norminf)
 ####################################################################################################
 # tangent predictor with Bordered system
 br = @time continuation(
-	prob, PALC(tangent=Bordered(), bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont,
-	plot = true,)
+    prob, PALC(tangent=Bordered(), bls=BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont,
+    plot = true,)
 ####################################################################################################
 indfold = 2
 outfold = @time BK.newton(
-		br, indfold, #index of the fold point
-		bdlinsolver = BorderingBLS(solver = DefaultLS(false), checkPrecision = false)
-		)
-	BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")
+        br, indfold, #index of the fold point
+        bdlinsolver = BorderingBLS(solver = DefaultLS(false), checkPrecision = false)
+        )
+    BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")

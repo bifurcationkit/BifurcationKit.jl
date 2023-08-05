@@ -59,37 +59,37 @@ julia> br.param
 - `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
-	"holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+    "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during newton (corrector)
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
   - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)"
-	branch::StructArray{Tbr}
+    branch::StructArray{Tbr}
 
-	"A vector with eigen-elements at each continuation step."
-	eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
+    "A vector with eigen-elements at each continuation step."
+    eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
 
-	"Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
-	sol::Tsol
+    "Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
+    sol::Tsol
 
-	"The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)"
-	contparams::Tparc
+    "The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)"
+    contparams::Tparc
 
-	"Type of solutions computed in this branch."
-	kind::Tkind = EquilibriumCont()
+    "Type of solutions computed in this branch."
+    kind::Tkind = EquilibriumCont()
 
-	"Bifurcation problem used to compute the branch, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
-	prob::Tprob = nothing
+    "Bifurcation problem used to compute the branch, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
+    prob::Tprob = nothing
 
-	"A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a list of special points."
-	specialpoint::Vector{Biftype}
+    "A vector holding the set of detected bifurcation points. See [`SpecialPoint`](@ref) for a list of special points."
+    specialpoint::Vector{Biftype}
 
-	"Continuation algorithm used for the computation of the branch"
-	alg::Talg
+    "Continuation algorithm used for the computation of the branch"
+    alg::Talg
 
-	@assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
+    @assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
 # returns the number of steps in a branch
@@ -126,8 +126,8 @@ $(SIGNATURES)
 Return the solution for the ind-th point stored in br.sol
 """
 @inline function getSolx(br::ContResult, ind::Int)
-	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
-	return br.sol[ind].x
+    @assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+    return br.sol[ind].x
 end
 
 """
@@ -136,16 +136,16 @@ $(SIGNATURES)
 Return the parameter for the ind-th point stored in br.sol
 """
 @inline function getSolp(br::ContResult, ind::Int)
-	@assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
-	return br.sol[ind].p
+    @assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+    return br.sol[ind].p
 end
 
 function Base.getproperty(br::ContResult, s::Symbol)
-	if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg)
-		getfield(br, s)
-	else
-		getproperty(br.branch, s)
-	end
+    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg)
+        getfield(br, s)
+    else
+        getproperty(br.branch, s)
+    end
 end
 
 @inline kernelDim(br::ContResult, ind) = kernelDim(br.specialpoint[ind])
@@ -156,14 +156,14 @@ $(SIGNATURES)
 Return the eigenvalues of the ind-th continuation step. `verbose` is used to tell the number of unstable eigen elements.
 """
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
-	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
-	if verbose
-		println("──> For ", getLensSymbol(br), " = ", br.branch[ind].param)
-		println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-		println("──> Eigenvalues for continuation step ", br.eig[ind+1].step)
-	end
-	~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
-	br.eig[ind+1].eigenvals
+    @assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
+    if verbose
+        println("──> For ", getLensSymbol(br), " = ", br.branch[ind].param)
+        println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
+        println("──> Eigenvalues for continuation step ", br.eig[ind+1].step)
+    end
+    ~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
+    br.eig[ind+1].eigenvals
 end
 
 """
@@ -179,29 +179,29 @@ $(SIGNATURES)
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
 function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
-	@assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
-	return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvecs, indev)
+    @assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
+    return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvecs, indev)
 end
 
 @inline getLensSymbol(br::AbstractBranchResult) = getLensSymbol(getLens(br))
 
 function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
-	print(io, prefix * "┌─ Curve type: ")
-	printstyled(io, typeof(br.kind).name.name, comment, "\n", color=:cyan, bold = true)
-	println(io, prefix * "├─ Number of points: ", length(br.branch))
-	print(io, prefix * "├─ Type of vectors: ")
-	printstyled(io, getvectortype(br), color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ Parameter ")
-	printstyled(io, getLensSymbol(br), color=:cyan, bold = true)
-	println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
-	print(io, prefix * "├─ Algo: ")
-	printstyled(io, typeof(br.alg).name.name, "\n", color=:cyan, bold = true)
-	if length(br.specialpoint) > 0
-		println(io, prefix * "└─ Special points:\n\nIf `br` is the name of the branch,\nind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`\n")
-		for ii in eachindex(br.specialpoint)
-			_show(io, br.specialpoint[ii], ii, String(getLensSymbol(br)))
-		end
-	end
+    print(io, prefix * "┌─ Curve type: ")
+    printstyled(io, typeof(br.kind).name.name, comment, "\n", color=:cyan, bold = true)
+    println(io, prefix * "├─ Number of points: ", length(br.branch))
+    print(io, prefix * "├─ Type of vectors: ")
+    printstyled(io, getvectortype(br), color=:cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Parameter ")
+    printstyled(io, getLensSymbol(br), color=:cyan, bold = true)
+    println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
+    print(io, prefix * "├─ Algo: ")
+    printstyled(io, typeof(br.alg).name.name, "\n", color=:cyan, bold = true)
+    if length(br.specialpoint) > 0
+        println(io, prefix * "└─ Special points:\n\nIf `br` is the name of the branch,\nind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`\n")
+        for ii in eachindex(br.specialpoint)
+            _show(io, br.specialpoint[ii], ii, String(getLensSymbol(br)))
+        end
+    end
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
@@ -218,27 +218,27 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
  function _ContResult(prob, alg, printsol, br, x0, τ, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool, kind::AbstractContinuationKind) where {T, S, E}
-	# example of bifurcation point
-	bif0 = SpecialPoint(x0, τ, T, namedprintsol(printsol))
-	# shall we save full solution?
-	sol = contParams.saveSolEveryStep > 0 ? [(x = x0, p = getParam(prob), step = 0)] : nothing
-	n_unstable = 0; n_imag = 0; stability = true
+    # example of bifurcation point
+    bif0 = SpecialPoint(x0, τ, T, namedprintsol(printsol))
+    # shall we save full solution?
+    sol = contParams.saveSolEveryStep > 0 ? [(x = x0, p = getParam(prob), step = 0)] : nothing
+    n_unstable = 0; n_imag = 0; stability = true
 
-	if computeEigElements
-		evvectors = saveEigenvectors(contParams) ? eiginfo[2] : nothing
-		_evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, converged = true, step = 0)
-	else
-		_evvectors = (eigenvals = nothing, eigenvecs = nothing, converged = true, step = 0)
-	end
-	return ContResult(
-		branch = StructArray([br]),
-		specialpoint = Vector{typeof(bif0)}(undef, 0),
-		eig = computeEigElements ? [_evvectors] : empty([_evvectors]),
-		sol = sol,
-		contparams =  contParams,
-		alg = alg,
-		kind = kind,
-		prob = prob)
+    if computeEigElements
+        evvectors = saveEigenvectors(contParams) ? eiginfo[2] : nothing
+        _evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, converged = true, step = 0)
+    else
+        _evvectors = (eigenvals = nothing, eigenvecs = nothing, converged = true, step = 0)
+    end
+    return ContResult(
+        branch = StructArray([br]),
+        specialpoint = Vector{typeof(bif0)}(undef, 0),
+        eig = computeEigElements ? [_evvectors] : empty([_evvectors]),
+        sol = sol,
+        contparams =  contParams,
+        alg = alg,
+        kind = kind,
+        prob = prob)
 end
 
 """
@@ -247,7 +247,7 @@ $(SIGNATURES)
 Return the list of bifurcation points on a branch. It essentially filters the field `specialpoint`.
 """
 function bifurcation_points(br::AbstractBranchResult)
-	[sp for sp in br.specialpoint if is_bifurcation(sp)]
+    [sp for sp in br.specialpoint if is_bifurcation(sp)]
 end
 ####################################################################################################
 """
@@ -258,13 +258,13 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
-	"Set of branches branching off the bifurcation point `bp`"
-	γ::T
-	"Bifurcation point. It is thought as the root of the branches in γ"
-	bp::Tbp
-	function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ AbstractResult{Tkind, Tprob}} }}
-		return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
-	end
+    "Set of branches branching off the bifurcation point `bp`"
+    γ::T
+    "Bifurcation point. It is thought as the root of the branches in γ"
+    bp::Tbp
+    function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ AbstractResult{Tkind, Tprob}} }}
+        return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
+    end
 end
 
 Base.length(br::Branch) = length(br.γ)
@@ -291,31 +291,31 @@ Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing
 function _reverse(br0::ContResult)
-	br = deepcopy(br0)
-	nb = length(br.branch)
-	if ~isnothing(br.branch)
-		@set! br.branch =
-			StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
-	end
+    br = deepcopy(br0)
+    nb = length(br.branch)
+    if ~isnothing(br.branch)
+        @set! br.branch =
+            StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
+    end
 
-	if ~isnothing(br.specialpoint)
-		@set! br.specialpoint =
-			[setproperties(pt;
-				step = nb - pt.step - 1,
-				idx = nb - pt.idx + 1,
-				δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
-	end
+    if ~isnothing(br.specialpoint)
+        @set! br.specialpoint =
+            [setproperties(pt;
+                step = nb - pt.step - 1,
+                idx = nb - pt.idx + 1,
+                δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
+    end
 
-	if ~isnothing(br.eig)
-		@set! br.eig =
-			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
-	end
+    if ~isnothing(br.eig)
+        @set! br.eig =
+            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
+    end
 
-	if ~isnothing(br.sol)
-		@set! br.sol =
-			[setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
-	end
-	return br
+    if ~isnothing(br.sol)
+        @set! br.sol =
+            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
+    end
+    return br
 end
 
 _append!(x, y) = append!(x, y)
@@ -327,29 +327,29 @@ $(SIGNATURES)
 Merge two `ContResult`s and put the result in `br`.
 """
 function _cat!(br::ContResult, br2::ContResult)
-	# br = deepcopy(br1)
-	nb = length(br.branch)
-	if ~isnothing(br.branch)
-		append!(br.branch,
-			[setproperties(pt; step = nb + pt.step) for pt in br2.branch])
-	end
-	if ~isnothing(br.specialpoint)
-		append!(br.specialpoint,
-			[setproperties(pt;
-				step = nb + pt.step,
-				idx = nb + pt.idx) for pt in br2.specialpoint])
-	end
+    # br = deepcopy(br1)
+    nb = length(br.branch)
+    if ~isnothing(br.branch)
+        append!(br.branch,
+            [setproperties(pt; step = nb + pt.step) for pt in br2.branch])
+    end
+    if ~isnothing(br.specialpoint)
+        append!(br.specialpoint,
+            [setproperties(pt;
+                step = nb + pt.step,
+                idx = nb + pt.idx) for pt in br2.specialpoint])
+    end
 
-	if ~isnothing(br.eig)
-		append!(br.eig,
-			[setproperties(pt; step = nb + pt.step) for pt in br2.eig])
-	end
+    if ~isnothing(br.eig)
+        append!(br.eig,
+            [setproperties(pt; step = nb + pt.step) for pt in br2.eig])
+    end
 
-	if ~isnothing(br.sol)
-		append!(br.sol,
-			[setproperties(pt; step = nb + pt.step) for pt in br2.sol])
-	end
-	return br
+    if ~isnothing(br.sol)
+        append!(br.sol,
+            [setproperties(pt; step = nb + pt.step) for pt in br2.sol])
+    end
+    return br
 end
 
 # _catrev(br1::ContResult, br2::ContResult) = _merge!(_reverse(br1), br2)
@@ -359,39 +359,39 @@ end
 Same as _cat! but determine the ordering so that the branches merge properly
 """
 function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
-	# find the intersection point
-	dst(x1, p1, x2, p2) = max(abs(x1 - x2), abs(p1 - p2))
-	dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
-	ind = (1, 1)
-	for i in [1, length(br1)], j in [1, length(br2)]
-		if dst(i, j) < tol
-			ind = (i, j)
-			break
-		end
-	end
+    # find the intersection point
+    dst(x1, p1, x2, p2) = max(abs(x1 - x2), abs(p1 - p2))
+    dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
+    ind = (1, 1)
+    for i in [1, length(br1)], j in [1, length(br2)]
+        if dst(i, j) < tol
+            ind = (i, j)
+            break
+        end
+    end
 
-	if ind[1] == 1
-		if ind[2] == 1
-			return _cat!(_reverse(br2), br1)
-		else
-			return _cat!((br2), br1)
-		end
-	else
-		if ind[2] == 1
-			return _cat!(br1, br2)
-		else
-			return _cat!(br1, _reverse(br2))
-		end
+    if ind[1] == 1
+        if ind[2] == 1
+            return _cat!(_reverse(br2), br1)
+        else
+            return _cat!((br2), br1)
+        end
+    else
+        if ind[2] == 1
+            return _cat!(br1, br2)
+        else
+            return _cat!(br1, _reverse(br2))
+        end
 
-	end
+    end
 
-	if minimum(br1.branch.param) < minimum(br2.branch.param)
-		@debug "b1-b2"
-		# br1 is the first branch and then br2
-		# we need to look at the indexing
-		return _cat!(_reverse(br1), br2)
-	else
-		@debug "b2-b1"
-		return _cat!(_reverse(br1), br2)
-	end
+    if minimum(br1.branch.param) < minimum(br2.branch.param)
+        @debug "b1-b2"
+        # br1 is the first branch and then br2
+        # we need to look at the indexing
+        return _cat!(_reverse(br1), br2)
+    else
+        @debug "b2-b1"
+        return _cat!(_reverse(br1), br2)
+    end
 end

@@ -4,12 +4,12 @@ using BifurcationKit, LinearAlgebra, ForwardDiff, Parameters
 const BK = BifurcationKit
 ####################################################################################################
 struct EigMaps{T} <: BK.AbstractEigenSolver
-	solver::T
+    solver::T
 end
 
 function (eig::EigMaps)(J, nev; kwargs...)
-	λs, evs, cv, it = eig.solver(J + I, nev; kwargs)
-	return log.(Complex.(λs)), evs, cv, it
+    λs, evs, cv, it = eig.solver(J + I, nev; kwargs)
+    return log.(Complex.(λs)), evs, cv, it
 end
 ####################################################################################################
 opt_newton = NewtonPar(tol = 1e-9, maxIter = 20, verbose = false)
@@ -35,14 +35,14 @@ show(nf)
 ####################################################################################################
 # case of the Neimark-Sacker
 function Fns!(f, u, p, t)
-	@unpack θ, μ, c3, a = p
-	z = complex(u[1], u[2])
-	dz = z * cis(θ) * (1 + a * μ + c3 * abs2(z))
+    @unpack θ, μ, c3, a = p
+    z = complex(u[1], u[2])
+    dz = z * cis(θ) * (1 + a * μ + c3 * abs2(z))
 
-	f[1] = real(dz)
-	f[2] = imag(dz)
+    f[1] = real(dz)
+    f[2] = imag(dz)
 
-	return f
+    return f
 end
 Fns(x, p) = Fns!(similar(x), x, p, 0.)
 pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -1.123 - 0.456im)
@@ -57,4 +57,3 @@ nf = BK.neimarkSackerNormalForm(prob, br, 1; nev = 2, verbose = true)
 @test nf.nf.a ≈ pars_ns.a
 @test nf.nf.b ≈ pars_ns.c3
 show(nf)
-####################################################################################################

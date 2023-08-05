@@ -5,64 +5,64 @@ const BK = BifurcationKit
 const FD = ForwardDiff
 
 function Laplacian1D(N, lx, bc = :none)
-	hx = 2lx/N
-	Δ = spdiagm(0 => -2ones(N), 1 => ones(N-1), -1 => ones(N-1) )
-	Δ[1,end]=1; Δ[end,1]=1
-	D = spdiagm(1 => ones(N-1), -1 => -ones(N-1) )
-	D[1,end]=-1; D[end,1]=1
-	D = D / (2hx)
-	Δ = Δ / hx^2
-	return Δ, D
+    hx = 2lx/N
+    Δ = spdiagm(0 => -2ones(N), 1 => ones(N-1), -1 => ones(N-1) )
+    Δ[1,end]=1; Δ[end,1]=1
+    D = spdiagm(1 => ones(N-1), -1 => -ones(N-1) )
+    D[1,end]=-1; D[end,1]=1
+    D = D / (2hx)
+    Δ = Δ / hx^2
+    return Δ, D
 end
 
 # add to f the nonlinearity
 @views function NL!(f, u, p)
-	@unpack r, μ, ν, c3, c5, γ = p
-	n = div(length(u), 2)
-	u1 = u[1:n]
-	u2 = u[n+1:2n]
+    @unpack r, μ, ν, c3, c5, γ = p
+    n = div(length(u), 2)
+    u1 = u[1:n]
+    u2 = u[n+1:2n]
 
-	ua = u1.^2 .+ u2.^2
+    ua = u1.^2 .+ u2.^2
 
-	f1 = f[1:n]
-	f2 = f[n+1:2n]
+    f1 = f[1:n]
+    f2 = f[n+1:2n]
 
-	f1 .+= @. r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1 + γ
-	f2 .+= @. r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
+    f1 .+= @. r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1 + γ
+    f2 .+= @. r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
 
-	return f
+    return f
 end
 
 function Fcgl!(f, u, p, t = 0)
-	mul!(f, p.Δ, u)
-	NL!(f, u, p)
+    mul!(f, p.Δ, u)
+    NL!(f, u, p)
 end
 
 Fcgl(u, p, t = 0) = Fcgl!(similar(u), u, p)
 
 # remark: I checked this against finite differences
 @views function Jcgl(u, p)
-	@unpack r, μ, ν, c3, c5, Δ = p
+    @unpack r, μ, ν, c3, c5, Δ = p
 
-	n = div(length(u), 2)
-	u1 = u[1:n]
-	u2 = u[n+1:2n]
+    n = div(length(u), 2)
+    u1 = u[1:n]
+    u2 = u[n+1:2n]
 
-	ua = u1.^2 .+ u2.^2
+    ua = u1.^2 .+ u2.^2
 
-	f1u = zero(u1)
-	f2u = zero(u1)
-	f1v = zero(u1)
-	f2v = zero(u1)
+    f1u = zero(u1)
+    f2u = zero(u1)
+    f1v = zero(u1)
+    f2v = zero(u1)
 
-	@. f1u =  r - 2 * u1 * (c3 * u1 - μ * u2) - c3 * ua - 4 * c5 * ua * u1^2 - c5 * ua^2
-	@. f1v = -ν - 2 * u2 * (c3 * u1 - μ * u2)  + μ * ua - 4 * c5 * ua * u1 * u2
-	@. f2u =  ν - 2 * u1 * (c3 * u2 + μ * u1)  - μ * ua - 4 * c5 * ua * u1 * u2
-	@. f2v =  r - 2 * u2 * (c3 * u2 + μ * u1) - c3 * ua - 4 * c5 * ua * u2 ^2 - c5 * ua^2
+    @. f1u =  r - 2 * u1 * (c3 * u1 - μ * u2) - c3 * ua - 4 * c5 * ua * u1^2 - c5 * ua^2
+    @. f1v = -ν - 2 * u2 * (c3 * u1 - μ * u2)  + μ * ua - 4 * c5 * ua * u1 * u2
+    @. f2u =  ν - 2 * u1 * (c3 * u2 + μ * u1)  - μ * ua - 4 * c5 * ua * u1 * u2
+    @. f2v =  r - 2 * u2 * (c3 * u2 + μ * u1) - c3 * ua - 4 * c5 * ua * u2 ^2 - c5 * ua^2
 
-	jacdiag = vcat(f1u, f2v)
+    jacdiag = vcat(f1u, f2v)
 
-	Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
+    Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
 end
 ####################################################################################################
 n = 50
@@ -95,31 +95,31 @@ br = continuation(prob, PALC(), opts_br, verbosity = 0)
 # @test _J0 == _J1
 ####################################################################################################
 function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0, k = 1.)
-	specialpoint = branch.specialpoint[ind_hopf]
-	@show specialpoint.ind_ev
+    specialpoint = branch.specialpoint[ind_hopf]
+    @show specialpoint.ind_ev
 
-	# parameter value at the Hopf point
-	p_hopf = specialpoint.param
+    # parameter value at the Hopf point
+    p_hopf = specialpoint.param
 
-	# frequency at the Hopf point
-	# @show branch.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev:specialpoint.ind_ev+4]
-	ωH = imag(branch.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) |> abs
+    # frequency at the Hopf point
+    # @show branch.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev:specialpoint.ind_ev+4]
+    ωH = imag(branch.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) |> abs
 
-	# vec_hopf is the eigenvector for the eigenvalues iω
-	vec_hopf1 = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev)
-	vec_hopf1 ./=  norm(vec_hopf1)
+    # vec_hopf is the eigenvector for the eigenvalues iω
+    vec_hopf1 = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev)
+    vec_hopf1 ./=  norm(vec_hopf1)
 
-	vec_hopf2 = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev - 2)
-	vec_hopf2 ./=  norm(vec_hopf2)
+    vec_hopf2 = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev - 2)
+    vec_hopf2 ./=  norm(vec_hopf2)
 
-	 orbitguess = [real.(specialpoint.x .+
-	 			z1 .* vec_hopf1 .* exp(2pi * complex(0, 1) .* (ii/(M-1) - phase)) .+
-				z2 .* vec_hopf2 .* exp(2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii=0:M-1]
+     orbitguess = [real.(specialpoint.x .+
+                 z1 .* vec_hopf1 .* exp(2pi * complex(0, 1) .* (ii/(M-1) - phase)) .+
+                z2 .* vec_hopf2 .* exp(2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii=0:M-1]
 
-	 X = LinRange(-pi, pi, n) |> collect; X = vcat(X, X)
-	 # orbitguess = [real.(specialpoint.x .+ z1 .* exp.(complex(0, 1) .* (2pi * ii/(M-1) .- k .* X))) for ii=0:M-1]
+     X = LinRange(-pi, pi, n) |> collect; X = vcat(X, X)
+     # orbitguess = [real.(specialpoint.x .+ z1 .* exp.(complex(0, 1) .* (2pi * ii/(M-1) .- k .* X))) for ii=0:M-1]
 
-	return p_hopf, 2pi/ωH, orbitguess, specialpoint.x, vec_hopf1, vec_hopf2
+    return p_hopf, 2pi/ωH, orbitguess, specialpoint.x, vec_hopf1, vec_hopf2
 end
 ####################################################################################################
 # we test TWProblem: travelling wave problem

@@ -3,21 +3,21 @@
 using BifurcationKit, OrdinaryDiffEq, ForwardDiff
 # using Zygote, DiffEqSensitivity
 using LinearAlgebra, Parameters
-	
+    
 # using Pkg
 # pkg"st OrdinaryDiffEq"
 
 function Fsl!(f, u, p, t)
-	@unpack r, μ, ω, c3 = p
-	u1 = u[1]
-	u2 = u[2]
+    @unpack r, μ, ω, c3 = p
+    u1 = u[1]
+    u2 = u[2]
 
-	ua = u1^2 + u2^2
+    ua = u1^2 + u2^2
 
-	f[1] = r * u1 - ω * u2 - ua * (c3 * u1 - μ * u2)
-	f[2] = r * u2 + ω * u1 - ua * (c3 * u2 + μ * u1)
+    f[1] = r * u1 - ω * u2 - ua * (c3 * u1 - μ * u2)
+    f[2] = r * u2 + ω * u1 - ua * (c3 * u2 + μ * u1)
 
-	return f
+    return f
 end
 
 Fsl(x, p) = Fsl!(similar(x), x, p, 0.)
@@ -25,8 +25,8 @@ dFsl(x, dx, p) = ForwardDiff.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 
 # function to compute differentials
 function diffAD(f, x, dx)
-	# Zygote.pullback(t->f(x .+ t.* dx), 0.)[1]
-	ForwardDiff.derivative(t->f(x .+ t.* dx), 0.)
+    # Zygote.pullback(t->f(x .+ t.* dx), 0.)[1]
+    ForwardDiff.derivative(t->f(x .+ t.* dx), 0.)
 end
 
 ####################################################################################################
@@ -39,9 +39,9 @@ algsl = KenCarp4()#Rodas4P()
 sol = solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
 function flowTS(x, t, pb; alg = algsl, kwargs...)
-	_pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
-	sol = DiffEqBase.solve(_pb, alg; abstol =1e-10, reltol=1e-9, save_everystep = false, kwargs...)
-	return sol.t, sol
+    _pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
+    sol = DiffEqBase.solve(_pb, alg; abstol =1e-10, reltol=1e-9, save_everystep = false, kwargs...)
+    return sol.t, sol
 end
 flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2][end]
 
@@ -68,19 +68,19 @@ dΠ(x, dx) = diffAD(Π, x, dx)
 dΠFD(x, dx) = (Π(x .+ δ .* dx) .- Π(x)) ./ δ
 
 function DPoincare(x, dx, p, normal, center, _cb, pb; verbose = false)
-	verbose && printstyled(color=:blue, "\nEntree dans DPoincare\n")
-	abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
-	# compute the Poincare map from x
-	_tΣ, _solΣ = flowTS(x, Inf, pb; callback = _cb, save_everystep = false)
-	tΣ, solΣ = _tΣ[end], _solΣ[end]
+    verbose && printstyled(color=:blue, "\nEntree dans DPoincare\n")
+    abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
+    # compute the Poincare map from x
+    _tΣ, _solΣ = flowTS(x, Inf, pb; callback = _cb, save_everystep = false)
+    tΣ, solΣ = _tΣ[end], _solΣ[end]
 
-	z = Fsl(solΣ, p)
-	verbose && @show z tΣ solΣ
-	# solution of the variational equation at time tΣ
-	# We need the callback to be INACTIVE here!!!
-	y = dflowDE(x, dx, tΣ; callback = nothing)
-	verbose && @show y
-	out = y .- (dot(normal, y) / dot(normal, z)) .* z
+    z = Fsl(solΣ, p)
+    verbose && @show z tΣ solΣ
+    # solution of the variational equation at time tΣ
+    # We need the callback to be INACTIVE here!!!
+    y = dflowDE(x, dx, tΣ; callback = nothing)
+    verbose && @show y
+    out = y .- (dot(normal, y) / dot(normal, z)) .* z
 end
 
 # vecteurs for the flow and the variational flow
@@ -134,17 +134,17 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 # const BK = BifurcationKit
 #
 # function FslMono!(f, x, p, t)
-# 	u = x[1:2]
-# 	du = x[3:4]
-# 	Fsl!(view(f,1:2), u, p, t)
-# 	f[3:4] .= dFsl(u, du, p)
+#     u = x[1:2]
+#     du = x[3:4]
+#     Fsl!(view(f,1:2), u, p, t)
+#     f[3:4] .= dFsl(u, du, p)
 # end
 # probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
 #
 # probHPsh = BK.PoincareShootingProblem(
-# 		prob, algsl,
-# 		# probMono, Rodas4P(autodiff=false),
-# 		normals, centers; abstol =1e-10, reltol=1e-10)
+#         prob, algsl,
+#         # probMono, Rodas4P(autodiff=false),
+#         normals, centers; abstol =1e-10, reltol=1e-10)
 #
 # @show BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 #

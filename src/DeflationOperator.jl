@@ -4,7 +4,7 @@ abstract type abstractDeflationFactor end
 Wrapper for a distance. You need to pass a function `d(u, v)`.
 """
 struct CustomDist{T}
-	dist::T
+    dist::T
 end
 @inline (cd::CustomDist)(u, v) = cd.dist(u, v)
 
@@ -34,31 +34,31 @@ The option `autodiff` triggers the use of automatic differentiation for the comp
 
 You are asked to pass a scalar product like `dot` to build a `DeflationOperator`. However, in some cases, you may want to pass a custom distance `dist(u, v)`. You can do this using
 
-	`DeflationOperator(p, CustomDist(dist), α, roots)`
+    `DeflationOperator(p, CustomDist(dist), α, roots)`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 """
 struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: abstractDeflationFactor
-	"power `p`. You can use an `Int` for example"
-	power::Tp
+    "power `p`. You can use an `Int` for example"
+    power::Tp
 
-	"function, this function has to be bilinear and symmetric for the linear solver to work well"
-	dot::Tdot
+    "function, this function has to be bilinear and symmetric for the linear solver to work well"
+    dot::Tdot
 
-	"shift"
-	α::T
+    "shift"
+    α::T
 
-	"roots"
-	roots::Vector{vectype}
+    "roots"
+    roots::Vector{vectype}
 
-	# internal, to reduce allocations during computation
-	tmp::vectype
+    # internal, to reduce allocations during computation
+    tmp::vectype
 
-	# internal, to reduce allocations during computation
-	autodiff::Bool
+    # internal, to reduce allocations during computation
+    autodiff::Bool
 
-	# internal, for finite differences
-	δ::T
+    # internal, for finite differences
+    δ::T
 end
 
 # constructors
@@ -79,27 +79,27 @@ Base.lastindex(df::DeflationOperator) = length(df)
 Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff, df.δ)
 
 function Base.show(io::IO, df::DeflationOperator; prefix = "")
-	println(io, prefix * "┌─ Deflation operator with ", length(df.roots)," root(s)")
-	println(io, prefix * "├─ eltype   = ", eltype(df))
-	println(io, prefix * "├─ power    = ", df.power)
-	println(io, prefix * "├─ α        = ", df.α)
-	println(io, prefix * "├─ dist     = ", df.dot)
-	println(io, prefix * "└─ autodiff = ", df.autodiff)
+    println(io, prefix * "┌─ Deflation operator with ", length(df.roots)," root(s)")
+    println(io, prefix * "├─ eltype   = ", eltype(df))
+    println(io, prefix * "├─ power    = ", df.power)
+    println(io, prefix * "├─ α        = ", df.α)
+    println(io, prefix * "├─ dist     = ", df.dot)
+    println(io, prefix * "└─ autodiff = ", df.autodiff)
 end
 
 # Compute M(u)
 # optimised version which does not allocate much
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot, T, vectype}
-	length(df.roots) == 0 && return T(1)
-	M(u) = T(1) / df.dot(u, u)^df.power + df.α
-	# compute u - df.roots[1]
-	copyto!(tmp, u); axpy!(T(-1), df.roots[1], tmp)
-	out = M(tmp)
-	for ii in 2:length(df.roots)
-		copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
-		out *= M(tmp)
-	end
-	return out
+    length(df.roots) == 0 && return T(1)
+    M(u) = T(1) / df.dot(u, u)^df.power + df.α
+    # compute u - df.roots[1]
+    copyto!(tmp, u); axpy!(T(-1), df.roots[1], tmp)
+    out = M(tmp)
+    for ii in 2:length(df.roots)
+        copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
+        out *= M(tmp)
+    end
+    return out
 end
 
 # Compute M(u), efficient and do not allocate
@@ -108,38 +108,38 @@ end
 
 # version when a custom distance is passed
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot <: CustomDist, T, vectype}
-	length(df.roots) == 0 && return T(1)
-	M(u, v) = T(1) / df.dot(u, v)^df.power + df.α
-	out = M(u, df.roots[1])
-	for ii in 2:length(df.roots)
-		out *= M(u, df.roots[ii])
-	end
-	return out
+    length(df.roots) == 0 && return T(1)
+    M(u, v) = T(1) / df.dot(u, v)^df.power + df.α
+    out = M(u, df.roots[1])
+    for ii in 2:length(df.roots)
+        out *= M(u, df.roots[ii])
+    end
+    return out
 end
 
 # Compute dM(u)⋅du. We use tmp for storing intermediate values
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
-	length(df) == 0 && return T(0)
-	if df.autodiff
-		return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
-	else
-		copyto!(tmp, u); axpy!(df.δ, du, tmp)
-		return (df(tmp) - df(u)) / df.δ
-	end
+    length(df) == 0 && return T(0)
+    if df.autodiff
+        return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
+    else
+        copyto!(tmp, u); axpy!(df.δ, du, tmp)
+        return (df(tmp) - df(u)) / df.δ
+    end
 end
 (df::DeflationOperator)(u, du) = df(Val(:dMwithTmp), similar(u), u, du)
 
 """
-	pb = DeflatedProblem(prob, M::DeflationOperator, jactype)
+    pb = DeflatedProblem(prob, M::DeflationOperator, jactype)
 
 Create a `DeflatedProblem`.
 
 This creates a deflated functional (problem) ``M(u) \\cdot F(u) = 0`` where `M` is a `DeflationOperator` which encodes the penalization term. `prob` is an `AbstractBifurcationProblem` which encodes the functional. It is not meant not be used directly albeit by advanced users.
 """
 struct DeflatedProblem{Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype, Tjac} <: AbstractBifurcationProblem
-	prob::Tprob
-	M::DeflationOperator{Tp, Tdot, T, vectype}
-	jactype::Tjac
+    prob::Tprob
+    M::DeflationOperator{Tp, Tdot, T, vectype}
+    jactype::Tjac
 end
 @inline length(prob::DeflatedProblem) = length(prob.M)
 @inline isInplace(prob::DeflatedProblem) = isInplace(prob.prob)
@@ -150,33 +150,33 @@ end
 Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
 function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u, par) where {Tprob, Tp, Tdot, T, vectype}
-	out = residual(dfp.prob, u, par)
-	rmul!(out, dfp.M(u))
-	return out
+    out = residual(dfp.prob, u, par)
+    rmul!(out, dfp.M(u))
+    return out
 end
 
 """
 Return the jacobian of the deflated function M(u) * F(u) where M(u) ∈ R
 """
 function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u::vectype, par, du) where {Tprob, Tp, Tdot, T, vectype}
-	# dF(u)⋅du * M(u) + F(u) dM(u)⋅du
-	# out = dF(u)⋅du * M(u)
 	out = dF(dfp.prob, u, par, du)
-	M = dfp.M(u)
-	rmul!(out, M)
-	# we add the remaining part
-	if length(dfp) > 0
-		F = residual(dfp.prob, u, par)
-		# F(u) dM(u)⋅du, out .+= dfp.M(u, du) .* F
-		axpy!(dfp.M(u, du), F, out)
-	end
-	return out
+    # dF(u)⋅du * M(u) + F(u) dM(u)⋅du
+    # out = dF(u)⋅du * M(u)
+    M = dfp.M(u)
+    rmul!(out, M)
+    # we add the remaining part
+    if length(dfp) > 0
+        F = residual(dfp.prob, u, par)
+        # F(u) dM(u)⋅du, out .+= dfp.M(u, du) .* F
+        axpy!(dfp.M(u, du), F, out)
+    end
+    return out
 end
 
 residual(dfp::DeflatedProblem, x, p) = dfp(x, p)
 
 function jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, Val{:Custom}}, x, p) where {Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype}
-	return (x, p, dfp)
+    return (x, p, dfp)
 end
 
 jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, Val{:fullIterative}}, x, p) where {Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype} = dx -> dfp(x, p, dx)
@@ -191,17 +191,17 @@ getParam(dfp::DeflatedProblem) = getParam(dfp.prob)
 setParam(dfp::DeflatedProblem, p0) = setParam(dfp.prob, p0)
 
 function Base.show(io::IO, prob::DeflatedProblem; prefix = "")
-	print(io, prefix * "┌─ " );	printstyled(io, "Deflated Problem", bold = true)
-	print(" with uType ")
-	printstyled(io, getVectorType(prob), color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ Symmetric: ")
-	printstyled(io, isSymmetric(prob), color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ jacobian: ")
-	printstyled(io, prob.jactype, color=:cyan, bold = true)
-	print(io, "\n" * prefix * "├─ Parameter ")
-	printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
-	println(io, "\n" * prefix * "└─ deflation operator:")
-	show(io, prob.M; prefix = "    ")
+    print(io, prefix * "┌─ " );    printstyled(io, "Deflated Problem", bold = true)
+    print(" with uType ")
+    printstyled(io, getVectorType(prob), color=:cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Symmetric: ")
+    printstyled(io, isSymmetric(prob), color=:cyan, bold = true)
+    print(io, "\n" * prefix * "├─ jacobian: ")
+    printstyled(io, prob.jactype, color=:cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Parameter ")
+    printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
+    println(io, "\n" * prefix * "└─ deflation operator:")
+    show(io, prob.M; prefix = "    ")
 end
 
 ###################################################################################################
@@ -215,59 +215,59 @@ $(TYPEDEF)
 Custom linear solver for deflated problem, very close to the Sherman-Morrison formula.
 """
 @with_kw_noshow struct DeflatedProblemCustomLS{T} <: AbstractLinearSolverForDeflation
-	solver::T = nothing
+    solver::T = nothing
 end
 
 """
 Implement the custom linear solver for the deflated problem.
 """
 function (dfl::DeflatedProblemCustomLS)(J, rhs)
-	# the expression of the Functional is now
-	# F(u) * Π_i(dot(u - root_i, u - root_i)^{-power} + shift) := F(u) * M(u)
-	# the expression of the differential is
-	# dF(u)⋅du * M(u) + F(u) dM(u)⋅du
+    # the expression of the Functional is now
+    # F(u) * Π_i(dot(u - root_i, u - root_i)^{-power} + shift) := F(u) * M(u)
+    # the expression of the differential is
+    # dF(u)⋅du * M(u) + F(u) dM(u)⋅du
 
-	# the point at which to compute the Jacobian
-	u = J[1]
-	p = J[2]
+    # the point at which to compute the Jacobian
+    u = J[1]
+    p = J[2]
 
-	# deflated Problem composite type
-	defPb = J[3]
-	linsolve = dfl.solver
+    # deflated Problem composite type
+    defPb = J[3]
+    linsolve = dfl.solver
 
-	Fu = residual(defPb.prob, u, p)
-	Mu = defPb.M(u)
-	Ju = jacobian(defPb.prob, u, p)
+    Fu = residual(defPb.prob, u, p)
+    Mu = defPb.M(u)
+    Ju = jacobian(defPb.prob, u, p)
 
-	if length(defPb.M) == 0
-		h1, _, it1 = linsolve(Ju, rhs)
-		return h1, true, (it1, 0)
-	end
+    if length(defPb.M) == 0
+        h1, _, it1 = linsolve(Ju, rhs)
+        return h1, true, (it1, 0)
+    end
 
-	# linear solve for the deflated problem. We note that Mu ∈ R
-	# hence dM(u)⋅du is a scalar. We now solve the following linear problem
-	# M(u) * dF(u)⋅h + F(u) dM(u)⋅h = rhs
-	h1, h2, _, (it1, it2) = linsolve(Ju, rhs, Fu)
+    # linear solve for the deflated problem. We note that Mu ∈ R
+    # hence dM(u)⋅du is a scalar. We now solve the following linear problem
+    # M(u) * dF(u)⋅h + F(u) dM(u)⋅h = rhs
+    h1, h2, _, (it1, it2) = linsolve(Ju, rhs, Fu)
 
-	# We look for the expression of dM(u)⋅h
-	# the solution is then h = Mu * h1 - z h2 where z has to be determined
-	# z1 = dM(h)⋅h1
-	tmp = similar(u)
-	z1 = defPb.M(Val(:dMwithTmp), tmp, u, h1)
+    # We look for the expression of dM(u)⋅h
+    # the solution is then h = Mu * h1 - z h2 where z has to be determined
+    # z1 = dM(h)⋅h1
+    tmp = similar(u)
+    z1 = defPb.M(Val(:dMwithTmp), tmp, u, h1)
 
-	# z2 = dM(h)⋅h2
-	z2 = defPb.M(Val(:dMwithTmp), tmp, u, h2)
+    # z2 = dM(h)⋅h2
+    z2 = defPb.M(Val(:dMwithTmp), tmp, u, h2)
 
-	z = z1 / (Mu + z2)
+    z = z1 / (Mu + z2)
 
-	# we extract the type of defPb
-	_T = eltype(defPb.M)
+    # we extract the type of defPb
+    _T = eltype(defPb.M)
 
-	# return (h1 - z * h2) / Mu, true, (it1, it2)
-	copyto!(tmp, h1)
-	axpy!(-z, h2, tmp)
-	rmul!(tmp, _T(1) / Mu)
-	return tmp, true, (it1, it2)
+    # return (h1 - z * h2) / Mu, true, (it1, it2)
+    copyto!(tmp, h1)
+    axpy!(-z, h2, tmp)
+    rmul!(tmp, _T(1) / Mu)
+    return tmp, true, (it1, it2)
 end
 
 """
@@ -276,7 +276,7 @@ $(TYPEDEF)
 Full iterative linear solver for deflated problem.
 """
 struct DefProbFullIterativeLinearSolver{T} <: AbstractLinearSolverForDeflation
-	solver::T
+    solver::T
 end
 ####################################################################################################
 """
@@ -296,39 +296,39 @@ Compared to [`newton`](@ref), the only different arguments are
     - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 function newton(prob::AbstractBifurcationProblem,
-				defOp::DeflationOperator{Tp, Tdot, T, vectype},
-				options::NewtonPar{T, L, E},
-				_linsolver::DeflatedProblemCustomLS = DeflatedProblemCustomLS();
-				kwargs...) where {T, L, E, Tp, Tdot, vectype}
+                defOp::DeflationOperator{Tp, Tdot, T, vectype},
+                options::NewtonPar{T, L, E},
+                _linsolver::DeflatedProblemCustomLS = DeflatedProblemCustomLS();
+                kwargs...) where {T, L, E, Tp, Tdot, vectype}
 
-	# we create the new functional
-	deflatedPb = DeflatedProblem(prob, defOp, Val(:Custom))
+    # we create the new functional
+    deflatedPb = DeflatedProblem(prob, defOp, Val(:Custom))
 
-	# create the linear solver
-	linsolver = @set _linsolver.solver = options.linsolver
+    # create the linear solver
+    linsolver = @set _linsolver.solver = options.linsolver
 
-	# change the linear solver
-	opt_def = @set options.linsolver = linsolver
+    # change the linear solver
+    opt_def = @set options.linsolver = linsolver
 
-	return newton(deflatedPb, opt_def; kwargs...)
+    return newton(deflatedPb, opt_def; kwargs...)
 end
 
 function newton(prob::AbstractBifurcationProblem,
-				defOp::DeflationOperator{Tp, Tdot, T, vectype},
-				options::NewtonPar{T, L, E},
-				::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
-	# we create the new functional
-	deflatedPb = DeflatedProblem(prob, defOp, AutoDiff())
-	return newton(deflatedPb, options; kwargs...)
+                defOp::DeflationOperator{Tp, Tdot, T, vectype},
+                options::NewtonPar{T, L, E},
+                ::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
+    # we create the new functional
+    deflatedPb = DeflatedProblem(prob, defOp, AutoDiff())
+    return newton(deflatedPb, options; kwargs...)
 end
 
 function newton(prob::AbstractBifurcationProblem,
-				defOp::DeflationOperator{Tp, Tdot, T, vectype},
-				options::NewtonPar{T, L, E},
-				::Val{:fullIterative}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
-	# we create the new functional
-	deflatedPb = DeflatedProblem(prob, defOp, Val(:fullIterative))
-	return newton(deflatedPb, options; kwargs...)
+                defOp::DeflationOperator{Tp, Tdot, T, vectype},
+                options::NewtonPar{T, L, E},
+                ::Val{:fullIterative}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
+    # we create the new functional
+    deflatedPb = DeflatedProblem(prob, defOp, Val(:fullIterative))
+    return newton(deflatedPb, options; kwargs...)
 end
 
 """
@@ -337,23 +337,23 @@ $(TYPEDEF)
 This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous converged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
 """
 function newton(prob::AbstractBifurcationProblem,
-				x0::vectype,
-				x1::vectype, p0,
-				options::NewtonPar{T, L, E},
-				defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}(), _copy(x0); autodiff = true),
-				linsolver = DeflatedProblemCustomLS();
-				kwargs...) where {T, vectype, L, E}
-	prob0 = reMake(prob, u0 = x0, params = p0)
-	sol0 = newton(prob0, options; kwargs...)
-	@assert converged(sol0) "Newton did not converge to the trivial solution x0."
-	push!(defOp, sol0.u)
-	prob1 = reMake(prob0, u0 = x1)
-	sol1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
-	~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
-	@debug "deflated Newton" x0 x1 sol0.u sol1.u
-	# we test if the two solutions are different. We first get the norm
-	normN = get(kwargs, :normN, norm)
-	flag = normN(minus(sol0.u, sol0.u)) < options.tol
-	@assert flag "Did not find a non trivial solution using deflated newton"
-	return sol1, sol0, flag
+                x0::vectype,
+                x1::vectype, p0,
+                options::NewtonPar{T, L, E},
+                defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}(), _copy(x0); autodiff = true),
+                linsolver = DeflatedProblemCustomLS();
+                kwargs...) where {T, vectype, L, E}
+    prob0 = reMake(prob, u0 = x0, params = p0)
+    sol0 = newton(prob0, options; kwargs...)
+    @assert converged(sol0) "Newton did not converge to the trivial solution x0."
+    push!(defOp, sol0.u)
+    prob1 = reMake(prob0, u0 = x1)
+    sol1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
+    ~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
+    @debug "deflated Newton" x0 x1 sol0.u sol1.u
+    # we test if the two solutions are different. We first get the norm
+    normN = get(kwargs, :normN, norm)
+    flag = normN(minus(sol0.u, sol0.u)) < options.tol
+    @assert flag "Did not find a non trivial solution using deflated newton"
+    return sol1, sol0, flag
 end

@@ -63,10 +63,10 @@ branch = Branch(br0, rand(2));
 branch[end]
 ###### start at pMin and see if it continues the solution
 for alg in (Natural(), PALC(), PALC(tangent = Bordered()), Multiple(copy(x0), 0.01,13), PALC(tangent=Polynomial(Bordered(), 2, 6, copy(x0))), MoorePenrose())
-	br0 = continuation(reMake(prob, params = opts.pMin), alg, opts)
-	@test length(br0) > 10
-	br0 = continuation(reMake(prob, params = opts.pMax), Natural(), ContinuationPar(opts, ds = -0.01))
-	@test length(br0) > 10
+    br0 = continuation(reMake(prob, params = opts.pMin), alg, opts)
+    @test length(br0) > 10
+    br0 = continuation(reMake(prob, params = opts.pMax), Natural(), ContinuationPar(opts, ds = -0.01))
+    @test length(br0) > 10
 end
 
 # test with callbacks
@@ -86,8 +86,8 @@ length(iter)
 typeof(contRes)
 
 # state = iterate(iter)[1]
-# 	 contRes = BK.ContResult(iter, state)
-# 	 @code_warntype continuation!(iter, state, contRes)
+#      contRes = BK.ContResult(iter, state)
+#      @code_warntype continuation!(iter, state, contRes)
 #####
 
 opts = ContinuationPar(opts; detectBifurcation = 3, saveEigenvectors=true)
@@ -137,67 +137,67 @@ br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=false)
-	opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-	br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
-	BK.empty!(Multiple(copy(x0), 0.01, 13))
-	# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
+    opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
+    br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
+    BK.empty!(Multiple(copy(x0), 0.01, 13))
+    # plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
 ## same but with failed prediction
 opts9_1 = ContinuationPar(opts9, dsmax = 0.2, maxSteps = 125, ds = 0.1)
-	@set! opts9_1.newtonOptions.tol = 1e-14
-	@set! opts9_1.newtonOptions.verbose = false
-	@set! opts9_1.newtonOptions.maxIter = 3
-	br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
-	@test length(br9_1) == 126
-	BK.empty!(Multiple(copy(x0), 0.01, 13))
+    @set! opts9_1.newtonOptions.tol = 1e-14
+    @set! opts9_1.newtonOptions.verbose = false
+    @set! opts9_1.newtonOptions.maxIter = 3
+    br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
+    @test length(br9_1) == 126
+    BK.empty!(Multiple(copy(x0), 0.01, 13))
 
 
 # tangent prediction with Polynomial predictor
 polpred = Polynomial(Bordered(), 2, 6, x0)
-	opts9 = (@set opts.newtonOptions.verbose=false)
-	opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
-	br10 = continuation(prob, PALC(tangent = polpred), opts9,
-	plot=false,
-	)
-	# plot(br10) |> display
-	polpred(0.1)
-	BK.empty!(polpred)
-	# plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
-	# plot!(br9)
+    opts9 = (@set opts.newtonOptions.verbose=false)
+    opts9 = ContinuationPar(opts9; maxSteps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plotEveryStep = 3,)
+    br10 = continuation(prob, PALC(tangent = polpred), opts9,
+    plot=false,
+    )
+    # plot(br10) |> display
+    polpred(0.1)
+    BK.empty!(polpred)
+    # plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
+    # plot!(br9)
 
 # polpred(0.0)
-# 	for _ds in LinRange(-0.51,.1,161)
-# 		_x,_p = polpred(_ds)
-# 		# @show _ds,_x[1], _p
-# 		scatter!([_p],[_x[1]],label="",color=:blue, markersize = 1)
-# 	end
-# 	scatter!(polpred.parameters,map(x->x[1],polpred.solutions), color=:green)
-# 	scatter!([polpred(0.01)[2]],[polpred(0.01)[1][1]],marker=:cross)
-# 	# title!("",ylims=(-0.1,0.22))
+#     for _ds in LinRange(-0.51,.1,161)
+#         _x,_p = polpred(_ds)
+#         # @show _ds,_x[1], _p
+#         scatter!([_p],[_x[1]],label="",color=:blue, markersize = 1)
+#     end
+#     scatter!(polpred.parameters,map(x->x[1],polpred.solutions), color=:green)
+#     scatter!([polpred(0.01)[2]],[polpred(0.01)[1][1]],marker=:cross)
+#     # title!("",ylims=(-0.1,0.22))
 # # BK.isready(polpred)
 # # polpred.coeffsPar
 
 # test for polynomial predictor interpolation
 # polpred = BK.PolynomialPred(4,9,x0)
-# 	for (ii,v) in enumerate(LinRange(-5,1.,10))
-# 		if length(polpred.arclengths)==0
-# 			push!(polpred.arclengths, 0.1)
-# 		else
-# 			push!(polpred.arclengths, polpred.arclengths[end]+0.1)
-# 		end
-# 		push!(polpred.solutions, [v])
-# 		push!(polpred.parameters, 1-v^2+0.001v^4)
-# 	end
-# 	BK.updatePred!(polpred)
-# 	polpred(-0.5)
+#     for (ii,v) in enumerate(LinRange(-5,1.,10))
+#         if length(polpred.arclengths)==0
+#             push!(polpred.arclengths, 0.1)
+#         else
+#             push!(polpred.arclengths, polpred.arclengths[end]+0.1)
+#         end
+#         push!(polpred.solutions, [v])
+#         push!(polpred.parameters, 1-v^2+0.001v^4)
+#     end
+#     BK.updatePred!(polpred)
+#     polpred(-0.5)
 #
 # plot()
-# 	scatter(polpred.parameters, reduce(vcat,polpred.solutions))
-# 	for _ds in LinRange(-1.5,.75,121)
-# 		_x,_p = polpred(_ds)
-# 		scatter!([_p],[_x[1]],label="", color=:blue, markersize = 1)
-# 	end
-# 	scatter!([polpred(0.1)[2]],[polpred(0.1)[1][1]],marker=:cross)
-# 	title!("",)
+#     scatter(polpred.parameters, reduce(vcat,polpred.solutions))
+#     for _ds in LinRange(-1.5,.75,121)
+#         _x,_p = polpred(_ds)
+#         scatter!([_p],[_x[1]],label="", color=:blue, markersize = 1)
+#     end
+#     scatter!([polpred(0.1)[2]],[polpred(0.1)[1][1]],marker=:cross)
+#     title!("",)
 
 # tangent prediction with Moore Penrose
 opts11 = (@set opts.newtonOptions.verbose=false)
@@ -219,8 +219,8 @@ brsp = continuation(prob_sp, PALC(bls = BK.MatrixBLS()), opts)
 ####################################################################################################
 # check bounds for all predictors / correctors
 for talgo in (Bordered(), Secant())
-	brbd  = continuation(prob, PALC(tangent = talgo), opts; verbosity = 0)
-	@test length(brbd) > 2
+    brbd  = continuation(prob, PALC(tangent = talgo), opts; verbosity = 0)
+    @test length(brbd) > 2
 end
 prob.u0 .= ones(N)*3
 @set! prob.params = -3.
@@ -256,21 +256,21 @@ BK.DCState(rand(2))
 
 prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
 alg = BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.]]),
-	perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
-	)
+    perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
+    )
 brdc = continuation(prob, alg,
-	ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40, detectBifurcation = 3);
-	plot=false, verbosity = 0,
-	callbackN = BK.cbMaxNorm(1e3))
+    ContinuationPar(opts, ds = -0.001, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 6), plotEveryStep = 40, detectBifurcation = 3);
+    plot=false, verbosity = 0,
+    callbackN = BK.cbMaxNorm(1e3))
 
 # test that the saved points are true solutions
 norminf(x) = norm(x, Inf)
 for i in 1:length(brdc)
-	brs = brdc[i]
-	for j=1:length(brs.sol)
-		res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setParam(prob, brs.sol[j].p)) |> norminf
-		@test res < brs.contparams.newtonOptions.tol
-	end
+    brs = brdc[i]
+    for j=1:length(brs.sol)
+        res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setParam(prob, brs.sol[j].p)) |> norminf
+        @test res < brs.contparams.newtonOptions.tol
+    end
 end
 
 lastindex(brdc)
@@ -280,7 +280,7 @@ length(brdc)
 F2(u,p) = @. -u * (p + u * (2-5u)) * (p - .15 - u * (2+20u))
 prob2 = BK.BifurcationProblem(F2, [0.], 0.3, (@lens _))
 brdc = continuation(prob2,
-	BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.], [0.05]]); maxBranches = 6),
-	ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 15), plotEveryStep = 40, detectBifurcation = 3, pMin = -0.8);
-	plot=false, verbosity = 0,
-	callbackN = BK.cbMaxNorm(1e6))
+    BK.DefCont(deflationOperator = DeflationOperator(2, .001, [[0.], [0.05]]); maxBranches = 6),
+    ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, maxSteps = 800, newtonOptions = NewtonPar(verbose = false, maxIter = 15), plotEveryStep = 40, detectBifurcation = 3, pMin = -0.8);
+    plot=false, verbosity = 0,
+    callbackN = BK.cbMaxNorm(1e6))
