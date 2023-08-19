@@ -373,7 +373,7 @@ BK.getlens(hp_from_hh)
 BK.getparams(hp_from_hh)
 ####################################################################################################
 # branching from Bautin to Fold of periodic orbits
-using DifferentialEquations
+using OrdinaryDiffEq
 prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detectBifurcation = 0, maxSteps = 3, detectEvent = 0, ds = 0.001)
