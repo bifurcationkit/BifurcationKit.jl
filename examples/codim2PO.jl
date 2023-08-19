@@ -223,7 +223,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
     verbosity = 3, plot = true,
@@ -231,7 +231,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSt
     # bothside = true,
     )
 
-getNormalForm(brpo_ns, 1)
+getNormalForm(brpo_ns, 1; prm = false)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -281,7 +281,7 @@ ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
         )
 
 plot!(ns_po_coll, vars = (:ϵ, :b0))
-    plot!(pd_po_coll2, vars = (:ϵ, :b0))
+plot!(pd_po_coll2, vars = (:ϵ, :b0))
 
 #####
 # find the PD case
@@ -290,7 +290,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -317,12 +317,12 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         )
 
 plot(fold_po_coll1, ylims = (0, 0.49))
-    plot!(fold_po_coll2)
-    # plot!(pd_po_coll, vars = (:ϵ, :b0))
-    plot!(pd_po_coll2, vars = (:ϵ, :b0))
+plot!(fold_po_coll2)
+# plot!(pd_po_coll, vars = (:ϵ, :b0))
+plot!(pd_po_coll2, vars = (:ϵ, :b0))
 ################################################################################
 ######    Shooting ########
-probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
 
 solpo = newton(probsh, cish, NewtonPar(verbose = true))
 
@@ -345,7 +345,7 @@ pt = getNormalForm(brpo_pd_sh, 1)
 
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 3, maxSteps = 200, pMin = 0.01, pMax = 1.2)
-@error "ça foire la precision si cette tol est trop petite"
+@error "it fails if the tolerance tol is too high"
 @set! opts_posh_fold.newtonOptions.tol = 1e-12
 fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
         verbosity = 2, plot = true,
@@ -370,15 +370,15 @@ fold_po_sh2 = continuation(br_fold_sh, 1, (@lens _.ϵ), opts_posh_fold;
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 40, pMin = -1.)
 @set! opts_posh_pd.newtonOptions.tol = 1e-12
-@error "ça foire la precision si cette tol est trop petite"
+@error "it fails if the tolerance tol is too high"
 @set! opts_posh_pd.newtonOptions.verbose = true
 pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
-        verbosity = 3, plot = true,
+        verbosity = 0, plot = true,
         detectCodim2Bifurcation = 2,
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
-        usehessian = false,
         # jacobian_ma = :finiteDifferences,
+        usehessian = false,
         startWithEigen = false,
         bothside = true,
         callbackN = BK.cbMaxNorm(1),
@@ -396,10 +396,10 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshns, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
-    verbosity = 3, plot = true,
+    verbosity = 0, plot = true,
     argspo...,
     # bothside = true,
     callbackN = BK.cbMaxNorm(1),
@@ -412,7 +412,7 @@ opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSte
 @set! opts_posh_ns.newtonOptions.tol = 1e-12
 @set! opts_posh_ns.newtonOptions.verbose = true
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
-        verbosity = 2, plot = true,
+        verbosity = 0, plot = true,
         detectCodim2Bifurcation = 0,
         startWithEigen = false,
         usehessian = false,
@@ -436,7 +436,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshpd, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 prob2 = @set probshpd.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -464,155 +464,19 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         )
 
 plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
-    # plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
-    # plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
-    plot!(pd_po_sh2, vars = (:ϵ, :b0), branchlabel = "PD2")
+# plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
+# plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+plot!(pd_po_sh2, vars = (:ϵ, :b0), branchlabel = "PD2")
 ################################################################################
 ###### Poincare Shooting ########
-probpsh, cipsh = generateCIProblem( PoincareShootingProblem( M=1 ), prob, prob_de, sol, 2.; alg = Rodas5(), updateSectionEveryStep = 0)
+probpsh, cipsh = generate_ci_problem( PoincareShootingProblem( M=1 ), prob, prob_de, sol, 2.; alg = Rodas5(), updateSectionEveryStep = 0)
 
 # je me demande si la section n'intersecte pas deux fois l'hyperplan
 hyper = probpsh.section
 plot(sol)
-    plot!(sol.t, [hyper(zeros(1),u)[1] for u in sol.u])
+plot!(sol.t, [hyper(zeros(1),u)[1] for u in sol.u])
 
-# solpo = newton(probpsh, cipsh, NewtonPar(verbose = true))
-BK.getPeriod(probpsh, cipsh, sol.prob.p)
+solpo = newton(probpsh, cipsh, NewtonPar(verbose = true))
+BK.getperiod(probpsh, cipsh, sol.prob.p)
 _sol = BK.get_periodic_orbit(probpsh, cipsh, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
-
-
-######
-JE PENSE QU IL FAUT N CALLBACK ET N FLOW
-
-cisl = BK.getTimeSlices(probpsh, cipsh)
-hyper = probpsh.section
-ind = 1
-    println("\n\n\n*********\n ind = $ind -> $(ind+1)")
-    _x = cisl[:,ind]
-    _xsol = BK.evolve(probpsh.flow, _x, sol.prob.p, Inf).u
-    display(hcat(_xsol, cisl[:, ind]))
-    printstyled(color=:green, "--> sol hyper\n")
-    hyper(zeros(probpsh.M), _xsol) |> display
-    printstyled(color=:green, "--> ci hyper\n")
-    hyper(zeros(probpsh.M), cisl[:, ind]) |> display
-###### plotting
-
-plot(sol[1,:], sol[2,:], sol[3,:])
-cisl = BK.getTimeSlices(probpsh, cipsh)
-for ii=1:probpsh.M
-    scatter!([cisl[1,ii]],[cisl[2,ii]],[cisl[3,ii]], label="") |> display
-end
-######
-
-_sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
-plot(_sol.t, _sol[1:2,:]')
-
-cisl = BK.getTimeSlices(probpsh, cipsh)
-
-probpsh.flow
-
-hyper = probpsh.section
-hyper(zeros(3),cisl[:,3])
-
-plot(sol,)
-    M = probpsh.M
-    ts = LinRange(0, 2.1, M+1)[1:end-1]
-    scatter!(ts, cisl', label = "")
-
-probpsh(cipsh, sol.prob.p)
-
-getPeriod(probpsh, cipsh, probpsh.par)
-
-@assert 1==0 "Ca foire voilamment"
-
-_sol = get_periodic_orbit(probpsh, cipsh, sol.prob.p)
-plot(sol)
-
-record_sh = recordFromSolution = (x, p) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
-        return (max = maximum(xtt[1,:]),
-                min = minimum(xtt[1,:]),
-                period = getPeriod(p.prob, x, set(par_pop, p.prob.lens, p.p)))
-    end
-plot_sh  = (x, p; k...) -> begin
-    xtt = BK.get_periodic_orbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
-    plot!(xtt.t, xtt[1,:]; label = "x", k...)
-    plot!(xtt.t, xtt[2,:]; label = "y", k...)
-    # plot!(xtt.t, xtt[3,:]; label = "u", k...)
-    # plot!(xtt.t, xtt[4,:]; label = "v", k...)
-    # plot!(br; subplot = 1, putspecialptlegend = false)
-    end
-
-probpsh(cipsh, prob_de.p)
-
-opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3)
-@set! opts_po_cont.newtonOptions.verbose = true
-@set! opts_po_cont.newtonOptions.tol = 1e-10
-br_fold_psh = continuation(probpsh, cipsh, PALC(), opts_po_cont;
-    verbosity = 3, plot = true,
-    recordFromSolution = record_sh,
-    callbackN = BK.cbMaxNorm(10),
-    plotSolution = plot_sh,)
-
-probpsh2 = @set probpsh.lens = @lens _.ϵ
-brpo_pd_psh = continuation(probpsh2, cipsh, PALC(), opts_po_cont;
-    verbosity = 3, plot = true,
-    recordFromSolution = record_sh,
-    plotSolution = plot_sh,
-    callbackN = BK.cbMaxNorm(10),
-    # bothside = true,
-    )
-
-getNormalForm(brpo_pd_psh, 1)
-
-# codim 2 ns
-opts_posh_fold = ContinuationPar(br_fold_psh.contparams, detectBifurcation = 3, maxSteps = 60, pMin = 0., pMax = 1.2)
-@set! opts_posh_fold.newtonOptions.tol = 1e-9
-ns_po_sh = continuation(br_fold_psh, 1, (@lens _.ϵ), opts_posh_fold;
-        verbosity = 2, plot = true,
-        detectCodim2Bifurcation = 0,
-        jacobian_ma = :minaug,
-        startWithEigen = false,
-        bothside = true,
-        callbackN = BK.cbMaxNorm(1),
-        )
-
-@test fold_po_sh.kind isa BK.FoldPeriodicOrbitCont
-
-# codim 2 PD
-opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, maxSteps = 30, pMin = 0., pMax = 1.2)
-@set! opts_posh_pd.newtonOptions.tol = 1e-9
-pd_po_sh = continuation(brpo_pd_psh, 1, (@lens _.b0), opts_posh_pd;
-        verbosity = 2, plot = true,
-        detectCodim2Bifurcation = 0,
-        usehessian = false,
-        jacobian_ma = :minaug,
-        startWithEigen = false,
-        bothside = true,
-        )
-
-plot(pd_po_sh)
-
-
-proj(a,c,x) = x .- dot(a, x .- c) .* a
-function findPointOnHyp(a, c; radius = 1, nd = 0)
-    n = size(a,1)
-    nd = max(nd, n+1)
-    [proj(a,c,rand(n)) for i=1:nd]
-end
-
-
-_normal = probpsh.section.normals[1]
-    _center = probpsh.section.centers[1]
-    res = findPointOnHyp(_normal, _center; radius = 0.1, nd = 200)
-
-    plot([r[1] for r in res],[r[2] for r in res],[r[3] for r in res])
-
-
-plot(sol[1,:], sol[2,:], sol[3,:])
-    cisl = BK.getTimeSlices(probpsh, cipsh)
-    for ii=1:probpsh.M
-        scatter!([cisl[1,ii]],[cisl[2,ii]],[cisl[3,ii]], label="")
-    end
-    plot!([r[1] for r in res],[r[2] for r in res],[r[3] for r in res]) |> display

@@ -45,7 +45,7 @@ type(bp::BranchPointPO) = :BranchPoint
 
 function Base.show(io::IO, pd::PeriodDoublingPO)
     printstyled(io, "Period-Doubling", color=:cyan, bold = true)
-    println(io, " bifurcation point of periodic orbit at\n┌─ ", get_lens_symbol(pd.nf.lens)," ≈ $(pd.nf.p)")
+    println(io, " bifurcation point of periodic orbit")
     println(io, "├─ Period = ", abs(pd.T), " -> ", 2abs(pd.T))
     println(io, "├─ Problem: ", typeof(pd.prob).name.name)
     if pd.prob isa ShootingProblem
@@ -60,7 +60,8 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
 end
 
 function Base.show(io::IO, bp::BranchPointPO)
-    println(io, type(bp), " bifurcation point of periodic orbit at\n┌─ ", get_lens_symbol(bp.nf.lens)," ≈ $(bp.nf.p)")
+    printstyled(io, type(bp), color=:cyan, bold = true)
+    println(io, " bifurcation point of periodic orbit\n┌─ ", get_lens_symbol(bp.nf.lens)," ≈ $(bp.nf.p)")
     println(io, "├─ Period = ", abs(bp.T))
     println(io, "└─ Problem: ", typeof(bp.prob).name.name)
 end
@@ -111,7 +112,8 @@ end
 type(bp::NeimarkSackerPO) = type(bp.nf)
 
 function Base.show(io::IO, ns::NeimarkSackerPO)
-    println(io, ns.nf.type, " - ",type(ns), " bifurcation point of periodic orbit at\n┌─ ", get_lens_symbol(ns.nf.lens)," ≈ $(ns.p).")
+    printstyled(io, ns.nf.type, " - ",type(ns), color=:cyan, bold = true)
+    println(io, " bifurcation point of periodic orbit\n┌─ ", get_lens_symbol(ns.nf.lens)," ≈ $(ns.p).")
     println(io, "├─ Frequency θ ≈ ", abs(ns.ω))
     println(io, "├─ Period at the periodic orbit T ≈ ", abs(ns.T))
     println(io, "├─ Second frequency of the bifurcated torus ≈ ", abs(2pi/ns.ω))
@@ -119,7 +121,7 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
     println(io, "└─ Periodic orbit problem: \n")
     show(io, ns.prob)
     if ~isnothing(ns.nf.nf)
-        println(io,"\n- a = ", ns.nf.nf.a)
-        println(io,"- b = ", ns.nf.nf.b)
+        println(io,"\n├─ a = ", ns.nf.nf.a)
+        println(io,"└─ b = ", ns.nf.nf.b)
     end
 end
