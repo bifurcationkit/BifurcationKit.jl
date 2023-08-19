@@ -36,7 +36,6 @@ X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
 sol = -(1 .- par_car.X.^2)
-norminf(x) = norm(x,Inf)
 recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
 prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@lens _.ϵ);
@@ -44,14 +43,14 @@ prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@lens _.ϵ);
     recordFromSolution = recordFromSolution)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-    out = @time newton(prob, optnew, normN = x -> norm(x, Inf64))
-    plot(out.u, label="Solution")
+out = @time newton(prob, optnew, normN = x -> norm(x, Inf64))
+plot(out.u, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMin = 0.05, plotEveryStep = 10, newtonOptions = NewtonPar(tol = 1e-8, maxIter = 20, verbose = false), maxSteps = 300, detectBifurcation = 3, nev = 40, nInversion = 6, maxBisectionSteps = 25)
-    br = @time continuation(
-        prob, PALC(bls = BorderingBLS(solver = DefaultLS(), checkPrecision = false)), optcont;
-        plot = true, verbosity = 0,
-        normC = norminf)
+br = @time continuation(
+    prob, PALC(bls = BorderingBLS(solver = DefaultLS(), checkPrecision = false)), optcont;
+    plot = true, verbosity = 0,
+    normC = norminf)
 
 plot(br)
 
@@ -76,7 +75,7 @@ outdef1 = @time newton(
     optdef;
     # callback = BK.cbMaxNorm(1e8)
     )
-    BK.converged(outdef1) && push!(deflationOp, outdef1.u)
+BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(); for _s in deflationOp.roots; plot!(_s);end;title!("")
 perturbsol(-deflationOp[1],0,0) |> plot
@@ -90,7 +89,7 @@ alg = DefCont(deflationOperator = deflationOp,
 
 brdc = @time continuation(
     (@set prob.params.ϵ = 0.6), alg,
-    setproperties(optcont; ds = -0.001, dsmin=1e-5, maxSteps = 20000,
+    setproperties(optcont; ds = -0.0001, dsmin=1e-5, maxSteps = 20000,
         pMax = 0.7, pMin = 0.05, detectBifurcation = 0, plotEveryStep = 40,
         newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 100, verbose = false)),
     ;verbosity = 1,
@@ -98,20 +97,6 @@ brdc = @time continuation(
     )
 
 plot(brdc, legend=true)#, marker=:d)
-scatter!([b.branch[end].param for b in brdc], [b.branch[end][1] for b in brdc], marker = :circle, color=:red, markeralpha=0.5,label = "")
-    scatter!([b.branch[1].param for b in brdc], [b.branch[1][1] for b in brdc], marker = :cross, color=:green,  label = "")
-
-br2 = [deepcopy(b) for b in brdc[1:8] if length(b) > 1]
-    BifurcationKit.mergeBranches!(br2, it; iterbrsmax = 4)
-
-plot(br2...)
-    # scatter!(br2[6])
-scatter!([b.branch[end].param for b in brdc], [b.branch[end][1] for b in brdc], marker = :circle, color=:red, markeralpha=0.5,label = "")
-    scatter!([b.branch[1].param for b in brdc], [b.branch[1][1] for b in brdc], marker = :cross, color=:green,  label = "")
-
-
-BifurcationKit.mergeBranches!(brdc, it)
-
 ####################################################################################################
 # bifurcation diagram
 diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS(), checkPrecision = false)), 2,

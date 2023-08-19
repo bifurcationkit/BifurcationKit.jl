@@ -1,8 +1,8 @@
 # https://github.com/SciML/SciMLBase.jl/issues/427
 # https://github.com/VarLad/SciMLMakie.jl
-function GLMakie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars = nothing)
-    ind1, ind2 = getPlotVars(contres, vars)
-    return ([Point2f0(i, j) for (i, j) in zip(getproperty(contres.branch, ind1), getproperty(contres.branch, ind2))],)
+function GLMakie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars = nothing, applytoY = identity, applytoX = identity)
+    ind1, ind2 = get_plot_vars(contres, vars)
+    return ([Point2f0(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
 function plot!(ax1, contres::AbstractBranchResult;
@@ -11,6 +11,7 @@ function plot!(ax1, contres::AbstractBranchResult;
                 plotspecialpoints = true,
                 putspecialptlegend = true,
                 filterspecialpoints = false,
+                vars = nothing,
                 linewidthunstable = 1.0,
                 linewidthstable = 3.0linewidthunstable,
                 plotcirclesbif = true,
@@ -19,8 +20,8 @@ function plot!(ax1, contres::AbstractBranchResult;
                 applytoX = identity)
     
     # names for axis labels
-    ind1, ind2 = getPlotVars(contres, nothing)
-    xlab, ylab = getAxisLabels(ind1, ind2, contres)
+    ind1, ind2 = get_plot_vars(contres, vars)
+    xlab, ylab = get_axis_labels(ind1, ind2, contres)
     
     # stability linewidth
     linewidth = linewidthunstable
@@ -28,10 +29,12 @@ function plot!(ax1, contres::AbstractBranchResult;
         linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
     end
     if branchlabel == ""
-        lines!(ax1, contres, linewidth = linewidth)
+        lines!(ax1, map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)); linewidth)
     else
-        lines!(ax1, contres, linewidth = linewidth, label = branchlabel)
+        lines!(ax1, map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)), linewidth = linewidth, label = branchlabel)
     end
+    ax1.xlabel = xlab
+    ax1.ylabel = ylab
 
     # display bifurcation points
     bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
@@ -40,8 +43,8 @@ function plot!(ax1, contres::AbstractBranchResult;
             bifpt = filterBifurcations(bifpt)
         end
         scatter!(ax1, 
-            map(x -> getproperty(x, ind1), bifpt), 
-            map(x -> getproperty(x.printsol, ind2), bifpt);
+            [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
+            [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt];
             marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), 
             markersize = 10, 
             color = map(x -> colorbif[x.type], bifpt),
@@ -56,7 +59,7 @@ function plot!(ax1, contres::AbstractBranchResult;
             scatter!(ax1, 
                 [applytoX(getproperty(contres[pt.idx], ind1))], 
                 [applytoY(getproperty(contres[pt.idx], ind2))];
-                color = getColor(pt.type),
+                color = get_color(pt.type),
                 markersize = 10,
                 label = "$(pt.type)")
         end
@@ -65,7 +68,7 @@ function plot!(ax1, contres::AbstractBranchResult;
     ax1
 end
 
-function plotBranchCont(contres::ContResult,
+function plot_branch_cont(contres::ContResult,
         sol::BorderedArray,
         contparms,
         plotuserfunction;
@@ -83,8 +86,8 @@ function plotBranchCont(contres::ContResult,
     if length(contres) == 0; return ; end
 
     # names for axis labels
-    ind1, ind2 = getPlotVars(contres, nothing)
-    xlab, ylab = getAxisLabels(ind1, ind2, contres)
+    ind1, ind2 = get_plot_vars(contres, nothing)
+    xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
     # stability linewidth
     linewidth = linewidthunstable
@@ -98,7 +101,7 @@ function plotBranchCont(contres::ContResult,
     ax2 = fig[1, 2] = Axis(fig, xlabel = "step", ylabel = String(xlab))
     lines!(ax2, contres.step, contres.param, linewidth = linewidth)
 
-    if computeEigenElements(contparms)
+    if compute_eigenelements(contparms)
         eigvals = contres.eig[end].eigenvals
         ax_ev = fig[3, 1:2] = Axis(fig, xlabel = "Re", ylabel = "Im")
         scatter!(ax_ev, real.(eigvals), imag.(eigvals), markerstrokewidth = 0, markersize = 10, color = :black)
@@ -135,8 +138,8 @@ function plot(contres::AbstractBranchResult;
         kP...)
     if length(contres) == 0; return ;end
 
-    ind1, ind2 = getPlotVars(contres, nothing)
-    xlab, ylab = getAxisLabels(ind1, ind2, contres)
+    ind1, ind2 = get_plot_vars(contres, nothing)
+    xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
     fig = Figure(resolution = (1200, 700))
     ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
@@ -156,8 +159,8 @@ function plot(brs::AbstractBranchResult...;
 
     for (id, contres) in pairs(brs)
 
-        ind1, ind2 = getPlotVars(contres, nothing)
-        xlab, ylab = getAxisLabels(ind1, ind2, contres)
+        ind1, ind2 = get_plot_vars(contres, nothing)
+        xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
         plot!(ax1, contres; branchlabel = branchlabel[id], kP...)
 
@@ -170,7 +173,7 @@ end
 
 ####################################################################################################
 # plotting function of the periodic orbits
-# function plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...)
+# function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)
 #     @assert ratio > 0 "You need at least one component"
 #     n = Nx*Ny
 #     outpo = reshape(x[1:end-1], ratio * n, M)
@@ -185,7 +188,7 @@ end
 #     end
 # end
 
-function plotPeriodicPOTrap(outpof, n, M; ratio = 2)
+function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
     if ratio == 1
@@ -201,45 +204,45 @@ function plotPeriodicPOTrap(outpof, n, M; ratio = 2)
     end
 end
 ####################################################################################################
-# function plotPeriodicShooting!(x, M; kwargs...)
+# function plot_periodic_shooting!(x, M; kwargs...)
 #     N = div(length(x), M);    plot!(x; label = "", kwargs...)
 #     for ii in 1:M
 #         plot!([ii*N, ii*N], [minimum(x), maximum(x)] ;color = :red, label = "", kwargs...)
 #     end
 # end
 
-# function plotPeriodicShooting(x, M; kwargs...)
-#     plot();plotPeriodicShooting!(x, M; kwargs...)
+# function plot_periodic_shooting(x, M; kwargs...)
+#     plot();plot_periodic_shooting!(x, M; kwargs...)
 # end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
-function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf))
+function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd); return; end
 
     fig = Figure(resolution = (1200, 700))
     ax = fig[1, 1] = Axis(fig)
 
-    _plot_bifdiag_makie!(ax, bd; code, level)
+    _plot_bifdiag_makie!(ax, bd; code, level, k...)
 
     display(fig)
     fig
 end
 
-function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf))
+function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd); return; end
 
     _bd = getBranch(bd, code)
-    _plot_bifdiag_makie!(ax, _bd.child; code = (), level = level)
+    _plot_bifdiag_makie!(ax, _bd.child; code = (), level = level, k...)
 
     # !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
     if level[1] <= _bd.level <= level[2]
-        plot!(ax, _bd.γ)
+        plot!(ax, _bd.γ; k...)
     end
 end
 
-function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
+function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf), k...)
     for b in bd
-        _plot_bifdiag_makie!(ax, b; code, level )
+        _plot_bifdiag_makie!(ax, b; code, level, k... )
     end
 end
 ####################################################################################################

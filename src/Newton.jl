@@ -135,7 +135,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 !!! warning "Linear solver"
     Make sure that the linear solver (Matrix-Free...) corresponds to your jacobian (Matrix-Free vs. Matrix based).
 """
-newton(prob::AbstractBifurcationProblem, options::NewtonPar; kwargs...) = _newton(prob, getu0(prob), getParams(prob), options::NewtonPar; kwargs...)
+newton(prob::AbstractBifurcationProblem, options::NewtonPar; kwargs...) = _newton(prob, getu0(prob), getparams(prob), options::NewtonPar; kwargs...)
 # newton(F, J, x0, p0, options::NewtonPar; kwargs...) = newton(BifurcationProblem(F, x0, p0; J = J), options; kwargs...)
 
 # default callback

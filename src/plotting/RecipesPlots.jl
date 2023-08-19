@@ -11,12 +11,12 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
     branchlabel = "",
     linewidthunstable = 1.0,
     linewidthstable = 2linewidthunstable,
-    plotcirclesbif = false,
+    plotcirclesbif = true,
     applytoY = identity,
     applytoX = identity)
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
-    ind1, ind2 = getPlotVars(contres, vars)
-    xlab, ylab = getAxisLabels(ind1, ind2, contres)
+    ind1, ind2 = get_plot_vars(contres, vars)
+    xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
         if hasstability(contres) && plotstability
             linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
@@ -32,11 +32,11 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
 
     if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
         if filterspecialpoints == true
-            bifpt = filterBifurcations(bifpt)
+            bifpt = filter_bifurcations(bifpt)
         end
         @series begin
             seriestype := :scatter
-            seriescolor --> map(x -> getColor(x.type), bifpt)
+            seriescolor --> map(x -> get_color(x.type), bifpt)
             markershape --> map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :square : :circle, bifpt)
             markersize --> 3
             markerstrokewidth --> 0
@@ -52,7 +52,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
             for pt in bps
                 @series begin
                     seriestype := :scatter
-                    seriescolor --> getColor(pt.type)
+                    seriescolor --> get_color(pt.type)
                     label --> "$(pt.type)"
                     markersize --> 3
                     markerstrokewidth --> 0
@@ -78,12 +78,12 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
         linewidthstable = 2linewidthunstable,
         applytoY = identity,
         applytoX = identity)
-    ind1, ind2 = getPlotVars(brs[1], vars)
+    ind1, ind2 = get_plot_vars(brs[1], vars)
     if length(brs) == 0; return; end
     # handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
     bptps = Any[(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if ((pt.type != :none)&&(pt.type != :endpoint))]
     for ii=2:length(brs)
-        _ind1, _ind2 = getPlotVars(brs[ii], vars)
+        _ind1, _ind2 = get_plot_vars(brs[ii], vars)
         for pt in brs[ii].specialpoint
             if (pt.type != :none) && (pt.type != :endpoint)
                 push!(bptps, (type = pt.type, param = getproperty(pt, _ind1), printsol = getproperty(pt.printsol, _ind2)))
@@ -97,7 +97,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
         for pt in unique(x -> x.type, bp)
             @series begin
                 seriestype := :scatter
-                seriescolor --> getColor(pt.type)
+                seriescolor --> get_color(pt.type)
                 label --> "$(pt.type)"
                 markersize --> 3
                 markerstrokewidth --> 0
@@ -119,7 +119,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
             applytoY --> applytoY
             vars --> vars
             if ind1 == 1 || ind1 == :param
-                xguide --> String(getLensSymbol(brs[id]))
+                xguide --> String(get_lens_symbol(brs[id]))
             elseif ind1 isa Symbol
                 xguide --> String(ind1)
             end
@@ -127,7 +127,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
                 yguide --> String(ind2)
             end
             # collect the values of the bifurcation points to be added in the legend
-            ind1, ind2 = getPlotVars(brs[id], vars)
+            ind1, ind2 = get_plot_vars(brs[id], vars)
             for pt in res.specialpoint
                 # this does not work very well when changing optional argument vars
                 pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, ind2)))
@@ -170,12 +170,12 @@ end
 """
 Plot the branch of solutions during the continuation
 """
-function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
-    l = computeEigenElements(contparms) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
+function plot_branch_cont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
+    l = compute_eigenelements(contparms) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
     plot(layout = l )
 
     plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
-        xlabel = getLensSymbol(contres),
+        xlabel = get_lens_symbol(contres),
         ylabel = getfirstusertype(contres),
         label = "", plotfold = false, subplot = 1)
 
@@ -184,7 +184,7 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
     # put arrow to indicate the order of computation
     length(contres) > 1 && plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 
-    if computeEigenElements(contparms)
+    if compute_eigenelements(contparms)
         eigvals = contres.eig[end].eigenvals
         scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
         # add stability boundary
@@ -193,13 +193,13 @@ function plotBranchCont(contres::ContResult, sol::BorderedArray, contparms, plot
         plot!([0, 0], [maxIm, minIm], subplot=4, label = "", color = :blue)
     end
 
-    plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = getLensSymbol(contres), label = "", subplot = 2) |> display
+    plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = get_lens_symbol(contres), label = "", subplot = 2) |> display
 
 end
 
 ####################################################################################################
 # plotting function of the periodic orbits
-function plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...)
+function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)
     @assert ratio > 0 "You need at least one component"
     n = Nx*Ny
     outpo = reshape(x[1:end-1], ratio * n, M)
@@ -214,7 +214,7 @@ function plotPeriodicPOTrap(x, M, Nx, Ny; ratio = 2, kwargs...)
     end
 end
 
-function plotPeriodicPOTrap(outpof, n, M; ratio = 2)
+function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
     if ratio == 1
@@ -225,15 +225,15 @@ function plotPeriodicPOTrap(outpof, n, M; ratio = 2)
     end
 end
 ####################################################################################################
-function plotPeriodicShooting!(x, M; kwargs...)
+function plot_periodic_shooting!(x, M; kwargs...)
     N = div(length(x), M); plot!(x; label = "", kwargs...)
     for ii in 1:M
         plot!([ii*N, ii*N], [minimum(x), maximum(x)] ;color = :red, label = "", kwargs...)
     end
 end
 
-function plotPeriodicShooting(x, M; kwargs...)
-    plot();plotPeriodicShooting!(x, M; kwargs...)
+function plot_periodic_shooting(x, M; kwargs...)
+    plot();plot_periodic_shooting!(x, M; kwargs...)
 end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
@@ -286,8 +286,8 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
     applytoY = identity,
     applytoX = identity) where {Tk <: TwoParamCont, Tprob}
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
-    ind1, ind2 = getPlotVars(contres, vars)
-    xlab, ylab = getAxisLabels(ind1, ind2, contres)
+    ind1, ind2 = get_plot_vars(contres, vars)
+    xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
         if hasstability(contres) && false
             linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
@@ -303,11 +303,11 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
 
     if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
         if filterspecialpoints == true
-            bifpt = filterBifurcations(bifpt)
+            bifpt = filter_bifurcations(bifpt)
         end
         @series begin
             seriestype := :scatter
-            seriescolor --> map(x -> getColor(x.type), bifpt)
+            seriescolor --> map(x -> get_color(x.type), bifpt)
             markershape --> map(x -> (x.status != :converged) && (plotcirclesbif==false) ? :square : :circle, bifpt)
             markersize --> 3
             markerstrokewidth --> 0
@@ -323,7 +323,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
             for pt in bps
                 @series begin
                     seriestype := :scatter
-                    seriescolor --> getColor(pt.type)
+                    seriescolor --> get_color(pt.type)
                     label --> "$(pt.type)"
                     markersize --> 3
                     markerstrokewidth --> 0

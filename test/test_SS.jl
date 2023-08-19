@@ -17,7 +17,7 @@ BK.evolve(fl, Val(:Full), x0, p0, 0)
 BK.evolve(fl, Val(:SerialTimeSol), x0, p0, 0)
 BK.evolve(fl, Val(:TimeSol), x0, p0, 0)
 BK.evolve(fl, Val(:SerialdFlow), x0, p0, 0, 0)
-BK.getDelta(fl)
+BK.getdelta(fl)
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)
@@ -167,17 +167,17 @@ probPSh(ci, par, dci)
 # test the analytical of the differential of the return Map
 z0 = rand(2)
 dz0 = rand(2)
-_out0 = BK.diffPoincareMap(probPSh, z0, par, dz0, 1)
+_out0 = BK.diff_poincare_map(probPSh, z0, par, dz0, 1)
 _out1 = ForwardDiff.derivative(z -> Π(z0 .+ z .* dz0, par).u, 0)
 display(_out0)
 display(_out1)
 
 # test the analytical version of the functional
 _out0 = probPSh(ci, par, dci)
-    δ = 1e-6
-    _out2 = (probPSh(ci .+ δ .* dci, par) .- probPSh(ci, par)) ./ δ
-    _out1 = ForwardDiff.derivative(z -> probPSh(ci .+ z .* dci, par), 0)
-    display(_out0)
-    display(_out1)
-    display(_out2)
-    _out0 - _out1 |> display
+δ = 1e-6
+_out2 = (probPSh(ci .+ δ .* dci, par) .- probPSh(ci, par)) ./ δ
+_out1 = ForwardDiff.derivative(z -> probPSh(ci .+ z .* dci, par), 0)
+display(_out0)
+display(_out1)
+display(_out2)
+_out0 - _out1 |> display

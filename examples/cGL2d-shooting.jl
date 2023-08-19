@@ -51,8 +51,6 @@ function Fcgl!(f, u, p, t = 0.)
 	f .= f .+ NL(u, p)
 end
 
-Fcgl(u, p, t = 0.) = Fcgl!(similar(u), u, p, t)
-
 # computation of the first derivative
 # d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
 
@@ -101,7 +99,7 @@ Nx = 41*1
     sol0 = 0.1rand(2Nx, Ny)
     sol0_f = vec(sol0)
 
-prob = BK.BifurcationProblem(Fcgl, sol0_f, par_cgl, (@lens _.r); J = Jcgl)
+prob = BK.BifurcationProblem(Fcgl!, sol0_f, par_cgl, (@lens _.r); J = Jcgl)
 ####################################################################################################
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
@@ -113,10 +111,10 @@ br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 plot(br)
 ####################################################################################################
 # Look for periodic orbits
-f1 = DiffEqArrayOperator(par_cgl.Δ)
+f1 = DiffEqArrayOperator(par_cgl.Δ);
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; reltol = 1e-8, dt = 0.1)
-prob = ODEProblem(Fcgl, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
+prob = ODEProblem(Fcgl!, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
 ####################################################################################################
 # sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
 sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
@@ -139,45 +137,43 @@ probSh = ShootingProblem(
     lens = (@lens _.r),
     jacobian = BK.FiniteDifferencesMF())
 
-@assert BK.getParams(probSh) == @set par_cgl.r = 1.2
+@assert BK.getparams(probSh) == @set par_cgl.r = 1.2
 
 initpo = vcat(sol[end], 6.3) |> vec
-    probSh(initpo, @set par_cgl.r = 1.2) |> norminf
+probSh(initpo, @set par_cgl.r = 1.2) |> norminf
 
 ls = GMRESIterativeSolvers(reltol = 1e-4, N = 2n + 1, maxiter = 50, verbose = false)
-    optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
-outpo = @time newton(probSh, initpo, optn; normN = norminf)
-BK.getPeriod(probSh, outpo.u, BK.getParams(probSh))
+optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
+outpo = @time newton(probSh, initpo, optn; normN = norminf);
+BK.getperiod(probSh, outpo.u, BK.getparams(probSh))
 
 heatmap(reshape(outpo.u[1:Nx*Ny], Nx, Ny), color = :viridis)
 
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-    opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 0, plotEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= -0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 2, plotEveryStep = 1)
 br_po = @time continuation(probSh, outpo.u, PALC(),
         opts_po_cont;
         verbosity = 3,
         plot = true,
         linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
-        # plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-        plotSolution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
-        recordFromSolution = (u, p; k...) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
+        plotSolution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
+        # plotSolution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
+        recordFromSolution = (u, p; k...) -> (amp = BK.getamplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
         normC = norminf)
 
 ####################################################################################################
 # automatic branch switching
 ls = GMRESIterativeSolvers(reltol = 1e-4, maxiter = 50, verbose = false)
-    optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
+optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 25, linsolver = ls)
 eig = EigKrylovKit(tol = 1e-7, x₀ = rand(2Nx*Ny), verbose = 2, dim = 40)
-    opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 2.5, maxSteps = 32, newtonOptions = (@set optn.eigsolver = eig), nev = 15, tolStability = 1e-3, detectBifurcation = 3, plotEveryStep = 1)
 
-Mt = 1 # number of time sections
+
 br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8,
-            jacobian = BK.FiniteDifferencesMF(),
-            ) ;
+    ShootingProblem(1, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = BK.FiniteDifferencesMF(),) ;
     verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
     # callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
     linearAlgo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
@@ -185,7 +181,7 @@ br_po = continuation(
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
         return true
     end,
-    # plotSolution = (x, p; k...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, k...),
-    plotSolution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
-    recordFromSolution = (u, p; k...) -> (amp = BK.getAmplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
+    plotSolution = (x, p; k...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, k...),
+    # plotSolution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
+    recordFromSolution = (u, p; k...) -> (amp = BK.getamplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
     normC = norminf)

@@ -3,34 +3,34 @@ $(SIGNATURES)
 
 For an initial guess from the index of a PD bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonFold`.
 """
-function PDPoint(br::AbstractBranchResult, index::Int)
+function pd_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
     @assert bptype == :pd "This should be a PD point"
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 
-function applyJacobianPeriodDoubling(pb, x, par, dx, _transpose = false)
+function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     if _transpose == false
         # THIS CASE IS NOT REALLY USED
         # if hasJvp(pb)
         #  return jvp(pb, x, par, dx)
         # else
-        #  return apply(jacobianPeriodDoubling(pb, x, par), dx)
+        #  return apply(jacobian_period_doubling(pb, x, par), dx)
         # end
         @assert 1==0 "Please report to the website of BifurcationKit"
     else
         # if matrix-free:
-        if hasAdjoint(pb)
-            return jacobianAdjointPeriodDoublingMatrixFree(pb, x, par, dx)
+        if has_adjoint(pb)
+            return jacobian_adjoint_period_doubling_matrix_free(pb, x, par, dx)
         else
-            return apply(transpose(jacobianPeriodDoubling(pb, x, par)), dx)
+            return apply(transpose(jacobian_period_doubling(pb, x, par)), dx)
         end
     end
 end
 ####################################################################################################
-@inline getVec(x, ::PeriodDoublingProblemMinimallyAugmented) = extractVecBLS(x)
-@inline getP(x, ::PeriodDoublingProblemMinimallyAugmented) = extractParBLS(x)
+@inline getvec(x, ::PeriodDoublingProblemMinimallyAugmented) = extractVecBLS(x)
+@inline getp(x, ::PeriodDoublingProblemMinimallyAugmented) = extractParBLS(x)
 
 pdtest(JacPD, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 
@@ -44,7 +44,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::T, params) wh
     a = 𝐏𝐝.a
     b = 𝐏𝐝.b
     # update parameter
-    par = set(params, getLens(𝐏𝐝), p)
+    par = set(params, getlens(𝐏𝐝), p)
     # ┌        ┐┌  ┐   ┌ ┐
     # │ J+I  a ││v │ = │0│
     # │ b    0 ││σ │   │1│
@@ -55,7 +55,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::T, params) wh
     # we solve Jv + v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>
     # @debug "" x par
-    J = jacobianPeriodDoubling(𝐏𝐝.prob_vf, x, par)
+    J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
     σ = pdtest(J, a, b, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
@@ -103,15 +103,15 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     POWrap = 𝐏𝐝.prob_vf
 
     # parameter axis
-    lens = getLens(𝐏𝐝)
+    lens = getlens(𝐏𝐝)
     # update parameter
     par0 = set(par, lens, p)
 
     # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
-    JPD = jacobianPeriodDoubling(POWrap, x, par0) # jacobian with period doubling boundary condition
+    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
 
     # we do the following in order to avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
-    JPD★ = hasAdjoint(𝐏𝐝) ? jacobianAdjointPeriodDoubling(POWrap, x, par0) : transpose(JPD)
+    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
 
     # we solve N[v, σ1] = [0, 1]
     v, σ1, cv, itv = pdtest(JPD, a, b, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)
@@ -121,21 +121,21 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     w, σ2, cv, itw = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
-    δ = getDelta(POWrap)
+    δ = getdelta(POWrap)
     ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
                 residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, T(1 / (2ϵ1)))
-    dJvdp = minus(apply(jacobianPeriodDoubling(POWrap, x, set(par, lens, p + ϵ3)), v),
-                  apply(jacobianPeriodDoubling(POWrap, x, set(par, lens, p - ϵ3)), v));
+    dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵ3)), v),
+                  apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵ3)), v));
     rmul!(dJvdp, T(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
-    if hasHessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
+    if has_hessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
         # We invert the jacobian of the PD problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
-        u1 = applyJacobianPeriodDoubling(POWrap, x .+ ϵ2 .* vcat(v,0), par0, w, true)
+        u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵ2 .* vcat(v,0), par0, w, true)
         u2 = apply(JPD★, w) #TODO this has been already computed !!!
         σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
 
@@ -179,9 +179,9 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, T}; debug
     return BorderedArray{vectype, T}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
-@inline hasAdjoint(pdpb::PDMAProblem) = hasAdjoint(pdpb.prob)
-@inline isSymmetric(pdpb::PDMAProblem) = isSymmetric(pdpb.prob)
-@inline getDelta(pdpb::PDMAProblem) = getDelta(pdpb.prob)
+@inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)
+@inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
+@inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
 residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)
@@ -192,12 +192,13 @@ jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord
 
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
-function continuationPD(prob, alg::AbstractContinuationAlgorithm,
+function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 pdpointguess::BorderedArray{vectype, T}, par,
                 lens1::Lens, lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
+                plotsolution = plot_solution(prob),
                 updateMinAugEveryStep = 0,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
@@ -206,7 +207,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
                 usehessian = true,
                 kwargs...) where {T, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getLens(prob)
+    @assert lens1 == getlens(prob)
 
     # options for the Newton Solver inheritated from the ones the user provided
     options_newton = options_cont.newtonOptions
@@ -225,19 +226,19 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
+        prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
+        prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
     else
-        prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotSolution(prob), prob.recordFromSolution)
+        prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newtonOptions.linsolver = PDLinearSolverMinAug()
     end
 
     # this functions allows to tackle the case where the two parameters have the same name
-    lenses = getLensSymbol(lens1, lens2)
+    lenses = get_lens_symbol(lens1, lens2)
 
     # global variables to save call back
     𝐏𝐝.CP = one(T)
@@ -246,7 +247,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
-    function updateMinAugPD(z, tau, step, contResult; kUP...)
+    function update_min_aug_pd(z, tau, step, contResult; kUP...)
         # user-passed finalizer
         finaliseUser = get(kwargs, :finaliseSolution, nothing)
 
@@ -258,8 +259,8 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         end
         @debug "Update a / b dans PD"
 
-        x = getVec(z.u) # PD point
-        p1 = getP(z.u)  # first parameter
+        x = getvec(z.u) # PD point
+        p1 = getp(z.u)  # first parameter
         p2 = z.p        # second parameter
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
@@ -268,10 +269,10 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         b = 𝐏𝐝.b
 
         POWrap = 𝐏𝐝.prob_vf
-        JPD = jacobianPeriodDoubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
+        JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
 
         # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-        JPD★ = hasAdjoint(𝐏𝐝) ? jad(POWrap, x, newpar) : transpose(JPD)
+        JPD★ = has_adjoint(𝐏𝐝) ? jad(POWrap, x, newpar) : transpose(JPD)
 
         # normalization
         n = T(1)
@@ -290,10 +291,10 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         return true
     end
 
-    function testForGPD_CP(iter, state)
+    function test_for_gpd_cp(iter, state)
         z = getx(state)
-        x = getVec(z)    # pd point
-        p1 = getP(z)     # first parameter
+        x = getvec(z)    # pd point
+        p1 = getp(z)     # first parameter
         p2 = getp(state) # second parameter
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
@@ -305,10 +306,10 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         b = prob_pd.b
 
         # expression of the jacobian
-        JPD = jacobianPeriodDoubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
+        JPD = jacobian_period_doubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
 
         # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-        JPD★ = hasAdjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
+        JPD★ = has_adjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
 
         # compute new b
         n = T(1)
@@ -321,12 +322,12 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         #############
         pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
         if pbwrap.prob isa ShootingProblem
-            pd = perioddoublingNormalForm(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
+            pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
             prob_pd.GPD = pd.nf.nf.b3
             #############
         end
         if pbwrap.prob isa PeriodicOrbitOCollProblem
-            pd = perioddoublingNormalFormPRM(pbwrap, pd0, NewtonPar(options_newton, verbose = false); verbose = false)
+            pd = period_doubling_normal_form_prm(pbwrap, pd0, NewtonPar(options_newton, verbose = false); verbose = false)
             prob_pd.GPD = pd.nf.nf.b3
         end
 
@@ -336,14 +337,14 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _printsol = get(kwargs, :recordFromSolution, nothing)
     _printsol2 = isnothing(_printsol) ?
-            (u, p; kw...) -> (; zip(lenses, (getP(u, 𝐏𝐝), (p = p, prob = prob)))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(recordFromSolution(prob)(getVec(u), p; kw...))...) :
-            (u, p; kw...) -> (; namedprintsol(_printsol(getVec(u, 𝐏𝐝), (p = p, prob = prob); kw...))..., zip(lenses, (getP(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
+            (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝), (p = p, prob = prob)))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
+            (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐏𝐝), (p = p, prob = prob); kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newtonOptions.eigsolver))
 
-    prob_f = reMake(prob_f, recordFromSolution = _printsol2)
+    prob_f = re_make(prob_f, recordFromSolution = _printsol2)
 
-    event = ContinuousEvent(2, testForGPD_CP, computeEigenElements, ("gpd", "cusp"), 0)
+    event = ContinuousEvent(2, test_for_gpd_cp, computeEigenElements, ("gpd", "cusp"), 0)
 
     # solve the PD equations
     br_pd_po = continuation(
@@ -354,7 +355,7 @@ function continuationPD(prob, alg::AbstractContinuationAlgorithm,
         kind = kind,
         normC = normC,
         event = event,
-        finaliseSolution = updateMinAugPD,
+        finaliseSolution = update_min_aug_pd,
         )
-    correctBifurcation(br_pd_po)
+    correct_bifurcation(br_pd_po)
 end

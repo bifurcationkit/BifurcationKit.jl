@@ -25,7 +25,7 @@ struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgor
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(alg::MoorePenrose, swch::Bool) = internalAdaptation!(alg.tangent, swch)
+internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 @inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
 
@@ -47,8 +47,8 @@ function MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)
     return MoorePenrose(tangent, method, ls)
 end
 
-getPredictor(alg::MoorePenrose) = getPredictor(alg.tangent)
-getLinsolver(alg::MoorePenrose) = getLinsolver(alg.tangent)
+getpredictor(alg::MoorePenrose) = getpredictor(alg.tangent)
+getlinsolver(alg::MoorePenrose) = getlinsolver(alg.tangent)
 
 function Base.empty!(alg::MoorePenrose)
     empty!(alg.tangent)
@@ -72,32 +72,32 @@ initialize!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
 
-function getPredictor!(state::AbstractContinuationState,
+function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::MoorePenrose, nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
-    getPredictor!(state, iter, alg.tangent, nrm)
+    getpredictor!(state, iter, alg.tangent, nrm)
 end
 
-updatePredictor!(state::AbstractContinuationState,
+update_predictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::MoorePenrose,
-                        nrm = false) = updatePredictor!(state, iter, alg.tangent, nrm)
+                        nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
 
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,
                 it::AbstractContinuationIterable,
                 algo::MoorePenrose;
                 kwargs...)
-    if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
-        state.z_pred.p = clampPredp(state.z_pred.p, it)
+    if state.z_pred.p <= it.contparams.pMin || state.z_pred.p >= it.contparams.pMax
+        state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newtonMoorePenrose(it, state, getdot(algo); normN = it.normC, callback = it.callbackN, kwargs...)
+    sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callbackN, kwargs...)
 
     # update fields
-    _updatefieldButNotSol!(state, sol)
+    _update_field_but_not_sol!(state, sol)
 
     # update solution
     if converged(sol)
@@ -107,20 +107,20 @@ function corrector!(state::AbstractContinuationState,
     return true
 end
 
-function newtonMoorePenrose(iter::AbstractContinuationIterable,
+function newton_moore_penrose(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState, dotθ;
                     normN = norm,
                     callback = cbDefault, kwargs...)
     prob = iter.prob
-    par = getParams(prob)
-    ϵ = getDelta(prob)
-    paramlens = getLens(iter)
-    contparams = getContParams(iter)
+    par = getparams(prob)
+    ϵ = getdelta(prob)
+    paramlens = getlens(iter)
+    contparams = getcontparams(iter)
     T = eltype(iter)
 
     @unpack method = iter.alg
 
-    z0 = getSolution(state)
+    z0 = getsolution(state)
     τ0 = state.τ
     z_pred = state.z_pred
     ds = state.ds

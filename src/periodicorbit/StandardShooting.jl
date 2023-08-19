@@ -3,9 +3,9 @@ $(SIGNATURES)
 
 Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
 """
-function getAmplitude(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-    _max = _getExtremum(prob, x, p; ratio = ratio)
-    _min = _getExtremum(prob, x, p; ratio = ratio, op = (min, minimum))
+function getamplitude(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
+    _max = _get_extremum(prob, x, p; ratio = ratio)
+    _min = _get_extremum(prob, x, p; ratio = ratio, op = (min, minimum))
     return maximum(_max .- _min)
 end
 
@@ -14,8 +14,8 @@ $(SIGNATURES)
 
 Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
 """
-function getMaximum(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-    mx = _getExtremum(prob, x, p; ratio = ratio)
+function getmaximum(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
+    mx = _get_extremum(prob, x, p; ratio = ratio)
     return maximum(mx)
 end
 ####################################################################################################
@@ -42,7 +42,7 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
-Note that you can generate this guess from a function solution using `generateSolution`.
+Note that you can generate this guess from a function solution using `generate_solution`.
 
 ## Jacobian
 $DocStrjacobianPOSh
@@ -88,39 +88,39 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     jacobian::Tjac = AutoDiffDense()
 end
 
-@inline isSimple(sh::ShootingProblem) = getMeshSize(sh) == 1
-@inline isParallel(sh::ShootingProblem) = sh.parallel
-@inline getLens(sh::ShootingProblem) = sh.lens
-getParams(prob::ShootingProblem) = prob.par
-setParam(prob::ShootingProblem, p) = set(getParams(prob), getLens(prob), p)
+@inline issimple(sh::ShootingProblem) = get_mesh_size(sh) == 1
+@inline isparallel(sh::ShootingProblem) = sh.parallel
+@inline getlens(sh::ShootingProblem) = sh.lens
+getparams(prob::ShootingProblem) = prob.par
+setparam(prob::ShootingProblem, p) = set(getparams(prob), getlens(prob), p)
 
 function Base.show(io::IO, sh::ShootingProblem)
     println(io, "┌─ Standard shooting functional for periodic orbits")
-    println(io, "├─ time slices    : ", getMeshSize(sh))
-    println(io, "├─ lens           : ", getLensSymbol(sh.lens))
+    println(io, "├─ time slices    : ", get_mesh_size(sh))
+    println(io, "├─ lens           : ", get_lens_symbol(sh.lens))
     println(io, "├─ jacobian       : ", sh.jacobian)
     println(io, "├─ update section : ", sh.updateSectionEveryStep)
     if sh.flow isa FlowDE
         println(io, "├─ integrator     : ", typeof(sh.flow.alg).name.name)
     end
-    println(io, "└─ parallel       : ", isParallel(sh))
+    println(io, "└─ parallel       : ", isparallel(sh))
 end
 
 # this function updates the section during the continuation run
-function updateSection!(sh::ShootingProblem, x, par)
+function updatesection!(sh::ShootingProblem, x, par)
     @debug "Update section shooting"
-    xt = getTimeSlices(sh, x)
+    xt = get_time_slices(sh, x)
     @views update!(sh.section, vf(sh.flow, xt[:, 1], par), xt[:, 1])
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
 
-@views function getTimeSlices(sh::ShootingProblem, x::AbstractVector)
-    M = getMeshSize(sh)
+@views function get_time_slices(sh::ShootingProblem, x::AbstractVector)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     return reshape(x[1:end-1], N, M)
 end
-getTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
+get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 
 @inline getTimeSlice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline getTimeSlice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
@@ -128,18 +128,18 @@ getTimeSlices(::ShootingProblem ,x::BorderedArray) = x.u
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
     # Sundials does not like @views :(
-    T = getPeriod(sh, x)
-    M = getMeshSize(sh)
+    T = getperiod(sh, x)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-    xc = getTimeSlices(sh, x)
+    xc = get_time_slices(sh, x)
 
     # variable to hold the computed result
     out = similar(x)
-    outc = getTimeSlices(sh, out)
+    outc = get_time_slices(sh, out)
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # we can use views but Sundials will complain
@@ -162,16 +162,16 @@ end
 # shooting functional, this allows for AbstractArray state space
 function (sh::ShootingProblem)(x::BorderedArray, par)
     # period of the cycle
-    T = getPeriod(sh, x)
-    M = getMeshSize(sh)
+    T = getperiod(sh, x)
+    M = get_mesh_size(sh)
 
     # extract the orbit guess
-    xc = getTimeSlices(sh, x)
+    xc = get_time_slices(sh, x)
 
     # variable to hold the computed result
     out = similar(x)
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             # we can use views but Sundials will complain
             ip1 = (ii == M) ? 1 : ii+1
@@ -190,18 +190,18 @@ end
 function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
     # period of the cycle
     # Sundials does not like @views :(
-    dT = getPeriod(sh, dx)
-    T  = getPeriod(sh, x)
-    M  = getMeshSize(sh)
+    dT = getperiod(sh, dx)
+    T  = getperiod(sh, x)
+    M  = get_mesh_size(sh)
 
-    xc = getTimeSlices(sh, x)
-    dxc = getTimeSlices(sh, dx)
+    xc = get_time_slices(sh, x)
+    dxc = get_time_slices(sh, dx)
 
     # variable to hold the computed result
     out = similar(x)
-    outc = getTimeSlices(sh, out)
+    outc = get_time_slices(sh, out)
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             tmp = jvp(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
@@ -225,14 +225,14 @@ end
 
 # jacobian of the shooting functional, this allows for Array state space
 function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = convert(eltype(x.u), 1e-8))
-    dT = getPeriod(sh, dx)
-    T  = getPeriod(sh, x)
-    M  = getMeshSize(sh)
+    dT = getperiod(sh, dx)
+    T  = getperiod(sh, x)
+    M  = get_mesh_size(sh)
 
     # variable to hold the computed result
     out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
@@ -250,12 +250,12 @@ end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
-    T = getPeriod(sh, x)
-    M = getMeshSize(sh)
+    T = getperiod(sh, x)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-    xc = getTimeSlices(sh, x)
+    xc = get_time_slices(sh, x)
 
     # jacobian of the flow
     dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, par, _T).u, _x)
@@ -287,10 +287,10 @@ end
 (sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 
-function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
+function _get_extremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
     # this function extracts the amplitude of the cycle
-    T = getPeriod(prob, x)
-    M = getMeshSize(prob)
+    T = getperiod(prob, x)
+    M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
     xv = @view x[1:end-1]
     xc = reshape(xv, N, M)
@@ -298,7 +298,7 @@ function _getExtremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op
     n = div(N, ratio)
 
     # !!!! we could use @views but then Sundials will complain !!!
-    if ~isParallel(prob)
+    if ~isparallel(prob)
         sol = evolve(prob.flow, Val(:Full), xc[:, 1], p, T)
         mx = @views op[2](sol[1:n, :], dims = 1)
     else # threaded version
@@ -316,16 +316,16 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par; kode...)
-    T = getPeriod(prob, x)
-    M = getMeshSize(prob)
+function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, par; kode...)
+    T = getperiod(prob, x)
+    M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
     xv = @view x[1:end-1]
     xc = reshape(xv, N, M)
     Th = eltype(x)
 
     # !!!! we could use @views but then Sundials will complain !!!
-    if ~isParallel(prob)
+    if ~isparallel(prob)
         sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T; kode...) for ii in 1:M]
         time = sol[1].t; u = sol[1][:,:]
         for ii in 2:M
@@ -344,17 +344,17 @@ function getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, par; kode...
         return SolPeriodicOrbit(t = time, u = u)
     end
 end
-getPeriodicOrbit(prob::ShootingProblem, x::AbstractVector, p::Real; kode...) = getPeriodicOrbit(prob, x, setParam(prob, p); kode...)
+get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(prob, x, setparam(prob, p); kode...)
 
-function getPOSolution(prob::ShootingProblem, x, pars; kode...)
-    T = getPeriod(prob, x)
-    M = getMeshSize(prob)
+function get_po_solution(prob::ShootingProblem, x, pars; kode...)
+    T = getperiod(prob, x)
+    M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
     xv = @view x[1:end-1]
     xc = reshape(xv, N, M)
 
     # !!!! we could use @views but then Sundials will complain !!!
-    if ~isParallel(prob)
+    if ~isparallel(prob)
         sol_ode = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
     else # threaded version
         sol_ode = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
@@ -369,7 +369,7 @@ function (sol::POSolution{ <: ShootingProblem})(t)
     T = sol.x.period
     t = mod(t, T)
     t0 = zero(t)
-    M = getMeshSize(sol.pb)
+    M = get_mesh_size(sol.pb)
     ii = 1
     while ii <= M
         tspan = sol.x.sol[ii].prob.tspan
@@ -384,13 +384,13 @@ function (sol::POSolution{ <: ShootingProblem})(t)
 end
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function reMake(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
+function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
     # update the problem but not the section if the user passed one
-    probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section, par = getParams(prob_vf), lens = getLens(prob_vf))
+    probSh = setproperties(prob, section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section, par = getparams(prob_vf), lens = getlens(prob_vf))
     probSh.section.normal ./= norm(probSh.section.normal)
 
     # be sure that the vector field is correctly inplace in the Flow structure
@@ -416,18 +416,18 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, tspan::Tuple; alg = sol.alg, ksh...)
+function generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, tspan::Tuple; alg = sol.alg, ksh...)
     u0 = sol(0)
     @assert u0 isa AbstractVector
     N = length(u0)
     M = pb.M
 
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
-    probsh = ShootingProblem(prob_de, alg, centers; lens = getLens(bifprob), ksh...)
+    probsh = ShootingProblem(prob_de, alg, centers; lens = getlens(bifprob), ksh...)
 
     cish = reduce(vcat, centers)
     cish = vcat(cish, tspan[2]-tspan[1])
 
     return probsh, cish
 end
-generateCIProblem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generateCIProblem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)
+generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)

@@ -68,10 +68,10 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
     p = JacSH.par
 
     # period of the cycle
-    T = getPeriod(sh, x)
+    T = getperiod(sh, x)
 
     # extract parameters
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
 
     # extract the time slices
@@ -94,10 +94,10 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
     p = JacSH.par
 
     # period of the cycle
-    T = getPeriod(sh, x)
+    T = getperiod(sh, x)
 
     # extract parameters
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
 
     Mono = zeros(N, N)
@@ -123,7 +123,7 @@ end
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     J = JacSH.jacpb
     sh = JacSH.pb
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(JacSH.x) - 1, M)
     mono = copy(J[1:N, 1:N])
     if M == 1
@@ -147,10 +147,10 @@ end
     sh = powrap.prob
 
     # period of the cycle
-    T = getPeriod(sh, x)
+    T = getperiod(sh, x)
 
     # extract parameters
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
 
     # extract the time slices
@@ -176,7 +176,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
     x_bar = JacSH.x
     p = JacSH.par
 
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess into a Matrix
@@ -190,7 +190,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
     for ii in 1:M
         E!(psh.section,  xc,  view(x_barc, :, ii), ii)
         dE!(psh.section, outc, outbar, ii)
-        outc .= diffPoincareMap(psh, xc, p, outc, ii)
+        outc .= diff_poincare_map(psh, xc, p, outc, ii)
         # check to <outc, normals[ii]> = 0
         # println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
         dR!(psh.section, outbar, outc, ii)
@@ -207,7 +207,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
     sh = JacSH.pb
     T = eltype(J)
 
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     Nj = length(JacSH.x)
     N = div(Nj, M)
 
@@ -239,7 +239,7 @@ end
     psh = powrap.prob
 
     #  ζ is of size (N-1)
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = length(ζ)
     dx = similar(x_bar, length(ζ) + 1)
 
@@ -253,7 +253,7 @@ end
     for ii in 1:M
         E!(psh.section,  xc,  view(x_barc, :, ii), ii)
         dE!(psh.section, outc, outbar, ii)
-        outc .= diffPoincareMap(psh, xc, p, outc, ii)
+        outc .= diff_poincare_map(psh, xc, p, outc, ii)
         # check to <outc, normals[ii]> = 0
         # println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
         dR!(psh.section, outbar, outc, ii)
@@ -274,15 +274,15 @@ end
     M, N = size(poPb)
 
     # period of the cycle
-    T = extractPeriodFDTrap(poPb, u0)
+    T = extract_period_fdtrap(poPb, u0)
 
     # time step
-    h =  T * getTimeStep(poPb, 1)
+    h =  T * get_time_step(poPb, 1)
     Typeh = typeof(h)
 
     out = copy(du)
 
-    u0c = getTimeSlices(u0, N, M)
+    u0c = get_time_slices(u0, N, M)
 
     out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
     # res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, 1])) \ out
@@ -290,7 +290,7 @@ end
     out .= res
 
     for ii in 2:M-1
-        h =  T * getTimeStep(poPb, ii)
+        h =  T * get_time_step(poPb, ii)
         out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
         # res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, ii])) \ out
         res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
@@ -310,15 +310,15 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
     M, N = size(poPb)
 
     # period of the cycle
-    T = extractPeriodFDTrap(poPb, u0)
+    T = extract_period_fdtrap(poPb, u0)
 
     # time step
-    h =  T * getTimeStep(poPb, 1)
+    h =  T * get_time_step(poPb, 1)
     Typeh = typeof(h)
 
     out = copy(ζ)
 
-    u0c = getTimeSlices(u0, N, M)
+    u0c = get_time_slices(u0, N, M)
 
     @views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
     # res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
@@ -328,7 +328,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
     # push!(out_a, copy(out))
 
     for ii in 2:M-1
-        h =  T * getTimeStep(poPb, ii)
+        h =  T * get_time_step(poPb, ii)
         @views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
         # res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
         @views res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
@@ -351,12 +351,12 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
     M, N = size(poPb)
 
     # period of the cycle
-    T = extractPeriodFDTrap(poPb, u0)
+    T = extract_period_fdtrap(poPb, u0)
 
     # time step
-    h =  T * getTimeStep(poPb, 1)
+    h =  T * get_time_step(poPb, 1)
 
-    u0c = getTimeSlices(u0, N, M)
+    u0c = get_time_slices(u0, N, M)
 
     @views mono = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, 1], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, M-1], par))
     temp = similar(mono)
@@ -364,7 +364,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
     for ii in 2:M-1
         # for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
         # also I - h/2 .* J seems to hurt (a little) the performances
-        h =  T * getTimeStep(poPb, ii)
+        h =  T * get_time_step(poPb, ii)
         @views temp = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, ii], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, ii-1], par))
         mono .= temp * mono
     end

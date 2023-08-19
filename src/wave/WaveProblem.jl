@@ -24,7 +24,7 @@ This simplified call handles the case where a single symmetry needs to be frozen
 
 ## Useful function
 
-- `updateSection!(pb::TWProblem, u0)` updates the reference solution of the problem using `u0`.
+- `updatesection!(pb::TWProblem, u0)` updates the reference solution of the problem using `u0`.
 - `nbConstraints(::TWProblem)` number of constraints (or Lie generators)
 
 """
@@ -64,13 +64,13 @@ function Base.show(io::IO, tw::TWProblem)
     println(io, "┌─ Travelling wave functional")
     println(io, "├─ type          : Vector{", eltype(tw.u₀), "}")
     println(io, "├─ # constraints : ", tw.nc)
-    println(io, "├─ lens          : ", getLensSymbol(getLens(tw.prob_vf)))
+    println(io, "├─ lens          : ", get_lens_symbol(getlens(tw.prob_vf)))
     println(io, "├─ jacobian      : ", tw.jacobian)
     println(io, "└─ DAE           : ", tw.DAE)
 end
 
 # we put type information to ensure the user pass a correct u0
-function updateSection!(pb::TWProblem{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {Tprob, Tu0, TDu0, TD}
+function updatesection!(pb::TWProblem{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {Tprob, Tu0, TDu0, TD}
     copyto!(pb.u₀, u₀)
     for (∂, ∂u₀) in zip(pb.∂, pb.∂u₀)
         # pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
@@ -179,7 +179,7 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
     return J2
 end
 ################################################################################
-function modifyTWRecord(probTW, kwargs, par, lens)
+function modify_tw_record(probTW, kwargs, par, lens)
     _recordsol0 = get(kwargs, :recordFromSolution, nothing)
     if isnothing(_recordsol0) == false
         _recordsol0 = get(kwargs, :recordFromSolution, nothing)
@@ -191,9 +191,12 @@ end
 ################################################################################
 residual(tw::WrapTW, x, p) = tw.prob(x, p)
 jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
-@inline isSymmetric(::WrapTW) = false
-@inline hasAdjoint(::WrapTW) = false
-@inline getDelta(::WrapTW) = 1e-8
+@inline is_symmetric(::WrapTW) = false
+@inline has_adjoint(::WrapTW) = false
+@inline getdelta(::WrapTW) = 1e-8
+dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> tw.prob(x .+ t .* dx1, p), 0.)
+d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0.)
+d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0.)
 
 function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
     jacobian = prob.jacobian
@@ -209,7 +212,7 @@ function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
     elseif jacobian == :MatrixFree
         jac = (x, p) -> (dx ->  prob(x, p, dx))
     end
-    probwp = WrapTW(prob, jac, orbitguess, getParams(prob.prob_vf), getLens(prob.prob_vf), recordFromSolution(prob.prob_vf), plotSolution(prob.prob_vf))
+    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), record_from_solution(prob.prob_vf), plot_solution(prob.prob_vf))
     return newton(probwp, optn; kwargs...,)
 end
 
@@ -238,9 +241,9 @@ function continuation(prob::TWProblem,
     contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)
 
     # update record function
-    _recordsol = modifyTWRecord(prob, kwargs, getParams(prob.prob_vf), getLens(prob.prob_vf))
+    _recordsol = modify_tw_record(prob, kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
 
-    probwp = WrapTW(prob, jac, orbitguess, getParams(prob.prob_vf), getLens(prob.prob_vf), plotSolution(prob.prob_vf), _recordsol)
+    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution(prob.prob_vf), _recordsol)
 
     # call continuation
     branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)

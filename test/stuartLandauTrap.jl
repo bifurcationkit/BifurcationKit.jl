@@ -38,9 +38,9 @@ poTrap = PeriodicOrbitTrapProblem(
     10, 2)
 
 show(poTrap)
-BK.isInplace(poTrap)
+BK.isinplace(poTrap)
 try
-    BK.hasHessian(poTrap)
+    BK.has_hessian(poTrap)
 catch
 end
 
@@ -68,7 +68,7 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
         # plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
         printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 
-    BK.getPeriodicOrbit(br_po, 1)
+    BK.get_periodic_orbit(br_po, 1)
 end
 
 let

@@ -98,9 +98,9 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     @assert ~(detectBifurcation > 1 && saveEigEveryStep > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use saveEigEveryStep = 1 or detectBifurcation = 1."
 end
 
-@inline computeEigenElements(cp::ContinuationPar) = cp.detectBifurcation > 0
-@inline computeEigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
-@inline saveEigenvectors(cp::ContinuationPar) = cp.saveEigenvectors
+@inline compute_eigenelements(cp::ContinuationPar) = cp.detectBifurcation > 0
+@inline compute_eigenvalues(cp::ContinuationPar) = cp.detectBifurcation > 0
+@inline save_eigenvectors(cp::ContinuationPar) = cp.saveEigenvectors
 
 # clamp ds value
-clampDs(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)
+clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)

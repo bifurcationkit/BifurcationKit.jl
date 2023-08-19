@@ -35,7 +35,7 @@ recordFromSolutionLor(u::BorderedArray, p) = recordFromSolutionLor(u.u, p)
 prob = BK.BifurcationProblem(Lor, z0, parlor, (@lens _.F);
     recordFromSolution = recordFromSolutionLor,)
 
-br = @time continuation(reMake(prob, params = setproperties(parlor;T=0.04,F=3.)),
+br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)),
      PALC(tangent = Bordered()),
     opts_br;
     normC = norminf,
@@ -95,19 +95,19 @@ function testEV(br, verbose = false)
     prob_ma = br.prob.prob
     prob_vf = prob_ma.prob_vf
     eig = DefaultEig()
-    lens1 = BK.getLens(br)
+    lens1 = BK.getlens(br)
     lens2 = prob.lens
-    par0 = BK.getParams(br)
+    par0 = BK.getparams(br)
     ϵ = br.contparams.newtonOptions.tol
 
     for (ii, pt) in enumerate(br.branch)
         # we make sure the parameters are set right
         step = pt.step
         verbose && (println("="^50); @info step ii)
-        x0 = BK.getVec(br.sol[ii].x, prob_ma)
-        p0 = BK.getP(br.sol[ii].x, prob_ma)[1]
+        x0 = BK.getvec(br.sol[ii].x, prob_ma)
+        p0 = BK.getp(br.sol[ii].x, prob_ma)[1]
         if prob_ma isa HopfProblemMinimallyAugmented
-            ω0 = BK.getP(br.sol[ii].x, prob_ma)[2]
+            ω0 = BK.getp(br.sol[ii].x, prob_ma)[2]
         end
         p1 = br.sol[ii].p
         @test p1 == get(pt, lens1)
@@ -128,7 +128,7 @@ function testEV(br, verbose = false)
         verbose && @show res
         @test norminf(res[1]) < 100ϵ
         @test norminf(res[2]) < 100ϵ
-        par0 = merge(BK.getParams(br), pt)
+        par0 = merge(BK.getparams(br), pt)
 
         # we test the eigenvalues
         vp = eigenvals(br, step)
@@ -184,7 +184,7 @@ for _jac in (:autodiff, :minaug)
     BK.predictor(zh, Val(:HopfCurve), 0.1).ω(0.)
 
     # locate BT point with newton algorithm and compute the normal form
-    _bt = BK.BTPoint(sn_codim2, 1) # does nothing
+    _bt = BK.bt_point(sn_codim2, 1) # does nothing
 
     solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newtonOptions; verbose = false, tol = 1e-15), startWithEigen = true, jacobian_ma = :finitedifferences)
     @test BK.converged(solbt)
@@ -320,7 +320,7 @@ _pred.ns1(0.1)
 _pred.ns2(0.1)
 
 # locate BT point with newton algorithm
-_bt = BK.BTPoint(hp_codim2_1, 2)
+_bt = BK.bt_point(hp_codim2_1, 2)
 solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newtonOptions;verbose = true))
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
@@ -369,12 +369,12 @@ hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, ds
 #     plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf-HH")
 
 # test getters for branches
-BK.getLens(hp_from_hh)
-BK.getParams(hp_from_hh)
+BK.getlens(hp_from_hh)
+BK.getparams(hp_from_hh)
 ####################################################################################################
 # branching from Bautin to Fold of periodic orbits
-using OrdinaryDiffEq
-prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getParams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
+using DifferentialEquations
+prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detectBifurcation = 0, maxSteps = 3, detectEvent = 0, ds = 0.001)
 @set! opts_fold_po.newtonOptions.verbose = false
@@ -394,7 +394,7 @@ for probPO in (
             )
     
     @test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
-end    
+end 
 ####################################################################################################
 # branching HH to NS of periodic orbits
 prob_ode = ODEProblem(Lor, z0, (0, 1), hp_codim2_1.contparams, reltol = 1e-8, abstol = 1e-10)

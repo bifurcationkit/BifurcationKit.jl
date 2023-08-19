@@ -1,5 +1,5 @@
 # if the jacobian is matrix based, use transpose
-@inline hasAdjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
+@inline has_adjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
 @inline hasJvp(wrap::WrapPOSh) = hasJvp(wrap.prob)
 
 function Base.transpose(J::FloquetWrapper{ <: ShootingProblem })
@@ -11,22 +11,22 @@ function Base.adjoint(J::FloquetWrapper{ <: ShootingProblem })
 end
 
 # this function is necessary for pdtest to work in PDMinimallyAugmented problem
-function jacobianPeriodDoubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj}
-    dx -> jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, 1, dx)
+function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj}
+    dx -> jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, 1, dx)
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem
-function jacobianAdjointPeriodDoubling(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par)
-    dx -> jacobianAdjointPeriodDoublingMatrixFree(pbwrap, x, par, dx)
+function jacobian_adjoint_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par)
+    dx -> jacobian_adjoint_period_doubling_matrix_free(pbwrap, x, par, dx)
 end
 
-jacobianAdjointPeriodDoublingMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, dx) = jacobianAdjointPD_NFMatrixFree(pbwrap, x, par, 1, dx)
+jacobian_adjoint_period_doubling_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, 1, dx)
 
-jacobianAdjointNeimarkSackerMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω, dx) = jacobianAdjointPD_NFMatrixFree(pbwrap, x, par, -cis(-ω), dx)
+jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, -cis(-ω), dx)
 
 # same as above but matrix based
-function jacobianPeriodDoubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = getMeshSize(pbwrap.prob)
+function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+    M = get_mesh_size(pbwrap.prob)
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the PD boundary condition
@@ -37,13 +37,13 @@ function jacobianPeriodDoubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, 
 end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
+function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
     sh = pbwrap.prob
-    T  = getPeriod(sh, x)
-    M  = getMeshSize(sh)
+    T  = getperiod(sh, x)
+    M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
 
-    xc = getTimeSlices(sh, x)
+    xc = get_time_slices(sh, x)
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
@@ -54,7 +54,7 @@ function jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par,
     dflowDE(_x, _dx, _T) = ForwardDiff.derivative(z -> evolve(sh.flow, _x .+ z .* _dx, par, _T).u, 0)
     dflow(_x, _dx, _T) = dflowDE(_x, real.(_dx), _T) .+ im .* dflowDE(_x, imag.(_dx), _T)
     dflow(_x, _dx::T, _T) where {T <: AbstractArray{<: Real}} = dflowDE(_x, _dx, _T)
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow, jacobian-vector product
@@ -79,13 +79,13 @@ function jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par,
 end
 
 # matrix free adjoint linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobianAdjointPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
+function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
     sh = pbwrap.prob
-    T  = getPeriod(sh, x)
-    M  = getMeshSize(sh)
+    T  = getperiod(sh, x)
+    M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
 
-    xc = getTimeSlices(sh, x)
+    xc = get_time_slices(sh, x)
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
@@ -97,7 +97,7 @@ function jacobianAdjointPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, 
     dflow(_x, _dx, _T) = dflowDE(_x, real.(_dx), _T) .+ im .* dflowDE(_x, imag.(_dx), _T)
     dflow(_x, _dx::T, _T) where {T <: AbstractArray{<: Real}} = dflowDE(_x, _dx, _T)
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         for ii in 1:M
             im1 = (ii == 1) ? M : ii-1
             # call jacobian of the flow, jacobian-vector product
@@ -121,12 +121,12 @@ function jacobianAdjointPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, 
     return out
 end
 
-function jacobianNeimarkSacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj}
-    dx -> jacobianPD_NFMatrixFree(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, -cis(ω), dx)
+function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj}
+    dx -> jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, -cis(ω), dx)
 end
 
-function jacobianNeimarkSacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = getMeshSize(pbwrap.prob)
+function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
+    M = get_mesh_size(pbwrap.prob)
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
@@ -136,8 +136,8 @@ function jacobianNeimarkSacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem
-function jacobianAdjointNeimarkSacker(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω)
-    dx -> jacobianAdjointNeimarkSackerMatrixFree(pbwrap, x, par, ω, dx)
+function jacobian_adjoint_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω)
+    dx -> jacobian_adjoint_neimark_sacker_matrix_free(pbwrap, x, par, ω, dx)
 end
 
 function continuation(br::AbstractResult{Tkind, Tprob},
@@ -150,19 +150,19 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
-    _options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
-        return continuationSH_Fold(br, ind_bif, lens2, options_cont; kwargs... )
+        return continuation_sh_fold(br, ind_bif, lens2, options_cont; kwargs... )
     elseif biftype == :pd
-        return continuationSH_PD(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; kwargs... )
     elseif biftype == :ns
-        return continuationSH_NS(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; kwargs... )
     end
     throw("You passed the bifurcation type = $biftype. We continue only Fold / PD / NS points of periodic orbits for now.")
 end
 
-function continuationSH_Fold(br::AbstractResult{Tkind, Tprob},
+function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -174,10 +174,10 @@ function continuationSH_Fold(br::AbstractResult{Tkind, Tprob},
     biftype = br.specialpoint[ind_bif].type
     bifpt = br.specialpoint[ind_bif]
 
-    pbwrap = getProb(br)
+    pbwrap = getprob(br)
     probsh = pbwrap.prob
 
-    probshFold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getParams(br), getLens(br);
+    probshFold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getparams(br), getlens(br);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probsh(z, p), x, dx1, dx2)
@@ -186,7 +186,7 @@ function continuationSH_Fold(br::AbstractResult{Tkind, Tprob},
     options_foldpo = @set options_cont.newtonOptions.linsolver = FloquetWrapperLS(options_cont.newtonOptions.linsolver)
 
     # perform continuation
-    br_fold_po = continuationFold(probshFold,
+    br_fold_po = continuation_fold(probshFold,
         br, ind_bif, lens2,
         options_cont;
         startWithEigen = startWithEigen,
@@ -196,7 +196,7 @@ function continuationSH_Fold(br::AbstractResult{Tkind, Tprob},
         kwargs...)
 end
 
-function continuationSH_PD(br::AbstractResult{Tkind, Tprob},
+function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -209,14 +209,14 @@ function continuationSH_PD(br::AbstractResult{Tkind, Tprob},
 
         bifpt = br.specialpoint[ind_bif]
         bptype = bifpt.type
-        pdpointguess = PDPoint(br, ind_bif)
+        pdpointguess = pd_point(br, ind_bif)
 
         # copy the problem for not mutating the one passed by the user
         pbwrap = br.prob
         sh = deepcopy(pbwrap.prob)
 
         # get the parameters
-        par_pd = setParam(br, pdpointguess.p)
+        par_pd = setparam(br, pdpointguess.p)
 
         # let us compute the eigenspace
         λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -229,22 +229,22 @@ function continuationSH_PD(br::AbstractResult{Tkind, Tprob},
 
         # # compute the full eigenvector
         # floquetsolver = br.contparams.newtonOptions.eigsolver
-        # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+        # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
         # ζs = reduce(vcat, ζ_a)
         # ζs_ad = copy(ζs)
 
         # compute the full eigenvector, version with bordered problem
         ls = options_cont.newtonOptions.linsolver
-        J = jacobianPeriodDoubling(pbwrap, bifpt.x, par_pd)
+        J = jacobian_period_doubling(pbwrap, bifpt.x, par_pd)
         rhs = zero(bifpt.x)[1:end-1]; rhs[end] = 1
         q, = ls(J, rhs); q ./= norm(q) #≈ ker(J)
         # p, = ls(transpose(J), rhs); p ./= norm(p)
         p = copy(q)
 
         # perform continuation
-        continuationPD(br.prob, alg,
-            pdpointguess, setParam(br, pdpointguess.p),
-            getLens(br), lens2,
+        continuation_pd(br.prob, alg,
+            pdpointguess, setparam(br, pdpointguess.p),
+            getlens(br), lens2,
             # ζs, ζs_ad,
             p, q,
             options_cont;
@@ -253,7 +253,7 @@ function continuationSH_PD(br::AbstractResult{Tkind, Tprob},
             )
 end
 
-function continuationSH_NS(br::AbstractResult{Tkind, Tprob},
+function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -267,23 +267,23 @@ function continuationSH_NS(br::AbstractResult{Tkind, Tprob},
 
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
 
-    nspointguess = NSPoint(br, ind_bif)
+    nspointguess = ns_point(br, ind_bif)
 
     # copy the problem for not mutating the one passed by the user
     pbwrap = br.prob
     sh = deepcopy(br.prob.prob)
 
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(bifpt.x) - 1, M)
 
-    par_ns = setParam(br, bifpt.param)
-    period = getPeriod(sh, bifpt.x, par_ns)
+    par_ns = setparam(br, bifpt.param)
+    period = getperiod(sh, bifpt.x, par_ns)
 
     # compute the eigenspace
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = λₙₛ/1im
 
-    J = jacobianNeimarkSacker(pbwrap, bifpt.x, par_ns, ωₙₛ)
+    J = jacobian_neimark_sacker(pbwrap, bifpt.x, par_ns, ωₙₛ)
     nj = length(bifpt.x)-1
     q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(rand(nj)), 0, Complex.(zeros(nj)), 1)
     q ./= norm(q)
@@ -293,14 +293,14 @@ function continuationSH_NS(br::AbstractResult{Tkind, Tprob},
     # ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # # compute the full eigenvector
     # floquetsolver = br.contparams.newtonOptions.eigsolver
-    # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+    # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
     # ζs = reduce(vcat, ζ_a)
     # ζs_ad = copy(ζs)
 
     # perform continuation
-    continuationNS(br.prob, alg,
-        nspointguess, setParam(br, nspointguess.p[1]),
-        getLens(br), lens2,
+    continuation_ns(br.prob, alg,
+        nspointguess, setparam(br, nspointguess.p[1]),
+        getlens(br), lens2,
         p, q,
         # ζs, copy(ζs_ad),
         options_cont;

@@ -22,7 +22,7 @@ function testBranch(br)
     for ii in eachindex(br.branch)
         @test br.eig[ii].eigenvals == eigenvals(br, br.eig[ii].step, false)
         # compute number of unstable eigenvalues
-        isstable, n_u, n_i = BK.isStable(br.contparams, br.eig[ii].eigenvals)
+        isstable, n_u, n_i = BK.is_stable(br.contparams, br.eig[ii].eigenvals)
         # test that the stability matches the one in eig
         @test br[ii].n_unstable == n_u
         @test br[ii].stable  == isstable

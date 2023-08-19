@@ -49,7 +49,7 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     prob = BifurcationProblem(F, x0, p0, (@lens _); J = Jac)
     iter = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
     state = iterate(iter)[1]
-    newtonPALC(iter, state)
+    BK.newton_palc(iter, state)
 end
 
 test_newton_palc(-ones(10) .* 0.04, 0.5)
@@ -90,12 +90,12 @@ deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
 prob = BifurcationProblem(F4def, [0.1], nothing; J = J4def)
 defpb = DeflatedProblem(prob, deflationOp, nothing)
 show(defpb)
-BK.isInplace(defpb)
-BK.getVectorType(defpb)
-BK.isSymmetric(defpb)
-BK.getLens(defpb)
-BK.getParam(defpb)
-BK.setParam(defpb, 0.)
+BK.isinplace(defpb)
+BK.getvectortype(defpb)
+BK.is_symmetric(defpb)
+BK.getlens(defpb)
+BK.getparam(defpb)
+BK.setparam(defpb, 0.)
 
 @test defpb(rand(_T, 1), nothing) |> eltype == _T
 @test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T

@@ -1,31 +1,31 @@
 # these functions are indicators, an event occurs when they change value
-nbSigns(x, ::AbstractContinuousEvent) = mapreduce(x -> x > 0, +, x)
-nbSigns(x, ::AbstractDiscreteEvent) = x
+nb_signs(x, ::AbstractContinuousEvent) = mapreduce(x -> x > 0, +, x)
+nb_signs(x, ::AbstractDiscreteEvent) = x
 
-function nbSigns(x, event::PairOfEvents)
+function nb_signs(x, event::PairOfEvents)
     xc = x[1:event.eventC.nb]
     xd = x[event.eventC.nb+1:end]
-    res = (nbSigns(xc, event.eventC)..., nbSigns(xd, event.eventD)...)
+    res = (nb_signs(xc, event.eventC)..., nb_signs(xd, event.eventD)...)
     return res
 end
 
-function nbSigns(x, event::SetOfEvents)
+function nb_signs(x, event::SetOfEvents)
     nb = 0
     nC = length(event.eventC)
     nD = length(event.eventD)
     nCb = length(x)
     @inbounds for i in 1:nC
-        nb += nbSigns(x[i], event.eventC[i])
+        nb += nb_signs(x[i], event.eventC[i])
     end
     @inbounds for i in nC+1:nCb
-        nb += nbSigns(x[i], event.eventC[i-nC])
+        nb += nb_signs(x[i], event.eventC[i-nC])
     end
     return nb
 end
 ####################################################################################################
 # Function to locate precisely an Event using a bisection algorithm. We make sure that, at the end of the algorithm, the state is just after the event (in the s coordinate).
 # I put the event in first argument even if it is in `iter` in order to allow for easier dispatch
-function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
+function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     @assert isnothing(_state.eventValue) == false "Empty event value, this should not be happening. Please open an issue."
 
     # type of scalars in iter
@@ -33,16 +33,16 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
     # we test if the current state is an event, ie satisfies the constraint
     # up to a given tolerance. Very important to detect BT
-    if isOnEvent(event, _state.eventValue[1])
+    if isonevent(event, _state.eventValue[1])
         return :converged, getinterval(getp(_state), getpreviousp(_state))
     end
 
-    if abs(_state.ds) < iter.contParams.dsmin; return :none, (_T(0), _T(0)); end
+    if abs(_state.ds) < iter.contparams.dsmin; return :none, (_T(0), _T(0)); end
 
     # get continuation parameters
-    contParams = iter.contParams
+    contParams = iter.contparams
 
-    n2, n1 = nbSigns(_state.eventValue[1], event), nbSigns(_state.eventValue[2], event)
+    n2, n1 = nb_signs(_state.eventValue[1], event), nb_signs(_state.eventValue[2], event)
     verbose && println("────> Entering [Event], indicator of 2 last events = ", (n2, n1))
     verbose && println("────> [Bisection] initial ds = ", _state.ds)
 
@@ -88,7 +88,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     eventlocated::Bool = false
 
     # for a polynomial tangent predictor, we disable the update of the predictor parameters
-    internalAdaptation!(iter.alg, false)
+    internal_adaptation!(iter.alg, false)
 
     verbose && printstyled(color=:green, "──> eve (initial) ",
         _state.eventValue[2], " ──> ",  _state.eventValue[1], "\n")
@@ -114,8 +114,8 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         (_, state) = next
 
         # the eigenelements have been computed/stored in state during the call iterate(iter, state)
-        updateEvent!(iter, state)
-        push!(nsigns, nbSigns(state.eventValue[1], event))
+        update_event!(iter, state)
+        push!(nsigns, nb_signs(state.eventValue[1], event))
         verbose && printstyled(color=:green, "\n────> eve (current) ",
             state.eventValue[2], " ──> ", state.eventValue[1], "\n")
 
@@ -133,7 +133,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
             n_inversion += 1
             indinterval = (indinterval == 2) ? 1 : 2
         end
-        updatePredictor!(state, iter)
+        update_predictor!(state, iter)
 
         if iseven(n_inversion)
             copyto!(after, state)
@@ -157,7 +157,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
         # this test contains the verification that the current state is an
         # event up to a given tolerance. Very important to detect BT
-        eventlocated = (isEventCrossed(event, iter, state) &&
+        eventlocated = (is_event_crossed(event, iter, state) &&
                 abs(interval[2] - interval[1]) < contParams.tolParamBisectionEvent)
 
         # condition for breaking the while loop
@@ -182,7 +182,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
     end
 
-    internalAdaptation!(iter.alg, true)
+    internal_adaptation!(iter.alg, true)
 
     ######## update current state ########
     # So far we have (possibly) performed an even number of event crossings.
@@ -198,10 +198,10 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         copyto!(_state.τ, state.τ)
         # if there is no inversion, the eventValue will possibly be constant like (0, 0). Hence
 
-        if computeEigenElements(iter.event)
+        if compute_eigenelements(iter.event)
             # save eigen-elements
             _state.eigvals = state.eigvals
-            if saveEigenvectors(contParams)
+            if save_eigenvectors(contParams)
                 _state.eigvecs = state.eigvecs
             end
             # to prevent spurious event detection, update the following numbers carefully
@@ -218,7 +218,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         copyto!(_state.z,  after.z)
         copyto!(_state.τ, after.τ)
 
-        if computeEigenElements(iter.event)
+        if compute_eigenelements(iter.event)
             # save eigen-elements
             _state.eigvals = after.eigvals
             if contParams.saveEigenvectors
@@ -233,7 +233,7 @@ function locateEvent!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         interval = (getp(state), getp(after))
     end
     # update the predictor before leaving
-    updatePredictor!(_state, iter)
+    update_predictor!(_state, iter)
     verbose && println("────> Leaving [Loc-Bif]")
     return status, getinterval(interval...)
 end
@@ -244,26 +244,26 @@ EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Sym
 
 # I put the callback in first argument even if it is in iter in order to allow for dispatch
 # function to tell the event type based  on the coordinates of the zero
-function getEventType(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
+function get_event_type(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
     # record information about the event point
     userpoint = EventSpecialPoint(state, :user, status, recordFromSolution(iter), iter.normC, interval)
     (verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
     return true, userpoint
 end
 ####################################################################################################
-function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userC") where T
+function get_event_type(event::AbstractContinuousEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userC") where T
     event_index_C = Int32[]
     if state.eventValue[1] isa Real
-        if testEve(event, state.eventValue[1],  state.eventValue[2])
+        if test_event(event, state.eventValue[1],  state.eventValue[2])
             push!(event_index_C, 1)
         end
     elseif state.eventValue[1][ind] isa Real
-        if testEve(event, state.eventValue[1][ind], state.eventValue[2][ind])
+        if test_event(event, state.eventValue[1][ind], state.eventValue[2][ind])
             push!(event_index_C, 1)
         end
     else
         for ii in eachindex(state.eventValue[1][ind])
-            if testEve(event, state.eventValue[1][ind][ii], state.eventValue[2][ind][ii])
+            if test_event(event, state.eventValue[1][ind][ii], state.eventValue[2][ind][ii])
                 push!(event_index_C, ii)
                 typeE = typeE * "-$ii"
             end
@@ -276,7 +276,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
         return false, EventSpecialPoint(state, Symbol(typeE), status, recordFromSolution(iter), iter.normC, interval)
     end
 
-    if hasCustomLabels(event)
+    if has_custom_labels(event)
         typeE = labels(event, event_index_C)
     end
     # record information about the event point
@@ -285,7 +285,7 @@ function getEventType(event::AbstractContinuousEvent, iter::AbstractContinuation
     return true, userpoint
 end
 ####################################################################################################
-function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userD") where T
+function get_event_type(event::AbstractDiscreteEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userD") where T
     event_index_D = Int32[]
     if state.eventValue[1] isa Real && (abs(state.eventValue[1] - state.eventValue[2]) > 0)
         push!(event_index_D, 1)
@@ -305,7 +305,7 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
         state.stopcontinuation = true
         return false, EventSpecialPoint(state, Symbol(typeE), status, recordFromSolution(iter), iter.normC, interval)
     end
-    if hasCustomLabels(event)
+    if has_custom_labels(event)
         typeE = labels(event, event_index_D)
     end
     # record information about the ev point
@@ -314,21 +314,21 @@ function getEventType(event::AbstractDiscreteEvent, iter::AbstractContinuationIt
     return true, userpoint
 end
 ####################################################################################################
-function getEventType(event::PairOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
+function get_event_type(event::PairOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
     nC = length(event.eventC)
     n = length(event)
 
-    if (isEventCrossed(event.eventC, iter, state, 1:nC) && isEventCrossed(event.eventD, iter, state, nC+1:n))
-        evc = getEventType(event.eventC, iter, state, verbosity, status, interval, 1:nC; typeE = "userC")
-        evd = getEventType(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
+    if (is_event_crossed(event.eventC, iter, state, 1:nC) && is_event_crossed(event.eventD, iter, state, nC+1:n))
+        evc = get_event_type(event.eventC, iter, state, verbosity, status, interval, 1:nC; typeE = "userC")
+        evd = get_event_type(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
         @warn "More than one Event was detected $(evc[2].type)-$(evd[2].type). We call the continuous event to save data in the branch."
         @set! evc[2].type = Symbol(evc[2].type, evd[2].type)
         return evc
     end
-    if isEventCrossed(event.eventC, iter, state, 1:nC)
-        return getEventType(event.eventC, iter, state, verbosity, status, interval, 1:nC; typeE = "userC")
-    elseif isEventCrossed(event.eventD, iter, state, nC+1:n)
-        return getEventType(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
+    if is_event_crossed(event.eventC, iter, state, 1:nC)
+        return get_event_type(event.eventC, iter, state, verbosity, status, interval, 1:nC; typeE = "userC")
+    elseif is_event_crossed(event.eventD, iter, state, nC+1:n)
+        return get_event_type(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
     else
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
@@ -338,19 +338,19 @@ function getEventType(event::PairOfEvents, iter::AbstractContinuationIterable, s
 end
 
 ####################################################################################################
-function getEventType(event::SetOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
+function get_event_type(event::SetOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
     # find the active events
     event_index_C = Int32[]
     event_index_D = Int32[]
     for (ind, eve) in enumerate(event.eventC)
-        if isEventCrossed(eve, iter, state, ind)
+        if is_event_crossed(eve, iter, state, ind)
             push!(event_index_C, ind)
         end
     end
 
     nC = length(event.eventC)
     for (ind, eve) in enumerate(event.eventD)
-        if isEventCrossed(eve, iter, state, nC + ind)
+        if is_event_crossed(eve, iter, state, nC + ind)
             push!(event_index_D, ind)
         end
     end
@@ -359,10 +359,10 @@ function getEventType(event::SetOfEvents, iter::AbstractContinuationIterable, st
 
     if isempty(event_index_C) == false
         indC = event_index_C[1]
-        return getEventType(event.eventC[indC], iter, state, verbosity, status, interval, indC; typeE = "userC$indC")
+        return get_event_type(event.eventC[indC], iter, state, verbosity, status, interval, indC; typeE = "userC$indC")
     elseif isempty(event_index_D) == false
         indD = event_index_D[1]
-        return getEventType(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
+        return get_event_type(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
     else
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events

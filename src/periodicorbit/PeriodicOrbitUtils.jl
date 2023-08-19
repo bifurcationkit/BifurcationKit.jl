@@ -50,7 +50,7 @@ function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
 end
 ####################################################################################################
 # functions to insert the problem into the user passed parameters
-function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
+function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     _finsol = get(kwargs, :finaliseSolution, nothing)
     _finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
         begin
@@ -58,7 +58,7 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
             # if not, we do not update the problem with bad information
             success = converged(get(kF, :state, nothing))
             if success && modCounter(step, updateSectionEveryStep) == 1
-                updateSection!(prob, z.u, setParam(contResult, z.p))
+                updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             return true
         end :
@@ -68,7 +68,7 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
             # if not, we do not update the problem with bad information!
             success = converged(get(kF, :state, nothing))
             if success && modCounter(step, updateSectionEveryStep) == 1
-                updateSection!(prob, z.u, setParam(contResult, z.p))
+                updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             return _finsol(z, tau, step, contResult; prob = prob, kF...)
         end
@@ -76,7 +76,7 @@ function modifyPOFinalise(prob, kwargs, updateSectionEveryStep)
 end
 
 # version specific to collocation. Handles mesh adaptation
-function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
+function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
     _finsol = get(kwargs, :finaliseSolution, nothing)
     _finsol2 = (z, tau, step, contResult; kF...) ->
         begin
@@ -86,18 +86,18 @@ function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSection
             # mesh adaptation
             if success && prob.meshadapt
                 oldsol = _copy(z)
-                oldmesh = getTimes(prob) .* getPeriod(prob, z.u, nothing)
-                adapt = computeError!(prob, z.u;
+                oldmesh = get_times(prob) .* getperiod(prob, z.u, nothing)
+                adapt = compute_error!(prob, z.u;
                         verbosity = prob.verboseMeshAdapt,
-                        par = setParam(contResult, z.p),
+                        par = setparam(contResult, z.p),
                         K = prob.K)
                 if ~adapt.success
                     return false
                 end
-                @info norm(oldsol.u - z.u, Inf)
+                # @info norm(oldsol.u - z.u, Inf)
             end
             if success && modCounter(step, updateSectionEveryStep) == 1
-                updateSection!(prob, z.u, setParam(contResult, z.p))
+                updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             if isnothing(_finsol)
                 return true
@@ -108,7 +108,7 @@ function modifyPOFinalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSection
     return _finsol2
 end
 
-function modifyPORecord(probPO, kwargs, par, lens)
+function modify_po_record(probPO, kwargs, par, lens)
     if :recordFromSolution in keys(kwargs)
         _recordsol0 = get(kwargs, :recordFromSolution, nothing)
         @assert ~isnothing(_recordsol0) "Please open an issue on the website."
@@ -116,26 +116,26 @@ function modifyPORecord(probPO, kwargs, par, lens)
     else
         if probPO isa AbstractPODiffProblem
             return _recordsol = (x, p; k...) -> begin
-                period = getPeriod(probPO, x, set(par, lens, p))
-                sol = getPeriodicOrbit(probPO, x, set(par, lens, p))
+                period = getperiod(probPO, x, set(par, lens, p))
+                sol = get_periodic_orbit(probPO, x, set(par, lens, p))
                 max = maximum(sol[1,:])
                 min = minimum(sol[1,:])
                 return (max = max, min = min, amplitude = max - min, period = period)
             end
         else
-            return _recordsol = (x, p; k...) -> (period = getPeriod(probPO, x, set(par, lens, p)),)
+            return _recordsol = (x, p; k...) -> (period = getperiod(probPO, x, set(par, lens, p)),)
         end
     end
 end
 
-function modifyPOPlot(::Union{BK_NoPlot, BK_Plots}, probPO, kwargs)
+function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, kwargs)
     _plotsol = get(kwargs, :plotSolution, nothing)
     _plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 end
 
-function modifyPOPlot(::BK_Makie, probPO, kwargs)
+function modify_po_plot(::BK_Makie, probPO, kwargs)
     _plotsol = get(kwargs, :plotSolution, nothing)
     _plotsol2 = isnothing(_plotsol) ? (ax, x, p; k...) -> nothing : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
 end
 
-modifyPOPlot(probPO, kwargs) = modifyPOPlot(get_plot_backend(), probPO, kwargs)
+modify_po_plot(probPO, kwargs) = modify_po_plot(get_plot_backend(), probPO, kwargs)

@@ -11,7 +11,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
             nev = length(eigenvalsfrombif(br, id_bif)),
             verbose = false,
             ζs = nothing,
-            lens = getLens(br),
+            lens = getlens(br),
             Teigvec = getvectortype(br),
             scaleζ = norm,
             prm = true,
@@ -26,11 +26,11 @@ function getNormalForm(prob::AbstractBifurcationProblem,
     kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 
     if bifpt.type == :pd
-        return perioddoublingNormalForm(prob, br, id_bif; prm = prm, detailed = detailed, δ = δ, kwargs_nf...)
+        return period_doubling_normal_form(prob, br, id_bif; prm = prm, detailed = detailed, δ = δ, kwargs_nf...)
     elseif bifpt.type == :bp
-        return branchNormalForm(prob, br, id_bif; kwargs_nf...)
+        return branch_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimarksackerNormalForm(prob, br, id_bif; δ = δ, detailed = detailed, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif; δ = δ, detailed = detailed, kwargs_nf...)
     end
 
     throw("Normal form for $(bifpt.type) not yet implemented.")
@@ -40,19 +40,19 @@ end
 """
 [WIP] Note that the computation of this normal form is not implemented yet.
 """
-function branchNormalForm(pbwrap,
+function branch_normal_form(pbwrap,
                             br,
                             ind_bif::Int;
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
-                            lens = getLens(br),
+                            lens = getlens(br),
                             Teigvec = vectortype(br),
                             kwargs_nf...)
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    par = setParam(br, bifpt.param)
-    period = getPeriod(pb, bifpt.x, par)
+    par = setparam(br, bifpt.param)
+    period = getperiod(pb, bifpt.x, par)
 
     # let us compute the kernel
     λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -65,28 +65,28 @@ function branchNormalForm(pbwrap,
 
     # compute the full eigenvector
     floquetsolver = br.contparams.newtonOptions.eigsolver
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ))
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    nf = BranchPoint(nothing, nothing, bifpt.param, par, getLens(br), nothing, nothing, nothing, :none)
+    nf = BranchPoint(nothing, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
 
     return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
 ####################################################################################################
-function perioddoublingNormalForm(pbwrap,
+function period_doubling_normal_form(pbwrap,
                                 br,
                                 ind_bif::Int;
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
-                                lens = getLens(br),
+                                lens = getlens(br),
                                 Teigvec = vectortype(br),
                                 kwargs_nf...)
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    pars = setParam(br, bifpt.param)
-    period = getPeriod(pb, bifpt.x, pars)
+    pars = setparam(br, bifpt.param)
+    period = getperiod(pb, bifpt.x, pars)
 
     # let us compute the kernel
     λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -99,27 +99,27 @@ function perioddoublingNormalForm(pbwrap,
 
     # compute the full eigenvector
     floquetsolver = br.contparams.newtonOptions.eigsolver
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ))
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ))
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    nf = PeriodDoubling(nothing, nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
+    nf = PeriodDoubling(nothing, nothing, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
     PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
 
-function perioddoublingNormalForm(pbwrap::WrapPOSh,
+function period_doubling_normal_form(pbwrap::WrapPOSh,
                                 br,
                                 ind_bif::Int;
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
-                                lens = getLens(br),
+                                lens = getlens(br),
                                 Teigvec = vectortype(br),
                                 detailed = true,
                                 kwargs_nf...)
     verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    pars = setParam(br, bifpt.param)
+    pars = setparam(br, bifpt.param)
 
     # let us compute the kernel
     λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -132,49 +132,49 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh,
 
     # compute the full eigenvector
     floquetsolver = br.contparams.newtonOptions.eigsolver
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setParam(br, bifpt.param), real.(ζ₋₁))
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ₋₁))
     ζs = reduce(vcat, ζ_a)
 
-    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, pars, getLens(br), nothing, nothing, nothing, :none)
+    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
     if ~detailed
-        period = getPeriod(pbwrap.prob, pd0.x0, pd0.params)
+        period = getperiod(pbwrap.prob, pd0.x0, pd0.params)
         return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, pbwrap.prob, true)
     end
 
     # newton parameter
     optn = br.contparams.newtonOptions
-    perioddoublingNormalForm(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose = verbose, nev = nev, kwargs_nf...)
+    period_doubling_normal_form(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose = verbose, nev = nev, kwargs_nf...)
 end
 
-function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: PoincareShootingProblem },
+function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
                                 nev = 3,
                                 verbose = false,
-                                lens = getLens(pbwrap),
+                                lens = getlens(pbwrap),
                                 kwargs_nf...)
     psh = pbwrap.prob
-    period = getPeriod(psh, pd0.x0, pd0.params)
+    period = getperiod(psh, pd0.x0, pd0.params)
     PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd0, psh, true)
 end
 
-function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
+function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
                                 nev = 3,
                                 verbose = false,
-                                lens = getLens(pbwrap),
+                                lens = getlens(pbwrap),
                                 δ = 1e-9,
                                 kwargs_nf...)
     sh = pbwrap.prob
     pars = pd0.params
-    period = getPeriod(sh, pd0.x0, pars)
+    period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
     # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
-    xₛ = getTimeSlices(sh, Π.po)[:, 1]
+    xₛ = get_time_slices(sh, Π.po)[:, 1]
     # ζ₁ = getVectorField(br.prob.prob.flow.prob)(xₛ,pars) |> normalize
 
     # If M is the monodromy matrix and E = x - <x,e>e with e the eigen
@@ -237,11 +237,11 @@ function perioddoublingNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
     # normal form computation
-    pd = periodDoublingNormalForm(probΠ, pd1, DefaultLS(); verbose = verbose)
+    pd = period_doubling_normal_form(probΠ, pd1, DefaultLS(); verbose = verbose)
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd, sh, true)
 end
 
-function perioddoublingNormalForm(pbwrap::WrapPOColl,
+function period_doubling_normal_form(pbwrap::WrapPOColl,
                                 br,
                                 ind_bif::Int;
                                 verbose = false,
@@ -252,7 +252,7 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    par = setParam(br, bifpt.param)
+    par = setparam(br, bifpt.param)
 
     if bifpt.x isa NamedTuple
         # the solution is mesh adapted, we need to restore the mesh.
@@ -260,31 +260,33 @@ function perioddoublingNormalForm(pbwrap::WrapPOColl,
         updateMesh!(pbwrap.prob, bifpt.x._mesh )
         bifpt = @set bifpt.x = bifpt.x.sol
     end
-    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getLens(br), nothing, nothing, nothing, :none)
+    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if prm
         # newton parameter
         optn = br.contparams.newtonOptions
-        return perioddoublingNormalFormPRM(pbwrap, pd0, optn; verbose = verbose, nev = nev, kwargs_nf...)
+        return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose = verbose, nev = nev, kwargs_nf...)
     end
-
-    return perioddoublingNormalForm(pbwrap, pd0; verbose = verbose, nev = nev, kwargs_nf...)
-
+    # this other approach is not implemented yet
+    # return period_doubling_normal_form(pbwrap, pd0; verbose = verbose, nev = nev, kwargs_nf...)
+    nf = PeriodDoubling(nothing, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    period = getperiod(pbwrap.prob, bifpt.x, par)
+    PeriodDoublingPO(bifpt.x, period, nothing, nothing, nf, pbwrap.prob, true)
 end
 
-function perioddoublingNormalFormPRM(pbwrap::WrapPOColl,
+function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
                                 pd0::PeriodDoubling,
                                 optn::NewtonPar;
                                 nev = 3,
                                 δ = 1e-7,
                                 verbose = false,
-                                lens = getLens(pbwrap),
+                                lens = getlens(pbwrap),
                                 kwargs_nf...)
     @debug "method PRM"
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     pars = pd0.params
     @debug pars typeof(pd0.x0)
-    T = getPeriod(coll, pd0.x0, pars)
+    T = getperiod(coll, pd0.x0, pars)
 
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
     xₛ = pd0.x0[1:N]
@@ -323,12 +325,12 @@ function perioddoublingNormalFormPRM(pbwrap::WrapPOColl,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
-    pd = periodDoublingNormalForm(probΠ, pd1, DefaultLS(); verbose = verbose)
+    pd = period_doubling_normal_form(probΠ, pd1, DefaultLS(); verbose = verbose)
     return PeriodDoublingPO(pd0.x0, pd0.x0[end], nothing, nothing, pd, coll, true)
 end
 ####################################################################################################
-function neimarksackerNormalForm(pbwrap::WrapPOColl,
-                                br,
+function neimark_sacker_normal_form(pbwrap::WrapPOColl,
+                                br::AbstractBranchResult,
                                 ind_bif::Int;
                                 verbose = false,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
@@ -339,7 +341,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    par = setParam(br, bifpt.param)
+    par = setparam(br, bifpt.param)
 
     # get the eigenvalue
     eigRes = br.eig
@@ -371,35 +373,35 @@ function neimarksackerNormalForm(pbwrap::WrapPOColl,
     v₁ = @view vr[1:end-1]
     v₁★ = @view vl[1:end-1]
 
-    ζₛ = getTimeSlices(coll, vr)
+    ζₛ = get_time_slices(coll, vr)
     vr ./= sqrt(∫(coll, ζₛ, ζₛ, 1)) # first vector conjugated by dot
 
-    ζ★ₛ = getTimeSlices(coll, vl)
+    ζ★ₛ = get_time_slices(coll, vl)
     v₁★ ./= 2∫(coll, ζ★ₛ, ζₛ, 1)
 
-    v₁ₛ = getTimeSlices(coll, vcat(v₁,0))
-    v₁★ₛ = getTimeSlices(coll, vcat(v₁★,0))
+    v₁ₛ = get_time_slices(coll, vcat(v₁,0))
+    v₁★ₛ = get_time_slices(coll, vcat(v₁★,0))
 
-	ns0 =  NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, par, getLens(br), nothing, nothing, nothing, :none)
+	ns0 =  NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
 
     # newton parameter
     optn = br.contparams.newtonOptions
-    return neimarksackerNormalFormPRM(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
+    return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
 end
 ####################################################################################################
-function neimarksackerNormalForm(pbwrap,
+function neimark_sacker_normal_form(pbwrap,
                             br,
                             ind_bif::Int;
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
-                            lens = getLens(br),
+                            lens = getlens(br),
                             Teigvec = vectortype(br),
                             kwargs_nf...)
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    pars = setParam(br, bifpt.param)
-    period = getPeriod(pb, bifpt.x, pars)
+    pars = setparam(br, bifpt.param)
+    period = getperiod(pb, bifpt.x, pars)
 
     # get the eigenvalue
     eigRes = br.eig
@@ -407,23 +409,23 @@ function neimarksackerNormalForm(pbwrap,
     ωₙₛ = imag(λₙₛ)
 
 
-    ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getLens(br), nothing, nothing, nothing, :none)
+    ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
     return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
 end
 
-function neimarksackerNormalFormPRM(pbwrap::WrapPOColl,
+function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
                                 ns0::NeimarkSacker,
                                 optn::NewtonPar;
                                 nev = 3,
                                 δ = 1e-7,
                                 verbose = false,
-                                lens = getLens(pbwrap),
+                                lens = getlens(pbwrap),
                                 kwargs_nf...)
     @debug "methode PRM"
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     pars = ns0.params
-    T = getPeriod(coll, ns0.x0, pars)
+    T = getperiod(coll, ns0.x0, pars)
 
     Π = PoincareMap(pbwrap, ns0.x0, pars, optn)
     xₛ = ns0.x0[1:N]
@@ -459,16 +461,16 @@ function neimarksackerNormalFormPRM(pbwrap::WrapPOColl,
             )
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
-    ns = neimarkSackerNormalForm(probΠ, ns1, DefaultLS(); verbose = verbose)
-    return NeimarkSackerPO(ns0.x0, T, 0., 0., real.(1), nothing, ns, coll, true)
+    ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose = verbose)
+    return NeimarkSackerPO(ns0.x0, T, ns0.p, ns0.ω, ev, nothing, ns, coll, true)
 end
 
-function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
-                                br,
+function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
+                                br::AbstractBranchResult,
                                 ind_bif::Int;
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
-                                lens = getLens(br),
+                                lens = getlens(br),
                                 Teigvec = vectortype(br),
                                 kwargs_nf...)
 
@@ -480,35 +482,35 @@ function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    pars = setParam(br, bifpt.param)
-    T = getPeriod(sh, bifpt.x, pars)
+    pars = setparam(br, bifpt.param)
+    T = getperiod(sh, bifpt.x, pars)
 
     # get the eigenvalue
     eigRes = br.eig
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = imag(λₙₛ)
 
-    ns0 =  NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, pars, getLens(br), nothing, nothing, nothing, :none)
+    ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
 
     # newton parameter
     optn = br.contparams.newtonOptions
-    return neimarksackerNormalForm(pbwrap, ns0, (1, 1), optn; verbose = verbose, nev = nev, kwargs_nf...)
+    return neimark_sacker_normal_form(pbwrap, ns0, (1, 1), optn; verbose = verbose, nev = nev, kwargs_nf...)
 end
 
-function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
+function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 ns0::NeimarkSacker,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
                                 nev = 3,
                                 verbose = false,
-                                lens = getLens(pbwrap),
+                                lens = getlens(pbwrap),
                                 kwargs_nf...)
     sh = pbwrap.prob
     pars = ns0.params
-    period = getPeriod(sh, ns0.x0, pars)
+    period = getperiod(sh, ns0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, ns0.x0, pars, optn)
-    xₛ = getTimeSlices(sh, Π.po)[:, 1]
+    xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-12 && @warn  "$_nrm"
@@ -544,7 +546,7 @@ function neimarksackerNormalForm(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
     # normal form computation
-    ns = neimarkSackerNormalForm(probΠ, ns1, DefaultLS(); verbose = verbose)
+    ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose = verbose)
 
     return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
@@ -554,7 +556,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampf
 
     M, N = size(pb)
     orbitguess0 = nf.po[1:end-1]
-    orbitguess0c = getTimeSlices(pb, nf.po)
+    orbitguess0c = get_time_slices(pb, nf.po)
     ζc = reshape(nf.ζ, N, M)
     orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
     orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)

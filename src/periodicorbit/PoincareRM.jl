@@ -12,10 +12,10 @@ struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
     options::To
 end
 
-@inline getMeshSize(Π::PoincaréMap{ <: WrapPOSh}) = getMeshSize(Π.probpo.prob) - 1
+@inline get_mesh_size(Π::PoincaréMap{ <: WrapPOSh}) = get_mesh_size(Π.probpo.prob) - 1
 
-@views function getTimeSlices(Π::PoincaréMap{ <: WrapPOSh}, x::AbstractVector)
-    M = getMeshSize(Π)
+@views function get_time_slices(Π::PoincaréMap{ <: WrapPOSh}, x::AbstractVector)
+    M = get_mesh_size(Π)
     if M == 0
         return x
     end
@@ -27,7 +27,7 @@ end
 function PoincareMap(wrap::WrapPOSh, po, par, optn)
     sh = wrap.prob
     Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
-    poc = getTimeSlices(sh, po)
+    poc = get_time_slices(sh, po)
     @views update!(Π.Σ, vf(sh.flow, poc[:, 1], par), poc[:, 1])
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
@@ -37,32 +37,32 @@ function PoincareMap(wrap::WrapPOColl, po, par, optn)
     coll = wrap.prob
     N, m, Ntst = size(coll)
     Σ = SectionSS(rand(N), rand(N))
-    poc = getTimeSlices(coll, po)
+    poc = get_time_slices(coll, po)
     @views update!(Σ, residual(coll.prob_vf, po[1:N], par), po[1:N])
     Σ.normal ./= norm(Σ.normal)
     return PoincaréMap(wrap, po, Σ, optn)
 end
 
-function poincaréFunctional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
+function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     # shooting problem
     sh = Π.probpo.prob
 
-    M = getMeshSize(Π)
+    M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
-    T⁰ = getPeriod(sh, Π.po) # period of the reference periodic orbit
-    tₘ = extractPeriod(x)    # estimate of the last bit for the return time
+    T⁰ = getperiod(sh, Π.po) # period of the reference periodic orbit
+    tₘ = extract_period(x)    # estimate of the last bit for the return time
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
-    poc = getTimeSlices(sh, Π.po)
+    poc = get_time_slices(sh, Π.po)
     # unknowns are po₁, po₂,...,poₘ,period
     @assert size(poc) == (N, M+1)
 
-    xc = getTimeSlices(Π, x)
+    xc = get_time_slices(Π, x)
     # unknowns are x₂,...,xₘ,tΣ
 
     # variable to hold the computed result
     out = similar(x, typeof(x[1]*x₁[1]))
-    outc = getTimeSlices(Π, out)
+    outc = get_time_slices(Π, out)
 
     if M == 0
         𝒯 = typeof(x[1] * x₁[1])
@@ -71,7 +71,7 @@ function poincaréFunctional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
         return out
     end
 
-    if ~isParallel(sh)
+    if ~isparallel(sh)
         outc[:, 1] .= evolve(sh.flow, x₁, par, sh.ds[1] * T⁰).u .- xc[:, 1]
         for ii in 1:M-1
             outc[:, ii+1] .= evolve(sh.flow, xc[:, ii], par, sh.ds[ii] * T⁰).u .- xc[:, ii+1]
@@ -94,12 +94,12 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     # for x near po, this computes the poincare return map
     # get the size of the state space
     sh = Π.probpo.prob
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     N = div(length(Π.po) - 1, M)
     # we construct the initial guess
     x₀ = Π.po[N+1:end]
     x₀[end] = sh.ds[end]
-    mapΠ(x, p) = poincaréFunctional(Π, x, p, xₛ)
+    mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
     # @assert 1==0 "needs a jacobian"
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
@@ -113,17 +113,17 @@ end
 function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
     sh = Π.probpo.prob
     # we get the return time
-    T⁰ = getPeriod(sh, Π.po)
-    tₘ = extractPeriod(solΠ)
-    tᵣ = getPeriod(sh, Π.po) + (tₘ - sh.ds[end]) * T⁰
+    T⁰ = getperiod(sh, Π.po)
+    tₘ = extract_period(solΠ)
+    tᵣ = getperiod(sh, Π.po) + (tₘ - sh.ds[end]) * T⁰
     # we get the return point
-    M = getMeshSize(sh)
+    M = get_mesh_size(sh)
     if M == 1
         xᵣ = evolve(sh.flow, xₛ, par, tₘ * T⁰).u
-    elseif ~isParallel(sh)
-        xᵣ = evolve(sh.flow, getTimeSlices(Π, solΠ)[:, end], par, tₘ * T⁰).u
+    elseif ~isparallel(sh)
+        xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰).u
     else
-        xᵣ = evolve(sh.flow, getTimeSlices(Π, solΠ)[:, end], par, tₘ * T⁰)[1].u
+        xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰)[1].u
     end
     return (u = xᵣ, t = tᵣ)
 end
@@ -133,18 +133,18 @@ function (Π::PoincaréMap)(xₛ, par)
     _extend(Π, solΠ, par)
 end
 
-@views function poincaréFunctional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
+@views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
     # x has size ?? - N
     # shooting problem
     coll = Π.probpo.prob
     N,_,_ = size(coll)
 
-    uc = getTimeSlices(coll, u)
-    T = getPeriod(coll, u, nothing)
+    uc = get_time_slices(coll, u)
+    T = getperiod(coll, u, nothing)
     𝒯 = typeof(u[1] * x₁[1])
     result = 𝒯.(u)
-    resultc = getTimeSlices(coll, result)
-    functionalColl_bare!(coll, resultc, uc, T, getLs(coll.mesh_cache), par)
+    resultc = get_time_slices(coll, result)
+    functional_coll_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
     resultc[:, end] .= x₁ .- uc[:, 1]
     return vcat(vec(resultc), Π.Σ(u[end-N:end-1], T))
 end
@@ -156,7 +156,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     # we construct the initial guess
     x₀ = Π.po
 
-    mapΠ(x, p) = poincaréFunctional(Π, x, p, xₛ)
+    mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
@@ -168,8 +168,8 @@ end
 function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
     coll = Π.probpo.prob
     N,_,_ = size(coll)
-    T⁰ = getPeriod(coll, Π.po)
-    tₘ = extractPeriod(solΠ)
+    T⁰ = getperiod(coll, Π.po)
+    tₘ = extract_period(solΠ)
     tᵣ = tₘ
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end

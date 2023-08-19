@@ -7,8 +7,8 @@ const BK = BifurcationKit
 ###################################################################################################
 _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
 _eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
-@test BK.hasCustomLabels(_eve) == false
-@test BK.computeEigenElements(_eve) == false
+@test BK.has_custom_labels(_eve) == false
+@test BK.compute_eigenelements(_eve) == false
 BK.labels(_eve, 1)
 
 _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1), ("event1", "event2"))
@@ -20,7 +20,7 @@ SetOfEvents(nothing)
 SetOfEvents(_eve)
 SetOfEvents(_eved)
 BK.split_events(_eve, _eved, nothing)
-BK.hasCustomLabels(BK.BifEvent(1,1))
+BK.has_custom_labels(BK.BifEvent(1,1))
 ####################################################################################################
 function testBranch(br)
     # test if stability works
@@ -30,7 +30,7 @@ function testBranch(br)
         if ~isempty(br.eig)
             @test br.eig[ii].eigenvals == eigenvals(br, br.eig[ii].step, false)
             # compute number of unstable eigenvalues
-            isstable, n_u, n_i = BK.isStable(br.contparams, br.eig[ii].eigenvals)
+            isstable, n_u, n_i = BK.is_stable(br.contparams, br.eig[ii].eigenvals)
             # test that the stability matches the one in eig
             @test br[ii].n_unstable == n_u
             @test br[ii].stable  == isstable
@@ -88,8 +88,8 @@ opts = ContinuationPar(opts0; saveSolEveryStep = 1, detectBifurcation = 0, detec
 # pretty_table(br.branch[1:40])
 
 # arguments for continuation
-args = (prob, PALC(), opts)
-kwargs = (plot = false, verbosity = 0, recordFromSolution = (x,p) -> x[1], linearAlgo = MatrixBLS(),)
+args = (BK.re_make(prob; recordFromSolution = (x,p) -> x[1]), PALC(), opts)
+kwargs = (plot = false, verbosity = 0, linearAlgo = MatrixBLS(),)
 
 br = continuation(args...; kwargs...,
     verbosity = 0, # test printing

@@ -47,13 +47,13 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
         massmatrix::Tmass
     end
 
-    @inline getDelta(pb::$op) = getDelta(pb.prob_vf)
-    @inline hasHessian(pb::$op) = hasHessian(pb.prob_vf)
-    @inline isSymmetric(pb::$op) = isSymmetric(pb.prob_vf)
-    @inline hasAdjoint(pb::$op) = hasAdjoint(pb.prob_vf)
-    @inline hasAdjointMF(pb::$op) = hasAdjointMF(pb.prob_vf)
-    @inline isInplace(pb::$op) = isInplace(pb.prob_vf)
-    @inline getLens(pb::$op) = getLens(pb.prob_vf)
+    @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
+    @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
+    @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
+    @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
+    @inline has_adjoint_MF(pb::$op) = has_adjoint_MF(pb.prob_vf)
+    @inline isinplace(pb::$op) = isinplace(pb.prob_vf)
+    @inline getlens(pb::$op) = getlens(pb.prob_vf)
     jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
     # constructor
@@ -86,7 +86,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     end
 end
 
-function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+function detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
     if detectCodim2Bifurcation > 0
     if get(kwargs, :updateMinAugEveryStep, 0) == 0
         @error "You asked for detection of codim 2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
@@ -97,22 +97,22 @@ function detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...
     end
 end
 ################################################################################
-function getBifPointCodim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     prob_ma = br.prob.prob
     Teigvec = getvectortype(br)
 
     bifpt = br.specialpoint[ind]
     # jacobian at bifurcation point
     if Teigvec <: BorderedArray
-    x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+    x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-    x0 = convert(Teigvec, getVec(bifpt.x , prob_ma))
+    x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
     end
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), getLens(br), p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), getlens(br), p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     return (x = x0, params = parbif)
 
@@ -149,11 +149,11 @@ function newton(br::AbstractBranchResult,
         kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
-    return newtonHopf(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_hopf(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
-    return newtonBT(br, ind_bif; lens2 = lens2, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
     else
-    return newtonFold(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_fold(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
     end
 end
 ################################################################################
@@ -163,7 +163,7 @@ $(SIGNATURES)
 Codimension 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold/Hopf point into a curve of Fold/Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
-- `lens2` second parameter used for the continuation, the first one is the one used to compute `br`, e.g. `getLens(br)`
+- `lens2` second parameter used for the continuation, the first one is the one used to compute `br`, e.g. `getlens(br)`
 - `options_cont = br.contparams` arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 # Optional arguments:
@@ -191,15 +191,15 @@ function continuation(br::AbstractBranchResult,
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     # options to detect codim2 bifurcations
     computeEigenElements = options_cont.detectBifurcation > 0
-    _options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
-    return continuationHopf(br.prob, br, ind_bif, lens2, _options_cont;
+    return continuation_hopf(br.prob, br, ind_bif, lens2, _options_cont;
         startWithEigen = startWithEigen,
         computeEigenElements = computeEigenElements,
         kwargs...)
     else
-    return continuationFold(br.prob, br, ind_bif, lens2, _options_cont;
+    return continuation_fold(br.prob, br, ind_bif, lens2, _options_cont;
         startWithEigen = startWithEigen,
         computeEigenElements = computeEigenElements,
         kwargs...)
@@ -218,7 +218,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         startWithEigen = false,
         autodiff = false,
         detailed = true,
-        bdlinsolver::AbstractBorderedLinearSolver = getProb(br).prob.linbdsolver,
+        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
         kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -237,7 +237,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 
     # continuation parameters
     computeEigenElements = options_cont.detectBifurcation > 0
-    optionsCont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    optionsCont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
     # scalar type
     Ty = eltype(Teigvec)
@@ -270,7 +270,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                 getsolver(optionsCont.newtonOptions.eigsolver)
         @set! optionsCont.newtonOptions.linsolver = prob_ma.linsolver
 
-        branch = continuationHopf(prob_vf, alg,
+        branch = continuation_hopf(prob_vf, alg,
             hopfpt, params,
             nf.lens...,
             ζ, ζstar,
@@ -306,7 +306,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         # @set! optionsCont.detectBifurcation = 0
         # @set! optionsCont.detectEvent = 0
 
-        branch = continuationFold(prob_vf, alg,
+        branch = continuation_fold(prob_vf, alg,
             foldpt, params,
             nf.lens...,
             ζstar, ζ,
@@ -325,7 +325,7 @@ $(SIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
-function correctBifurcation(contres::ContResult)
+function correct_bifurcation(contres::ContResult)
     if contres.prob.prob isa AbstractProblemMinimallyAugmented == false
     return contres
     end

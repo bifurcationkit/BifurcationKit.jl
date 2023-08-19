@@ -24,7 +24,7 @@ end
 function (l::DefaultEig)(J, nev; kwargs...)
     # I put Array so we can call it on small sparse matrices
     F = eigen(Array(J))
-    I = sortperm(F.values, by = l.which, rev = true)
+    I = sortperm(F.values; by = l.which, rev = true)
     nev2 = min(nev, length(I))
     # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
     return Complex.(F.values[I[1:nev2]]), Complex.(F.vectors[:, I[1:nev2]]), true, 1
@@ -66,10 +66,12 @@ function (l::EigArpack)(J, nev; kwargs...)
         N = length(l.kwargs[:v0])
         T = eltype(l.kwargs[:v0])
         Jmap = LinearMap{T}(J, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
+        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev = nev, which = l.which, sigma = l.sigma,
+                                 l.kwargs...)
     end
-    Ind = sortperm(λ, by = l.by, rev = true)
-    ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
+    Ind = sortperm(λ; by = l.by, rev = true)
+    ncv < nev &&
+        @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
     return λ[Ind], ϕ[:, Ind], true, 1
 end
 ####################################################################################################
@@ -113,10 +115,16 @@ function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     # with the option `which`, by decreasing order.
     if J isa AbstractMatrix && isnothing(l.x₀)
         nev = min(_nev, size(J, 1))
-        vals, vec, info = KrylovKit.eigsolve(J, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
+        vals, vec, info = KrylovKit.eigsolve(J, nev, l.which; verbosity = l.verbose,
+                                             krylovdim = l.dim, maxiter = l.maxiter,
+                                             tol = l.tol, issymmetric = l.issymmetric,
+                                             ishermitian = l.ishermitian)
     else
         nev = min(_nev, length(l.x₀))
-        vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which;  verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, tol = l.tol, issymmetric = l.issymmetric, ishermitian = l.ishermitian)
+        vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which; verbosity = l.verbose,
+                                             krylovdim = l.dim, maxiter = l.maxiter,
+                                             tol = l.tol, issymmetric = l.issymmetric,
+                                             ishermitian = l.ishermitian)
     end
     # (length(vals) != _nev) && (@warn "EigKrylovKit returned $(length(vals)) eigenvalues instead of the $_nev requested")
     info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
@@ -159,26 +167,32 @@ EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, k
 function (l::EigArnoldiMethod)(J, nev; kwargs...)
     if J isa AbstractMatrix
         if isnothing(l.sigma)
-            decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which, l.kwargs...)
+            decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which,
+                                                         l.kwargs...)
         else
             F = factorize(l.sigma * LinearAlgebra.I - J)
-            Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1), ismutating=true)
-            decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
+            Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1);
+                                        ismutating = true)
+            decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which,
+                                                         l.kwargs...)
         end
     else
         N = length(l.x₀)
         T = eltype(l.x₀)
-        isnothing(l.sigma) == false && @warn "Shift-Invert strategy not implemented for maps"
+        isnothing(l.sigma) == false &&
+            @warn "Shift-Invert strategy not implemented for maps"
         Jmap = LinearMap{T}(J, N, N; ismutating = false)
-        decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which, l.kwargs...)
+        decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which,
+                                                     l.kwargs...)
     end
     λ, ϕ = partialeigen(decomp)
     # shift and invert
     if isnothing(l.sigma) == false
         λ .= l.sigma .- 1 ./ λ
     end
-    Ind = sortperm(λ, by = l.by, rev = true)
+    Ind = sortperm(λ; by = l.by, rev = true)
     ncv = length(λ)
-    ncv < nev && @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
+    ncv < nev &&
+        @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
     return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), ncv >= nev, 1
 end

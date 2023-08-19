@@ -77,10 +77,10 @@ prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
 @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-out = newton(BK.reMake(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), opt_newton)
+out = newton(BK.re_make(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 1.8, newtonOptions = opt_newton, detectBifurcation = 3, nev = 16, nInversion = 4)
-br = continuation(BK.reMake(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
+br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
 ###################################################################################################
 # Hopf continuation with automatic procedure
 outhopf = newton(br, 1; startWithEigen = true)
@@ -205,7 +205,7 @@ jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf +
 
 # test various jacobians and methods
 jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
-BK.getTimeDiff(poTrap, orbitguess_f)
+BK.get_time_diff(poTrap, orbitguess_f)
 # BK.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
 # BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 

@@ -110,7 +110,7 @@ br_po = continuation(
     ShootingProblem(15, probsh, Rodas5P(); parallel = false, updateSectionEveryStep = 1);
     ampfactor = 1., δp = 0.0051,
     # verbosity = 3,    plot = true,
-    recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
+    recordFromSolution = (x, p) -> (return (max = getmaximum(p.prob, x, @set par_lur.β = p.p), period = getperiod(p.prob, x, @set par_lur.β = p.p))),
     # plotSolution = plotSH,
     # finaliseSolution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
     #         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
@@ -132,7 +132,7 @@ show(br_po)
 for _ind in (1,3)
     if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
         println("")
-        pt = getNormalForm(br_po, _ind; verbose = true, δ = 1e-5) # bizarre pour le vecteur propre PD
+        pt = getNormalForm(br_po, _ind; verbose = true, δ = 1e-5)
         show(pt)
         predictor(pt, 0.1, 1.)
         show(pt)
@@ -144,7 +144,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcat
     verbosity = 0, plot = false,
     usedeflation = false,
     ampfactor = .3, δp = -0.005,
-    recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
+    recordFromSolution = (x, p) -> (return (max = BK.getmaximum(p.prob, x, @set par_lur.β = p.p), period = getperiod(p.prob, x, @set par_lur.β = p.p))),
     normC = norminf,
     callbackN = BK.cbMaxNorm(10),
     )
@@ -159,7 +159,7 @@ br_po = continuation(br, 2, opts_po_cont_ps,
     PoincareShootingProblem(2, probsh, Rodas4P(); parallel = false, reltol = 1e-6, updateSectionEveryStep = 1, jacobian = BK.AutoDiffDenseAnalytical());
     ampfactor = 1., δp = 0.0051, #verbosity = 3,plot=true,
     callbackN = BK.cbMaxNorm(10),
-    recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
+    recordFromSolution = (x, p) -> (return (max = getmaximum(p.prob, x, @set par_lur.β = p.p), period = getperiod(p.prob, x, @set par_lur.β = p.p))),
     normC = norminf)
 
 # plot(br_po, br)
@@ -181,7 +181,7 @@ br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifur
     ampfactor = .3, δp = -0.005,
     normC = norminf,
     callbackN = BK.cbMaxNorm(10),
-    recordFromSolution = (x, p) -> (return (max = getMaximum(p.prob, x, @set par_lur.β = p.p), period = getPeriod(p.prob, x, @set par_lur.β = p.p))),
+    recordFromSolution = (x, p) -> (return (max = getmaximum(p.prob, x, @set par_lur.β = p.p), period = getperiod(p.prob, x, @set par_lur.β = p.p))),
     )
 
 # plot(br_po_pd, br_po)

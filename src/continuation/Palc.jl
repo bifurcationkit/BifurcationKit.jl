@@ -71,7 +71,7 @@ $(TYPEDFIELDS)
     @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <=1 "θ must belong to [0, 1]"
 end
-getLinsolver(alg::PALC) = alg.bls
+getlinsolver(alg::PALC) = alg.bls
 @inline getdot(alg::PALC) = alg.dotθ
 @inline getθ(alg::PALC) = alg.θ
 # we also extend this for a ContIterable
@@ -79,7 +79,7 @@ getLinsolver(alg::PALC) = alg.bls
 @inline getθ(it::ContIterable) = getθ(it.alg)
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(alg::PALC, onoroff::Bool) = internalAdaptation!(alg.tangent, onoroff)
+internal_adaptation!(alg::PALC, onoroff::Bool) = internal_adaptation!(alg.tangent, onoroff)
 
 
 function Base.empty!(alg::PALC)
@@ -103,26 +103,26 @@ function initialize!(state::AbstractContinuationState,
                         alg::PALC,
                         nrm = false)
     # for the initialisation step, we do not use a Bordered predictor which fails at bifurcation points
-    getTangent!(state, iter, Secant(), getdot(alg))
+    gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
     copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
-    addTangent!(state::AbstractContinuationState, nrm)
+    addtangent!(state::AbstractContinuationState, nrm)
 end
 
-function getPredictor!(state::AbstractContinuationState,
+function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::PALC,
                         nrm = false)
     # we first compute the tangent
-    getTangent!(state, iter, alg.tangent, getdot(alg))
+    gettangent!(state, iter, alg.tangent, getdot(alg))
     # then update the predictor state.z_pred
-    addTangent!(state::AbstractContinuationState, nrm)
+    addtangent!(state::AbstractContinuationState, nrm)
 end
 
 # this function only mutates z_pred
 # the nrm argument allows to just the increment z_pred.p by ds
-function addTangent!(state::AbstractContinuationState, nrm = false)
+function addtangent!(state::AbstractContinuationState, nrm = false)
     # we perform z_pred = z + ds * τ
     copyto!(state.z_pred, state.z)
     ds = state.ds
@@ -130,23 +130,23 @@ function addTangent!(state::AbstractContinuationState, nrm = false)
     axpy!(ρ, state.τ, state.z_pred)
 end
 
-updatePredictor!(state::AbstractContinuationState,
+update_predictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::PALC,
-                        nrm = false) = addTangent!(state, nrm)
+                        nrm = false) = addtangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
                     kwargs...)
-    if state.z_pred.p <= it.contParams.pMin || state.z_pred.p >= it.contParams.pMax
-        state.z_pred.p = clampPredp(state.z_pred.p, it)
+    if state.z_pred.p <= it.contparams.pMin || state.z_pred.p >= it.contparams.pMax
+        state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newtonPALC(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callbackN, kwargs...)
+    sol = newton_palc(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callbackN, kwargs...)
 
     # update fields
-    _updatefieldButNotSol!(state, sol)
+    _update_field_but_not_sol!(state, sol)
 
     # update solution
     if converged(sol)
@@ -172,9 +172,9 @@ function _secantComputation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIt
     rmul!(τ, α)
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(::Secant, ::Bool) = nothing
+internal_adaptation!(::Secant, ::Bool) = nothing
 
-getTangent!(state::AbstractContinuationState,
+gettangent!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable,
             algo::Secant,
             dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
@@ -184,7 +184,7 @@ getTangent!(state::AbstractContinuationState,
 """
 struct Bordered <: AbstractTangentComputation end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(::Bordered, ::Bool) = nothing
+internal_adaptation!(::Bordered, ::Bool) = nothing
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
@@ -193,25 +193,25 @@ internalAdaptation!(::Bordered, ::Bool) = nothing
 # │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
 # └                           ┘└  ┘   └   ┘
 # it is updated inplace
-function getTangent!(state::AbstractContinuationState,
+function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     tgtalgo::Bordered, dotθ)
     (it.verbosity > 0) && println("Predictor: Bordered")
-    ϵ = getDelta(it.prob)
+    ϵ = getdelta(it.prob)
     τ = state.τ
     θ = getθ(it)
     T = eltype(it)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(it.prob, state.z.u, setParam(it, state.z.p + ϵ))
-    minus!(dFdl, residual(it.prob, state.z.u, setParam(it, state.z.p)))
+    dFdl = residual(it.prob, state.z.u, setparam(it, state.z.p + ϵ))
+    minus!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
     rmul!(dFdl, 1/ϵ)
 
     # compute jacobian
-    J = jacobian(it.prob, state.z.u, setParam(it, state.z.p))
+    J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
-    τu, τp, flag, itl = getLinsolver(it)( it, state,
+    τu, τp, flag, itl = getlinsolver(it)( it, state,
                                         J, dFdl,
                                         0*state.z.u, one(T)) # Right-hand side
 
@@ -273,7 +273,7 @@ mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <:
     update::Bool
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
+internal_adaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"
@@ -293,7 +293,7 @@ function Base.empty!(ppd::Polynomial)
     empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
 end
 
-function getStats(polypred::Polynomial)
+function getstats(polypred::Polynomial)
     Sbar = sum(polypred.arclengths) / length(polypred.arclengths)
     σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / length(polypred.arclengths))
     # return 0,1
@@ -301,7 +301,7 @@ function getStats(polypred::Polynomial)
 end
 
 function (polypred::Polynomial)(ds::T) where T
-    sbar, σ = getStats(polypred)
+    sbar, σ = getstats(polypred)
     s = polypred.arclengths[end] + ds
     snorm = (s-sbar)/σ
     # vector of powers of snorm
@@ -312,8 +312,8 @@ function (polypred::Polynomial)(ds::T) where T
     return x, p
 end
 
-function updatePred!(polypred::Polynomial)
-    Sbar, σ = getStats(polypred)
+function update_pred!(polypred::Polynomial)
+    Sbar, σ = getstats(polypred)
     # re-scale the previous arclengths so that the Vandermond matrix is well conditioned
     Ss = (polypred.arclengths .- Sbar) ./ σ
     # construction of the Vandermond Matrix
@@ -326,7 +326,7 @@ function updatePred!(polypred::Polynomial)
     return true
 end
 
-function getTangent!(state::AbstractContinuationState,
+function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     polypred::Polynomial, dotθ)
     (it.verbosity > 0) && println("Predictor: Polynomial")
@@ -343,9 +343,9 @@ function getTangent!(state::AbstractContinuationState,
     end
 
     if ~isready(polypred) || ~polypred.update
-        return getTangent!(state, it, polypred.tangent, dotθ)
+        return gettangent!(state, it, polypred.tangent, dotθ)
     else
-        return polypred.update ? updatePred!(polypred) : true
+        return polypred.update ? update_pred!(polypred) : true
     end
 end
 
@@ -376,27 +376,27 @@ with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1-θ) ⋅ (p - p0
 
 The initial guess for the newton method is located in `state.z_pred`
 """
-function newtonPALC(iter::AbstractContinuationIterable,
+function newton_palc(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState,
                     dotθ = getdot(iter);
                     normN = norm,
                     callback = cbDefault,
                     kwargs...)
     prob = iter.prob
-    par = getParams(prob)
-    ϵ = getDelta(prob)
-    paramlens = getLens(iter)
-    contparams = getContParams(iter)
+    par = getparams(prob)
+    ϵ = getdelta(prob)
+    paramlens = getlens(iter)
+    contparams = getcontparams(iter)
     T = eltype(iter)
     θ = getθ(iter)
 
-    z0 = getSolution(state)
+    z0 = getsolution(state)
     τ0 = state.τ
     @unpack z_pred, ds = state
 
     @unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
     @unpack pMin, pMax = contparams
-    linsolver = getLinsolver(iter)
+    linsolver = getlinsolver(iter)
 
     # record the damping parameter
     α0 = α

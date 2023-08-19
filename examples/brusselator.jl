@@ -12,7 +12,7 @@ function plotsol(x; kwargs...)
     plot!(x[N+1:2N], label="v"; kwargs...)
 end
 
-function Fbru!(f, x, p)
+function Fbru!(f, x, p, t = 0)
     @unpack α, β, D1, D2, l = p
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h
@@ -35,8 +35,6 @@ function Fbru!(f, x, p)
     end
     return f
 end
-
-Fbru(x, p) = Fbru!(similar(x), x, p)
 
 function Jbru_sp(x, p)
     @unpack α, β, D1, D2, l = p
@@ -90,25 +88,22 @@ n = 500
 # different parameters to define the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l); 
+prob = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l); 
         J = Jbru_sp, 
-        #plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
+        plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
         # plotSolution = (ax, x, p) -> plotsol(ax, x), 
         recordFromSolution = (x, p) -> x[div(n,2)])
+
 # # parameters for an isola of stationary solutions
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
-#     xspace = LinRange(0, par_bru.l, n)
-#     sol0 = vcat(        par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
+# xspace = LinRange(0, par_bru.l, n)
+# sol0 = vcat(        par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
 #             par_bru.β/par_bru.α .- 0.5 .* sin.(pi*xspace/par_bru.l))
 
 # eigls = EigArpack(1.1, :LM)
-#     opt_newton = BK.NewtonPar(eigsolver = eigls)
-#     out, hist, flag = @time BK.newton(
-#         x ->    Fbru(x, par_bru),
-#         x -> Jbru_sp(x, par_bru),
-#         sol0, opt_newton, normN = norminf)
-#
-#     plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
+# opt_newton = BK.NewtonPar(eigsolver = eigls)
+# out = @time newton(re_make(prob, u0 = sol0), opt_newton, normN = norminf)
+# plot();plotsol(out.u);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-20, maxBisectionSteps = 30)
@@ -124,9 +119,10 @@ hopfpt = getNormalForm(br, 1; verbose = true)
 ind_hopf = 1
 # hopfpt = BK.HopfPoint(br, ind_hopf)
 optnew = opts_br_eq.newtonOptions
-    hopfpoint = @time newton(br, ind_hopf;
-        options = (@set optnew.verbose=true), normN = norminf)
-    BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
+hopfpoint = @time newton(br, ind_hopf;
+                options = (@set optnew.verbose=true), 
+                normN = norminf);
+BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 if 1==0
     br_hopf = @time continuation(
@@ -137,11 +133,6 @@ if 1==0
 
     plot(br_hopf, label="")
 end
-
-hopfpoint = @time newton(
-    br, ind_hopf;
-    options = (@set optnew.verbose = true),
-    normN = norminf)
 
 if 1==1
     br_hopf = @time continuation(
@@ -156,101 +147,6 @@ if 1==1
 end
 
 plot(br_hopf)
-#################################################################################################### Continuation of Periodic Orbit
-# number of time slices
-M = 51
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = guessFromHopf(br, ind_hopf, opts_br_eq.newtonOptions.eigsolver, M, 2*2.7; phase = 0.25)
-#
-# orbitguess_f2 = orbitguess2[1]; for ii=2:M; global orbitguess_f2 = hcat(orbitguess_f2, orbitguess2[ii]);end
-orbitguess_f2 = reduce(vcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
-
-poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n; jacobian = :BorderedSparseInplace, updateSectionEveryStep = 1)
-
-poTrap(orbitguess_f,  @set par_bru.l = l_hopf + 0.01) |> plot
-BK.plotPeriodicPOTrap(orbitguess_f, n, M; ratio = 2)
-
-ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-
-poTrapMF = PeriodicOrbitTrapProblem(
-            (@set prob.VF.J = (x, p) -> (dx -> d1Fbru(x, p, dx))),
-            real.(vec_hopf),
-            hopfpt.u,
-            M, 2n, ls0;
-            jacobian = :BorderedSparseInplace,
-            # jacobian = :FullSparseInplace,
-            )
-
-deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
-# deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo_f])
-####################################################################################################
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14)
-# opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 14, linsolver = BK.LSFromBLS())
-
-poTrap = @set poTrap.prob_vf.params = (@set par_bru.l = l_hopf + 0.01)
-
-outpo_f = @time newton(poTrap,
-        orbitguess_f,
-        opt_po;
-        # deflationOp,
-        normN = norminf,
-        callback = (state; kwargs...) -> (println("--> amplitude = ", BK.amplitude(state.x, n, M; ratio = 2));true)
-        )
-BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, n, M; ratio = 2),"\n")
-BK.plotPeriodicPOTrap(outpo_f.u, n, M; ratio = 2)
-
-opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-5, x₀ = rand(2n), verbose = 2, dim = 40)
-opt_po = @set opt_po.eigsolver = DefaultEig()
-# opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-5, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, pMax = 3.0, maxSteps = 20, newtonOptions = opt_po, saveSolEveryStep = 2, plotEveryStep = 5, nev = 11, tolStability = 1e-6, nInversion = 4, detectBifurcation = 0, dsminBisection = 1e-6, maxBisectionSteps = 15)
-    br_po = @time continuation(poTrap,
-        outpo_f.u,
-        # PALC(),
-        PALC(tangent = Bordered()),
-        opts_po_cont;
-        verbosity = 3,    plot = true,
-        # callbackN = (x, f, J, res, iteration, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M));true),
-        # finaliseSolution = (z, tau, step, contResult; k...) ->
-            # (Base.display(contResult.eig[end].eigenvals) ;true),
-
-        plotSolution = (ax, x, p;ax1 = nothing, kwargs...) -> heatmap!(ax, reshape(x[1:end-1], 2*n, M)'; kwargs...),
-        # plotSolution = (ax, x, p; k...) -> heatmap!(ax, rand(2,2)),
-        normC = norminf)
-
-BK.plot(br, br_po, branchlabel = ["br", "po"])
-####################################################################################################
-using IncompleteLU
-Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
-
-@time poTrap(Val(:JacFullSparseInplace), Jpo, orbitguess_f, @set par_bru.l = l_hopf + 0.01)
-_indx = BK.getBlocks(Jpo, 2n, M)
-@time poTrap(Val(:JacFullSparseInplace), Jpo, orbitguess_f, (@set par_bru.l = l_hopf + 0.01), _indx)
-
-@time lu(Jpo)
-Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_bru.l = l_hopf + 0.01)
-
-Precilu = @time ilu(Jpo, τ = 0.01)
-Precilu = @time lu(Jpo)
-
-ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 150, log=true, Pl = Precilu, )
-    @time ls(Jpo, rand(ls.N))
-
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 20)
-    outpo_f = @time newton(PeriodicOrbitTrapProblem(poTrap, jacobian = :BorderedMatrixFree), orbitguess_f,
-        (@set opt_po.linsolver = ls);
-        normN = norminf,
-        )
-    printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, n, M; ratio = 2),"\n")
-    BK.plotPeriodicPOTrap(outpo_f.u, n, M; ratio = 2)
-
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.01, pMax = 2.2, maxSteps = 3000, newtonOptions = (@set opt_po.linsolver = ls))
-    br_pok, = @time continuation(outpo_f.prob.prob,
-        outpo_f.u, PALC(),
-        opts_po_cont; jacobianPO = :BorderedMatrixFree,
-        verbosity = 2,
-        plot = true,
-        # plotSolution = (x, p;kwargs...) -> heatmap!(reshape(x[1:end-1], 2*n, M)'; ylabel="time", color=:viridis, kwargs...)
-        normC = norminf)
 ####################################################################################################
 # automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
@@ -258,23 +154,24 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.
     plotEveryStep = 1, nev = 11, tolStability = 1e-6,
     detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, nInversion = 4)
 
-M = 51
-probFD = PeriodicOrbitTrapProblem(M = M; jacobian = :BorderedSparseInplace)
 br_po = continuation(
     # arguments for branch switching
     br, 1,
     # arguments for continuation
-    opts_po_cont, probFD;
+    opts_po_cont, 
+    # method for computing the periodic orbits
+    PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace);
     ########
     linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
     ########
     δp = 0.01,
-    verbosity = 3,    plot = true,
+    verbosity = 3,
+    plot = true,
     finaliseSolution = (z, tau, step, contResult; k...) -> begin
         @info "Floquet exponents:"
         (Base.display(contResult.eig[end].eigenvals) ;true)
         end,
-    # plotSolution = (x, p; kwargs...) -> heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
+    # plotSolution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
     normC = norminf)
 
 ####################################################################################################
@@ -286,19 +183,32 @@ br_po2 = BK.continuation(
     opts_po_cont;
     ampfactor = 1., δp = 0.01,
     usedeflation = true,
-    verbosity = 3,    plot = true,
+    verbosity = 3,
+    plot = true,
     ########
     linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
     ########
     finaliseSolution = (z, tau, step, contResult; k...) ->
         (Base.display(contResult.eig[end].eigenvals) ;true),
     # plotSolution = (x, p; kwargs...) -> begin
-    #             heatmap!(getPeriodicOrbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)
+    #             heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)
     #             plot!(br_po,legend = :bottomright, subplot=1)
     #         end,
     normC = norminf)
+
+branches = Any[br_po]
+
 push!(branches, br_po2)
 
-plot();for _b in branches; plot!(_b; label = ""); end; title!("")
+plot(branches...)
+####################################################################################################
+using DifferentialEquations
+using Logging: global_logger
+using TerminalLoggers: TerminalLogger
+global_logger(TerminalLogger())
 
-plot(branches[2])
+vf = ODEFunction(Fbru!, jac = (J,u,p,t)-> J .= Jbru_sp(u,p))
+prob_ode = ODEProblem(vf, br_po2.specialpoint[1].x[1:2n], (0,150.), @set par_bru.l = 1.37)
+sol_ode = @time solve(prob_ode, Rodas4P(linsolve = KrylovJL_GMRES()), progress = true, progress_steps = 1); println("--> #steps = ", length(sol_ode))
+heatmap(sol_ode.t, 1:n, sol_ode[1:n,:], color = :viridis)
+plot(sol_ode.t, sol_ode[n÷2,:])

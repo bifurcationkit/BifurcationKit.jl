@@ -12,13 +12,13 @@ Compute the Cusp normal form.
 - `δ = 1e-8` used for finite differences
 - `verbose` bool to print information
 """
-function cuspNormalForm(_prob,
+function cusp_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
         δ = 1e-8,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
-        lens = getLens(br),
+        lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm)
     @assert br.specialpoint[ind_bif].type == :cusp "The provided index does not refer to a Cusp Point"
@@ -61,11 +61,11 @@ function cuspNormalForm(_prob,
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # jacobian at bifurcation point
-    x0 = getVec(bifpt.x, prob_ma)
+    x0 = getvec(bifpt.x, prob_ma)
     L = jacobian(prob_vf, x0, parbif)
 
     # eigenvectors
@@ -83,12 +83,12 @@ function cuspNormalForm(_prob,
     ζ ./= scaleζ(ζ)
 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
-    if isSymmetric(prob_vf)
+    if is_symmetric(prob_vf)
         λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         ζ★ = copy(ζ)
     else
-        _Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-        ζ★, λ★ = getAdjointBasis(_Jt, conj(λ), eigsolver; nev = nev, verbose = verbose)
+        _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+        ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), eigsolver; nev = nev, verbose = verbose)
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
@@ -111,7 +111,7 @@ function cuspNormalForm(_prob,
 
     pt = Cusp(
         x0, parbif,
-        (getLens(prob_ma), lens),
+        (getlens(prob_ma), lens),
         ζ, ζ★,
         (c = c, ),
         :none
@@ -134,7 +134,7 @@ Compute the Bogdanov-Takens normal form.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
 """
-function bogdanovTakensNormalForm(prob_ma, L,
+function bogdanov_takens_normal_form(prob_ma, L,
                             pt::BogdanovTakens;
                             δ = 1e-8,
                             verbose = false,
@@ -207,10 +207,10 @@ function bogdanovTakensNormalForm(prob_ma, L,
     H0200, = Ainv(2 .* H1100 .- B(q1, q1))
 
     # first order derivatives
-    pBq(p, q) = 2 .* (applyJacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
-                      applyJacobian(VF, x0, parbif, p, true)) ./ ϵ
-    A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
-                       applyJacobian(VF, x0, parbif, q)) ./ϵ
+    pBq(p, q) = 2 .* (apply_jacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
+                      apply_jacobian(VF, x0, parbif, p, true)) ./ ϵ
+    A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
     pAq(p, q, lens) =  dot(p, A1(q, lens))
 
     # second order derivative
@@ -459,13 +459,13 @@ Compute the Bogdanov-Takens normal form.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
 """
-function bogdanovTakensNormalForm(_prob,
+function bogdanov_takens_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
         δ = 1e-8,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
-        lens = getLens(br),
+        lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm,
         # bordered linear solver
@@ -499,14 +499,14 @@ function bogdanovTakensNormalForm(_prob,
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # jacobian at bifurcation point
     if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getVec(bifpt.x , prob_ma))
+        x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
     end
     𝒯 = eltype(Teigvec)
     L = jacobian(prob_vf, x0, parbif)
@@ -545,7 +545,7 @@ function bogdanovTakensNormalForm(_prob,
     # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
     ###########################
     vr = real.(ζs[1])
-    Lᵗ = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
+    Lᵗ = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
     _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
     Ivp = sortperm(_λ★, by = abs)
     # in case the prob is HopfMA, we real it
@@ -569,22 +569,22 @@ function bogdanovTakensNormalForm(_prob,
     p0 ./= ν
 
     pt = BogdanovTakens(
-        x0, parbif, (getLens(prob_ma), lens),
+        x0, parbif, (getlens(prob_ma), lens),
         (;q0, q1), (;p0, p1),
         (a = zero(𝒯), b = zero(𝒯) ),
         (K2 = zero(𝒯),),
         :none
     )
-    return bogdanovTakensNormalForm(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls)
+    return bogdanov_takens_normal_form(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls)
 end
 ####################################################################################################
-function bautinNormalForm(_prob,
+function bautin_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
         δ = 1e-8,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
-        lens = getLens(br),
+        lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm,
         detailed = false)
@@ -620,18 +620,18 @@ function bautinNormalForm(_prob,
     eigRes = br.eig
 
     # eigenvalue
-    ω = abs(getP(bifpt.x, prob_ma)[2])
+    ω = abs(getp(bifpt.x, prob_ma)[2])
     λ = Complex(0, ω)
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec, getvec(bifpt.x, prob_ma))
     end
 
     # jacobian at bifurcation point
@@ -653,8 +653,8 @@ function bautinNormalForm(_prob,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-    ζ★, λ★ = getAdjointBasis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
@@ -750,7 +750,7 @@ function bautinNormalForm(_prob,
 
     pt = Bautin(
         x0, parbif,
-        (getLens(prob_ma), lens),
+        (getlens(prob_ma), lens),
         ζ, ζ★,
         (;ω, G21, G32, l2),
         :none
@@ -771,16 +771,16 @@ function bautinNormalForm(_prob,
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
-    getp(l::Lens) = get(parbif, l)
-    setp(l::Lens, p::Number) = set(parbif, l, p)
-    setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    _A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
-                       applyJacobian(VF, x0, parbif, q)) ./ϵ
+    _getp(l::Lens) = get(parbif, l)
+    _setp(l::Lens, p::Number) = set(parbif, l, p)
+    _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, get(parbif, lens) + ϵ), q) .-
+                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
-    B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+    J1(lens) = F(x0, _setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
 
     # formula 17 in REF2
     h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
@@ -817,7 +817,7 @@ function bautinNormalForm(_prob,
     h₁₁₀₁, = ls(L, tmp1101)
 
     _C1(pars) = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, pars, dx1, dx2, dx3) )
-    C1(dx1, dx2, dx3, l) = (_C1(setp(l, getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
+    C1(dx1, dx2, dx3, l) = (_C1(_setp(l, _getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
 
     # formula (21) in REF2
     tmp2110 = D(x0, q0, q0, cq0, h₀₀₁₀) .+
@@ -878,13 +878,13 @@ function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; verbose = f
             x0 = t -> x0)
 end
 ####################################################################################################
-function zeroHopfNormalForm(_prob,
+function zero_hopf_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
         δ = 1e-8,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
-        lens = getLens(br),
+        lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm,
         bls = _prob.prob.linbdsolver,
@@ -927,14 +927,14 @@ function zeroHopfNormalForm(_prob,
 
     # parameter for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # jacobian at bifurcation point
     if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec, getvec(bifpt.x, prob_ma))
     end
     L = jacobian(prob_vf, x0, parbif)
 
@@ -974,9 +974,9 @@ function zeroHopfNormalForm(_prob,
     cq1 = conj(q1)
 
     # left eigen-elements
-    _Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-    p0, λ★ = getAdjointBasis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-    p1, λ★1 = getAdjointBasis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    p0, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    p1, λ★1 = get_adjoint_basis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
     # normalise left eigenvectors
     p0 ./= dot(p0, q0)
@@ -986,11 +986,11 @@ function zeroHopfNormalForm(_prob,
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # parameters
-    lenses = (getLens(prob_ma), lens)
+    lenses = (getlens(prob_ma), lens)
     lens1, lens2 = lenses
     p10 = get(parbif, lens1); p20 = get(parbif, lens2);
 
@@ -1074,8 +1074,8 @@ function zeroHopfNormalForm(_prob,
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
-    _A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
-                      applyJacobian(VF, x0, parbif, q)) ./ϵ
+    _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+                      apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
@@ -1194,13 +1194,13 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
     )
 end
 ####################################################################################################
-function hopfHopfNormalForm(_prob,
+function hopf_hopf_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
         δ = 1e-8,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
-        lens = getLens(br),
+        lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm,
         autodiff = true,
@@ -1242,17 +1242,17 @@ function hopfHopfNormalForm(_prob,
 
     # parameter for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # jacobian at bifurcation point
     if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getVec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec, getvec(bifpt.x, prob_ma))
     end
 
-    p0, ω0 = getP(bifpt.x, prob_ma)
+    p0, ω0 = getp(bifpt.x, prob_ma)
 
     L = jacobian(prob_vf, x0, parbif)
 
@@ -1301,9 +1301,9 @@ function hopfHopfNormalForm(_prob,
     ω1 = imag(λ1); ω2 = imag(λ2);
 
     # left eigen-elements
-    _Jt = hasAdjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-    p1, λ★1 = getAdjointBasis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-    p2, λ★2 = getAdjointBasis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    p1, λ★1 = get_adjoint_basis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    p2, λ★2 = get_adjoint_basis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
     # normalise left eigenvectors
     p1 ./= dot(q1, p1)
@@ -1314,17 +1314,17 @@ function hopfHopfNormalForm(_prob,
 
     # parameters for vector field
     p = bifpt.param
-    parbif = set(getParams(br), lens, p)
-    parbif = set(parbif, getLens(prob_ma), get(bifpt.printsol, getLens(prob_ma)))
+    parbif = set(getparams(br), lens, p)
+    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
 
     # parameters
-    lenses = (getLens(prob_ma), lens)
+    lenses = (getlens(prob_ma), lens)
     lens1, lens2 = lenses
     p10 = get(parbif, lens1); p20 = get(parbif, lens2);
 
-    # getp(l::Lens) = get(parbif, l)
-    # setp(l::Lens, p::Number) = set(parbif, l, p)
-    # setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    # _getp(l::Lens) = get(parbif, l)
+    # _setp(l::Lens, p::Number) = set(parbif, l, p)
+    # _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
     if autodiff
         Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
     else
@@ -1378,16 +1378,16 @@ function hopfHopfNormalForm(_prob,
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
-    getp(l::Lens) = get(parbif, l)
-    setp(l::Lens, p::Number) = set(parbif, l, p)
-    setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    _A1(q, lens) = (applyJacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
-                      applyJacobian(VF, x0, parbif, q)) ./ϵ
+    _getp(l::Lens) = get(parbif, l)
+    _setp(l::Lens, p::Number) = set(parbif, l, p)
+    _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, get(parbif, lens) + ϵ), q) .-
+                      apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
-    B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+    J1(lens) = F(x0, _setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
 
     # implement formula 26 from REF2
     h₀₀₀₀₁₀, = ls(L, J1(lens1)); h₀₀₀₀₁₀ .*= -1

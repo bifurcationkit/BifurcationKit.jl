@@ -72,8 +72,8 @@ end
 *(c::SHLinearOp, u) = apply(c, u, c.l1)
 \(c::SHLinearOp, u) = apply(c, u, c.l1, /)
 ####################################################################################################
-Nx = 2^8
-Ny = 2^8
+Nx = 2^10
+Ny = 2^10
 lx = 8pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
@@ -81,11 +81,11 @@ X = -lx .+ 2lx/Nx * collect(0:Nx-1)
 Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
 
 sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
-        sol0 .= sol0 .- minimum(vec(sol0))
-        sol0 ./= maximum(vec(sol0))
-        sol0 = sol0 .- 0.25
-        sol0 .*= 1.7
-        # heatmap(sol0, color=:viridis)
+sol0 .= sol0 .- minimum(vec(sol0))
+sol0 ./= maximum(vec(sol0))
+sol0 = sol0 .- 0.25
+sol0 .*= 1.7
+# heatmap(sol0, color=:viridis)
 
 function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-9)
     u, l, ν = J
@@ -132,38 +132,29 @@ println("--> norm(sol) = ", norminf(sol_hexa.u))
 
 plotsol(sol_hexa.u)
 ####################################################################################################
-# trial using IterativeSolvers
-
-# function (sh::SHLinearOp)(J, rhs)
-#     u, l, ν = J
-#     udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2
-#     res, info = res, info = KrylovKit.linsolve( u -> -u .+ sh \ (udiag .* u), sh \ rhs, tol = 1e-9, maxiter = 6)
-#     return res, true, info.numops
-# end
-####################################################################################################
-# computation of normal form
-# we collect the matrix-free derivatives
-nf = getNormalForm(br, 2)
-####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 
 opt_new = @set opt_new.maxIter = 250
-outdef = @time newton(reMake(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
+outdef = @time newton(re_make(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
             deflationOp, opt_new, normN = x -> maximum(abs, x))
-        println("--> norm(sol) = ", norm(outdef.u))
-        plotsol(outdef.u) |> display
-        BK.converged(outdef) && push!(deflationOp, outdef.u)
-
+println("--> norm(sol) = ", norm(outdef.u))
+plotsol(outdef.u) |> display
+BK.converged(outdef) && push!(deflationOp, outdef.u)
 ####################################################################################################
 opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.005, pMin = -1.0, plotEveryStep = 10, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
-    detectBifurcation = 0,
+    detectBifurcation = 3,
     tolStability = 1e-5,
     saveEigenvectors = false,
     nev = 11 )
 
-prob = reMake(prob, u0 = deflationOp[1])
+prob = re_make(prob, u0 = deflationOp[1])
 
-br = @time continuation(
-    prob, PALC(bls = BorderingBLS(solver = L, checkPrecision = false)), opts_cont;
-    plot = true, verbosity = 3, normC = norminf,
-    )
+br = @time continuation(prob, 
+                        PALC(bls = BorderingBLS(solver = L, checkPrecision = false)), 
+                        opts_cont;
+                        plot = true, verbosity = 3, normC = norminf,
+                        )
+####################################################################################################
+# computation of normal form
+# we collect the matrix-free derivatives
+nf = getNormalForm(br, 2)

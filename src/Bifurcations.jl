@@ -2,7 +2,7 @@
 """
 This function checks whether the solution with eigenvalues `eigvalues` is stable and also compute the number of unstable eigenvalues with nonzero imaginary part
 """
-function isStable(contparams::ContinuationPar, eigvalues)::NamedTuple{(:isstable, :n_unstable, :n_imag), Tuple{Bool, Int64, Int64}}
+function is_stable(contparams::ContinuationPar, eigvalues)::NamedTuple{(:isstable, :n_unstable, :n_imag), Tuple{Bool, Int64, Int64}}
     # the return type definition above is to remove type instability in continuation
     # numerical precision for deciding if an eigenvalue is above a threshold
     precision = contparams.tolStability
@@ -16,10 +16,10 @@ function isStable(contparams::ContinuationPar, eigvalues)::NamedTuple{(:isstable
     isstable = n_unstable == 0
     return (;isstable, n_unstable, n_imag)
 end
-isStable(::ContinuationPar, ::Nothing) = (isstable = true , n_unstable = 0, n_imag = 0)
+is_stable(::ContinuationPar, ::Nothing) = (isstable = true , n_unstable = 0, n_imag = 0)
 
 # we detect a bifurcation by a change in the number of unstable eigenvalues
-function detectBifucation(state::ContState)
+function detect_bifurcation(state::ContState)
     n1, n2 = state.n_unstable
     # deals with missing value encoded by n_unstable = -1
     if n1 == -1 || n2 == -1; return false; end
@@ -29,12 +29,12 @@ end
 ####################################################################################################
 
 # Test function for Fold bifurcation
-@inline detectFold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
+@inline detect_fold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
 
-function locateFold!(contres::ContResult, iter::ContIterable, state::ContState)
+function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
     # Fold point detection based on continuation parameter monotony
-    if iter.contParams.detectFold && length(branch) > 2 && detectFold(branch[end-2:end].param...)
+    if iter.contparams.detectFold && length(branch) > 2 && detect_fold(branch[end-2:end].param...)
         (iter.verbosity > 0) && printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
         npar = length(branch[1]) - 8
         push!(contres.specialpoint, SpecialPoint(
@@ -43,7 +43,7 @@ function locateFold!(contres::ContResult, iter::ContIterable, state::ContState)
             param = branch[end-1].param,
             norm = iter.normC(getx(state)),
             printsol = NamedTuple{keys(branch[end-1])[1:npar]}(values(branch[end-1])[1:npar]),
-            x = getSolution(iter.prob, _copy(getx(state))),
+            x = getsolution(iter.prob, _copy(getx(state))),
             τ = copy(state.τ),
             ind_ev = 0,
             # it means the fold occurs between step - 2 and step:
@@ -61,7 +61,7 @@ end
 """
 Function for coarse detection of bifurcation points.
 """
-function getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
+function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
     # this boolean ensures that edge cases are handled
     known = false
 
@@ -130,13 +130,13 @@ function getBifurcationType(it::ContIterable, state, status::Symbol, interval::T
 end
 
 # this allows for dispatch on eigensolver type
-getBifurcationType(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T = getBifurcationType(it, state, status, interval, it.contParams.newtonOptions.eigsolver)
+get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T = get_bifurcation_type(it, state, status, interval, it.contparams.newtonOptions.eigsolver)
 
 """
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
-function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
-    @assert detectBifucation(_state) "No bifurcation detected for the state"
+function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
+    @assert detect_bifurcation(_state) "No bifurcation detected for the state"
     verbose && println("┌─── Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
     # type of scalars in iter
@@ -146,7 +146,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
     n2, n1 = _state.n_unstable
     if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
 
-    contParams = iter.contParams
+    contParams = iter.contparams
     
     if abs(_state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
     verbose && println("├─── [Bisection] initial ds = ", _state.ds)
@@ -193,7 +193,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
     biflocated = false
 
     # for a polynomial tangent predictor, we disable the update of the predictor parameters
-    internalAdaptation!(iter.alg, false)
+    internal_adaptation!(iter.alg, false)
 
     # emulate a do-while
     while true
@@ -223,7 +223,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
             n_inversion += 1
             indinterval = (indinterval == 2) ? 1 : 2
         end
-        updatePredictor!(state, iter)
+        update_predictor!(state, iter)
 
         if iseven(n_inversion)
             copyto!(after, state)
@@ -271,7 +271,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
                 "\n└───── biflocated                = ", biflocated == true, "\n")
 
     end
-    internalAdaptation!(iter.alg, true)
+    internal_adaptation!(iter.alg, true)
 
     ######## update current state ########
     # So far we have (possibly) performed an even number of bifurcation crossings
@@ -286,7 +286,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
         copyto!(_state.τ, state.τ)
 
         _state.eigvals = state.eigvals
-        if saveEigenvectors(contParams)
+        if save_eigenvectors(contParams)
             _state.eigvecs = state.eigvecs
         end
 
@@ -318,7 +318,7 @@ function locateBifurcation!(iter::ContIterable, _state::ContState, verbose::Bool
         interval = (getp(state), getp(after))
     end
     # update the predictor before leaving
-    updatePredictor!(_state, iter)
+    update_predictor!(_state, iter)
     verbose && println("────> Leaving [Loc-Bif]")
     return status, getinterval(interval...)
 end

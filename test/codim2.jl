@@ -74,8 +74,8 @@ sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMi
 @test ~isnothing(sn_br.eig)
 
 # we test the jacobian and problem update
-par_sn = BK.setParam(br, sn_br.sol[end].x.p)
-par_sn = set(par_sn, BK.getLens(sn_br), sn_br.sol[end].p)
+par_sn = BK.setparam(br, sn_br.sol[end].x.p)
+par_sn = set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
 _J = BK.jacobian(prob, sn_br.sol[end].x.u, par_sn)
 _eigvals, eigvec, = eigen(_J)
 ind = argmin(abs.(_eigvals))
@@ -95,21 +95,21 @@ hppt = getNormalForm(br, 2)
 
 @set! opts_br.newtonOptions.verbose = false
 
-hp = newtonHopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true)
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)
 # plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
 @test hp.converged && hp.itlineartot == 8
 
-hp = newtonHopf(br, 2; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
+hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
 @test hp.converged && hp.itlineartot == 12
 
-hp = newtonHopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = true)
 @test hp.converged && hp.itlineartot == 8
 
 # we check that we truly have a bifurcation point.
 pb = hp.prob.prob
 ω = hp.u.p[2]
-par_hp = set(BK.getParams(br), BK.getLens(br), hp.u.p[1])
+par_hp = set(BK.getparams(br), BK.getlens(br), hp.u.p[1])
 _J = pb.prob_vf.VF.J(hp.u.u, par_hp)
 _eigvals, eigvec, = eigen(_J)
 ind = argmin(abs.(_eigvals .- Complex(0, ω)))

@@ -1,5 +1,5 @@
-@inline hasAdjointMF(::WrapPOColl) = false
-@inline hasHessian(::WrapPOColl) = false
+@inline has_adjoint_MF(::WrapPOColl) = false
+@inline has_hessian(::WrapPOColl) = false
 
 d2F(pbwrap::WrapPOColl, x, p, dx1, dx2) = d2PO(z -> pbwrap.prob(z, p), x, dx1, dx2)
 
@@ -11,7 +11,7 @@ function Base.adjoint(J::FloquetWrapper{ <: PeriodicOrbitOCollProblem})
     @set J.jacpb = adjoint(J.jacpb)
 end
 
-function jacobianPeriodDoubling(pbwrap::WrapPOColl, x, par)
+function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the PD boundary condition
@@ -21,7 +21,7 @@ function jacobianPeriodDoubling(pbwrap::WrapPOColl, x, par)
     @set Jac.jacpb = J[1:end-1,1:end-1]
 end
 
-function jacobianNeimarkSacker(pbwrap::WrapPOColl, x, par, ω)
+function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
@@ -40,21 +40,21 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
-    _options_cont = detectCodim2Parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
-        return continuationCOLL_Fold(br, ind_bif, lens2, options_cont; kwargs... )
+        return continuation_coll_fold(br, ind_bif, lens2, options_cont; kwargs... )
     elseif biftype == :pd
-        return continuationCOLL_PD(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_coll_pd(br, ind_bif, lens2, _options_cont; kwargs... )
     elseif biftype == :ns
-        return continuationCOLL_NS(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_coll_ns(br, ind_bif, lens2, _options_cont; kwargs... )
     else
         throw("We continue only Fold / PD / NS points of periodic orbits for now")
     end
     nothing
 end
 
-function continuationCOLL_Fold(br::AbstractResult{Tkind, Tprob},
+function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -66,18 +66,23 @@ function continuationCOLL_Fold(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
 
     # we get the collocation problem
-    probco = getProb(br).prob
+    probco = getprob(br).prob
 
-    probcoFold = BifurcationProblem((x, p) -> probco(x, p), bifpt, getParams(br), getLens(br);
+    if get_plot_backend() == BK_Makie()
+        plotsol = (ax,x,p;ax1 = nothing, k...) -> br.prob.plotSolution(ax,x.u,p;k...)
+    else
+        plotsol = (x,p;k...) -> br.prob.plotSolution(x.u,p;k...)
+    end
+    probcoFold = BifurcationProblem((x, p) -> probco(x, p), bifpt, getparams(br), getlens(br);
                 J = (x, p) -> FloquetWrapper(probco, ForwardDiff.jacobian(z -> probco(z, p), x), x, p),
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probco(z, p), x, dx1, dx2),
-                plotSolution = (x,p;k...) -> br.prob.plotSolution(x.u,p;k...)
+                plotSolution = plotsol
                 )
 
     options_foldpo = @set options_cont.newtonOptions.linsolver = FloquetWrapperLS(options_cont.newtonOptions.linsolver)
 
     # perform continuation
-    continuationFold(probcoFold,
+    continuation_fold(probcoFold,
         br, ind_bif, lens2,
         options_foldpo;
         startWithEigen = startWithEigen,
@@ -88,7 +93,7 @@ function continuationCOLL_Fold(br::AbstractResult{Tkind, Tprob},
         )
 end
 
-function continuationCOLL_PD(br::AbstractResult{Tkind, Tprob},
+function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -102,14 +107,14 @@ function continuationCOLL_PD(br::AbstractResult{Tkind, Tprob},
 
     @assert biftype == :pd "We continue only PD points of Periodic orbits for now"
 
-    pdpointguess = PDPoint(br, ind_bif)
+    pdpointguess = pd_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
     coll = deepcopy(br.prob.prob)
     N, m, Ntst = size(coll)
 
     # get the PD eigenvectors
-    par = setParam(br, bifpt.param)
+    par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, bifpt.x, par)
     J = jac.jacpb
     nj = size(J, 1)
@@ -123,9 +128,9 @@ function continuationCOLL_PD(br::AbstractResult{Tkind, Tprob},
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 
     # perform continuation
-    continuationPD(br.prob, alg,
-        pdpointguess, setParam(br, pdpointguess.p),
-        getLens(br), lens2,
+    continuation_pd(br.prob, alg,
+        pdpointguess, setparam(br, pdpointguess.p),
+        getlens(br), lens2,
         p, q,
         options_cont;
         kwargs...,
@@ -134,7 +139,7 @@ function continuationCOLL_PD(br::AbstractResult{Tkind, Tprob},
         )
 end
 
-function continuationCOLL_NS(br::AbstractResult{Tkind, Tprob},
+function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
@@ -148,14 +153,14 @@ function continuationCOLL_NS(br::AbstractResult{Tkind, Tprob},
 
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
 
-    nspointguess = NSPoint(br, ind_bif)
+    nspointguess = ns_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
     coll = deepcopy(br.prob.prob)
     N, m, Ntst = size(coll)
 
     # get the NS eigenvectors
-    par = setParam(br, bifpt.param)
+    par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, bifpt.x, par)
     J = Complex.(copy(jac.jacpb))
     nj = size(J, 1)
@@ -171,9 +176,9 @@ function continuationCOLL_NS(br::AbstractResult{Tkind, Tprob},
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 
     # perform continuation
-    continuationNS(br.prob, alg,
-        nspointguess, setParam(br, nspointguess.p[1]),
-        getLens(br), lens2,
+    continuation_ns(br.prob, alg,
+        nspointguess, setparam(br, nspointguess.p[1]),
+        getlens(br), lens2,
         p, q,
         options_cont;
         kwargs...,

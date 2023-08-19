@@ -9,7 +9,7 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
 
 # whether the event requires computing eigen-elements
-@inline computeEigenElements(::AbstractEvent) = false
+@inline compute_eigen_elements(::AbstractEvent) = false
 
 length(::AbstractEvent) = throw("length not implemented")
 
@@ -17,16 +17,16 @@ length(::AbstractEvent) = throw("length not implemented")
 labels(::AbstractEvent, ind) = "user"
 
 # whether the user provided its own labels
-hasCustomLabels(::AbstractEvent) = false
+has_custom_labels(::AbstractEvent) = false
 
 # general condition for detecting a continuous event.
-function testEve(eve::AbstractContinuousEvent, x, y)
+function test_event(eve::AbstractContinuousEvent, x, y)
     ϵ = eve.tol
     return (x * y < 0) || (abs(x) <= ϵ) || (abs(y) <= ϵ)
 end
 
 # is x actually an event
-function isOnEvent(eve::AbstractContinuousEvent, eventValue) 
+function isonevent(eve::AbstractContinuousEvent, eventValue) 
     for u in eventValue
         if  abs(u) <= eve.tol
             return true
@@ -37,12 +37,12 @@ end
 
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
 # the ind is used to specify which part of the event is tested
-function isEventCrossed(eve::AbstractContinuousEvent, iter, state, ind = :)
+function is_event_crossed(eve::AbstractContinuousEvent, iter, state, ind = :)
     if state.eventValue[1] isa Real
-        return testEve(eve, state.eventValue[1], state.eventValue[2])
+        return test_event(eve, state.eventValue[1], state.eventValue[2])
     else
         for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-            if testEve(eve, u[1], u[2])
+            if test_event(eve, u[1], u[2])
                 return true
             end
         end
@@ -51,15 +51,15 @@ function isEventCrossed(eve::AbstractContinuousEvent, iter, state, ind = :)
 end
 
 # general condition for detecting a discrete event
-testEve(eve::AbstractDiscreteEvent, x, y) = x != y
-isOnEvent(::AbstractDiscreteEvent, x) = false
+test_event(eve::AbstractDiscreteEvent, x, y) = x != y
+isonevent(::AbstractDiscreteEvent, x) = false
 
-function isEventCrossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
+function is_event_crossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
     if state.eventValue[1] isa Integer
-        return testEve(eve, state.eventValue[1], state.eventValue[2])
+        return test_event(eve, state.eventValue[1], state.eventValue[2])
     else
         for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-            if testEve(eve, u[1], u[2])
+            if test_event(eve, u[1], u[2])
                 return true
             end
         end
@@ -98,9 +98,9 @@ struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
 end
 
 ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; ContinuousEvent(nb, fct, false, labels, 0))
-@inline computeEigenElements(eve::ContinuousEvent) = eve.computeEigenElements
+@inline compute_eigenelements(eve::ContinuousEvent) = eve.computeEigenElements
 @inline length(eve::ContinuousEvent) = eve.nb
-@inline hasCustomLabels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+@inline has_custom_labels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -124,9 +124,9 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
     labels::Tl
 end
 DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; DiscreteEvent(nb, fct, false, labels))
-@inline computeEigenElements(eve::DiscreteEvent) = eve.computeEigenElements
+@inline compute_eigenelements(eve::DiscreteEvent) = eve.computeEigenElements
 @inline length(eve::DiscreteEvent) = eve.nb
-@inline hasCustomLabels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+@inline has_custom_labels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 
 function labels(eve::Union{ContinuousEvent{Tcb, Nothing}, DiscreteEvent{Tcb, Nothing}}, ind) where Tcb
     return "userC" * mapreduce(x -> "-$x", *, ind)
@@ -158,10 +158,10 @@ struct PairOfEvents{Tc <: AbstractContinuousEvent, Td <: AbstractDiscreteEvent} 
     eventD::Td
 end
 
-@inline computeEigenElements(eve::PairOfEvents) = computeEigenElements(eve.eventC) || computeEigenElements(eve.eventD)
+@inline compute_eigenelements(eve::PairOfEvents) = compute_eigenelements(eve.eventC) || compute_eigenelements(eve.eventD)
 @inline length(event::PairOfEvents) = length(event.eventC) + length(event.eventD)
 # is x actually an event, we just need to test the continuous part
-isOnEvent(eve::PairOfEvents, x) = isOnEvent(eve.eventC, x[1:length(eve.eventC)])
+isonevent(eve::PairOfEvents, x) = isonevent(eve.eventC, x[1:length(eve.eventC)])
 
 function (eve::PairOfEvents)(iter, state)
     outc = eve.eventC(iter, state)
@@ -170,11 +170,11 @@ function (eve::PairOfEvents)(iter, state)
 end
 
 initialize(eve::PairOfEvents, T) = initialize(eve.eventC, T)..., initialize(eve.eventD, T)...
-function isEventCrossed(eve::PairOfEvents, iter, state, ind = :)
+function is_event_crossed(eve::PairOfEvents, iter, state, ind = :)
     nc = length(eve.eventC)
     n = length(eve)
-    resC = isEventCrossed(eve.eventC, iter, state, 1:nc)
-    resD = isEventCrossed(eve.eventD, iter, state, nc+1:n)
+    resC = is_event_crossed(eve.eventC, iter, state, 1:nc)
+    resD = is_event_crossed(eve.eventD, iter, state, nc+1:n)
     return resC || resD
 end
 ####################################################################################################
@@ -222,7 +222,7 @@ Split comma separated callbacks into sets of continuous and discrete callbacks. 
   split_events((cs...,d.eventC...), (ds..., d.eventD...), args...)
 end
 
-@inline computeEigenElements(eve::SetOfEvents) = mapreduce(computeEigenElements, |, eve.eventC) || mapreduce(computeEigenElements, |, eve.eventD)
+@inline compute_eigenelements(eve::SetOfEvents) = mapreduce(compute_eigenelements, |, eve.eventC) || mapreduce(compute_eigenelements, |, eve.eventD)
 
 function (eve::SetOfEvents)(iter, state)
     outc = map(x -> x(iter, state), eve.eventC)
@@ -233,24 +233,24 @@ end
 initialize(eve::SetOfEvents, T) = map(x->initialize(x,T),eve.eventC)..., map(x->initialize(x,T),eve.eventD)...
 
 # is x actually an event, we just need to test the continuous events
-function isOnEvent(eves::SetOfEvents, eValues)
+function isonevent(eves::SetOfEvents, eValues)
     out = false
     for (index, eve) in pairs(eves.eventC)
-        out = out | isOnEvent(eve, eValues[index])
+        out = out | isonevent(eve, eValues[index])
     end
     return out
 end  
 
-function isEventCrossed(event::SetOfEvents, iter, state)
+function is_event_crossed(event::SetOfEvents, iter, state)
     res = false
     nC = length(event.eventC)
     nD = length(event.eventD)
     nCb = nC+nD
     for (i, eve) in enumerate(event.eventC)
-        res = res | isEventCrossed(eve, iter, state, i)
+        res = res | is_event_crossed(eve, iter, state, i)
     end
     for (i, eve) in enumerate(event.eventD)
-        res = res | isEventCrossed(eve, iter, state, nC + i)
+        res = res | is_event_crossed(eve, iter, state, nC + i)
     end
     return  res
 end

@@ -55,7 +55,7 @@ outdef1 = newton((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_
 # Fold continuation, test of Jacobian expression
 outfold = newton(br, 2; startWithEigen = true)
 @test  BK.converged(outfold) && outfold.itnewton == 2
-outfold = newtonFold((@set br.prob.VF.isSymmetric = true), 2; startWithEigen = true, issymmetric = true)
+outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; startWithEigen = true, issymmetric = true)
 @test  BK.converged(outfold) && outfold.itnewton == 2
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 50, detectBifurcation = 0)
@@ -64,7 +64,7 @@ outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@lens _.β), 
 
 # manual handling
 indfold = 1
-foldpt = FoldPoint(br, indfold)
+foldpt = foldpoint(br, indfold)
 foldpb = FoldProblemMinimallyAugmented(
         (@set prob.VF.d2F = nothing), # this is for debug array
         br.specialpoint[indfold].x,
@@ -72,7 +72,7 @@ foldpb = FoldProblemMinimallyAugmented(
         opts_br0.newtonOptions.linsolver)
 foldpb(foldpt, par_chan) |> norm
 
-outfold = newtonFold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(verbose=false))
+outfold = BK.newton_fold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(verbose=false))
 # @test BK.converged(outfold)
     # println("--> Fold found at α = ", outfold.p, " from ", br.specialpoint[indfold].param)
 
@@ -154,7 +154,7 @@ res_exp = debugTmpForσ \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = opt_newton, detectFold = true, detectBifurcation = 1, nev = 15)
 
-br = continuation(prob, PALC(), opts_br0, recordFromSolution = (x,p)->norm(x,Inf64), plot = false, verbosity = 0)
+br = continuation(BK.re_make(prob;recordFromSolution = (x,p)->norm(x,Inf64)), PALC(), opts_br0, plot = false, verbosity = 0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, pMax = 4.1, maxSteps = 250, newtonOptions = NewtonPar(tol =1e-8), detectFold = true, detectBifurcation = 1, nev = 15)
 

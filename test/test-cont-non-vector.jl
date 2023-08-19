@@ -9,10 +9,10 @@ _a = BorderedArray(zeros(2), zeros(2))
 _b = BorderedArray(zeros(2), zeros(2))
 BK.mul!(_a, 1., _b)
 BK.axpby!(1., _a, 1., _b)
-BK.getVec(_a)
-BK.getVec(_a.u)
-BK.getVec(BorderedArray(rand(2),1.))
-BK.getP(BorderedArray(rand(2),1.))
+BK.getvec(_a)
+BK.getvec(_a.u)
+BK.getvec(BorderedArray(rand(2),1.))
+BK.getp(BorderedArray(rand(2),1.))
 ####################################################################################################
 # We start with a simple Fold problem
 using LinearAlgebra
@@ -30,7 +30,7 @@ opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, pMax = 4.1, pMin = -1., newtonOptions = setproperties(opt_newton0; maxIter = 70, tol = 1e-8), detectBifurcation = 0, maxSteps = 150)
 
-BK.isStable(opts_br0, nothing)
+BK.is_stable(opts_br0, nothing)
 
 br0 = continuation(prob, PALC(), opts_br0)
 @test br0.param[end] == -1
@@ -80,8 +80,8 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, pMax = 4.1, pM
 
     br = continuation(prob, PALC(), opts_br; linearAlgo = BorderingBLS(opt_newton.linsolver))
 
-BK.getSolx(br, 1)
-BK.getSolp(br, 1)
+BK.get_solx(br, 1)
+BK.get_solp(br, 1)
 @test br.param[end] == -1
 
 # plot(br);title!("")
@@ -103,13 +103,13 @@ outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBL
 # test with Newton deflation 1
 deflationOp = DeflationOperator(2, 1.0, [zero(sol.u)])
 soldef0 = BorderedArray([0.1], 0.0)
-soldef1 = newton(BK.reMake(prob, u0 = soldef0), deflationOp, opt_newton)
+soldef1 = newton(BK.re_make(prob, u0 = soldef0), deflationOp, opt_newton)
 
 push!(deflationOp, soldef1.u)
 
 Random.seed!(1231)
 # test with Newton deflation 2
-soldef2 = newton(BK.reMake(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
+soldef2 = newton(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
 
 deflationOp[1]
 length(deflationOp)
@@ -171,7 +171,7 @@ Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
 
 opts_br0 = ContinuationPar(dsmin = 0.00001, dsmax = 0.1, ds= -0.01, pMin = -1., pMax = 1.1, newtonOptions = opt_newton0, maxSteps = 200, detectBifurcation = 0)
 
-br0 = continuation(BK.reMake(prob, u0 = sol.u),
+br0 = continuation(BK.re_make(prob, u0 = sol.u),
             PALC(tangent=Secant()),
             opts_br0;
             linearAlgo = BorderingBLS(opt_newton0.linsolver)
@@ -179,7 +179,7 @@ br0 = continuation(BK.reMake(prob, u0 = sol.u),
 
 @test br0.param[end] == -1
 
-br0 = continuation(BK.reMake(prob, u0 = sol.u),
+br0 = continuation(BK.re_make(prob, u0 = sol.u),
     PALC(tangent=Secant()), opts_br0;
     linearAlgo = BorderingBLS(opt_newton0.linsolver),)
 
@@ -200,7 +200,7 @@ outfoldco = continuation(br0sec, 1, (@lens _.s), opts_br0,
 # try with newtonDeflation
 # test with Newton deflation 1
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
-soldef1 = newton(BK.reMake(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
+soldef1 = newton(BK.re_make(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
     deflationOp, (@set opt_newton0.maxIter = 20))
 
 push!(deflationOp, soldef1.u)

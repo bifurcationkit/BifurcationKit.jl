@@ -77,7 +77,7 @@ function optrec(x, p, l; opt = opts)
     end
 end
 
-diagram = @time bifurcationdiagram(reMake(prob, params = @set parSH.λ = -0.1), PALC(), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = false)
+diagram = @time bifurcationdiagram(re_make(prob, params = @set parSH.λ = -0.1), PALC(), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = false)
 
 code = ()
     vars = (:param, :n2)
@@ -92,10 +92,10 @@ deflationOp = DeflationOperator(2, 1.0, [sol1.u])
 algdc = BK.DefCont(deflationOperator = deflationOp, maxBranches = 50, perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
 
 br = @time continuation(
-    reMake(prob, params = @set parSH.λ = -0.1), algdc,
+    re_make(prob, params = @set parSH.λ = -0.1), algdc,
     setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 0.25, pMin = -1., newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 0);
     verbosity = 1,
-    normN = x -> norm(x, Inf64),
+    normN = norminf,
     # tangentAlgo = SecantPred(),
     # callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
     )

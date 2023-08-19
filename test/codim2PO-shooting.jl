@@ -31,25 +31,25 @@ prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 
 sol = solve(prob_de, Rodas5())
 ################################################################################
 argspo = (recordFromSolution = (x, p) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getPeriod(p.prob, x, p.p))
+                period = getperiod(p.prob, x, p.p))
     end,
     plotSolution = (x, p; k...) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         plot!(xtt.t, xtt[1,:]; label = "x", k...)
         plot!(xtt.t, xtt[2,:]; label = "y", k...)
         # plot!(br; subplot = 1, putspecialptlegend = false)
     end)
 ################################################################################
 ######    Shooting ########
-probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
 
 solpo = newton(probsh, cish, NewtonPar(verbose = false))
 @test BK.converged(solpo)
 
-_sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
+_sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, tolStability = 1e-3)
@@ -101,9 +101,9 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
         )
 
 _pdma = pd_po_sh.prob
-BK.isSymmetric(_pdma)
-BK.hasAdjoint(_pdma.prob)
-BK.isInplace(_pdma)
+BK.is_symmetric(_pdma)
+BK.has_adjoint(_pdma.prob)
+BK.isinplace(_pdma)
 
 # plot(pd_po_sh)
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
@@ -116,7 +116,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 20, ds = -0.001);
     verbosity = 0, plot = false,
@@ -147,7 +147,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
         callbackN = BK.cbMaxNorm(1),
         )
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
-BK.getProb(ns_po_sh)
+BK.getprob(ns_po_sh)
 
 # plot(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
 #     plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
@@ -162,7 +162,7 @@ _x = ns_po_sh.sol[end].x
 _solpo = ns_po_sh.sol[end].x.u
 _p1 = ns_po_sh.sol[end].x.p
 _p2 = ns_po_sh.sol[end].p
-_param= BK.setParam(ns_po_sh, _p1[1])
+_param= BK.setparam(ns_po_sh, _p1[1])
 _param = set(_param, (@lens _.ϵ), _p2)
 
 _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
@@ -179,7 +179,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshpd, ci = generateCIProblem(ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 prob2 = @set probshpd.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -204,7 +204,7 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
         )
-BK.getProb(pd_po_sh2)
+BK.getprob(pd_po_sh2)
 
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 #     plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
@@ -218,7 +218,7 @@ _x = pd_po_sh2.sol[end].x
 _solpo = pd_po_sh2.sol[end].x.u
 _p1 = pd_po_sh2.sol[end].x.p
 _p2 = pd_po_sh2.sol[end].p
-_param= BK.setParam(pd_po_sh2, _p1)
+_param= BK.setparam(pd_po_sh2, _p1)
 _param = set(_param, (@lens _.ϵ), _p2)
 
 _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))

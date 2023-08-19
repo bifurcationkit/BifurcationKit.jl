@@ -37,10 +37,10 @@ sol = solve(prob_de, Rodas5())
 ################################################################################
 @info "plotting function"
 argspo = (recordFromSolution = (x, p) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p))
+        xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getPeriod(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p)))
+                period = getperiod(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p)))
     end,)
 ################################################################################
 @info "import AD"
@@ -50,7 +50,7 @@ argspo = (recordFromSolution = (x, p) -> begin
 
 @info "generate shooting problem"
 
-probsh, cish = generateCIProblem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
     jacobian = BK.AutoDiffMF()
     # jacobian = BK.FiniteDifferencesMF()
     )
@@ -71,7 +71,7 @@ lspo = GMRESKrylovKit(rtol = 1e-10, atol = 1e-12, verbose = 0, dim = 20, maxiter
     optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
     solpo = newton(probsh, cish, optnpo)
 
-_sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
+_sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
 @info "PO cont1"
@@ -141,7 +141,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generateCIProblem( ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
+probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             )
 

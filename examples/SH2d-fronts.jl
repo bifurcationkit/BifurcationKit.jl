@@ -112,6 +112,7 @@ brfold = continuation(br, 1, (@lens _.ν), optfold;
     jacobian_ma = :minaug,
     startWithEigen = true,
     detectCodim2Bifurcation = 0,
+    bothside = true,
     # plotSolution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
     updateMinAugEveryStep = 1,
     )
@@ -119,8 +120,8 @@ brfold = continuation(br, 1, (@lens _.ν), optfold;
 plot(brfold)
 ###################################################################################################
 using IncompleteLU
-prec = ilu(L1 + I, τ = 0.15)
-prec = lu(L1 + I)
+prec = ilu(L1 + I, τ = 0.15);
+prec = lu(L1 + I);
 ls = GMRESIterativeSolvers(reltol = 1e-5, N = Nx*Ny, Pl = prec)
 
 function dF_sh2(du, u, p)
@@ -132,8 +133,8 @@ prob2 = @set prob.VF.J = (u, p) -> (du -> dF_sh2(du, u, p))
 @set! prob2.u0 = vec(sol0)
 
 sol_hexa = @time newton(prob2, @set optnew.linsolver = ls)
-    println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
-    plotsol(sol_hexa.u)
+println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
+plotsol(sol_hexa.u)
 ###################################################################################################
 # Automatic branch switching
 br2 = continuation(br, 2, setproperties(optcont; ds = -0.001, detectBifurcation = 0, plotEveryStep = 5, maxSteps = 170);  
@@ -160,14 +161,15 @@ diagram = bifurcationdiagram(br.prob, br, 2, optionsCont;
     # callbackN = cb,
     # linearAlgo = MatrixBLS(),
     # finaliseSolution = (z, tau, step, contResult; k...) ->     (Base.display(contResult.eig[end].eigenvals) ;true),
-    normC = norminf
+    normC = norminf,
+    verbosediagram = true,
     )
 
 plot(diagram; code = (), legend = false, plotfold = false)
 plot!(br)
 ###################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
-optcontdf = @set optcont.newtonOptions.verbose = true
+optcontdf = @set optcont.newtonOptions.verbose = false
 
 algdc = BK.DefCont(deflationOperator = deflationOp, perturbSolution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))), maxIterDefOp = 50, maxBranches = 40, seekEveryStep = 5,)
 

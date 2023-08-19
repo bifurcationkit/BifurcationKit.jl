@@ -9,39 +9,36 @@ abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
 
 # get the number of time slices
-@inline getMeshSize(pb::AbstractPeriodicOrbitProblem) = pb.M
+@inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
 
 """
 $(SIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getPeriod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extractPeriod(x)
-@inline extractPeriod(x::AbstractVector) = x[end]
-@inline extractPeriod(x::BorderedArray)  = x.p
-setParamsPO(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = reMake(pb.prob_vf; params = pars))
-setParamsPO(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
+@inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extract_period(x)
+@inline extract_period(x::AbstractVector) = x[end]
+@inline extract_period(x::BorderedArray)  = x.p
+set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
+set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
-getPeriodicOrbit(prob::WrapPOColl, u, p) = getPeriodicOrbit(prob.prob, u, p)
-getPeriodicOrbit(prob::WrapPOSh, u, p) = getPeriodicOrbit(prob.prob, u, p)
-getPeriod(prob::WrapPOColl, u, p) = getPeriod(prob.prob, u, p)
-getPeriod(prob::WrapPOSh, u, p) = getPeriod(prob.prob, u, p)
-@inline getDelta(prob::WrapPOSh) = getDelta(prob.prob.flow)
-@inline hasHessian(::WrapPOSh) = true
-
-# update a problem with arguments
-function updateForBS(prob::AbstractPeriodicOrbitProblem, F, dF, hopfpt, ζr, M, orbitguess_a, period) end
+get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
+get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
+getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
+getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
+@inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
+@inline has_hessian(::WrapPOSh) = true
 
 # update a section with a problem, we do nothing by default
-updateSection!(prob::AbstractPeriodicOrbitProblem, x, par) = @warn "Not yet implemented!"
+updatesection!(prob::AbstractPeriodicOrbitProblem, x, par) = @warn "Not yet implemented!"
 
 Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
-onGpu(pb::AbstractPOFDProblem) = pb.ongpu
-hasHessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
-isInplace(pb::AbstractPOFDProblem) = isInplace(pb.prob_vf)
+on_gpu(pb::AbstractPOFDProblem) = pb.ongpu
+has_hessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
+isinplace(pb::AbstractPOFDProblem) = isinplace(pb.prob_vf)
 
 function applyF(pb, dest, x, p)
-    if isInplace(pb)
+    if isinplace(pb)
         pb.prob_vf.VF.F(dest, x, p)
     else
         dest .= residual(pb.prob_vf, x, p)
@@ -50,7 +47,7 @@ function applyF(pb, dest, x, p)
 end
 
 function applyJ(pb, dest, x, p, dx)
-    if isInplace(pb)
+    if isinplace(pb)
         pb.prob_vf.VF.J(dest, x, p, dx)
     else
         dest .= apply(pb.prob_vf.VF.J(x, p), dx)
@@ -59,15 +56,15 @@ function applyJ(pb, dest, x, p, dx)
 end
 
 # function to extract trajectories from branch
-getPeriodicOrbit(br::AbstractBranchResult, ind::Int) = getPeriodicOrbit(br.prob, br.sol[ind].x, setParam(br, br.sol[ind].p))
+get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
 
 """
 $(SIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,2π] and the period `period`.
 """
-function generateSolution(pb::AbstractPeriodicOrbitProblem, orbit, period)
-    M = getMeshSize(pb)
+function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
+    M = get_mesh_size(pb)
     orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
@@ -153,9 +150,9 @@ const DocStrjacobianPOSh = """
 ##########################
 residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
-@inline isSymmetric(prob::WrapPOSh) = false
+@inline is_symmetric(prob::WrapPOSh) = false
 
-function _buildJacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function _build_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = prob.jacobian
     if jacobianPO isa AutoDiffDenseAnalytical
         _J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -197,8 +194,8 @@ function newton(prob::AbstractShootingProblem,
                 lens::Union{Lens, Nothing} = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
-    jac = _buildJacobian(prob, orbitguess, getParams(prob); δ = δ)
-    probw = WrapPOSh(prob, jac, orbitguess, getParams(prob), lens, nothing, nothing)
+    jac = _build_jacobian(prob, orbitguess, getparams(prob); δ = δ)
+    probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     return newton(probw, options; kwargs...)
 end
 
@@ -224,18 +221,18 @@ function newton(prob::AbstractShootingProblem,
                 lens::Union{Lens, Nothing} = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
-    jac = _buildJacobian(prob, orbitguess, getParams(prob))
-    probw = WrapPOSh(prob, jac, orbitguess, getParams(prob), lens, nothing, nothing)
+    jac = _build_jacobian(prob, orbitguess, getparams(prob))
+    probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     return newton(probw, defOp, options; kwargs...)
 end
 
 ####################################################################################################
 # Continuation for shooting problems
-function buildJacobian(probPO::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function build_jacobian(probPO::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
     @assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
     if jacobianPO isa AutoDiffDenseAnalytical
-        _J = probPO(Val(:JacobianMatrix), orbitguess, getParams(probPO))
+        _J = probPO(Val(:JacobianMatrix), orbitguess, getparams(probPO))
         jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
     elseif jacobianPO isa AutoDiffDense
         jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
@@ -271,25 +268,25 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
                         eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
                         kwargs...)
     jacobianPO = probPO.jacobian
-    @assert ~isnothing(getLens(probPO)) "You need to provide a lens for your periodic orbit problem."
+    @assert ~isnothing(getlens(probPO)) "You need to provide a lens for your periodic orbit problem."
 
-    jac = buildJacobian(probPO, orbitguess, getParams(probPO); δ = δ)
+    jac = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
 
-    if computeEigenElements(contParams)
+    if compute_eigenelements(contParams)
         contParams = @set contParams.newtonOptions.eigsolver = eigsolver
     end
 
     # change the user provided functions by passing probPO in its parameters
-    _finsol = modifyPOFinalise(probPO, kwargs, probPO.updateSectionEveryStep)
-    _recordsol = modifyPORecord(probPO, kwargs, getParams(probPO), getLens(probPO))
-    _plotsol = modifyPOPlot(probPO, kwargs)
+    _finsol    = modify_po_finalise(probPO, kwargs, probPO.updateSectionEveryStep)
+    _recordsol = modify_po_record(probPO, kwargs, getparams(probPO), getlens(probPO))
+    _plotsol   = modify_po_plot(probPO, kwargs)
 
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
     alg = update(alg, contParams, linearAlgo)
 
-    probwp = WrapPOSh(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
+    probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
     options = contParams.newtonOptions
 
     br = continuation(
@@ -367,7 +364,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 
     cb = get(kwargs, :callbackN, cbDefault)
 
-    hopfpt = hopfNormalForm(br.prob, br, ind_bif; nev = nev, verbose = verbose)
+    hopfpt = hopf_normal_form(br.prob, br, ind_bif; nev = nev, verbose = verbose)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
@@ -391,14 +388,14 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
             "\n├─ Method = \n", probPO, "\n")
 
-    M = getMeshSize(probPO)
+    M = get_mesh_size(probPO)
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
-    prob_vf = reMake(br.prob, params = setParam(br, pred.p))
+    prob_vf = re_make(br.prob, params = setparam(br, pred.p))
 
     # build the variable to hold the functional for computing PO based on finite differences
-    probPO, orbitguess = reMake(probPO, prob_vf, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+    probPO, orbitguess = re_make(probPO, prob_vf, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
@@ -423,7 +420,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
         end
 
         # TODO should only update guess here, cf Poincaré
-        probPO0, orbitzeroamp = reMake(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, Tfactor * abs(2pi / pred.ω))
+        probPO0, orbitzeroamp = re_make(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, Tfactor * abs(2pi / pred.ω))
         sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
 
         # find the bifurcated branch using deflation
@@ -497,7 +494,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     verbose && printstyled(color = :green, "━"^55*
             "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
             "\n├─── bif. param  p0 = ", bifpt.param,
-            "\n├─── period at bif. = ", getPeriod(br.prob.prob, bifpt.x, setParam(br, bifpt.param)),
+            "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", bifpt.param + δp, ", p - p0 = ", δp,
             "\n├─── amplitude p.o. = ", ampfactor,
             "\n")
@@ -529,7 +526,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newtonOptions
         # find point on the first branch
-        pbnew = setParamsPO(pbnew, setParam(br, newp))
+        pbnew = set_params_po(pbnew, setparam(br, newp))
         sol0 = newton(pbnew, bifpt.x, optn; kwargs...)
         @assert converged(sol0) "The first guess did not converge"
 
@@ -544,9 +541,9 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     end
 
     # perform continuation
-    pbnew = setParamsPO(pbnew, setParam(br, newp))
+    pbnew = set_params_po(pbnew, setparam(br, newp))
 
-    pbnew(orbitguess, setParam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
+    pbnew(orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten just below!

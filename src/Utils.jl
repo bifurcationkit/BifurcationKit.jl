@@ -41,16 +41,16 @@ end
 
 @inline _printLine(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
-function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contParams.nev; kwargs...)
-    return it.contParams.newtonOptions.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
+function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contparams.nev; kwargs...)
+    return it.contparams.newtonOptions.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
 end
 
 function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
     # we compute the eigen-elements
     n = state.n_unstable[2]
-    nev_ = max(n + 5, iter.contParams.nev)
-    eiginfo = computeEigenvalues(iter, state, getx(state), setParam(iter, getp(state)), nev_; kwargs...)
-    @unpack isstable, n_unstable, n_imag = isStable(iter.contParams, eiginfo[1])
+    nev_ = max(n + 5, iter.contparams.nev)
+    eiginfo = computeEigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
+    @unpack isstable, n_unstable, n_imag = is_stable(iter.contparams, eiginfo[1])
     return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
@@ -58,11 +58,11 @@ end
 function computeEigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
     eiginfo, _isstable, n_unstable, n_imag, cveig = computeEigenvalues(iter, state; kwargs...)
     # we update the state
-    updateStability!(state, n_unstable, n_imag, cveig)
+    update_stability!(state, n_unstable, n_imag, cveig)
     if isnothing(state.eigvals) == false
         state.eigvals = eiginfo[1]
     end
-    if saveEigenVec && saveEigenvectors(iter)
+    if saveEigenVec && save_eigenvectors(iter)
         state.eigvecs = eiginfo[2]
     end
     # iteration number in eigen-solver

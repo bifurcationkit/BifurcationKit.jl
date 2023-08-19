@@ -45,16 +45,16 @@ function MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
     zg, wg = gausslegendre(m)
     cache = MeshCollocationCache(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(Ty, 1 + m * Ntst))
     # put the mesh where we removed redundant timing
-    cache.full_mesh .= getTimes(cache)
+    cache.full_mesh .= get_times(cache)
     return cache
 end
 
 @inline Base.eltype(pb::MeshCollocationCache{T}) where T = T
 @inline Base.size(pb::MeshCollocationCache) = (pb.degree, pb.Ntst)
-@inline getLs(pb::MeshCollocationCache) = (pb.lagrange_vals, pb.lagrange_∂)
-@inline getMesh(pb::MeshCollocationCache) = pb.mesh
-@inline getMeshColl(pb::MeshCollocationCache) = pb.mesh_coll
-getMaxTimeStep(pb::MeshCollocationCache) = maximum(diff(getMesh(pb)))
+@inline get_Ls(pb::MeshCollocationCache) = (pb.lagrange_vals, pb.lagrange_∂)
+@inline getmesh(pb::MeshCollocationCache) = pb.mesh
+@inline get_mesh_coll(pb::MeshCollocationCache) = pb.mesh_coll
+get_max_time_step(pb::MeshCollocationCache) = maximum(diff(getmesh(pb)))
 τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j])
 # get the sigma corresponding to τ in the interval (𝜏s[j], 𝜏s[j+1])
 σj(τ, τs, j) = -(2*τ - τs[j] - τs[j + 1])/(-τs[j + 1] + τs[j])
@@ -93,7 +93,7 @@ $(SIGNATURES)
 
 Return all the times at which the problem is evaluated.
 """
-function getTimes(pb::MeshCollocationCache)
+function get_times(pb::MeshCollocationCache)
     m, Ntst = size(pb)
     Ty = eltype(pb)
     ts = zero(Ty)
@@ -109,9 +109,9 @@ function getTimes(pb::MeshCollocationCache)
     return vec(tsvec)
 end
 
-function updateMesh!(pb::MeshCollocationCache, mesh)
+function update_mesh!(pb::MeshCollocationCache, mesh)
     pb.mesh .= mesh
-    pb.full_mesh .= getTimes(pb)
+    pb.full_mesh .= get_times(pb)
 end
 ####################################################################################################
 """
@@ -156,10 +156,10 @@ Here are some useful methods you can apply to `pb`
 
 - `length(pb)` gives the total number of unknowns
 - `size(pb)` returns the triplet `(N, m, Ntst)`
-- `getMesh(pb)` returns the mesh `0 = τ0 < ... < τNtst+1 = 1`. This is useful because this mesh is born to vary by automatic mesh adaptation
-- `getMeshColl(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
-- `getTimes(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
-- `generateSolution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
+- `getmesh(pb)` returns the mesh `0 = τ0 < ... < τNtst+1 = 1`. This is useful because this mesh is born to vary by automatic mesh adaptation
+- `get_mesh_coll(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
+- `get_times(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
+- `generate_solution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
 - `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
 
 # Orbit guess
@@ -168,7 +168,7 @@ You will see below that you can evaluate the residual of the functional (and oth
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst`and `m`.
 
-Note that you can generate this guess from a function using `generateSolution`.
+Note that you can generate this guess from a function using `generate_solution`.
 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
@@ -238,7 +238,7 @@ function setCollocationSize(pb::PeriodicOrbitOCollProblem, Ntst, m)
     pb2
 end
 
-@inline getMeshSize(pb::PeriodicOrbitOCollProblem) = pb.mesh_cache.Ntst
+@inline get_mesh_size(pb::PeriodicOrbitOCollProblem) = pb.mesh_cache.Ntst
 
 """
 The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProblem`
@@ -251,30 +251,30 @@ The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProb
 end
 
 @inline Base.eltype(pb::PeriodicOrbitOCollProblem) = eltype(pb.mesh_cache)
-getLs(pb::PeriodicOrbitOCollProblem) = getLs(pb.mesh_cache)
+get_Ls(pb::PeriodicOrbitOCollProblem) = get_Ls(pb.mesh_cache)
 
-@inline getParams(pb::PeriodicOrbitOCollProblem) = getParams(pb.prob_vf)
-@inline getLens(pb::PeriodicOrbitOCollProblem) = getLens(pb.prob_vf)
-@inline setParam(pb::PeriodicOrbitOCollProblem, p) = setParam(pb.prob_vf, p)
+@inline getparams(pb::PeriodicOrbitOCollProblem) = getparams(pb.prob_vf)
+@inline getlens(pb::PeriodicOrbitOCollProblem) = getlens(pb.prob_vf)
+@inline setparam(pb::PeriodicOrbitOCollProblem, p) = setparam(pb.prob_vf, p)
 
 # these functions extract the time slices components
-getTimeSlices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
+get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
 # array of size Ntst ⋅ (m+1) ⋅ n
-getTimeSlices(pb::PeriodicOrbitOCollProblem, x) = @views getTimeSlices(x[1:end-1], size(pb)...)
-getTimes(pb::PeriodicOrbitOCollProblem) = getTimes(pb.mesh_cache)
+get_time_slices(pb::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[1:end-1], size(pb)...)
+get_times(pb::PeriodicOrbitOCollProblem) = get_times(pb.mesh_cache)
 """
 Returns the vector of size m+1,  0 = τ1 < τ1 < ... < τm+1 = 1
 """
-getMesh(pb::PeriodicOrbitOCollProblem) = getMesh(pb.mesh_cache)
-getMeshColl(pb::PeriodicOrbitOCollProblem) = getMeshColl(pb.mesh_cache)
-getMaxTimeStep(pb::PeriodicOrbitOCollProblem) = getMaxTimeStep(pb.mesh_cache)
-updateMesh!(pb::PeriodicOrbitOCollProblem, mesh) = updateMesh!(pb.mesh_cache, mesh)
-@inline isInplace(pb::PeriodicOrbitOCollProblem) = isInplace(pb.prob_vf)
-@inline isSymmetric(pb::PeriodicOrbitOCollProblem) = isSymmetric(pb.prob_vf)
-@inline getDelta(pb::PeriodicOrbitOCollProblem) = getDelta(pb.prob_vf)
+getmesh(pb::PeriodicOrbitOCollProblem) = getmesh(pb.mesh_cache)
+get_mesh_coll(pb::PeriodicOrbitOCollProblem) = get_mesh_coll(pb.mesh_cache)
+get_max_time_step(pb::PeriodicOrbitOCollProblem) = get_max_time_step(pb.mesh_cache)
+update_mesh!(pb::PeriodicOrbitOCollProblem, mesh) = update_mesh!(pb.mesh_cache, mesh)
+@inline isinplace(pb::PeriodicOrbitOCollProblem) = isinplace(pb.prob_vf)
+@inline is_symmetric(pb::PeriodicOrbitOCollProblem) = is_symmetric(pb.prob_vf)
+@inline getdelta(pb::PeriodicOrbitOCollProblem) = getdelta(pb.prob_vf)
 
-@inline getDelta(pb::WrapPOColl) = getDelta(pb.prob)
-@inline hasAdjoint(::WrapPOColl) = false #c'est dans problems.jl
+@inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
+@inline has_adjoint(::WrapPOColl) = false #c'est dans problems.jl
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     N, m, Ntst = size(pb)
@@ -283,7 +283,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     println(io, "├─ time slices (Ntst) : ", Ntst)
     println(io, "├─ degree      (m)    : ", m)
     println(io, "├─ dimension   (N)    : ", pb.N)
-    println(io, "├─ inplace            : ", isInplace(pb))
+    println(io, "├─ inplace            : ", isinplace(pb))
     println(io, "├─ update section     : ", pb.updateSectionEveryStep)
     println(io, "├─ jacobian           : ", pb.jacobian)
     println(io, "├─ mesh adaptation    : ", pb.meshadapt)
@@ -295,9 +295,9 @@ $(SIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`.
 """
-function generateSolution(pb::PeriodicOrbitOCollProblem, orbit, period)
+function generate_solution(pb::PeriodicOrbitOCollProblem, orbit, period)
     n, _m, Ntst = size(pb)
-    ts = getTimes(pb)
+    ts = get_times(pb)
     Nt = length(ts)
     ci = zeros(eltype(pb), n, Nt)
     for (l, t) in pairs(ts)
@@ -321,7 +321,7 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `PeriodicOrbitOCollProblem` and an initial guess.
 """
-function generateCIProblem(pb::PeriodicOrbitOCollProblem,
+function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             bifprob::AbstractBifurcationProblem,
                             sol::AbstractTimeseriesSolution,
                             period)
@@ -333,17 +333,17 @@ function generateCIProblem(pb::PeriodicOrbitOCollProblem,
     nunknows = N * (1 + m * Ntst)
 
     par = sol.prob.p
-    prob_vf = reMake(bifprob, params = par)
+    prob_vf = re_make(bifprob, params = par)
 
     pbcoll = setproperties(pb, N = N, prob_vf = prob_vf, ϕ = zeros(nunknows), xπ = zeros(nunknows), cache = POCollCache(eltype(pb), N, m))
 
-    ci = generateSolution(pbcoll, t -> sol(t), period)
+    ci = generate_solution(pbcoll, t -> sol(t), period)
     pbcoll.ϕ .= @view ci[1:end-1]
 
     return pbcoll, ci
 end
 
-# @views function phaseCondition(prob::PeriodicOrbitOCollProblem, u)
+# @views function phase_condition(prob::PeriodicOrbitOCollProblem, u)
 #     dot(u[1:end-1], prob.ϕ) - dot(prob.xπ, prob.ϕ)
 # end
 
@@ -360,7 +360,7 @@ $(SIGNATURES)
     phase = zero(Ty)
 
     n, m, Ntst = size(pb)
-    L, ∂L = getLs(pb.mesh_cache)
+    L, ∂L = get_Ls(pb.mesh_cache)
     ω = pb.mesh_cache.gauss_weight
     mesh = pb.mesh_cache.mesh
 
@@ -392,7 +392,7 @@ $(SIGNATURES)
 - uj   n x (m + 1)
 - guj  n x m
 """
-@views function phaseCondition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L), period)
+@views function phase_condition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L), period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
 
@@ -401,7 +401,7 @@ $(SIGNATURES)
     guj = zeros(𝒯, n, m)
     uj  = zeros(𝒯, n, m+1)
 
-    vc = getTimeSlices(pb.ϕ, size(pb)...)
+    vc = get_time_slices(pb.ϕ, size(pb)...)
     gvj = zeros(𝒯, n, m)
     vj  = zeros(𝒯, n, m+1)
 
@@ -427,7 +427,7 @@ function _POOCollScheme!(pb::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, t
 end
 
 # function for collocation problem
-@views function functionalColl_bare!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
+@views function functional_coll_bare!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
     𝒯 = eltype(u)
     n, ntimes = size(u)
     m = pb.mesh_cache.degree
@@ -439,7 +439,7 @@ end
     ∂gj = zeros(𝒯, n, m)
     uj  = zeros(𝒯, n, m+1)
 
-    mesh = getMesh(pb)
+    mesh = getmesh(pb)
     # range for locating time slices
     rg = UnitRange(1, m+1)
     for j in 1:Ntst
@@ -458,20 +458,20 @@ end
     out
 end
 
-@views function functionalColl!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
-    functionalColl_bare!(pb, out, u, period, (L, ∂L), pars)
+@views function functional_coll!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
+    functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
     out[:, end] .= u[:, end] .- u[:, 1]
 end
 
 @views function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
-    uc = getTimeSlices(prob, u)
-    T = getPeriod(prob, u, nothing)
+    uc = get_time_slices(prob, u)
+    T = getperiod(prob, u, nothing)
     result = zero(u)
-    resultc = getTimeSlices(prob, result)
-    functionalColl!(prob, resultc, uc, T, getLs(prob.mesh_cache), pars)
+    resultc = get_time_slices(prob, result)
+    functional_coll!(prob, resultc, uc, T, get_Ls(prob.mesh_cache), pars)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt
-    result[end] = phaseCondition(prob, (u, uc), getLs(prob.mesh_cache), T)
+    result[end] = phase_condition(prob, (u, uc), get_Ls(prob.mesh_cache), T)
     return result
 end
 
@@ -480,27 +480,27 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, u, p)
-    T = getPeriod(prob, u, p)
-    ts = getTimes(prob)
-    uc = getTimeSlices(prob, u)
+@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, u, p)
+    T = getperiod(prob, u, p)
+    ts = get_times(prob)
+    uc = get_time_slices(prob, u)
     return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
 
 # simplified function to extract periodic orbit
-getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
+get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
 # same function as above but for coping with mesh adaptation
-@views function getPeriodicOrbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}}}, p) where Tp
+@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}}}, p) where Tp
     mesh = x.mesh
     u = x.sol
-    T = getPeriod(prob, u, p)
-    uc = getTimeSlices(prob, u)
+    T = getperiod(prob, u, p)
+    uc = get_time_slices(prob, u)
     return SolPeriodicOrbit(t = mesh .* T, u = uc)
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
-function reMake(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t->t, k...)
+function re_make(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t->t, k...)
     M = length(orbitguess_a)
     N = length(ζr)
 
@@ -512,23 +512,23 @@ function reMake(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractV
 
     probPO.xπ .= 0
 
-    ϕ0 = generateSolution(probPO, t -> orbit(2pi*t/period + pi), period)
+    ϕ0 = generate_solution(probPO, t -> orbit(2pi*t/period + pi), period)
     probPO.ϕ .= @view ϕ0[1:end-1]
 
     # append period at the end of the initial guess
-    orbitguess = generateSolution(probPO, t -> orbit(2pi*t/period), period)
+    orbitguess = generate_solution(probPO, t -> orbit(2pi*t/period), period)
 
     return probPO, orbitguess
 end
 
 residual(prob::WrapPOColl, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
-@inline isSymmetric(prob::WrapPOColl) = isSymmetric(prob.prob)
+@inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
 
 # for recording the solution in a branch
-function getSolution(wrap::WrapPOColl, x)
+function getsolution(wrap::WrapPOColl, x)
     if wrap.prob.meshadapt
-        return (mesh = copy(getTimes(wrap.prob)), sol = x, _mesh = copy(wrap.prob.mesh_cache.mesh))
+        return (mesh = copy(get_times(wrap.prob)), sol = x, _mesh = copy(wrap.prob.mesh_cache.mesh))
     else
         return x
     end
@@ -539,7 +539,7 @@ const DocStrjacobianPOColl = """
     - For `:autodiffDense`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
 """
 
-function _newtonPOColl(probPO::PeriodicOrbitOCollProblem,
+function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
             orbitguess,
             options::NewtonPar;
             defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing,
@@ -552,7 +552,7 @@ function _newtonPOColl(probPO::PeriodicOrbitOCollProblem,
         jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
     end
 
-    prob = WrapPOColl(probPO, jac, orbitguess, getParams(probPO), getLens(probPO), nothing, nothing)
+    prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
 
     if isnothing(defOp)
         return newton(prob, options; kwargs...)
@@ -583,7 +583,7 @@ $DocStrjacobianPOColl
 newton(probPO::PeriodicOrbitOCollProblem,
             orbitguess,
             options::NewtonPar;
-            kwargs...) = _newtonPOColl(probPO, orbitguess, options; defOp = nothing, kwargs...)
+            kwargs...) = _newton_pocoll(probPO, orbitguess, options; defOp = nothing, kwargs...)
 
 """
     $(SIGNATURES)
@@ -595,10 +595,10 @@ newton(probPO::PeriodicOrbitOCollProblem,
                 defOp::DeflationOperator,
                 options::NewtonPar;
                 kwargs...) =
-    _newtonPOColl(probPO, orbitguess, options; defOp = defOp, kwargs...)
+    _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
 
 
-function buildJacobian(probPO::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function build_jacobian(probPO::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
     @assert jacobianPO in (AutoDiffDense(),) "This jacobian is not defined. Please chose another one."
     _J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
@@ -626,7 +626,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
                     eigsolver = FloquetColl(),
                     kwargs...)
 
-     jacPO = buildJacobian(probPO, orbitguess, getParams(probPO); δ = δ)
+     jacPO = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
 
     linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
     options = _contParams.newtonOptions
@@ -635,16 +635,16 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     alg = update(alg, contParams, linearAlgo)
 
-    if computeEigenElements(contParams)
+    if compute_eigenelements(contParams)
         contParams = @set contParams.newtonOptions.eigsolver = eigsolver
     end
 
     # change the user provided finalise function by passing prob in its parameters
-    _finsol = modifyPOFinalise(probPO, kwargs, probPO.updateSectionEveryStep)
-    _recordsol = modifyPORecord(probPO, kwargs, getParams(probPO.prob_vf), getLens(probPO.prob_vf))
-    _plotsol = modifyPOPlot(probPO, kwargs)
+    _finsol = modify_po_finalise(probPO, kwargs, probPO.updateSectionEveryStep)
+    _recordsol = modify_po_record(probPO, kwargs, getparams(probPO.prob_vf), getlens(probPO.prob_vf))
+    _plotsol = modify_po_plot(probPO, kwargs)
 
-    probwp = WrapPOColl(probPO, jacPO, orbitguess, getParams(probPO), getLens(probPO), _plotsol, _recordsol)
+    probwp = WrapPOColl(probPO, jacPO, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     br = continuation(probwp, alg,
                     contParams;
@@ -659,13 +659,13 @@ $(SIGNATURES)
 
 Compute the maximum of the periodic orbit associated to `x`.
 """
-function getMaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
-    sol = getPeriodicOrbit(prob, x, p).u
+function getmaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
+    sol = get_periodic_orbit(prob, x, p).u
     return maximum(sol)
 end
 
 # this function updates the section during the continuation run
-@views function updateSection!(prob::PeriodicOrbitOCollProblem, x, par; stride = 0)
+@views function updatesection!(prob::PeriodicOrbitOCollProblem, x, par; stride = 0)
     @debug "Update section Collocation"
     # update the reference point
     prob.xπ .= 0
@@ -683,12 +683,12 @@ end
 
 @views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
     n, m, Ntst = size(sol.pb)
-    xc = getTimeSlices(sol.pb, sol.x)
+    xc = get_time_slices(sol.pb, sol.x)
 
-    T = getPeriod(sol.pb, sol.x, nothing)
+    T = getperiod(sol.pb, sol.x, nothing)
     t = mod(t0, T) / T
 
-    mesh = getMesh(sol.pb)
+    mesh = getmesh(sol.pb)
     indτ = searchsortedfirst(mesh, t) - 1
     if indτ <= 0
         return sol.x[1:n]
@@ -699,7 +699,7 @@ end
     @assert mesh[indτ] <= t <= mesh[indτ+1] "Please open an issue on the website of BifurcationKit.jl"
     σ = σj(t, mesh, indτ)
     # @assert -1 <= σ <= 1 "Strange value of $σ"
-    σs = getMeshColl(sol.pb)
+    σs = get_mesh_coll(sol.pb)
     out = zeros(typeof(t), sol.pb.N)
     rg = (1:m+1) .+ (indτ-1) * m
     for l in 1:m+1
@@ -717,19 +717,19 @@ Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution
 
 p. 368
 """
-function computeError!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
+function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
                     normE = norm,
                     verbosity::Bool = false,
                     K = Inf,
                     kw...) where Ty
     n, m, Ntst = size(pb)
-    period = getPeriod(pb, x, nothing)
+    period = getperiod(pb, x, nothing)
     # get solution
     sol = POSolution(deepcopy(pb), x)
     # derivative of degree m, indeed ∂(sol, m+1) = 0
     dmsol = ∂(sol, m)
     # we find the values of vm := ∂m(x) at the mid points
-    mesh = getMesh(pb)
+    mesh = getmesh(pb)
     meshT = mesh .* period
     vm = [ dmsol( (meshT[i] + meshT[i+1]) / 2 ) for i = 1:Ntst ]
     ############
@@ -795,11 +795,11 @@ function computeError!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 
     ############
     # modify meshes
-    updateMesh!(pb, newmesh)
+    update_mesh!(pb, newmesh)
 
     ############
     # update solution
-    newsol = generateSolution(pb, t -> sol(t), period)
+    newsol = generate_solution(pb, t -> sol(t), period)
     x .= newsol
 
     success = true

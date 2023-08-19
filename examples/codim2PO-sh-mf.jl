@@ -16,13 +16,12 @@ function Pop!(du, X, p, t = 0)
     du[4] = 2pi * u + v - s * v
     du
 end
-Pop(u,p) = Pop!(similar(u),u,p,0)
 
 par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
 @set! opts_br.newtonOptions.verbose = true
@@ -39,13 +38,14 @@ sol = solve(prob_de, Rodas5())
 plot(sol)
 ################################################################################
 argspo = (recordFromSolution = (x, p) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p))
+        xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getPeriod(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p)))
+                period = getperiod(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p)))
     end,
-    plotSolution = (x, p; k...) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, set(getParams(p.prob), BK.getLens(p.prob), p.p))
+    plotSolution = (X, p; k...) -> begin
+        x = X isa BorderedArray ? X.u : X
+        xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
         plot!(xtt.t, xtt[1,:]; label = "x", k...)
         plot!(xtt.t, xtt[2,:]; label = "y", k...)
         # plot!(br; subplot = 1, putspecialptlegend = false)
@@ -56,8 +56,8 @@ import AbstractDifferentiation as AD
 
 probsh0 = ShootingProblem(M=1)
 
-probshMatrix, = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5())
-probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(),
+probshMatrix, = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5())
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             # jacobian = BK.FiniteDifferencesMF()
             )
@@ -90,7 +90,7 @@ res1 = AD.pullback_function(AD.ZygoteBackend(), x->flow(x, prob_de,1), sol0_f)(s
 @test norm(res1 - dϕ' * sol0_f, Inf) < 1e-8
 ######
 
-AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getParams(probsh)), cish)(cish)[1]
+AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getparams(probsh)), cish)(cish)[1]
 
 @set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
@@ -99,7 +99,7 @@ lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, 
     optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
     solpo = newton(probsh, cish, optnpo)
 
-_sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
+_sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3, newtonOptions = optnpo)
@@ -175,7 +175,7 @@ opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 3, max
 plot(pd_po_sh)
 
 plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
-    plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 
 
 #####
@@ -185,7 +185,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshns, ci = generateCIProblem( ShootingProblem(M=3), reMake(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
+probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             # jacobian = BK.FiniteDifferencesMF()
             )
@@ -222,6 +222,6 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
         )
 
 plot(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
-    plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
-    plot!(fold_po_sh1, vars = (:ϵ, :b0), branchlabel = "FOLD")
-    plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")
+plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+plot!(fold_po_sh1, vars = (:ϵ, :b0), branchlabel = "FOLD")
+plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")

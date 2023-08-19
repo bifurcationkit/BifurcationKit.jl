@@ -34,18 +34,18 @@ prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 
 sol = solve(prob_de, Rodas5())
 ################################################################################
 argspo = (recordFromSolution = (x, p) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getPeriod(p.prob, x, p.p))
+                period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
 
 solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
 
-_sol = BK.getPeriodicOrbit(probcoll, solpo.u,1)
+_sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 
 opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, tolStability = 1e-8)
 @set! opts_po_cont.newtonOptions.verbose = false
@@ -97,7 +97,7 @@ par_pop2 = @set par_pop.b0 = 0.4
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), reMake(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 20, ds = -0.001);
     verbosity = 0, plot = false,
@@ -148,7 +148,7 @@ _x = pd_po_coll2.sol[end].x
 _solpo = pd_po_coll2.sol[end].x.u
 _p1 = pd_po_coll2.sol[end].x.p
 _p2 = pd_po_coll2.sol[end].p
-_param= BK.setParam(pd_po_coll2, _p1)
+_param = BK.setparam(pd_po_coll2, _p1)
 _param = set(_param, (@lens _.ϵ), _p2)
 
 # _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
@@ -169,7 +169,7 @@ _x = ns_po_coll.sol[end].x
 _solpo = ns_po_coll.sol[end].x.u
 _p1 = ns_po_coll.sol[end].x.p
 _p2 = ns_po_coll.sol[end].p
-_param= BK.setParam(ns_po_coll, _p1[1])
+_param = BK.setparam(ns_po_coll, _p1[1])
 _param = set(_param, (@lens _.ϵ), _p2)
 
 # _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))

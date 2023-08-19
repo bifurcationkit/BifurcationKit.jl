@@ -43,7 +43,7 @@ where `normals` (resp. `centers`) is a list of normals (resp. centers) which def
 ## Computing the functionals
 A functional, hereby called `G` encodes this shooting problem. You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
-Note that you can generate this guess from a function solution using `generateSolution`.
+Note that you can generate this guess from a function solution using `generate_solution`.
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
 - `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
@@ -52,7 +52,7 @@ Note that you can generate this guess from a function solution using `generateSo
 
 
 !!! tip "Tip"
-    You can use the function `getPeriod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
+    You can use the function `getperiod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
 @with_kw_noshow struct PoincareShootingProblem{Tf, Tjac <: AbstractJacobianType, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
     M::Int64 = 0                     # number of Poincaré sections
@@ -66,21 +66,21 @@ Note that you can generate this guess from a function solution using `generateSo
     jacobian::Tjac = AutoDiffDenseAnalytical()
 end
 
-@inline isParallel(psh::PoincareShootingProblem) = psh.parallel
-@inline getLens(psh::PoincareShootingProblem) = psh.lens
-getParams(prob::PoincareShootingProblem) = prob.par
-setParam(prob::PoincareShootingProblem, p) = set(getParams(prob), getLens(prob), p)
+@inline isparallel(psh::PoincareShootingProblem) = psh.parallel
+@inline getlens(psh::PoincareShootingProblem) = psh.lens
+getparams(prob::PoincareShootingProblem) = prob.par
+setparam(prob::PoincareShootingProblem, p) = set(getparams(prob), getlens(prob), p)
 
 function Base.show(io::IO, psh::PoincareShootingProblem)
     println(io, "┌─ Poincaré shooting functional for periodic orbits")
-    println(io, "├─ time slices : ", getMeshSize(psh))
-    println(io, "├─ lens        : ", getLensSymbol(psh.lens))
+    println(io, "├─ time slices : ", get_mesh_size(psh))
+    println(io, "├─ lens        : ", get_lens_symbol(psh.lens))
     println(io, "├─ jacobian    : ", psh.jacobian)
     println(io, "├─ update section : ", psh.updateSectionEveryStep)
     if psh.flow isa FlowDE
         println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
     end
-    println(io, "└─ parallel    : ", isParallel(psh))
+    println(io, "└─ parallel    : ", isparallel(psh))
 end
 
 R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
@@ -91,8 +91,8 @@ E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xba
 
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
-@views function updateSection!(pb::PoincareShootingProblem, centers_bar, par; _norm = norm)
-    M = getMeshSize(pb); Nm1 = div(length(centers_bar), M)
+@views function updatesection!(pb::PoincareShootingProblem, centers_bar, par; _norm = norm)
+    M = get_mesh_size(pb); Nm1 = div(length(centers_bar), M)
     centers_barc = reshape(centers_bar, Nm1, M)
     centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
     normals = [vf(pb.flow, c, par) for c in centers]
@@ -107,8 +107,8 @@ $(SIGNATURES)
 
 Compute the period of the periodic orbit associated to `x_bar`.
 """
-function getPeriod(psh::PoincareShootingProblem, x_bar, par)
-    M = getMeshSize(psh); Nm1 = div(length(x_bar), M)
+function getperiod(psh::PoincareShootingProblem, x_bar, par)
+    M = get_mesh_size(psh); Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
     x_barc = reshape(x_bar, Nm1, M)
@@ -120,7 +120,7 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
     period = zero(eltype(x_barc))
 
     # we extend the state space to be able to call the flow, so we fill xc
-    if ~isParallel(psh)
+    if ~isparallel(psh)
         for ii in 1:M
             @views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
             # We need the callback to be active here!!!
@@ -135,10 +135,10 @@ function getPeriod(psh::PoincareShootingProblem, x_bar, par)
     end
     return period
 end
-getPeriod(psh::PoincareShootingProblem, x_bar, p::Real) = getPeriod(psh, x_bar, setParam(psh, p))
+getperiod(psh::PoincareShootingProblem, x_bar, p::Real) = getperiod(psh, x_bar, setparam(psh, p))
 
-function getTimeSlices(prob::PoincareShootingProblem, x_bar::AbstractVector)
-    M = getMeshSize(prob); Nm1 = length(x_bar) ÷ M
+function get_time_slices(prob::PoincareShootingProblem, x_bar::AbstractVector)
+    M = get_mesh_size(prob); Nm1 = length(x_bar) ÷ M
     # reshape the period orbit guess
     x_barc = reshape(x_bar, Nm1, M)
     xc = similar(x_bar, Nm1 + 1, M)
@@ -153,18 +153,18 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
+function get_periodic_orbit(prob::PoincareShootingProblem, x_bar::AbstractVector, p)
     # this function extracts the amplitude of the cycle
-    M = getMeshSize(prob); Nm1 = length(x_bar) ÷ M
+    M = get_mesh_size(prob); Nm1 = length(x_bar) ÷ M
 
     # reshape the period orbit guess
     x_barc = reshape(x_bar, Nm1, M)
     xc = similar(x_bar, Nm1 + 1, M)
 
-    T = getPeriod(prob, x_bar, p)
+    T = getperiod(prob, x_bar, p)
 
     # !!!! we could use @views but then Sundials will complain !!!
-    if ~isParallel(prob)
+    if ~isparallel(prob)
         E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
         # We need the callback to be active here!!!
         sol1 = @views evolve(prob.flow, Val(:Full), xc[:, 1], p, T; callback = nothing)
@@ -175,11 +175,11 @@ function getPeriodicOrbit(prob::PoincareShootingProblem, x_bar::AbstractVector, 
         return sol[1]
     end
 end
-getPeriodicOrbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = getPeriodicOrbit(prob, x, setParam(prob, p))
+get_periodic_orbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
-function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
+function _get_extremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
     # this function extracts the amplitude of the cycle
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
@@ -189,7 +189,7 @@ function _getExtremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; 
     Th = eltype(x_bar)
     n = div(Nm1, ratio)
 
-    if ~isParallel(psh)
+    if ~isparallel(psh)
         E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
         # We need the callback to be active here!!!
         sol = @views evolve(psh.flow, Val(:Full), xc[:, 1], par, Inf)
@@ -220,7 +220,7 @@ Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré se
 """
 function projection(psh::PoincareShootingProblem, x::AbstractVector)
     # create initial guess. We have to pass it through the projection R
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     orbitguess_bar = Vector{eltype(x)}(undef, 0)
     @assert M == length(psh.section.normals)
     for ii=1:M
@@ -236,7 +236,7 @@ Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré
 """
 function projection(psh::PoincareShootingProblem, x::AbstractMatrix)
     # create initial guess. We have to pass it through the projection R
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     m, n = size(x)
     orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
     @assert M == length(psh.section.normals)
@@ -248,7 +248,7 @@ end
 ####################################################################################################
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = false)
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
@@ -266,7 +266,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
         E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
     end
 
-    if ~isParallel(psh)
+    if ~isparallel(psh)
         for ii in 1:M
             im1 = ii == 1 ? M : ii - 1
             # We need the callback to be active here!!!
@@ -293,7 +293,7 @@ end
 """
 This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x),x) where t(x) is the return time of x to the section.
 """
-function diffPoincareMap(psh::PoincareShootingProblem, x, par, dx, ii::Int)
+function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
     normal = psh.section.normals[ii]
     abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
     # compute the Poincare map from x
@@ -314,7 +314,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
     end
 
     # otherwise analytical Jacobian
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
@@ -332,10 +332,10 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
         dE!(psh.section, view(dxc, :, ii), view(dx_barc, :, ii), ii)
     end
 
-    if ~isParallel(psh)
+    if ~isparallel(psh)
         for ii in 1:M
             im1 = (ii == 1 ? M : ii - 1)
-            @views outc[:, ii] .= dxc[:, ii] .- diffPoincareMap(psh, xc[:, im1], par, dxc[:, im1], im1)
+            @views outc[:, ii] .= dxc[:, ii] .- diff_poincare_map(psh, xc[:, im1], par, dxc[:, im1], im1)
         end
     else
         @assert 1==0 "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences."
@@ -352,7 +352,7 @@ end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
 function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x_bar::AbstractVector, par)
-    M = getMeshSize(psh)
+    M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
     N = Nm1 + 1
 
@@ -405,7 +405,7 @@ end
 (psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, period; k...)
+function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, period; k...)
 
     # create the section
     if isEmpty(prob.section)
@@ -422,8 +422,8 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
     if length(prob.flow) == 4
         probPSh = PoincareShootingProblem(prob.flow.prob, prob.flow.alg, deepcopy(normals), deepcopy(centers);
             parallel = prob.parallel,
-            lens = getLens(prob_vf),
-            par = getParams(prob_vf),
+            lens = getlens(prob_vf),
+            par = getparams(prob_vf),
             updateSectionEveryStep = prob.updateSectionEveryStep,
             jacobian = prob.jacobian,
             prob.flow.kwargs...)
@@ -435,7 +435,7 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
             deepcopy(normals),
             deepcopy(centers);
             parallel = prob.parallel,
-            lens = getLens(prob_vf),
+            lens = getlens(prob_vf),
             updateSectionEveryStep = prob.updateSectionEveryStep,
             jacobian = prob.jacobian,
             prob.flow.kwargs...)
@@ -443,7 +443,7 @@ function reMake(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, pe
 
     # create initial guess. We have to pass it through the projection R
     hyper = probPSh.section
-    M = getMeshSize(probPSh)
+    M = get_mesh_size(probPSh)
     @assert length(normals) == M
     orbitguess_bar = zeros(length(centers[1])-1, M)
     for ii in 1:length(normals)
@@ -472,7 +472,7 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generateCIProblem(pb::PoincareShootingProblem,
+function generate_ci_problem(pb::PoincareShootingProblem,
                         bifprob::AbstractBifurcationProblem,
                         prob_de,
                         sol::AbstractTimeseriesSolution,
@@ -491,7 +491,7 @@ function generateCIProblem(pb::PoincareShootingProblem,
     for n in normals; n ./= norm(n); end
     @assert length(normals) == length(centers) == M
 
-    probpsh = PoincareShootingProblem(remake(prob_de, p = sol.prob.p), alg, normals, centers; lens = getLens(bifprob), par = sol.prob.p, ksh...)
+    probpsh = PoincareShootingProblem(remake(prob_de, p = sol.prob.p), alg, normals, centers; lens = getlens(bifprob), par = sol.prob.p, ksh...)
 
     # create initial guess. We have to pass it through the projection R
     cipsh = reduce(vcat, [R(probpsh, centers[k], k) for k in eachindex(centers)])
@@ -499,4 +499,4 @@ function generateCIProblem(pb::PoincareShootingProblem,
     return probpsh, cipsh
 end
 
-generateCIProblem(pb::PoincareShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generateCIProblem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)
+generate_ci_problem(pb::PoincareShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)

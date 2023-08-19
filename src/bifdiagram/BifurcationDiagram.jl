@@ -145,7 +145,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         # we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
         if pt.step > 1 && (pt.type in (:bp, :nd))
             try
-                verbose && println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernelDim(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
+                verbose && println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", kernel_dimension(pt), ", code = $code, from bp #",id," at p = ", pt.param, ", type = ", type(pt))
                 γ = letsbranch(id, pt, level)
                 add!(node, γ, level+1, id)
                 ~isnothing(γ) && (verbose && printstyled(color = :green, "────▶ From ", type(from(γ)), "\n"))

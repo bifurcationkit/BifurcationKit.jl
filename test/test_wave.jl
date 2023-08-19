@@ -156,12 +156,12 @@ BK.VFtw(probTW, uold, (user=par_cgl, s=Tuple(0.,)))
 BK.applyD(probTW, rand(2n))
 
 # we test update section
-BK.updateSection!(probTW, probTW.u₀)
+BK.updatesection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
 sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5))
 @test BK.converged(sol)
-BK.isSymmetric(sol.prob)
+BK.is_symmetric(sol.prob)
 sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5))
 @test BK.converged(sol)
 sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5, linsolver = GMRESKrylovKit()))

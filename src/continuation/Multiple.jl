@@ -39,10 +39,10 @@ end
 Multiple(alg, x0, α::T, nb) where T = Multiple(alg = alg, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
 Multiple(x0, α, nb) = Multiple(PALC(), x0, α, nb)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
-getLinsolver(alg::Multiple) = getLinsolver(alg.alg)
+getlinsolver(alg::Multiple) = getlinsolver(alg.alg)
 getdot(alg::Multiple) = getdot(alg.alg)
 # important for bisection algorithm
-internalAdaptation!(alg::Multiple, onoroff::Bool) = internalAdaptation!(alg.alg, onoroff)
+internal_adaptation!(alg::Multiple, onoroff::Bool) = internal_adaptation!(alg.alg, onoroff)
 @inline getθ(alg::Multiple) = getθ(alg.alg)
 
 # callback for newton
@@ -67,12 +67,12 @@ function initialize!(state::AbstractContinuationState,
     return initialize!(state, iter, algo.alg, nrm)
 end
 
-function getPredictor!(state::AbstractContinuationState,
+function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         algo::Multiple,
                         nrm = false)
     # we just compute the tangent
-    getPredictor!(state, iter, algo.alg, nrm)
+    getpredictor!(state, iter, algo.alg, nrm)
     return nothing
 end
 
@@ -110,15 +110,15 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
     return true
 end
 
-function stepSizeControl!(state::AbstractContinuationState,
+function step_size_control!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::Multiple)
     if ~state.stopcontinuation && stepsizecontrol(state)
-        _stepSizeControlMultiple!(state, getContParams(iter), iter.verbosity, alg)
+        _step_size_control_multiple!(state, getcontparams(iter), iter.verbosity, alg)
     end
 end
 
-function _stepSizeControlMultiple!(state, contparams::ContinuationPar, verbosity, alg)
+function _step_size_control_multiple!(state, contparams::ContinuationPar, verbosity, alg)
     ds = state.ds
     if converged(state) == false
         dsnew = ds
@@ -147,7 +147,7 @@ function _stepSizeControlMultiple!(state, contparams::ContinuationPar, verbosity
         end
     end
 
-    dsnew = clampDs(dsnew, contparams)
+    dsnew = clamp_ds(dsnew, contparams)
 
     # we do not stop the continuation
     state.ds = dsnew

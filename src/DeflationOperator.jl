@@ -142,9 +142,9 @@ struct DeflatedProblem{Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype
     jactype::Tjac
 end
 @inline length(prob::DeflatedProblem) = length(prob.M)
-@inline isInplace(prob::DeflatedProblem) = isInplace(prob.prob)
-@inline getVectorType(prob::DeflatedProblem) = getVectorType(prob.prob)
-@inline isSymmetric(::DeflatedProblem) = false
+@inline isinplace(prob::DeflatedProblem) = isinplace(prob.prob)
+@inline getvectortype(prob::DeflatedProblem) = getvectortype(prob.prob)
+@inline is_symmetric(::DeflatedProblem) = false
 
 """
 Return the deflated function M(u) * F(u) where M(u) ∈ R
@@ -185,21 +185,21 @@ jacobian(dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype, AutoDiff}, x, p) wher
 
 # getters
 getu0(dfp::DeflatedProblem) = getu0(dfp.prob)
-getParams(dfp::DeflatedProblem) = getParams(dfp.prob)
-@inline getLens(dfp::DeflatedProblem) = getLens(dfp.prob)
-getParam(dfp::DeflatedProblem) = getParam(dfp.prob)
-setParam(dfp::DeflatedProblem, p0) = setParam(dfp.prob, p0)
+getparams(dfp::DeflatedProblem) = getparams(dfp.prob)
+@inline getlens(dfp::DeflatedProblem) = getlens(dfp.prob)
+getparam(dfp::DeflatedProblem) = getparam(dfp.prob)
+setparam(dfp::DeflatedProblem, p0) = setparam(dfp.prob, p0)
 
 function Base.show(io::IO, prob::DeflatedProblem; prefix = "")
     print(io, prefix * "┌─ " );    printstyled(io, "Deflated Problem", bold = true)
     print(" with uType ")
-    printstyled(io, getVectorType(prob), color=:cyan, bold = true)
+    printstyled(io, getvectortype(prob), color=:cyan, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")
-    printstyled(io, isSymmetric(prob), color=:cyan, bold = true)
+    printstyled(io, is_symmetric(prob), color=:cyan, bold = true)
     print(io, "\n" * prefix * "├─ jacobian: ")
     printstyled(io, prob.jactype, color=:cyan, bold = true)
     print(io, "\n" * prefix * "├─ Parameter ")
-    printstyled(io, getLensSymbol(getLens(prob)), color=:cyan, bold = true)
+    printstyled(io, get_lens_symbol(getlens(prob)), color=:cyan, bold = true)
     println(io, "\n" * prefix * "└─ deflation operator:")
     show(io, prob.M; prefix = "    ")
 end
@@ -343,11 +343,11 @@ function newton(prob::AbstractBifurcationProblem,
                 defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}(), _copy(x0); autodiff = true),
                 linsolver = DeflatedProblemCustomLS();
                 kwargs...) where {T, vectype, L, E}
-    prob0 = reMake(prob, u0 = x0, params = p0)
+    prob0 = re_make(prob, u0 = x0, params = p0)
     sol0 = newton(prob0, options; kwargs...)
     @assert converged(sol0) "Newton did not converge to the trivial solution x0."
     push!(defOp, sol0.u)
-    prob1 = reMake(prob0, u0 = x1)
+    prob1 = re_make(prob0, u0 = x1)
     sol1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
     ~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
     @debug "deflated Newton" x0 x1 sol0.u sol1.u

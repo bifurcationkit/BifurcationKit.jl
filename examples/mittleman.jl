@@ -46,8 +46,6 @@ function Fmit!(f, u, p)
     return f
 end
 
-Fmit(u, p) = Fmit!(similar(u), u, p)
-
 function dFmit(x, p, dx)
     f = similar(dx)
     mul!(f, p.Δ, dx)
@@ -75,7 +73,7 @@ Nx = 30
     const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
     w .-= minimum(w)
 
-prob = BK.BifurcationProblem(Fmit, sol0, par_mit, (@lens _.λ);
+prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@lens _.λ);
         J = JFmit,
         recordFromSolution = (x, p) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
         plotSolution = (x, p; k...) -> plotsol!(x ; k...),
@@ -230,7 +228,7 @@ solbif = newton(prob, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2
 
 plotsol(solbif.u-0*bp2d(deflationOp[2], δp))
 
-brnf1 = continuation(reMake(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = 0.005);
+brnf1 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = 0.005);
     plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
     plot = true, verbosity = 3, normC = norminf)
 
@@ -239,7 +237,7 @@ push!(branches2, brnf1)
 # plot([br,br1,br2])
 # plot!(brnf1)
 
-brnf2 = continuation(reMake(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = -0.005);
+brnf2 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = -0.005);
     plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
     plot = true, verbosity = 3, normC = norminf)
 
@@ -257,7 +255,7 @@ vp, ve, _, _= eigls(JFmit(sol0, @set par_mit.λ = br.specialpoint[2].param), 5)
 
 for ii=1:size(ve, 1)
         outdef1 = @time newton(
-            reMake(prob, u0 = real.(br.specialpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))), params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), deflationOp,
+            re_make(prob, u0 = real.(br.specialpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))), params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), deflationOp,
             optdef)
             BK.converged(outdef1) && push!(deflationOp, outdef1.u)
     end
@@ -272,7 +270,7 @@ l = @layout grid(3,2)
     title!("")
 
 brdef1 = @time BK.continuation(
-    reMake(prob, u0 = deflationOp[3], params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), PALC(),
+    re_make(prob, u0 = deflationOp[3], params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), PALC(),
     setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
     verbosity = 3, plot = true,
     normC = norminf)
@@ -281,7 +279,7 @@ plot(br,br1,br2,brdef1,plotfold=false)
 
 
 brdef2 = @time BK.continuation(
-    reMake(brdef1.prob, u0 = deflationOp[5]), PALC(),
+    re_make(brdef1.prob, u0 = deflationOp[5]), PALC(),
     setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
     verbosity = 3, plot = true,
     recordFromSolution = (x, p) ->  normbratu(x),
@@ -301,4 +299,4 @@ brdef2 = @time BK.continuation(
     plot=true, verbosity = 2,
     normN = norminf)
 
-plot(brdef2..., color=:red)
+plot(brdef2, color=:red)

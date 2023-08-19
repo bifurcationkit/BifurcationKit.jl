@@ -21,9 +21,9 @@ struct BifEvent{Tcb} <: AbstractDiscreteEvent
     condition::Tcb
 end
 
-computeEigenElements(::BifEvent) = true
+compute_eigenelements(::BifEvent) = true
 @inline length(eve::BifEvent) = eve.nb
-@inline hasCustomLabels(::BifEvent) = true
+@inline has_custom_labels(::BifEvent) = true
 
 function detectBifurcationEVE(iter, state)
     # Note that the computation of eigen-elements should have occurred before events are called
@@ -40,6 +40,6 @@ This event implements the detection of bifurcations points along a continuation 
 """
 BifDetectEvent = BifEvent(1, detectBifurcationEVE)
 
-function getEventType(event::BifEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = :user) where T
-    return getBifurcationType(iter, state, status, interval)
+function get_event_type(event::BifEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = :user) where T
+    return get_bifurcation_type(iter, state, status, interval)
 end

@@ -37,15 +37,15 @@ sol = solve(prob_de, Rodas5())
 plot(sol)
 ################################################################################
 function recordFromSolution(x, p)
-    xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
-            period = getPeriod(p.prob, x, p.p))
+            period = getperiod(p.prob, x, p.p))
 end
 
 function plotSolution(X, p; k...)
     x = X isa BorderedArray ? X.u : X
-    xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
     plot!(xtt.t, xtt[1,:]; label = "x", k...)
     plot!(xtt.t, xtt[2,:]; label = "y", k...)
     # plot!(br; subplot = 1, putspecialptlegend = false)
@@ -53,7 +53,7 @@ end
 
 function plotSolution(ax, X, p; k...)
     x = X isa BorderedArray ? X.u : X
-    xtt = BK.getPeriodicOrbit(p.prob, x, p.p)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
     lines!(ax, xtt.t, xtt[1,:]; label = "x")
     lines!(ax, xtt.t, xtt[2,:]; label = "y")
     axislegend(ax)
@@ -64,14 +64,14 @@ argspo = (recordFromSolution = recordFromSolution,
     plotSolution = plotSolution
     )
 ################################################################################
-probtrap, ci = generateCIProblem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, updateSectionEveryStep = 0), prob, sol, 2.)
+probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, updateSectionEveryStep = 0), prob, sol, 2.)
 
 plot(sol)
 probtrap(ci, prob.params) |> plot
 
 solpo = newton(probtrap, ci, NewtonPar(verbose = true))
 
-_sol = BK.getPeriodicOrbit(probtrap, solpo.u,1)
+_sol = BK.get_periodic_orbit(probtrap, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, tolStability = 1e-8)
@@ -134,14 +134,14 @@ fold_po_trap2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
 plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
     # plot!(pd_po_trap.branch.ϵ, pd_po_trap.branch.b0)
 ################################################################################
-probcoll, ci = generateCIProblem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
 
 plot(sol)
 probcoll(ci, prob.params) |> plot
 
 solpo = newton(probcoll, ci, NewtonPar(verbose = true))
 
-_sol = BK.getPeriodicOrbit(probcoll, solpo.u,1)
+_sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, tolStability = 1e-8)
@@ -326,7 +326,7 @@ probsh, cish = generateCIProblem( ShootingProblem(M=3), prob, prob_de, sol, 2.; 
 
 solpo = newton(probsh, cish, NewtonPar(verbose = true))
 
-_sol = BK.getPeriodicOrbit(probsh, solpo.u, sol.prob.p)
+_sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3)
@@ -478,7 +478,7 @@ plot(sol)
 
 # solpo = newton(probpsh, cipsh, NewtonPar(verbose = true))
 BK.getPeriod(probpsh, cipsh, sol.prob.p)
-_sol = BK.getPeriodicOrbit(probpsh, cipsh, sol.prob.p)
+_sol = BK.get_periodic_orbit(probpsh, cipsh, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
 
 
@@ -505,7 +505,7 @@ for ii=1:probpsh.M
 end
 ######
 
-_sol = BK.getPeriodicOrbit(probcoll, solpo.u,1)
+_sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 cisl = BK.getTimeSlices(probpsh, cipsh)
@@ -526,17 +526,17 @@ getPeriod(probpsh, cipsh, probpsh.par)
 
 @assert 1==0 "Ca foire voilamment"
 
-_sol = getPeriodicOrbit(probpsh, cipsh, sol.prob.p)
+_sol = get_periodic_orbit(probpsh, cipsh, sol.prob.p)
 plot(sol)
 
 record_sh = recordFromSolution = (x, p) -> begin
-        xtt = BK.getPeriodicOrbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
+        xtt = BK.get_periodic_orbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
                 period = getPeriod(p.prob, x, set(par_pop, p.prob.lens, p.p)))
     end
 plot_sh  = (x, p; k...) -> begin
-    xtt = BK.getPeriodicOrbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
+    xtt = BK.get_periodic_orbit(p.prob, x, set(par_pop, p.prob.lens, p.p))
     plot!(xtt.t, xtt[1,:]; label = "x", k...)
     plot!(xtt.t, xtt[2,:]; label = "y", k...)
     # plot!(xtt.t, xtt[3,:]; label = "u", k...)

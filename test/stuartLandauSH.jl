@@ -47,10 +47,10 @@ sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 # test generation of initial guess from ODESolution
-generateCIProblem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
-generateCIProblem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
-generateCIProblem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
-generateCIProblem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
+generate_ci_problem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
+generate_ci_problem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
+generate_ci_problem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
+generate_ci_problem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
 ####################################################################################################
 section(x, T) = x[1] #* x[end]
 section(x, T, dx, dT) = dx[1] #* x[end]
@@ -93,7 +93,7 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 _pb2 = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
 res = _pb2(initpo, par_hopf)
 res = _pb2(initpo, par_hopf, initpo)
-@test BK.isSimple(_pb2)
+@test BK.issimple(_pb2)
 @test _pb2.flow.prob.p == _pb2.par
 
 # we test this using Newton - Continuation
@@ -103,10 +103,10 @@ outpo = newton(_pb, initpo, optn; normN = norminf)
 @test BK.converged(outpo)
 @test outpo.prob.prob.jacobian isa BK.AutoDiffDense
 
-BK.getPeriod(_pb, outpo.u, par_hopf)
-BK.getAmplitude(_pb, outpo.u, par_hopf)
-BK.getMaximum(_pb, outpo.u, par_hopf)
-BK.getPeriodicOrbit(_pb, outpo.u, par_hopf)
+BK.getperiod(_pb, outpo.u, par_hopf)
+BK.getamplitude(_pb, outpo.u, par_hopf)
+BK.getmaximum(_pb, outpo.u, par_hopf)
+BK.get_periodic_orbit(_pb, outpo.u, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 5, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), tolStability = 1e-5)
 br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
@@ -116,7 +116,7 @@ br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
-_sol = BK.getPOSolution(_pb, outpo.u, BK.getParams(_pb))
+_sol = BK.get_po_solution(_pb, outpo.u, BK.getparams(_pb))
 _sol(0.1)
 # plot(br_pok2)
 ####################################################################################################
@@ -215,10 +215,10 @@ ls = DefaultLS()
     @test BK.converged(outpo)
 
 
-BK.getPeriod(probPsh, outpo.u, par_hopf)
-BK.getAmplitude(probPsh, outpo.u, par_hopf)
-BK.getMaximum(probPsh, outpo.u, par_hopf)
-BK.getPeriodicOrbit(probPsh, outpo.u, par_hopf)
+BK.getperiod(probPsh, outpo.u, par_hopf)
+BK.getamplitude(probPsh, outpo.u, par_hopf)
+BK.getmaximum(probPsh, outpo.u, par_hopf)
+BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
 
 probPsh = PoincareShootingProblem(prob, Rodas4(),
         # probMono, Rodas4(autodiff=false),
@@ -237,10 +237,10 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(),
     opts_po_cont; verbosity = 0,
     plot = false, normC = norminf)
 # plot(br_pok2)
-BK.setParam(br_pok2.prob, 1.)
-BK.getPeriod(br_pok2.prob.prob, br_pok2.sol[1].x, br_pok2.sol[1].p)
-BK.getTimeSlices(br_pok2.prob.prob, br_pok2.sol[1].x)
-BK.getPeriodicOrbit(br_pok2, 1)
+BK.setparam(br_pok2.prob, 1.)
+BK.getperiod(br_pok2.prob.prob, br_pok2.sol[1].x, br_pok2.sol[1].p)
+BK.get_time_slices(br_pok2.prob.prob, br_pok2.sol[1].x)
+BK.get_periodic_orbit(br_pok2, 1)
 ####################################################################################################
 @info "Multiple Poincaré Shooting"
 # normals = [[-1., 0.], [1, -1]]
@@ -272,7 +272,7 @@ ls = DefaultLS()
     outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
     @test BK.converged(outpo)
 
-getPeriod(probPsh, outpo.u, par_hopf)
+getperiod(probPsh, outpo.u, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 5, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 3, nev = 2)
     br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),

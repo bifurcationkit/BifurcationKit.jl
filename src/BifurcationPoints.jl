@@ -76,7 +76,7 @@ $(TYPEDFIELDS)
     interval::Tuple{T, T} = (0, 0)
 end
 
-getVectorType(::Type{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = Tvτ
+getvectortype(::Type{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = Tvτ
 type(bp::SpecialPoint) = bp.type
 
 """
@@ -84,7 +84,7 @@ $(SIGNATURES)
 
 Return the dimension of the kernel of the special point.
 """
-@inline kernelDim(bp::SpecialPoint) = abs(bp.δ[1])
+@inline kernel_dimension(bp::SpecialPoint) = abs(bp.δ[1])
 
 # constructors
 SpecialPoint(x0, τ, T::Type, printsol) = SpecialPoint(type = :none, idx = 0, param = T(0), norm  = T(0), printsol = printsol, x = x0, τ = τ, ind_ev = 0, step = 0, status = :guess, δ = (0, 0), precision = T(-1), interval = (T(0), T(0)))
@@ -94,8 +94,8 @@ SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, i
                 idx = idx,
                 param = getp(state),
                 norm = it.normC(getx(state)),
-                printsol = namedprintsol(recordFromSolution(it)(getx(state), getp(state))),
-                x = getSolution(it.prob, _copy(getx(state))),
+                printsol = namedprintsol(record_from_solution(it)(getx(state), getp(state))),
+                x = getsolution(it.prob, _copy(getx(state))),
                 τ = copy(state.τ),
                 ind_ev = ind_ev,
                 step = state.step,
@@ -174,7 +174,7 @@ end
 
 Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
-isTranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
+istranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::BranchPoint) = :BranchPoint
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
@@ -191,7 +191,7 @@ end
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
     printstyled(io, type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
     println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
@@ -200,7 +200,7 @@ end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p)")
+    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
     println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
@@ -209,7 +209,7 @@ end
 
 function Base.show(io::IO, bp::PeriodDoubling)
     printstyled(io, bp.type, " - Period-Doubling ", color=:cyan, bold = true)
-    println("bifurcation point at ", getLensSymbol(bp.lens), " ≈ $(bp.p)")
+    println("bifurcation point at ", get_lens_symbol(bp.lens), " ≈ $(bp.p)")
     println(io, "Normal form x⋅(a⋅δp + c⋅x³)")
     if ~isnothing(bp.nf)
         println(io,"┌─ a = ", bp.nf.a)
@@ -276,7 +276,7 @@ type(bp::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint)
-    println(io, "Non simple bifurcation point at ", getLensSymbol(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
+    println(io, "Non simple bifurcation point at ", get_lens_symbol(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
     println(io, "Normal form:")
     println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
 end
@@ -331,7 +331,7 @@ Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ,
 
 function Base.show(io::IO, bp::Hopf)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p).")
     println(io, "Frequency ω ≈ ", abs(bp.ω))
     println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
     println(io, "Normal form z⋅(iω + a⋅δp + b⋅|z|²):")
@@ -389,7 +389,7 @@ type(bp::NeimarkSacker) = :NeimarkSacker
 
 function Base.show(io::IO, bp::NeimarkSacker)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", getLensSymbol(bp.lens)," ≈ $(bp.p).")
+    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p).")
     println(io, "Frequency θ ≈ ", abs(bp.ω))
     println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
     println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")

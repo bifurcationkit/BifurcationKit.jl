@@ -44,17 +44,17 @@ opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, maxSteps = 140, pM
 x0 = 0.01 * ones(N)
 
 prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
-BK.isInplace(prob)
-BK.getVectorType(prob)
+BK.isinplace(prob)
+BK.getvectortype(prob)
 show(prob)
 
 br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts) #(17.98 k allocations: 1.155 MiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
-BK.computeEigenvalues(opts)
-BK.saveEigenvectors(opts)
+BK.compute_eigenvalues(opts)
+BK.save_eigenvectors(opts)
 BK.from(br0)
-BK.getProb(br0)
+BK.getprob(br0)
 br0[1]
 br0[end]
 BK.bifurcation_points(br0)
@@ -63,9 +63,9 @@ branch = Branch(br0, rand(2));
 branch[end]
 ###### start at pMin and see if it continues the solution
 for alg in (Natural(), PALC(), PALC(tangent = Bordered()), Multiple(copy(x0), 0.01,13), PALC(tangent=Polynomial(Bordered(), 2, 6, copy(x0))), MoorePenrose())
-    br0 = continuation(reMake(prob, params = opts.pMin), alg, opts)
+    br0 = continuation(re_make(prob, params = opts.pMin), alg, opts)
     @test length(br0) > 10
-    br0 = continuation(reMake(prob, params = opts.pMax), Natural(), ContinuationPar(opts, ds = -0.01))
+    br0 = continuation(re_make(prob, params = opts.pMax), Natural(), ContinuationPar(opts, ds = -0.01))
     @test length(br0) > 10
 end
 
@@ -102,7 +102,7 @@ BK.getvectortype(br1)
 BK.getvectoreltype(br1)
 BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
-BK.getParams(br1)
+BK.getparams(br1)
 
 @set! prob.recordFromSolution = (x,p) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
@@ -137,10 +137,11 @@ br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 
 # tangent prediction with Multiple predictor
 opts9 = (@set opts.newtonOptions.verbose=false)
-    opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
-    br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
-    BK.empty!(Multiple(copy(x0), 0.01, 13))
-    # plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
+opts9 = ContinuationPar(opts9; maxSteps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
+br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
+BK.empty!(Multiple(copy(x0), 0.01, 13))
+# plot(br9, title = "$(length(br9))",marker=:d, vars=(:param, :x),plotfold=false)
+
 ## same but with failed prediction
 opts9_1 = ContinuationPar(opts9, dsmax = 0.2, maxSteps = 125, ds = 0.1)
     @set! opts9_1.newtonOptions.tol = 1e-14
@@ -238,7 +239,7 @@ x0 = newton(prob, opts.newtonOptions)
 x1 = newton((@set prob.params = -1.45), opts.newtonOptions)
 
 br0 = continuation(prob, PALC(), opts, verbosity=3)
-BK.getEigenelements(br0, br0.specialpoint[1])
+BK.get_eigenelements(br0, br0.specialpoint[1])
 BK.detectLoop(br0, x0.u, -1.45)
 
 @set! prob.params = -1.5
@@ -264,11 +265,10 @@ brdc = continuation(prob, alg,
     callbackN = BK.cbMaxNorm(1e3))
 
 # test that the saved points are true solutions
-norminf(x) = norm(x, Inf)
 for i in 1:length(brdc)
     brs = brdc[i]
     for j=1:length(brs.sol)
-        res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setParam(prob, brs.sol[j].p)) |> norminf
+        res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setparam(prob, brs.sol[j].p)) |> norminf
         @test res < brs.contparams.newtonOptions.tol
     end
 end

@@ -38,21 +38,21 @@ prob1 = BK.BifurcationProblem((x,p) -> Mf * x.^2, zeros(1), nothing)
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
 size(prob_col)
 length(prob_col)
-BK.getTimes(prob_col)
-BK.getMaxTimeStep(prob_col)
+BK.get_times(prob_col)
+BK.get_max_time_step(prob_col)
 size(prob_col.mesh_cache)
-BK.updateMesh!(prob_col, prob_col.mesh_cache.mesh)
-PeriodicOrbitOCollProblem(10, 2) |> BK.getMeshSize
-BK.getLs(prob_col)
+BK.update_mesh!(prob_col, prob_col.mesh_cache.mesh)
+PeriodicOrbitOCollProblem(10, 2) |> BK.get_mesh_size
+BK.get_Ls(prob_col)
 show(prob_col)
 
 _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
-_ci = BK.generateSolution(prob_col, _orbit, 1.)
-BK.getPeriodicOrbit(prob_col, _ci, par_sl)
-BK.getMaximum(prob_col, _ci, par_sl)
+_ci = BK.generate_solution(prob_col, _orbit, 1.)
+BK.get_periodic_orbit(prob_col, _ci, par_sl)
+BK.getmaximum(prob_col, _ci, par_sl)
 BK.∂(sin, 2)(0.)
 prob_col(_ci, par_sl) #|> scatter
-BK.getTimeSlices(prob_col, _ci)
+BK.get_time_slices(prob_col, _ci)
 # interpolate solution
 sol = BK.POSolution(prob_col, _ci)
 sol(rand())
@@ -63,8 +63,8 @@ sol(rand())
 #     heatmap(_J .!= 0, yflip = true)
 ####################################################################################################
 prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
-_ci = BK.generateSolution(prob_col, t -> cos(t) .* ones(1000), 2pi)
-BK.getTimes(prob_col)
+_ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
+BK.get_times(prob_col)
 sol = BK.POSolution(prob_col, _ci)
 sol(0.1)
 ####################################################################################################
@@ -74,12 +74,12 @@ sol(0.1)
     Ty = eltype(u)
     phase = zero(Ty)
 
-    uc = BK.getTimeSlices(pb, u)
-    vc = BK.getTimeSlices(pb, v)
+    uc = BK.get_time_slices(pb, u)
+    vc = BK.get_time_slices(pb, v)
 
     n, m, Ntst = size(pb)
 
-    T = getPeriod(pb, u, nothing)
+    T = BK.getperiod(pb, u, nothing)
 
     guj = zeros(Ty, n, m)
     uj  = zeros(Ty, n, m+1)
@@ -87,7 +87,7 @@ sol(0.1)
     gvj = zeros(Ty, n, m)
     vj  = zeros(Ty, n, m+1)
 
-    L, ∂L = BK.getLs(pb.mesh_cache)
+    L, ∂L = BK.get_Ls(pb.mesh_cache)
     ω = pb.mesh_cache.gauss_weight
 
     rg = UnitRange(1, m+1)
@@ -111,23 +111,23 @@ let
         # @info "Ntst" Ntst
         prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
 
-        _ci1 = BK.generateSolution(prob_col, t -> [1], 2pi)
-        _ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
+        _ci1 = BK.generate_solution(prob_col, t -> [1], 2pi)
+        _ci2 = BK.generate_solution(prob_col, t -> [t], 2pi)
         @test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
         # @info phaseCond(prob_col, _ci1, _ci2)/pi
 
-        _ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generateSolution(prob_col, t -> [sin(t)], 2pi)
+        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(prob_col, t -> [sin(t)], 2pi)
         @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-8
         # @info phaseCond(prob_col, _ci1, _ci2)/pi-1
 
-        _ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
+        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
         @test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
         # @info phaseCond(prob_col, _ci1, _ci2) / pi
 
-        _ci1 = BK.generateSolution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generateSolution(prob_col, t -> [t], 2pi)
+        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(prob_col, t -> [t], 2pi)
         @test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
         # @info phaseCond(prob_col, _ci1, _ci2) / pi
     end
@@ -135,14 +135,14 @@ end
 
 
 prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
-_ci1 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 1)
-_ci2 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 1)
-@test BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1), BK.getTimeSlices(prob_col, _ci2)) ≈ 0.5
+_ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
+_ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
+@test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2)) ≈ 0.5
 
 prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
-_ci1 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 3)
-_ci2 = BK.generateSolution(prob_col, t -> [cos(2pi*t)], 3)
-@test BK.∫(prob_col, BK.getTimeSlices(prob_col, _ci1), BK.getTimeSlices(prob_col, _ci2), 3) ≈ 3/2
+_ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
+_ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
+@test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2), 3) ≈ 3/2
 
 ####################################################################################################
 Ntst = 50
@@ -152,7 +152,7 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = 2, ϕ = z
 prob_col.ϕ[2] = 1 #phase condition
 
 _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
-_ci = BK.generateSolution(prob_col, _orbit, 2pi)
+_ci = BK.generate_solution(prob_col, _orbit, 2pi)
 @time prob_col(_ci, par_sl)
 @test prob_col(_ci, par_sl)[1:end-1] |> norminf < 1e-7
 
@@ -162,14 +162,14 @@ prob_coll_ip = @set prob_col.prob_vf = probsl_ip
 @time prob_coll_ip(_ci, par_sl)
 
 # test precision of generated solution
-_sol = getPeriodicOrbit(prob_col, _ci, nothing)
+_sol = BK.get_periodic_orbit(prob_col, _ci, nothing)
 for (i, t) in pairs(_sol.t)
     @test _sol.u[:, i] ≈ _orbit(t)
 end
 
 args = (
     plotSolution = (x,p; k...) -> begin
-        outt = getPeriodicOrbit(prob_col, x, p)
+        outt = get_periodic_orbit(prob_col, x, p)
         plot!(vec(outt.t), outt.u[1, :]; k...)
     end,
     finaliseSolution = (z, tau, step, contResult; k...) -> begin
@@ -188,8 +188,8 @@ sol_po = newton(prob_col2, _ci, optcontpo.newtonOptions)
 solc = BK.POSolution(prob_col2, sol_po.u)
 # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
 let
-    mesh = BK.getMesh(prob_col2)
-    solpo = getPeriodicOrbit(prob_col2, sol_po.u, nothing)
+    mesh = BK.getmesh(prob_col2)
+    solpo = get_periodic_orbit(prob_col2, sol_po.u, nothing)
     for (i, t) in pairs(solpo.t)
         @test solc(t) ≈ solpo.u[:, i]
     end

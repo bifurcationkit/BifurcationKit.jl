@@ -4,7 +4,7 @@ using BifurcationKit
 using LinearAlgebra, SparseArrays, DiffEqOperators, LinearMaps
 const BK = BifurcationKit
 
-# GLMakie.inline!(true)
+Makie.inline!(true)
 
 contour3dMakie(x; k...) = GLMakie.contour(x;  k...)
 contour3dMakie(x::AbstractVector; k...) = contour3dMakie(reshape(x,Nx,Ny,Nz); k...)
@@ -141,7 +141,7 @@ eigSH3d = SH3dEigMB(0.0, lu(L1))
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15, pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 0, nev = 15, nInversion = 4, plotEveryStep  = 1)
 
 br = @time continuation(
-    reMake(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+    re_make(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
     plot = true, verbosity = 1,
     normC = norminf,
     event = BK.FoldDetectEvent,

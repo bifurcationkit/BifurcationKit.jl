@@ -59,7 +59,7 @@ end
 sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol0.space, 2);
 par_af = (α = 3., β = 0.01)
-prob = BK.BifurcationProblem(F_chan, sol0, par_af, (@lens _.α); J = Jac_chan, plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
+prob = BifurcationProblem(F_chan, sol0, par_af, (@lens _.α); J = Jac_chan, plotSolution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
     sol = @time BK.newton(prob, optnew, normN = norminf)
@@ -85,7 +85,7 @@ solp = copy(sol.u)
 plot(sol.u);plot!(solp)
 
 outdef1 = @time BK.newton(
-    BK._remake(prob, u0 = solp), deflationOp, optdef)
+    BK.re_make(prob, u0 = solp), deflationOp, optdef)
     BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(deflationOp.roots)

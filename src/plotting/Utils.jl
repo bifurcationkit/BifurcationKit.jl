@@ -1,18 +1,18 @@
 using Setfield
 ####################################################################################################
-getLensSymbol(lens) = :p
-getLensSymbol(lens::Setfield.PropertyLens{F}) where F = F
-getLensSymbol(lens::Setfield.ComposedLens) = getLensSymbol(lens.inner)
-getLensSymbol(::Setfield.IdentityLens) = :p
-getLensSymbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
+get_lens_symbol(lens) = :p
+get_lens_symbol(lens::Setfield.PropertyLens{F}) where F = F
+get_lens_symbol(lens::Setfield.ComposedLens) = get_lens_symbol(lens.inner)
+get_lens_symbol(::Setfield.IdentityLens) = :p
+get_lens_symbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
 
-function getLensSymbol(lens1::Lens, lens2::Lens)
-    p1 = getLensSymbol(lens1)
-    p2 = getLensSymbol(lens2)
+function get_lens_symbol(lens1::Lens, lens2::Lens)
+    p1 = get_lens_symbol(lens1)
+    p2 = get_lens_symbol(lens2)
     out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
 end
 
-function getPlotVars(contres, vars)
+function get_plot_vars(contres, vars)
     if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}
         return vars
     else
@@ -48,7 +48,7 @@ const colorbif = Dict(:fold => :black,
                         :gpd => :darksalmon,
                         :user => :darkgoldenrod)
 
-function getColor(sp)
+function get_color(sp)
     if sp in keys(colorbif)
         return colorbif[sp]
     else
@@ -56,11 +56,11 @@ function getColor(sp)
     end
 end
 
-function getAxisLabels(ind1, ind2, br)
+function get_axis_labels(ind1, ind2, br)
     xguide = ""
     yguide = ""
     if ind1 == 1 || ind1 == :param
-        xguide = String(getLensSymbol(br))
+        xguide = String(get_lens_symbol(br))
     elseif ind1 isa Symbol
         xguide = String(ind1)
     end
@@ -71,7 +71,7 @@ function getAxisLabels(ind1, ind2, br)
 end
 
 ####################################################################################################
-function filterBifurcations(bifpt)
+function filter_bifurcations(bifpt)
     # this function filters Fold points and Branch points which are located at the same/previous/next point
     length(bifpt) == 0 && return bifpt
     res = [(type = :none, idx = 1, param = 1., printsol = bifpt[1].printsol, status = :guess)]

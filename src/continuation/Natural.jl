@@ -7,18 +7,18 @@ struct Natural <: AbstractContinuationAlgorithm
 end
 Natural() = Natural(false)
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internalAdaptation!(::Natural, ::Bool) = nothing
+internal_adaptation!(::Natural, ::Bool) = nothing
 
 function initialize!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::Natural, nrm = false)
     # we want to start at (u0, p0), not at (u1, p1)
     copyto!(state.z, state.z_old)
-    getPredictor!(state, iter, alg)
+    getpredictor!(state, iter, alg)
 end
 
 # this function mutates the predictor located in z_pred
-function getPredictor!(state::AbstractContinuationState,
+function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::Natural, nrm = false)
     copyto!(state.z_pred, state.z)
@@ -28,12 +28,12 @@ end
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::Natural; kwargs...)
-    sol = _newton(it.prob, state.z_pred.u, setParam(it, clampPredp(state.z_pred.p, it)), it.contParams.newtonOptions; normN = it.normC, callback = it.callbackN, kwargs...)
+    sol = _newton(it.prob, state.z_pred.u, setparam(it, clamp_predp(state.z_pred.p, it)), it.contparams.newtonOptions; normN = it.normC, callback = it.callbackN, kwargs...)
 
     # update solution
     copyto!(state.z.u, sol.u)
     state.z.p = state.z_pred.p
 
     # update fields
-    _updatefieldButNotSol!(state, sol)
+    _update_field_but_not_sol!(state, sol)
 end

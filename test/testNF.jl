@@ -16,11 +16,11 @@ br = continuation(prob, PALC(), opts_br; normC = norminf, verbosity = 0)
 ####################################################################################################
 # normal form computation
 bp = BK.getNormalForm(br, 1; verbose=false)
-@test BK.isTranscritical(bp) == true
+@test BK.istranscritical(bp) == true
 
 prob2 = @set prob.VF.J = (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x)
 bp = BK.getNormalForm(prob2, br, 1; verbose = false, autodiff = false)
-@test BK.isTranscritical(bp) == true
+@test BK.istranscritical(bp) == true
 show(bp)
 
 # normal form
@@ -64,7 +64,7 @@ bdiag = bifurcationdiagram(prob, PALC(tangent=Bordered()), 2,
 ####################################################################################################
 # Case of the pitchfork
 par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0)
-prob_pf = BK.reMake(prob, params = par_pf)
+prob_pf = BK.re_make(prob, params = par_pf)
 brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = norminf)
 
 bpp = BK.getNormalForm(brp, 1; verbose=true)
@@ -200,7 +200,7 @@ BK.nf(bp2d)
 @test abs(bp2d.nf.b2[1,2,3] - probD6.params.a)   < 1e-10
 
 # test the evaluation of the normal form
-x0 = rand(3); @test norm(FbpD6(x0, BK.setParam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
+x0 = rand(3); @test norm(FbpD6(x0, BK.setparam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
 br1 = BK.continuation(br, 1,
     setproperties(opts_br; nInversion = 4, dsmax = 0.005, ds = 0.001, maxSteps = 100, pMax = 1.); plot = false, verbosity = 0, normC = norminf, verbosedeflation = false)
@@ -363,7 +363,7 @@ hp_fromBT = continuation(sn_codim2, 1, opt;
 
 ########################################
 # update the BT point using newton and MA formulation
-solbt = BK.newtonBT(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newtonOptions, verbose = true), startWithEigen = true, jacobian_ma = :autodiff)
+solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newtonOptions, verbose = true), startWithEigen = true, jacobian_ma = :autodiff)
 @assert BK.converged(solbt)
 ####################################################################################################
 # test of the Bautin normal form

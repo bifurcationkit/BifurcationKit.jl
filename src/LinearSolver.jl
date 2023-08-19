@@ -157,17 +157,23 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Tl, Tr}
+function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1,
+                                               kwargs...) where {T, Tl, Tr}
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
         @assert ((a₀ == 0) && (a₁ == 1)) "Perturbed inplace linear problem not done yet!"
-        Jmap = LinearMap{T}((o, v) -> J(o, v), l.N, l.N ; ismutating = true)
+        @debug methods(J)
+        Jmap = LinearMap{T}((o, v) -> J(o, v), l.N, l.N; ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
-        Jmap = LinearMap{T}(J_map, length(rhs), length(rhs) ; ismutating = false)
+        Jmap = LinearMap{T}(J_map, length(rhs), length(rhs); ismutating = false)
     end
-    res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol, log = l.log, verbose = l.verbose, restart = l.restart, maxiter = l.maxiter, initially_zero = l.initially_zero, Pl = l.Pl, Pr = l.Pr, kwargs...)
-    (res[2].iters >= l.maxiter) && (@debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
+    res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol,
+                                 log = l.log, verbose = l.verbose, restart = l.restart,
+                                 maxiter = l.maxiter, initially_zero = l.initially_zero,
+                                 Pl = l.Pl, Pr = l.Pr, kwargs...)
+    (res[2].iters >= l.maxiter) &&
+        (@debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
     return res[1], length(res) > 1, res[2].iters
 end
 ####################################################################################################
@@ -214,17 +220,26 @@ end
 # the optional shift is only used for the Hopf Newton / Continuation
 function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Tl}
     if Tl == Nothing
-        res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
+        res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose,
+                                       krylovdim = l.dim, maxiter = l.maxiter,
+                                       atol = l.atol, issymmetric = l.issymmetric,
+                                       ishermitian = l.ishermitian, isposdef = l.isposdef,
+                                       kwargs...)
     else # use preconditioner
         # the preconditioner must be applied after the scaling
         function _linmap(dx)
             Jdx = apply(J, dx)
             # out = similar(dx)
             # ldiv!(out, l.Pl, Jdx)
-            out =  l.Pl \ Jdx
+            out = l.Pl \ Jdx
             axpby!(a₀, dx, a₁, out)
         end
-        res, info = KrylovKit.linsolve(_linmap, ldiv!(similar(rhs), l.Pl, copy(rhs)); rtol = l.rtol, verbosity = l.verbose, krylovdim = l.dim, maxiter = l.maxiter, atol = l.atol, issymmetric = l.issymmetric, ishermitian = l.ishermitian, isposdef = l.isposdef, kwargs...)
+        res, info = KrylovKit.linsolve(_linmap, ldiv!(similar(rhs), l.Pl, copy(rhs));
+                                       rtol = l.rtol, verbosity = l.verbose,
+                                       krylovdim = l.dim, maxiter = l.maxiter,
+                                       atol = l.atol, issymmetric = l.issymmetric,
+                                       ishermitian = l.ishermitian, isposdef = l.isposdef,
+                                       kwargs...)
     end
     info.converged == 0 && (@debug "KrylovKit.linsolve solver did not converge")
     return res, info.converged == 1, info.numops

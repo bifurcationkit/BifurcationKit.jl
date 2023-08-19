@@ -135,7 +135,7 @@ module BifurcationKit
             - `p` is the parameter
             - `i` is the index of the solution to be saved
             """
-            function saveToFile(iter::AbstractContinuationIterable, sol, p, i::Int64, br::ContResult)
+            function save_to_file(iter::AbstractContinuationIterable, sol, p, i::Int64, br::ContResult)
                 if iter.contParams.saveToFile == false; return nothing; end
                 filename = iter.filename
                 # this allows to save two branches forward/backward in case
@@ -161,7 +161,7 @@ module BifurcationKit
             end
 
             # final save of branch, in case bothsided = true is used
-            function saveToFile(iter::AbstractContinuationIterable, br::ContResult)
+            function save_to_file(iter::AbstractContinuationIterable, br::ContResult)
                 if iter.contParams.saveToFile == false; return nothing; end
                 filename = iter.filename
 
@@ -188,7 +188,7 @@ module BifurcationKit
             DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
     # Problems
-    export BifurcationProblem, BifFunction, getLens, getParams, reMake
+    export BifurcationProblem, BifFunction, getlens, getparams, re_make
 
     # bordered nonlinear problems
     export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
@@ -206,10 +206,10 @@ module BifurcationKit
     export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS
 
     # newton methods
-    export NewtonPar, newton, newtonDeflated, newtonPALC, newtonFold, newtonHopf, newtonBordered, NonLinearSolution
+    export NewtonPar, newton, newtonDeflated, newton_palc, newton_hopf, newtonBordered, NonLinearSolution
 
     # continuation methods
-    export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuationFold, continuationHopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals, getSolx, getSolp, bifurcation_points, SpecialPoint
+    export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuation_fold, continuation_hopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
 
     # events
     export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
@@ -218,7 +218,7 @@ module BifurcationKit
     export ContIterable, iterate, ContState, solution, getx, getp
 
     # codim2 Fold continuation
-    export FoldPoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug, foldPoint
+    export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug
 
     # codim2 Hopf continuation
     export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
@@ -230,7 +230,7 @@ module BifurcationKit
     export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
 
     # Periodic orbit computation
-    export generateSolution, getPeriod, getAmplitude, getMaximum, getPeriodicOrbit, sectionSS, sectionPS, guessFromHopf, generateCIProblem
+    export generate_solution, getperiod, getamplitude, getmaximum, get_periodic_orbit, sectionSS, sectionPS, guessFromHopf, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
     export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
