@@ -1,5 +1,7 @@
 env:
   # SECRET_CODECOV_TOKEN: "..."
+  BUILDKITE_PLUGIN_JULIA_VERSION: "{{matrix.version}}"
+  GROUP: "{{matrix.group}}"
 
 steps:
   - label: "Julia v1"
