@@ -21,11 +21,11 @@ z0 = [0.001137, 0.891483, 0.062345]
 
 prob = BifurcationProblem(COm!, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
-opts_br = ContinuationPar(pMin = 0.5, pMax = 2.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3, maxSteps = 20000)
+opts_br = ContinuationPar(dsmax = 0.05, pMin = 0.5, pMax = 2.0, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
 br = @time continuation(prob, PALC(), opts_br;
-	# plot = false, verbosity = 0,
-	normC = norminf,
-	bothside = true)
+    # plot = false, verbosity = 0,
+    normC = norminf,
+    bothside = true)
 show(br)
 
 plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))

@@ -78,11 +78,11 @@ dlagrange(i, x, z) = ForwardDiff.derivative(x -> lagrange(i, x, z), x)
 function getL(σs::AbstractVector)
     m = length(σs) - 1
     zs, = gausslegendre(m)
-    L = zeros(m, m + 1); ∂L = zeros(m, m + 1)
+    L = zeros(m + 1, m); ∂L = zeros(m + 1, m)
     for j in 1:m+1
         for i in 1:m
-             L[i, j] =  lagrange(j, zs[i], σs)
-            ∂L[i, j] = dlagrange(j, zs[i], σs)
+             L[j, i] =  lagrange(j, zs[i], σs)
+            ∂L[j, i] = dlagrange(j, zs[i], σs)
         end
     end
     return (;L, ∂L)
@@ -251,6 +251,11 @@ The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProb
 end
 
 @inline Base.eltype(pb::PeriodicOrbitOCollProblem) = eltype(pb.mesh_cache)
+"""
+    L, ∂L = get_Ls(pb)
+
+Return the collocation matrices for evaluation and derivation.
+"""
 get_Ls(pb::PeriodicOrbitOCollProblem) = get_Ls(pb.mesh_cache)
 
 @inline getparams(pb::PeriodicOrbitOCollProblem) = getparams(pb.prob_vf)
@@ -355,7 +360,7 @@ $(SIGNATURES)
 - uj  n x (m + 1)
 - vj  n x (m + 1)
 """
-@views function ∫(pb::PeriodicOrbitOCollProblem, uc, vc, T = one(eltype(uc)))
+@views function ∫(pb::PeriodicOrbitOCollProblem, uc::AbstractMatrix, vc::AbstractMatrix, T = one(eltype(uc)))
     Ty = eltype(uc)
     phase = zero(Ty)
 
@@ -374,14 +379,20 @@ $(SIGNATURES)
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg]
         vj .= vc[:, rg]
-        mul!(guj, uj, L')
-        mul!(gvj, vj, L')
+        mul!(guj, uj, L)
+        mul!(gvj, vj, L)
         @inbounds for l in 1:m
             phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
         end
         rg = rg .+ m
     end
     return phase * T
+end
+
+function ∫(pb::PeriodicOrbitOCollProblem, u::AbstractVector, v::AbstractVector, T = one(eltype(uc)))
+    uc = get_time_slices(pb, u)
+    vc = get_time_slices(pb, v)
+    ∫(pb, uc, vc, T)
 end
 
 """
@@ -392,7 +403,7 @@ $(SIGNATURES)
 - uj   n x (m + 1)
 - guj  n x m
 """
-@views function phase_condition(pb::PeriodicOrbitOCollProblem, (u, uc), (L, ∂L), period)
+@views function phase_condition(pb::PeriodicOrbitOCollProblem, uc, (L, ∂L), period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
 
@@ -411,8 +422,8 @@ $(SIGNATURES)
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg]
         vj .= vc[:, rg]
-        mul!(guj, uj, L')
-        mul!(gvj, vj, ∂L')
+        mul!(guj, uj, L)
+        mul!(gvj, vj, ∂L)
         @inbounds for l in 1:m
             phase += dot(guj[:, l], gvj[:, l]) * ω[l]
         end
@@ -434,22 +445,22 @@ end
     Ntst = pb.mesh_cache.Ntst
     # we want slices at fixed times, hence gj[:, j] is the fastest
     # temporaries to reduce allocations
-    # TODO VIRER CES TMP?
+    # TODO REMOVE THESE TEMPS?
     gj  = zeros(𝒯, n, m)
     ∂gj = zeros(𝒯, n, m)
     uj  = zeros(𝒯, n, m+1)
+    # out is of size (n, m⋅Ntst + 1)
 
     mesh = getmesh(pb)
     # range for locating time slices
     rg = UnitRange(1, m+1)
     for j in 1:Ntst
-        uj .= u[:, rg]
-        mul!(gj, uj, L')
-        mul!(∂gj, uj, ∂L')
+        uj .= u[:, rg]    # size (n, m+1)
+        mul!(gj, uj, L)   # size (n, m)
+        mul!(∂gj, uj, ∂L) # size (n, m)
         # compute the collocation residual
         for l in 1:m
-            # out[:, end] serves as buffer for now
-            # @info "" j l rg[l] gj[:, l] period*(mesh[j+1]-mesh[j])/2
+            # !!! out[:, end] serves as buffer for now !!!
             _POOCollScheme!(pb, out[:, rg[l]], ∂gj[:, l], gj[:, l], pars, period * (mesh[j+1]-mesh[j]) / 2, out[:, end])
         end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
@@ -471,9 +482,62 @@ end
     resultc = get_time_slices(prob, result)
     functional_coll!(prob, resultc, uc, T, get_Ls(prob.mesh_cache), pars)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt
-    result[end] = phase_condition(prob, (u, uc), get_Ls(prob.mesh_cache), T)
+    result[end] = phase_condition(prob, uc, get_Ls(prob.mesh_cache), T)
     return result
 end
+
+"""
+    Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula.
+"""
+@views function analytical_jacobian!(J, coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; _transpose::Bool = false, ρ = 1)
+    n, m, Ntst = size(coll)
+    L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
+    mesh = getmesh(coll)
+    period = getperiod(coll, u, nothing)
+    uc = get_time_slices(coll, u)
+    𝒯 = eltype(u)
+    gj = zeros(𝒯, n, m)
+    uj = zeros(𝒯, n, m+1)
+    In = I(n)
+    J0 = zeros(𝒯, n, n)
+
+    # put boundary condition
+    J[end-n:end-1, 1:n] .= -In
+    J[end-n:end-1, end-n:end-1] .= In
+
+    # loop over the mesh intervals
+    rg = UnitRange(1, m+1); rgNx = UnitRange(1, n); rgNy = UnitRange(1, n)
+    for j in 1:Ntst
+        uj .= uc[:, rg]
+        mul!(gj, uj, L) # gj ≈ (L * uj')'
+        α = period * (mesh[j+1]-mesh[j]) / 2
+        # put the jacobian of the vector field
+        for l in 1:m
+            if ~_transpose
+                J0 .= jacobian(coll.prob_vf, gj[:,l], pars)
+            else
+                J0 .= transpose(jacobian(coll.prob_vf, gj[:,l], pars))
+            end
+
+            for l2 in 1:m+1
+                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * ρ * L[l2, l]) .* J0 .+ (∂L[l2, l] .* In)
+            end
+            # add ∂_period
+            J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, gj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
+        end
+        rg = rg .+ m
+        rgNx = rgNx .+ (m * n)
+        rgNy = rgNy .+ (m * n)
+    end
+    # add phase condition
+    uc = get_time_slices(coll, u)
+    nuc = size(uc)
+
+    ForwardDiff.gradient!(J[end, 1:end-1], z -> phase_condition(coll, reshape(z, nuc...), (L, ∂L), period), vec(uc))
+    J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
+    return J
+end
+analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; k...) = analytical_jacobian!(zeros(eltype(u), length(coll)+1, length(coll)+1), coll, u, pars; k...)
 
 """
 $(SIGNATURES)
@@ -535,8 +599,9 @@ function getsolution(wrap::WrapPOColl, x)
 end
 ####################################################################################################
 const DocStrjacobianPOColl = """
-- `jacobian` Specify the choice of the linear algorithm, which must belong to `(:autodiffDense, )`. This is used to select a way of inverting the jacobian dG
-    - For `:autodiffDense`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
+- `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
+    - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
+    - For `AutoDiffDenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
 
 function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
@@ -546,9 +611,11 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
             kwargs...) where {T, Tf, vectype}
     jacobianPO = probPO.jacobian
     @assert jacobianPO in
-            (AutoDiffDense(), ) "This jacobian $jacobianPO is not defined. Please chose another one."
+            (AutoDiffDense(), AutoDiffDenseAnalytical(),) "This jacobian $jacobianPO is not defined. Please chose another one."
 
-    if jacobianPO isa AutoDiffDense
+    if jacobianPO isa AutoDiffDenseAnalytical
+        jac = (x, p) -> analytical_jacobian(probPO, x, p)
+    else
         jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
     end
 
@@ -600,9 +667,14 @@ newton(probPO::PeriodicOrbitOCollProblem,
 
 function build_jacobian(probPO::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
-    @assert jacobianPO in (AutoDiffDense(),) "This jacobian is not defined. Please chose another one."
-    _J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
-    jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)
+    @assert jacobianPO in (AutoDiffDense(), AutoDiffDenseAnalytical()) "This jacobian is not defined. Please chose another one."
+
+    if jacobianPO isa AutoDiffDenseAnalytical
+        jac = (x, p) -> FloquetWrapper(probPO, analytical_jacobian(probPO, x, p), x, p)
+    else
+        _J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
+        jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)
+    end
 end
 
 """
@@ -626,8 +698,7 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
                     eigsolver = FloquetColl(),
                     kwargs...)
 
-     jacPO = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
-
+    jacPO = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
     linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
     options = _contParams.newtonOptions
     contParams = @set _contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver)

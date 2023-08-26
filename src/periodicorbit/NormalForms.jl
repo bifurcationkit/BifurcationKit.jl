@@ -6,7 +6,7 @@ Compute the normal form of periodic orbits. Same arguments as the function `getN
 # Optional arguments
 - `prm = true` compute the normal form using Poincaré return map. For collocation, there will be another way to compute the normal form in the future.
 """
-function getNormalForm(prob::AbstractBifurcationProblem,
+function get_normal_form(prob::AbstractBifurcationProblem,
             br::ContResult{ <: PeriodicOrbitCont}, id_bif::Int ;
             nev = length(eigenvalsfrombif(br, id_bif)),
             verbose = false,
@@ -264,7 +264,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     if prm
         # newton parameter
         optn = br.contparams.newtonOptions
-        return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose = verbose, nev = nev, kwargs_nf...)
+        return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose, nev, kwargs_nf...)
     end
     # this other approach is not implemented yet
     # return period_doubling_normal_form(pbwrap, pd0; verbose = verbose, nev = nev, kwargs_nf...)
@@ -414,13 +414,13 @@ function neimark_sacker_normal_form(pbwrap,
 end
 
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
-                                ns0::NeimarkSacker,
-                                optn::NewtonPar;
-                                nev = 3,
-                                δ = 1e-7,
-                                verbose = false,
-                                lens = getlens(pbwrap),
-                                kwargs_nf...)
+                                    ns0::NeimarkSacker,
+                                    optn::NewtonPar;
+                                    nev = 3,
+                                    δ = 1e-7,
+                                    verbose = false,
+                                    lens = getlens(pbwrap),
+                                    kwargs_nf...)
     @debug "methode PRM"
     coll = pbwrap.prob
     N, m, Ntst = size(coll)

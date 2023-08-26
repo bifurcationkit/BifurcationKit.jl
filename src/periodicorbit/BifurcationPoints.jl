@@ -52,6 +52,7 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
         show(io, pd.nf)
     else
         if ~pd.prm
+            println("├─ ", get_lens_symbol(pd.nf.lens)," ≈ $(pd.nf.p).")
             println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅ξ²\n├\t∂ξ = c⋅ξ³\n└─ ", pd.nf.nf)
         else
             show(io, pd.nf)
@@ -117,11 +118,18 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
     println(io, "├─ Frequency θ ≈ ", abs(ns.ω))
     println(io, "├─ Period at the periodic orbit T ≈ ", abs(ns.T))
     println(io, "├─ Second frequency of the bifurcated torus ≈ ", abs(2pi/ns.ω))
-    println(io, "├─ Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+    if ns.prm
+        println(io, "├─ Normal form z -> z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+    else
+        println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅|ξ|²\n├\t∂ξ = iθ/T⋅ξ + d⋅ξ⋅|ξ|²")
+    end
     println(io, "└─ Periodic orbit problem: \n")
     show(io, ns.prob)
     if ~isnothing(ns.nf.nf)
-        println(io,"\n├─ a = ", ns.nf.nf.a)
-        println(io,"└─ b = ", ns.nf.nf.b)
+        if ns.prm
+            println(io,"\n- a = ", ns.nf.nf.a, "\n- b = ", ns.nf.nf.b)
+        else
+            println(io, ns.nf.nf)
+        end
     end
 end

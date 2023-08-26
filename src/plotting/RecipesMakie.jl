@@ -147,7 +147,7 @@ function plot(contres::AbstractBranchResult;
     plot!(ax1, contres; kP...)
 
     display(fig)
-    fig
+    fig, ax1
 end
 
 function plot(brs::AbstractBranchResult...; 
@@ -168,7 +168,7 @@ function plot(brs::AbstractBranchResult...;
     GLMakie.axislegend(ax1, merge = true, unique = true)
 
     display(fig)
-    fig
+    fig, ax1
 end
 
 ####################################################################################################

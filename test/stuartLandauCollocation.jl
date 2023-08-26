@@ -5,7 +5,6 @@ const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
-
 function Fsl!(f, u, p, t = 0)
     @unpack r, μ, ν, c3 = p
     u1 = u[1]
@@ -17,13 +16,11 @@ function Fsl!(f, u, p, t = 0)
     f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1)
     return f
 end
-
-Fsl(x, p) = Fsl!(similar(x), x, p, 0.)
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
 par_hopf = (@set par_sl.r = 0.1)
-probsl = BK.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
+probsl = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r))
 probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r), inplace = true)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
@@ -94,8 +91,8 @@ sol(0.1)
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg]
         vj .= vc[:, rg]
-        mul!(guj, uj, L')
-        mul!(gvj, vj, ∂L')
+        mul!(guj, uj, L)
+        mul!(gvj, vj, ∂L)
         @inbounds for l in 1:m
             # for mul!(gvj, vj, L')
             # phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2 * T
@@ -143,6 +140,8 @@ prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
 _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
 _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
 @test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2), 3) ≈ 3/2
+@test BK.∫(prob_col, _ci1, _ci2, 3) ≈ 3/2 # test vector form
+
 
 ####################################################################################################
 Ntst = 50
@@ -195,40 +194,80 @@ let
     end
 end
 
-# 3.855762 seconds (1.24 M allocations: 3.658 GiB, 12.54% gc time)
+# 0.90855762 seconds (1.24 M allocations: 3.658 GiB, 12.54% gc time)
 @set! prob_col2.updateSectionEveryStep = 1
 br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
     verbosity = 0, plot = false,
     args...,
     )
 ####################################################################################################
-# test  Hopf aBS
-let 
-    br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-        PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
-        δp = 0.1,
-        usedeflation = true,
-        eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
-        )
+# test analytical jacobian
+Ntst = 2
+m = 3
+N = 4
+nullvf(x,p) = zero(x)
+prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@lens _.r))
+prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+_ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+prob_col(_ci, par_sl);
+Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+D = BK.analytical_jacobian(prob_col, _ci, par_sl); # derivative matrix
+@test norminf(Jcofd - D) < 1e-15
 
-    br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-        PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1);
-        δp = 0.1,
-        usedeflation = true,
-        eigsolver = BK.FloquetColl(),
-        )
 
-    # we test that the 2 methods give the same floquet exponents
-    for i=1:length(br_po)-1
-        @info i
-        @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+# same but with linear vector field
+Ntst = 140
+m = 4
+N = 5
+const _al = I(N) + 0.1 .*rand(N,N)
+idvf(x,p) = _al*x
+prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _al)
+prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+_ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
+@test norminf(Jcofd - Jco) < 1e-15
+
+# same but with Stuart-Landau vector field
+N = 2
+Ntst = 20
+m = 4
+prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+_ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
+@test norminf(Jcofd - Jco) < 1e-15
+BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρ = 1.);
+####################################################################################################
+# test Hopf aBS
+let
+    for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
+        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1);
+            δp = 0.1,
+            usedeflation = true,
+            eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
+            )
+
+        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1);
+            δp = 0.1,
+            usedeflation = true,
+            eigsolver = BK.FloquetColl(),
+            )
+
+        # we test that the 2 methods give the same floquet exponents
+        for i=1:length(br_po)-1
+            @info i
+            @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+        end
+
+        # test mesh adaptation
+        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1, meshadapt = true);
+            δp = 0.1,
+            usedeflation = true,
+            eigsolver = BK.FloquetColl(),
+            )
     end
-
-    # test mesh adaptation
-    br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
-        PeriodicOrbitOCollProblem(20, 5; jacobian = BK.AutoDiffDense(), updateSectionEveryStep = 1, meshadapt = true);
-        δp = 0.1,
-        usedeflation = true,
-        eigsolver = BK.FloquetColl(),
-        )
 end

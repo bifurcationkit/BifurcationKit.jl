@@ -118,13 +118,13 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     jac = jacobian(br.prob, bifpt.x, par)
     J = jac.jacpb
     nj = size(J, 1)
-    J[end, :] .= rand(nj) #must be close to kernel
+    J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
     J[end, end] = 0
     # enforce PD boundary condition
     J[end-N:end-1, 1:N] .= I(N)
     rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) #≈ ker(J)
+    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 
     # perform continuation
@@ -164,7 +164,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     jac = jacobian(br.prob, bifpt.x, par)
     J = Complex.(copy(jac.jacpb))
     nj = size(J, 1)
-    J[end, :] .= rand(nj) #must be close to eigensapce
+    J[end, :] .= rand(nj) # must be close to eigensapce
     J[:, end] .= rand(nj)
     J[end, end] = 0
     # enforce NS boundary condition
@@ -172,7 +172,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     J[end-N:end-1, end-N:end-1] .= UniformScaling(exp(λₙₛ))(N)
 
     rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) #≈ ker(J)
+    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 
     # perform continuation

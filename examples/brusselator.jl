@@ -158,9 +158,7 @@ br_po = continuation(
     # arguments for branch switching
     br, 1,
     # arguments for continuation
-    opts_po_cont, 
-    # method for computing the periodic orbits
-    PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace);
+    opts_po_cont, probFD;
     ########
     linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
     ########

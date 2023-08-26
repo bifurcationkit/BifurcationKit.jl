@@ -197,7 +197,8 @@ br_po = continuation(
             # jacobian = BK.AutoDiffMF(),
             updateSectionEveryStep = 1);
     ampfactor = 1., δp = 0.005,
-    verbosity = 3,    plot = true,
+    verbosity = 3,
+    plot = true,
     linearAlgo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
     finaliseSolution = (z, tau, step, contResult; k...) -> begin
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)

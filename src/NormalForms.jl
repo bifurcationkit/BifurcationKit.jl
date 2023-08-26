@@ -435,7 +435,7 @@ which is a shortcut for `getNormalForm(getProb(br), br, ind_bif ; kwargs...)`.
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
 
 """
-function getNormalForm(prob::AbstractBifurcationProblem,
+function get_normal_form(prob::AbstractBifurcationProblem,
             br::ContResult, id_bif::Int ;
             nev = length(eigenvalsfrombif(br, id_bif)),
             verbose = false,
@@ -623,7 +623,7 @@ function getNormalForm(prob::AbstractBifurcationProblem,
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
-getNormalForm(br::ContResult, id_bif::Int; kwargs...) = getNormalForm(br.prob, br, id_bif; kwargs...)
+getNormalForm(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
 getNormalForm(br::Branch, id_bif::Int; kwargs...) = getNormalForm(getContResult(br), id_bif; kwargs...)
 
 """

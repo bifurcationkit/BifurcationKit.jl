@@ -59,7 +59,7 @@ args_po = (    recordFromSolution = (x, p) -> begin
 
 br_potrap = continuation(br, 4, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 250, jacobian = :Dense, updateSectionEveryStep = 0);
-    verbosity = 2, plot = true,
+    verbosity = 2, plot = false,
     args_po...,
     callbackN = BK.cbMaxNorm(10.),
     )
