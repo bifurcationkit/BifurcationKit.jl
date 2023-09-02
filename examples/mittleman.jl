@@ -1,6 +1,8 @@
 using Revise
 using DiffEqOperators, ForwardDiff
-using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
+using Plots
+# using GLMakie; Makie.inline!(true)
+using BifurcationKit, LinearAlgebra, SparseArrays, Parameters
 const BK = BifurcationKit
 
 normbratu(x) = norm(x .* w) / sqrt(length(x))
@@ -8,6 +10,7 @@ normbratu(x) = norm(x .* w) / sqrt(length(x))
 # plotting function
 plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)'; color = :viridis, xlabel = "x", ylabel = "y", kwargs...)
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
+# plotsol!(ax, x, nx = Nx, ny = Ny; ax1=nothing, kwargs...) = heatmap!(ax, LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)')
 
 function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
     hx = 2lx/Nx
@@ -75,14 +78,15 @@ Nx = 30
 
 prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@lens _.λ);
         J = JFmit,
-        recordFromSolution = (x, p) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
-        plotSolution = (x, p; k...) -> plotsol!(x ; k...),
+        record_from_solution = (x, p) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+        plot_solution = (x, p; k...) -> plotsol!(x ; k...),
+        # plot_solution = (ax, x, p; ax1 = nothing, k...) -> plotsol!(ax, x ; k...),
         issymmetric = true)
 ####################################################################################################
 eigls = EigArpack(20.5, :LM)
 # eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
-opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, max_iterations = 20)
 sol = newton(prob, opt_newton, normN = norminf)
 
 plotsol(sol.u)
@@ -108,34 +112,34 @@ end
 # optional parameters for continuation
 kwargsC = (verbosity = 3,
     plot = true,
-    callbackN = cb,
-    finaliseSolution = finSol,
+    callback_newton = cb,
+    finalise_solution = finSol,
     normC = norminf
     )
 
-opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, pMax = 3.5, pMin = 0.01, detectBifurcation = 3, nev = 50, plotEveryStep = 10, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 251, tolStability = 1e-6, nInversion = 6, maxBisectionSteps = 25)
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, p_max = 3.5, p_min = 0.01, detect_bifurcation = 3, nev = 50, plot_every_step = 10, newton_options = (@set opt_newton.verbose = false), max_steps = 251, tol_stability = 1e-6, n_inversion = 6, max_bisection_steps = 25)
 
 br = @time continuation(prob, PALC(), opts_br; kwargsC...)
 
-plot(br)
+BK.plot(br)
 ####################################################################################################
 # automatic branch switching
 br1 = continuation(br, 3; kwargsC...)
 
-plot(br, br1, plotfold=false)
+BK.plot(br, br1, plotfold=false)
 
 br2 = continuation(br1, 1; kwargsC...)
 
-plot(br, br1, br2, plotfold=false)
+BK.plot(br, br1, br2, plotfold=false)
 ####################################################################################################
 # bifurcation diagram
 function optionsCont(x,p,l; opt = opts_br)
     if l <= 1
         return opt
     elseif l==2
-        return setproperties(opt ;detectBifurcation = 3,ds = 0.001, a = 0.75)
+        return setproperties(opt ;detect_bifurcation = 3,ds = 0.001, a = 0.75)
     else
-        return setproperties(opt ;detectBifurcation = 3,ds = 0.00051, dsmax = 0.01)
+        return setproperties(opt ;detect_bifurcation = 3,ds = 0.00051, dsmax = 0.01)
     end
 end
 
@@ -145,7 +149,7 @@ diagram = @time bifurcationdiagram(prob, PALC(), 3, optionsCont; kwargsC...,
     verbosity = 0
     )
 
-bifurcationdiagram!(prob, getBranch(diagram, (2,1)), 5, optionsCont;
+bifurcationdiagram!(prob, get_branch(diagram, (2,1)), 5, optionsCont;
     kwargsC..., usedeflation = true, halfbranch = true,)
 
 code = ()
@@ -154,16 +158,16 @@ code = ()
     )
     # plot!(br)
     # xlims!(0.01, 0.4)
-    title!("#branches = $(size(getBranch(diagram, code)))")
+    title!("#branches = $(size(get_branch(diagram, code)))")
     # xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
-plot(getBranchesFromBP(diagram, 2); plotfold = false, legend = false, vars = (:param, :n2))
+plot(get_branches_from_BP(diagram, 2); plotfold = false, legend = false, vars = (:param, :n2))
 
-getBranch(diagram, (2,1)) |> plot
+get_branch(diagram, (2,1)) |> plot
 
 ####################################################################################################
 # analyse 2d bifurcation point
-bp2d = @time getNormalForm(br, 4, verbose = true, nev = 30)
+bp2d = @time get_normal_form(br, 4, verbose = true, nev = 30)
 
 BK.nf(bp2d)[2] |> println
 
@@ -201,10 +205,10 @@ plot(
     scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
 
 ####################################################################################################
-bp2d = @time getNormalForm(br, 2, nev = 30)
+bp2d = @time get_normal_form(br, 2, nev = 30)
 
 res = BK.continuation(br, 2,
-    setproperties(opts_br; detectBifurcation = 3, ds = 0.001, pMin = 0.01, maxSteps = 32 ) ;
+    setproperties(opts_br; detect_bifurcation = 3, ds = 0.001, p_min = 0.01, max_steps = 32 ) ;
     nev = 30, verbosity = 3,
     kwargsC...,
     )
@@ -216,15 +220,15 @@ plot(res..., br ;plotfold= false)
         success = [0]
 while sum(success) < 10
     pb = BK.BifurcationProblem((x, p) -> bp2d(Val(:reducedForm), x, p[1]), rand(2), [δp])
-    outdef1 = newton(pb, deflationOp, NewtonPar(maxIter = 50))
+    outdef1 = newton(pb, deflationOp, NewtonPar(max_iterations = 50))
     @show BK.converged(outdef1)
     BK.converged(outdef1) && push!(deflationOp, outdef1.u)
     (BK.converged(outdef1)==false) && push!(success, 1)
 end
-    println("--> found $(length(deflationOp)) solutions")
+println("--> found $(length(deflationOp)) solutions")
 
 plotsol(bp2d(deflationOp[3], δp))
-solbif = newton(prob, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2d.p + δp), opts_br.newtonOptions)[1]
+solbif = newton(prob, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2d.p + δp), opts_br.newton_options)[1]
 
 plotsol(solbif.u-0*bp2d(deflationOp[2], δp))
 
@@ -232,7 +236,7 @@ brnf1 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp
     plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
     plot = true, verbosity = 3, normC = norminf)
 
-branches2 = (br,br1,br2,brnf1)
+branches2 = Any[br,br1,br2,brnf1]
 push!(branches2, brnf1)
 # plot([br,br1,br2])
 # plot!(brnf1)
@@ -247,7 +251,7 @@ plot!(brnf2)
 ####################################################################################################
 # find isolated branch, see Farrell et al.
 deflationOp = DeflationOperator(2, 1.0, [sol0])
-optdef = setproperties(opt_newton; tol = 1e-8, maxIter = 150)
+optdef = setproperties(opt_newton; tol = 1e-8, max_iterations = 150)
 
 # eigen-elements close to the second bifurcation point on the branch
 # of homogeneous solutions
@@ -271,7 +275,7 @@ l = @layout grid(3,2)
 
 brdef1 = @time BK.continuation(
     re_make(prob, u0 = deflationOp[3], params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), PALC(),
-    setproperties(opts_br;ds = 0.001, detectBifurcation = 0, dsmax = 0.01, maxSteps = 500);
+    setproperties(opts_br;ds = 0.001, detect_bifurcation = 0, dsmax = 0.01, max_steps = 500);
     verbosity = 3, plot = true,
     normC = norminf)
 
@@ -280,7 +284,7 @@ plot(br,br1,br2,brdef1,plotfold=false)
 
 brdef2 = @time BK.continuation(
     re_make(brdef1.prob, u0 = deflationOp[5]), PALC(),
-    setproperties(opts_br;ds = -0.001, detectBifurcation = 0, dsmax = 0.02);
+    setproperties(opts_br;ds = -0.001, detect_bifurcation = 0, dsmax = 0.02);
     verbosity = 3, plot = true,
     recordFromSolution = (x, p) ->  normbratu(x),
     plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
@@ -291,11 +295,11 @@ plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)
 ####################################################################################################
 # deflated continuation
 deflationOp = DeflationOperator(2, 1., ([sol0]))
-algdc = BK.DefCont(deflationOperator = deflationOp, maxBranches = 150, perturbSolution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))))
+algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 150, perturb_solution = (x,p,id) -> (x .+ 0.1 .* rand(length(x))))
 
 brdef2 = @time BK.continuation(
     (@set prob.params.λ = 0.367), algdc,
-    ContinuationPar(opts_br; ds = -0.0001, maxSteps = 800000, plotEveryStep = 10, detectBifurcation = 0);
+    ContinuationPar(opts_br; ds = -0.0001, max_steps = 800000, plot_every_step = 10, detect_bifurcation = 0);
     plot=true, verbosity = 2,
     normN = norminf)
 

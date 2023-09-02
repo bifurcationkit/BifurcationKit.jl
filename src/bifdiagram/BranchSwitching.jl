@@ -11,7 +11,7 @@ function continuation(prob::AbstractBifurcationProblem,
                     alg, lens::Lens,
                     contParams::ContinuationPar;
                     kwargs...) where Tv
-    # update alg linear solver with contParams.newtonOptions.linsolver
+    # update alg linear solver with contParams.newton_options.linsolver
     alg = update(alg, contParams, nothing)
     # check the sign of ds
     dsfactor = sign(p1 - get(par0, lens))
@@ -42,17 +42,17 @@ Automatic branch switching at branch points based on a computation of the normal
 # Arguments
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br` from which you want to branch from
-- `optionsCont` options for the call to [`continuation`](@ref)
+- `options_cont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
-- `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
+- `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
-- `maxIterDeflation` number of newton steps in deflated newton
-- `perturn = identity` which perturbation function to use during deflated newton
+- `max_iter_deflation` number of newton steps in deflated newton
+- `perturb = identity` which perturbation function to use during deflated newton
 - `Teigvec = getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `scaleζ = norm` pass a norm to normalize vectors during normal form computation
 - `plotSolution` change plot solution method in the problem `br.prob`
@@ -61,18 +61,18 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, optionsCont::ContinuationPar = br.contparams ;
+function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, options_cont::ContinuationPar = br.contparams ;
         alg = br.alg,
         δp = nothing, ampfactor::Real = 1,
-        nev = optionsCont.nev,
+        nev = options_cont.nev,
         usedeflation::Bool = false,
         verbosedeflation::Bool = false,
-        maxIterDeflation::Int = min(50, 15optionsCont.newtonOptions.maxIter),
+        max_iter_deflation::Int = min(50, 15options_cont.newton_options.max_iterations),
         perturb = identity,
-        plotSolution = plot_solution(br.prob),
+        plot_solution = plot_solution(br.prob),
         Teigvec = getvectortype(br),
         scaleζ = norm,
-        tolFold = 1e-3,
+        tol_fold = 1e-3,
         kwargs...) where Tprob
     # The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
@@ -81,17 +81,17 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
     verbose && _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
     if kernel_dimension(br, ind_bif) > 1
-        return multicontinuation(br, ind_bif, optionsCont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, perturb = perturb, Teigvec = Teigvec, alg = alg, plotSolution = plotSolution, kwargs...)
+        return multicontinuation(br, ind_bif, options_cont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, perturb = perturb, Teigvec = Teigvec, alg = alg, plot_solution = plot_solution, kwargs...)
     end
 
     @assert br.specialpoint[ind_bif].type == :bp "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
 
     # compute predictor for point on new branch
-    ds = isnothing(δp) ? optionsCont.ds : δp
+    ds = isnothing(δp) ? options_cont.ds : δp
     Ty = typeof(ds)
 
     # compute the normal form of the bifurcation point
-    bp = get_normal_form1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tolFold = tolFold)
+    bp = get_normal_form1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tol_fold = tol_fold)
 
     # compute predictor for a point on new branch
     pred = predictor(bp, ds; verbose = verbose, ampfactor = Ty(ampfactor))
@@ -101,7 +101,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 
     if usedeflation
         verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
-        optn = optionsCont.newtonOptions
+        optn = options_cont.newton_options
         bifpt = br.specialpoint[ind_bif]
         # find the bifurcated branch using nonlinear deflation
         solbif = newton(br.prob, convert(Teigvec, pred.x0), pred.x1, setparam(br, pred.p), setproperties(optn; verbose = verbosedeflation); kwargs...)[1]
@@ -109,16 +109,16 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
     end
 
     # perform continuation
-    branch = continuation(re_make(br.prob, plotSolution = plotSolution),
+    branch = continuation(re_make(br.prob, plot_solution = plot_solution),
             bp.x0, bp.params, # first point on the branch
             pred.x1, pred.p,  # second point on the branch
             alg, getlens(br),
-            optionsCont; kwargs...)
+            options_cont; kwargs...)
     return Branch(branch, bp)
 end
 
 # same but for a Branch
-continuation(br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams ; kwargs...) = continuation(getContResult(br), ind_bif, optionsCont ; kwargs...)
+continuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams ; kwargs...) = continuation(getContResult(br), ind_bif, options_cont ; kwargs...)
 
 """
 $(SIGNATURES)
@@ -128,64 +128,64 @@ Automatic branch switching at branch points based on a computation of the normal
 # Arguments
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br` from which you want to branch from
-- `optionsCont` options for the call to [`continuation`](@ref)
+- `options_cont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
-- `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `optionsCont.ds`. This allows to use a step larger than `optionsCont.dsmax`.
+- `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `verbosedeflation = true` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
 - `scaleζ` norm used to normalize eigenbasis when computing the reduced equation
 - `Teigvec` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `ζs` basis of the kernel
-- `perturbGuess = identity` perturb the guess from the predictor just before the deflated-newton correction
+- `perturb_guess = identity` perturb the guess from the predictor just before the deflated-newton correction
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function multicontinuation(br::AbstractBranchResult, ind_bif::Int, optionsCont::ContinuationPar = br.contparams;
+function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams;
         δp = nothing,
         ampfactor::Real = getvectoreltype(br)(1),
-        nev::Int = optionsCont.nev,
+        nev::Int = options_cont.nev,
         Teigvec = getvectortype(br),
         ζs = nothing,
         verbosedeflation::Bool = false,
         scaleζ = norm,
-        perturbGuess = identity,
-        plotSolution = plot_solution(br.prob),
+        perturb_guess = identity,
+        plot_solution = plot_solution(br.prob),
         kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-    bpnf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, ζs = ζs, scaleζ = scaleζ)
+    bpnf = get_normal_form(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, ζs = ζs, scaleζ = scaleζ)
 
-    return multicontinuation(br, bpnf, optionsCont; Teigvec = Teigvec, δp = δp, ampfactor = ampfactor, verbosedeflation = verbosedeflation, plotSolution = plotSolution, kwargs...)
+    return multicontinuation(br, bpnf, options_cont; Teigvec = Teigvec, δp = δp, ampfactor = ampfactor, verbosedeflation = verbosedeflation, plot_solution = plot_solution, kwargs...)
 end
 
 # for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing
-multicontinuation(br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, optionsCont::ContinuationPar; kwargs...) = nothing
+multicontinuation(br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, options_cont::ContinuationPar; kwargs...) = nothing
 
 # general function for branching from Nd bifurcation points
 function multicontinuation(br::AbstractBranchResult,
                         bpnf::NdBranchPoint,
-                        optionsCont::ContinuationPar = br.contparams;
+                        options_cont::ContinuationPar = br.contparams;
                         δp = nothing,
                         ampfactor = getvectoreltype(br)(1),
                         perturb = identity,
-                        plotSolution = plot_solution(br.prob),
+                        plot_solution = plot_solution(br.prob),
                         kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
 
     # compute predictor for point on new branch
-    ds = abs(isnothing(δp) ? optionsCont.ds : δp)
+    ds = abs(isnothing(δp) ? options_cont.ds : δp)
 
     # get prediction from solving the reduced equation
     rootsNFm, rootsNFp = predictor(bpnf, ds;  verbose = verbose, perturb = perturb, ampfactor = ampfactor)
 
-    return multicontinuation(br, bpnf, (before = rootsNFm, after = rootsNFp), optionsCont; δp = δp, plotSolution = plotSolution, kwargs...)
+    return multicontinuation(br, bpnf, (before = rootsNFm, after = rootsNFp), options_cont; δp = δp, plot_solution = plot_solution, kwargs...)
 end
 
 """
@@ -195,35 +195,35 @@ Function to transform predictors `solfromRE` in the normal form coordinates of `
 """
 function getFirstPointsOnBranch(br::AbstractBranchResult,
         bpnf::NdBranchPoint, solfromRE,
-        optionsCont::ContinuationPar = br.contparams ;
+        options_cont::ContinuationPar = br.contparams ;
         δp = nothing,
         Teigvec = getvectortype(br),
         usedeflation = true,
         verbosedeflation = false,
-        maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+        max_iter_deflation = min(50, 15options_cont.newton_options.maxIter),
         lsdefop = DeflatedProblemCustomLS(),
-        perturbGuess = identity,
+        perturb_guess = identity,
         kwargs...)
     # compute predictor for point on new branch
-    ds = isnothing(δp) ? optionsCont.ds : δp |> abs
-    dscont = abs(optionsCont.ds)
+    ds = isnothing(δp) ? options_cont.ds : δp |> abs
+    dscont = abs(options_cont.ds)
 
     rootsNFm = solfromRE.before
     rootsNFp = solfromRE.after
 
     # attempting now to convert the guesses from the normal form into true zeros of F
-    optn = optionsCont.newtonOptions
+    optn = options_cont.newton_options
 
     # options for newton
-    cbnewton = get(kwargs, :callbackN, cbDefault)
+    cbnewton = get(kwargs, :callbackN, cb_default)
     normn = get(kwargs, :normN, norm)
 
     printstyled(color = :magenta, "──▶ Looking for solutions after the bifurcation point...\n")
     defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
-    optnDf = setproperties(optn; maxIter = maxIterDeflation, verbose = verbosedeflation)
+    optnDf = setproperties(optn; max_iterations = max_iter_deflation, verbose = verbosedeflation)
 
     for (ind, xsol) in pairs(rootsNFp)
-        probp = re_make(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
+        probp = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p + ds))
         if usedeflation
             solbif = newton(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -236,7 +236,7 @@ function getFirstPointsOnBranch(br::AbstractBranchResult,
     printstyled(color = :magenta, "──▶ Looking for solutions before the bifurcation point...\n")
     defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
     for (ind, xsol) in pairs(rootsNFm)
-        probm = re_make(br.prob; u0 = perturbGuess(bpnf(xsol, ds)),
+        probm = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p - ds))
         if usedeflation
             solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -252,23 +252,23 @@ end
 # In this function, I keep usedeflation although it is not used to simplify the calls
 function multicontinuation(br::AbstractBranchResult,
         bpnf::NdBranchPoint, solfromRE,
-        optionsCont::ContinuationPar = br.contparams ;
+        options_cont::ContinuationPar = br.contparams ;
         δp = nothing,
         Teigvec = getvectortype(br),
         verbosedeflation = false,
-        maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+        max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
         lsdefop = DeflatedProblemCustomLS(),
-        perturbGuess = identity,
+        perturb_guess = identity,
         kwargs...)
 
-    defOpm, defOpp, _, _ = getFirstPointsOnBranch(br, bpnf, solfromRE, optionsCont; δp = δp, verbosedeflation = verbosedeflation, maxIterDeflation = maxIterDeflation, lsdefop = lsdefop, perturbGuess = perturbGuess, kwargs...)
+    defOpm, defOpp, _, _ = getFirstPointsOnBranch(br, bpnf, solfromRE, options_cont; δp = δp, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, lsdefop = lsdefop, perturb_guess = perturb_guess, kwargs...)
 
     multicontinuation(br,
-            bpnf, defOpm, defOpp, optionsCont;
+            bpnf, defOpm, defOpp, options_cont;
             δp = δp,
             Teigvec = Teigvec,
             verbosedeflation = verbosedeflation,
-            maxIterDeflation = maxIterDeflation,
+            max_iter_deflation = max_iter_deflation,
             lsdefop = lsdefop,
             kwargs...)
 end
@@ -289,20 +289,20 @@ function multicontinuation(br::AbstractBranchResult,
         bpnf::NdBranchPoint,
         defOpm::DeflationOperator,
         defOpp::DeflationOperator,
-        optionsCont::ContinuationPar = br.contparams ;
+        options_cont::ContinuationPar = br.contparams ;
         alg = br.alg,
         δp = nothing,
         Teigvec = getvectortype(br),
         verbosedeflation = false,
-        maxIterDeflation = min(50, 15optionsCont.newtonOptions.maxIter),
+        max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
         lsdefop = DeflatedProblemCustomLS(),
-        plotSolution = plot_solution(br.prob),
+        plot_solution = plot_solution(br.prob),
         kwargs...)
 
-    ds = isnothing(δp) ? optionsCont.ds : δp |> abs
-    dscont = abs(optionsCont.ds)
+    ds = isnothing(δp) ? options_cont.ds : δp |> abs
+    dscont = abs(options_cont.ds)
     par = bpnf.params
-    prob = re_make(br.prob; plotSolution = plotSolution)
+    prob = re_make(br.prob; plot_solution = plot_solution)
 
     # compute the different branches
     function _continue(_sol, _dp, _ds)
@@ -312,7 +312,7 @@ function multicontinuation(br::AbstractBranchResult,
             bpnf.x0, par,       # first point on the branch
             _sol, bpnf.p + _dp, # second point on the branch
             empty(alg), getlens(br),
-            (@set optionsCont.ds = _ds); kwargs...)
+            (@set options_cont.ds = _ds); kwargs...)
     end
 
     branches = Branch[]
@@ -330,4 +330,4 @@ function multicontinuation(br::AbstractBranchResult,
 end
 
 # same but for a Branch
-multicontinuation(br::Branch, ind_bif::Int, optionsCont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(getContResult(br), ind_bif, optionsCont ; kwargs...)
+multicontinuation(br::Branch, ind_bif::Int, options_cont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(getContResult(br), ind_bif, options_cont ; kwargs...)

@@ -14,13 +14,13 @@ getinterval(a, b) = (min(a, b), max(a, b))
 norm2sqr(x) = dot(x, x)
 ####################################################################################################
 # display eigenvals with color
-function printEV(eigenvals, color = :black)
+function print_ev(eigenvals, color = :black)
     for r in eigenvals
         printstyled(color = color, r, "\n")
     end
 end
 ####################################################################################################
-function printNonlinearStep(step, residual, itlinear = 0, lastRow = false)
+function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
     if lastRow
         lastRow && println("└─────────────┴──────────────────────┴────────────────┘")
     else
@@ -29,34 +29,34 @@ function printNonlinearStep(step, residual, itlinear = 0, lastRow = false)
               println("│ Newton step         residual     linear iterations  │")
               println("├─────────────┬──────────────────────┬────────────────┤")
         end
-        _printLine(step, residual, itlinear)
+        _print_line(step, residual, itlinear)
     end
 end 
 
-@inline _printLine(step::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", step, residual, itlinear[1], itlinear[2])
+@inline _print_line(step::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", step, residual, itlinear[1], itlinear[2])
 
-@inline _printLine(step::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", step, residual, itlinear)
+@inline _print_line(step::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", step, residual, itlinear)
 
-@inline _printLine(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
+@inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
 
-@inline _printLine(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
+@inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
-function computeEigenvalues(it::ContIterable, state, u0, par, nev = it.contparams.nev; kwargs...)
-    return it.contparams.newtonOptions.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
+function compute_eigenvalues(it::ContIterable, state, u0, par, nev = it.contparams.nev; kwargs...)
+    return it.contparams.newton_options.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
 end
 
-function computeEigenvalues(iter::ContIterable, state::ContState; kwargs...)
+function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
     # we compute the eigen-elements
     n = state.n_unstable[2]
     nev_ = max(n + 5, iter.contparams.nev)
-    eiginfo = computeEigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
+    eiginfo = compute_eigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
     @unpack isstable, n_unstable, n_imag = is_stable(iter.contparams, eiginfo[1])
     return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
 # same as previous but we save the eigen-elements in state
-function computeEigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
-    eiginfo, _isstable, n_unstable, n_imag, cveig = computeEigenvalues(iter, state; kwargs...)
+function compute_eigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
+    eiginfo, _isstable, n_unstable, n_imag, cveig = compute_eigenvalues(iter, state; kwargs...)
     # we update the state
     update_stability!(state, n_unstable, n_imag, cveig)
     if isnothing(state.eigvals) == false
@@ -72,24 +72,24 @@ end
 
 ####################################################################################################
 """
-    finiteDifferences(F, x::AbstractVector; δ = 1e-9)
+    finite_differences(F, x::AbstractVector; δ = 1e-9)
 
 Compute a Jacobian by Finite Differences
 """
-function finiteDifferences(F, x::AbstractVector; δ = 1e-9)
+function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
     Nf = length(F(x))
     J = zeros(eltype(x), Nf, N)
-    finiteDifferences!(F, J, x; δ = δ)
+    finite_differences!(F, J, x; δ = δ)
     return J
 end
 
 """
-    finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
+    finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
 
 Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(x+δ)-f(x-δ))/2δ
 """
-function finiteDifferences!(F, J, x::AbstractVector; δ = 1e-9)
+function finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
     f = F(x)
     x1 = copy(x)
     @inbounds for i in eachindex(x)
@@ -105,7 +105,7 @@ end
 ####################################################################################################
 using BlockArrays, SparseArrays
 
-function blockToSparse(J::AbstractBlockArray)
+function block_to_sparse(J::AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
     res = J[Block(1,1)]
@@ -128,7 +128,7 @@ $(SIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
 """
-function getBlocks(A::SparseMatrixCSC, N, M)
+function get_blocks(A::SparseMatrixCSC, N, M)
     I,J,K = findnz(A)
     out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
     for k in eachindex(I)
@@ -144,7 +144,7 @@ $(SIGNATURES)
 
 This function implements a counter. If `everyN == 0`, it returns false. Otherwise, it returns `true` when `step` is a multiple of `everyN`
 """
-function modCounter(step, everyN)
+function mod_counter(step, everyN)
     if step == 0; return false; end
     if everyN == 0; return false; end
     if everyN == 1; return true; end
@@ -207,12 +207,12 @@ $(SIGNATURES)
 
 Function to detect continuation branches which loop on themselves.
 """
-function detectLoop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
+function detect_loop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
     verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detectLoop, rtol = $rtol\n")
     N = length(br)
     out = false
     for bp in br.specialpoint[1:end-1]
-        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ",norm(minus(bp.x, x), Inf),", norm(δp) = ",abs(bp.param - p)," \n")
+        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ", norm(minus(bp.x, x), Inf),", norm(δp) = ",abs(bp.param - p)," \n")
         if (norm(minus(bp.x, x), Inf) / norm(x, Inf) < rtol) && isapprox(bp.param , p ; rtol = rtol)
             out = true
             verbose && printstyled(color = :magenta, "    └─ Loop detected!, n = $N\n")
@@ -222,5 +222,5 @@ function detectLoop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
     verbose && printstyled(color = :magenta, "    └─ Loop detected = $out\n")
     return out
 end
-detectLoop(br::ContResult, u; rtol = 1e-3, verbose = true) = detectLoop(br, u.x, u.param; rtol = rtol, verbose = verbose)
-detectLoop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detectLoop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
+detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol = rtol, verbose = verbose)
+detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)

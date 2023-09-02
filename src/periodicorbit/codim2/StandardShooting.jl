@@ -144,13 +144,13 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
-    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
         return continuation_sh_fold(br, ind_bif, lens2, options_cont; kwargs... )
@@ -166,8 +166,8 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
@@ -183,14 +183,14 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probsh(z, p), x, dx1, dx2)
                 )
 
-    options_foldpo = @set options_cont.newtonOptions.linsolver = FloquetWrapperLS(options_cont.newtonOptions.linsolver)
+    options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
     br_fold_po = continuation_fold(probshFold,
         br, ind_bif, lens2,
         options_cont;
-        startWithEigen = startWithEigen,
-        detectCodim2Bifurcation = detectCodim2Bifurcation,
+        start_with_eigen = start_with_eigen,
+        # detect_codim2_bifurcation = detect_codim2_bifurcation, # not necessary
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
         kwargs...)
@@ -201,8 +201,8 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
         verbose = get(kwargs, :verbosity, 0) > 0
@@ -221,20 +221,20 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         # let us compute the eigenspace
         λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
         verbose && print("├─ computing nullspace of Periodic orbit problem...")
-        ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+        ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
         # we normalize it by the sup norm because it could be too small/big in L2 norm
         # TODO: user defined scaleζ
         ζ ./= norm(ζ, Inf)
         verbose && println(" Done!")
 
         # # compute the full eigenvector
-        # floquetsolver = br.contparams.newtonOptions.eigsolver
+        # floquetsolver = br.contparams.newton_options.eigsolver
         # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
         # ζs = reduce(vcat, ζ_a)
         # ζs_ad = copy(ζs)
 
         # compute the full eigenvector, version with bordered problem
-        ls = options_cont.newtonOptions.linsolver
+        ls = options_cont.newton_options.linsolver
         J = jacobian_period_doubling(pbwrap, bifpt.x, par_pd)
         rhs = zero(bifpt.x)[1:end-1]; rhs[end] = 1
         q, = ls(J, rhs); q ./= norm(q) #≈ ker(J)
@@ -258,8 +258,8 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
     bifpt = br.specialpoint[ind_bif]
@@ -290,9 +290,9 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     p = conj(q)
 
     ###########
-    # ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+    # ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # # compute the full eigenvector
-    # floquetsolver = br.contparams.newtonOptions.eigsolver
+    # floquetsolver = br.contparams.newton_options.eigsolver
     # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
     # ζs = reduce(vcat, ζ_a)
     # ζs_ad = copy(ζs)

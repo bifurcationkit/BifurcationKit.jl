@@ -17,7 +17,7 @@ The arguments are
 - `M` number of time slices in the periodic orbit guess
 - `amplitude`: amplitude of the periodic orbit guess
 """
-function guessFromHopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
+function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
     hopfpoint = HopfPoint(br, ind_hopf)
     specialpoint = br.specialpoint[ind_hopf]
 
@@ -51,13 +51,13 @@ end
 ####################################################################################################
 # functions to insert the problem into the user passed parameters
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
-    _finsol = get(kwargs, :finaliseSolution, nothing)
+    _finsol = get(kwargs, :finalise_solution, nothing)
     _finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
         begin
             # we first check that the continuation step was successful
             # if not, we do not update the problem with bad information
             success = converged(get(kF, :state, nothing))
-            if success && modCounter(step, updateSectionEveryStep) == 1
+            if success && mod_counter(step, updateSectionEveryStep) == 1
                 updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             return true
@@ -67,7 +67,7 @@ function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
             # we first check that the continuation step was successful
             # if not, we do not update the problem with bad information!
             success = converged(get(kF, :state, nothing))
-            if success && modCounter(step, updateSectionEveryStep) == 1
+            if success && mod_counter(step, updateSectionEveryStep) == 1
                 updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             return _finsol(z, tau, step, contResult; prob = prob, kF...)
@@ -77,7 +77,7 @@ end
 
 # version specific to collocation. Handles mesh adaptation
 function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
-    _finsol = get(kwargs, :finaliseSolution, nothing)
+    _finsol = get(kwargs, :finalise_solution, nothing)
     _finsol2 = (z, tau, step, contResult; kF...) ->
         begin
             # we first check that the continuation step was successful
@@ -88,7 +88,7 @@ function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSecti
                 oldsol = _copy(z)
                 oldmesh = get_times(prob) .* getperiod(prob, z.u, nothing)
                 adapt = compute_error!(prob, z.u;
-                        verbosity = prob.verboseMeshAdapt,
+                        verbosity = prob.verbose_mesh_adapt,
                         par = setparam(contResult, z.p),
                         K = prob.K)
                 if ~adapt.success
@@ -96,7 +96,7 @@ function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSecti
                 end
                 # @info norm(oldsol.u - z.u, Inf)
             end
-            if success && modCounter(step, updateSectionEveryStep) == 1
+            if success && mod_counter(step, updateSectionEveryStep) == 1
                 updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             if isnothing(_finsol)
@@ -109,8 +109,8 @@ function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSecti
 end
 
 function modify_po_record(probPO, kwargs, par, lens)
-    if :recordFromSolution in keys(kwargs)
-        _recordsol0 = get(kwargs, :recordFromSolution, nothing)
+    if ~isnothing(get(kwargs, :record_from_solution, nothing))
+        _recordsol0 = get(kwargs, :record_from_solution, nothing)
         @assert ~isnothing(_recordsol0) "Please open an issue on the website."
         return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
     else
@@ -129,12 +129,12 @@ function modify_po_record(probPO, kwargs, par, lens)
 end
 
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, kwargs)
-    _plotsol = get(kwargs, :plotSolution, nothing)
+    _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 end
 
 function modify_po_plot(::BK_Makie, probPO, kwargs)
-    _plotsol = get(kwargs, :plotSolution, nothing)
+    _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? (ax, x, p; k...) -> nothing : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
 end
 

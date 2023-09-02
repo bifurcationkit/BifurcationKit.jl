@@ -4,8 +4,8 @@ const BK = BifurcationKit
 ####################################################################################################
 BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))
-BK.printEV(rand(2))
-BK._printLine(1,nothing,1)
+BK.print_ev(rand(2))
+BK._print_line(1,nothing,1)
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
 z_pred = BorderedArray(rand(10), 1.0)
@@ -99,7 +99,7 @@ let
     rhs = rand(100)
     sol_explicit = (J0 + 0.2spdiagm(0 => vcat(ones(99),0))) \ rhs
 
-    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
+    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end]; shift = 0.2)
     @test sol_explicit[1:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
@@ -253,7 +253,7 @@ let
         @test sol_explicit[end] ≈ sol_bd3p
 
     # without the shift the first block is singular
-    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
+    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls...)
     @test sol_explicit[1:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
@@ -337,7 +337,7 @@ let
     @test sol_explicit[1:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p
 
-    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), checkPrecision=true)
+    linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
     @test sol_explicit[1:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p

@@ -46,7 +46,7 @@ function cusp_normal_form(_prob,
     nev = min(2N, nev)
 
     # Newton parameters
-    options = br.contparams.newtonOptions
+    options = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
@@ -75,7 +75,7 @@ function cusp_normal_form(_prob,
     _λ0, _ev0, _ = eigsolver(L, nev)
     Ivp = sortperm(_λ0, by = abs)
     _λ = _λ0[Ivp]
-    if norm(_λ[1:N] .- 0, Inf) > br.contparams.tolStability
+    if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
         @warn "We did not find the correct eigenvalues. We found the eigenvalues:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
         display(_λ[1:N] .- 0)
     end
@@ -491,7 +491,7 @@ function bogdanov_takens_normal_form(_prob,
     verbose && println("━"^53*"\n──▶ Bogdanov-Takens Normal form computation")
 
     # Newton parameters
-    optionsN = br.contparams.newtonOptions
+    optionsN = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
@@ -525,7 +525,7 @@ function bogdanov_takens_normal_form(_prob,
             Ivp = sortperm(_λ0, by = abs)
             _λ = _λ0[Ivp]
             verbose && (println("──▶ (λs, λs (recomputed)) = "); display(( _λ[1:N])))
-            if norm(_λ[1:N] .- 0, Inf) > br.contparams.tolStability
+            if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
                 display(_λ[1:N] .- 0)
             end
@@ -613,7 +613,7 @@ function bautin_normal_form(_prob,
     nev = max(N, nev)
 
     # newton parameters
-    optionsN = br.contparams.newtonOptions
+    optionsN = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
@@ -645,7 +645,7 @@ function bautin_normal_form(_prob,
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
         _ind = argmin(abs.(_λ .- λ))
         @info "The eigenvalue is $(_λ[_ind])"
-        abs(_λ[_ind] - λ) > 10br.contparams.newtonOptions.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+        abs(_λ[_ind] - λ) > 10br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
         ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
     else
         ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
@@ -919,7 +919,7 @@ function zero_hopf_normal_form(_prob,
     nev = max(N, nev)
 
     # Newton parameters
-    optionsN = br.contparams.newtonOptions
+    optionsN = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
@@ -947,7 +947,7 @@ function zero_hopf_normal_form(_prob,
         # null eigenvalue
         _ind0 = argmin(abs.(_λ))
         @info "The eigenvalue is $(_λ[_ind0])"
-        abs(_λ[_ind0]) > br.contparams.newtonOptions.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
+        abs(_λ[_ind0]) > br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
         q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
         # imaginary eigenvalue
         tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
@@ -1234,7 +1234,7 @@ function hopf_hopf_normal_form(_prob,
     nev = max(N, nev)
 
     # Newton parameters
-    optionsN = br.contparams.newtonOptions
+    optionsN = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]

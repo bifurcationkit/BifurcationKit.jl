@@ -90,23 +90,26 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l); 
         J = Jbru_sp, 
-        plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
+        #plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
         # plotSolution = (ax, x, p) -> plotsol(ax, x), 
-        recordFromSolution = (x, p) -> x[div(n,2)])
-
+        record_from_solution = (x, p) -> x[div(n,2)])
 # # parameters for an isola of stationary solutions
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
-# xspace = LinRange(0, par_bru.l, n)
-# sol0 = vcat(        par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
+#     xspace = LinRange(0, par_bru.l, n)
+#     sol0 = vcat(        par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
 #             par_bru.β/par_bru.α .- 0.5 .* sin.(pi*xspace/par_bru.l))
 
 # eigls = EigArpack(1.1, :LM)
-# opt_newton = BK.NewtonPar(eigsolver = eigls)
-# out = @time newton(re_make(prob, u0 = sol0), opt_newton, normN = norminf)
-# plot();plotsol(out.u);plotsol(sol0, label = "sol0",line=:dash)
+#     opt_newton = BK.NewtonPar(eigsolver = eigls)
+#     out, hist, flag = @time BK.newton(
+#         x ->    Fbru(x, par_bru),
+#         x -> Jbru_sp(x, par_bru),
+#         sol0, opt_newton, normN = norminf)
+#
+#     plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, pMax = 1.9, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = NewtonPar(eigsolver = eigls, tol = 1e-9), maxSteps = 1060, nInversion = 6, tolBisectionEigenvalue = 1e-20, maxBisectionSteps = 30)
+opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), max_steps = 1060, n_inversion = 6, tol_bisection_eigenvalue = 1e-20, max_bisection_steps = 30)
 
 br = @time continuation(
     prob, PALC(),
@@ -114,11 +117,11 @@ br = @time continuation(
     plot = true,
     normC = norminf)
 ####################################################################################################
-hopfpt = getNormalForm(br, 1; verbose = true)
+hopfpt = get_normal_form(br, 1; verbose = true)
 #################################################################################################### Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
 # hopfpt = BK.HopfPoint(br, ind_hopf)
-optnew = opts_br_eq.newtonOptions
+optnew = opts_br_eq.newton_options
 hopfpoint = @time newton(br, ind_hopf;
                 options = (@set optnew.verbose=true), 
                 normN = norminf);
@@ -127,7 +130,7 @@ BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at
 if 1==0
     br_hopf = @time continuation(
         br, ind_hopf, (@lens _.β),
-        ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 6.5, pMin = 0.0, newtonOptions = optnew);
+        ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, newton_options = optnew);
         jacobian_ma = :minaug,
         verbosity = 2, normC = norminf)
 
@@ -137,10 +140,10 @@ end
 if 1==1
     br_hopf = @time continuation(
         br, ind_hopf, (@lens _.β),
-        ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 10.5, pMin = 5.1, detectBifurcation = 0, newtonOptions = optnew);
-        updateMinAugEveryStep = 1,
-        startWithEigen = true,
-        detectCodim2Bifurcation = 2,
+        ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 10.5, p_min = 5.1, detect_bifurcation = 0, newton_options = optnew);
+        update_minaug_every_step = 1,
+        start_with_eigen = true,
+        detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
         plot = true,
         verbosity = 2, normC = norminf, bothside = true)
@@ -149,23 +152,24 @@ end
 plot(br_hopf)
 ####################################################################################################
 # automatic branch switching from Hopf point
-opt_po = NewtonPar(tol = 1e-10, verbose = true, maxIter = 15)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, pMax = 2.2, maxSteps = 200, newtonOptions = opt_po, saveSolEveryStep = 2,
-    plotEveryStep = 1, nev = 11, tolStability = 1e-6,
-    detectBifurcation = 3, dsminBisection = 1e-6, maxBisectionSteps = 15, nInversion = 4)
+opt_po = NewtonPar(tol = 1e-10, verbose = true, max_iterations = 15)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, p_max = 2.2, max_steps = 200, newton_options = opt_po, save_sol_every_step = 2,
+    plot_every_step = 1, nev = 11, tol_stability = 1e-6,
+    detect_bifurcation = 3, dsmin_bisection = 1e-6, max_bisection_steps = 15, n_inversion = 4)
 
+probFD = PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace)
 br_po = continuation(
     # arguments for branch switching
     br, 1,
     # arguments for continuation
     opts_po_cont, probFD;
     ########
-    linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+    linear_algo = BorderingBLS(solver = DefaultLS(), check_precision = false),
     ########
     δp = 0.01,
     verbosity = 3,
     plot = true,
-    finaliseSolution = (z, tau, step, contResult; k...) -> begin
+    finalise_solution = (z, tau, step, contResult; k...) -> begin
         @info "Floquet exponents:"
         (Base.display(contResult.eig[end].eigenvals) ;true)
         end,
@@ -179,14 +183,14 @@ br_po2 = BK.continuation(
     br_po, 1,
     # arguments for continuation
     opts_po_cont;
-    ampfactor = 1., δp = 0.01,
+    ampfactor = 1., δp = 0.001,
     usedeflation = true,
     verbosity = 3,
     plot = true,
     ########
-    linearAlgo = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+    linear_algo = BorderingBLS(solver = DefaultLS(), check_precision = false),
     ########
-    finaliseSolution = (z, tau, step, contResult; k...) ->
+    finalise_solution = (z, tau, step, contResult; k...) ->
         (Base.display(contResult.eig[end].eigenvals) ;true),
     # plotSolution = (x, p; kwargs...) -> begin
     #             heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)
@@ -198,7 +202,7 @@ branches = Any[br_po]
 
 push!(branches, br_po2)
 
-plot(branches...)
+BK.plot(branches...)
 ####################################################################################################
 using DifferentialEquations
 using Logging: global_logger

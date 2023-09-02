@@ -25,10 +25,10 @@ compute_eigenelements(::BifEvent) = true
 @inline length(eve::BifEvent) = eve.nb
 @inline has_custom_labels(::BifEvent) = true
 
-function detectBifurcationEVE(iter, state)
+function detect_bifurcation_event(iter, state)
     # Note that the computation of eigen-elements should have occurred before events are called
     # state should be thus up to date at this stage
-    @assert state.n_unstable[1] >=0 "Issue with `detectBifurcationEVE`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
+    @assert state.n_unstable[1] >=0 "Issue with `detect_bifurcation_event`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
     # put the max because n_unstable is initialized at -1 at the beginning of the continuation
     return max(0, state.n_unstable[1])
 end
@@ -38,7 +38,7 @@ end
 
 This event implements the detection of bifurcations points along a continuation curve. The detection is based on monitoring the number of unstable eigenvalues. More details are given at [Detection of bifurcation points of Equilibria](@ref).
 """
-BifDetectEvent = BifEvent(1, detectBifurcationEVE)
+BifDetectEvent = BifEvent(1, detect_bifurcation_event)
 
 function get_event_type(event::BifEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = :user) where T
     return get_bifurcation_type(iter, state, status, interval)

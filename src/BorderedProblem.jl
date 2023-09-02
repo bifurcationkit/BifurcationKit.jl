@@ -186,7 +186,7 @@
 # end
 # ####################################################################################################
 # # continuation function
-# function continuationBordered(pb, z0, p0::Real, contParams::ContinuationPar, linearAlgo::AbstractBorderedLinearSolver; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
+# function continuationBordered(pb, z0, p0::Real, contParams::ContinuationPar, linear_algo::AbstractBorderedLinearSolver; kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
 #     Jac   = p -> JacobianBorderedProblem(pb(p), z0)
 #     lsbpb = LinearSolverBorderedProblem(contParams.newtonOptions.linsolver)
 #     contParams2 = @set contParams.newtonOptions.linsolver = lsbpb
@@ -206,7 +206,7 @@
 # - `p0` initial parameter, must be a real number
 # - `contParams` same as for the regular `continuation` method
 # """
-# function continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; linearAlgo = BorderingBLS(), kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
-#     linearAlgo = @set linearAlgo.solver = contParams.newtonOptions.linsolver
-#     return continuationBordered(prob, z0, p0, contParams, linearAlgo; kwargs...)
+# function continuationBordered(prob, z0, p0::Real, contParams::ContinuationPar; linear_algo = BorderingBLS(), kwargs...) where {T, L <: AbstractBorderedLinearSolver, S}
+#     linear_algo = @set linear_algo.solver = contParams.newtonOptions.linsolver
+#     return continuationBordered(prob, z0, p0, contParams, linear_algo; kwargs...)
 # end

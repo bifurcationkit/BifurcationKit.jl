@@ -1,5 +1,5 @@
 function modify_po_2params_finalise(prob, kwargs, probMA)
-    updateSectionEveryStep = prob.updateSectionEveryStep
+    update_section_every_step = prob.update_section_every_step
     _finsol = get(kwargs, :finaliseSolution, nothing)
     if isnothing(_finsol)
         return (Z, tau, step, contResult; kF...) ->
@@ -8,7 +8,7 @@ function modify_po_2params_finalise(prob, kwargs, probMA)
                 # we first check that the continuation step was successful
                 # if not, we do not update the problem with bad information
                 success = converged(get(kF, :state, nothing)) && ~get(kF, :bisection, false)
-                if success && modCounter(step, updateSectionEveryStep) == 1
+                if success && mod_counter(step, update_section_every_step) == 1
                     updatesection!(prob, getvec(z, probMA), setparam(contResult, Z.p))
                 end
                 return true
@@ -19,7 +19,7 @@ function modify_po_2params_finalise(prob, kwargs, probMA)
                 # we first check that the continuation step was successful
                 # if not, we do not update the problem with bad information!
                 success = converged(get(kF, :state, nothing)) && ~get(kF, :bisection, false)
-                if success && modCounter(step, updateSectionEveryStep) == 1
+                if success && mod_counter(step, update_section_every_step) == 1
                     z = Z.u
                     updatesection!(prob, getvec(z, probMA), setparam(contResult, Z.p))
                 end
@@ -29,7 +29,7 @@ function modify_po_2params_finalise(prob, kwargs, probMA)
 end
 
 function modify_po_2params_finalise(prob::PeriodicOrbitOCollProblem, kwargs, probMA)
-    updateSectionEveryStep = prob.updateSectionEveryStep
+    update_section_every_step = prob.update_section_every_step
     _finsol = get(kwargs, :finaliseSolution, nothing)
     _finsol2 = (Z, tau, step, contResult; kF...) ->
         begin
@@ -49,7 +49,7 @@ function modify_po_2params_finalise(prob::PeriodicOrbitOCollProblem, kwargs, pro
                     return false
                 end
             end
-            if success && modCounter(step, updateSectionEveryStep) == 1
+            if success && mod_counter(step, update_section_every_step) == 1
                 updatesection!(prob, getvec(z, probMA), setparam(contResult, Z.p))
             end
             if isnothing(_finsol)

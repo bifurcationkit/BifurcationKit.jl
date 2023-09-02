@@ -35,12 +35,12 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     bdlinsolver = MatrixBLS(),
-                    detectCodim2Bifurcation::Int = 0,
+                    detect_codim2_bifurcation::Int = 0,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
-    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
         return continuation_coll_fold(br, ind_bif, lens2, options_cont; kwargs... )
@@ -58,8 +58,8 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     biftype = br.specialpoint[ind_bif].type
@@ -76,19 +76,19 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     probcoFold = BifurcationProblem((x, p) -> probco(x, p), bifpt, getparams(br), getlens(br);
                 J = (x, p) -> FloquetWrapper(probco, ForwardDiff.jacobian(z -> probco(z, p), x), x, p),
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probco(z, p), x, dx1, dx2),
-                plotSolution = plotsol
+                plot_solution = plotsol
                 )
 
-    options_foldpo = @set options_cont.newtonOptions.linsolver = FloquetWrapperLS(options_cont.newtonOptions.linsolver)
+    options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
     continuation_fold(probcoFold,
         br, ind_bif, lens2,
         options_foldpo;
-        startWithEigen = startWithEigen,
+        start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
-        detectCodim2Bifurcation = detectCodim2Bifurcation,
+        # detect_codim2_bifurcation = detect_codim2_bifurcation, # not necessary
         kwargs...
         )
 end
@@ -98,8 +98,8 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bifpt = br.specialpoint[ind_bif]
@@ -134,7 +134,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         p, q,
         options_cont;
         kwargs...,
-        detectCodim2Bifurcation = detectCodim2Bifurcation,
+        # detect_codim2_bifurcation = detect_codim2_bifurcation,
         kind = PDPeriodicOrbitCont(),
         )
 end
@@ -144,8 +144,8 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
-                    startWithEigen = false,
-                    detectCodim2Bifurcation::Int = 0,
+                    start_with_eigen = false,
+                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bifpt = br.specialpoint[ind_bif]
@@ -182,7 +182,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
         p, q,
         options_cont;
         kwargs...,
-        detectCodim2Bifurcation = detectCodim2Bifurcation,
+        # detect_codim2_bifurcation = detect_codim2_bifurcation,
         kind = NSPeriodicOrbitCont(),
         )
 end

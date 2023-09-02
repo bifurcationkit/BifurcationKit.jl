@@ -48,7 +48,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     verbose = false,
                     lens = getlens(br),
                     Teigvec = vectortype(br),
-                    tolFold = 1e-3,
+                    tol_fold = 1e-3,
                     scaleζ = norm,
                     autodiff = false)
     bifpt = br.specialpoint[ind_bif]
@@ -59,7 +59,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bifpt.param)
 
-    options = br.contparams.newtonOptions
+    options = br.contparams.newton_options
 
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(Teigvec, bifpt.x)
@@ -144,7 +144,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("└─── b3/6 = ", b3/6)
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01, wst), :NA)
-    if abs(a) < tolFold
+    if abs(a) < tol_fold
         return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
     else
         return Fold(bp...)
@@ -153,7 +153,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     return nothing
 end
 
-get_normal_form1d(br::Branch, ind_bif::Int; kwargs...) = get_normal_form1d(getContResult(br), ind_bif; kwargs...)
+get_normal_form1d(br::Branch, ind_bif::Int; kwargs...) = get_normal_form1d(get_contresult(br), ind_bif; kwargs...)
 
 get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(br.prob, br, ind_bif; kwargs...)
 """
@@ -428,24 +428,24 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 
 You can directly call 
 
-    getNormalForm(br, ind_bif ; kwargs...)
+    get_normal_form(br, ind_bif ; kwargs...)
 
-which is a shortcut for `getNormalForm(getProb(br), br, ind_bif ; kwargs...)`.
+which is a shortcut for `get_normal_form(getProb(br), br, ind_bif ; kwargs...)`.
 
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
 
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
-            br::ContResult, id_bif::Int ;
-            nev = length(eigenvalsfrombif(br, id_bif)),
-            verbose = false,
-            ζs = nothing,
-            lens = getlens(br),
-            Teigvec = getvectortype(br),
-            scaleζ = norm,
-            detailed = true,
-            autodiff = false,
-            bls = MatrixBLS())
+                        br::ContResult, id_bif::Int ;
+                        nev = length(eigenvalsfrombif(br, id_bif)),
+                        verbose = false,
+                        ζs = nothing,
+                        lens = getlens(br),
+                        Teigvec = getvectortype(br),
+                        scaleζ = norm,
+                        detailed = true,
+                        autodiff = false,
+                        bls = MatrixBLS())
     bifpt = br.specialpoint[id_bif]
 
     @assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
@@ -480,7 +480,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     verbose && println("━"^53*"\n──> Normal form Computation for a $N-d kernel")
     verbose && println("──> analyse bifurcation at p = ", bifpt.param)
 
-    options = br.contparams.newtonOptions
+    options = br.contparams.newton_options
     ls = options.linsolver
 
     # bifurcation point
@@ -623,8 +623,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
-getNormalForm(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
-getNormalForm(br::Branch, id_bif::Int; kwargs...) = getNormalForm(getContResult(br), id_bif; kwargs...)
+get_normal_form(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
+get_normal_form(br::Branch, id_bif::Int; kwargs...) = get_normal_form(get_contresult(br), id_bif; kwargs...)
 
 """
 $(SIGNATURES)
@@ -639,7 +639,7 @@ function predictor(bp::NdBranchPoint, δp::T;
         perturb = identity,
         J = nothing,
         normN = x -> norm(x, Inf),
-        optn = NewtonPar(maxIter = maxiter, verbose = verbose)) where T
+        optn = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -770,7 +770,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     @assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
 
-    options = br.contparams.newtonOptions
+    options = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_hopf]
@@ -997,7 +997,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
-    options = br.contparams.newtonOptions
+    options = br.contparams.newton_options
 
     # bifurcation point
     bifpt = br.specialpoint[ind_ns]

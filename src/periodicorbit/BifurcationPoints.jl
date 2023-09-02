@@ -123,13 +123,13 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
     else
         println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅|ξ|²\n├\t∂ξ = iθ/T⋅ξ + d⋅ξ⋅|ξ|²")
     end
-    println(io, "└─ Periodic orbit problem: \n")
-    show(io, ns.prob)
     if ~isnothing(ns.nf.nf)
         if ns.prm
-            println(io,"\n- a = ", ns.nf.nf.a, "\n- b = ", ns.nf.nf.b)
+            println(io,"├─── a = ", ns.nf.nf.a, "\n├─── b = ", ns.nf.nf.b)
         else
             println(io, ns.nf.nf)
         end
     end
+    println(io, "└─ Periodic orbit problem: \n")
+    show(io, ns.prob)
 end

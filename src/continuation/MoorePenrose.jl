@@ -60,7 +60,7 @@ function update(alg0::MoorePenrose, contParams::ContinuationPar, linearAlgo)
     alg = @set alg0.tangent = tgt
     if isnothing(linearAlgo)
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
-            return @set alg.ls.solver = contParams.newtonOptions.linsolver
+            return @set alg.ls.solver = contParams.newton_options.linsolver
         end
     else
         return @set alg.ls = linearAlgo
@@ -90,11 +90,11 @@ function corrector!(state::AbstractContinuationState,
                 it::AbstractContinuationIterable,
                 algo::MoorePenrose;
                 kwargs...)
-    if state.z_pred.p <= it.contparams.pMin || state.z_pred.p >= it.contparams.pMax
+    if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callbackN, kwargs...)
+    sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callback_newton, kwargs...)
 
     # update fields
     _update_field_but_not_sol!(state, sol)
@@ -125,8 +125,8 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     z_pred = state.z_pred
     ds = state.ds
 
-    @unpack tol, maxIter, verbose = contparams.newtonOptions
-    @unpack pMin, pMax = contparams
+    @unpack tol, max_iterations, verbose = contparams.newton_options
+    @unpack p_min, p_max = contparams
     linsolver = iter.alg.ls
 
     # initialise variables
@@ -150,7 +150,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     itlinear = 0
     itlineartot = 0
 
-    verbose && printNonlinearStep(step, res)
+    verbose && print_nonlinear_step(step, res)
     line_step = true
 
     compute = callback((;x, res_f, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
@@ -161,7 +161,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         rmul!(ϕ,  T(1) / norm(ϕ))
     end
 
-    while (step < maxIter) && (res > tol) && line_step && compute
+    while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
@@ -189,10 +189,10 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(T), one(T), one(T))
             minus!(x, du)
             p -= dup
-            verbose && printNonlinearStep(step, nothing, itlinear1)
+            verbose && print_nonlinear_step(step, nothing, itlinear1)
         end
 
-        p = clamp(p, pMin, pMax)
+        p = clamp(p, p_min, p_max)
         res_f .= residual(prob, x, set(par, paramlens, p))
         res = normN(res_f)
 
@@ -211,12 +211,12 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         end
         push!(residuals, res)
 
-        verbose && printNonlinearStep(step, res, itlinear)
+        verbose && print_nonlinear_step(step, res, itlinear)
 
         # break the while-loop?
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, p, residuals, z0); fromNewton = false, kwargs...)
     end
-    verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
+    verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
     flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
     return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end

@@ -33,7 +33,7 @@ u0 = [.001, .001]
 
 prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
 
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
+optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
 show(br)
 ####################################################################################################
@@ -97,7 +97,7 @@ res = _pb2(initpo, par_hopf, initpo)
 @test _pb2.flow.prob.p == _pb2.par
 
 # we test this using Newton - Continuation
-optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 20)
+optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 20)
 # deflationOp = BK.DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zeros(3)])
 outpo = newton(_pb, initpo, optn; normN = norminf)
 @test BK.converged(outpo)
@@ -108,7 +108,7 @@ BK.getamplitude(_pb, outpo.u, par_hopf)
 BK.getmaximum(_pb, outpo.u, par_hopf)
 BK.get_periodic_orbit(_pb, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, pMax = 4.0, maxSteps = 5, detectBifurcation = 2, nev = 2, newtonOptions = (@set optn.tol = 1e-7), tolStability = 1e-5)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, p_max = 4.0, max_steps = 5, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-7), tol_stability = 1e-5)
 br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
     opts_po_cont;
     # verbosity = 0, plot = false,
@@ -137,15 +137,15 @@ br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, usedeflati
 
 # test matrix-free computation of floquet coefficients
 eil = EigKrylovKit(dim = 2, x₀=rand(2))
-opts_po_contMF = @set opts_po_cont.newtonOptions.eigsolver = eil
-opts_po_contMF = @set opts_po_cont.detectBifurcation = 0
+opts_po_contMF = @set opts_po_cont.newton_options.eigsolver = eil
+opts_po_contMF = @set opts_po_cont.detect_bifurcation = 0
 br_pok2 = continuation(br,1, opts_po_contMF, _probsh; normC = norminf)
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.prob isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # case with 2 sections
-br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newtonOptions.verbose = false), ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf)
+br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = false), ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf)
 @test br_pok2_s2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2_s2.prob isa BK.WrapPOSh
 @test br_pok2_s2.period[1] ≈ 2pi rtol = 1e-7
@@ -202,14 +202,14 @@ initpo_bar = [0.4]
 probPsh(initpo_bar, par_hopf)
 
 # test of the analytical formula for jacobian of the functional
-_Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
+_Jad = BifurcationKit.finite_differences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-3
 
 @info "Test newton"
 ls = DefaultLS()
     eil = EigKrylovKit(dim = 1, x₀ = rand(1))
-    optn = NewtonPar(verbose = false, tol = 1e-8,  maxIter = 140, linsolver = ls, eigsolver = eil)
+    optn = NewtonPar(verbose = false, tol = 1e-8,  max_iterations = 140, linsolver = ls, eigsolver = eil)
     deflationOp = BK.DeflationOperator(2, dot, 1.0, [zero(initpo_bar)])
     outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
     @test BK.converged(outpo)
@@ -232,7 +232,7 @@ probPsh(outpo.u, par_hopf, outpo.u)
 # BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase
 
 @info "Test continuation"
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMax = 4.0, maxSteps = 5, newtonOptions = setproperties(optn; tol = 1e-7, eigsolver = eil), detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, p_max = 4.0, max_steps = 5, newton_options = setproperties(optn; tol = 1e-7, eigsolver = eil), detect_bifurcation = 0)
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
     opts_po_cont; verbosity = 0,
     plot = false, normC = norminf)
@@ -256,14 +256,14 @@ probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-
 probPsh2 = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0, lens = (@lens _.r), jacobian = BK.AutoDiffDenseAnalytical())
 
 # test of the analytical formula for jacobian of the functional
-_Jad = BifurcationKit.finiteDifferences( x-> probPsh(x, par_hopf), initpo_bar)
+_Jad = BifurcationKit.finite_differences( x-> probPsh(x, par_hopf), initpo_bar)
 # _Jphifd = BifurcationKit.finiteDifferences(x->probPsh.flow(x, par_hopf, Inf64), [0,0.4]; δ=1e-8)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
 ls = DefaultLS()
     eil = EigKrylovKit(dim = 1, x₀=rand(1))
-    optn = NewtonPar(verbose = false, tol = 1e-9,  maxIter = 140, linsolver = ls, eigsolver = eil)
+    optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 140, linsolver = ls, eigsolver = eil)
     deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
 
     outpo = newton(probPsh2, initpo_bar, optn; normN = norminf)
@@ -274,7 +274,7 @@ ls = DefaultLS()
 
 getperiod(probPsh, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 4.0, maxSteps = 5, newtonOptions = (@set optn.tol = 1e-9), detectBifurcation = 3, nev = 2)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max = 4.0, max_steps = 5, newton_options = (@set optn.tol = 1e-9), detect_bifurcation = 3, nev = 2)
     br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
         opts_po_cont; verbosity = 0,
         plot = false, normC = norminf)
@@ -311,7 +311,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, pMax = 
 #
 # getPeriod(probPsh, outpo.u, par_hopf)
 #
-# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, pMax = 4.0, maxSteps = 10, newtonOptions = setproperties(optn; tol = 1e-8), detectBifurcation = 3)
+# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.005, p_max = 4.0, max_steps = 10, newton_options = setproperties(optn; tol = 1e-8), detect_bifurcation = 3)
 #     br_hpsh = continuation(probPsh, outpo.u, PALC(),
 #         opts_po_cont; normC = norminf)
 #
@@ -326,9 +326,9 @@ br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingPro
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
-@set! opts_po_cont.newtonOptions.eigsolver.dim = 20
-@set! opts_po_cont.newtonOptions.eigsolver.x₀ = rand(2)
-br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, saveSolEveryStep = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
+@set! opts_po_cont.newton_options.eigsolver.dim = 20
+@set! opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
+br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
@@ -336,9 +336,9 @@ br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, saveSolEve
 # BK.MonodromyQaD(br_sh.functional, br.sol)
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
-@set! opts_po_cont.detectBifurcation = 0
-@set! opts_po_cont.newtonOptions.linsolver = ls
-@set! opts_po_cont.saveSolEveryStep = 1
+@set! opts_po_cont.detect_bifurcation = 0
+@set! opts_po_cont.newton_options.linsolver = ls
+@set! opts_po_cont.save_sol_every_step = 1
 
 for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDenseAnalytical(), BK.FiniteDifferences())
     @info M, jacobianPO
@@ -347,12 +347,12 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
     jacPO = jacobianPO isa BK.AutoDiffMF ? BK.FiniteDifferences() : jacobianPO
     _parallel = jacPO isa BK.MatrixFree ? false : false
 
-    local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2, linearAlgo = BorderingBLS(solver = (@set ls.N = M), checkPrecision = false), verbosity = 0)
+    local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO, update_section_every_step = 2); normC = norminf, linear_algo = BorderingBLS(solver = (@set ls.N = M), check_precision = false), verbosity = 0)
 
     local br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
-    ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO); normC = norminf, updateSectionEveryStep = 2,
-    linearAlgo = BorderingBLS(solver = (@set ls.N = 2M + 1), checkPrecision = false), verbosity = 0)
+    ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO, update_section_every_step = 2); normC = norminf,
+    linear_algo = BorderingBLS(solver = (@set ls.N = 2M + 1), check_precision = false), verbosity = 0)
 
     # test different versions of newton
-    newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newtonOptions)
+    newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newton_options)
 end

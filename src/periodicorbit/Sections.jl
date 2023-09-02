@@ -36,7 +36,7 @@ function (sect::SectionSS)(u, T::Ty, du, dT::Ty) where Ty
     return sect(u, one(Ty)) * dT + dot(du, sect.normal) * T
 end
 
-isEmpty(sect::SectionSS{Tn, Tc}) where {Tn, Tc} = (Tn == Nothing) || (Tn == Nothing)
+_isempty(sect::SectionSS{Tn, Tc}) where {Tn, Tc} = (Tn == Nothing) || (Tn == Nothing)
 
 # we update the field of Section, useful during continuation procedure for updating the section
 function update!(sect::SectionSS, normal, center)
@@ -48,7 +48,7 @@ end
 ####################################################################################################
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
-function sectionHyp!(out, x, normals, centers, radius)
+function _section_hyp!(out, x, normals, centers, radius)
     for ii in eachindex(normals)
         if norm(x-centers[ii]) < radius
             out[ii] = dot(normals[ii], x) - dot(normals[ii], centers[ii])
@@ -86,7 +86,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
         M = length(normals)
         indices = zeros(Int64, M)
         for ii in 1:M
-            indices[ii] = _selectIndex(normals[ii])
+            indices[ii] = _select_index(normals[ii])
         end
         nbar = [R(normals[ii], indices[ii]) for ii in 1:M]
         cbar = [R(centers[ii], indices[ii]) for ii in 1:M]
@@ -97,10 +97,10 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
     SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Float64}(M, nothing, nothing, Int64[], nothing, nothing, 100.)
 end
 
-(hyp::SectionPS)(out, u) = sectionHyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
-isEmpty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
+(hyp::SectionPS)(out, u) = _section_hyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
+_isempty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
-_selectIndex(v) = argmax(abs.(v))
+_select_index(v) = argmax(abs.(v))
 # ==================================================================================================
 function _duplicate!(x::AbstractVector)
     n = length(x)
@@ -125,7 +125,7 @@ function update!(hyp::SectionPS, normals, centers)
     for ii in 1:M
         hyp.normals[ii] .= normals[ii]
         hyp.centers[ii] .= centers[ii]
-        k = _selectIndex(normals[ii])
+        k = _select_index(normals[ii])
         hyp.indices[ii] = k
         R!(hyp.normals_bar[ii], normals[ii], k)
         R!(hyp.centers_bar[ii], centers[ii], k)

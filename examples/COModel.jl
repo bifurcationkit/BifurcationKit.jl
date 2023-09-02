@@ -1,7 +1,7 @@
 using Revise
 using Test, ForwardDiff, Parameters
-# using Plots
-using GLMakie; Makie.inline!(true)
+using Plots
+# using GLMakie; Makie.inline!(true)
 using BifurcationKit, Test
 const BK = BifurcationKit
 ####################################################################################################
@@ -19,9 +19,9 @@ par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-prob = BifurcationProblem(COm!, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
+prob = BifurcationProblem(COm!, z0, par_com, (@lens _.q2); record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
-opts_br = ContinuationPar(dsmax = 0.05, pMin = 0.5, pMax = 2.0, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 3)
+opts_br = ContinuationPar(dsmax = 0.05, p_min = 0.5, p_max = 2.0, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3)
 br = @time continuation(prob, PALC(), opts_br;
     # plot = false, verbosity = 0,
     normC = norminf,
@@ -34,18 +34,18 @@ plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
 @set! opts_br.newtonOptions.maxIter = 10
 opts_br = @set opts_br.newtonOptions.tol = 1e-12
 
-sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 
-hp = newton(br, 2; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true)
+hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
-hpnf = getNormalForm(br, 2)
+hpnf = get_normal_form(br, 2)
 
-sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 3.2, pMin = 0., detectBifurcation = 0, dsmin=1e-5, ds = -0.001, dsmax = 0.05, nInversion = 6, detectEvent = 2, detectFold = false) ; plot = true,
+sn_codim2 = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, dsmin=1e-5, ds = -0.001, dsmax = 0.05, n_inversion = 6, detect_event = 2, detect_fold = false) ; plot = true,
     verbosity = 3,
     normC = norminf,
-    updateMinAugEveryStep = 1,
-    startWithEigen = true,
-    # recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+    update_minaug_every_step = 1,
+    start_with_eigen = true,
+    # record_from_solution = (u,p; kw...) -> (x = u.u[1] ),
     bothside=true,
     bdlinsolver = MatrixBLS()
     )
@@ -60,13 +60,13 @@ BK.plot(sn_codim2)#, real.(sn_codim2.BT), ylims = (-1,1), xlims=(0,2))
 
 BK.plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
 
-hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@lens _.k), ContinuationPar(opts_br, pMin = 0., pMax = 2.8, detectBifurcation = 0, ds = -0.0001, dsmax = 0.08, dsmin = 1e-4, nInversion = 6, detectEvent = 2, detectLoop = true, maxSteps = 50, detectFold=false) ; plot = true,
+hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@lens _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, ds = -0.0001, dsmax = 0.08, dsmin = 1e-4, n_inversion = 6, detect_event = 2, detect_loop = true, max_steps = 50, detect_fold=false) ; plot = true,
     verbosity = 0,
     normC = norminf,
-    detectCodim2Bifurcation = 2,
-    updateMinAugEveryStep = 1,
-    startWithEigen = true,
-    # recordFromSolution = (u,p; kw...) -> (x = u.u[1] ),
+    detect_codim2_bifurcation = 2,
+    update_minaug_every_step = 1,
+    start_with_eigen = true,
+    # record_from_solution = (u,p; kw...) -> (x = u.u[1] ),
     bothside = true,
     bdlinsolver = MatrixBLS())
 

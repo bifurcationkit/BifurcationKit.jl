@@ -249,7 +249,7 @@ end
 
 RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
     if ~hasbranch(bd); return; end
-    _bd = getBranch(bd, code)
+    _bd = get_branch(bd, code)
     @series begin
         level --> level
         code --> ()

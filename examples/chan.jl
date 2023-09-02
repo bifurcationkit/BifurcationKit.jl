@@ -23,13 +23,13 @@ par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
 prob = BifurcationProblem(F_chan, sol0, par, (@lens _.α); 
-    plotSolution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
+    plot_solution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
 # ca fait dans les 63.59k Allocations
 sol = @time newton( prob, optnewton)
 
-optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.1, pMax = 4.25, nev = 5, detectFold = true, plotEveryStep = 10, newtonOptions = NewtonPar(maxIter = 10, tol = 1e-9, verbose = false), maxSteps = 150)
+optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.1, p_max = 4.25, nev = 5, detect_fold = true, plot_every_step = 10, newton_options = NewtonPar(max_iterations = 10, tol = 1e-9, verbose = false), max_steps = 150)
 
 alg = PALC(tangent = Bordered())
 br = @time continuation( prob, alg, optscont; plot = true, verbosity = 0)
@@ -40,7 +40,7 @@ br_mp = @time continuation( prob, MoorePenrose(tangent = alg), optscont; plot = 
 # Example with deflation technique
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
 
-optdef = setproperties(optnewton; tol = 1e-10, maxIter = 100)
+optdef = setproperties(optnewton; tol = 1e-10, max_iterations = 100)
 
 outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef)
 outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef, Val(:autodiff))
@@ -58,7 +58,7 @@ push!(deflationOp, outdef1.u)
 outdef2 = @time newton((@set prob.u0 = sol0), deflationOp, optdef; callback = BK.cbMaxNorm(1e5))
 plot!(outdef2.u, label="deflation-2")
 #################################################################################################### Continuation of the Fold Point using minimally augmented formulation
-optscont = (@set optscont.newtonOptions = setproperties(optscont.newtonOptions; verbose = true, tol = 1e-10))
+optscont = (@set optscont.newton_options = setproperties(optscont.newton_options; verbose = true, tol = 1e-10))
 
 #index of the fold point
 indfold = 2
@@ -66,11 +66,11 @@ indfold = 2
 outfold = @time newton(br, indfold)
 BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=false, tol = 1e-8), maxSteps = 1300, detectBifurcation = 0)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=false, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 foldbranch = @time continuation(br, indfold, (@lens _.β),
     plot = false, verbosity = 0,
     jacobian_ma = :minaug,
-    startWithEigen = true,
+    start_with_eigen = true,
     optcontfold)
 plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
@@ -79,9 +79,9 @@ d2F(x, p, u, v; b = 0.01) = p.α .* d2Nl.(x; b = b) .* u .* v
 prob2 = re_make(prob, d2F = d2F)
 
 outfold = @time newton((@set br.prob = prob2), indfold)
-    BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
+BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 4.1, pMin = 0., newtonOptions = NewtonPar(verbose=true, tol = 1e-8), maxSteps = 1300, detectBifurcation = 0)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=true, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 
 outfoldco = continuation((@set br.prob = prob2), indfold, (@lens _.β), optcontfold)
 ###################################################################################################
@@ -103,7 +103,7 @@ optnewton_mf = NewtonPar(tol = 1e-11, verbose = false, linsolver = ls)
 prob2 = @set prob.VF.J = (x, p) -> (dx -> dF_chan(x, dx, p))
 out_mf = @time newton(prob2, @set optnewton_mf.verbose = true)
 
-opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.01, pMax = 4.2, nev = 5, plotEveryStep = 40, newtonOptions = setproperties(optnewton_mf; maxIter = 70, tol = 1e-8), maxSteps = 150, detectBifurcation = 0)
+opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.01, p_max = 4.2, nev = 5, plot_every_step = 40, newton_options = setproperties(optnewton_mf; max_iterations = 70, tol = 1e-8), max_steps = 150, detect_bifurcation = 0)
 brmf = @time continuation(prob2, PALC(bls = MatrixFreeBLS(ls)), opts_cont_mf)
 
 plot(brmf)
@@ -119,12 +119,12 @@ out_mf = @time newton(prob2, @set optnewton_mf.verbose = true)
 plot(brmf, color=:red)
 
 # matrix free with different tangent predictor
-brmf = @time continuation(prob2, PALC(tangent = Bordered(), bls = BorderingBLS(lsp)), (@set opts_cont_mf.newtonOptions = optnewton_mf))
+brmf = @time continuation(prob2, PALC(tangent = Bordered(), bls = BorderingBLS(lsp)), (@set opts_cont_mf.newton_options = optnewton_mf))
 
 plot(brmf,color=:blue)
 
 alg = brmf.alg
-brmf = @time continuation(prob2, MoorePenrose(tangent = alg, directLS = false), (@set opts_cont_mf.newtonOptions = optnewton_mf))
+brmf = @time continuation(prob2, MoorePenrose(tangent = alg, directLS = false), (@set opts_cont_mf.newton_options = optnewton_mf))
 
 plot(brmf,color=:blue)
 

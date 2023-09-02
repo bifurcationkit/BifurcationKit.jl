@@ -72,8 +72,8 @@ end
 *(c::SHLinearOp, u) = apply(c, u, c.l1)
 \(c::SHLinearOp, u) = apply(c, u, c.l1, /)
 ####################################################################################################
-Nx = 2^10
-Ny = 2^10
+Nx = 2^9
+Ny = 2^9
 lx = 8pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
@@ -123,8 +123,8 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@lens _.l) ;
     J =  J_shfft,
-    plotSolution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
-    recordFromSolution = (x, p) -> norm(x))
+    plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
+    record_from_solution = (x, p) -> norm(x))
 
 opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 sol_hexa = @time newton(prob, opt_new, normN = norminf)
@@ -134,27 +134,27 @@ plotsol(sol_hexa.u)
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 
-opt_new = @set opt_new.maxIter = 250
+opt_new = @set opt_new.max_iterations = 250
 outdef = @time newton(re_make(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
             deflationOp, opt_new, normN = x -> maximum(abs, x))
 println("--> norm(sol) = ", norm(outdef.u))
 plotsol(outdef.u) |> display
 BK.converged(outdef) && push!(deflationOp, outdef.u)
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, pMax = 0.005, pMin = -1.0, plotEveryStep = 10, newtonOptions = setproperties(opt_new; tol = 1e-6, maxIter = 15), maxSteps = 88,
-    detectBifurcation = 3,
-    tolStability = 1e-5,
-    saveEigenvectors = false,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, p_max = 0.005, p_min = -1.0, plot_every_step = 10, newton_options = setproperties(opt_new; tol = 1e-6, max_iterations = 15), max_steps = 88,
+    detect_bifurcation = 0,
+    tol_stability = 1e-5,
+    save_eigenvectors = false,
     nev = 11 )
 
 prob = re_make(prob, u0 = deflationOp[1])
 
 br = @time continuation(prob, 
-                        PALC(bls = BorderingBLS(solver = L, checkPrecision = false)), 
+                        PALC(bls = BorderingBLS(solver = L, check_precision = false)), 
                         opts_cont;
                         plot = true, verbosity = 3, normC = norminf,
                         )
 ####################################################################################################
 # computation of normal form
 # we collect the matrix-free derivatives
-nf = getNormalForm(br, 2)
+nf = get_normal_form(br, 2)

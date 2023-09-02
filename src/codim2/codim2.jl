@@ -86,12 +86,12 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     end
 end
 
-function detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
-    if detectCodim2Bifurcation > 0
-    if get(kwargs, :updateMinAugEveryStep, 0) == 0
-        @error "You asked for detection of codim 2 bifurcations but passed the option `updateMinAugEveryStep = 0`. The bifurcation detection algorithm may not work faithfully. Please use `updateMinAugEveryStep > 0`."
+function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
+    if detect_codim2_bifurcation > 0
+    if get(kwargs, :update_minaug_every_step, 0) == 0
+        @error "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`. The bifurcation detection algorithm may not work faithfully. Please use `update_minaug_every_step > 0`."
     end
-    return setproperties(options_cont; detectBifurcation = 0, detectEvent = detectCodim2Bifurcation, detectFold = false)
+    return setproperties(options_cont; detect_bifurcation = 0, detect_event = detect_codim2_bifurcation, detect_fold = false)
     else
     return options_cont
     end
@@ -121,46 +121,46 @@ end
 """
 $(SIGNATURES)
 
-This function turns an initial guess for a Fold/Hopf point into a solution to the Fold/Hopf problem based on a Minimally Augmented formulation.
+This function turns an initial guess for a Fold / Hopf point into a solution to the Fold / Hopf problem based on a Minimally Augmented formulation.
 
 ## Arguments
 - `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
 
 # Optional arguments:
-- `options::NewtonPar`, default value `br.contparams.newtonOptions`
+- `options::NewtonPar`, default value `br.contparams.newton_options`
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
+- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
-!!! tip "startWithEigen"
-    It is recommended that you use the option `startWithEigen=true`
+!!! tip "start_with_eigen"
+    It is recommended that you use the option `start_with_eigen=true`
 """
 function newton(br::AbstractBranchResult,
         ind_bif::Int64; normN = norm,
-        options = br.contparams.newtonOptions,
-        startWithEigen = false,
+        options = br.contparams.newton_options,
+        start_with_eigen = false,
         lens2::Lens = (@lens _),
         kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
-    return newton_hopf(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_hopf(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
-    return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     else
-    return newton_fold(br, ind_bif; normN = normN, options = options, startWithEigen = startWithEigen, kwargs...)
+    return newton_fold(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     end
 end
 ################################################################################
 """
 $(SIGNATURES)
 
-Codimension 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold/Hopf point into a curve of Fold/Hopf points based on a Minimally Augmented formulation. The arguments are as follows
+Codimension 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold / Hopf point into a curve of Fold / Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `br` results returned after a call to [continuation](@ref Library-Continuation)
 - `ind_bif` bifurcation index in `br`
 - `lens2` second parameter used for the continuation, the first one is the one used to compute `br`, e.g. `getlens(br)`
@@ -168,9 +168,9 @@ Codimension 2 continuation of Fold / Hopf points. This function turns an initial
 
 # Optional arguments:
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
-- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements
-- `detectCodim2Bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.
+- `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
+- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements
+- `detect_codim2_bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.
 - `kwargs` keywords arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
@@ -178,30 +178,30 @@ where the parameters are as above except that you have to pass the branch `br` f
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
-!!! tip "startWithEigen"
-    It is recommended that you use the option `startWithEigen = true`
+!!! tip "start_with_eigen"
+    It is recommended that you use the option `start_with_eigen = true`
 """
 function continuation(br::AbstractBranchResult,
             ind_bif::Int64,
             lens2::Lens,
             options_cont::ContinuationPar = br.contparams ;
-            startWithEigen = false,
-            detectCodim2Bifurcation::Int = 0,
+            start_with_eigen = false,
+            detect_codim2_bifurcation::Int = 0,
             kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     # options to detect codim2 bifurcations
-    computeEigenElements = options_cont.detectBifurcation > 0
-    _options_cont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    compute_eigen_elements = options_cont.detect_bifurcation > 0
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
     return continuation_hopf(br.prob, br, ind_bif, lens2, _options_cont;
-        startWithEigen = startWithEigen,
-        computeEigenElements = computeEigenElements,
+        start_with_eigen = start_with_eigen,
+        compute_eigen_elements = compute_eigen_elements,
         kwargs...)
     else
     return continuation_fold(br.prob, br, ind_bif, lens2, _options_cont;
-        startWithEigen = startWithEigen,
-        computeEigenElements = computeEigenElements,
+        start_with_eigen = start_with_eigen,
+        compute_eigen_elements = compute_eigen_elements,
         kwargs...)
     end
 end
@@ -212,10 +212,10 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         alg = br.alg,
         δp = nothing, ampfactor::Real = 1,
         nev = options_cont.nev,
-        detectCodim2Bifurcation::Int = 0,
+        detect_codim2_bifurcation::Int = 0,
         Teigvec = getvectortype(br),
         scaleζ = norm,
-        startWithEigen = false,
+        start_with_eigen = false,
         autodiff = false,
         detailed = true,
         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
@@ -225,7 +225,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
     bif_type = br.specialpoint[ind_bif].type
-    @assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf is allowed (for now)"
+    @assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf is allowed (for now)."
 
     if bif_type == :hh
         @assert Tkind <: HopfCont
@@ -236,14 +236,14 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     prob_vf = prob_ma.prob_vf
 
     # continuation parameters
-    computeEigenElements = options_cont.detectBifurcation > 0
-    optionsCont = detect_codim2_parameters(detectCodim2Bifurcation, options_cont; kwargs...)
+    compute_eigen_elements = options_cont.detect_bifurcation > 0
+    optionsCont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     # scalar type
     Ty = eltype(Teigvec)
 
     # compute the normal form of the bifurcation point
-    nf = getNormalForm(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed, bls = bdlinsolver)
+    nf = get_normal_form(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed, bls = bdlinsolver)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? optionsCont.ds : δp
@@ -266,9 +266,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         ζstar = pred.EigenVecAd(ds)
 
         # put back original options
-        @set! optionsCont.newtonOptions.eigsolver =
-                getsolver(optionsCont.newtonOptions.eigsolver)
-        @set! optionsCont.newtonOptions.linsolver = prob_ma.linsolver
+        @set! optionsCont.newton_options.eigsolver =
+                getsolver(optionsCont.newton_options.eigsolver)
+        @set! optionsCont.newton_options.linsolver = prob_ma.linsolver
 
         branch = continuation_hopf(prob_vf, alg,
             hopfpt, params,
@@ -276,8 +276,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             ζ, ζstar,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
-            startWithEigen = startWithEigen,
-            computeEigenElements = computeEigenElements,
+            compute_eigen_elements = compute_eigen_elements,
             kwargs...
             )
         return Branch(branch, nf)
@@ -300,11 +299,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         ζstar = pred.EigenVecAd(ds) |> real
 
         # put back original options
-        @set! optionsCont.newtonOptions.eigsolver =
-                getsolver(optionsCont.newtonOptions.eigsolver)
-        @set! optionsCont.newtonOptions.linsolver = prob_ma.linsolver
-        # @set! optionsCont.detectBifurcation = 0
-        # @set! optionsCont.detectEvent = 0
+        @set! optionsCont.newton_options.eigsolver =
+                getsolver(optionsCont.newton_options.eigsolver)
+        @set! optionsCont.newton_options.linsolver = prob_ma.linsolver
 
         branch = continuation_fold(prob_vf, alg,
             foldpt, params,
@@ -312,8 +309,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             ζstar, ζ,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
-            startWithEigen = startWithEigen,
-            computeEigenElements = computeEigenElements,
+            compute_eigen_elements = compute_eigen_elements,
             kwargs...
             )
         return Branch(branch, nf)

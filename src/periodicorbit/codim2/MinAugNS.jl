@@ -14,7 +14,7 @@ end
 function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     if _transpose == false
         @assert 1==0
-        return jacobian_neimark_sackerMatrixFree(pb, x, par, ω, dx)
+        return jacobian_adjoint_neimark_sacker_matrix_free(pb, x, par, ω, dx)
     else
         # if matrix-free:
         if has_adjoint(pb)
@@ -216,18 +216,19 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
-                updateMinAugEveryStep = 0,
+                update_minaug_every_step = 0,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
-                computeEigenElements = false,
+                compute_eigen_elements = false,
                 kind = NSCont(),
                 usehessian = true,
+                plot_solution = BifurcationKit.plot_solution(prob),
                 kwargs...) where {𝒯b, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
     # options for the Newton Solver inheritated from the ones the user provided
-    options_newton = options_cont.newtonOptions
+    options_newton = options_cont.newton_options
 
     𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
             prob,
@@ -243,19 +244,19 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # Jacobian for the NS problem
     if jacobian_ma == :autodiff
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plot_solution(prob), prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+        prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_ns_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferences
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plot_solution(prob), prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferencesMF
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution(prob), prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution(prob), prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newtonOptions.linsolver = NSLinearSolverMinAug()
+        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
 
     # this functions allows to tackle the case where the two parameters have the same name
@@ -275,14 +276,14 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (modCounter(step, 1) && success)
+        if (mod_counter(step, 1) && success)
             resFin = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
             if ~resFin
                 return false
             end
         end
 
-        if ~modCounter(step, updateMinAugEveryStep)
+        if ~mod_counter(step, update_minaug_every_step)
             return true
         end
         @debug "Update a / b dans NS"
@@ -352,29 +353,29 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐍𝐒), p; kw...))..., zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., ωₙₛ = getp(u, 𝐍𝐒)[2], CH = 𝐍𝐒.l1, )
 
     # eigen solver
-    eigsolver = HopfEig(getsolver(opt_ns_cont.newtonOptions.eigsolver), prob_ns)
+    eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
-    prob_ns = re_make(prob_ns, recordFromSolution = _printsol2)
+    prob_ns = re_make(prob_ns, record_from_solution = _printsol2)
 
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
-        event = ContinuousEvent(1, test_ch, computeEigenElements, ("ch",), 0)
+        event = ContinuousEvent(1, test_ch, compute_eigen_elements, ("ch",), 0)
     else
-        event = PairOfEvents(ContinuousEvent(1, test_ch, computeEigenElements, ("ch",), 0), event_user)
+        event = PairOfEvents(ContinuousEvent(1, test_ch, compute_eigen_elements, ("ch",), 0), event_user)
     end
 
     # solve the NS equations
     br_ns_po = continuation(
         prob_ns, alg,
-        (@set opt_ns_cont.newtonOptions.eigsolver = eigsolver);
-        linearAlgo = BorderingBLS(solver = opt_ns_cont.newtonOptions.linsolver, checkPrecision = false),
+        (@set opt_ns_cont.newton_options.eigsolver = eigsolver);
+        linear_algo = BorderingBLS(solver = opt_ns_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
         kind = kind,
         event = event,
         normC = normC,
-        finaliseSolution = update_min_aug_ns,
+        finalise_solution = update_min_aug_ns,
         )
     correct_bifurcation(br_ns_po)
 end

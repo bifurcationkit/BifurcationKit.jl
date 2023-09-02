@@ -190,7 +190,7 @@ pbsp(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
 
 # test for inplace
 Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
-Jan2 = copy(Jan); _indx = BK.getBlocks(Jan2, pbsp.N, pbsp.M)
+Jan2 = copy(Jan); _indx = BK.get_blocks(Jan2, pbsp.N, pbsp.M)
 pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
 @test norm(Jan2 - Jan, Inf) < 1e-6
 
@@ -224,7 +224,7 @@ pbsp_mass(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
 
 # test for inplace
 Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
-Jan2 = copy(Jan); _indx = BK.getBlocks(Jan2, pbsp_mass.N, pbsp_mass.M)
+Jan2 = copy(Jan); _indx = BK.get_blocks(Jan2, pbsp_mass.N, pbsp_mass.M)
 pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
 @test norm(Jan2 - Jan, Inf) < 1e-6
 
@@ -260,13 +260,13 @@ pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the full matrix
-_indx = BK.getBlocks(Jpo, 2n, M)
+_indx = BK.get_blocks(Jpo, 2n, M)
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the cyclic matrix
 Jpo = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
-_indx = BK.getBlocks(Jpo, 2n, M-1)
+_indx = BK.get_blocks(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
 pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0
@@ -280,13 +280,13 @@ pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the full matrix
-_indx = BK.getBlocks(Jpo, 2n, M)
+_indx = BK.get_blocks(Jpo, 2n, M)
 pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the cyclic matrix
 Jpo = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
-_indx = BK.getBlocks(Jpo, 2n, M-1)
+_indx = BK.get_blocks(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
 pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0

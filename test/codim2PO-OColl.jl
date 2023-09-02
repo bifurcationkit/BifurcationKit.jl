@@ -19,10 +19,10 @@ par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
-opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4, maxSteps = 20000)
-@set! opts_br.newtonOptions.verbose = false
+opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
+@set! opts_br.newton_options.verbose = false
 
 ################################################################################
 using OrdinaryDiffEq
@@ -33,27 +33,27 @@ sol = solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
 sol = solve(prob_de, Rodas5())
 ################################################################################
-argspo = (recordFromSolution = (x, p) -> begin
+argspo = (record_from_solution = (x, p) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), prob, sol, 2.)
 
 solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
 
 _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 
-opts_po_cont = setproperties(opts_br, maxSteps = 40, saveEigenvectors = true, tolStability = 1e-8)
-@set! opts_po_cont.newtonOptions.verbose = false
+opts_po_cont = setproperties(opts_br, max_steps = 40, save_eigenvectors = true, tol_stability = 1e-8)
+@set! opts_po_cont.newton_options.verbose = false
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 0, plot = false,
     argspo...
     )
-# pt = getNormalForm(brpo_fold, 1)
+# pt = get_normal_form(brpo_fold, 1)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -61,34 +61,34 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     argspo...
     )
 
-pt = getNormalForm(brpo_pd, 1)
+pt = get_normal_form(brpo_pd, 1)
 # test PD normal form computation using Iooss method
-pt = getNormalForm(brpo_pd, 1, prm = false)
+pt = get_normal_form(brpo_pd, 1, prm = false)
 
 # codim 2 Fold
-opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 3, pMin = 0., pMax=1.2, nInversion = 4)
-@set! opts_pocoll_fold.newtonOptions.tol = 1e-12
+opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
+@set! opts_pocoll_fold.newton_options.tol = 1e-12
 fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
         verbosity = 0, plot = false,
-        detectCodim2Bifurcation = 0,
-        startWithEigen = false,
+        detect_codim2_bifurcation = 0,
+        start_with_eigen = false,
         bothside = true,
         jacobian_ma = :minaug,
-        bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+        bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 3, pMin = -1., dsmax = 1e-2, ds = 1e-3)
-@set! opts_pocoll_pd.newtonOptions.tol = 1e-9
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 3, p_min = -1., dsmax = 1e-2, ds = 1e-3)
+@set! opts_pocoll_pd.newton_options.tol = 1e-9
 pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
         verbosity = 0, plot = false,
-        detectCodim2Bifurcation = 1,
-        startWithEigen = false,
+        detect_codim2_bifurcation = 1,
+        start_with_eigen = false,
         usehessian = false,
         jacobian_ma = :minaug,
         normC = norminf,
-        callbackN = BK.cbMaxNorm(10),
+        callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         )
 
@@ -100,17 +100,17 @@ par_pop2 = @set par_pop.b0 = 0.4
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; updateSectionEveryStep = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
-brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 20, ds = -0.001);
+brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
     argspo...,
     )
 
 # compute NS normal form using Poincare return map     
-getNormalForm(brpo_ns, 1)
+get_normal_form(brpo_ns, 1)
 # compute NS normal form using Iooss method
-getNormalForm(brpo_ns, 1; prm = false)
+get_normal_form(brpo_ns, 1; prm = false)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -118,31 +118,31 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     argspo...,
     bothside = true,
     )
-getNormalForm(brpo_pd, 2)
+get_normal_form(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 1.e-2, dsmax = 1e-2, ds = 1e-3)
-@set! opts_pocoll_pd.newtonOptions.tol = 1e-10
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 2, p_min = 1.e-2, dsmax = 1e-2, ds = 1e-3)
+@set! opts_pocoll_pd.newton_options.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         verbosity = 0, plot = false,
-        detectCodim2Bifurcation = 1,
-        startWithEigen = false,
+        detect_codim2_bifurcation = 1,
+        start_with_eigen = false,
         usehessian = false,
         jacobian_ma = :minaug,
-        normN = norminf,
-        callbackN = BK.cbMaxNorm(1),
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(1),
         bothside = true,
         )
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detectBifurcation = 3, maxSteps = 2, pMin = 0., dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 2, p_min = 0., dsmax = 1e-2, ds = 1e-3)
 ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
         verbosity = 0, plot = false,
-        detectCodim2Bifurcation = 1,
-        startWithEigen = false,
+        detect_codim2_bifurcation = 1,
+        start_with_eigen = false,
         usehessian = false,
         jacobian_ma = :minaug,
-        normN = norminf,
-        callbackN = BK.cbMaxNorm(10),
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         )
 
@@ -158,7 +158,7 @@ _param = BK.setparam(pd_po_coll2, _p1)
 _param = set(_param, (@lens _.ϵ), _p2)
 
 # _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
-_Jpdad = BK.finiteDifferences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+_Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jpdad)
 _duu = rand(length(_x.u))
@@ -179,7 +179,7 @@ _param = BK.setparam(ns_po_coll, _p1[1])
 _param = set(_param, (@lens _.ϵ), _p2)
 
 # _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
-_Jnsad = BK.finiteDifferences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+_Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jnsad)
 _dp = rand()

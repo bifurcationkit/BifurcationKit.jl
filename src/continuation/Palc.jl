@@ -87,13 +87,13 @@ function Base.empty!(alg::PALC)
     alg
 end
 
-function update(alg::PALC, contParams::ContinuationPar, linearAlgo)
-    if isnothing(linearAlgo)
+function update(alg::PALC, contParams::ContinuationPar, linear_algo)
+    if isnothing(linear_algo)
         if isnothing(alg.bls.solver)
-            return @set alg.bls.solver = contParams.newtonOptions.linsolver
+            return @set alg.bls.solver = contParams.newton_options.linsolver
         end
     else
-        return @set alg.bls = linearAlgo
+        return @set alg.bls = linear_algo
     end
     alg
 end
@@ -139,11 +139,11 @@ function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
                     kwargs...)
-    if state.z_pred.p <= it.contparams.pMin || state.z_pred.p >= it.contparams.pMax
+    if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newton_palc(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callbackN, kwargs...)
+    sol = newton_palc(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callback_newton, kwargs...)
 
     # update fields
     _update_field_but_not_sol!(state, sol)
@@ -163,7 +163,7 @@ end
 struct Secant <: AbstractTangentComputation end
 
 # This function is used for initialisation in iterateFromTwoPoints
-function _secantComputation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIterable, ds, θ, verbosity, dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
+function _secant_computation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIterable, ds, θ, verbosity, dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
     copyto!(τ, z₁)
@@ -177,7 +177,7 @@ internal_adaptation!(::Secant, ::Bool) = nothing
 gettangent!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable,
             algo::Secant,
-            dotθ) = _secantComputation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
+            dotθ) = _secant_computation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
 ###############################################
 """
     Bordered Tangent predictor
@@ -380,7 +380,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState,
                     dotθ = getdot(iter);
                     normN = norm,
-                    callback = cbDefault,
+                    callback = cb_default,
                     kwargs...)
     prob = iter.prob
     par = getparams(prob)
@@ -394,8 +394,8 @@ function newton_palc(iter::AbstractContinuationIterable,
     τ0 = state.τ
     @unpack z_pred, ds = state
 
-    @unpack tol, maxIter, verbose, α, αmin, linesearch = contparams.newtonOptions
-    @unpack pMin, pMax = contparams
+    @unpack tol, max_iterations, verbose, α, αmin, linesearch = contparams.newton_options
+    @unpack p_min, p_max = contparams
     linsolver = getlinsolver(iter)
 
     # record the damping parameter
@@ -426,12 +426,12 @@ function newton_palc(iter::AbstractContinuationIterable,
     step = 0
     itlineartot = 0
 
-    verbose && printNonlinearStep(step, res)
+    verbose && print_nonlinear_step(step, res)
     line_step = true
 
     compute = callback((;x, res_f, residual=res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
-    while (step < maxIter) && (res > tol) && line_step && compute
+    while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
             minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
@@ -468,7 +468,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                     copyto!(x, x_pred)
 
                     # p = p_pred
-                    p  = clamp(p_pred, pMin, pMax)
+                    p  = clamp(p_pred, p_min, p_max)
                 else
                     α /= 2
                 end
@@ -477,7 +477,7 @@ function newton_palc(iter::AbstractContinuationIterable,
             α = α0
         else
             minus!(x, u)
-            p = clamp(p - up, pMin, pMax)
+            p = clamp(p - up, p_min, p_max)
 
             copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
 
@@ -487,12 +487,12 @@ function newton_palc(iter::AbstractContinuationIterable,
         push!(residuals, res)
         step += 1
 
-        verbose && printNonlinearStep(step, res, itlinear)
+        verbose && print_nonlinear_step(step, res, itlinear)
 
         # shall we break the loop?
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
     end
-    verbose && printNonlinearStep(step, res, 0, true) # display last line of the table
+    verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
     flag = (residuals[end] < tol) & callback((;x, res_f, residual=res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
     return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
 end

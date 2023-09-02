@@ -98,6 +98,7 @@ POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
     u::Tu
 end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
+Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -117,7 +118,7 @@ FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 # jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
 
-# this is to use with BorderingBLS with checkPrecision = true
+# this is to use with BorderingBLS with check_precision = true
 apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
 
 # specific linear solver to dispatch
@@ -162,7 +163,7 @@ function _build_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ = co
     elseif jacobianPO isa AutoDiffMF
         jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
     elseif jacobianPO isa FiniteDifferences
-        jac = (x, p) -> finiteDifferences(z -> prob(z, p), x; δ = δ)
+        jac = (x, p) -> finite_differences(z -> prob(z, p), x; δ = δ)
     elseif jacobianPO isa FiniteDifferencesMF
         jac = (x, p) -> dx -> (prob(x .+ δ .* dx, p) .- prob(x .- δ .* dx, p)) ./ (2δ)
     else
@@ -237,7 +238,7 @@ function build_jacobian(probPO::AbstractShootingProblem, orbitguess, par; δ = c
     elseif jacobianPO isa AutoDiffDense
         jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
     elseif jacobianPO isa FiniteDifferences
-        jac = (x, p) -> FloquetWrapper(probPO, finiteDifferences(z -> probPO(z, p), x), x, p)
+        jac = (x, p) -> FloquetWrapper(probPO, finite_differences(z -> probPO(z, p), x), x, p)
     elseif jacobianPO isa AutoDiffMF
         jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
     elseif jacobianPO isa FiniteDifferencesMF
@@ -263,9 +264,11 @@ $DocStrjacobianPOSh
 function continuation(probPO::AbstractShootingProblem, orbitguess,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
-                        linearAlgo::AbstractBorderedLinearSolver;
+                        linear_algo::AbstractBorderedLinearSolver;
                         δ = convert(eltype(orbitguess), 1e-8),
-                        eigsolver = FloquetQaD(contParams.newtonOptions.eigsolver),
+                        eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
+                        record_from_solution = nothing,
+                        plot_solution = nothing,
                         kwargs...)
     jacobianPO = probPO.jacobian
     @assert ~isnothing(getlens(probPO)) "You need to provide a lens for your periodic orbit problem."
@@ -273,28 +276,29 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
     jac = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
 
     if compute_eigenelements(contParams)
-        contParams = @set contParams.newtonOptions.eigsolver = eigsolver
+        contParams = @set contParams.newton_options.eigsolver = eigsolver
     end
 
     # change the user provided functions by passing probPO in its parameters
-    _finsol    = modify_po_finalise(probPO, kwargs, probPO.updateSectionEveryStep)
-    _recordsol = modify_po_record(probPO, kwargs, getparams(probPO), getlens(probPO))
-    _plotsol   = modify_po_plot(probPO, kwargs)
-
+    _finsol    = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
+    # this is to remove this part from the arguments passed to continuation
+    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
+    _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))
+    _plotsol   = modify_po_plot(probPO, _kwargs)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
-    linearAlgo = @set linearAlgo.solver = FloquetWrapperLS(linearAlgo.solver)
-    alg = update(alg, contParams, linearAlgo)
+    linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
+    alg = update(alg, contParams, linear_algo)
 
     probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
-    options = contParams.newtonOptions
+    options = contParams.newton_options
 
     br = continuation(
         probwp, alg,
-        (@set contParams.newtonOptions.linsolver = FloquetWrapperLS(options.linsolver));
+        (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
         kwargs...,
         kind = PeriodicOrbitCont(),
-        finaliseSolution = _finsol)
+        finalise_solution = _finsol)
     return br
 end
 
@@ -308,7 +312,7 @@ This is the continuation routine for computing a periodic orbit using a (Standar
 Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
 
 # Optional argument
-- `linearAlgo::AbstractBorderedLinearSolver`
+- `linear_algo::AbstractBorderedLinearSolver`
 $DocStrjacobianPOSh
 
 """
@@ -316,10 +320,10 @@ function continuation(prob::AbstractPeriodicOrbitProblem,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar;
-                    linearAlgo = nothing,
+                    linear_algo = nothing,
                     kwargs...)
-    _linearAlgo = isnothing(linearAlgo) ?  MatrixBLS() : linearAlgo
-    return continuation(prob, orbitguess, alg, _contParams, _linearAlgo; kwargs...)
+    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
+    return continuation(prob, orbitguess, alg, _contParams, _linear_algo; kwargs...)
 end
 
 ####################################################################################################
@@ -347,7 +351,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 A modified version of `prob` is passed to `plotSolution` and `finaliseSolution`.
 
 !!! note "Linear solver"
-    You have to be careful about the options `contParams.newtonOptions.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
+    You have to be careful about the options `contParams.newton_options.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
 """
 function continuation(br::AbstractBranchResult, ind_bif::Int,
                     _contParams::ContinuationPar,
@@ -362,7 +366,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-    cb = get(kwargs, :callbackN, cbDefault)
+    cb = get(kwargs, :callback_newton, cb_default)
 
     hopfpt = hopf_normal_form(br.prob, br, ind_bif; nev = nev, verbose = verbose)
 
@@ -397,8 +401,8 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
     # build the variable to hold the functional for computing PO based on finite differences
     probPO, orbitguess = re_make(probPO, prob_vf, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
-    if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
-        _contParams = @set _contParams.newtonOptions.linsolver.N = length(orbitguess)
+    if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
+        _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
     end
 
     if usedeflation
@@ -406,7 +410,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         probPO isa PoincareShootingProblem &&
             @warn "Poincaré Shooting does not work very well with stationary states."
-        optn = _contParams.newtonOptions
+        optn = _contParams.newton_options
 
         # we start with the case of zero amplitude
         orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
@@ -431,7 +435,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
         end
 
         verbose && println("\n──▶ Compute point on bifurcated branch...")
-        solbif = newton(probPO, orbitguess, deflationOp, (@set optn.maxIter = 10 * optn.maxIter); callback = cb, kwargs...)
+        solbif = newton(probPO, orbitguess, deflationOp, (@set optn.max_iterations = 10 * optn.max_iterations); callback = cb, kwargs...)
         @assert converged(solbif) "Deflated newton did not converge"
         orbitguess .= solbif.u
 
@@ -469,10 +473,10 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 # Optional arguments
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `detailed = false` fully compute the normal form
+- `detailed = false` whether to fully compute the normal form. The normal form is only used to collect the eigenvector for now.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `recordFromSolution = (u, p) -> u[end]`, record method used in the bifurcation diagram, by default this records the period of the periodic orbit.
-- `linearAlgo = BorderingBLS()`, same as for [`continuation`](@ref)
+- `linear_algo = BorderingBLS()`, same as for [`continuation`](@ref)
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
@@ -481,7 +485,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             alg = br.alg,
             δp = 0.1, ampfactor = 1,
             usedeflation = false,
-            linearAlgo = nothing,
+            linear_algo = nothing,
             detailed = false,
             kwargs...) where Tprob
 
@@ -499,12 +503,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n├─── amplitude p.o. = ", ampfactor,
             "\n")
 
-    _linearAlgo = isnothing(linearAlgo) ? BorderingBLS(_contParams.newtonOptions.linsolver) : linearAlgo
+    _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
     # we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
-    nf = getNormalForm(br, ind_bif; detailed = detailed)
+    nf = get_normal_form(br, ind_bif; detailed = detailed)
     pred = predictor(nf, δp, ampfactor)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
@@ -513,18 +517,18 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact
     if pb isa AbstractShootingProblem
-        if _contParams.newtonOptions.linsolver isa GMRESIterativeSolvers
-            @set! _contParams.newtonOptions.linsolver.N = length(orbitguess)
-        elseif _contParams.newtonOptions.linsolver isa FloquetWrapperLS
-            if _contParams.newtonOptions.linsolver.solver isa GMRESIterativeSolvers
-                @set! _contParams.newtonOptions.linsolver.solver.N = length(orbitguess)
+        if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
+            @set! _contParams.newton_options.linsolver.N = length(orbitguess)
+        elseif _contParams.newton_options.linsolver isa FloquetWrapperLS
+            if _contParams.newton_options.linsolver.solver isa GMRESIterativeSolvers
+                @set! _contParams.newton_options.linsolver.solver.N = length(orbitguess)
             end
         end
     end
 
     if usedeflation
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
-        optn = _contParams.newtonOptions
+        optn = _contParams.newton_options
         # find point on the first branch
         pbnew = set_params_po(pbnew, setparam(br, newp))
         sol0 = newton(pbnew, bifpt.x, optn; kwargs...)
@@ -535,7 +539,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
-            (@set optn.maxIter = 10 * optn.maxIter) ; kwargs...,)
+            (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         @assert converged(solbif) "Deflated newton did not converge"
         orbitguess .= solbif.u
     end
@@ -547,7 +551,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten just below!
-        linearAlgo = _linearAlgo,
+        linear_algo = _linear_algo,
         kind = br.kind
     )
 

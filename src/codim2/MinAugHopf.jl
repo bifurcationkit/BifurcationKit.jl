@@ -174,7 +174,7 @@ jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, 
 
 jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
 
 jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
@@ -197,7 +197,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 # Simplified call:
 Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
 
-    newtonHopf(br::AbstractBranchResult, ind_hopf::Int; normN = norm, options = br.contparams.newtonOptions, kwargs...)
+    newtonHopf(br::AbstractBranchResult, ind_hopf::Int; normN = norm, options = br.contparams.newton_options, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -239,10 +239,10 @@ end
 function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
             prob = br.prob,
             normN = norm,
-            options = br.contparams.newtonOptions,
+            options = br.contparams.newton_options,
             verbose = true,
             nev = br.contparams.nev,
-            startWithEigen = false,
+            start_with_eigen = false,
             kwargs...)
     hopfpointguess = HopfPoint(br, ind_hopf)
     ω = hopfpointguess.p[2]
@@ -253,7 +253,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     ζ ./= normN(ζ)
     ζad = LinearAlgebra.conj.(ζ)
 
-    if startWithEigen
+    if start_with_eigen
         # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
         λ = Complex(0, ω)
         p = bifpt.param
@@ -289,8 +289,8 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 # Optional arguments:
 - `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `updateMinAugEveryStep` update vectors `a,b` in Minimally Formulation every `updateMinAugEveryStep` steps
-- `computeEigenElements = false` whether to compute eigenelements. If `options_cont.detecttEvent>0`, it allows the detection of ZH, HH points.
+- `update_minaug_every_step` update vectors `a,b` in Minimally Formulation every `update_minaug_every_step` steps
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detectEvent>0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
@@ -313,19 +313,20 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 lens1::Lens, lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
-                updateMinAugEveryStep = 0,
+                update_minaug_every_step = 0,
                 normC = norm,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
-                computeEigenElements = false,
+                compute_eigen_elements = false,
                 usehessian = true,
                 massmatrix = LinearAlgebra.I,
+                record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob_vf)
 
     # options for the Newton Solver inherited from the ones the user provided
-    options_newton = options_cont.newtonOptions
+    options_newton = options_cont.newton_options
     threshBT = 100options_newton.tol
 
     𝐇 = HopfProblemMinimallyAugmented(
@@ -342,18 +343,18 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     if jacobian_ma == :autodiff
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_h = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+        opt_hopf_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_h = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferences
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_h = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
         prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newtonOptions.linsolver = HopfLinearSolverMinAug()
+        opt_hopf_cont = @set options_cont.newton_options.linsolver = HopfLinearSolverMinAug()
     end
 
     # this functions allows to tackle the case where the two parameters have the same name
@@ -370,12 +371,12 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # by updating the vectors a, b
     function update_minaug_hopf(z, tau, step, contResult; kUP...)
         # user-passed finalizer
-        finaliseUser = get(kwargs, :finaliseSolution, nothing)
+        finaliseUser = get(kwargs, :finalise_solution, nothing)
 
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (~modCounter(step, updateMinAugEveryStep) || success == false)
+        if (~mod_counter(step, update_minaug_every_step) || success == false)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
         end
         x = getvec(z.u, 𝐇) # hopf point
@@ -462,28 +463,28 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = get(kwargs, :recordFromSolution, nothing)
+    _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH, namedprintsol(record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...) :
+        (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH, namedprintsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...) :
         (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐇), p; kw...))..., zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH)
 
-    prob_h = re_make(prob_h, recordFromSolution = _printsol2)
+    prob_h = re_make(prob_h, record_from_solution = _printsol2)
 
     # eigen solver
-    eigsolver = HopfEig(getsolver(opt_hopf_cont.newtonOptions.eigsolver), prob_h)
+    eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_h)
 
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points
     event_user = get(kwargs, :event, nothing)
-    if computeEigenElements
+    if compute_eigen_elements
         if isnothing(event_user)
-            event = PairOfEvents(ContinuousEvent(2, test_bt_gh, computeEigenElements, ("bt", "gh"), threshBT), BifDetectEvent)
+            event = PairOfEvents(ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), BifDetectEvent)
         else
-            event = SetOfEvents(ContinuousEvent(2, test_bt_gh, computeEigenElements, ("bt", "gh"), threshBT), BifDetectEvent, event_user)
+            event = SetOfEvents(ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), BifDetectEvent, event_user)
         end
         # careful here, we need to adjust the tolerance for stability to avoid
         # spurious ZH or HH bifurcations
-        @set! opt_hopf_cont.tolStability = max(10opt_hopf_cont.newtonOptions.tol, opt_hopf_cont.tolStability)
+        @set! opt_hopf_cont.tol_stability = max(10opt_hopf_cont.newton_options.tol, opt_hopf_cont.tol_stability)
     else
         if isnothing(event_user)
             event = ContinuousEvent(2, test_bt_gh, false, ("bt", "gh"), threshBT)
@@ -492,17 +493,17 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
     end
 
-    prob_h = re_make(prob_h, recordFromSolution = _printsol2)
+    prob_h = re_make(prob_h, record_from_solution = _printsol2)
 
     # solve the hopf equations
     br = continuation(
         prob_h, alg,
-        (@set opt_hopf_cont.newtonOptions.eigsolver = eigsolver);
+        (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
         kwargs...,
         kind = HopfCont(),
-        linearAlgo = BorderingBLS(solver = opt_hopf_cont.newtonOptions.linsolver, checkPrecision = false),
+        linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
         normC = normC,
-        finaliseSolution = updateMinAugEveryStep == 0 ? get(kwargs, :finaliseSolution, finalise_default) : update_minaug_hopf,
+        finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
         event = event
     )
     @assert ~isnothing(br) "Empty branch!"
@@ -516,7 +517,7 @@ function continuation_hopf(prob,
                         alg = br.alg,
                         normC = norm,
                         nev = br.contparams.nev,
-                        startWithEigen = false,
+                        start_with_eigen = false,
                         bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                         kwargs...)
     hopfpointguess = HopfPoint(br, ind_hopf)
@@ -527,14 +528,14 @@ function continuation_hopf(prob,
 
     @assert ~isnothing(br.eig[1].eigenvecs) "The branch contains no eigenvectors for the Hopf point. Please provide one."
 
-    ζ = geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+    ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     ζ ./= normC(ζ)
     ζad = conj.(ζ)
 
     p = bifpt.param
     parbif = setparam(br, p)
 
-    if startWithEigen
+    if start_with_eigen
         # computation of adjoint eigenvalue
         λ = Complex(0, -ω)
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
@@ -543,7 +544,7 @@ function continuation_hopf(prob,
         # jacobian adjoint at bifurcation point
         L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
 
-        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
+        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad .= ζ★ ./ dot(ζ★, ζ)
     end
 

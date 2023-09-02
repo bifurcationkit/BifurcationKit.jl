@@ -94,7 +94,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         _state.eventValue[2], " ──> ",  _state.eventValue[1], "\n")
     if verbose && ~isnothing(_state.eigvals)
         printstyled(color=:green, "\n──> eigvals = \n")
-        printEV(_state.eigvals, :green)
+        print_ev(_state.eigvals, :green)
         # calcul des VP et determinant
     end
 
@@ -121,7 +121,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
         if verbose && ~isnothing(state.eigvals)
             printstyled(color=:blue, "────> eigvals = \n")
-            printEV(state.eigvals, :blue)
+            print_ev(state.eigvals, :blue)
         end
 
         if nsigns[end] == nsigns[end-1]
@@ -145,7 +145,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         state.step > 0 && (@set! interval[indinterval] = getp(state))
 
         # we call the finalizer
-        state.stopcontinuation = ~iter.finaliseSolution(state.z, state.τ, state.step, nothing; bisection = true, state = state)
+        state.stopcontinuation = ~iter.finalise_solution(state.z, state.τ, state.step, nothing; bisection = true, state = state)
 
         if verbose
             printstyled(color=:blue, bold = true, "────> ", state.step,
@@ -158,13 +158,13 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         # this test contains the verification that the current state is an
         # event up to a given tolerance. Very important to detect BT
         eventlocated = (is_event_crossed(event, iter, state) &&
-                abs(interval[2] - interval[1]) < contParams.tolParamBisectionEvent)
+                abs(interval[2] - interval[1]) < contParams.tol_param_bisection_event)
 
         # condition for breaking the while loop
         if (isnothing(next) == false &&
-                abs(state.ds) >= contParams.dsminBisection &&
-                state.step < contParams.maxBisectionSteps &&
-                n_inversion < contParams.nInversion &&
+                abs(state.ds) >= contParams.dsmin_bisection &&
+                state.step < contParams.max_bisection_steps &&
+                n_inversion < contParams.n_inversion &&
                 eventlocated == false) == false
             break
         end
@@ -175,9 +175,9 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     if verbose
         printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
         printstyled(color=:blue, "─"^40*"\n────> Stopping reason:\n──────> isnothing(next)           = ", isnothing(next),
-                "\n──────> |ds| < dsminBisection     = ", abs(state.ds) < contParams.dsminBisection,
-                "\n──────> step >= maxBisectionSteps = ", state.step >= contParams.maxBisectionSteps,
-                "\n──────> n_inversion >= nInversion = ", n_inversion >= contParams.nInversion,
+                "\n──────> |ds| < dsmin_bisection     = ", abs(state.ds) < contParams.dsmin_bisection,
+                "\n──────> step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
+                "\n──────> n_inversion >= n_inversion = ", n_inversion >= contParams.n_inversion,
                 "\n──────> eventlocated              = ", eventlocated == true, "\n")
 
     end
@@ -191,7 +191,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # point is deemed undetected.
     # In the case n_inversion = 0, we are still on the right of the event point
     if iseven(n_inversion)
-        status = n_inversion >= contParams.nInversion ? :converged : :guess
+        status = n_inversion >= contParams.n_inversion ? :converged : :guess
         copyto!(_state.z_pred, state.z_pred)
         copyto!(_state.z_old,  state.z_old)
         copyto!(_state.z,  state.z)
@@ -221,7 +221,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         if compute_eigenelements(iter.event)
             # save eigen-elements
             _state.eigvals = after.eigvals
-            if contParams.saveEigenvectors
+            if contParams.save_eigenvectors
                 _state.eigvecs = after.eigvecs
             end
             # to prevent spurious event detection, update the following numbers carefully

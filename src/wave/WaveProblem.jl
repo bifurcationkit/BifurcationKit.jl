@@ -25,7 +25,7 @@ This simplified call handles the case where a single symmetry needs to be frozen
 ## Useful function
 
 - `updatesection!(pb::TWProblem, u0)` updates the reference solution of the problem using `u0`.
-- `nbConstraints(::TWProblem)` number of constraints (or Lie generators)
+- `nb_constraints(::TWProblem)` number of constraints (or Lie generators)
 
 """
 @with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD} <: AbstractBifurcationProblem
@@ -58,7 +58,7 @@ end
 # constructor
 TWProblem(prob, ∂, u₀; kw...) = TWProblem(prob, (∂,), u₀; kw...)
 
-@inline nbConstraints(pb::TWProblem) = pb.nc
+@inline nb_constraints(pb::TWProblem) = pb.nc
 
 function Base.show(io::IO, tw::TWProblem)
     println(io, "┌─ Travelling wave functional")
@@ -93,7 +93,7 @@ applyD(pb::TWProblem, u) = applyD(pb, zero(u), 1, u)
 
 # s is the speed.
 # Return F(u, p) - s * D * u
-@views function VFplusD(pb::TWProblem, u::AbstractVector, s::Tuple, pars)
+@views function VF_plus_D(pb::TWProblem, u::AbstractVector, s::Tuple, pars)
     # apply the vector field
     out = residual(pb.prob_vf, u, pars)
     # we add the freezing, it can be done now since out is filled by the previous call!!
@@ -102,7 +102,7 @@ applyD(pb::TWProblem, u) = applyD(pb, zero(u), 1, u)
 end
 
 # function (u, p) -> F(u, p) - s * D * u to be used with shooting or Trapezoid
-VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VFplusD(pb, u, parsFreez.s, parsFreez.user)
+VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
 
 # vector field of the TW problem
 @views function (pb::TWProblem)(x::AbstractVector, pars)
@@ -117,7 +117,7 @@ VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VFplusD(pb, u, parsFreez.s, 
     # get the speed
     s = Tuple(x[end-nc+1:end])
     # apply the vector field
-    outu .= VFplusD(pb, u, s, pars)
+    outu .= VF_plus_D(pb, u, s, pars)
     # we put the constraints
     for ii in 0:nc-1
         out[end-ii] = dot(u, pb.∂u₀[ii+1])
@@ -157,7 +157,7 @@ end
 # build the sparse jacobian of the freezed problem
 function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 1e-9)
     # number of constraints
-    nc = nbConstraints(pb)
+    nc = nb_constraints(pb)
     # number of unknowns
     N = length(ufreez) - nc
     # get the speed
@@ -180,9 +180,9 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
 end
 ################################################################################
 function modify_tw_record(probTW, kwargs, par, lens)
-    _recordsol0 = get(kwargs, :recordFromSolution, nothing)
+    _recordsol0 = get(kwargs, :record_from_solution, nothing)
     if isnothing(_recordsol0) == false
-        _recordsol0 = get(kwargs, :recordFromSolution, nothing)
+        _recordsol0 = get(kwargs, :record_from_solution, nothing)
         return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probTW, p = p); k...)
     else
         return _recordsol = (x, p; k...) -> (s = x[end],)
@@ -217,8 +217,12 @@ function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
 end
 
 function continuation(prob::TWProblem,
-        orbitguess, alg::AbstractContinuationAlgorithm, contParams::ContinuationPar;
-        kwargs...)
+                    orbitguess, 
+                    alg::AbstractContinuationAlgorithm, 
+                    contParams::ContinuationPar;
+                    record_from_solution = nothing,
+                    plot_solution = BifurcationKit.plot_solution(prob.prob_vf),
+                    kwargs...)
     jacobian = prob.jacobian
     @assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
 
@@ -229,7 +233,7 @@ function continuation(prob::TWProblem,
     elseif jacobian == :FullLU
         jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
     elseif jacobian == :FiniteDifferences
-        jac = (x, p) -> finiteDifferences(z -> prob(z, p), x)
+        jac = (x, p) -> finite_differences(z -> prob(z, p), x)
     elseif jacobian == :MatrixFree
         jac = (x, p) -> (dx ->  prob(x, p, dx))
     end
@@ -237,13 +241,15 @@ function continuation(prob::TWProblem,
     N = length(orbitguess)
     B = spdiagm(vcat(ones(N-1),0))
     # convert eigsolver to generalised one
-    old_eigsolver = contParams.newtonOptions.eigsolver
-    contParamsWave = @set contParams.newtonOptions.eigsolver = convertToGEV(old_eigsolver, B)
+    old_eigsolver = contParams.newton_options.eigsolver
+    contParamsWave = @set contParams.newton_options.eigsolver = convertToGEV(old_eigsolver, B)
 
     # update record function
-    _recordsol = modify_tw_record(prob, kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
+    # this is to remove this part from the arguments passed to continuation
+    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
+    _recordsol = modify_tw_record(prob, _kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
 
-    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution(prob.prob_vf), _recordsol)
+    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution, _recordsol)
 
     # call continuation
     branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)

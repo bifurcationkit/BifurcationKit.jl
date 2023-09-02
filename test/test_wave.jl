@@ -82,10 +82,10 @@ prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@lens _.r); J = J
 eigls = EigArpack(1.0, :LM)
 eigls = DefaultEig()
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
-opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 out = @time newton(prob, opt_newton, normN = norminf)
 
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 30, nInversion = 8, maxBisectionSteps=20)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
 br = continuation(prob, PALC(), opts_br, verbosity = 0)
 
 ####################################################################################################
@@ -159,31 +159,31 @@ BK.applyD(probTW, rand(2n))
 BK.updatesection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
-sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5))
+sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5))
 @test BK.converged(sol)
 BK.is_symmetric(sol.prob)
-sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5))
+sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5))
 @test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5, linsolver = GMRESKrylovKit()))
+sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5, linsolver = GMRESKrylovKit()))
 @test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFreeAD), vcat(uold, .1), NewtonPar(verbose = true, maxIter = 5, linsolver = GMRESKrylovKit()))
+sol = newton((@set probTW.jacobian = :MatrixFreeAD), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5, linsolver = GMRESKrylovKit()))
 @test BK.converged(sol)
 ####################################################################################################
 # test continuation method with different Generalised eigensolvers
 optn = NewtonPar(tol = 1e-8)
-opt_cont_br = ContinuationPar(pMin = -1., pMax = 1., newtonOptions = optn, maxSteps = 3, detectBifurcation = 2)
+opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 3, detect_bifurcation = 2)
 continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@set! opt_cont_br.newtonOptions.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
-continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; jacobian = :FullLU, verbosity = 0)
+@set! opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
+continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
 BK.GEigArpack(nothing, :LR)
-@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
+@set! opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
 continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@set! opt_cont_br.newtonOptions.linsolver = GMRESIterativeSolvers(N = 2n+1)
-@set! opt_cont_br.newtonOptions.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
-@set! opt_cont_br.detectBifurcation = 0
+@set! opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
+@set! opt_cont_br.newton_options.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+@set! opt_cont_br.detect_bifurcation = 0
 continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :FiniteDifferences), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)

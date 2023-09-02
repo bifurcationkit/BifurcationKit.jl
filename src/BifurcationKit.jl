@@ -209,7 +209,7 @@ module BifurcationKit
     export NewtonPar, newton, newtonDeflated, newton_palc, newton_hopf, newtonBordered, NonLinearSolution
 
     # continuation methods
-    export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuation_fold, continuation_hopf, continuationPOTrap, continuationBordered, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
+    export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuation_fold, continuation_hopf, continuation_potrap, continuationBordered, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
 
     # events
     export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
@@ -224,19 +224,19 @@ module BifurcationKit
     export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
 
     # normal form
-    export getNormalForm, hopfNormalForm, predictor
+    export get_normal_form, hopf_normal_form, predictor
 
     # automatic bifurcation diagram
-    export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, getBranch, getBranchesFromBP
+    export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP
 
     # Periodic orbit computation
-    export generate_solution, getperiod, getamplitude, getmaximum, get_periodic_orbit, sectionSS, sectionPS, guessFromHopf, generate_ci_problem
+    export generate_solution, getperiod, getamplitude, getmaximum, get_periodic_orbit, sectionSS, sectionPS, guess_from_hopf, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
-    export PeriodicOrbitTrapProblem, continuationPOTrap, continuationPOTrapBPFromPO
+    export PeriodicOrbitTrapProblem, continuation_potrap
 
     # Periodic orbit computation based on Shooting
-    export Flow, ShootingProblem, PoincareShootingProblem, continuationPOShooting, AbstractShootingProblem, SectionPS, SectionSS
+    export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
     export PeriodicOrbitOCollProblem

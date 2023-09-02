@@ -5,7 +5,7 @@ This function checks whether the solution with eigenvalues `eigvalues` is stable
 function is_stable(contparams::ContinuationPar, eigvalues)::NamedTuple{(:isstable, :n_unstable, :n_imag), Tuple{Bool, Int64, Int64}}
     # the return type definition above is to remove type instability in continuation
     # numerical precision for deciding if an eigenvalue is above a threshold
-    precision = contparams.tolStability
+    precision = contparams.tol_stability
 
     # update number of unstable eigenvalues
     n_unstable = mapreduce(x -> real(x) > precision, +, eigvalues)
@@ -34,7 +34,7 @@ end
 function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
     # Fold point detection based on continuation parameter monotony
-    if iter.contparams.detectFold && length(branch) > 2 && detect_fold(branch[end-2:end].param...)
+    if iter.contparams.detect_fold && length(branch) > 2 && detect_fold(branch[end-2:end].param...)
         (iter.verbosity > 0) && printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
         npar = length(branch[1]) - 8
         push!(contres.specialpoint, SpecialPoint(
@@ -130,7 +130,7 @@ function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval:
 end
 
 # this allows for dispatch on eigensolver type
-get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T = get_bifurcation_type(it, state, status, interval, it.contparams.newtonOptions.eigsolver)
+get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}) where T = get_bifurcation_type(it, state, status, interval, it.contparams.newton_options.eigsolver)
 
 """
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
@@ -247,12 +247,12 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
             verbose && Base.display(ct0[1:min(5, length(ct0))])
         end
 
-        biflocated = abs(real.(rightmost(state.eigvals))[1]) < contParams.tolBisectionEigenvalue
+        biflocated = abs(real.(rightmost(state.eigvals))[1]) < contParams.tol_bisection_eigenvalue
 
         if (isnothing(next) == false &&
-                abs(state.ds) >= contParams.dsminBisection &&
-                state.step < contParams.maxBisectionSteps &&
-                n_inversion < contParams.nInversion &&
+                abs(state.ds) >= contParams.dsmin_bisection &&
+                state.step < contParams.max_bisection_steps &&
+                n_inversion < contParams.n_inversion &&
                 biflocated == false) == false
             break
         end
@@ -265,9 +265,9 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     if verbose
         printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs(2nunstbls[end]-n1-n2), ", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
         printstyled(color=:blue, "─"^40*"\n┌─── Stopping reason:\n├───── isnothing(next)           = ", isnothing(next),
-                "\n├───── |ds| < dsminBisection     = ", abs(state.ds) < contParams.dsminBisection,
-                "\n├───── step >= maxBisectionSteps = ", state.step >= contParams.maxBisectionSteps,
-                "\n├───── n_inversion >= nInversion = ", n_inversion >= contParams.nInversion,
+                "\n├───── |ds| < dsmin_bisection     = ", abs(state.ds) < contParams.dsmin_bisection,
+                "\n├───── step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
+                "\n├───── n_inversion >= n_inversion = ", n_inversion >= contParams.n_inversion,
                 "\n└───── biflocated                = ", biflocated == true, "\n")
 
     end
@@ -279,7 +279,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     # right of the bifurcation point if iseven(n_inversion) == true. Otherwise, the bifurcation
     # point is still deemed undetected
     if iseven(n_inversion)
-        status = n_inversion >= contParams.nInversion ? :converged : :guess
+        status = n_inversion >= contParams.n_inversion ? :converged : :guess
         copyto!(_state.z_old, state.z_old)
         copyto!(_state.z_pred, state.z_pred)
         copyto!(_state.z, state.z)
@@ -306,7 +306,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
         copyto!(_state.τ, after.τ)
 
         _state.eigvals = after.eigvals
-        if contParams.saveEigenvectors
+        if contParams.save_eigenvectors
             _state.eigvecs = after.eigvecs
         end
 

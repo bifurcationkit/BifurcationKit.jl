@@ -198,11 +198,11 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
-                plotsolution = plot_solution(prob),
-                updateMinAugEveryStep = 0,
+                update_minaug_every_step = 0,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
-                computeEigenElements = false,
+                compute_eigen_elements = false,
+                plot_solution = BifurcationKit.plot_solution(prob),
                 kind = PDCont(),
                 usehessian = true,
                 kwargs...) where {T, vectype}
@@ -210,7 +210,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     @assert lens1 == getlens(prob)
 
     # options for the Newton Solver inheritated from the ones the user provided
-    options_newton = options_cont.newtonOptions
+    options_newton = options_cont.newton_options
 
     𝐏𝐝 = PeriodDoublingProblemMinimallyAugmented(
             prob,
@@ -226,15 +226,15 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+        prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plotsolution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newtonOptions.linsolver = PDLinearSolverMinAug()
+        prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 
     # this functions allows to tackle the case where the two parameters have the same name
@@ -249,12 +249,12 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # by updating the vectors a, b
     function update_min_aug_pd(z, tau, step, contResult; kUP...)
         # user-passed finalizer
-        finaliseUser = get(kwargs, :finaliseSolution, nothing)
+        finaliseUser = get(kwargs, :finalise_solution, nothing)
 
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (~modCounter(step, updateMinAugEveryStep) || success == false)
+        if (~mod_counter(step, update_minaug_every_step) && success)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
         end
         @debug "Update a / b dans PD"
@@ -335,27 +335,28 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = get(kwargs, :recordFromSolution, nothing)
+    _printsol = get(kwargs, :record_from_solution, nothing)
     _printsol2 = isnothing(_printsol) ?
-            (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝), (p = p, prob = prob)))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
-            (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐏𝐝), (p = p, prob = prob); kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
+            (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
+            (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
+
     # eigen solver
-    eigsolver = FoldEig(getsolver(opt_pd_cont.newtonOptions.eigsolver))
+    eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver))
 
-    prob_f = re_make(prob_f, recordFromSolution = _printsol2)
+    prob_f = re_make(prob_f, record_from_solution = _printsol2)
 
-    event = ContinuousEvent(2, test_for_gpd_cp, computeEigenElements, ("gpd", "cusp"), 0)
+    event = ContinuousEvent(2, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp"), 0)
 
     # solve the PD equations
     br_pd_po = continuation(
         prob_f, alg,
-        (@set opt_pd_cont.newtonOptions.eigsolver = eigsolver);
-        linearAlgo = BorderingBLS(solver = opt_pd_cont.newtonOptions.linsolver, checkPrecision = false),
+        (@set opt_pd_cont.newton_options.eigsolver = eigsolver);
+        linear_algo = BorderingBLS(solver = opt_pd_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
         kind = kind,
         normC = normC,
         event = event,
-        finaliseSolution = update_min_aug_pd,
+        finalise_solution = update_min_aug_pd,
         )
     correct_bifurcation(br_pd_po)
 end

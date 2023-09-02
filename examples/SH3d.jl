@@ -61,16 +61,16 @@ Z = -lz .+ 2lz/(Nz) * collect(0:Nz-1)
 
 # initial guess for newton
 sol0 = [(cos(x) .* cos(y )) for x in X, y in Y, z in Z]
-    sol0 .= sol0 .- minimum(vec(sol0))
-    sol0 ./= maximum(vec(sol0))
-    sol0 .*= 1.7
+sol0 .= sol0 .- minimum(vec(sol0))
+sol0 ./= maximum(vec(sol0))
+sol0 .*= 1.2
 
 # parameters for PDE
 Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann);
 L1 = (I + Δ)^2;
 par = (l = 0.1, ν = 1.2, L1 = L1);
 
-Pr = cholesky(L1)
+Pr = lu(L1);
 using SuiteSparse
 LinearAlgebra.ldiv!(o::Vector, P::SuiteSparse.CHOLMOD.Factor{Float64}, v::Vector) = o .= -(P \ v)
 
@@ -99,15 +99,15 @@ end
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 
 prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@lens _.l),
-    # J = (x, p) -> (dx -> dF_sh(x, p, dx)),
-    J = (x, p) -> J_sh(x, p),
-    plotSolution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),
-    recordFromSolution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+    J = (x, p) -> (dx -> dF_sh(x, p, dx)),
+    # J = (x, p) -> J_sh(x, p),
+    plot_solution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),
+    record_from_solution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
     issymmetric = true)
 
-optnew = NewtonPar(verbose = true, tol = 1e-8, maxIter = 20, linsolver = @set ls.verbose = 0)
+optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, linsolver = @set ls.verbose = 0)
 @set! optnew.eigsolver = eigSH3d
-@set! optnew.linsolver = DefaultLS()
+# @set! optnew.linsolver = DefaultLS()
 sol_hexa = @time newton(prob, optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 
@@ -138,10 +138,10 @@ eigSH3d = SH3dEigMB(0.0, lu(L1))
 @time eigSH3d(J_sh(sol_hexa.u, par), 10)
 @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMax = 0.15, pMin = -.1, newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15), maxSteps = 146, detectBifurcation = 0, nev = 15, nInversion = 4, plotEveryStep  = 1)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 0, nev = 15, n_inversion = 4, plot_every_step  = 1)
 
 br = @time continuation(
-    re_make(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, checkPrecision = false)), optcont;
+    re_make(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
     plot = true, verbosity = 1,
     normC = norminf,
     event = BK.FoldDetectEvent,
@@ -157,13 +157,13 @@ br = @time continuation(
 
 plot(br)
 ####################################################################################################
-getNormalForm(br, 3; nev = 25)
+get_normal_form(br, 3; nev = 25)
 
-br1 = @time continuation(br, 3, setproperties(optcont; saveSolEveryStep = 10, detectBifurcation = 3, pMax = 0.1, plotEveryStep = 5, dsmax = 0.01);
+br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10, detect_bifurcation = 3, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,
     δp = 0.005,
     verbosedeflation = true,
-    finaliseSolution = (z, tau, step, contResult; k...) -> begin
+    finalise_solution = (z, tau, step, contResult; k...) -> begin
         if isnothing(br.eig) == true
             Base.display(contResult.eig[end].eigenvals)
         end

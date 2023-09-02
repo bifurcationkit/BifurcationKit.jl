@@ -18,7 +18,7 @@ $(TYPEDFIELDS)
     "absolute tolerance for `F(x)`"
     tol::T = 1e-12
     "number of Newton iterations"
-    maxIter::Int64 = 25
+    max_iterations::Int64 = 25
     "display Newton iterations?"
     verbose::Bool = false
     "linear solver, must be `<: AbstractLinearSolver`"
@@ -27,7 +27,7 @@ $(TYPEDFIELDS)
     eigsolver::E = DefaultEig()
     linesearch::Bool = false
     α::T = convert(typeof(tol), 1.0)        # damping
-    αmin::T = convert(typeof(tol), 0.001)      # minimal damping
+    αmin::T = convert(typeof(tol), 0.001)   # minimal damping
     @assert 0 <= α <= 1
 end
 
@@ -61,10 +61,10 @@ end
 ####################################################################################################
 function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
                     normN = norm,
-                    callback = cbDefault,
+                    callback = cb_default,
                     kwargs...)
     # Extract parameters
-    @unpack tol, maxIter, verbose = options
+    @unpack tol, max_iterations, verbose = options
 
     x = _copy(x0)
     fx = residual(prob, x, p0)
@@ -79,12 +79,12 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
     # total number of linear iterations
     itlineartot = 0
 
-    verbose && printNonlinearStep(step, res)
+    verbose && print_nonlinear_step(step, res)
 
     # invoke callback before algo really starts
     compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
-    while (step < maxIter) && (res > tol) && compute
+    while (step < max_iterations) && (res > tol) && compute
         J = jacobian(prob, x, p0)
         u, cv, itlinear = options.linsolver(J, fx)
         ~cv && @debug "Linear solver for J did not converge."
@@ -99,13 +99,13 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
         push!(residuals, res)
         step += 1
 
-        verbose && printNonlinearStep(step, res, itlinear)
+        verbose && print_nonlinear_step(step, res, itlinear)
 
         compute = callback((;x, fx, J, residual=res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
     ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
     flag = (residuals[end] < tol) & callback((;x, fx, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
-    verbose && printNonlinearStep(0, res, 0, true) # display last line of the table
+    verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
     return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
 
@@ -117,7 +117,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 # Arguments:
 - `prob` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
-- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cbDefault((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cb_default((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
     - `x` current solution
     - `fx` current residual
     - `J` current jacobian
@@ -139,7 +139,7 @@ newton(prob::AbstractBifurcationProblem, options::NewtonPar; kwargs...) = _newto
 # newton(F, J, x0, p0, options::NewtonPar; kwargs...) = newton(BifurcationProblem(F, x0, p0; J = J), options; kwargs...)
 
 # default callback
-cbDefault(state; k...) = true
+cb_default(state; k...) = true
 
 """
     cb = cbMaxNorm(maxres)

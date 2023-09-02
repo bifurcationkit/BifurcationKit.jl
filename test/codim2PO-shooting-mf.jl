@@ -22,10 +22,10 @@ par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, 
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); recordFromSolution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop, z0, par_pop, (@lens _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
-opts_br = ContinuationPar(pMin = 0., pMax = 20.0, ds = 0.002, dsmax = 0.01, nInversion = 6, detectBifurcation = 3, maxBisectionSteps = 25, nev = 4)
-@set! opts_br.newtonOptions.verbose = true
+opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4)
+@set! opts_br.newton_options.verbose = true
 
 ################################################################################
 using OrdinaryDiffEq
@@ -36,7 +36,7 @@ prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol =
 sol = solve(prob_de, Rodas5())
 ################################################################################
 @info "plotting function"
-argspo = (recordFromSolution = (x, p) -> begin
+argspo = (record_from_solution = (x, p) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
@@ -51,7 +51,7 @@ argspo = (recordFromSolution = (x, p) -> begin
 @info "generate shooting problem"
 
 probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
-    jacobian = BK.AutoDiffMF()
+    jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF()
     )
 
@@ -62,72 +62,71 @@ function flow(x0, prob0, tm, p = prob0.p)
 end
 
 @info "set AD"
-@set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+# @set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
 @info "Newton"
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
-lspo = GMRESKrylovKit(rtol = 1e-10, atol = 1e-12, verbose = 0, dim = 20, maxiter = 1)
-    eigpo = EigKrylovKit(x₀ = rand(4))
-    optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
-    solpo = newton(probsh, cish, optnpo)
+# lspo = GMRESKrylovKit(rtol = 1e-10, atol = 1e-12, verbose = 0, dim = 20, maxiter = 1)
+eigpo = EigKrylovKit(x₀ = rand(4))
+optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
+solpo = newton(probsh, cish, optnpo)
 
 _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
 @info "PO cont1"
-opts_po_cont = setproperties(opts_br, maxSteps = 50, saveEigenvectors = true, detectLoop = true, tolStability = 1e-3, newtonOptions = optnpo)
-@set! opts_po_cont.newtonOptions.verbose = false
+opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3, newton_options = optnpo)
+@set! opts_po_cont.newton_options.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
     # verbosity = 3, plot = true,
-    linearAlgo = MatrixFreeBLS(lspo),
+    linear_algo = MatrixFreeBLS(lspo),
     argspo...)
-# pt = getNormalForm(br_fold_sh, 1)
+# pt = get_normal_form(br_fold_sh, 1)
 
 @info "PO cont2"
 probsh2 = @set probsh.lens = @lens _.ϵ
 brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
     # verbosity = 3, plot = true,
-    # linearAlgo = MatrixFreeBLS(@set lspo.N = lspo.N+1),
-    linearAlgo = MatrixFreeBLS(lspo),
+    # linear_algo = MatrixFreeBLS(@set lspo.N = lspo.N+1),
+    linear_algo = MatrixFreeBLS(lspo),
     argspo...
     )
-# pt = getNormalForm(brpo_pd_sh, 1)
+# pt = get_normal_form(brpo_pd_sh, 1)
 
 # codim 2 Fold
 @info "--> Fold curve"
-opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detectBifurcation = 0, maxSteps = 0, pMin = 0.01, pMax = 1.2)
-    @set! opts_posh_fold.newtonOptions.tol = 1e-8
-    # @set! opts_posh_fold.newtonOptions.linsolver.solver.N = opts_posh_fold.newtonOptions.linsolver.solver.N+1
-    @set! opts_posh_fold.newtonOptions.verbose = false
-    @set! opts_posh_fold.newtonOptions.linsolver.solver.verbose=0
-    fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
-        # verbosity = 3, #plot = true,
-        detectCodim2Bifurcation = 0,
-        jacobian_ma = :finiteDifferencesMF,
-        bdlinsolver = MatrixFreeBLS(lspo),
-        startWithEigen = false,
-        callbackN = BK.cbMaxNorm(1),
-        )
+opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 0, p_min = 0.01, p_max = 1.2)
+@set! opts_posh_fold.newton_options.tol = 1e-8
+# @set! opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
+@set! opts_posh_fold.newton_options.verbose = false
+@set! opts_posh_fold.newton_options.linsolver.solver.verbose=0
+fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
+    # verbosity = 3, #plot = true,
+    detect_codim2_bifurcation = 0,
+    jacobian_ma = :finiteDifferencesMF,
+    bdlinsolver = MatrixFreeBLS(lspo),
+    start_with_eigen = false,
+    callback_newton = BK.cbMaxNorm(1),
+    )
 
 @test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
 @info "--> PD curve"
-opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detectBifurcation = 0, maxSteps = 0, pMin = -1.)
-    @set! opts_posh_pd.newtonOptions.tol = 1e-7
-    @set! opts_posh_pd.newtonOptions.linsolver.solver.verbose = 0
-    @set! opts_posh_pd.newtonOptions.verbose = false
-    pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
-        # verbosity = 2, #plot = true,
-        detectCodim2Bifurcation = 0,
-        usehessian = false,
-        # jacobian_ma = :minaug,
-        jacobian_ma = :finiteDifferencesMF,
-        # bdlinsolver = BorderingBLS(@set lspo.N=12),
-        bdlinsolver = MatrixFreeBLS(lspo),
-        startWithEigen = false,
-        callbackN = BK.cbMaxNorm(1),
-        )
+opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 0, max_steps = 4, p_min = -1.)
+@set! opts_posh_pd.newton_options.tol = 1e-8
+pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
+    verbosity = 0, #plot = true,
+    detect_codim2_bifurcation = 0,
+    usehessian = false,
+    # jacobian_ma = :minaug,
+    jacobian_ma = :finiteDifferencesMF,
+    # bdlinsolver = BorderingBLS(@set lspo.N=12),
+    bdlinsolver = MatrixFreeBLS(lspo),
+    start_with_eigen = false,
+    callback_newton = BK.cbMaxNorm(1),
+    update_minaug_every_step = 0,
+    )
 
 # plot(pd_po_sh)
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
@@ -145,32 +144,33 @@ probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params =
             jacobian = BK.AutoDiffMF()
             )
 
-@set! probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+# @set! probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
-brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; maxSteps = 50, ds = -0.001);
+brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     # verbosity = 3, plot = true,
     argspo...,
-    callbackN = BK.cbMaxNorm(1),
-    linearAlgo = MatrixFreeBLS(lspo),
+    callback_newton = BK.cbMaxNorm(1),
+    linear_algo = MatrixFreeBLS(lspo),
     )
 
-# ns = getNormalForm(brpo_ns, 1)
+# ns = get_normal_form(brpo_ns, 1)
 
 # codim 2 NS
 @info "--> NS curve"
-opts_posh_ns = ContinuationPar(brpo_ns.contparams, detectBifurcation = 0, maxSteps = 0, pMin = -0., pMax = 1.2)
-@set! opts_posh_ns.newtonOptions.tol = 1e-8
-@set! opts_posh_ns.newtonOptions.linsolver.solver.verbose = 0
-@set! opts_posh_ns.newtonOptions.verbose = false
+opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 0, p_min = -0., p_max = 1.2)
+@set! opts_posh_ns.newton_options.tol = 1e-8
+@set! opts_posh_ns.newton_options.linsolver.solver.verbose = 0
+@set! opts_posh_ns.newton_options.verbose = false
 ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
-        # verbosity = 2, #plot = true,
-        detectCodim2Bifurcation = 0,
-        startWithEigen = false,
+        # verbosity = 2, plot = true,
+        detect_codim2_bifurcation = 0,
+        start_with_eigen = false,
         usehessian = false,
         # jacobian_ma = :minaug,
         jacobian_ma = :finiteDifferencesMF,
-        normN = norminf,
-        callbackN = BK.cbMaxNorm(1),
+        normC = norminf,
+        bothside = false,
+        callback_newton = BK.cbMaxNorm(1),
         bdlinsolver = MatrixFreeBLS(lspo),
         )
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont

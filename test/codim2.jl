@@ -18,11 +18,11 @@ end
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
-prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2); recordFromSolution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
+prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2); record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
-opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInversion = 4, detectBifurcation = 3, maxBisectionSteps = 25, nev = 2, maxSteps = 20000)
+opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
 
-    # @set! opts_br.newtonOptions.verbose = true
+    # @set! opts_br.newton_options.verbose = true
     alg = PALC()
     br = @time continuation(prob, alg, opts_br;
     plot = false, verbosity = 0, normC = norminf,
@@ -30,12 +30,12 @@ opts_br = ContinuationPar(pMin = 0.6, pMax = 2.5, ds = 0.002, dsmax = 0.01, nInv
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################
-hp = newton(br, 2; options = NewtonPar( opts_br.newtonOptions; maxIter = 10), startWithEigen = true)
+hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10), start_with_eigen = true)
 
-hpnf = getNormalForm(br, 5)
+hpnf = get_normal_form(br, 5)
 @test hpnf.nf.b |> real ≈ 1.070259e+01 rtol = 1e-3
 
-hpnf = getNormalForm(br, 2)
+hpnf = get_normal_form(br, 2)
 @test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2
 
 BK.FoldProblemMinimallyAugmented(prob)
@@ -44,30 +44,30 @@ BK.PeriodDoublingProblemMinimallyAugmented(prob)
 BK.NeimarkSackerProblemMinimallyAugmented(prob)
 ####################################################################################################
 # different tests for the Fold point
-snpt = getNormalForm(br, 3)
+snpt = get_normal_form(br, 3)
 
 @test snpt.nf.a ≈ 0.11539539170637884 rtol = 1e-3
 @test snpt.nf.b1 ≈ 0.7323167187172155 rtol = 1e-3
 @test snpt.nf.b2 ≈ 0.2693795490512864 rtol = 1e-3
 @test snpt.nf.b3 ≈ 12.340786210650833 rtol = 1e-3
 
-@set! opts_br.newtonOptions.verbose = false
-@set! opts_br.newtonOptions.maxIter = 10
+@set! opts_br.newton_options.verbose = false
+@set! opts_br.newton_options.max_iterations = 10
 
-sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
     # plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test BK.converged(sn) && sn.itlineartot == 8
 @test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
 @test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
 
-sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS())
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 @test BK.converged(sn) && sn.itlineartot == 8
 
-sn = newton(br, 3; options = opts_br.newtonOptions, bdlinsolver = MatrixBLS(), startWithEigen = true)
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 8
 
-sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), startWithEigen = true, updateMinAugEveryStep = 1, jacobian_ma = :minaug, verbosity = 0, plot=false)
+sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug, verbosity = 0, plot=false)
 @test sn_br.kind isa BK.FoldCont
 @test sn_br.specialpoint[1].type == :bt
 @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
@@ -89,21 +89,21 @@ ind = argmin(abs.(_eigvals))
 @test sn_br.prob.prob.a ≈ ζstar
 ####################################################################################################
 # different tests for the Hopf point
-hppt = getNormalForm(br, 2)
+hppt = get_normal_form(br, 2)
 @test hppt.nf.a ≈ 2.546719962189168 + 1.6474887797814664im
 @test hppt.nf.b ≈ 4.3536804635557855 + 15.441272421860365im
 
-@set! opts_br.newtonOptions.verbose = false
+@set! opts_br.newton_options.verbose = false
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true)
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)
 # plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
 @test hp.converged && hp.itlineartot == 8
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = false, bdlinsolver = MatrixBLS())
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = false, bdlinsolver = MatrixBLS())
 @test hp.converged && hp.itlineartot == 12
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newtonOptions, startWithEigen = true, bdlinsolver = MatrixBLS(), verbose = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true, bdlinsolver = MatrixBLS(), verbose = true)
 @test hp.converged && hp.itlineartot == 8
 
 # we check that we truly have a bifurcation point.
@@ -120,15 +120,15 @@ ind = argmin(abs.(_eigvals .- Complex(0, ω)))
 @test pb.b ≈ ζ atol = 1e-3
 
 hp = newton(br, 2;
-    options = NewtonPar( opts_br.newtonOptions; maxIter = 10),
-    startWithEigen = true,
+    options = NewtonPar( opts_br.newton_options; max_iterations = 10),
+    start_with_eigen = true,
     bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
 # plot(br);scatter!([hp.p[1]], [hp.u[1]])
 
-hp = newton(br, 2; options = NewtonPar( opts_br.newtonOptions; maxIter = 10),startWithEigen=true)
+hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
-hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, pMax = 1., pMin = 0., detectBifurcation = 1, maxSteps = 50, saveSolEveryStep = 1, detectEvent = 2), bdlinsolver = MatrixBLS(), startWithEigen = true, updateMinAugEveryStep = 1, verbosity=0, plot=false)
+hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = true, update_minaug_every_step = 1, verbosity=0, plot=false)
 @test hp_br.kind isa BK.HopfCont
 @test hp_br.specialpoint[1].type == :gh
 @test hp_br.specialpoint[2].type == :nd

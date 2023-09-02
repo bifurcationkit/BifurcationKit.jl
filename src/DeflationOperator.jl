@@ -348,7 +348,7 @@ function newton(prob::AbstractBifurcationProblem,
     @assert converged(sol0) "Newton did not converge to the trivial solution x0."
     push!(defOp, sol0.u)
     prob1 = re_make(prob0, u0 = x1)
-    sol1 = newton(prob1, defOp, (@set options.maxIter = 10options.maxIter), linsolver; kwargs...)
+    sol1 = newton(prob1, defOp, (@set options.max_iterations = 10options.max_iterations), linsolver; kwargs...)
     ~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
     @debug "deflated Newton" x0 x1 sol0.u sol1.u
     # we test if the two solutions are different. We first get the norm

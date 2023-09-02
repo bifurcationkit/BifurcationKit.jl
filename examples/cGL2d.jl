@@ -105,7 +105,7 @@ prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@lens _.r); J = Jcgl)
 
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
-opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, maxIter = 20)
+opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 out = @time newton(prob, opt_newton, normN = norminf)
 ####################################################################################################
 # test for the Jacobian expression
@@ -114,37 +114,37 @@ out = @time newton(prob, opt_newton, normN = norminf)
 # J1 = Jcgl(sol0, par_cgl)
 # norm(J0 - J1, Inf)
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, pMax = 2.5, detectBifurcation = 3, nev = 9, plotEveryStep = 50, newtonOptions = (@set opt_newton.verbose = false), maxSteps = 1060, nInversion = 6)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 1060, n_inversion = 6)
 br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
-hopfpt = getNormalForm(br, 2)
+hopfpt = get_normal_form(br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
-# we need to do startWithEigen = true because the left eigenvector is not simply
+# we need to do start_with_eigen = true because the left eigenvector is not simply
 # the conjugate of the right one
 
 ind_hopf = 1
 # hopfpt = BK.HopfPoint(br, ind_hopf)
-optnew = NewtonPar(opts_br.newtonOptions, verbose = true)
+optnew = NewtonPar(opts_br.newton_options, verbose = true)
 hopfpoint = newton(br, ind_hopf;
                     options = optnew, 
                     normN = norminf, 
-                    startWithEigen = true)
+                    start_with_eigen = true)
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf = continuation(br, 1, (@lens _.γ),
-    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, pMax = 6.5, pMin = -10.0, detectBifurcation = 1, newtonOptions = optnew, plotEveryStep = 5, tolStability = 1e-7, nev = 15); plot = true,
-    updateMinAugEveryStep = 1,
-    startWithEigen = true, bothside = false,
-    detectCodim2Bifurcation = 2,
+    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15); plot = true,
+    update_minaug_every_step = 1,
+    start_with_eigen = true, bothside = false,
+    detect_codim2_bifurcation = 2,
     verbosity = 3, normC = norminf,
     jacobian_ma = :minaug,
-    bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false))
+    bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false))
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 
-getNormalForm(br_hopf, 2; autodiff = false)
+get_normal_form(br_hopf, 2; autodiff = false)
 
 # improve estimation of BT point
 btsol = BK.newton(br_hopf, 2; jacobian_ma = :minaug,)
@@ -153,18 +153,29 @@ btsol = BK.newton(br_hopf, 2; jacobian_ma = :minaug,)
 indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
 # branch from the BT point
 brfold = continuation(br_hopf, indbt, 
-                setproperties(br_hopf.contparams; detectBifurcation = 1, maxSteps = 20, saveSolEveryStep = 1);
-                updateMinAugEveryStep = 1,
-                detectCodim2Bifurcation = 2,
-                callbackN = BK.cbMaxNorm(1e5),
-                bdlinsolver = BorderingBLS(solver = DefaultLS(), checkPrecision = false),
+                setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
+                update_minaug_every_step = 1,
+                detect_codim2_bifurcation = 2,
+                callback_newton = BK.cbMaxNorm(1e5),
+                bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
                 jacobian_ma = :minaug,
                 bothside = true, normC = norminf)
 
 br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
 plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
-getNormalForm(brfold, 4; autodiff = false, nev = 15)
+get_normal_form(brfold, 4; autodiff = false, nev = 15)
+
+hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_bifurcation = 1, max_steps = 40, save_sol_every_step = 1);
+    update_minaug_every_step = 1,
+    detect_codim2_bifurcation = 2,
+    callback_newton = BK.cbMaxNorm(1e5),
+    start_with_eigen = true,
+    bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
+    jacobian_ma = :minaug,
+    bothside = false, normC = norminf)
+
+plot!(hopf_from_zh)
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -208,7 +219,7 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 ####################################################################################################
 # opt_po = (@set opt_po.eigsolver = eig_MF_KrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.5, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = DefaultLS()), nev = 5, tolStability = 1e-7, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
 @assert 1==0 "Too much memory will be used!"
 br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = :FullLU),
             orbitguess_f, PALC(),
@@ -234,7 +245,7 @@ plot();BK.plot_periodic_potrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, pMax = 2.2, maxSteps = 250, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, tolStability = 1e-5, detectBifurcation = 0, dsminBisection = 1e-7)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 2.2, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 0, dsmin_bisection = 1e-7)
 
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
@@ -255,11 +266,11 @@ br_po = continuation(
     opts_po_cont, poTrapMF;
     ampfactor = 3.,
     verbosity = 3, plot = true,
-    # callbackN = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
-    finaliseSolution = (z, tau, step, contResult; k...) ->
+    # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
+    finalise_solution = (z, tau, step, contResult; k...) ->
     (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
-    plotSolution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-    recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+    plot_solution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+    record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
 
 ###################################################################################################
 # preconditioner not taking into account the constraint
@@ -278,10 +289,10 @@ ls(Jpo, rand(ls.N))
 probBMF = PeriodicOrbitTrapProblem(poTrapMF; jacobian = :BorderedMatrixFree)
 
 opt_po = @set opt_newton.verbose = true
-    outpo_f = @time newton(probBMF,
-            orbitguess_f,
-            (@set opt_po.linsolver = ls);
-            normN = norminf)
+outpo_f = @time newton(probBMF,
+        orbitguess_f,
+        (@set opt_po.linsolver = ls);
+        normN = norminf)
 
 function callbackPO(state; linsolver = ls, prob = poTrap, p = par_cgl, kwargs...)
     @show ls.N keys(kwargs)
@@ -297,15 +308,15 @@ end
 
 opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2n), verbose = 2, dim = 20))
 # opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.15, maxSteps = 450, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls), nev = 5, tolStability = 1e-7, detectBifurcation = 1)
-# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, pMax = 1.5, maxSteps = 400, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = ls))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.15, max_steps = 450, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-7, detect_bifurcation = 1)
+# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, p_max = 1.5, max_steps = 400, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls))
 br_pok2 = @time continuation(
                         probBMF, outpo_f.u, PALC(),
                         opts_po_cont;
-                        verbosity = 2,    plot = true,
-                        plotSolution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
-                        # callbackN = callbackPO,
-                        recordFromSolution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
+                        verbosity = 2, plot = true,
+                        plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
+                        # callback_newton = callbackPO,
+                        record_from_solution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
                         normC = norminf)
 
 # branches = Any[br_pok2]
@@ -458,18 +469,18 @@ outfold = @time BK.newton_fold(
         br_po, indfold; #index of the fold point
         prob = probFold,
         options = (@set opt_po.linsolver = ls),
-        bdlinsolver = BorderingBLS(solver = ls, checkPrecision = false))
+        bdlinsolver = BorderingBLS(solver = ls, check_precision = false))
 BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p," from ", br_po.specialpoint[indfold].param,"\n")
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = (@set opt_po.linsolver = ls), maxSteps = 20, detectBifurcation = 0)
+optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 40.1, p_min = -10., newton_options = (@set opt_po.linsolver = ls), max_steps = 20, detect_bifurcation = 0)
 
-# optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, pMax = 40.1, pMin = -10., newtonOptions = opt_po, maxSteps = 10)
+# optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 40.1, p_min = -10., newton_options = opt_po, max_steps = 10)
 
 outfoldco = @time BK.continuation_fold(probFold,
     br_po, indfold, (@lens _.c5),
     optcontfold;
     jacobian_ma = :minaug,
-    bdlinsolver = BorderingBLS(solver = ls, checkPrecision = false),
+    bdlinsolver = BorderingBLS(solver = ls, check_precision = false),
     plot = true, verbosity = 2)
 
 plot(outfoldco, label="", xlabel="c5", ylabel="r")
@@ -608,11 +619,11 @@ opt_po = @set opt_newton.verbose = true
     flag && printstyled(color=:red, "--> T = ", outpo_f[end:end], ", amplitude = ", amplitude(outpo_f, Nx*Ny, M),"\n")
 
 
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, pMax = 2.2, maxSteps = 35, plotEveryStep = 3, newtonOptions = (@set opt_po.linsolver = lsgpu))
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.2, max_steps = 35, plot_every_step = 3, newton_options = (@set opt_po.linsolver = lsgpu))
     br_pok2, upo , _= @time BK.continuation(
         poTrapMFGPU,
         orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r),
         opts_po_cont; jacobianPO = :FullMatrixFree,
         verbosity = 2,
-        recordFromSolution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])),
+        record_from_solution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])),
         normC = x -> maximum(abs.(x)))

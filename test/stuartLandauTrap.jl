@@ -27,7 +27,7 @@ par_hopf = (@set par_sl.r = 0.1)
 prob = BK.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
+optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(prob, PALC(), optconteq)
 ####################################################################################################
 prob2 = BK.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r); J = (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)))# we put sparse to try the different linear solvers
@@ -49,7 +49,7 @@ orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in Lin
 push!(orbitguess_f, 2pi)
 
 optn_po = NewtonPar()
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, pMax = 2.2, maxSteps = 3, newtonOptions = optn_po, saveSolEveryStep = 1, detectBifurcation = 0)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 0)
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
@@ -62,11 +62,11 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
     @test BK.converged(outpo_f)
 
     br_po = continuation((@set poTrap.jacobian = jacobianPO), outpo_f.u,
-        PALC(),    (@set opts_po_cont.newtonOptions.linsolver = _ls);
+        PALC(),    (@set opts_po_cont.newton_options.linsolver = _ls);
         verbosity = 0,    plot = false,
-        linearAlgo = BorderingBLS(solver = _ls, checkPrecision = false),
+        linear_algo = BorderingBLS(solver = _ls, check_precision = false),
         # plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
-        printSolution = (u, p) -> BK.getAmplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
+        record_from_solution = (u, p) -> BK.getamplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 
     BK.get_periodic_orbit(br_po, 1)
 end

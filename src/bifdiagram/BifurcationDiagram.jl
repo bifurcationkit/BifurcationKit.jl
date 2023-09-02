@@ -21,9 +21,9 @@ from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
 add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
-getContResult(br::ContResult) = br
-getContResult(br::Branch) = br.γ
-getAlg(tree::BifDiagNode) = tree.γ.alg
+get_contresult(br::ContResult) = br
+get_contresult(br::Branch) = br.γ
+getalg(tree::BifDiagNode) = tree.γ.alg
 
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
@@ -41,16 +41,16 @@ $(SIGNATURES)
 
 Return the size of the bifurcation diagram. The argument `code` is the same as in `getBranch`.
 """
-Base.size(tree::BifDiagNode, code = ()) = _size(getBranch(tree, code))
+Base.size(tree::BifDiagNode, code = ()) = _size(get_branch(tree, code))
 
 """
 $(SIGNATURES)
 
 Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
 """
-function getBranch(tree::BifDiagNode, code)
+function get_branch(tree::BifDiagNode, code)
     isempty(code) && return tree
-    return getBranch(tree.child[code[1]], code[2:end])
+    return get_branch(tree.child[code[1]], code[2:end])
 end
 
 """
@@ -58,7 +58,7 @@ $(SIGNATURES)
 
 Return the part of the tree corresponding to the indbif-th bifurcation point on the root branch.
 """
-function getBranchesFromBP(tree::BifDiagNode, indbif::Int)
+function get_branches_from_BP(tree::BifDiagNode, indbif::Int)
     # parameter value at the bp
     p = tree.γ.specialpoint[indbif].param
     return BifDiagNode[br for br in tree.child if from(br).p == p]
@@ -134,7 +134,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         optscont = options(_pt.x, _pt.param, _level + 1)
         @set! optscont.ds *= _dsfactor
 
-        continuation(getContResult(node.γ), _id, optscont;
+        continuation(get_contresult(node.γ), _id, optscont;
             nev = optscont.nev, kwargs...,
             ampfactor = _ampfactor,
             usedeflation = usedeflation,

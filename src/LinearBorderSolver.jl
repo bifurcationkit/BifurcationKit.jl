@@ -37,7 +37,7 @@ $(TYPEDFIELDS)
     tol::Ttol = 1e-12
 
     "Check precision of the linear solve?"
-    checkPrecision::Bool = true
+    check_precision::Bool = true
 
     "Number of recursions to achieve tolerance"
     k::Int64 = 1
@@ -67,7 +67,7 @@ function (lbs::BorderingBLS)(  J, dR,
     dX, dl, cv, itlinear = BEC0(R, n)
 
     failBLS::Bool = true
-    while lbs.checkPrecision && k < lbs.k && failBLS
+    while lbs.check_precision && k < lbs.k && failBLS
         δX, δl = Residual(dX, dl)
         failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
         @debug k, norm(δX), abs(δl)
@@ -347,11 +347,11 @@ struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorde
     "Linear solver used to solve the extended linear system"
     solver::S
     "What is the structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
-    useBorderedArray::Bool
+    use_bordered_array::Bool
 end
 
 # dummy constructor to simplify user passing options to continuation
-MatrixFreeBLS(useBorderedArray::Bool = true) = MatrixFreeBLS(nothing, useBorderedArray)
+MatrixFreeBLS(use_bordered_array::Bool = true) = MatrixFreeBLS(nothing, use_bordered_array)
 MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
 MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 
@@ -367,7 +367,7 @@ function (lbs::MatrixFreeBLS{S})(J,     dR,
                                 dzu,     dzp::T, R, n::T,
                                 ξu::Tξ = 1, ξp::Tξ = 1; shift = nothing, dotp = dot) where {T <: Number, Tξ, S}
     linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
-    rhs = lbs.useBorderedArray ? BorderedArray(copy(R), n) : vcat(R, n)
+    rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return extractVecBLS(sol), extractParBLS(sol), cv, it
 end
@@ -385,7 +385,7 @@ end
 function (lbs::MatrixFreeBLS)(::Val{:Block}, J, a,
                                 b,     c, rhst, rhsb; shift::Ts = nothing, dotp = dot) where {Ts}
     linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
-    rhs = lbs.useBorderedArray ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
+    rhs = lbs.use_bordered_array ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return extractVecBLS(sol, length(a)), extractParBLS(sol, length(a)), cv, it
 end
@@ -408,7 +408,7 @@ struct LSFromBLS{Ts} <: AbstractLinearSolver
     solver::Ts
 end
 
-LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), checkPrecision = false))
+LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), check_precision = false))
 
 function (l::LSFromBLS)(J, rhs)
     F = factorize(J[1:end-1, 1:end-1])

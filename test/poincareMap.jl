@@ -119,12 +119,12 @@ dϕ = FD.jacobian( x -> flowTS(x, tΣ, prob)[2][end], (u0))
 F = Fsl(Π(u0), par_sl)
 normal = normals[1]
 
-dTfd = BK.finiteDifferences(T, u0; δ = 1e-8)
+dTfd = BK.finite_differences(T, u0; δ = 1e-8)
 dT = -normal' * dϕ ./ dot(normal, F)
 @test norm(dTfd - dT, Inf) < 5e-5
 
 Jtmp = dϕ .- F * normal' * dϕ #./ dot(F, normal)
-dΠfd = BK.finiteDifferences(Π, u0; δ = 1e-8)
+dΠfd = BK.finite_differences(Π, u0; δ = 1e-8)
 Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 @test norm(dΠfd - Jtmp, Inf) < 1e-4
 ####################################################################################################

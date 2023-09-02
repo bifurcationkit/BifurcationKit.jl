@@ -24,7 +24,7 @@ probsl = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r))
 probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r), inplace = true)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
-optconteq = ContinuationPar(ds = -0.01, detectBifurcation = 3, pMin = -0.5, nInversion = 8)
+optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(probsl, PALC(), optconteq)
 ####################################################################################################
 Ntst = 4
@@ -169,21 +169,21 @@ for (i, t) in pairs(_sol.t)
 end
 
 args = (
-    plotSolution = (x,p; k...) -> begin
+    plot_solution = (x,p; k...) -> begin
         outt = get_periodic_orbit(prob_col, x, p)
         plot!(vec(outt.t), outt.u[1, :]; k...)
     end,
-    finaliseSolution = (z, tau, step, contResult; k...) -> begin
+    finalise_solution = (z, tau, step, contResult; k...) -> begin
         return true
     end,)
 
-optcontpo = setproperties(optconteq; detectBifurcation = 2, tolStability = 1e-7)
+optcontpo = setproperties(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
 @set! optcontpo.ds = -0.01
-@set! optcontpo.newtonOptions.verbose = false
+@set! optcontpo.newton_options.verbose = false
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
 @set! prob_col2.jacobian = BK.AutoDiffDense()
-sol_po = newton(prob_col2, _ci, optcontpo.newtonOptions)
+sol_po = newton(prob_col2, _ci, optcontpo.newton_options)
 
 # test Solution
 solc = BK.POSolution(prob_col2, sol_po.u)
@@ -197,14 +197,14 @@ let
 end
 
 # 0.90855762 seconds (1.24 M allocations: 3.658 GiB, 12.54% gc time)
-@set! prob_col2.updateSectionEveryStep = 1
+@set! prob_col2.update_section_every_step = 1
 br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
     verbosity = 0, plot = false,
     args...,
     )
 ####################################################################################################
 # test analytical jacobian
-Ntst = 2
+Ntst = 9
 m = 3
 N = 4
 nullvf(x,p) = zero(x)
@@ -244,15 +244,15 @@ BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρ = 1.);
 # test Hopf aBS
 let
     for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
-        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1);
+        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10).newton_options.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
             δp = 0.1,
             usedeflation = true,
             eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
             )
 
-        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 10).newtonOptions.verbose = false),
-            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1);
+        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10).newton_options.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
             δp = 0.1,
             usedeflation = true,
             eigsolver = BK.FloquetColl(),
@@ -265,8 +265,8 @@ let
         end
 
         # test mesh adaptation
-        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, saveSolEveryStep=1, maxSteps = 2).newtonOptions.verbose = false),
-            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, updateSectionEveryStep = 1, meshadapt = true);
+        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 2).newton_options.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1, meshadapt = true);
             δp = 0.1,
             usedeflation = true,
             eigsolver = BK.FloquetColl(),

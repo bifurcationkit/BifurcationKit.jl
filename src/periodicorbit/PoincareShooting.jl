@@ -14,7 +14,7 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 - `parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
 - `par` parameters of the model
 - `lens` parameter axis
-- `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
+- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
 - `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 
 ## Jacobian
@@ -62,7 +62,7 @@ Note that you can generate this guess from a function solution using `generate_s
     parallel::Bool = false           # whether we use DE in Ensemble mode for multiple shooting
     par::Tpar = nothing
     lens::Tlens = nothing
-    updateSectionEveryStep::Int = 1
+    update_section_every_step::Int = 1
     jacobian::Tjac = AutoDiffDenseAnalytical()
 end
 
@@ -76,7 +76,7 @@ function Base.show(io::IO, psh::PoincareShootingProblem)
     println(io, "├─ time slices : ", get_mesh_size(psh))
     println(io, "├─ lens        : ", get_lens_symbol(psh.lens))
     println(io, "├─ jacobian    : ", psh.jacobian)
-    println(io, "├─ update section : ", psh.updateSectionEveryStep)
+    println(io, "├─ update section : ", psh.update_section_every_step)
     if psh.flow isa FlowDE
         println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
     end
@@ -408,7 +408,7 @@ end
 function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, period; k...)
 
     # create the section
-    if isEmpty(prob.section)
+    if _isempty(prob.section)
         normals = [residual(prob_vf, u, hopfpt.params) for u in centers]
         for n in normals; n ./= norm(n); end
     else
@@ -424,7 +424,7 @@ function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, p
             parallel = prob.parallel,
             lens = getlens(prob_vf),
             par = getparams(prob_vf),
-            updateSectionEveryStep = prob.updateSectionEveryStep,
+            update_section_every_step = prob.update_section_every_step,
             jacobian = prob.jacobian,
             prob.flow.kwargs...)
     else
@@ -436,7 +436,7 @@ function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, p
             deepcopy(centers);
             parallel = prob.parallel,
             lens = getlens(prob_vf),
-            updateSectionEveryStep = prob.updateSectionEveryStep,
+            update_section_every_step = prob.update_section_every_step,
             jacobian = prob.jacobian,
             prob.flow.kwargs...)
     end

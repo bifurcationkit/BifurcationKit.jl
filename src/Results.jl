@@ -184,7 +184,7 @@ Return the indev-th eigenvectors of the ind-th continuation step.
 """
 function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
     @assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
-    return geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[ind+1].eigenvecs, indev)
+    return geteigenvector(br.contparams.newton_options.eigsolver, br.eig[ind+1].eigenvecs, indev)
 end
 
 @inline get_lens_symbol(br::AbstractBranchResult) = get_lens_symbol(getlens(br))
@@ -221,11 +221,11 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _ContResult(prob, alg, printsol, br, x0, τ, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool, kind::AbstractContinuationKind) where {T, S, E}
+ function _contresult(prob, alg, printsol, br, x0, τ, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool, kind::AbstractContinuationKind) where {T, S, E}
     # example of bifurcation point
     bif0 = SpecialPoint(x0, τ, T, namedprintsol(printsol))
     # shall we save full solution?
-    sol = contParams.saveSolEveryStep > 0 ? [(x = x0, p = getparam(prob), step = 0)] : nothing
+    sol = contParams.save_sol_every_step > 0 ? [(x = x0, p = getparam(prob), step = 0)] : nothing
     n_unstable = 0; n_imag = 0; stability = true
 
     if computeEigElements

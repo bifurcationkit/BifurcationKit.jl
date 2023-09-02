@@ -36,7 +36,7 @@ function Base.empty(alg::AbstractContinuationAlgorithm)
     alg2
 end
 
-# this is called during initialisation of the continuation method. It can be used to adjust the algo.
+# this is called during initialisation of the continuation method. Can be used to adjust the algo.
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
 # helper functions to update ::ContState when calling the corrector
@@ -73,7 +73,7 @@ function _step_size_control!(state, contparams::ContinuationPar, verbosity)
 
     else
         # control to have the same number of Newton iterations
-        Nmax = contparams.newtonOptions.maxIter
+        Nmax = contparams.newton_options.max_iterations
         factor = (Nmax - state.itnewton) / Nmax
         dsnew = ds * (1 + contparams.a * factor^2)
     end

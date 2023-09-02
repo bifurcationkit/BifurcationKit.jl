@@ -73,38 +73,39 @@ N = 100
     solc0 = vcat(u0, u0)
 
 probBif = BifurcationProblem(Fbr, solc0, par_br, (@lens _.C) ;J = Jbr,
-        recordFromSolution = (x, p) -> norm(x, Inf),
-        plotSolution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+        record_from_solution = (x, p) -> norm(x, Inf),
+        plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
 # eigls = DefaultEig()
 eigls = EigArpack(0.5, :LM)
-optnewton = NewtonPar(eigsolver = eigls, verbose=true, maxIter = 3200, tol=1e-9)
+optnewton = NewtonPar(eigsolver = eigls, verbose=true, max_iterations = 3200, tol=1e-9)
 
 out = @time newton(probBif, optnewton, normN = norminf)
 plot();plot!(X,out.u[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
-optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, pMin = -1.8, detectBifurcation = 3, nev = 21, plotEveryStep = 50, newtonOptions = optnewton, maxSteps = 370, nInversion = 10, maxBisectionSteps = 25)
+optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, p_min = -1.8, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = optnewton, max_steps = 370, n_inversion = 10, max_bisection_steps = 25)
 
-br = @time continuation(re_make(probBif, params = (@set par_br.C = -0.2)), PALC(), (@set optcont.newtonOptions.verbose = false);
+br = @time continuation(re_make(probBif, params = (@set par_br.C = -0.2)), PALC(), (@set optcont.newton_options.verbose = false);
     plot = true, verbosity = 0,)
 
 plot(br)
-getNormalForm(br, 1)
+get_normal_form(br, 1)
 ####################################################################################################
 # branching from Hopf bp using aBS-Trapezoid
-opt_po = NewtonPar(tol = 1e-9, verbose = true, maxIter = 20)
+opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 20)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, pMin = -1.8, maxSteps = 60, newtonOptions = (@set opt_po.eigsolver = eig), nev = 25, tolStability = 1e-4, detectBifurcation = 3, dsminBisection = 1e-6)
+optcontpo = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, p_min = -1.8, max_steps = 60, newton_options = (@set opt_po.eigsolver = eig), nev = 25, tol_stability = 1e-4, detect_bifurcation = 3, dsmin_bisection = 1e-6)
 
+M = 100
 br_po = @time continuation(
     # arguments for branch switching from the first
     # Hopf bifurcation point
     br, 1,
     # arguments for continuation
     optcontpo,
-    PeriodicOrbitTrapProblem(M = 100, jacobian = :FullSparseInplace, updateSectionEveryStep = 0);
+    PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace, update_section_every_step = 0);
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess
@@ -122,7 +123,7 @@ plot(br, br_po, label = "")
 br_po_pd = @time continuation(
     # arguments for branch switching from the first
     # Hopf bifurcation point
-    br_po, 1, setproperties(br_po.contparams; detectBifurcation = 3, plotEveryStep = 1, ds = 0.01);
+    br_po, 1, setproperties(br_po.contparams; detect_bifurcation = 3, plot_every_step = 1, ds = 0.01);
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess
@@ -138,22 +139,6 @@ br_po_pd = @time continuation(
     normC = norminf)
 
 plot(br, br_po, br_po_pd, label = "")
-####################################################################################################
-# Period doubling
-ind_pd = 1
-vec_pd = geteigenvector(eig,
-        br_po.eig[br_po.specialpoint[ind_pd].idx][2],
-        br_po.specialpoint[ind_pd].ind_ev)
-
-orbitguess_f = br_po.specialpoint[1].x .+ 0.1 * real.(vec_pd)
-orbitguess_f[end] *= 2
-#
-# outpo_pd, _, _ = @time BK.newton(
-#         poTrap(br_po.bifpoint[1].param),
-#         orbitguess_f, opt_po, :FullLU;
-#         normN = norminf)
-#     printstyled(color=:red, "--> T = ", outpo_pd[end], ", amplitude = ", BK.amplitude(outpo_pd, 2N, M),"\n")
-#     BK.plotPeriodicPOTrap(outpo_pd, N, M)
 ####################################################################################################
 # shooting
 par_br_hopf = @set par_br.C = -0.86
@@ -180,26 +165,23 @@ plot(probSh(initpo, par_br_hopf))
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verbose = false)
 # ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
-optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 20, linsolver = ls)
+optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 20, linsolver = ls)
 # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-outposh = @time newton(probSh, initpo, optn;
-    callbackN = (x, f, J, res, iteration; kw...) -> (@show x[end];true),
-    normN = norminf)
+outposh = @time newton(probSh, initpo, optn; normN = norminf)
 BK.converged(outposh) && printstyled(color=:red, "--> T = ", outposh.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh.u, par_br_hopf; ratio = 2),"\n")
 
-plot(initpo[1:end-1], label = "Init guess")
-    plot!(outposh.u[1:end-1], label = "sol")
+plot(initpo[1:end-1], label = "Init guess"); plot!(outposh.u[1:end-1], label = "sol")
 
 eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2N), verbose = 2, dim = 40)
 # eig = DefaultEig()
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set optn.eigsolver = eig), nev = 10, tolStability = 1e-2, detectBifurcation = 3)
-    br_po_sh = @time continuation(probSh, outposh.u, PALC(), optcontpo;
-        verbosity = 3,    plot = true,
-        linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
-        finaliseSolution = (z, tau, step, contResult; kw...) ->
-            (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
-        plotSolution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
-        recordFromSolution = (u, p) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1.8, max_steps = 50, newton_options = (@set optn.eigsolver = eig), nev = 10, tol_stability = 1e-2, detect_bifurcation = 3)
+br_po_sh = @time continuation(probSh, outposh.u, PALC(), optcontpo;
+    verbosity = 3,    plot = true,
+    linear_algo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
+    finaliseSolution = (z, tau, step, contResult; kw...) ->
+        (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
+    plotSolution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
+    recordFromSolution = (u, p) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
@@ -230,26 +212,25 @@ probSh.section.normal ./= norm(probSh.section.normal)
 plot(probSh(initpo_pd, par_br_pd))
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
-    # ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
-    optn = NewtonPar(verbose = true, tol = 1e-9,  maxIter = 12, linsolver = ls)
-    # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-    outposh_pd = @time newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
+# ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
+optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 12, linsolver = ls)
+# deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
+outposh_pd = @time newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
         # callback = (state; kwargs...) -> (@show state.x[end];true),
         normN = norminf)
-    BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh_pd.u, (@set par_br.C = -0.86); ratio = 2),"\n")
+BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh_pd.u, (@set par_br.C = -0.86); ratio = 2),"\n")
 
-    plot(initpo[1:end-1], label = "Init guess")
-    plot!(outposh_pd.u[1:end-1], label = "sol")
+plot(initpo[1:end-1], label = "Init guess"); plot!(outposh_pd.u[1:end-1], label = "sol")
 
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, pMin = -1.8, maxSteps = 500, newtonOptions = (@set optn.eigsolver = eig), nev = 10, tolStability = 1e-2, detectBifurcation = 0)
-    br_po_sh_pd = @time continuation(outposh_pd.prob.prob, outposh_pd.u, PALC(), optcontpo;
-        verbosity = 3, plot = true,
-        linearAlgo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
-        # finaliseSolution = (z, tau, step, contResult; k...) ->
-            # (Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
-        plotSolution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...); plot!(br_po_sh; subplot=1, legend=false)),
-        recordFromSolution = (u, p; k...) -> BK.getmaximum(probSh, u, (@set par_br_pd.C = p.p); ratio = 2),
-        normC = norminf)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_min = -1.8, max_steps = 500, newton_options = (@set optn.eigsolver = eig), nev = 10, tol_stability = 1e-2, detect_bifurcation = 0)
+br_po_sh_pd = @time continuation(outposh_pd.prob.prob, outposh_pd.u, PALC(), optcontpo;
+    verbosity = 3, plot = true,
+    linear_algo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
+    # finalise_solution = (z, tau, step, contResult; k...) ->
+        # (Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
+    plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...); plot!(br_po_sh; subplot=1, legend=false)),
+    record_from_solution = (u, p; k...) -> BK.getmaximum(probSh, u, (@set par_br_pd.C = p.p); ratio = 2),
+    normC = norminf)
 
 plot(br_po_sh_pd, br, label = "");title!("")
 ####################################################################################################
@@ -258,12 +239,12 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, v
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 eig = DefaultEig()
 
-opt_po = NewtonPar(tol = 1e-9, verbose = true, maxIter = 12, linsolver  = ls)
-optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, pMin = -1.8, maxSteps = 50, newtonOptions = (@set opt_po.eigsolver = eig), nev = 20, tolStability = 1e-2, detectBifurcation = 3, nInversion = 8)
+opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 12, linsolver  = ls)
+optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1.8, max_steps = 50, newton_options = (@set opt_po.eigsolver = eig), nev = 20, tol_stability = 1e-2, detect_bifurcation = 3, n_inversion = 8)
 
 probPO = ShootingProblem(1, prob_sp,
-                        ETDRK2(krylov=true); abstol=1e-14,
-                        reltol=1e-14,
+                        ETDRK2(krylov=true); 
+                        abstol=1e-14, reltol=1e-14,
                         jacobian = BK.FiniteDifferencesMF(),
                         # jacobian = BK.AutoDiffMF(),
                         )
@@ -280,33 +261,33 @@ br_po = @time continuation(
     δp = 0.005,
     verbosity = 3,
     plot = true,
-    linearAlgo = MatrixFreeBLS(@set ls.N = probPO.M*n+2),
-    finaliseSolution = (z, tau, step, contResult; kw...) ->
+    linear_algo = MatrixFreeBLS(@set ls.N = probPO.M*n+2),
+    finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
-    plotSolution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    recordFromSolution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
+    record_from_solution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
     normC = norminf)
 
 plot(br, br_po, label = "")
 
 # period-doubling normal form
-getNormalForm(br_po, 1, detailed = false)
+get_normal_form(br_po, 1, detailed = false)
 
 # aBS from PD
 # CQ NE CONVERGE PAS VERS PD CF REMAKE?
-@set! br_po.γ.contparams.newtonOptions.tol = 1e-7
-br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detectBifurcation = 0, maxSteps = 5, ds = -0.01, plotEveryStep = 1);
+@set! br_po.γ.contparams.newton_options.tol = 1e-7
+br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 5, ds = -0.01, plot_every_step = 1);
     verbosity = 3, plot = true,
     ampfactor = .2, δp = -0.01,
     usedeflation = false,
     # for aBS from period doubling, we double the sections
-    linearAlgo = MatrixFreeBLS(@set ls.N = 2probPO.M*n+2),
-    plotSolution = (x, p; kwargs...) -> begin
+    linear_algo = MatrixFreeBLS(@set ls.N = 2probPO.M*n+2),
+    plot_solution = (x, p; kwargs...) -> begin
         outt = BK.get_periodic_orbit(p.prob, x, p.p)
         heatmap!(outt[:,:]'; color = :viridis, subplot = 3)
         plot!(br_po; legend=false, subplot=1)
     end,
-    recordFromSolution = (u, p) -> (BK.getmaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
+    record_from_solution = (u, p) -> (BK.getmaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
     )
 
 plot(br_po, br_po_pd, legend=false)
@@ -325,16 +306,16 @@ br_po_pdcodim2 = @time continuation(
     δp = 0.005,
     verbosity = 3,
     plot = true,
-    linearAlgo = MatrixFreeBLS(@set ls.N = probPO.M*n+2),
-    finaliseSolution = (z, tau, step, contResult; kw...) ->
+    linear_algo = MatrixFreeBLS(@set ls.N = probPO.M*n+2),
+    finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
-    plotSolution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    recordFromSolution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
+    record_from_solution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
     normC = norminf)
 ####################################################################################################
 # aBS Poincare Shooting
 
-br_po.contparams.newtonOptions.linsolver.solver.N
-br_po_pd.contparams.newtonOptions.linsolver.solver.N
+br_po.contparams.newton_options.linsolver.solver.N
+br_po_pd.contparams.newton_options.linsolver.solver.N
 
 ####################################################################################################

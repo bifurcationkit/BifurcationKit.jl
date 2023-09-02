@@ -167,7 +167,7 @@ jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, 
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences( z -> foldpb.prob(z, p), x; δ = 1e-8)
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
 
 jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
@@ -190,7 +190,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-    newtonFold(br::AbstractBranchResult, ind_fold::Int; options = br.contparams.newtonOptions, kwargs...)
+    newtonFold(br::AbstractBranchResult, ind_fold::Int; options = br.contparams.newton_options, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -230,9 +230,9 @@ end
 function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                 prob = br.prob,
                 normN = norm,
-                options = br.contparams.newtonOptions,
+                options = br.contparams.newton_options,
                 nev = br.contparams.nev,
-                startWithEigen = false,
+                start_with_eigen = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
@@ -240,7 +240,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
     eigenvec = bifpt.τ.u; rmul!(eigenvec, 1/normN(eigenvec))
     eigenvec_ad = _copy(eigenvec)
 
-    if startWithEigen
+    if start_with_eigen
         λ = zero(getvectoreltype(br))
         p = bifpt.param
         parbif = setparam(br, p)
@@ -249,12 +249,12 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        ζstar, = get_adjoint_basis(L, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = false)
+        ζstar, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver; nev = nev, verbose = false)
         eigenvec .= real.(ζstar)
 
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
-        ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = false)
+        ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev = nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         rmul!(eigenvec_ad, 1/normN(eigenvec_ad))
     end
@@ -279,8 +279,8 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 # Optional arguments:
 - `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `updateMinAugEveryStep` update vectors `a, b` in Minimally Formulation every `updateMinAugEveryStep` steps
-- `computeEigenElements = false` whether to compute eigenelements. If `options_cont.detecttEvent>0`, it allows the detection of ZH points.
+- `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detectEvent>0`, it allows the detection of ZH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call
@@ -304,18 +304,19 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
-                updateMinAugEveryStep = 0,
+                update_minaug_every_step = 0,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
-                computeEigenElements = false,
+                compute_eigen_elements = false,
                 usehessian = true,
                 kind = FoldCont(),
+                record_from_solution = nothing,
                 kwargs...) where {T, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
     # options for the Newton Solver inherited from the ones the user provided
-    options_newton = options_cont.newtonOptions
+    options_newton = options_cont.newton_options
 
     𝐅 = FoldProblemMinimallyAugmented(
             prob,
@@ -330,18 +331,18 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     if jacobian_ma == :autodiff
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
         prob_f = FoldMAProblem(𝐅, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newtonOptions.linsolver = DefaultLS()
+        opt_fold_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
         prob_f = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferences
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
         prob_f = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newtonOptions.linsolver = options_cont.newtonOptions.linsolver
+        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
         prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newtonOptions.linsolver = FoldLinearSolverMinAug()
+        opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 
     # this function allows to tackle the case where the two parameters have the same name
@@ -362,7 +363,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (~modCounter(step, updateMinAugEveryStep) || success == false)
+        if (~mod_counter(step, update_minaug_every_step) || success == false)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)
         end
 
@@ -436,7 +437,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         if isnothing(state.eigvals)
             iter.prob.prob.ZH = 1
         else
-            ϵ = iter.contparams.tolStability
+            ϵ = iter.contparams.tol_stability
             ρ = minimum(abs ∘ real, state.eigvals)
             iter.prob.prob.ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
         end
@@ -444,33 +445,33 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = get(kwargs, :recordFromSolution, nothing)
+    _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...) -> (; zip(lenses, (getp(u), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH, namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
+        (u, p; kw...) -> (; zip(lenses, (getp(u), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH, namedprintsol(BifurcationKit.record_from_solution(prob)(getvec(u), p; kw...))...) :
         (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u), p; kw...))..., zip(lenses, (getp(u, 𝐅), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH,)
 
-    prob_f = re_make(prob_f, recordFromSolution = _printsol2)
+    prob_f = re_make(prob_f, record_from_solution = _printsol2)
 
     # eigen solver
-    eigsolver = FoldEig(getsolver(opt_fold_cont.newtonOptions.eigsolver), prob_f)
+    eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_f)
 
     # define event for detecting bifurcations. Coupled it with user passed events
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
-        event = PairOfEvents(ContinuousEvent(2, test_bt_cp, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)))
+        event = PairOfEvents(ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)))
     else
-        event = SetOfEvents(ContinuousEvent(2, test_bt_cp, computeEigenElements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
+        event = SetOfEvents(ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
     end
 
     # solve the Fold equations
     br = continuation(
         prob_f, alg,
-        (@set opt_fold_cont.newtonOptions.eigsolver = eigsolver);
-        linearAlgo = BorderingBLS(solver = opt_fold_cont.newtonOptions.linsolver, checkPrecision = false),
+        (@set opt_fold_cont.newton_options.eigsolver = eigsolver);
+        linear_algo = BorderingBLS(solver = opt_fold_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
         kind = kind,
         normC = normC,
-        finaliseSolution = updateMinAugEveryStep == 0 ? get(kwargs, :finaliseSolution, finalise_default) : update_minaug_fold,
+        finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finaliseSolution, finalise_default) : update_minaug_fold,
         event = event
         )
         @assert ~isnothing(br) "Empty branch!"
@@ -484,7 +485,7 @@ function continuation_fold(prob,
                 alg = br.alg,
                 normC = norm,
                 nev = br.contparams.nev,
-                startWithEigen = false,
+                start_with_eigen = false,
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
@@ -494,19 +495,19 @@ function continuation_fold(prob,
     p = bifpt.param
     parbif = setparam(br, p)
 
-    if startWithEigen
+    if start_with_eigen
         # jacobian at bifurcation point
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        eigenvec .= real.( geteigenvector(br.contparams.newtonOptions.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+        eigenvec .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
         rmul!(eigenvec, 1/normC(eigenvec))
 
         # jacobian adjoint at bifurcation point
         L★ = has_adjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
 
         # computation of zero adjoint eigenvector
-        ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newtonOptions.eigsolver; nev = nev, verbose = options_cont.newtonOptions.verbose)
+        ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         eigenvec_ad = real.(ζ★)
         rmul!(eigenvec_ad, 1/dot(eigenvec, eigenvec_ad))
     end

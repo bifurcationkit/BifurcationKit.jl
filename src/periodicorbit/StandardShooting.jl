@@ -30,7 +30,7 @@ Create a problem to implement the Standard Simple / Parallel Multiple Standard S
 - `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you).
 - `par` parameters of the model
 - `lens` parameter axis
-- `updateSectionEveryStep` updates the section every `updateSectionEveryStep` step during continuation
+- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
 - `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
@@ -84,7 +84,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     parallel::Bool = false               # whether we use DE in Ensemble mode for multiple shooting
     par::Tpar = nothing
     lens::Tlens = nothing
-    updateSectionEveryStep::Int = 1
+    update_section_every_step::Int = 1
     jacobian::Tjac = AutoDiffDense()
 end
 
@@ -99,7 +99,7 @@ function Base.show(io::IO, sh::ShootingProblem)
     println(io, "├─ time slices    : ", get_mesh_size(sh))
     println(io, "├─ lens           : ", get_lens_symbol(sh.lens))
     println(io, "├─ jacobian       : ", sh.jacobian)
-    println(io, "├─ update section : ", sh.updateSectionEveryStep)
+    println(io, "├─ update section : ", sh.update_section_every_step)
     if sh.flow isa FlowDE
         println(io, "├─ integrator     : ", typeof(sh.flow.alg).name.name)
     end

@@ -68,10 +68,10 @@ end
 
 par = (p1 = -3., p2=-3., k=3)
 
-opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pMax = 4.0, saveSolEveryStep = 1, newtonOptions = NewtonPar(tol = 1e-10, verbose = false, maxIter = 5), detectBifurcation = 3, detectEvent = 0, nInversion = 8, dsminBisection = 1e-9, maxBisectionSteps = 15, detectFold=false, plotEveryStep = 10)
+opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 1000, p_min = -3., p_max = 4.0, save_sol_every_step = 1, newton_options = NewtonPar(tol = 1e-10, verbose = false, max_iterations = 5), detect_bifurcation = 3, detect_event = 0, n_inversion = 8, dsmin_bisection = 1e-9, max_bisection_steps = 15, detect_fold=false, plot_every_step = 10)
 
     prob = BK.BifurcationProblem(Feve, -2ones(2), par, (@lens _.p1);
-            recordFromSolution = (x, p) -> x[1])
+            record_from_solution = (x, p) -> x[1])
 
     br0 = continuation(prob, PALC(), opts0;
         plot = false, verbosity = 0,
@@ -79,7 +79,7 @@ opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, maxSteps = 1000, pMin = -3., pM
 testBranch(br0)
 # plot(br0, plotspecialpoints=true)
 ####################################################################################################
-opts = ContinuationPar(opts0; saveSolEveryStep = 1, detectBifurcation = 0, detectEvent = 2, dsminBisection = 1e-9, maxBisectionSteps = 15)
+opts = ContinuationPar(opts0; save_sol_every_step = 1, detect_bifurcation = 0, detect_event = 2, dsmin_bisection = 1e-9, max_bisection_steps = 15)
     br = continuation(prob, PALC(), opts;
         plot = false, verbosity = 0,
         )
@@ -88,8 +88,8 @@ opts = ContinuationPar(opts0; saveSolEveryStep = 1, detectBifurcation = 0, detec
 # pretty_table(br.branch[1:40])
 
 # arguments for continuation
-args = (BK.re_make(prob; recordFromSolution = (x,p) -> x[1]), PALC(), opts)
-kwargs = (plot = false, verbosity = 0, linearAlgo = MatrixBLS(),)
+args = (BK.re_make(prob; record_from_solution = (x,p) -> x[1]), PALC(), opts)
+kwargs = (plot = false, verbosity = 0, linear_algo = MatrixBLS(),)
 
 br = continuation(args...; kwargs...,
     verbosity = 0, # test printing
@@ -198,7 +198,7 @@ ev2 = BK.ContinuousEvent(2, (iter, state) -> (getp(state)-2, getp(state)-2.5))
 ev3 = BK.BifDetectEvent
 eves1 = BK.SetOfEvents(ev1, ev2, ev3)
 
-args2 = @set args[end].detectEvent = 2
+args2 = @set args[end].detect_event = 2
 @set! kwargs.verbosity = 0
     br = continuation(args2...; kwargs...,
         event = eves1,

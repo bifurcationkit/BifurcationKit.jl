@@ -12,8 +12,8 @@ function (eig::EigMaps)(J, nev; kwargs...)
     return log.(Complex.(λs)), evs, cv, it
 end
 ####################################################################################################
-opt_newton = NewtonPar(tol = 1e-9, maxIter = 20, verbose = false)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, pMax = 0.4, pMin = -0.5, detectBifurcation = 3, nev = 2, newtonOptions = opt_newton, maxSteps = 100, nInversion = 4, tolBisectionEigenvalue = 1e-8, dsminBisection = 1e-9)
+opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = false)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 100, n_inversion = 4, tol_bisection_eigenvalue = 1e-8, dsmin_bisection = 1e-9)
 ####################################################################################################
 # case of the period doubling
 Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
@@ -21,7 +21,7 @@ pars_pd = (μ = -0.2, a = 0.456, c = -1.234)
 
 probMap = BK.BifurcationProblem((x, p) -> Fpd(x, p) .- x, [0.0], pars_pd, (@lens _.μ))
 
-@set! opts_br.newtonOptions.eigsolver = EigMaps(DefaultEig())
+@set! opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
 br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
 prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@lens _.μ))

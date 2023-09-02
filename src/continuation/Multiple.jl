@@ -53,7 +53,7 @@ function (algcont::Multiple)(state; kwargs...)
     if algcont.currentind > 1
         if iteration - algcont.pmimax > 0
             out = residuals[end] <= algcont.α * residuals[end-algcont.pmimax]
-            tol = isnothing(contparams) ? Inf : contparams.newtonOptions.tol
+            tol = isnothing(contparams) ? Inf : contparams.newton_options.tol
             out = out || residuals[end] < tol
             return out
         end
@@ -77,7 +77,7 @@ function getpredictor!(state::AbstractContinuationState,
 end
 
 function corrector!(_state::AbstractContinuationState, it::AbstractContinuationIterable,
-        algo::Multiple, linearalgo = MatrixFreeBLS(); kwargs...)
+        algo::Multiple, linear_algo = MatrixFreeBLS(); kwargs...)
     verbose = it.verbosity
     # we create a copy of the continuation cache
     state = copy(_state)

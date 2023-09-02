@@ -273,7 +273,7 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 # Simplified call
 Simplified call to refine an initial guess for a BT point. More precisely, the call is as follows
 
-    newton(br::AbstractBranchResult, ind_bt::Int; options = br.contparams.newtonOptions, kwargs...)
+    newton(br::AbstractBranchResult, ind_bt::Int; options = br.contparams.newton_options, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -313,7 +313,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
         optn_bt = @set options.linsolver = DefaultLS()
     elseif jacobian_ma == :finitedifferences
         prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par;
-            J = (x, p) -> finiteDifferences(z -> 𝐁𝐓(z, p), x))
+            J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else
         prob_f = BTMAProblem(𝐁𝐓, jacobian_ma, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
@@ -343,26 +343,26 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 - `ind_bif` bifurcation index in `br`
 
 # Optional arguments:
-- `options::NewtonPar`, default value `br.contparams.newtonOptions`
+- `options::NewtonPar`, default value `br.contparams.newton_options`
 - `normN = norm`
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `startWithEigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
+- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
     For ODE problems, it is more efficient to pass the option `jacobian = :autodiff`
 
-!!! tip "startWithEigen"
-    For ODE problems, it is more efficient to pass the option `startWithEigen = true`
+!!! tip "start_with_eigen"
+    For ODE problems, it is more efficient to pass the option `start_with_eigen = true`
 """
 function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                 probvf = br.prob.prob.prob_vf,
                 normN = norm,
-                options = br.contparams.newtonOptions,
+                options = br.contparams.newton_options,
                 nev = br.contparams.nev,
-                startWithEigen = false,
+                start_with_eigen = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
@@ -376,12 +376,12 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
     bifpt = br.specialpoint[ind_bt]
     eigenvec = getvec(bifpt.τ.u, prob_ma); rmul!(eigenvec, 1/normN(eigenvec))
     # in the case of Fold continuation, this could be ill-defined.
-    if ~isnothing(findfirst(isnan, eigenvec)) && ~startWithEigen
-        @warn "Eigenvector ill defined (has NaN). Use the option startWithEigen = true"
+    if ~isnothing(findfirst(isnan, eigenvec)) && ~start_with_eigen
+        @warn "Eigenvector ill defined (has NaN). Use the option start_with_eigen = true"
     end
     eigenvec_ad = _copy(eigenvec)
 
-    if startWithEigen
+    if start_with_eigen
         x0, parbif = get_bif_point_codim2(br, ind_bt)
 
         # jacobian at bifurcation point
@@ -389,13 +389,13 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 
         # computation of zero eigenvector
         λ = zero(getvectoreltype(br))
-        ζ, = get_adjoint_basis(L, λ, br.contparams.newtonOptions.eigsolver.eigsolver; nev = nev, verbose = false)
+        ζ, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         eigenvec .= real.(ζ)
         rmul!(eigenvec, 1/normN(eigenvec))
 
         # computation of adjoint eigenvector
         Lt = has_adjoint(prob_ma.prob_vf) ? jad(prob_ma.prob_vf, x0, parbif) : adjoint(L)
-        ζstar, = get_adjoint_basis(Lt, λ, br.contparams.newtonOptions.eigsolver.eigsolver; nev = nev, verbose = false)
+        ζstar, = get_adjoint_basis(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         rmul!(eigenvec_ad, 1/normN(eigenvec_ad))
     end

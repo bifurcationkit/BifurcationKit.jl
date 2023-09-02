@@ -32,8 +32,8 @@ parSH = (λ = -0.1, ν = 2., L1 = L1)
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 
 prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.λ); J = Jac_sp,
-    recordFromSolution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
-    plotSolution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
+    record_from_solution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
+    plot_solution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
     )
 ####################################################################################################
 optnew = NewtonPar(verbose = false, tol = 1e-12)
@@ -42,8 +42,8 @@ sol1 = @time newton(prob, optnew)
 Plots.plot(X, sol1.u)
 
 opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,
-    newtonOptions = setproperties(optnew; maxIter = 30, tol = 1e-8), pMax = 1.,
-    maxSteps = 300, plotEveryStep = 40, detectBifurcation = 3, nInversion = 4, tolBisectionEigenvalue = 1e-17, dsminBisection = 1e-7)
+    newton_options = setproperties(optnew; max_iterations = 30, tol = 1e-8), p_max = 1.,
+    max_steps = 300, plot_every_step = 40, detect_bifurcation = 3, n_inversion = 4, tol_bisection_eigenvalue = 1e-17, dsmin_bisection = 1e-7)
 
 function cb(state; kwargs...)
     _x = get(kwargs, :z0, nothing)
@@ -59,8 +59,8 @@ end
 kwargsC = (verbosity = 3,
     plot = true,
     # tangentAlgo = BorderedPred(),
-    linearAlgo  = MatrixBLS(),
-    callbackN = cb
+    linear_algo  = MatrixBLS(),
+    callback_newton = cb
     )
 
 brflat = @time continuation(prob, PALC(), opts; kwargsC..., verbosity = 0)
@@ -71,9 +71,9 @@ plot(brflat, putspecialptlegend = false)
 function optrec(x, p, l; opt = opts)
     level =  l
     if level <= 2
-        return setproperties(opt; maxSteps = 300, detectBifurcation = 3, nev = N, detectLoop = false)
+        return setproperties(opt; max_steps = 300, detect_bifurcation = 3, nev = N, detect_loop = false)
     else
-        return setproperties(opt; maxSteps = 250, detectBifurcation = 3, nev = N, detectLoop = true)
+        return setproperties(opt; max_steps = 250, detect_bifurcation = 3, nev = N, detect_loop = true)
     end
 end
 
@@ -85,15 +85,15 @@ code = ()
     plot!(brflat, putspecialptlegend = false, vars = vars)
     title!("#branches = $(size(diagram, code))")
 
-diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.getBranch(diagram, (2,)), 3, optrec; kwargsC..., halfbranch = true)
+diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.get_branch(diagram, (2,)), 3, optrec; kwargsC..., halfbranch = true)
 
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol1.u])
-algdc = BK.DefCont(deflationOperator = deflationOp, maxBranches = 50, perturbSolution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
+algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 50, perturb_solution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
 
 br = @time continuation(
     re_make(prob, params = @set parSH.λ = -0.1), algdc,
-    setproperties(opts; ds = 0.001, maxSteps = 20000, pMax = 0.25, pMin = -1., newtonOptions = setproperties(optnew; tol = 1e-9, maxIter = 15, verbose = false), saveSolEveryStep = 0, detectBifurcation = 0);
+    setproperties(opts; ds = 0.001, max_steps = 20000, p_max = 0.25, p_min = -1., newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), save_sol_every_step = 0, detect_bifurcation = 0);
     verbosity = 1,
     normN = norminf,
     # tangentAlgo = SecantPred(),
