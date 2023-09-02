@@ -208,7 +208,7 @@ $(SIGNATURES)
 Function to detect continuation branches which loop on themselves.
 """
 function detect_loop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
-    verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detectLoop, rtol = $rtol\n")
+    verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detect_loop, rtol = $rtol\n")
     N = length(br)
     out = false
     for bp in br.specialpoint[1:end-1]

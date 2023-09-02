@@ -113,7 +113,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
-    ϵ1, ϵ2, ϵ3 = T(δ), (T(δ)), (T(δ))
+    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
@@ -271,8 +271,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # by updating the vectors a, b
     function update_min_aug_ns(z, tau, step, contResult; kUP...)
         # user-passed finalizer
-        finaliseUser = get(kwargs, :finaliseSolution, nothing)
-
+        finaliseUser = get(kwargs, :finalise_solution, nothing)
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
@@ -349,8 +348,16 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _printsol = get(kwargs, :recordFromSolution, nothing)
     _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., ωₙₛ = getp(u, 𝐍𝐒)[2], CH = 𝐍𝐒.l1,  namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
-        (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐍𝐒), p; kw...))..., zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., ωₙₛ = getp(u, 𝐍𝐒)[2], CH = 𝐍𝐒.l1, )
+        (u, p; kw...) -> (; zip(lenses, 
+                (getp(u, 𝐍𝐒)[1], p))..., 
+                ωₙₛ = getp(u, 𝐍𝐒)[2], 
+                CH = 𝐍𝐒.l1, 
+                namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
+        (u, p; kw...) -> (; 
+            namedprintsol(_printsol(getvec(u, 𝐍𝐒), p; kw...))..., 
+            zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
+            ωₙₛ = getp(u, 𝐍𝐒)[2], 
+            CH = 𝐍𝐒.l1, )
 
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)

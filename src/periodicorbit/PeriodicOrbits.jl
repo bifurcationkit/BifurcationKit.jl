@@ -348,7 +348,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - all `kwargs` from [`continuation`](@ref)
 
-A modified version of `prob` is passed to `plotSolution` and `finaliseSolution`.
+A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
 
 !!! note "Linear solver"
     You have to be careful about the options `contParams.newton_options.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.

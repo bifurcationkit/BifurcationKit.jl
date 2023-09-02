@@ -384,7 +384,7 @@ $(SIGNATURES)
                     uc::AbstractMatrix, 
                     vc::AbstractMatrix,
                     T = one(eltype(uc)))
-    Ty = eltype(uc)
+    Ty = promote_type(eltype(uc),eltype(vc)) 
     phase = zero(Ty)
 
     n, m, Ntst = size(pb)

@@ -358,7 +358,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # by updating the vectors a, b
     function update_minaug_fold(z, tau, step, contResult; kUP...)
         # user-passed finalizer
-        finaliseUser = get(kwargs, :finaliseSolution, nothing)
+        finaliseUser = get(kwargs, :finalise_solution, nothing)
 
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
@@ -395,7 +395,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         copyto!(𝐅.b, newb); rmul!(𝐅.b, 1/normC(newb))
 
         # call the user-passed finalizer
-        finaliseUser = get(kwargs, :finaliseSolution, nothing)
+        finaliseUser = get(kwargs, :finalise_solution, nothing)
         if isnothing(finaliseUser) == false
             return finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)
         end
@@ -471,7 +471,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         kwargs...,
         kind = kind,
         normC = normC,
-        finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finaliseSolution, finalise_default) : update_minaug_fold,
+        finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_fold,
         event = event
         )
         @assert ~isnothing(br) "Empty branch!"

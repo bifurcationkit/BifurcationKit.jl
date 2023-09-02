@@ -389,7 +389,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             if contparams.detect_fold && contparams.detect_bifurcation < 2
                 foldetected = locate_fold!(contRes, it, state)
                 if foldetected && contparams.detect_loop
-                    state.stopcontinuation |= detectLoop(contRes, nothing; verbose = verbose1)
+                    state.stopcontinuation |= detect_loop(contRes, nothing; verbose = verbose1)
                 end
             end
 
@@ -437,7 +437,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             # save solution to file
             contparams.save_to_file && save_to_file(it, getx(state), getp(state), state.step, contRes)
 
-            # call user saved finaliseSolution function. If returns false, stop continuation
+            # call user saved finalise_solution function. If returns false, stop continuation
             # we put a OR to stop continuation if the stop was required before
             state.stopcontinuation |= ~it.finalise_solution(getsolution(state), state.τ, state.step, contRes; state = state, iter = it)
 

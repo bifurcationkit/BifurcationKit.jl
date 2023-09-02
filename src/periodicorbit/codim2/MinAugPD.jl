@@ -250,7 +250,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     function update_min_aug_pd(z, tau, step, contResult; kUP...)
         # user-passed finalizer
         finaliseUser = get(kwargs, :finalise_solution, nothing)
-
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
@@ -337,8 +336,11 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _printsol = get(kwargs, :record_from_solution, nothing)
     _printsol2 = isnothing(_printsol) ?
-            (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD, namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
-            (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
+        (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))..., 
+                    CP = 𝐏𝐝.CP, 
+                    GPD = 𝐏𝐝.GPD, 
+                    namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
+        (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
 
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver))

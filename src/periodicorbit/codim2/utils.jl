@@ -1,6 +1,6 @@
 function modify_po_2params_finalise(prob, kwargs, probMA)
     update_section_every_step = prob.update_section_every_step
-    _finsol = get(kwargs, :finaliseSolution, nothing)
+    _finsol = get(kwargs, :finalise_solution, nothing)
     if isnothing(_finsol)
         return (Z, tau, step, contResult; kF...) ->
             begin
@@ -30,7 +30,7 @@ end
 
 function modify_po_2params_finalise(prob::PeriodicOrbitOCollProblem, kwargs, probMA)
     update_section_every_step = prob.update_section_every_step
-    _finsol = get(kwargs, :finaliseSolution, nothing)
+    _finsol = get(kwargs, :finalise_solution, nothing)
     _finsol2 = (Z, tau, step, contResult; kF...) ->
         begin
             # we first check that the continuation step was successful
