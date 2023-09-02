@@ -60,7 +60,10 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     verbosity = 0, plot = false,
     argspo...
     )
-# pt = getNormalForm(brpo_pd, 1, prm = false)
+
+pt = getNormalForm(brpo_pd, 1)
+# test PD normal form computation using Iooss method
+pt = getNormalForm(brpo_pd, 1, prm = false)
 
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detectBifurcation = 3, maxSteps = 3, pMin = 0., pMax=1.2, nInversion = 4)
@@ -104,7 +107,10 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; maxSt
     argspo...,
     )
 
+# compute NS normal form using Poincare return map     
 getNormalForm(brpo_ns, 1)
+# compute NS normal form using Iooss method
+getNormalForm(brpo_ns, 1; prm = false)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);

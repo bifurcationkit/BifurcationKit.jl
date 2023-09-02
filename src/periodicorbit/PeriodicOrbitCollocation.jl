@@ -481,7 +481,7 @@ end
     result = zero(u)
     resultc = get_time_slices(prob, result)
     functional_coll!(prob, resultc, uc, T, get_Ls(prob.mesh_cache), pars)
-    # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt
+    # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt / T
     result[end] = phase_condition(prob, uc, get_Ls(prob.mesh_cache), T)
     return result
 end
@@ -506,7 +506,9 @@ end
     J[end-n:end-1, end-n:end-1] .= In
 
     # loop over the mesh intervals
-    rg = UnitRange(1, m+1); rgNx = UnitRange(1, n); rgNy = UnitRange(1, n)
+    rg = UnitRange(1, m+1)
+    rgNx = UnitRange(1, n)
+    rgNy = UnitRange(1, n)
     for j in 1:Ntst
         uj .= uc[:, rg]
         mul!(gj, uj, L) # gj ≈ (L * uj')'

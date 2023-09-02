@@ -68,8 +68,8 @@ sol(0.1)
 # test precision of phase condition, it must work for non uniform mesh
 # recall that it is 1/T int(f,g')
 @views function phaseCond(pb::PeriodicOrbitOCollProblem, u, v)
-    Ty = eltype(u)
-    phase = zero(Ty)
+    𝒯 = eltype(u)
+    phase = zero(𝒯)
 
     uc = BK.get_time_slices(pb, u)
     vc = BK.get_time_slices(pb, v)
@@ -78,11 +78,11 @@ sol(0.1)
 
     T = BK.getperiod(pb, u, nothing)
 
-    guj = zeros(Ty, n, m)
-    uj  = zeros(Ty, n, m+1)
+    guj = zeros(𝒯, n, m)
+    uj  = zeros(𝒯, n, m+1)
 
-    gvj = zeros(Ty, n, m)
-    vj  = zeros(Ty, n, m+1)
+    gvj = zeros(𝒯, n, m)
+    vj  = zeros(𝒯, n, m+1)
 
     L, ∂L = BK.get_Ls(pb.mesh_cache)
     ω = pb.mesh_cache.gauss_weight
@@ -95,7 +95,7 @@ sol(0.1)
         mul!(gvj, vj, ∂L)
         @inbounds for l in 1:m
             # for mul!(gvj, vj, L')
-            # phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2 * T
+            # phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
             phase += dot(guj[:, l], gvj[:, l]) * ω[l]
         end
         rg = rg .+ m
@@ -105,8 +105,10 @@ end
 
 let
     for Ntst in 2:10:100
-        # @info "Ntst" Ntst
+        @info "Ntst" Ntst
         prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
+        # test non uniform mesh
+        BK.update_mesh!(prob_col, sort(vcat(0,rand(Ntst-1),1)))
 
         _ci1 = BK.generate_solution(prob_col, t -> [1], 2pi)
         _ci2 = BK.generate_solution(prob_col, t -> [t], 2pi)
@@ -115,7 +117,7 @@ let
 
         _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
         _ci2 = BK.generate_solution(prob_col, t -> [sin(t)], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-8
+        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-6
         # @info phaseCond(prob_col, _ci1, _ci2)/pi-1
 
         _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
@@ -152,13 +154,13 @@ prob_col.ϕ[2] = 1 #phase condition
 
 _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
 _ci = BK.generate_solution(prob_col, _orbit, 2pi)
-@time prob_col(_ci, par_sl)
+prob_col(_ci, par_sl)
 @test prob_col(_ci, par_sl)[1:end-1] |> norminf < 1e-7
 
 prob_coll_ip = @set prob_col.prob_vf = probsl_ip
 
-@time prob_col(_ci, par_sl)
-@time prob_coll_ip(_ci, par_sl)
+@time prob_col(_ci, par_sl);
+@time prob_coll_ip(_ci, par_sl);
 
 # test precision of generated solution
 _sol = BK.get_periodic_orbit(prob_col, _ci, nothing)
