@@ -19,7 +19,7 @@ bp = BK.getNormalForm(br, 1; verbose=false)
 @test BK.istranscritical(bp) == true
 
 prob2 = @set prob.VF.J = (x, p) -> BK.finiteDifferences(z -> Fbp(z, p), x)
-bp = BK.getNormalForm(prob2, br, 1; verbose = false, autodiff = false)
+bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
 @test BK.istranscritical(bp) == true
 show(bp)
 
