@@ -198,13 +198,13 @@ Note that you can generate this guess from a function using `generate_solution`.
     # update the section every step
     updateSectionEveryStep::Int = 1
 
-    # symbol to control the way the jacobian of the functional is computed
+    # variable to control the way the jacobian of the functional is computed
     jacobian::Tjac = AutoDiffDense()
 
     # collocation mesh cache
     mesh_cache::Tmcache = nothing
 
-    # collocation mesh cache
+    # cache for allocation free computations
     cache::Tcache = nothing
 
     #################
@@ -398,7 +398,8 @@ end
 """
 $(SIGNATURES)
 
-[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt.
+[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it must work for non uniform mesh.
+
 # Arguments
 - uj   n x (m + 1)
 - guj  n x m
