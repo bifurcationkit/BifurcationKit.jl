@@ -665,7 +665,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                         verbose = false,
                                         lens = getlens(pbwrap),
                                         kwargs_nf...)
-    _NRM = true # normalise to compare to ApproxFun
+    _NRM = false # normalise to compare to ApproxFun
     @warn "method IOOSS, NRM = $_NRM"
 
     # based on the article
