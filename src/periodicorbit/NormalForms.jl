@@ -315,12 +315,12 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # however it seems Prop A.1 says the opposite
 
     rhs = zeros(nj); rhs[end] = 1;
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) #≈ ker(J)
-    p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) #≈ ker(J)
+    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
     # update the borders to have less singular matrix Jψ
-    J[end, 1:end-1] .= q
-    J[1:end-1, end] .= p
+    J[end, 1:end-1] .= k
+    J[1:end-1, end] .= l
 
     # left / right Floquet eigenvectors
     vl = J' \ rhs
@@ -334,7 +334,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
     # convention notation. We use the ₛ to indicates time slices which
     # are of size (N, Ntxt⋅m + 1)
-    v₁ₛ = get_time_slices(coll, vcat(v₁,1))
+    v₁ₛ  = get_time_slices(coll, vcat(v₁ ,1))
     v₁★ₛ = get_time_slices(coll, vcat(v₁★,1))
 
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1/2
@@ -361,7 +361,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem Jψ
-    Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρ = -1)
+    Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1, ρI = 0)
     Jψ[end-N:end-1, 1:N] .= -I(N)
     Jψ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -370,16 +370,19 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     Jψ[end, end] = 0
 
     # update the borders to have less singular matrix Jψ
-    q = Jψ  \ rhs; q = q[1:end-1]; q ./= norm(q)
-    p = Jψ' \ rhs; p = p[1:end-1]; p ./= norm(p)
-    Jψ[end, 1:end-1] .= q
-    Jψ[1:end-1, end] .= p
+    k = Jψ  \ rhs; k = k[1:end-1]; k ./= norm(k)
+    l = Jψ' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    Jψ[end, 1:end-1] .= k
+    Jψ[1:end-1, end] .= l
 
     ψ₁★ = Jψ \ rhs
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
     ψ₁★ ./= 2∫( ψ₁★ₛ, Fu₀ₛ)
     @assert ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
     a₁ = ∫(ψ₁★ₛ, Bₛ)
+            # _plot(vcat(vec(ψ₁★ₛ),1), label = "ψ1star")
+            # _plot(vcat(vec(@. Bₛ ),1), label = "Bₛ")
+            # return a₁
 
     # computation of h₂
     rhsₛ = @. Bₛ - 2a₁ * Fu₀ₛ
@@ -411,6 +414,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     for i=1:size(Bₛ, 2)
         Bₛ[:,i]  .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
     end
+                # _plot(vcat(vec( Bₛ ),1), label = "Bₛ for h2")
+                # _plot(vcat(vec(@. Bₛ * v₁★ₛ ),1), label = "Bₛ*v1star")
 
     c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
                  ∫( v₁★ₛ, Bₛ ) -
@@ -534,11 +539,14 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
         return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
     end
 
-    if prm || ~prm
+    if prm # method based on Poincare Return Map (PRM)
         # newton parameter
         optn = br.contparams.newton_options
         return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
     end
+    # method based on Iooss method
+    # nf = PeriodDoubling(bifpt.x, period, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    neimark_sacker_normal_form(pbwrap, ns0; verbose, nev, kwargs_nf...)
 end
 ####################################################################################################
 function neimark_sacker_normal_form(pbwrap,
@@ -562,6 +570,41 @@ function neimark_sacker_normal_form(pbwrap,
 
     ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
     return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
+end
+
+function neimark_sacker_normal_form(pbwrap::WrapPOColl,
+                                    br,
+                                    ind_bif::Int;
+                                    verbose = false,
+                                    nev = length(eigenvalsfrombif(br, ind_bif)),
+                                    newton_options = br.contparams.newton_options,
+                                    prm = true,
+                                    detailed = true,
+                                    kwargs_nf...)
+     # first, get the bifurcation point parameters
+     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
+     bifpt = br.specialpoint[ind_bif]
+     bptype = bifpt.type
+     par = setparam(br, bifpt.param)
+     period = getperiod(pbwrap.prob, bifpt.x, par)
+
+     if bifpt.x isa NamedTuple
+        # the solution is mesh adapted, we need to restore the mesh.
+        pbwrap = deepcopy(pbwrap)
+        updateMesh!(pbwrap.prob, bifpt.x._mesh )
+        bifpt = @set bifpt.x = bifpt.x.sol
+    end
+    ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
+    if ~detailed || ~prm
+        # method based on Iooss method
+        return neimark_sacker_normal_form(pbwrap, ns0; detailed, verbose, nev, kwargs_nf...)
+    end
+    if prm # method based on Poincare Return Map (PRM)
+        # newton parameter
+        return neimark_sacker_normal_form_prm(pbwrap, ns0, newton_options; verbose, nev, kwargs_nf...)
+    end
+    return nothing
+
 end
 
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
@@ -614,6 +657,216 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
     ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose = verbose)
     return NeimarkSackerPO(ns0.x0, T, ns0.p, ns0.ω, ev, nothing, ns, coll, true)
+end
+
+function neimark_sacker_normal_form(pbwrap::WrapPOColl,
+                                        ns::NeimarkSacker;
+                                        nev = 3,
+                                        verbose = false,
+                                        lens = getlens(pbwrap),
+                                        kwargs_nf...)
+    _NRM = true # normalise to compare to ApproxFun
+    @warn "method IOOSS, NRM = $_NRM"
+
+    # based on the article
+    # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.
+    # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
+    coll = pbwrap.prob
+    N, m, Ntst = size(coll)
+    par = ns.params
+    T = getperiod(coll, ns.x0, par)
+    # identity matrix for collocation problem
+    Icoll = analytical_jacobian(coll, ns.x0, par; ρD = 0, ρF = 0, ρI = -1/T)
+    Icoll[:,end] .=0; Icoll[end,:] .=0
+    Icoll[end-N:end-1, 1:N] .= 0
+    Icoll[end-N:end-1, end-N:end-1] .= 0
+
+    F(u, p) = residual(coll.prob_vf, u, p)
+    A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
+    B(u, p, du1, du2)      = BilinearMap( (dx1, dx2)      -> d2F(coll.prob_vf, u, p, dx1, dx2))(du1, du2)
+    C(u, p, du1, du2, du3) = TrilinearMap((dx1, dx2, dx3) -> d3F(coll.prob_vf, u, p, dx1, dx2, dx3))(du1, du2, du3)
+
+    _plot(x; k...) = (_sol = get_periodic_orbit(coll, x, 1);display(plot(_sol.t, _sol.u'; k...)))
+    _rand(n, r = 2) = r .* (rand(n) .- 1/2) # centered uniform random variables
+    local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
+
+    #########
+    # compute v1
+    # we first compute the NS floquet eigenvector
+    # we use an extended linear system for this
+     # J = D  -  T*A(t) + iθ/T
+    θ = ns.ω
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-θ/T), 𝒯 = ComplexF64)
+
+    nj = size(J, 1)
+    J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
+    J[end, end] = 0
+
+    rhs = zeros(nj); rhs[end] = 1;
+    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
+    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
+
+    # update the borders to have less singular matrix J
+    J[end, 1:end-1] .= k
+    J[1:end-1, end] .= l
+
+    # Floquet eigenvectors
+    vr = J  \ rhs
+    v₁  = @view vr[1:end-1]
+    v₁ ./= sqrt(∫(vr, vr))
+    v₁ₛ = get_time_slices(coll, vcat(v₁,1))
+
+                if _NRM;v₁ₛ .*= (-0.46220415773497325 + 0.2722705470750184im)/v₁ₛ[1,1];end
+                # re-scale the eigenvector
+                v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
+                v₁ = vec(v₁ₛ)
+
+    @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
+
+    #########
+    # compute ϕ1star
+    # Jϕ = D  +  T*At(t)
+    Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = true, ρF = -1)
+    Jϕ[end-N:end-1, 1:N] .= -I(N)
+    Jϕ[end-N:end-1, end-N:end-1] .= I(N)
+    # build the extended linear problem
+    Jϕ[end, :] .= _rand(nj)
+    Jϕ[:, end] .= _rand(nj)
+    Jϕ[end, end] = 0
+
+    # update the borders to have less singular matrix Jψ
+    k = Jϕ  \ rhs; k = k[1:end-1]; k ./= norm(k)
+    l = Jϕ' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    Jϕ[end, 1:end-1] .= k
+    Jϕ[1:end-1, end] .= l
+
+    ϕ₁★ = Jϕ \ rhs
+    ϕ₁★ₛ = get_time_slices(coll, ϕ₁★)
+
+    u₀ₛ = get_time_slices(coll, ns.x0) # periodic solution at bifurcation
+    Fu₀ₛ = copy(u₀ₛ)
+    Aₛ   = copy(v₁ₛ)
+    Bₛ   = copy(v₁ₛ)
+    Cₛ   = copy(v₁ₛ)
+    for i = 1:size(u₀ₛ, 2)
+      Fu₀ₛ[:,i] .= F(u₀ₛ[:,i], par)
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+    end
+
+    #########
+    # compute a₁
+    ϕ₁★ ./= ∫( ϕ₁★ₛ, Fu₀ₛ)
+    @assert ∫( ϕ₁★ₛ, Fu₀ₛ) ≈ 1
+    # a = ∫ < ϕ₁★, B(v1, cv1) >
+    a₁ = ∫(ϕ₁★ₛ, Bₛ)
+
+    #########
+    # compute v1star
+    # J = D  +  T*At(t) + iθ/T
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-θ/T), 𝒯 = ComplexF64, _transpose = true, ρF = -1)
+
+    nj = size(J, 1)
+    J[end, :] .= _rand(nj)
+    J[:, end] .= _rand(nj)
+    J[end, end] = 0
+
+    rhs = zeros(nj); rhs[end] = 1;
+    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
+    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
+
+    # update the borders to have less singular matrix J
+    J[end, 1:end-1] .= k
+    J[1:end-1, end] .= l
+
+    # left / right Floquet eigenvectors
+    vr = J  \ rhs
+    v₁★  = @view vr[1:end-1]
+    v₁★ₛ = get_time_slices(coll, vcat(v₁★,1))
+    v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
+                if _NRM; v₁★ₛ .*= (1.0371208296352463 + 4.170902638152008im)/v₁★ₛ[1,1];end
+                # re-scale the eigenvector
+    v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
+    v₁★ = vec(v₁★ₛ)
+
+                # return
+    @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1
+    #########
+    # compute h20
+    # solution of (D-T A(t) + 2iθ   )h = B(v1, v1)
+    # written     (D-T(A(t) - 2iθ/T))h = B
+    for i = 1:size(u₀ₛ, 2)
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i])
+    end
+    rhs = vcat(vec(Bₛ), 0)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = ComplexF64)
+    # h₂₀ = J \ (rhs)
+
+    h₂₀= J[1:end-1,1:end-1] \ rhs[1:end-1];h₂₀ = vcat(vec(h₂₀), 0)
+    # h₂₀ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
+    h₂₀ = Icoll * h₂₀;@set! h₂₀[end]=0
+    h₂₀ₛ = get_time_slices(coll, h₂₀)
+                # a cause de Icoll
+                h₂₀ₛ[:, end] .= h₂₀ₛ[:,1]
+
+                # _plot(real(vcat(vec(h₂₀ₛ),1)),label="h20")
+                # _plot(imag(vcat(vec(Bₛ),1+im)),label="Bₛ")
+
+    #########
+    # compute h11
+    # solution of (D-TA(t))h = B - a₁F
+    for i = 1:size(u₀ₛ, 2)
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+    end
+    rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
+    rhs = vcat(vec(rhsₛ), 0)
+    border_ϕ1 = ForwardDiff.gradient(x -> ∫( reshape(x, size(ϕ₁★ₛ)), ϕ₁★ₛ),
+                                     zeros(length(ϕ₁★ₛ))
+                                    )
+    J = analytical_jacobian(coll, ns.x0, par;  𝒯 = ComplexF64)
+    J[end-N:end-1, 1:N] .= -I(N)
+    J[end-N:end-1, end-N:end-1] .= I(N)
+    # add borders
+    J[end, 1:end-1] .= border_ϕ1 # integral condition
+    J[:, end] .= ϕ₁★
+    J[end, end] = 0
+    h₁₁ = J \ rhs
+    h₁₁ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
+    h₁₁ₛ = get_time_slices(coll, h₁₁)
+                # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
+                @info abs(∫( ϕ₁★ₛ, h₁₁ₛ))
+    if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
+        @warn "The integral ∫(coll,ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
+    end
+    if abs(h₁₁[end]) > 1e-10
+        @warn "The value h₁₁[end] should be zero. We found $(h₁₁[end])"
+    end
+    #########
+    # compute d
+    # d = <v1★, C(v,v,v)  +  2B(h11, v)  +  B(h20, cv)  +  C(v,v,cv)>/2 + ...
+    for i = 1:size(u₀ₛ, 2)
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, h₁₁ₛ[:,i], v₁ₛ[:,i])
+        Cₛ[:,i] .= C(u₀ₛ[:,i], par,  v₁ₛ[:,i], v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+    end
+                # _plot(real(vcat(vec(Bₛ),1)),label="B")
+
+    d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
+
+                @debug "h20*v1b" d  (1/T) * ∫( v₁★ₛ, Cₛ )     ∫( v₁★ₛ, Bₛ )
+
+    for i = 1:size(u₀ₛ, 2)
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, h₂₀ₛ[:,i], conj(v₁ₛ[:,i]))
+        Aₛ[:,i] .= A(u₀ₛ[:,i], par, v₁ₛ[:,i])
+    end
+                @debug "h20*v1b" d   ∫( v₁★ₛ, Bₛ )
+    d +=  ∫( v₁★ₛ, Bₛ )
+    d = d/2
+                @debug ""  -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
+    d += -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2
+
+
+
+    nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRM) # keep b3 for ns-codim 2
+    return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, (@set ns.nf = nf), coll, false)
 end
 
 function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },

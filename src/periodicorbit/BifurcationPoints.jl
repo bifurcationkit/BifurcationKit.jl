@@ -127,7 +127,7 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
         if ns.prm
             println(io,"├─── a = ", ns.nf.nf.a, "\n├─── b = ", ns.nf.nf.b)
         else
-            println(io, ns.nf.nf)
+            println(io,"├─── a = ", ns.nf.nf.a, "\n├─── d = ", ns.nf.nf.d)
         end
     end
     println(io, "└─ Periodic orbit problem: \n")

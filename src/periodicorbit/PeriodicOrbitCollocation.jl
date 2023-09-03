@@ -517,9 +517,21 @@ end
 end
 
 """
-    Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula.
+$(SIGNATURES)
+
+Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
+
+ρD * D - T*(ρF * F + ρI * I)
+
+
 """
-@views function analytical_jacobian!(J, coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; _transpose::Bool = false, ρ = 1)
+@views function analytical_jacobian!(J,
+                                    coll::PeriodicOrbitOCollProblem,
+                                    u::AbstractVector,
+                                    pars; _transpose::Bool = false,
+                                    ρD = 1,
+                                    ρF = 1,
+                                    ρI = 0)
     n, m, Ntst = size(coll)
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     Ω = matrix_phase_condition(coll)
@@ -558,7 +570,8 @@ end
             end
 
             for l2 in 1:m+1
-                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * ρ * L[l2, l]) .* J0 .+ (∂L[l2, l] .* In)
+                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+
+                                                         ρD * (∂L[l2, l] .* In)
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
@@ -586,7 +599,7 @@ end
     J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
     return J
 end
-analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; k...) = analytical_jacobian!(zeros(eltype(u), length(coll)+1, length(coll)+1), coll, u, pars; k...)
+analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; 𝒯 = eltype(u), k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), coll, u, pars; k...)
 
 """
 $(SIGNATURES)
