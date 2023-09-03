@@ -239,7 +239,7 @@ _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
 Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
 @test norminf(Jcofd - Jco) < 1e-15
-BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρ = 1.);
+BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
 ####################################################################################################
 # test Hopf aBS
 let
