@@ -75,14 +75,15 @@ function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     return _finsol2
 end
 
-# version specific to collocation. Handles mesh adaptation
+# version specific to collocation. Handle mesh adaptation
 function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
     _finsol = get(kwargs, :finalise_solution, nothing)
     _finsol2 = (z, tau, step, contResult; kF...) ->
         begin
             # we first check that the continuation step was successful
             # if not, we do not update the problem with bad information
-            success = converged(get(kF, :state, nothing))
+            state = get(kF, :state, nothing)
+            success = isnothing(state) ? false : converged(state)
             # mesh adaptation
             if success && prob.meshadapt
                 oldsol = _copy(z)

@@ -156,7 +156,7 @@ Here are some useful methods you can apply to `pb`
 
 - `length(pb)` gives the total number of unknowns
 - `size(pb)` returns the triplet `(N, m, Ntst)`
-- `getmesh(pb)` returns the mesh `0 = τ0 < ... < τNtst+1 = 1`. This is useful because this mesh is born to vary by automatic mesh adaptation
+- `getmesh(pb)` returns the mesh `0 = τ0 < ... < τNtst+1 = 1`. This is useful because this mesh is born to vary during automatic mesh adaptation
 - `get_mesh_coll(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
 - `get_times(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
 - `generate_solution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
@@ -166,7 +166,7 @@ Here are some useful methods you can apply to `pb`
 You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
 
 # Constructors
-- `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst`and `m`.
+- `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
 
 Note that you can generate this guess from a function using `generate_solution`.
 
@@ -528,7 +528,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector,
-                                    pars; _transpose::Bool = false,
+                                    pars; 
+                                    _transpose::Bool = false,
                                     ρD = 1,
                                     ρF = 1,
                                     ρI = 0)

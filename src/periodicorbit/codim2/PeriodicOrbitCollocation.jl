@@ -40,6 +40,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
+    compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
@@ -88,7 +89,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
-        # detect_codim2_bifurcation = detect_codim2_bifurcation, # not necessary
         kwargs...
         )
 end
@@ -105,7 +105,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
 
-    @assert biftype == :pd "We continue only PD points of Periodic orbits for now"
+    @assert biftype == :pd "Please open an issue on BifurcationKit website"
 
     pdpointguess = pd_point(br, ind_bif)
 

@@ -434,7 +434,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-            minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
+        minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))

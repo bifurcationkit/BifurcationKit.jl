@@ -227,11 +227,12 @@ prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) 
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
+Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.006155 seconds (21.30 k allocations: 62.150 MiB)
 @test norminf(Jcofd - Jco) < 1e-15
 
 # same but with Stuart-Landau vector field
 N = 2
+@assert N == 2 "must be the dimension of the SL"
 Ntst = 20
 m = 4
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))

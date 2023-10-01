@@ -295,11 +295,13 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
-    _rand(n, r = 2) = r .* (rand(n) .- 1/2) # centered uniform random variables
+    _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
     local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     # we first compute the PD floquet eigenvector (for μ = -1)
     # we use an extended linear system for this
+    #########
+    # compute v1
     jac = jacobian(pbwrap, pd.x0, par)
     J = copy(jac.jacpb)
     nj = size(J, 1)
@@ -309,10 +311,6 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # enforce PD boundary condition
     J[end-N:end-1, 1:N] .= I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
-
-    # the transpose problem is a bit different. 
-    # transposing J means the boundary condition is wrong
-    # however it seems Prop A.1 says the opposite
 
     rhs = zeros(nj); rhs[end] = 1;
     k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) #≈ ker(J)
@@ -361,7 +359,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem Jψ
-    Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1, ρI = 0)
+    Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -I(N)
     Jψ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -410,7 +408,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
         @warn "The value h₂[end] should be zero. We found $(h₂[end])"
     end
 
-    # computation of c. We need B(t, v₁(t), h₂(t))
+    # computation of c. 
+    # we need B(t, v₁(t), h₂(t))
     for i=1:size(Bₛ, 2)
         Bₛ[:,i]  .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
     end
@@ -420,9 +419,10 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
                  ∫( v₁★ₛ, Bₛ ) -
          2a₁/T * ∫( v₁★ₛ, Aₛ )
+                    @debug "" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
-    nf = (a = a₁, b3 = c) # keep b3 for PD-codim 2
-    @debug "" a₁ c c/a₁
+    nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ) # keep b3 for PD-codim 2
+    @debug "" a₁ c
     return PeriodDoublingPO(pd.x0, T, v₁, v₁★, (@set pd.nf = nf), coll, false)
 end
 
@@ -525,7 +525,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # get the eigenvalue
     eigRes = br.eig
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
-    ωₙₛ = imag(λₙₛ)
+    ωₙₛ = abs(imag(λₙₛ))
 
     if bifpt.x isa NamedTuple
         # the solution is mesh adapted, we need to restore the mesh.
@@ -572,41 +572,6 @@ function neimark_sacker_normal_form(pbwrap,
     return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
 end
 
-function neimark_sacker_normal_form(pbwrap::WrapPOColl,
-                                    br,
-                                    ind_bif::Int;
-                                    verbose = false,
-                                    nev = length(eigenvalsfrombif(br, ind_bif)),
-                                    newton_options = br.contparams.newton_options,
-                                    prm = true,
-                                    detailed = true,
-                                    kwargs_nf...)
-     # first, get the bifurcation point parameters
-     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
-     bifpt = br.specialpoint[ind_bif]
-     bptype = bifpt.type
-     par = setparam(br, bifpt.param)
-     period = getperiod(pbwrap.prob, bifpt.x, par)
-
-     if bifpt.x isa NamedTuple
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        updateMesh!(pbwrap.prob, bifpt.x._mesh )
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
-    if ~detailed || ~prm
-        # method based on Iooss method
-        return neimark_sacker_normal_form(pbwrap, ns0; detailed, verbose, nev, kwargs_nf...)
-    end
-    if prm # method based on Poincare Return Map (PRM)
-        # newton parameter
-        return neimark_sacker_normal_form_prm(pbwrap, ns0, newton_options; verbose, nev, kwargs_nf...)
-    end
-    return nothing
-
-end
-
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
                                     ns0::NeimarkSacker,
                                     optn::NewtonPar;
@@ -615,7 +580,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
                                     verbose = false,
                                     lens = getlens(pbwrap),
                                     kwargs_nf...)
-    @debug "methode PRM"
+    @debug "method PRM"
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     pars = ns0.params
@@ -664,9 +629,9 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                         nev = 3,
                                         verbose = false,
                                         lens = getlens(pbwrap),
+                                        _NRMDEBUG = false, # normalise to compare to ApproxFun
                                         kwargs_nf...)
-    _NRM = false # normalise to compare to ApproxFun
-    @warn "method IOOSS, NRM = $_NRM"
+    @warn "method IOOSS, NRM = $_NRMDEBUG"
 
     # based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.
@@ -687,7 +652,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     C(u, p, du1, du2, du3) = TrilinearMap((dx1, dx2, dx3) -> d3F(coll.prob_vf, u, p, dx1, dx2, dx3))(du1, du2, du3)
 
     _plot(x; k...) = (_sol = get_periodic_orbit(coll, x, 1);display(plot(_sol.t, _sol.u'; k...)))
-    _rand(n, r = 2) = r .* (rand(n) .- 1/2) # centered uniform random variables
+    _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
     local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     #########
@@ -695,7 +660,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # we first compute the NS floquet eigenvector
     # we use an extended linear system for this
      # J = D  -  T*A(t) + iθ/T
-    θ = ns.ω
+    θ = abs(ns.ω)
     J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-θ/T), 𝒯 = ComplexF64)
 
     nj = size(J, 1)
@@ -716,7 +681,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     v₁ ./= sqrt(∫(vr, vr))
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
 
-                if _NRM;v₁ₛ .*= (-0.46220415773497325 + 0.2722705470750184im)/v₁ₛ[1,1];end
+                if _NRMDEBUG;v₁ₛ .*= (-0.46231553686750715 - 0.27213798536704986im)/v₁ₛ[1,1];end
                 # re-scale the eigenvector
                 v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
                 v₁ = vec(v₁ₛ)
@@ -783,7 +748,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     v₁★  = @view vr[1:end-1]
     v₁★ₛ = get_time_slices(coll, vcat(v₁★,1))
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
-                if _NRM; v₁★ₛ .*= (1.0371208296352463 + 4.170902638152008im)/v₁★ₛ[1,1];end
+                if _NRMDEBUG; v₁★ₛ .*= (1.0371208296352463 + 4.170902638152008im)/v₁★ₛ[1,1];end
                 # re-scale the eigenvector
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
     v₁★ = vec(v₁★ₛ)
@@ -833,7 +798,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     h₁₁ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
     h₁₁ₛ = get_time_slices(coll, h₁₁)
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
-                @info abs(∫( ϕ₁★ₛ, h₁₁ₛ))
+                @debug "" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
         @warn "The integral ∫(coll,ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
     end
@@ -851,13 +816,13 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
 
-                @debug "h20*v1b" d  (1/T) * ∫( v₁★ₛ, Cₛ )     ∫( v₁★ₛ, Bₛ )
+                @debug "B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
 
     for i = 1:size(u₀ₛ, 2)
         Bₛ[:,i] .= B(u₀ₛ[:,i], par, h₂₀ₛ[:,i], conj(v₁ₛ[:,i]))
         Aₛ[:,i] .= A(u₀ₛ[:,i], par, v₁ₛ[:,i])
     end
-                @debug "h20*v1b" d   ∫( v₁★ₛ, Bₛ )
+                @debug "B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
     d +=  ∫( v₁★ₛ, Bₛ )
     d = d/2
                 @debug ""  -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
@@ -865,7 +830,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
 
 
-    nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRM) # keep b3 for ns-codim 2
+    nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2
     return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, (@set ns.nf = nf), coll, false)
 end
 

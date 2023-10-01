@@ -45,10 +45,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     # parameters for arclength continuation
     dsmin::T    = 1e-3
     dsmax::T    = 1e-1
-    @assert dsmax >= dsmin "You must provide a valid interval (ordered) for ds"
-    ds::T        = 1e-2; @assert dsmax >= abs(ds) >= dsmin
-    @assert dsmin > 0 "The interval for ds must be positive"
-    @assert dsmax > 0
+    ds::T        = 1e-2
 
     # parameters for continuation
     a::T    = 0.5 # aggressiveness factor
@@ -86,14 +83,15 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     # handling event detection
     detect_event::Int64 = 0               # event location
     tol_param_bisection_event::T = 1e-16  # tolerance on value of parameter
+    detect_loop::Bool = false                # detect if the branch loops
 
+    @assert dsmax >= abs(ds) >= dsmin > 0 "You must provide a valid interval (ordered) for ds"
     @assert p_max >= p_min "You must provide a valid interval [p_min, p_max]"
     @assert iseven(n_inversion) "The option `n_inversion` number must be even"
     @assert 0 <= detect_bifurcation <= 3 "The option `detect_bifurcation` must belong to {0,1,2,3}"
     @assert 0 <= detect_event <= 2 "The option `detect_event` must belong to {0,1,2}"
     @assert (detect_bifurcation > 1 && detect_event == 0) || (detect_bifurcation <= 1 && detect_event >= 0)  "One of these options must be disabled detect_bifurcation = $detect_bifurcation and detect_event = $detect_event"
     @assert tol_bisection_eigenvalue >= 0 "The option `tol_bisection_eigenvalue` must be positive"
-    detect_loop::Bool = false                # detect if the branch loops
     @assert plot_every_step > 0 "plot_every_step must be positive. You can turn off plotting by passing plot = false to `continuation`"
     @assert ~(detect_bifurcation > 1 && save_eig_every_step > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use save_eig_every_step = 1 or detect_bifurcation = 1."
 end

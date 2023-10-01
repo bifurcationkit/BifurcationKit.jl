@@ -190,7 +190,6 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
         br, ind_bif, lens2,
         options_cont;
         start_with_eigen = start_with_eigen,
-        # detect_codim2_bifurcation = detect_codim2_bifurcation, # not necessary
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
         kwargs...)

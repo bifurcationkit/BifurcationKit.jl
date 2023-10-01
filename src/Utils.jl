@@ -129,13 +129,12 @@ $(SIGNATURES)
 This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
 """
 function get_blocks(A::SparseMatrixCSC, N, M)
-    I,J,K = findnz(A)
+    I, J, K = findnz(A)
     out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
     for k in eachindex(I)
         m, l = div(I[k]-1, N), div(J[k]-1, N)
         push!(out[1+m, 1+l], k)
     end
-    res = [length(m) for m in out]
     out
 end
 ####################################################################################################
