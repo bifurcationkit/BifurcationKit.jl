@@ -10,7 +10,7 @@
 [docs-dev-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev
 
 
-**!!! A new version v0.3.0 will be tagged soon in which the function names, keyword arguments,... follow the Julia convention. There are a lot of breaking changes !!!**
+**!!! A new version v0.3 has been tagged in which the function names, keyword arguments,... follow the Julia convention. There are a lot of breaking changes. The docs are up to date.**
 
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ∈ℝ by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
 

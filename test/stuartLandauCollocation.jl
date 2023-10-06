@@ -204,7 +204,7 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
     )
 ####################################################################################################
 # test analytical jacobian
-Ntst = 9
+Ntst = 10
 m = 3
 N = 4
 nullvf(x,p) = zero(x)
@@ -213,9 +213,8 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = ra
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 prob_col(_ci, par_sl);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-D = BK.analytical_jacobian(prob_col, _ci, par_sl); # derivative matrix
+D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000463 seconds (2.82 k allocations: 304.016 KiB)
 @test norminf(Jcofd - D) < 1e-15
-
 
 # same but with linear vector field
 Ntst = 140
@@ -233,7 +232,7 @@ Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.006155 seconds (21.30 k
 # same but with Stuart-Landau vector field
 N = 2
 @assert N == 2 "must be the dimension of the SL"
-Ntst = 30
+Ntst = 3
 m = 2
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
@@ -241,6 +240,22 @@ Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
 Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
 @test norminf(Jcofd - Jco) < 1e-14
 BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
+# test for the case of sparse arrays
+# jacobian using BlockArray
+const _asp = sparse(I(N) + 0.1 .*sprand(N,N,0.1))
+prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _asp)
+prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> Array(_asp))
+prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N = N, ϕ = copy(prob_col_dense.ϕ), xπ = copy(prob_col_dense.xπ))
+_ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+Jco_sp = BK.analytical_jacobian_sparse(prob_col, _ci, par_sl);
+Jco = BK.analytical_jacobian(prob_col_dense, _ci, par_sl);
+@assert norminf(Jco - Array(Jco_sp)) == 0
+Jco2 = copy(Jco) |> sparse;
+Jco2.=0
+_indx = BifurcationKit.get_blocks(prob_col, Jco2);
+@time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
+@test norminf(Jco - Jco2) < 1e-14
 ####################################################################################################
 # test Hopf aBS
 let

@@ -526,12 +526,12 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 """
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
-                                    u::AbstractVector,
+                                    u::AbstractVector{𝒯},
                                     pars; 
                                     _transpose::Bool = false,
-                                    ρD = 1,
-                                    ρF = 1,
-                                    ρI = 0)
+                                    ρD = one(𝒯),
+                                    ρF = one(𝒯),
+                                    ρI = zero(𝒯)) where {𝒯}
     n, m, Ntst = size(coll)
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     Ω = matrix_phase_condition(coll)
@@ -539,13 +539,11 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    𝒯 = eltype(u)
     pj = zeros(𝒯, n, m)
     ϕj = zeros(𝒯, n, m)
     uj = zeros(𝒯, n, m+1)
     In = I(n)
     J0 = zeros(𝒯, n, n)
-    tmpN = zeros(𝒯, n)
 
     # put boundary condition
     J[end-n:end-1, 1:n] .= -In
@@ -570,8 +568,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             end
 
             for l2 in 1:m+1
-                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+
-                                                         ρD * (∂L[l2, l] .* In)
+                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 .+ ρI .* In) .+
+                                                        (ρD * ∂L[l2, l]) .* In
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
@@ -594,12 +592,177 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         end
     end
     J[end, 1:end-1] ./= period
-
-
     J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
     return J
 end
 analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; 𝒯 = eltype(u), k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), coll, u, pars; k...)
+
+function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
+                                    u::AbstractVector,
+                                    pars; 
+                                    k...)
+    jacBlock = jacobian_poocoll_block(coll, u, pars; k...)
+    block_to_sparse(jacBlock)
+end
+
+function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
+                                u::AbstractVector{𝒯},
+                                pars;
+                                _transpose::Bool = false,
+                                ρD = one(𝒯),
+                                ρF = one(𝒯),
+                                ρI = zero(𝒯)) where {𝒯}
+    n, m, Ntst = size(coll)
+    # allocate the jacobian matrix
+    blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
+    n_blocks = length(blocks)
+    J = BlockArray(spzeros(length(u), length(u)), blocks,  blocks)
+    # temporaries
+    L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
+    Ω = matrix_phase_condition(coll)
+    mesh = getmesh(coll)
+    period = getperiod(coll, u, nothing)
+    uc = get_time_slices(coll, u)
+    ϕc = get_time_slices(coll.ϕ, size(coll)...)
+    pj = zeros(𝒯, n, m)
+    ϕj = zeros(𝒯, n, m)
+    uj = zeros(𝒯, n, m+1)
+    In = I(n)
+    J0 = jacobian(coll.prob_vf, u[1:n], pars)
+    # tmpN = zeros(𝒯, n)
+
+    # put boundary condition
+    J[Block(1 + m * Ntst, 1 + m * Ntst)] = In
+    J[Block(1 + m * Ntst, 1)] = -In
+
+    # loop over the mesh intervals
+    rg = UnitRange(1, m+1)
+    rgNx = UnitRange(1, n)
+    rgNy = UnitRange(1, n)
+
+    for j in 1:Ntst
+        uj .= uc[:, rg]
+        mul!(pj, uj, L) # pj ≈ (L * uj')'
+        α = period * (mesh[j+1]-mesh[j]) / 2
+        mul!(ϕj, ϕc[:, rg], ∂L)
+        # put the jacobian of the vector field
+        for l in 1:m
+            if ~_transpose
+                J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
+            else
+                J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
+            end
+
+            for l2 in 1:m+1
+                J[Block( l + (j-1)*m ,l2 + (j-1)*m) ] = (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+
+                                                         ρD * (∂L[l2, l] .* In)
+            end
+            # add derivative w.r.t. the period
+            J[Block(l + (j-1)*m, n_blocks)] = reshape(residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2), n, 1)
+        end
+        rg = rg .+ m
+    end
+
+    rg = 1
+    J[end, 1:end-1] .= 0
+    for j = 1:Ntst
+        for k₁ = 1:m+1
+            for k₂ = 1:m+1
+                J[Block(n_blocks, rg)] += reshape(Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂], 1, n)
+            end
+            if k₁ < m + 1
+                rg += 1
+            end
+        end
+    end
+    J[end, 1:end-1] ./= period
+
+    J[Block(n_blocks, n_blocks)] = reshape([-phase_condition(coll, uc, (L, ∂L), period) / period],1,1)
+
+    return J
+end
+
+@views function jacobian_poocoll_sparse_indx!(coll::PeriodicOrbitOCollProblem,
+                                        J::AbstractSparseMatrix,
+                                        u::AbstractVector{𝒯},
+                                        pars,
+                                        indx; 
+                                        _transpose::Bool = false,
+                                        ρD = one(𝒯),
+                                        ρF = one(𝒯),
+                                        ρI = zero(𝒯),
+                                        δ = convert(𝒯, 1e-9), 
+                                        updateborder = true) where {𝒯}
+    n, m, Ntst = size(coll)
+    # allocate the jacobian matrix
+    blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
+    n_blocks = length(blocks)
+    @assert n_blocks == size(indx, 1)
+    # J = BlockArray(spzeros(length(u), length(u)), blocks,  blocks)
+    # temporaries
+    L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
+    Ω = matrix_phase_condition(coll)
+    mesh = getmesh(coll)
+    period = getperiod(coll, u, nothing)
+    uc = get_time_slices(coll, u)
+    ϕc = get_time_slices(coll.ϕ, size(coll)...)
+    pj = zeros(𝒯, n, m)
+    ϕj = zeros(𝒯, n, m)
+    uj = zeros(𝒯, n, m+1)
+    In = sparse(I(n))
+    J0 = jacobian(coll.prob_vf, uc[1:n], pars)
+    tmpJ = copy(J0)
+    @assert J0 isa AbstractSparseMatrix
+
+    # put boundary condition
+    J.nzval[indx[1 + m * Ntst, 1 + m * Ntst]] = In.nzval
+    J.nzval[indx[1 + m * Ntst, 1]] = -In.nzval
+
+    # loop over the mesh intervals
+    rg = UnitRange(1, m+1)
+    rgNx = UnitRange(1, n)
+    rgNy = UnitRange(1, n)
+
+    for j in 1:Ntst
+        uj .= uc[:, rg]
+        mul!(pj, uj, L) # pj ≈ (L * uj')'
+        α = period * (mesh[j+1]-mesh[j]) / 2
+        mul!(ϕj, ϕc[:, rg], ∂L)
+        # put the jacobian of the vector field
+        for l in 1:m
+            if ~_transpose
+                J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
+            else
+                J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
+            end
+
+            for l2 in 1:m+1
+                tmpJ .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+ ρD * (∂L[l2, l] .* In)
+                J.nzval[indx[ l + (j-1) * m ,l2 + (j-1)*m] ] .= sparse(tmpJ).nzval
+            end
+            # add derivative w.r.t. the period
+            J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
+        end
+        rg = rg .+ m
+        rgNx = rgNx .+ (m * n)
+    end
+
+    rg = 1:n
+    J[end, 1:end-1] .= 0
+    for j = 1:Ntst
+        for k₁ = 1:m+1
+            for k₂ = 1:m+1
+                J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
+            end
+            if k₁ < m + 1
+                rg = rg .+ n
+            end
+        end
+    end
+    J[end, 1:end-1] ./= period
+    J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
+    return J
+end
 
 """
 $(SIGNATURES)
