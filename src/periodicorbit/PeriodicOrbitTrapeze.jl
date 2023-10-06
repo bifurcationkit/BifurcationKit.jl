@@ -798,8 +798,6 @@ end
     out1 = apply(J.Aγ, dx[1:end-1])
     out1 .+= J.∂TGpo[1:end-1] .* dx[end]
     return vcat(out1, dot(J.Aγ.prob.ϕ, dx[1:end-1]) + dx[end] * J.∂TGpo[end])
-
-    throw("Not implemented. If you use the bordered linear solver BorderingBLS, please use the option `check_precision = false`")
 end
 ####################################################################################################
 # linear solver for the PO functional, akin to a bordered linear solver

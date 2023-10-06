@@ -145,7 +145,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `N::Int` dimension of the state space
 - `mesh_cache::MeshCollocationCache` cache for collocation. See docs of `MeshCollocationCache`
 - `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDenseAnalytical(), AutoDiffDense`.
+- `jacobian = AutoDiffDenseAnalytical()` symbol which describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()`.
 - `meshadapt::Bool = false` whether to use mesh adaptation
 - `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
 - `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size
@@ -523,7 +523,6 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 
 ρD * D - T*(ρF * F + ρI * I)
 
-
 """
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
@@ -851,9 +850,11 @@ $(SIGNATURES)
 
 Perform mesh adaptation of the periodic orbit problem. Modify `pb` and `x` inplace if the adaptation is successfull.
 
+See page 367 of:
 Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
 
-p. 368
+See also:
+R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
 function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
                     normE = norm,
@@ -920,11 +921,10 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
     if verbosity
         h = maximum(diff(newmesh))
         printstyled(color = :magenta, 
-        "   ┌─ Mesh adaptation",
+          "   ┌─ Mesh adaptation, hi = time steps",
         "\n   ├─── min(hi)       = ", minimum(diff(newmesh)),
         "\n   ├─── h = max(hi)   = ", h,
         "\n   ├─── K = max(h/hi) = ", maximum(h ./ diff(newmesh)),
-        "\n   ├─── θ             = ", θ,
         "\n   ├─── min(ϕ)        = ", minimum(ϕ),
         "\n   ├─── max(ϕ)        = ", maximum(ϕ),
         "\n   └─── θ             = ", θ,

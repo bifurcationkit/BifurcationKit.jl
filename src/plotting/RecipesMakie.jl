@@ -134,8 +134,7 @@ function plot_branch_cont(contres::ContResult,
     fig
 end
 
-function plot(contres::AbstractBranchResult; 
-        kP...)
+function plot(contres::AbstractBranchResult; kP...)
     if length(contres) == 0; return ;end
 
     ind1, ind2 = get_plot_vars(contres, nothing)

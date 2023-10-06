@@ -193,14 +193,14 @@ $(SIGNATURES)
 
 Function to transform predictors `solfromRE` in the normal form coordinates of `bpnf` into solutions. Note that `solfromRE = (before = Vector{vectype}, after = Vector{vectype})`.
 """
-function getFirstPointsOnBranch(br::AbstractBranchResult,
+function get_first_points_on_branch(br::AbstractBranchResult,
         bpnf::NdBranchPoint, solfromRE,
         options_cont::ContinuationPar = br.contparams ;
         δp = nothing,
         Teigvec = getvectortype(br),
         usedeflation = true,
         verbosedeflation = false,
-        max_iter_deflation = min(50, 15options_cont.newton_options.maxIter),
+        max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
         lsdefop = DeflatedProblemCustomLS(),
         perturb_guess = identity,
         kwargs...)
@@ -261,7 +261,7 @@ function multicontinuation(br::AbstractBranchResult,
         perturb_guess = identity,
         kwargs...)
 
-    defOpm, defOpp, _, _ = getFirstPointsOnBranch(br, bpnf, solfromRE, options_cont; δp = δp, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, lsdefop = lsdefop, perturb_guess = perturb_guess, kwargs...)
+    defOpm, defOpp, _, _ = get_first_points_on_branch(br, bpnf, solfromRE, options_cont; δp = δp, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, lsdefop = lsdefop, perturb_guess = perturb_guess, kwargs...)
 
     multicontinuation(br,
             bpnf, defOpm, defOpp, options_cont;

@@ -327,6 +327,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
     # options for the Newton Solver inherited from the ones the user provided
     options_newton = options_cont.newton_options
+    # tolerance for detecting BT bifurcation and stopping continuation
     threshBT = 100options_newton.tol
 
     𝐇 = HopfProblemMinimallyAugmented(

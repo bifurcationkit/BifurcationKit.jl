@@ -36,8 +36,8 @@ $(TYPEDFIELDS)
     "Factor to increase ds upon successful step"
     dsfact::T = 1.5
 end
-Multiple(alg, x0, α::T, nb) where T = Multiple(alg = alg, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
-Multiple(x0, α, nb) = Multiple(PALC(), x0, α, nb)
+Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg = alg, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
+Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
 getlinsolver(alg::Multiple) = getlinsolver(alg.alg)
 getdot(alg::Multiple) = getdot(alg.alg)
@@ -87,7 +87,6 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
     cb = (state; k...) -> callback(it)(state; k...) && algo(state; k...)
     # note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
     for ii in algo.nb:-1:1
-        (verbose > 1) && printstyled(color=:magenta, "   ├─ i = $ii, s(i) = $(ii*ds), converged = [")
         algo.currentind = ii # record the current index
         zpred = _copy(state.z_pred)
         axpy!(ii * ds, algo.τ, zpred)
@@ -95,6 +94,8 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
         # we restore the original callback if it reaches the usual case ii == 0
         corrector!(state, it, algo.alg; callback = cb, kwargs...)
         if verbose > 1
+            firstchar = (converged(state) || ii == 1) ? "└" : "├"
+            printstyled(color=:magenta, "   "*firstchar*"─ i = $ii, s(i) = $(ii*ds), converged = [")
             if converged(state)
                 printstyled("YES", color=:green)
             else

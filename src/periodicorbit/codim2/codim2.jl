@@ -97,7 +97,7 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     if contres.prob.prob isa FoldProblemMinimallyAugmented
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1)
     elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
-        conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2,)
+        conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, )
     elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
         conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS,)
     else
@@ -234,9 +234,9 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     return Branch(branch, gh)
 end
 
-wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
-wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
-wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
+_wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
+_wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
+_wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 
 function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
@@ -307,7 +307,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(probPO, _kwargs)
 
     jac = build_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
