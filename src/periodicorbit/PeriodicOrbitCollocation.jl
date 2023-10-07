@@ -629,7 +629,6 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
     uj = zeros(𝒯, n, m+1)
     In = I(n)
     J0 = jacobian(coll.prob_vf, u[1:n], pars)
-    # tmpN = zeros(𝒯, n)
 
     # put boundary condition
     J[Block(1 + m * Ntst, 1 + m * Ntst)] = In
@@ -1105,4 +1104,32 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 
     success = true
     return (;success, newmeshT, ϕ)
+end
+
+"""
+$(SIGNATURES)
+
+This function extracts the indices of the blocks composing the matrix J which is a M x M Block matrix where each block N x N has the same sparsity.
+"""
+function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
+    # N, m, Ntst = size(coll)
+    # M = div(size(Jac,1)-1, N)
+    # I, J, K = findnz(Jac)
+    # out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
+    # for k in eachindex(I)
+    #     m, l = div(I[k]-1, N), div(J[k]-1, N)
+    #     push!(out[1+m, 1+l], k)
+    # end
+    # res = [length(m) for m in out]
+    # out
+    N, m, Ntst = size(coll)
+    blocks = N * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
+    n_blocks = length(blocks)
+    I, J, K = findnz(Jac)
+    out = [Vector{Int}() for i in 1:n_blocks, j in 1:n_blocks];
+    for k in eachindex(I)
+        i, j = div(I[k]-1, N), div(J[k]-1, N)
+        push!(out[1+i, 1+j], k)
+    end
+    out
 end
