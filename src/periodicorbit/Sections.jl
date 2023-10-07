@@ -3,9 +3,9 @@ abstract type AbstractSection end
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
 ####################################################################################################
-function sectionShooting(x::AbstractVector, T,
-                        normal::AbstractVector,
-                        center::AbstractVector)
+function sectionShooting(x::AbstractArray, T,
+                        normal::AbstractArray,
+                        center::AbstractArray)
     N = length(center)
     # we only constrain the first point to lie on a specific hyperplane
     # this avoids the temporary xc - centers
@@ -53,7 +53,7 @@ function _section_hyp!(out, x, normals, centers, radius)
         if norm(x-centers[ii]) < radius
             out[ii] = dot(normals[ii], x) - dot(normals[ii], centers[ii])
         else
-            out[ii] = 1.
+            out[ii] = 1
         end
     end
     out

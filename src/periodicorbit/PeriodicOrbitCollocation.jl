@@ -145,7 +145,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `N::Int` dimension of the state space
 - `mesh_cache::MeshCollocationCache` cache for collocation. See docs of `MeshCollocationCache`
 - `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian = AutoDiffDenseAnalytical()` symbol which describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()`.
+- `jacobian = AutoDiffDenseAnalytical()` describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()`.
 - `meshadapt::Bool = false` whether to use mesh adaptation
 - `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
 - `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size

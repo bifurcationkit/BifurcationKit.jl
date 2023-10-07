@@ -186,7 +186,7 @@ function plot_branch_cont(contres::ContResult, sol::BorderedArray, contparms, pl
 
     if compute_eigenelements(contparms)
         eigvals = contres.eig[end].eigenvals
-        scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black)
+        scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black, xlabel = "ℜ", ylabel = "ℑ")
         # add stability boundary
         maxIm = maximum(imag, eigvals)
         minIm = minimum(imag, eigvals)

@@ -392,6 +392,10 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
             "\n├─ Method = \n", probPO, "\n")
 
+    if pred.amp < 0.1
+        @error "The amplitude for the predictor for the first periodic orbit on the bifurcated branch is not small $(pred.amp). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start. Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor"
+    end
+
     M = get_mesh_size(probPO)
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
 

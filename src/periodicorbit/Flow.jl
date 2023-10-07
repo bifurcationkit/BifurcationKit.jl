@@ -94,9 +94,9 @@ Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, jvp = df, jvpSerial = df)
 
 vf(fl::Flow, x, p) = fl.F(x, p)
 
-evolve(fl::Flow, x, p, t; k...)                        = fl.flow(x, p, t; k...)
-jvp(fl::Flow, x, p, dx, t; k...)                    = fl.jvp(x, p, dx, t; k...)
-evolve(fl::Flow, ::Val{:Full}, x, p, t; k...)          = fl.flowFull(x, p, t; k...)
+evolve(fl::Flow, x, p, t; k...)                          = fl.flow(x, p, t; k...)
+jvp(fl::Flow, x, p, dx, t; k...)                         = fl.jvp(x, p, dx, t; k...)
+evolve(fl::Flow, ::Val{:Full}, x, p, t; k...)            = fl.flowFull(x, p, t; k...)
 
 # for Poincaré Shooting
 evolve(fl::Flow, ::Val{:SerialTimeSol}, x, p, t; k...)   = fl.flowSerial(x, p, t; k...)

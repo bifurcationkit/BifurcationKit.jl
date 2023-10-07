@@ -264,11 +264,12 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
 
     if verbose
         printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs(2nunstbls[end]-n1-n2), ", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
-        printstyled(color=:blue, "─"^40*"\n┌─── Stopping reason:\n├───── isnothing(next)           = ", isnothing(next),
-                "\n├───── |ds| < dsmin_bisection     = ", abs(state.ds) < contParams.dsmin_bisection,
+        printstyled(color=:blue, "─"^40*
+                "\n┌─── Stopping reason:\n├───── isnothing(next)             = ", isnothing(next),
+                "\n├───── |ds| < dsmin_bisection      = ", abs(state.ds) < contParams.dsmin_bisection,
                 "\n├───── step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
-                "\n├───── n_inversion >= n_inversion = ", n_inversion >= contParams.n_inversion,
-                "\n└───── biflocated                = ", biflocated == true, "\n")
+                "\n├───── n_inversion >= n_inversion  = ", n_inversion >= contParams.n_inversion,
+                "\n└───── biflocated                  = ", biflocated == true, "\n")
 
     end
     internal_adaptation!(iter.alg, true)

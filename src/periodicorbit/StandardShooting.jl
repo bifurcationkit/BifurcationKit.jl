@@ -126,8 +126,9 @@ end
 end
 get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 
-@inline getTimeSlice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
-@inline getTimeSlice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
+@inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
+@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
+@inline get_time_slice(sh::ShootingProblem, x::BorderedArray, ii::Int) = x.u[ii]
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)
@@ -159,7 +160,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
     end
 
     # add constraint
-    out[end] = @views sh.section(getTimeSlice(sh, xc, 1), T)
+    out[end] = @views sh.section(get_time_slice(sh, xc, 1), T)
     return out
 end
 
@@ -186,7 +187,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
     end
 
     # add constraint
-    out.p = sh.section(getTimeSlice(sh, xc, 1), T)
+    out.p = sh.section(get_time_slice(sh, x, 1), T)
     return out
 end
 
