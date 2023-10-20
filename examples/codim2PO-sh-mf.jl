@@ -95,9 +95,9 @@ AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getparams(pro
 @set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
-    eigpo = EigKrylovKit(x₀ = rand(4))
-    optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
-    solpo = newton(probsh, cish, optnpo)
+eigpo = EigKrylovKit(x₀ = rand(4))
+optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
+solpo = newton(probsh, cish, optnpo)
 
 _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
@@ -121,25 +121,25 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0.01, p_max = 1.2)
-    @set! opts_posh_fold.newton_options.tol = 1e-9
+@set! opts_posh_fold.newton_options.tol = 1e-9
 
-    # use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
-    @set! opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
-    fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
-        verbosity = 2, plot = true,
-        detect_codim2_bifurcation = 0,
-        jacobian_ma = :finiteDifferencesMF,
+# use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
+@set! opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
+fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
+    verbosity = 2, plot = true,
+    detect_codim2_bifurcation = 0,
+    jacobian_ma = :finiteDifferencesMF,
 
-        # jacobian_ma = :minaug,
-        bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
-        # linear_algo = MatrixFreeBLS(@set lspo.N = lspo.N+2),
-        # Jᵗ = (x,p) -> (dx -> AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, p), x)(dx)[1]),
-        # # usehessian = false,
+    # jacobian_ma = :minaug,
+    bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
+    # linear_algo = MatrixFreeBLS(@set lspo.N = lspo.N+2),
+    # Jᵗ = (x,p) -> (dx -> AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, p), x)(dx)[1]),
+    # # usehessian = false,
 
-        start_with_eigen = false,
-        bothside = true,
-        callback_newton = BK.cbMaxNorm(1),
-        )
+    start_with_eigen = false,
+    bothside = true,
+    callback_newton = BK.cbMaxNorm(1),
+    )
 
 fold_po_sh2 = continuation(br_fold_sh, 1, (@lens _.ϵ), opts_posh_fold;
         verbosity = 2, plot = true,
@@ -157,20 +157,20 @@ plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, max_steps = 40, p_min = -1.)
-    @set! opts_posh_pd.newton_options.tol = 1e-8
-    # use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
-    # @set! opts_posh_pd.newton_options.linsolver.solver.N = opts_posh_pd.newton_options.linsolver.solver.N+1
-    pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
-        verbosity = 2, plot = true,
-        detect_codim2_bifurcation = 0,
-        usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :finiteDifferencesMF,
-        bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
-        start_with_eigen = false,
-        bothside = true,
-        callback_newton = BK.cbMaxNorm(1),
-        )
+@set! opts_posh_pd.newton_options.tol = 1e-8
+# use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
+# @set! opts_posh_pd.newton_options.linsolver.solver.N = opts_posh_pd.newton_options.linsolver.solver.N+1
+pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
+    verbosity = 2, plot = true,
+    detect_codim2_bifurcation = 0,
+    usehessian = false,
+    jacobian_ma = :minaug,
+    # jacobian_ma = :finiteDifferencesMF,
+    bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
+    start_with_eigen = false,
+    bothside = true,
+    callback_newton = BK.cbMaxNorm(1),
+    )
 
 plot(pd_po_sh)
 

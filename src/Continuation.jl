@@ -500,7 +500,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
     - case 3: print information during bisection to locate bifurcations / events
 - `normC = norm` norm used in the Newton solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
-- `callback_newton` callback for newton iterations. See docs for [`newton`](@ref). For example, it can be used to change preconditioners.
+- `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change preconditioners.
 - `kind::AbstractContinuationKind` [Internal] flag to describe continuation kind (equilibrium, codim 2, ...). Default = `EquilibriumCont()`
 
 # Output:

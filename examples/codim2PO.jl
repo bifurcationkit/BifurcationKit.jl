@@ -136,7 +136,7 @@ fold_po_trap2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
 plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
     # plot!(pd_po_trap.branch.ϵ, pd_po_trap.branch.b0)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3; update_section_every_step = 0), prob, sol, 2.)
 
 plot(sol)
 probcoll(ci, prob.params) |> plot
@@ -155,7 +155,7 @@ brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
 pt = get_normal_form(brpo_fold, 1; prm = true)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
-brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
+brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, max_steps=250);
     verbosity = 3, plot = true,
     argspo...
     )
@@ -195,7 +195,7 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -209,13 +209,15 @@ plot(fold_po_coll1, pd_po_coll)
 fold_po_coll2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
+        update_minaug_every_step = 1,
         start_with_eigen = false,
         bothside = true,
         jacobian_ma = :minaug,
+        callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 plot(fold_po_coll1, fold_po_coll2, ylims = (0, 0.49))
-    plot!(pd_po_coll, vars = (:ϵ, :b0))
+plot!(pd_po_coll, vars = (:ϵ, :b0))
 
 
 #####
@@ -252,18 +254,19 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         start_with_eigen = false,
         usehessian = false,
         jacobian_ma = :minaug,
+        update_minaug_every_step = 1,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(1),
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
 plot(fold_po_coll1, ylims = (0, 0.49))
-    plot!(fold_po_coll2)
-    # plot!(pd_po_coll, vars = (:ϵ, :b0))
-    plot!(pd_po_coll2, vars = (:ϵ, :b0))
+plot!(fold_po_coll2)
+# plot!(pd_po_coll, vars = (:ϵ, :b0))
+plot!(pd_po_coll2, vars = (:ϵ, :b0))
 
 ns = get_normal_form(brpo_ns, 1)
 
@@ -276,7 +279,7 @@ ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),

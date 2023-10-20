@@ -54,7 +54,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
     fl = Flow(prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tad, Tse, Tprob, TprobMono, Tfs, Tcb} <: AbstractFlow
+@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tad, Tse, Tprob, TprobMono, Tfs, Tcb, Tδ} <: AbstractFlow
     "The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
     F::TF = nothing
 
@@ -87,12 +87,16 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
 
     "[Internal] Store possible callback"
     callback::Tcb = nothing
+
+    "[Internal]"
+    delta::Tδ = 1e-8
 end
 
 # constructors
-Flow(F, fl, df = nothing) = Flow(F = F, flow = fl, jvp = df, jvpSerial = df)
+Flow(F, fl, df = nothing; k...) = Flow(;F = F, flow = fl, jvp = df, jvpSerial = df, k...)
 
 vf(fl::Flow, x, p) = fl.F(x, p)
+getdelta(fl::Flow) = fl.delta
 
 evolve(fl::Flow, x, p, t; k...)                          = fl.flow(x, p, t; k...)
 jvp(fl::Flow, x, p, dx, t; k...)                         = fl.jvp(x, p, dx, t; k...)
