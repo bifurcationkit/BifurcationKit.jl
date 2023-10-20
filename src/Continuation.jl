@@ -537,7 +537,7 @@ function continuation(prob::AbstractBifurcationProblem,
         contresult = continuation(itfwd)
         # we have to update the branch if saved on a file,
         # basically this removes "branchfw" or "branchbw" in file and append "branch"
-        itfwd.contparams.save_to_file && save_to_file(itfwd, contresult[1])
+        itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
         return contresult
     end
 end

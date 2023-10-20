@@ -136,11 +136,11 @@ module BifurcationKit
             - `i` is the index of the solution to be saved
             """
             function save_to_file(iter::AbstractContinuationIterable, sol, p, i::Int64, br::ContResult)
-                if iter.contParams.saveToFile == false; return nothing; end
+                if iter.contparams.save_to_file == false; return nothing; end
                 filename = iter.filename
                 # this allows to save two branches forward/backward in case
                 # bothside = true is passed to continuation
-                fd = iter.contParams.ds >=0 ? "fw" : "bw"
+                fd = iter.contparams.ds >=0 ? "fw" : "bw"
 
                 # create a group in the JLD format
                 jldopen(filename*".jld2", "a+") do file
@@ -162,7 +162,7 @@ module BifurcationKit
 
             # final save of branch, in case bothsided = true is used
             function save_to_file(iter::AbstractContinuationIterable, br::ContResult)
-                if iter.contParams.saveToFile == false; return nothing; end
+                if iter.contparams.save_to_file == false; return nothing; end
                 filename = iter.filename
 
                 jldopen(filename*"-branch.jld2", "a+") do file
