@@ -319,7 +319,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 options_cont::ContinuationPar ;
                 update_minaug_every_step = 0,
                 normC = norm,
+
+                linsolve_adjoint = options_cont.newton_options.linsolver,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
+
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
                 usehessian = true,
@@ -341,6 +345,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         options_newton.linsolver,
         # do not change linear solver if user provides it
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+        linsolve_adjoint = linsolve_adjoint,
+        linbdsolve_adjoint = bdlinsolver_adjoint,
         usehessian = usehessian,
         massmatrix = massmatrix)
 

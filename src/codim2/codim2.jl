@@ -57,7 +57,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
     # constructor
-    function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true, massmatrix = LinearAlgebra.I)
+    function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); linsolve_adjoint = linsolve, usehessian = true, massmatrix = LinearAlgebra.I, linbdsolve_adjoint = linbdsolver)
         # determine scalar type associated to vectors a and b
         α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         Ty = eltype(α)
@@ -67,7 +67,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
             real(one(Ty)),    # bt
             real(one(Ty)),    # gh
             1,                # zh
-            linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+            linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
     end
 
     # empty constructor, mainly used for dispatch
@@ -185,6 +185,7 @@ function continuation(br::AbstractBranchResult,
             ind_bif::Int64,
             lens2::Lens,
             options_cont::ContinuationPar = br.contparams ;
+            prob = br.prob,
             start_with_eigen = false,
             detect_codim2_bifurcation::Int = 0,
             kwargs...)
@@ -194,12 +195,12 @@ function continuation(br::AbstractBranchResult,
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
-    return continuation_hopf(br.prob, br, ind_bif, lens2, _options_cont;
+    return continuation_hopf(prob, br, ind_bif, lens2, _options_cont;
         start_with_eigen = start_with_eigen,
         compute_eigen_elements = compute_eigen_elements,
         kwargs...)
     else
-    return continuation_fold(br.prob, br, ind_bif, lens2, _options_cont;
+    return continuation_fold(prob, br, ind_bif, lens2, _options_cont;
         start_with_eigen = start_with_eigen,
         compute_eigen_elements = compute_eigen_elements,
         kwargs...)
