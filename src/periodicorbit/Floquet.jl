@@ -1,5 +1,5 @@
 # This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behaviour which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
-function checkFloquetOptions(eigls::AbstractEigenSolver)
+function check_floquet_options(eigls::AbstractEigenSolver)
     if eigls isa DefaultEig
         return @set eigls.which = abs
     elseif eigls isa EigArpack
@@ -30,7 +30,7 @@ If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eige
 struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
     eigsolver::E
     function FloquetQaD(eigls::AbstractEigenSolver)
-        eigls2 = checkFloquetOptions(eigls)
+        eigls2 = check_floquet_options(eigls)
         return new{typeof(eigls2)}(eigls2)
     end
     FloquetQaD(eigls::AbstractFloquetSolver) = eigls
@@ -118,7 +118,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
 end
 
 # Compute the monodromy matrix at `x` explicitly, not suitable for large systems
-# it is based on a matrix expression of the Jacobian of the shooting functional. We thus
+# it is based on a matrix expression of the Jacobian of the shooting functional. We
 # just extract the blocks needed to compute the monodromy
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     J = JacSH.jacpb
@@ -394,7 +394,7 @@ struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     eigsolver::E
     B::Tb
     function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int)
-        eigls2 = checkFloquetOptions(eigls)
+        eigls2 = check_floquet_options(eigls)
         # build the mass matrix
         B = zeros(ntot, ntot)
         B[end-n+1:end, end-n+1:end] .= I(n)
@@ -443,7 +443,7 @@ This is much faster than `FloquetCollGEV` but less precise. The best version use
 struct FloquetColl{E <: AbstractEigenSolver} <: AbstractFloquetSolver
     eigsolver::E
     function FloquetColl(eigls::AbstractEigenSolver = DefaultEig())
-        eigls2 = checkFloquetOptions(eigls)
+        eigls2 = check_floquet_options(eigls)
         return new{typeof(eigls2)}(eigls2)
     end
     FloquetColl(eigls::FloquetColl) = eigls

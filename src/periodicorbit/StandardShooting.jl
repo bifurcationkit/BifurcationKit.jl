@@ -421,7 +421,14 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, tspan::Tuple; alg = sol.alg, ksh...)
+function generate_ci_problem(pb::ShootingProblem, 
+                            bifprob::AbstractBifurcationProblem, 
+                            prob_de, 
+                            sol::AbstractTimeseriesSolution, 
+                            tspan::Tuple; 
+                            alg = sol.alg, 
+                            use_bordered_array = false, 
+                            ksh...)
     u0 = sol(0)
     @assert u0 isa AbstractVector
     N = length(u0)
@@ -435,4 +442,4 @@ function generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationPr
 
     return probsh, cish
 end
-generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)
+generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); ksh...)

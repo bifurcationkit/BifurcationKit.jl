@@ -445,7 +445,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
     @views Aγ = hcat(Aγ, ∂TGpo[1:end-1])
     Aγ = vcat(Aγ, spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
+    Aγ[N*M+1, 1:length(pb.ϕ)] .= pb.ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
     return Aγ
 end

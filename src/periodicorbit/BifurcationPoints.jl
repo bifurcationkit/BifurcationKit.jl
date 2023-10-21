@@ -16,16 +16,16 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
         to find the zeros of the normal form polynomials.
         """
         mutable struct $op{Tprob, Tv, T, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
-            "Bifurcation point (periodic orbit)."
+            "Bifurcation point (periodic orbit)"
             po::Tv
 
             "Period"
             T::T
 
-            "Right eigenvector(s)."
+            "Right eigenvector(s)"
             ζ::Tevr
 
-            "Left eigenvector(s)."
+            "Left eigenvector(s)"
             ζ★::Tevl
 
             "Normal form"
@@ -52,7 +52,8 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
         show(io, pd.nf)
     else
         if ~pd.prm
-            println("├─ ", get_lens_symbol(pd.nf.lens)," ≈ $(pd.nf.p).")
+            println("├─ ", get_lens_symbol(pd.nf.lens)," ≈ $(pd.nf.p)")
+            println("├─ type: ", "$(pd.nf.type)")
             println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅ξ²\n├\t∂ξ = c⋅ξ³")
             println(io,"├─── a = ", pd.nf.nf.a, "\n└─── c = ", pd.nf.nf.b3)
         else

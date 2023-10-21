@@ -3,7 +3,8 @@ abstract type AbstractSection end
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
 ####################################################################################################
-function sectionShooting(x::AbstractArray, T,
+function sectionShooting(x::AbstractArray,
+                        T,
                         normal::AbstractArray,
                         center::AbstractArray)
     N = length(center)

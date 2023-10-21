@@ -14,7 +14,7 @@ end
 @inline getp(x, ::HopfProblemMinimallyAugmented) = extractParBLS(x, 2)
 
 # this function encodes the functional
-function (𝐇::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
+function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
     # input:
     # - x guess for the point at which the jacobian has a purely imaginary eigenvalue
@@ -33,7 +33,7 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
     #       a should be a null vector of J'+ iω
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
-    _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
+    _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
@@ -55,9 +55,9 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 """
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
 """
-function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented, par,
+function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
                              duu, dup, duω;
-                            debugArray = nothing) where T
+                            debugArray = nothing) where 𝒯
     ################################################################################################
     # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
     ################################################################################################
@@ -81,6 +81,7 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
 
     # parameter axis
     lens = getlens(𝐇)
+
     # update parameter
     par0 = set(par, lens, p)
 
@@ -92,35 +93,38 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
     JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
-    v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, -ω))
+    v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Linear solver for (J-iω) did not converge."
+                @info "(J-iω)" itv
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
-    w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, T(1); shift = Complex{T}(0, ω))
+    w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
     ~cv && @debug "Linear solver for (J+iω)' did not converge."
+                @info "(J+iω)'" itw
 
     δ = getdelta(𝐇.prob_vf)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jhopf ####################
     dpF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
-             residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / T(2ϵ1)
+             residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
-             apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / T(2ϵ3)
+             apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
     σp = -dot(w, dJvdp)
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
-    σω = Complex{T}(0, 1) * dot(w, v)
+    σω = Complex{𝒯}(0, 1) * dot(w, v)
 
     # we solve J⋅x1 = duu and J⋅x2 = dpF
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dpF)
-    ~cv && @debug "Linear solver for J did not converge."
+    ~cv && @debug "Linear solver for J did not converge"
+                @info it1 it2 𝐇.linsolver
 
     # the case of ∂_xσ is a bit more involved
     # we first need to compute the value of ∂_xσ written σx
     # σx = zeros(Complex{T}, length(x))
-    σx = similar(x, Complex{T})
+    σx = similar(x, Complex{𝒯})
 
     if has_hessian(𝐇) == false || 𝐇.usehessian == false
         cw = conj(w)
@@ -130,7 +134,7 @@ function hopfMALinearSolver(x, p::T, ω::T, 𝐇::HopfProblemMinimallyAugmented,
         u2 = apply(JAd_at_xp,  cw)
         σxv2r = @. -(u1r - u2) / ϵ2
         σxv2i = @. -(u1i - u2) / ϵ2
-        σx = @. σxv2r + Complex{T}(0, 1) * σxv2i
+        σx = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
         σxx1 = dot(σx, x1)
         σxx2 = dot(σx, x2)

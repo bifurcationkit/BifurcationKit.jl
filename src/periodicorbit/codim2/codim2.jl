@@ -97,7 +97,7 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     if contres.prob.prob isa FoldProblemMinimallyAugmented
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1)
     elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
-        conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, )
+        conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2)
     elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
         conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS,)
     else

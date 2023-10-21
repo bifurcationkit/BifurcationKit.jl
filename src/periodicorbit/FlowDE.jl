@@ -28,7 +28,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
     delta::Tδ
 end
 
-hasMonoDE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
+has_mono_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
 getdelta(fl::FlowDE) = fl.delta
 ####################################################################################################
 # constructors

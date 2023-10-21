@@ -422,8 +422,14 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
                     @debug "" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
     nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ) # keep b3 for PD-codim 2
+    newpd = @set pd.nf = nf
     @debug "" a₁ c
-    return PeriodDoublingPO(pd.x0, T, v₁, v₁★, (@set pd.nf = nf), coll, false)
+    if real(c) < 0
+        @set! newpd.type = :SuperCritical
+    else
+        @set! newpd.type = :SubCritical
+    end
+    return PeriodDoublingPO(pd.x0, T, v₁, v₁★, newpd, coll, false)
 end
 
 function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
