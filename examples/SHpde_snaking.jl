@@ -95,9 +95,9 @@ br = @time continuation(
     re_make(prob, params = @set parSH.λ = -0.1), algdc,
     setproperties(opts; ds = 0.001, max_steps = 20000, p_max = 0.25, p_min = -1., newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), save_sol_every_step = 0, detect_bifurcation = 0);
     verbosity = 1,
-    normN = norminf,
+    normC = norminf,
     # tangentAlgo = SecantPred(),
-    # callbackN = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
+    # callback_newton = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
     )
 
 plot(br, legend=false, linewidth=1, vars = (:param, :n2))

@@ -93,7 +93,7 @@ plot(deflationOp.roots)
 # other dot product
 # dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y) * length(x) # gives 0.1
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 10, newtonOptions = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = true), max_steps = 300, θ = 0.2, detect_bifurcation = 0)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = true), max_steps = 300, θ = 0.2, detect_bifurcation = 0)
 
     br = @time continuation(
         prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;

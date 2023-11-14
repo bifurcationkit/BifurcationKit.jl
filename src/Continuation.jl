@@ -11,8 +11,8 @@ $(TYPEDEF)
 - `save_eigenvectors(iter)` whether to save eigen vectors
 - `getparams(iter)` get full list of params
 - `length(iter)`
-- `isindomain(iter, p)` whether `p` in is domain [pMin, pMax]. (See [`ContinuationPar`](@ref))
-- `is_on_boundary(iter, p)` whether `p` in is {pMin, pMax}
+- `isindomain(iter, p)` whether `p` in is domain [p_min, p_max]. (See [`ContinuationPar`](@ref))
+- `is_on_boundary(iter, p)` whether `p` in is {p_min, p_max}
 """
 @with_kw_noshow struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
     kind::Tkind
@@ -493,7 +493,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `plot = false` whether to plot the solution/branch/spectrum while computing the branch
 - `bothside = true` compute the branches on the two sides of `p0`, merge them and return it.
 - `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)`` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau` is the tangent at `z`, `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
-- `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newtonOptions.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:
+- `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newton_options.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
     - case 2: print newton iterations number, stability of solution, detected bifurcations / events

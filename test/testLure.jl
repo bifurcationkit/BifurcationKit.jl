@@ -111,7 +111,7 @@ br_po = continuation(
     ampfactor = 1., δp = 0.0051,
     # verbosity = 3,    plot = true,
     record_from_solution = (x, p) -> (return (max = getmaximum(p.prob, x, @set par_lur.β = p.p), period = getperiod(p.prob, x, @set par_lur.β = p.p))),
-    # plotSolution = plotSH,
+    # plot_solution = plotSH,
     # finalise_solution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
     #         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
     #         return z.u[end] < 30 && length(contResult.specialpoint) < 3

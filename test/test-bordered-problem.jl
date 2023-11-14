@@ -48,12 +48,12 @@ pb(vcat(sol.u, 3.1), par, vcat(sol, 3.1))
 #
 # # test of _newtonBK
 # Jchan = (x0, p0) -> BK.finiteDifferences(x -> F_chan(x, p0), x0)
-# BK._newtonBK( (x,p) -> F_chan(x, p), Jchan, BorderedArray(sol, 3.1), _tau, BorderedArray(sol, 3.1), ContinuationPar(newtonOptions = optnewbd), BK.DotTheta())
+# BK._newtonBK( (x,p) -> F_chan(x, p), Jchan, BorderedArray(sol, 3.1), _tau, BorderedArray(sol, 3.1), ContinuationPar(newton_options = optnewbd), BK.DotTheta())
 #
 # # test of newton functional, with BorderedVector
 # prob = β -> BorderedProblem((x, p) -> F_chan(x, p, β), (x, p) -> g(x, p))
 #
-# PseudoArcLengthContinuation.continuationBordered(prob, BorderedArray(sol, 3.1), 0.01, ContinuationPar(newtonOptions = optnewbd, maxSteps = 4), verbosity = 0)
+# PseudoArcLengthContinuation.continuationBordered(prob, BorderedArray(sol, 3.1), 0.01, ContinuationPar(newton_options = optnewbd, max_steps = 4), verbosity = 0)
 # ####################################################################################################
 # # problem with 2 constraints
 # g2 = (x, p) -> [g(x,p[1]), p[2] - 0.01]

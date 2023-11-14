@@ -39,14 +39,14 @@ _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.
 """
 $(SIGNATURES)
 
-Return the size of the bifurcation diagram. The argument `code` is the same as in `getBranch`.
+Return the size of the bifurcation diagram. The argument `code` is the same as in `get_branch`.
 """
 Base.size(tree::BifDiagNode, code = ()) = _size(get_branch(tree, code))
 
 """
 $(SIGNATURES)
 
-Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `getBranch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
+Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `get_branch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
 """
 function get_branch(tree::BifDiagNode, code)
     isempty(code) && return tree
@@ -99,7 +99,7 @@ end
 """
 $(SIGNATURES)
 
-Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node` from which you want to further compute the bifurcated branches. It is usually used with `node = getBranch(diagram, code)` from a previously computed bifurcation `diagram`.
+Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node` from which you want to further compute the bifurcated branches. It is usually used with `node = get_branch(diagram, code)` from a previously computed bifurcation `diagram`.
 
 # Arguments
 - `node::BifDiagNode` a node in the bifurcation diagram
@@ -130,7 +130,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
     # convenient function for branching
     function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        plotfunc = get(kwargs, :plotSolution, (x, p; kws...) -> plot!(x; kws...))
+        plotfunc = get(kwargs, :plot_solution, (x, p; kws...) -> plot!(x; kws...))
         optscont = options(_pt.x, _pt.param, _level + 1)
         @set! optscont.ds *= _dsfactor
 

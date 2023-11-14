@@ -93,7 +93,7 @@ brdc = @time continuation(
         p_max = 0.7, p_min = 0.05, detect_bifurcation = 0, plot_every_step = 40,
         newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 100, verbose = false)),
     ;verbosity = 1,
-    normN = norminf,
+    normC = norminf,
     )
 
 plot(brdc, legend=true)#, marker=:d)

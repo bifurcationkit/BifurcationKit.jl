@@ -55,8 +55,8 @@ Automatic branch switching at branch points based on a computation of the normal
 - `perturb = identity` which perturbation function to use during deflated newton
 - `Teigvec = getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `scaleζ = norm` pass a norm to normalize vectors during normal form computation
-- `plotSolution` change plot solution method in the problem `br.prob`
-- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`getNormalForm`](@ref).
+- `plot_solution` change plot solution method in the problem `br.prob`
+- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`get_normal_form`](@ref).
 
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
@@ -118,7 +118,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
 end
 
 # same but for a Branch
-continuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams ; kwargs...) = continuation(getContResult(br), ind_bif, options_cont ; kwargs...)
+continuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams ; kwargs...) = continuation(get_contresult(br), ind_bif, options_cont ; kwargs...)
 
 """
 $(SIGNATURES)
@@ -215,8 +215,8 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     optn = options_cont.newton_options
 
     # options for newton
-    cbnewton = get(kwargs, :callbackN, cb_default)
-    normn = get(kwargs, :normN, norm)
+    cbnewton = get(kwargs, :callback_newton, cb_default)
+    normn = get(kwargs, :normC, norm)
 
     printstyled(color = :magenta, "──▶ Looking for solutions after the bifurcation point...\n")
     defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
@@ -330,4 +330,4 @@ function multicontinuation(br::AbstractBranchResult,
 end
 
 # same but for a Branch
-multicontinuation(br::Branch, ind_bif::Int, options_cont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(getContResult(br), ind_bif, options_cont ; kwargs...)
+multicontinuation(br::Branch, ind_bif::Int, options_cont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(get_contresult(br), ind_bif, options_cont ; kwargs...)

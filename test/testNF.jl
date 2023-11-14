@@ -155,7 +155,7 @@ br_snd1 = BK.continuation(prob, PALC(),
 br_snd2 = BK.continuation(
     br_snd1, 1,
     setproperties(opts_br; p_min = -1.2, p_max = 0.2, ds = 0.001, detect_bifurcation = 3, max_steps=31, n_inversion = 8, newton_options = NewtonPar(opts_br.newton_options; verbose = false), dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20); plot = false, verbosity = 0, normC = norminf,
-    # finaliseSolution = (z, tau, step, contResult) ->
+    # finalise_solution = (z, tau, step, contResult) ->
     #     (Base.display(contResult.eig[end].eigenvals) ;true)
     )
 

@@ -178,7 +178,7 @@ polpred = Polynomial(Bordered(), 2, 6, x0)
 # # polpred.coeffsPar
 
 # test for polynomial predictor interpolation
-# polpred = BK.PolynomialPred(4,9,x0)
+# polpred = BK.Polynomial(4,9,x0)
 #     for (ii,v) in enumerate(LinRange(-5,1.,10))
 #         if length(polpred.arclengths)==0
 #             push!(polpred.arclengths, 0.1)
@@ -188,7 +188,7 @@ polpred = Polynomial(Bordered(), 2, 6, x0)
 #         push!(polpred.solutions, [v])
 #         push!(polpred.parameters, 1-v^2+0.001v^4)
 #     end
-#     BK.updatePred!(polpred)
+#     BK.update_pred!(polpred)
 #     polpred(-0.5)
 #
 # plot()

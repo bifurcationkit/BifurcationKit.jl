@@ -485,7 +485,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     if ~(bifpt.x isa Teigvec)
-        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec). You can keep your choice by using the option `Teigvec` in `getNormalForm` to specify the type of the equilibrum."
+        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec). You can keep your choice by using the option `Teigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
     x0 = convert(Teigvec, bifpt.x)
     p = bifpt.param
@@ -512,7 +512,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             _λ, _ev, _ = options.eigsolver(L, length(rightEv))
             verbose && (println("──> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
-            if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tolStability
+            if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
             ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]

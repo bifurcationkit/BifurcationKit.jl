@@ -280,12 +280,12 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
-- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detectEvent>0`, it allows the detection of ZH points.
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event>0`, it allows the detection of ZH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call
 
-    continuationFold(br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
+    continuation_fold(br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` that you want to continue.
 
@@ -296,7 +296,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 
 !!! tip "Detection of Bogdanov-Takens and Cusp bifurcations"
-    In order to trigger the detection, pass `detectEvent = 1,2` in `options_cont`.
+    In order to trigger the detection, pass `detect_event = 1,2` in `options_cont`.
 """
 function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                 foldpointguess::BorderedArray{vectype, T}, par,

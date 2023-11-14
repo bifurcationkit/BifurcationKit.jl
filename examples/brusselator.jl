@@ -90,8 +90,8 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l); 
         J = Jbru_sp, 
-        #plotSolution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
-        # plotSolution = (ax, x, p) -> plotsol(ax, x), 
+        #plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
+        # plot_solution = (ax, x, p) -> plotsol(ax, x), 
         record_from_solution = (x, p) -> x[div(n,2)])
 # # parameters for an isola of stationary solutions
 # par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
@@ -173,7 +173,7 @@ br_po = continuation(
         @info "Floquet exponents:"
         (Base.display(contResult.eig[end].eigenvals) ;true)
         end,
-    # plotSolution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
+    # plot_solution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
     normC = norminf)
 
 ####################################################################################################
@@ -192,7 +192,7 @@ br_po2 = BK.continuation(
     ########
     finalise_solution = (z, tau, step, contResult; k...) ->
         (Base.display(contResult.eig[end].eigenvals) ;true),
-    # plotSolution = (x, p; kwargs...) -> begin
+    # plot_solution = (x, p; kwargs...) -> begin
     #             heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...)
     #             plot!(br_po,legend = :bottomright, subplot=1)
     #         end,
