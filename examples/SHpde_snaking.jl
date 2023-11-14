@@ -58,12 +58,11 @@ end
 
 kwargsC = (verbosity = 3,
     plot = true,
-    # tangentAlgo = BorderedPred(),
     linear_algo  = MatrixBLS(),
     callback_newton = cb
     )
 
-brflat = @time continuation(prob, PALC(), opts; kwargsC..., verbosity = 0)
+brflat = @time continuation(prob, PALC(#=tangent=Bordered()=#), opts; kwargsC..., verbosity = 0)
 
 plot(brflat, putspecialptlegend = false)
 ####################################################################################################
@@ -89,14 +88,13 @@ diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.get_branch(diagram, (2,)), 3,
 
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol1.u])
-algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 50, perturb_solution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),)
+algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 50, perturb_solution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),#= alg = PALC(tangent=Secant())=#)
 
 br = @time continuation(
     re_make(prob, params = @set parSH.λ = -0.1), algdc,
     setproperties(opts; ds = 0.001, max_steps = 20000, p_max = 0.25, p_min = -1., newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), save_sol_every_step = 0, detect_bifurcation = 0);
     verbosity = 1,
     normC = norminf,
-    # tangentAlgo = SecantPred(),
     # callback_newton = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)
     )
 

@@ -89,9 +89,8 @@ BK.show(stdout, br2)
 BK.propertynames(br2)
 
 # automatic bifurcation diagram (Pitchfork)
-bdiag = bifurcationdiagram(prob_pf, PALC(), 2,
+bdiag = bifurcationdiagram(prob_pf, PALC(#=tangent=Bordered()=#), 2,
     (args...) -> setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = (@set opt_newton.verbose=false), max_steps = 15);
-    # tangentAlgo = BorderedPred(),
     plot = false, verbosity = 0, normC = norminf)
 
 # plot(bdiag)
