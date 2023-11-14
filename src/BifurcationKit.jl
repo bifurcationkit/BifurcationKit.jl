@@ -34,7 +34,6 @@ module BifurcationKit
 
     # continuation
     include("Continuation.jl")
-    include("IteratorUtils.jl")
 
     # events
     include("events/EventDetection.jl")
