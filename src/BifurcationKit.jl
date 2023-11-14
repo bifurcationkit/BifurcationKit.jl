@@ -34,7 +34,6 @@ module BifurcationKit
 
     # continuation
     include("Continuation.jl")
-    include("IteratorUtils.jl")
 
     # events
     include("events/EventDetection.jl")
@@ -185,13 +184,13 @@ module BifurcationKit
     export norminf
     
     export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit,
-            DefaultEig, EigArpack, EigIterativeSolvers, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
+            DefaultEig, EigArpack, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
     # Problems
     export BifurcationProblem, BifFunction, getlens, getparams, re_make
 
     # bordered nonlinear problems
-    export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem
+    # export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem, newtonBordered, continuationBordered
 
     # preconditioner based on deflation
     export PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
@@ -200,28 +199,28 @@ module BifurcationKit
     export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS, BorderedArray
 
     # nonlinear deflation
-    export DeflationOperator, DeflatedProblem, DefProbCustomLinearSolver, scalardM
+    export DeflationOperator, DeflatedProblem
 
     # predictors for continuation
     export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS
 
     # newton methods
-    export NewtonPar, newton, newtonDeflated, newton_palc, newton_hopf, newtonBordered, NonLinearSolution
+    export NewtonPar, newton, newton_palc, newton_hopf, NonLinearSolution
 
     # continuation methods
-    export ContinuationPar, ContResult, GenericBifPoint, continuation, continuation!, continuation_fold, continuation_hopf, continuation_potrap, continuationBordered, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
+    export ContinuationPar, ContResult, continuation, continuation!, continuation_fold, continuation_hopf, continuation_potrap, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
 
     # events
     export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
 
     # iterators for continuation
-    export ContIterable, iterate, ContState, solution, getx, getp
+    export ContIterable, iterate, ContState, getsolution, getx, getp
 
     # codim2 Fold continuation
-    export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolveMinAug
+    export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolverMinAug
 
     # codim2 Hopf continuation
-    export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolveMinAug
+    export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolverMinAug
 
     # normal form
     export get_normal_form, hopf_normal_form, predictor
@@ -230,7 +229,7 @@ module BifurcationKit
     export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP
 
     # Periodic orbit computation
-    export generate_solution, getperiod, getamplitude, getmaximum, get_periodic_orbit, sectionSS, sectionPS, guess_from_hopf, generate_ci_problem
+    export generate_solution, getperiod, getamplitude, getmaximum, get_periodic_orbit, guess_from_hopf, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
     export PeriodicOrbitTrapProblem, continuation_potrap
