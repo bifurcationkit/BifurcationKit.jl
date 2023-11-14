@@ -233,7 +233,7 @@ solbif = newton(prob, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2
 plotsol(solbif.u-0*bp2d(deflationOp[2], δp))
 
 brnf1 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = 0.005);
-    plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
     plot = true, verbosity = 3, normC = norminf)
 
 branches2 = Any[br,br1,br2,brnf1]
@@ -242,7 +242,7 @@ push!(branches2, brnf1)
 # plot!(brnf1)
 
 brnf2 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = -0.005);
-    plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
+    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
     plot = true, verbosity = 3, normC = norminf)
 
 # plot([br,br1,br2]);plot!(brnf1);plot!(brnf2)
@@ -286,8 +286,8 @@ brdef2 = @time BK.continuation(
     re_make(brdef1.prob, u0 = deflationOp[5]), PALC(),
     setproperties(opts_br;ds = -0.001, detect_bifurcation = 0, dsmax = 0.02);
     verbosity = 3, plot = true,
-    recordFromSolution = (x, p) ->  normbratu(x),
-    plotSolution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
+    record_from_solution = (x, p) ->  normbratu(x),
+    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
 
 plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
 
@@ -301,6 +301,6 @@ brdef2 = @time BK.continuation(
     (@set prob.params.λ = 0.367), algdc,
     ContinuationPar(opts_br; ds = -0.0001, max_steps = 800000, plot_every_step = 10, detect_bifurcation = 0);
     plot=true, verbosity = 2,
-    normN = norminf)
+    normC = norminf)
 
 plot(brdef2, color=:red)

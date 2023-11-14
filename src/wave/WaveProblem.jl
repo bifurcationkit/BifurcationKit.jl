@@ -1,5 +1,5 @@
-abstract type abstractModulatedWaveFD <: AbstractPOFDProblem end
-abstract type abstractModulatedWaveShooting <: AbstractShootingProblem end
+abstract type AbstractModulatedWaveFD <: AbstractPOFDProblem end
+abstract type AbstractModulatedWaveShooting <: AbstractShootingProblem end
 
 """
 TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)

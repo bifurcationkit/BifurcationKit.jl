@@ -230,7 +230,7 @@ end
 function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd); return; end
 
-    _bd = getBranch(bd, code)
+    _bd = get_branch(bd, code)
     _plot_bifdiag_makie!(ax, _bd.child; code = (), level = level, k...)
 
     # !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed

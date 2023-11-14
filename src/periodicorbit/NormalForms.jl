@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-Compute the normal form of periodic orbits. Same arguments as the function `getNormalForm` for equilibria. We detail the additional keyword arguments specific to periodic orbits
+Compute the normal form of periodic orbits. Same arguments as the function `get_normal_form` for equilibria. We detail the additional keyword arguments specific to periodic orbits
 
 # Optional arguments
 - `prm = true` compute the normal form using Poincaré return map. For collocation, there will be another way to compute the normal form in the future.
@@ -259,7 +259,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     if bifpt.x isa NamedTuple
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
-        updateMesh!(pbwrap.prob, bifpt.x._mesh )
+        update_mesh!(pbwrap.prob, bifpt.x._mesh )
         bifpt = @set bifpt.x = bifpt.x.sol
     end
     pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)

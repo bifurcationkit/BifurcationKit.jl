@@ -116,7 +116,7 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
         normC = norminf,
         update_minaug_every_step = 1,
         bothside = true,
-        # recordFromSolution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
+        # record_from_solution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
         )
 
 @test hp_from_bt.kind == BK.HopfCont()

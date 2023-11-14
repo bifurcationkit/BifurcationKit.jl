@@ -111,10 +111,9 @@ br_po = @time continuation(
     # ampfactor is a factor to increase the amplitude of the guess
     verbosity = 2,
     plot = true,
-    normN = norminf,
-    callbackN = BK.cbMaxNorm(1e2),
-    plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
-    recordFromSolution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
+    callback_newton = BK.cbMaxNorm(1e2),
+    plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
+    record_from_solution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
 plot(br, br_po, label = "")
@@ -130,12 +129,11 @@ br_po_pd = @time continuation(
     ampfactor = 0.9, δp = -0.01,
     verbosity = 3,
     plot = true,
-    normN = norminf,
-    callbackN = BK.cbMaxNorm(1e2),
+    callback_newton = BK.cbMaxNorm(1e2),
     # jacobianPO = :FullSparseInplace,
     # jacobianPO = :BorderedSparseInplace,
-    plotSolution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
-    recordFromSolution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
+    plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
+    record_from_solution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
 plot(br, br_po, br_po_pd, label = "")
@@ -178,10 +176,10 @@ optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1
 br_po_sh = @time continuation(probSh, outposh.u, PALC(), optcontpo;
     verbosity = 3,    plot = true,
     linear_algo = MatrixFreeBLS(@set ls.N = probSh.M*n+2),
-    finaliseSolution = (z, tau, step, contResult; kw...) ->
+    finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
-    plotSolution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
-    recordFromSolution = (u, p) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
+    plot_solution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
+    record_from_solution = (u, p) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)

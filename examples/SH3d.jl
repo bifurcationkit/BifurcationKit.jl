@@ -145,7 +145,7 @@ br = @time continuation(
     plot = true, verbosity = 1,
     normC = norminf,
     event = BK.FoldDetectEvent,
-    # finaliseSolution = (z, tau, step, contResult; k...) -> begin
+    # finalise_solution = (z, tau, step, contResult; k...) -> begin
     #     if length(contResult) == 1
     #         pretty_table(contResult.branch)
     #     else
@@ -169,7 +169,7 @@ br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10,
         end
         true
     end,
-    # callbackN = cb,
+    # callback_newton = cb,
     normC = norminf)
 
 BK.plotBranch(br, br1...)

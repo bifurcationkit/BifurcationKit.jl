@@ -246,7 +246,7 @@ EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Sym
 # function to tell the event type based  on the coordinates of the zero
 function get_event_type(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
     # record information about the event point
-    userpoint = EventSpecialPoint(state, :user, status, recordFromSolution(iter), iter.normC, interval)
+    userpoint = EventSpecialPoint(state, :user, status, record_from_solution(iter), iter.normC, interval)
     (verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
     return true, userpoint
 end
@@ -273,7 +273,7 @@ function get_event_type(event::AbstractContinuousEvent, iter::AbstractContinuati
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
-        return false, EventSpecialPoint(state, Symbol(typeE), status, recordFromSolution(iter), iter.normC, interval)
+        return false, EventSpecialPoint(state, Symbol(typeE), status, record_from_solution(iter), iter.normC, interval)
     end
 
     if has_custom_labels(event)
@@ -303,7 +303,7 @@ function get_event_type(event::AbstractDiscreteEvent, iter::AbstractContinuation
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
-        return false, EventSpecialPoint(state, Symbol(typeE), status, recordFromSolution(iter), iter.normC, interval)
+        return false, EventSpecialPoint(state, Symbol(typeE), status, record_from_solution(iter), iter.normC, interval)
     end
     if has_custom_labels(event)
         typeE = labels(event, event_index_D)
@@ -333,7 +333,7 @@ function get_event_type(event::PairOfEvents, iter::AbstractContinuationIterable,
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
-        return false, EventSpecialPoint(state, :PairOfEvents, status, recordFromSolution(iter), iter.normC, interval)
+        return false, EventSpecialPoint(state, :PairOfEvents, status, record_from_solution(iter), iter.normC, interval)
     end
 end
 
@@ -367,6 +367,6 @@ function get_event_type(event::SetOfEvents, iter::AbstractContinuationIterable, 
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
-        return false, EventSpecialPoint(state, :SetOfEvents, status, recordFromSolution(iter), iter.normC, interval)
+        return false, EventSpecialPoint(state, :SetOfEvents, status, record_from_solution(iter), iter.normC, interval)
     end
 end

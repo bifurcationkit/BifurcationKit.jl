@@ -19,7 +19,7 @@ function vjp(::AbstractFlow, x, par, dx, δt; k...) end
 # [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
 function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
 
-# [Optional / Internal] Serial version of the flow. Used for Matrix based jacobian (Shooting and Poincaré Shooting) and diffPoincareMap. Must return a Named Tuple `(u = ..., t = t)`
+# [Optional / Internal] Serial version of the flow. Used for Matrix based jacobian (Shooting and Poincaré Shooting) and diff_poincare_map. Must return a Named Tuple `(u = ..., t = t)`
 function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, δt; k...) end
 
 # [Optional] Flow which returns the tuple `(t, u(t))`. Optional, mainly used for plotting on the user side.

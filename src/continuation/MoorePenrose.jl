@@ -110,7 +110,7 @@ end
 function newton_moore_penrose(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState, dotθ;
                     normN = norm,
-                    callback = cbDefault, kwargs...)
+                    callback = cb_default, kwargs...)
     prob = iter.prob
     par = getparams(prob)
     ϵ = getdelta(prob)

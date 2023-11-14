@@ -94,7 +94,7 @@ optcont = @set optcont.newton_options.eigsolver = EigArpack(0.1, :LM)
 br = @time continuation(
     prob, PALC(), optcont;
     plot = true, verbosity = 3,
-    # finaliseSolution = (z, tau, step, contResult; k...) -> (Base.display(contResult.eig[end].eigenvals) ;true),
+    # finalise_solution = (z, tau, step, contResult; k...) -> (Base.display(contResult.eig[end].eigenvals) ;true),
     # callback_newton = cb,
     normC = norminf)
 ###################################################################################################
@@ -113,7 +113,7 @@ brfold = continuation(br, 1, (@lens _.ν), optfold;
     start_with_eigen = true,
     detect_codim2_bifurcation = 0,
     bothside = true,
-    # plotSolution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
+    # plot_solution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
     update_minaug_every_step = 1,
     )
 
@@ -158,9 +158,9 @@ diagram = bifurcationdiagram(br.prob, br, 2, optionsCont;
     plot = true, verbosity = 0,
     # usedeflation = true,
     # δp = 0.005,
-    # callbackN = cb,
-    # linearAlgo = MatrixBLS(),
-    # finaliseSolution = (z, tau, step, contResult; k...) ->     (Base.display(contResult.eig[end].eigenvals) ;true),
+    # callback_newton = cb,
+    # linear_algo = MatrixBLS(),
+    # finalise_solution = (z, tau, step, contResult; k...) ->     (Base.display(contResult.eig[end].eigenvals) ;true),
     normC = norminf,
     verbosediagram = true,
     )
@@ -175,8 +175,8 @@ algdc = BK.DefCont(deflation_operator = deflationOp, perturb_solution = (x,p,id)
 
 brdf = continuation(prob, algdc, setproperties(optcontdf; detect_bifurcation = 0, plot_every_step = 1);
     plot = true, verbosity = 2,
-    # finaliseSolution = (z, tau, step, contResult) ->     (Base.display(contResult.eig[end].eigenvals) ;true),
-    # callbackN = cb,
-    normN = x -> norm(x, Inf))
+    # finalise_solution = (z, tau, step, contResult) ->     (Base.display(contResult.eig[end].eigenvals) ;true),
+    # callback_newton = cb,
+    normC = x -> norm(x, Inf))
 
 plot(brdf...)
