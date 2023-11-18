@@ -52,9 +52,9 @@ end
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
-function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
+function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
                             rhsu, rhsp;
-                            debugArray = nothing) where T
+                            debugArray = nothing) where 𝒯
     ################################################################################################
     # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
     ################################################################################################
@@ -91,22 +91,22 @@ function foldMALinearSolver(x, p::T, 𝐅::FoldProblemMinimallyAugmented, par,
 
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
-    v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, T(0), 𝐅.zero, T(1))
+    v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Linear solver for J did not converge."
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, σ2, cv, itw = 𝐅.linbdsolver(JAd_at_xp, b, a, T(0), 𝐅.zero, T(1))
+    w, σ2, cv, itw = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Linear solver for J' did not converge."
 
     δ = getdelta(𝐅.prob_vf)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jfold ####################
     dpF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
-                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, T(1 / (2ϵ1)))
+                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
                   apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
-    rmul!(dJvdp, T(1/(2ϵ3)))
+    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σp = -dot(w, dJvdp)
 
     if has_hessian(𝐅) == false || 𝐅.usehessian == false
