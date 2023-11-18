@@ -425,11 +425,11 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                     if contparams.detect_event > 1
                         status, intervalevent = locate_event!(it.event, it, state, it.verbosity > 2)
                     end
-                    success, bifpt = get_event_type(it.event, it, state, it.verbosity, status, intervalevent)
+                    success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, intervalevent)
                     state.stopcontinuation |= ~success
-                    if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
+                    if event_pt.type != :none; push!(contRes.specialpoint, event_pt); end
                     # detect loop in the branch
-                    contparams.detect_loop && (state.stopcontinuation |= detect_loop(contRes, bifpt))
+                    contparams.detect_loop && (state.stopcontinuation |= detect_loop(contRes, event_pt))
                 end
             end
 

@@ -61,7 +61,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
 end
 ####################################################################################################
 # ShootingProblem
-# Matrix free monodromy operator
+# Matrix free monodromy operators
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::AbstractVector) where {Tpb <: ShootingProblem, Tjacpb, Torbitguess, Tp}
     sh = JacSH.pb
     x = JacSH.x

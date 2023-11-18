@@ -45,7 +45,7 @@ poguess = VectorOfArray([rand(N) for ii=1:M])
 dpoguess = VectorOfArray([rand(N) for ii=1:M])
     dpo = BorderedArray(dpoguess, 2.)
 
-# use of AbstractArray structure
+# use of AbstractVector structure
 pov = vcat(vec(po.u), po.p)
 dpov = vcat(vec(dpo.u), dpo.p)
 resv = probSh(pov, par)

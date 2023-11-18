@@ -89,7 +89,7 @@ BK.amplitude(rand(101), 4, 25)
 BK.maximumPOTrap(rand(101), 4, 25)
 ####################################################################################################
 # tests for constructor of Floquet routines
-BK.checkFloquetOptions(EigArpack())
-BK.checkFloquetOptions(EigArnoldiMethod())
-BK.checkFloquetOptions(EigKrylovKit())
+BK.check_floquet_options(EigArpack())
+BK.check_floquet_options(EigArnoldiMethod())
+BK.check_floquet_options(EigKrylovKit())
 FloquetQaD(EigKrylovKit()) |> FloquetQaD
