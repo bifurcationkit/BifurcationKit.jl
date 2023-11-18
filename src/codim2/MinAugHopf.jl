@@ -94,13 +94,11 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
 
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
     v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
-    ~cv && @debug "Linear solver for (J-iω) did not converge."
-                @info "(J-iω)" itv
+    ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
     w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
-    ~cv && @debug "Linear solver for (J+iω)' did not converge."
-                @info "(J+iω)'" itw
+    ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
     δ = getdelta(𝐇.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
@@ -306,7 +304,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` that you want to refine.
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`. This is the default setting.
 
 !!! tip "Jacobian transpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!

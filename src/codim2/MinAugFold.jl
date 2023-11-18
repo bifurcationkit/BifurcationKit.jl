@@ -13,7 +13,7 @@ end
 @inline getvec(x, ::FoldProblemMinimallyAugmented) = extractVecBLS(x)
 @inline getp(x, ::FoldProblemMinimallyAugmented) = extractParBLS(x)
 
-function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
+function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -33,7 +33,7 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::T, params) where T
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
     J = jacobian(𝐅.prob_vf, x, par)
-    σ = 𝐅.linbdsolver(J, a, b, T(0), 𝐅.zero, T(1))[2]
+    σ = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))[2]
     return residual(𝐅.prob_vf, x, par), σ
 end
 
@@ -92,11 +92,11 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
     v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "Linear solver for J did not converge."
+    ~cv && @debug "Bordered linear solver for J did not converge."
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, σ2, cv, itw = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "Linear solver for J' did not converge."
+        w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+        ~cv && @debug "Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐅.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
@@ -118,7 +118,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         ########## Resolution of the bordered linear system ########
         # we invert Jfold
         dX, dsig, flag, it = 𝐅.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
-        ~flag && @debug "Linear solver for J did not converge."
+        ~flag && @debug "Bordered linear solver for J did not converge."
     else
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
         # we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
@@ -293,25 +293,27 @@ where the parameters are as above except that you have to pass the branch `br` f
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! tip "ODE problems"
-    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
+    For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`. This is the default setting.
 
 !!! tip "Detection of Bogdanov-Takens and Cusp bifurcations"
     In order to trigger the detection, pass `detect_event = 1,2` in `options_cont`.
 """
 function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
-                foldpointguess::BorderedArray{vectype, T}, par,
+                foldpointguess::BorderedArray{vectype, 𝒯}, par,
                 lens1::Lens, lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
-                normC = norm,
                 update_minaug_every_step = 0,
+                normC = norm,
+
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
                 usehessian = true,
                 kind = FoldCont(),
                 record_from_solution = nothing,
-                kwargs...) where {T, vectype}
+                kwargs...) where {𝒯, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
@@ -349,8 +351,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     lenses = get_lens_symbol(lens1, lens2)
 
     # global variables to save call back
-    𝐅.BT = one(T)
-    𝐅.CP = one(T)
+    𝐅.BT = one(𝒯)
+    𝐅.CP = one(𝒯)
     𝐅.ZH = 1
 
     # this function is used as a Finalizer
@@ -382,7 +384,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
 
         # compute new b
-        newb = 𝐅.linbdsolver(J_at_xp, a, b, T(0), 𝐅.zero, T(1))[1]
+        newb = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))[1]
 
         # compute new a
         if is_symmetric(𝐅)
@@ -390,7 +392,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         else
             JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
-        newa = 𝐅.linbdsolver(JAd_at_xp, b, a, T(0), 𝐅.zero, T(1))[1]
+        newa = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))[1]
 
         copyto!(𝐅.a, newa); rmul!(𝐅.a, 1/normC(newa))
         # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
@@ -421,12 +423,12 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         J_at_xp = jacobian(probfold.prob_vf, x, newpar)
 
         # compute new b
-        ζ = probfold.linbdsolver(J_at_xp, a, b, T(0), probfold.zero, T(1))[1]
+        ζ = probfold.linbdsolver(J_at_xp, a, b, zero(𝒯), probfold.zero, one(𝒯))[1]
         ζ ./= norm(ζ)
 
         # compute new a
         JAd_at_xp = has_adjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
-        ζstar = probfold.linbdsolver(JAd_at_xp, b, a, T(0), probfold.zero, T(1))[1]
+        ζstar = probfold.linbdsolver(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))[1]
         ζstar ./= norm(ζstar)
 
         probfold.BT = dot(ζstar, ζ)
