@@ -67,11 +67,13 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 8
 
-sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug, verbosity = 0, plot=false)
-@test sn_br.kind isa BK.FoldCont
-@test sn_br.specialpoint[1].type == :bt
-@test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
-@test ~isnothing(sn_br.eig)
+for eigen_start in (true, false)
+    sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, jacobian_ma = :minaug)
+    @test sn_br.kind isa BK.FoldCont
+    @test sn_br.specialpoint[1].type == :bt
+    @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
+    @test ~isnothing(sn_br.eig)
+end
 
 # we test the jacobian and problem update
 par_sn = BK.setparam(br, sn_br.sol[end].x.p)
