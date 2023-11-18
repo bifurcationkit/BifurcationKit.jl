@@ -163,7 +163,7 @@ Here are some useful methods you can apply to `pb`
 - `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
 
 # Orbit guess
-You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
+You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
 
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
@@ -1105,6 +1105,9 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
     success = true
     return (;success, newmeshT, ϕ)
 end
+
+# condensation of parameters in Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
+
 
 """
 $(SIGNATURES)

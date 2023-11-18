@@ -292,14 +292,16 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 
 # Optional arguments:
 - `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
-- `bdlinsolver` bordered linear solver for the constraint equation
+- `linsolve_adjoint` solver for (J+iω)^* ⋅sol = rhs
+- `bdlinsolver` bordered linear solver for the constraint equation with top-left block (J-iω). Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
+- `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)^*. Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a,b` in Minimally Formulation every `update_minaug_every_step` steps
 - `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detectEvent>0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
 
-    continuationHopf(br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  kwargs...)
+    continuation_hopf(br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` that you want to refine.
 
@@ -390,6 +392,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         if (~mod_counter(step, update_minaug_every_step) || success == false)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
         end
+
+        @debug "[Hopf] Update vectors a and b"
         x = getvec(z.u, 𝐇) # hopf point
         p1, ω = getp(z.u, 𝐇)
         p2 = z.p           # second parameter
@@ -405,11 +409,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # compute new b
         T = typeof(p1)
         local n = T(1)
-        newb = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex(0, -ω))[1]
+        newb = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))[1]
 
         # compute new a
         JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-        newa = 𝐇.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex(0, ω))[1]
+        newa = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))[1]
 
         𝐇.a .= newa ./ normC(newa)
         # do not normalize with dot(newb, 𝐇.a), it prevents BT detection
@@ -450,12 +454,12 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # compute new b
         T = typeof(p1)
         n = T(1)
-        ζ = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex(0, -ω))[1]
+        ζ = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))[1]
         ζ ./= normC(ζ)
 
         # compute new a
         JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-        ζ★ = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex(0, ω))[1]
+        ζ★ = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))[1]
         # test function for Bogdanov-Takens
         probhopf.BT = ω
         BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
@@ -530,6 +534,7 @@ function continuation_hopf(prob,
                         nev = br.contparams.nev,
                         start_with_eigen = false,
                         bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                        bdlinsolver_adjoint = bdlinsolver,
                         kwargs...)
     hopfpointguess = HopfPoint(br, ind_hopf)
     ω = hopfpointguess.p[2]
@@ -565,7 +570,8 @@ function continuation_hopf(prob,
                     ζ, ζad,
                     options_cont ;
                     normC = normC,
-                    bdlinsolver = bdlinsolver,
+                    bdlinsolver,
+                    bdlinsolver_adjoint,
                     kwargs...)
 end
 

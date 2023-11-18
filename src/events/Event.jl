@@ -97,7 +97,11 @@ struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
     tol::T
 end
 
-ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; ContinuousEvent(nb, fct, false, labels, 0))
+function ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N 
+    @assert nb > 0 "You need to return at least one callback"
+    ContinuousEvent(nb, fct, false, labels, 0)
+end
+
 @inline compute_eigenelements(eve::ContinuousEvent) = eve.computeEigenElements
 @inline length(eve::ContinuousEvent) = eve.nb
 @inline has_custom_labels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)

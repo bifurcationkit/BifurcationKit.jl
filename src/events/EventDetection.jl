@@ -251,10 +251,17 @@ function get_event_type(event::AbstractEvent, iter::AbstractContinuationIterable
     return true, userpoint
 end
 ####################################################################################################
-function get_event_type(event::AbstractContinuousEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userC") where T
+function get_event_type(event::AbstractContinuousEvent, 
+                        iter::AbstractContinuationIterable, 
+                        state, 
+                        verbosity, 
+                        status::Symbol, 
+                        interval::Tuple{T, T}, 
+                        ind = :; 
+                        typeE = "userC") where T
     event_index_C = Int32[]
     if state.eventValue[1] isa Real
-        if test_event(event, state.eventValue[1],  state.eventValue[2])
+        if test_event(event, state.eventValue[1], state.eventValue[2])
             push!(event_index_C, 1)
         end
     elseif state.eventValue[1][ind] isa Real
@@ -285,7 +292,14 @@ function get_event_type(event::AbstractContinuousEvent, iter::AbstractContinuati
     return true, userpoint
 end
 ####################################################################################################
-function get_event_type(event::AbstractDiscreteEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = "userD") where T
+function get_event_type(event::AbstractDiscreteEvent, 
+                        iter::AbstractContinuationIterable, 
+                        state, 
+                        verbosity, 
+                        status::Symbol, 
+                        interval::Tuple{T, T}, 
+                        ind = :; 
+                        typeE = "userD") where T
     event_index_D = Int32[]
     if state.eventValue[1] isa Real && (abs(state.eventValue[1] - state.eventValue[2]) > 0)
         push!(event_index_D, 1)
@@ -314,7 +328,12 @@ function get_event_type(event::AbstractDiscreteEvent, iter::AbstractContinuation
     return true, userpoint
 end
 ####################################################################################################
-function get_event_type(event::PairOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
+function get_event_type(event::PairOfEvents, 
+                        iter::AbstractContinuationIterable, 
+                        state, 
+                        verbosity, 
+                        status::Symbol, 
+                        interval::Tuple{T, T}) where T
     nC = length(event.eventC)
     n = length(event)
 
@@ -338,7 +357,12 @@ function get_event_type(event::PairOfEvents, iter::AbstractContinuationIterable,
 end
 
 ####################################################################################################
-function get_event_type(event::SetOfEvents, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}) where T
+function get_event_type(event::SetOfEvents, 
+                        iter::AbstractContinuationIterable, 
+                        state, 
+                        verbosity, 
+                        status::Symbol, 
+                        interval::Tuple{T, T}) where T
     # find the active events
     event_index_C = Int32[]
     event_index_D = Int32[]

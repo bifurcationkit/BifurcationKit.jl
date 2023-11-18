@@ -1,14 +1,14 @@
 using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback, ContinuousCallback
 const ODEType = Union{ODEProblem, DAEProblem}
 
-function getVectorField(prob::Union{ODEProblem, DAEProblem})
+function get_vector_field(prob::Union{ODEProblem, DAEProblem})
     if isinplace_sciml(prob)
         return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
     else
         return (x, p) -> prob.f(x, p, prob.tspan[1])
     end
 end
-getVectorField(pb::EnsembleProblem) = getVectorField(pb.prob)
+get_vector_field(pb::EnsembleProblem) = get_vector_field(pb.prob)
 ####################################################################################################
 ###                                     STANDARD SHOOTING
 ####################################################################################################
@@ -30,7 +30,7 @@ end
 ShootingProblem(prob::ODEType, alg, M::Int, section; kwargs...) = ShootingProblem(prob, alg, diff(LinRange(0, 1, M + 1)), section; kwargs...)
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, par = prob.p, kwargs...)
-    F = getVectorField(prob)
+    F = get_vector_field(prob)
     sh = ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
     # set jacobian for the flow too
     _sync_jacobian!(sh)
@@ -57,7 +57,7 @@ ShootingProblem(M::Int, prob1::ODEType, alg1, prob2::ODEType, alg2; kwargs...) =
 ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, M::Int, section; kwargs...) = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, M + 1)), section; kwargs...)
 
 function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractVector; kwargs...)
-    F = getVectorField(prob1)
+    F = get_vector_field(prob1)
     p = prob1.p # parameters
     sh = ShootingProblem(prob1, alg1, prob2, alg2, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], p)./ norm(F(centers[1], p)), centers[1]); kwargs...)
     # set jacobian for the flow too

@@ -255,7 +255,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
     T = eltype(it)
 
-    verbose && printstyled("━"^55*"\n"*"─"^18*" ",typeof(getalg(it)).name.name," "*"─"^18*"\n\n", bold = true, color = :red)
+    verbose && printstyled("━"^54*"\n"*"─"^18*" ",typeof(getalg(it)).name.name," "*"─"^18*"\n\n", bold = true, color = :red)
 
     # newton parameters
     @unpack p_min, p_max, max_steps, newton_options, η, ds = it.contparams
@@ -333,7 +333,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
     @unpack step, ds = state
 
     if verbose
-        printstyled("─"^55*"\nContinuation Step $step \n", bold = true);
+        printstyled("━"^55*"\nContinuation step $step \n", bold = true);
         @printf("Step size = %2.4e\n", ds); print("Parameter ", get_lens_symbol(it))
         @printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clamp_predp(state.z_pred.p, it))
     end
@@ -407,10 +407,10 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                 end
                 # we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
                 if detect_bifurcation(state)
-                    _, bifpt = get_bifurcation_type(it, state, status, interval)
-                    if bifpt.type != :none; push!(contRes.specialpoint, bifpt); end
+                    _, bif_pt = get_bifurcation_type(it, state, status, interval)
+                    if bif_pt.type != :none; push!(contRes.specialpoint, bif_pt); end
                     # detect loop in the branch
-                    contparams.detect_loop && (state.stopcontinuation |= detect_loop(contRes, bifpt))
+                    contparams.detect_loop && (state.stopcontinuation |= detect_loop(contRes, bif_pt))
                 end
             end
 
@@ -423,7 +423,6 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                 if eveDetected
                     _T = eltype(it); status = :guess; intervalevent = (_T(0),_T(0))
                     if contparams.detect_event > 1
-                        # interval = getinterval(state.z_pred.p, getp(state))::Tuple{_T, _T}
                         status, intervalevent = locate_event!(it.event, it, state, it.verbosity > 2)
                     end
                     success, bifpt = get_event_type(it.event, it, state, it.verbosity, status, intervalevent)

@@ -108,7 +108,7 @@ SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, i
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
     if bp.type == :none ; return; end
     if bp.type == :endpoint
-        @printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                      step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
+        @printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                     step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
         return
     end
     if bp.status == :converged

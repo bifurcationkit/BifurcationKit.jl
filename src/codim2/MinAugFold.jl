@@ -285,7 +285,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 # Simplified call
 
-    continuationFold(br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
+    continuation_fold(br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` that you want to continue.
 
@@ -366,6 +366,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         if (~mod_counter(step, update_minaug_every_step) || success == false)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)
         end
+
+        @debug "[Fold] Update vectors a and b"
 
         x = getvec(z.u) # fold point
         p1 = getp(z.u)  # first parameter

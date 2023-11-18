@@ -26,7 +26,7 @@ function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
     else
         if step == 0
             println("\n┌─────────────────────────────────────────────────────┐")
-              println("│ Newton step         residual     linear iterations  │")
+              println("│ Newton step         residual      linear iterations │")
               println("├─────────────┬──────────────────────┬────────────────┤")
         end
         _print_line(step, residual, itlinear)

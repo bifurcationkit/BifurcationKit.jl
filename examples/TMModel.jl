@@ -43,19 +43,19 @@ function plotSolution(x, p; k...)
 end
 
 args_po = (	record_from_solution = (x, p) -> begin
-		xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-		return (max = maximum(xtt[1,:]),
-				min = minimum(xtt[1,:]),
-				period = getPeriod(p.prob, x, p.p))
-	end,
-	plot_solution = plotSolution,
-	normC = norminf)
+        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+        return (max = maximum(xtt[1,:]),
+                min = minimum(xtt[1,:]),
+                period = getperiod(p.prob, x, p.p))
+    end,
+    plot_solution = plotSolution,
+    normC = norminf)
 
 br_potrap = continuation(br, 4, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 250, jacobian = :Dense, update_section_every_step = 0);
     verbosity = 2, plot = false,
     args_po...,
-    callbackN = BK.cbMaxNorm(10.),
+    callback_newton = BK.cbMaxNorm(10.),
     )
 
 plot(br, br_potrap, markersize = 3)
