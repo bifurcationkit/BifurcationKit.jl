@@ -555,11 +555,29 @@ function continuation_hopf(prob,
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         # jacobian at bifurcation point
         L = jacobian(prob, bifpt.x, parbif)
+
         # jacobian adjoint at bifurcation point
         L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
 
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad .= ζ★ ./ dot(ζ★, ζ)
+    else
+        # we use a minimally augmented formulation to set the initial vectors
+        a = ζ
+        b = ζad
+        𝒯 = typeof(ω)
+        L = jacobian(prob, bifpt.x, parbif)
+        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
+
+        @debug "EIGENVECTORS" ω cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L,newb) - complex(0,ω)*newb, Inf) norm(apply(L,newb) + complex(0,ω)*newb, Inf)
+
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, ω))
+
+        @debug "EIGENVECTORS" ω cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L★,newa) - complex(0,ω)*newa, Inf) norm(apply(L★,newa) + complex(0,ω)*newa, Inf)
+
+        ζad = newa ./ normC(newa)
+        ζ = newb ./ normC(newb)
     end
 
     return continuation_hopf(br.prob, alg,

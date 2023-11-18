@@ -130,14 +130,16 @@ hp = newton(br, 2;
 
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
-hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = true, update_minaug_every_step = 1, verbosity=0, plot=false)
-@test hp_br.kind isa BK.HopfCont
-@test hp_br.specialpoint[1].type == :gh
-@test hp_br.specialpoint[2].type == :nd
-@test hp_br.specialpoint[3].type == :gh
+for eigen_start in (true, false)
+    hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, verbosity=0, plot=false)
+    @test hp_br.kind isa BK.HopfCont
+    @test hp_br.specialpoint[1].type == :gh
+    @test hp_br.specialpoint[2].type == :nd
+    @test hp_br.specialpoint[3].type == :gh
 
-@test hp_br.specialpoint[1].param ≈ 0.305873681159479 rtol = 1e-5
-@test hp_br.specialpoint[2].param ≈ 0.16452182436723148 rtol = 1e-5
-@test hp_br.specialpoint[3].param ≈ 0.23255761094689315 atol = 1e-4
+    @test hp_br.specialpoint[1].param ≈ 0.305873681159479 rtol = 1e-5
+    @test hp_br.specialpoint[2].param ≈ 0.16452182436723148 rtol = 1e-5
+    @test hp_br.specialpoint[3].param ≈ 0.23255761094689315 atol = 1e-4
 
-@test ~isnothing(hp_br.eig)
+    @test ~isnothing(hp_br.eig)
+end
