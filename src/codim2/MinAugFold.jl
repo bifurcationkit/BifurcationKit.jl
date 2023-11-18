@@ -278,7 +278,8 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 # Optional arguments:
 - `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
-- `bdlinsolver` bordered linear solver for the constraint equation
+- `bdlinsolver` bordered linear solver for the constraint equation with top-left block J. Required in the linear solver for the Minimally Augmented Fold functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
+- `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block J^*. Required in the linear solver for the Minimally Augmented Fold functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
 - `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event>0`, it allows the detection of ZH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
@@ -307,6 +308,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                 normC = norm,
 
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
 
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
@@ -327,6 +329,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             options_newton.linsolver,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+            linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
     # Jacobian for the Fold problem
