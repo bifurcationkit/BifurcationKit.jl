@@ -225,8 +225,8 @@ br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = :FullLU),
             orbitguess_f, PALC(),
             opts_po_cont;
             verbosity = 2,    plot = true,
-            plotSolution = (x ;kwargs...) -> plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
-            recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
+            plot_solution = (x ;kwargs...) -> plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
+            record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
 ###################################################################################################
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
@@ -250,8 +250,8 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max =
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
         plot = true,
-        # plotSolution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-        # recordFromSolution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2),
+        # plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+        # record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2),
         normC = norminf)
 
 branches = Any[br_pok2]

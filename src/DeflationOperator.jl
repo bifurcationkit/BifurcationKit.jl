@@ -1,4 +1,4 @@
-abstract type abstractDeflationFactor end
+abstract type AbstractDeflationFactor end
 
 """
 Wrapper for a distance. You need to pass a function `d(u, v)`.
@@ -38,7 +38,7 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 """
-struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: abstractDeflationFactor
+struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflationFactor
     "power `p`. You can use an `Int` for example"
     power::Tp
 

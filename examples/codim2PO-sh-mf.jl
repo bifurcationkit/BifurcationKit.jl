@@ -214,7 +214,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         bothside = false,
         callback_newton = BK.cbMaxNorm(1),
         bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+2),

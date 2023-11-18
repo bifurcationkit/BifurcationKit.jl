@@ -114,9 +114,9 @@ for op in (:BifurcationProblem,
 
             ## Methods
 
-            - `reMake(pb; kwargs...)` modify a bifurcation problem
+            - `re_make(pb; kwargs...)` modify a bifurcation problem
             - `getu0(pb)` calls `pb.u0`
-            - `petParams(pb)` calls `pb.params`
+            - `getparams(pb)` calls `pb.params`
             - `getlens(pb)` calls `pb.lens`
             - `getparam(pb)` calls `get(pb.params, pb.lens)`
             - `setparam(pb, p0)` calls `set(pb.params, pb.lens, p0)`

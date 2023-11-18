@@ -944,7 +944,7 @@ This is the continuation routine for computing a periodic orbit using a function
 
 $DocStrjacobianPOTrap
 
-Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
+Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """
 function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             orbitguess,
@@ -1063,7 +1063,7 @@ This is the continuation routine for computing a periodic orbit using a function
 - `linear_algo` same as in [`continuation`](@ref)
 $DocStrjacobianPOTrap
 
-Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `recordFromSolution` argument.
+Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """
 function continuation(prob::PeriodicOrbitTrapProblem,
                     orbitguess,

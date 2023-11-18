@@ -104,7 +104,7 @@ br = @time continuation(
 #################################################################################################### Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guessFromHopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
+l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
 #
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec

@@ -464,7 +464,6 @@ let
 end
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
-# eil = BK.EigIterativeSolvers(tol = 1e-9)
 let
     x0 = rand(100)
     J0 = I + sprand(100,100,0.1)

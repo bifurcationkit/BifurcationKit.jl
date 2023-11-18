@@ -48,7 +48,7 @@ $(TYPEDFIELDS)
     "Norm of the equilibrium at the special point"
     norm::T  = 0.
 
-    "`printsol = recordFromSolution(x, param)` where `recordFromSolution` is one of the arguments to [`continuation`](@ref)"
+    "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)"
     printsol::Tp = 0.
 
     "Equilibrium at the special point"

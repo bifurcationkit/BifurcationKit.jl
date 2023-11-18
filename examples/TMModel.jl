@@ -76,13 +76,13 @@ br_pocoll = @time continuation(
     verbosity = 2,
     plot = true,
     args_po...,
-    plotSolution = (x, p; k...) -> begin
+    plot_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         plot!(xtt.t, xtt[1,:]; label = "", marker =:d, markersize = 1.5, k...)
         plot!(br; subplot = 1, putspecialptlegend = false)
 
     end,
-    callbackN = BK.cbMaxNorm(1000.),
+    callback_newton = BK.cbMaxNorm(1000.),
     )
 
 plot(br, br_pocoll, markersize = 3)
@@ -107,7 +107,7 @@ br_posh = @time continuation(
     # ShootingProblem(15, probsh, TaylorMethod(15), parallel = false);
     ampfactor = 1.0, δp = 0.0005,
     usedeflation = true,
-    linearAlgo = MatrixBLS(),
+    linear_algo = MatrixBLS(),
     verbosity = 2,    plot = true,
     args_po...,
     )
@@ -128,10 +128,10 @@ br_popsh = @time continuation(
     alg = PALC(tangent = Bordered()),
     ampfactor = 1.0, δp = 0.005,
     # usedeflation = true,
-    linearAlgo = MatrixBLS(),
+    linear_algo = MatrixBLS(),
     verbosity = 2, plot = true,
     args_po...,
-    callbackN = BK.cbMaxNorm(1e1),
+    callback_newton = BK.cbMaxNorm(1e1),
     record_from_solution = (x, p) -> (return (max = getmaximum(p.prob, x, @set par_tm.E0 = p.p), period = getperiod(p.prob, x, @set par_tm.E0 = p.p))),
     normC = norminf)
 

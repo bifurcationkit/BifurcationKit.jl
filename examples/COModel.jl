@@ -30,9 +30,9 @@ show(br)
 
 plot(br, plotfold=false, markersize=4, legend=:topright, ylims=(0,0.16))
 ####################################################################################################
-@set! opts_br.newtonOptions.verbose = false
-@set! opts_br.newtonOptions.maxIter = 10
-opts_br = @set opts_br.newtonOptions.tol = 1e-12
+@set! opts_br.newton_options.verbose = false
+@set! opts_br.newton_options.maxIter = 10
+opts_br = @set opts_br.newton_options.tol = 1e-12
 
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 

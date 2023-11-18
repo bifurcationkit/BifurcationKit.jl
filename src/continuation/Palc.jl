@@ -215,7 +215,7 @@ function gettangent!(state::AbstractContinuationState,
                                         J, dFdl,
                                         0*state.z.u, one(T)) # Right-hand side
 
-    ~flag && @warn "Linear solver failed to converge in tangent computation with type ::BorderedPred"
+    ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))

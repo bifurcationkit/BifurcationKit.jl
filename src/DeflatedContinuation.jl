@@ -172,7 +172,7 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 - `plot = false` whether to plot the solution while computing,
 - `callback_newton` callback for newton iterations. see docs for `newton`. Can be used to change preconditioners or affect the newton iterations. In the deflation part of the algorithm, when seeking for new branches, the callback is passed the keyword argument `fromDeflatedNewton = true` to tell the user can it is not in the continuation part (regular newton) of the algorithm,
 - `verbosity::Int` controls the amount of information printed during the continuation process. Must belong to `{0,⋯,5}`,
-- `normN = norm` norm used in the Newton solves,
+- `normC = norm` norm used in the Newton solves,
 - `dot_palc = (x, y) -> dot(x, y) / length(x)`, dot product used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...),
 
 # Outputs:
@@ -187,7 +187,7 @@ function continuation(prob::AbstractBifurcationProblem,
             dot_palc = DotTheta(),
             callback_newton = cb_default,
             filename = "branch-" * string(Dates.now()),
-            normN = norm,
+            normC = norm,
             kwcont...)
 
     algdc = @set algdc.max_iter_defop = algdc.max_iter_defop * contParams.newton_options.max_iterations
@@ -202,10 +202,10 @@ function continuation(prob::AbstractBifurcationProblem,
     verbosity > 0 && printstyled(color=:magenta, "──▶ There are $(length(deflationOp)) branche(s)\n")
 
     # underlying continuation iterator
-    # we "hack" the saveSolEveryStep option because we always want to record the first point on each branch
+    # we "hack" the save_sol_every_step option because we always want to record the first point on each branch
     contIt = ContIterable(prob, algdc.alg, ContinuationPar(contParams, save_sol_every_step = contParams.save_sol_every_step == 0 ? Int(1e14) : contParams.save_sol_every_step);
                     plot = plot,
-                    normC = normN,
+                    normC = normC,
                     callback_newton = callback_newton,
                     verbosity = verbosity-2,
                     kwcont...)

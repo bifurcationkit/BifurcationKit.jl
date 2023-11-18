@@ -55,7 +55,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
     σ = logvals[I]
     vp0 = minimum(abs, σ)
     if (J isa FloquetWrapper{ShootingProblem}) && vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`"
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
@@ -422,7 +422,7 @@ end
     μ = @. Complex(1 / (1 + vals))
     vp0 = minimum(abs∘log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tolStability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
     end
 
     return log.(μ), Complex.(vecs[indvalid, :]), true

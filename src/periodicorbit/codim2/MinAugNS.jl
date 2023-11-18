@@ -346,7 +346,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = get(kwargs, :recordFromSolution, nothing)
+    _printsol = get(kwargs, :record_from_solution, nothing)
     _printsol2 = isnothing(_printsol) ?
         (u, p; kw...) -> (; zip(lenses, 
                 (getp(u, 𝐍𝐒)[1], p))..., 

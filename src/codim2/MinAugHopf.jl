@@ -1,5 +1,5 @@
 """
-For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newtonHopf`.
+For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_hopf`.
 """
 function HopfPoint(br::AbstractBranchResult, index::Int)
     @assert br.specialpoint[index].type == :hopf "The provided index does not refer to a Hopf point"
@@ -201,7 +201,7 @@ This function turns an initial guess for a Hopf point into a solution to the Hop
 # Simplified call:
 Simplified call to refine an initial guess for a Hopf point. More precisely, the call is as follows
 
-    newtonHopf(br::AbstractBranchResult, ind_hopf::Int; normN = norm, options = br.contparams.newton_options, kwargs...)
+    newton_hopf(br::AbstractBranchResult, ind_hopf::Int; normN = norm, options = br.contparams.newton_options, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
@@ -296,7 +296,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `bdlinsolver` bordered linear solver for the constraint equation with top-left block (J-iω). Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)^*. Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a,b` in Minimally Formulation every `update_minaug_every_step` steps
-- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detectEvent>0`, it allows the detection of ZH, HH points.
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event>0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
@@ -312,7 +312,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian would be computed twice!
 
 !!! tip "Detection of Bogdanov-Takens and Bautin bifurcations"
-    In order to trigger the detection, pass `detectEvent = 1,2` in `options_cont`. Note that you need to provide `d3F` in `prob`.
+    In order to trigger the detection, pass `detect_event = 1,2` in `options_cont`. Note that you need to provide `d3F` in `prob`.
 """
 function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 hopfpointguess::BorderedArray{vectype, Tb}, par,

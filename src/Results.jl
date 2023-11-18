@@ -26,7 +26,7 @@ $(TYPEDFIELDS)
 - `show(br)` display information about the branch
 - `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
-- `getNormalForm(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`
+- `get_normal_form(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`
 - `getlens(br)` return the parameter axis used for the branch
 - `getlenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD)
 - `br[k+1]` gives information about the k-th step. A typical run yields the following
@@ -59,7 +59,7 @@ julia> br.param
 - `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
-    "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(recordFromSolution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+    "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations
   - `itlinear` total number of linear iterations during newton (corrector)
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
@@ -71,7 +71,7 @@ julia> br.param
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
 
-    "Vector of solutions sampled along the branch. This is set by the argument `saveSolEveryStep::Int64` (default 0) in [`ContinuationPar`](@ref)."
+    "Vector of solutions sampled along the branch. This is set by the argument `save_sol_every_step::Int64` (default 0) in [`ContinuationPar`](@ref)."
     sol::Tsol
 
     "The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)"
@@ -130,7 +130,7 @@ $(SIGNATURES)
 Return the solution for the ind-th point stored in br.sol
 """
 @inline function get_solx(br::ContResult, ind::Int)
-    @assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+    @assert hassolution(br) "You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`"
     return br.sol[ind].x
 end
 
@@ -140,7 +140,7 @@ $(SIGNATURES)
 Return the parameter for the ind-th point stored in br.sol
 """
 @inline function get_solp(br::ContResult, ind::Int)
-    @assert hassolution(br) "You did not record the solution in the branch. Please set `saveSolEveryStep` in `ContinuationPar`"
+    @assert hassolution(br) "You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`"
     return br.sol[ind].p
 end
 
@@ -218,7 +218,7 @@ $(SIGNATURES)
 Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 
 # Arguments
-- `br` result from `getStateSummary`
+- `br` result from `get_state_summary`
 - `par`: parameters
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)

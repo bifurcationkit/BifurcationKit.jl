@@ -115,7 +115,7 @@ pd_po_trap = continuation(brpo_pd, 1, (@lens _.b0), opts_potrap_pd;
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(1),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
@@ -462,7 +462,7 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
