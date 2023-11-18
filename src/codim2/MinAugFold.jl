@@ -493,11 +493,13 @@ function continuation_fold(prob,
                 normC = norm,
                 nev = br.contparams.nev,
                 start_with_eigen = false,
+                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint = bdlinsolver,
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    eigenvec = bifpt.τ.u; rmul!(eigenvec, 1/norm(eigenvec))
-    eigenvec_ad = _copy(eigenvec)
+    ζ = bifpt.τ.u; rmul!(ζ, 1/norm(ζ))
+    ζad = _copy(ζ)
 
     p = bifpt.param
     parbif = setparam(br, p)
@@ -507,24 +509,30 @@ function continuation_fold(prob,
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        eigenvec .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
-        rmul!(eigenvec, 1/normC(eigenvec))
+        if bifpt.ind_ev > 0 && haseigenvector(br)
+            ζ .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+            rmul!(ζ, 1/normC(ζ))
+        else
+            @assert 1==0 "This is an issue. Please open an issue on the website of BifurcationKit."
+        end
 
         # jacobian adjoint at bifurcation point
         L★ = has_adjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
 
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
-        eigenvec_ad = real.(ζ★)
-        rmul!(eigenvec_ad, 1/dot(eigenvec, eigenvec_ad))
+        ζad = real.(ζ★)
+        rmul!(ζad, 1/dot(ζ, ζ★))
     end
 
     return continuation_fold(prob, alg,
             foldpointguess, parbif,
             getlens(br), lens2,
-            eigenvec, eigenvec_ad,
+            ζ, ζad,
             options_cont ;
-            normC = normC,
+            normC,
+            bdlinsolver,
+            bdlinsolver_adjoint,
             kwargs...)
 end
 

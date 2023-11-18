@@ -117,7 +117,6 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     # we solve J⋅x1 = duu and J⋅x2 = dpF
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dpF)
     ~cv && @debug "Linear solver for J did not converge"
-                @info it1 it2 𝐇.linsolver
 
     # the case of ∂_xσ is a bit more involved
     # we first need to compute the value of ∂_xσ written σx
@@ -327,6 +326,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
                 usehessian = true,
+                kind = HopfCont(),
                 massmatrix = LinearAlgebra.I,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
@@ -513,7 +513,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         prob_h, alg,
         (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
         kwargs...,
-        kind = HopfCont(),
+        kind = kind,
         linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
         normC = normC,
         finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
@@ -567,7 +567,7 @@ function continuation_hopf(prob,
                     getlens(br), lens2,
                     ζ, ζad,
                     options_cont ;
-                    normC = normC,
+                    normC,
                     bdlinsolver,
                     bdlinsolver_adjoint,
                     kwargs...)
