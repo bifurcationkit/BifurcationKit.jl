@@ -298,8 +298,8 @@ function iterate_from_two_points(it::ContIterable, u₀, p₀::T, u₁, p₁::T;
         eigvals, eigvecs = nothing, nothing
     end
 
-    # compute event value and store into state
-    cbval = is_event_active(it) ? initialize(it.event, T) : nothing # event result
+    # compute event value and store it into state
+    cbval = is_event_active(it) ? initialize(it.event, T) : nothing
     state = ContState(z_pred = BorderedArray(_copy(u₀), p₀),
                         τ = BorderedArray(0*u₁, zero(p₁)),
                         z = BorderedArray(_copy(u₁), p₁),
