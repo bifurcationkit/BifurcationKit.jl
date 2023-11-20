@@ -491,9 +491,14 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     event_user = get(kwargs, :event, nothing)
     if compute_eigen_elements
         if isnothing(event_user)
-            event = PairOfEvents(ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), BifDetectEvent)
+            event = PairOfEvents(
+                    ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), 
+                    BifDetectEvent)
         else
-            event = SetOfEvents(ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), BifDetectEvent, event_user)
+            event = SetOfEvents(
+                    ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), 
+                    BifDetectEvent, 
+                    event_user)
         end
         # careful here, we need to adjust the tolerance for stability to avoid
         # spurious ZH or HH bifurcations

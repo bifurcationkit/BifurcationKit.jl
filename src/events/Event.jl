@@ -2,7 +2,7 @@ abstract type AbstractEvent end
 abstract type AbstractContinuousEvent <: AbstractEvent end
 abstract type AbstractDiscreteEvent <: AbstractEvent end
 
-# evaluate the functional whose events are sought
+# evaluate the functional whose events are sought. It must return a Tuple.
 (eve::AbstractEvent)(iter, state) = eve.condition(iter, state)
 
 # initialize function, must return the same type as eve(iter, state)
@@ -69,8 +69,11 @@ end
 ####################################################################################################
 # for AbstractContinuousEvent and AbstractDiscreteEvent
 # return type when calling eve.fct(iter, state)
-initialize(eve::AbstractContinuousEvent, T) = eve.nb == 1 ? T(1) : ntuple(x -> T(1), eve.nb)
-initialize(eve::AbstractDiscreteEvent, T) = eve.nb == 1 ? Int64(1) : ntuple(x -> Int64(1), eve.nb)
+initialize(eve::AbstractContinuousEvent, T) = ntuple(x -> T(1), eve.nb)
+initialize(eve::AbstractDiscreteEvent, T) = ntuple(x -> Int64(1), eve.nb)
+
+@inline convert_to_tuple_eve(x::Tuple) = x
+@inline convert_to_tuple_eve(x::Real) = (x,)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -90,16 +93,21 @@ struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
     "whether the event requires to compute eigen elements"
     computeEigenElements::Bool
 
-    "Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0,1.3213,3.434)`. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
+    "Labels used to display information. For example `labels[1]` is used to qualify an event of the type `(0, 1.3213, 3.434)`. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
     labels::Tl
 
     "Tolerance on event value to declare it as true event."
     tol::T
+
+    function ContinuousEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing, tol::T = 0) where {N,T}
+        @assert nb > 0 "You need to return at least one callback"
+        condition = convert_to_tuple_eve ∘ fct
+        new{typeof(condition), typeof(labels), T}(nb, condition, cev, labels, tol)
+    end
 end
 
-function ContinuousEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N 
-    @assert nb > 0 "You need to return at least one callback"
-    ContinuousEvent(nb, fct, false, labels, 0)
+function ContinuousEvent(nb::Int, fct, labels = nothing)
+    ContinuousEvent(nb, fct, false, labels)
 end
 
 @inline compute_eigenelements(eve::ContinuousEvent) = eve.computeEigenElements
@@ -126,14 +134,28 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
 
     "Labels used to display information. For example `labels[1]` is used to qualify an event occurring in the first component. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
     labels::Tl
+
+    function DiscreteEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing) where {N}
+        @assert nb > 0 "You need to return at least one callback"
+        condition = convert_to_tuple_eve ∘ fct
+        new{typeof(condition), typeof(labels)}(nb, condition, cev, labels)
+    end
 end
-DiscreteEvent(nb::Int, fct, labels::Union{Nothing, NTuple{N, String}} = nothing) where N = (@assert nb > 0 "You need to return at least one callback"; DiscreteEvent(nb, fct, false, labels))
+
+function DiscreteEvent(nb::Int, fct, labels = nothing)
+    DiscreteEvent(nb, fct, false, labels)
+end
+
 @inline compute_eigenelements(eve::DiscreteEvent) = eve.computeEigenElements
 @inline length(eve::DiscreteEvent) = eve.nb
 @inline has_custom_labels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 
 function labels(eve::Union{ContinuousEvent{Tcb, Nothing}, DiscreteEvent{Tcb, Nothing}}, ind) where Tcb
-    return "userC" * mapreduce(x -> "-$x", *, ind)
+    if length(eve) == 1
+        return "userC"
+    else
+        return "userC" * mapreduce(x -> "-$x", *, ind)
+    end
 end
 
 function labels(eve::Union{ContinuousEvent{Tcb, Tl}, DiscreteEvent{Tcb, Tl}}, ind) where {Tcb, Tl}

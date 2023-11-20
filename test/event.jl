@@ -1,10 +1,11 @@
 # using Revise
 # using Plots
 using Test
-using BifurcationKit, Setfield, ForwardDiff
+using BifurcationKit, Setfield
 
 const BK = BifurcationKit
 ###################################################################################################
+# general interface
 _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
 _eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
 @test BK.has_custom_labels(_eve) == false
@@ -79,6 +80,7 @@ br0 = continuation(prob, PALC(), opts0;
 testBranch(br0)
 # plot(br0, plotspecialpoints=true)
 ####################################################################################################
+# continuous events
 opts = ContinuationPar(opts0; save_sol_every_step = 1, detect_bifurcation = 0, detect_event = 2, dsmin_bisection = 1e-9, max_bisection_steps = 15)
 br = continuation(prob, PALC(), opts;
     plot = false, verbosity = 0,
@@ -111,13 +113,29 @@ br = continuation(args...; kwargs...,
 @test br.specialpoint[2].type==Symbol("User-2.0")
 testBranch(br)
 
+# code for testing a single value
+br = continuation(args...; kwargs...,
+    event = BK.SaveAtEvent((-2.,))
+    )
+@test length(br.specialpoint)-1 == 3
+@test br.specialpoint[2].type==Symbol("save")
+testBranch(br)
+
 br = continuation(args...; kwargs...,
     event = BK.SaveAtEvent((-2., 0., 1.))
     )
 @test length(br.specialpoint) == 6
 @test br.specialpoint[2].type==Symbol("save-1")
 testBranch(br)
+
+br = continuation(args...; kwargs...,
+    event = BK.FoldDetectEvent,
+    )
+@test length(br.specialpoint) == 5
+@test br.specialpoint[1].type==Symbol("fold")
+testBranch(br)
 ####################################################################################################
+# discrete events
 br = continuation(args...; kwargs...,
     event = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2),
     )
@@ -130,14 +148,6 @@ br = continuation(args...; kwargs...,
     )
 @test length(br.specialpoint) == 5
 @test br.specialpoint[1].type==Symbol("userD-1")
-testBranch(br)
-
-
-br = continuation(args...; kwargs...,
-    event = BK.FoldDetectEvent,
-    )
-@test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("fold")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
@@ -159,12 +169,15 @@ for (bp, bp0) in zip(br.specialpoint, br0.specialpoint)
 end
 testBranch(br)
 ####################################################################################################
+# test PairOfEvents
 br = continuation(args...; kwargs..., verbosity = 0,
-    event = BK.PairOfEvents(BK.ContinuousEvent(1, (iter, state) -> getp(state)),
-    BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)),)
+    event = BK.PairOfEvents(
+        BK.ContinuousEvent(1, (iter, state) -> getp(state)),
+        BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)),
+        )
 @test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("userD-1")
-@test br.specialpoint[4].type==Symbol("userC-1")
+@test br.specialpoint[1].type==Symbol("userD")
+@test br.specialpoint[4].type==Symbol("userC")
 testBranch(br)
 
 br = continuation(args...; kwargs..., verbosity = 0,
@@ -179,20 +192,24 @@ br = continuation(args...; kwargs..., verbosity = 0,
 testBranch(br)
 
 br = continuation(args...; kwargs...,
-    event = BK.PairOfEvents(BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),
+    event = BK.PairOfEvents(
+        BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),
         BK.BifDetectEvent),)
 @test length(br.specialpoint) == 10
-@test br.specialpoint[1].type==Symbol("userC-1")
+@test br.specialpoint[1].type==Symbol("userC")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
-    event = BK.PairOfEvents(BK.FoldDetectEvent, BK.DiscreteEvent(1, (iter, state) -> getp(state)>2)),
+    event = BK.PairOfEvents(
+        BK.FoldDetectEvent, 
+        BK.DiscreteEvent(1, (iter, state) -> getp(state)>2)),
     )
 @test length(br.specialpoint) == 8
 @test br.specialpoint[1].type==Symbol("fold")
-@test br.specialpoint[3].type==Symbol("userD-1")
+@test br.specialpoint[3].type==Symbol("userD")
 testBranch(br)
 ####################################################################################################
+# test SetOfEvents
 ev1 = BK.ContinuousEvent(1, (iter, state) -> getp(state)-1)
 ev2 = BK.ContinuousEvent(2, (iter, state) -> (getp(state)-2, getp(state)-2.5))
 ev3 = BK.BifDetectEvent
@@ -200,10 +217,10 @@ eves1 = BK.SetOfEvents(ev1, ev2, ev3)
 
 args2 = @set args[end].detect_event = 2
 @set! kwargs.verbosity = 0
-    br = continuation(args2...; kwargs...,
-        event = eves1,
-        )
-    # plot(br, legend = :bottomright)
+br = continuation(args2...; kwargs...,
+    event = eves1,
+    )
+# plot(br, legend = :bottomright)
 @test length(br.specialpoint) == 12
 @test br.specialpoint[1].type==Symbol("bp")
 @test br.specialpoint[5].type==Symbol("userC1")
@@ -224,14 +241,21 @@ br = continuation(args2...; kwargs...,
 testBranch(br)
 
 eves3 = SetOfEvents(eves1, eves2)
-
 @set! kwargs.verbosity = 0
-    br = continuation(args2...; kwargs...,
-        event = eves3,
-        )
-    # plot(br, legend = :bottomright)
+br = continuation(args2...; kwargs...,
+    event = eves3,
+    )
+# plot(br, legend = :bottomright)
 @test length(br.specialpoint) == 17
 @test br.specialpoint[1].type==Symbol("userD3-1")
 @test br.specialpoint[2].type==Symbol("bp")
 @test br.specialpoint[11].type==Symbol("userC2-1")
 testBranch(br)
+
+br = continuation(args2...; kwargs...,
+    event = BK.SetOfEvents(
+        ContinuousEvent(2, (it, state) -> (getp(state)-1, getp(state)-2), false, ("C1", "C2"), 0),
+        DiscreteEvent(1, (it, state) -> getp(state) > 3, false, ("D",)),
+        SaveAtEvent((0.001,.01))
+    ),
+    )

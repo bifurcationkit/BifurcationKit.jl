@@ -260,12 +260,9 @@ function get_event_type(event::AbstractContinuousEvent,
                         ind = :; 
                         typeE = "userC") where T
     event_index_C = Int32[]
-    if state.eventValue[1] isa Real
-        if test_event(event, state.eventValue[1], state.eventValue[2])
-            push!(event_index_C, 1)
-        end
-    elseif state.eventValue[1][ind] isa Real
-        if test_event(event, state.eventValue[1][ind], state.eventValue[2][ind])
+
+    if length(event) == 1
+        if test_event(event, state.eventValue[1][ind][1], state.eventValue[2][ind][1])
             push!(event_index_C, 1)
         end
     else
@@ -276,6 +273,7 @@ function get_event_type(event::AbstractContinuousEvent,
             end
         end
     end
+
     if isempty(event_index_C) == true
         @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
@@ -301,10 +299,10 @@ function get_event_type(event::AbstractDiscreteEvent,
                         ind = :; 
                         typeE = "userD") where T
     event_index_D = Int32[]
-    if state.eventValue[1] isa Real && (abs(state.eventValue[1] - state.eventValue[2]) > 0)
+    if length(event) == 1
+        if abs(state.eventValue[1][ind][1] - state.eventValue[2][ind][1]) > 0
         push!(event_index_D, 1)
-    elseif state.eventValue[1][ind] isa Real && (abs(state.eventValue[1][ind] - state.eventValue[2][ind]) > 0)
-        push!(event_index_D, 1)
+        end
     else
         for ii in eachindex(state.eventValue[1][ind])
             if abs(state.eventValue[1][ind][ii] - state.eventValue[2][ind][ii]) > 0

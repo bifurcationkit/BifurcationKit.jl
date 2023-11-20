@@ -5,7 +5,10 @@ This event implements the detection of when the parameter values, used during co
 
 For example, you can use it like `continuation(args...; event = SaveAtEvent((1., 2., -3.)))`
 """
-SaveAtEvent(positions::Tuple) = ContinuousEvent(length(positions), (it, state) -> map(x -> x - getp(state), positions), ntuple(x -> "save-$x", length(positions)))
+function SaveAtEvent(positions::Tuple) 
+    labels = length(positions) == 1 ? ("save",) : ntuple(x -> "save-$x", length(positions))
+    ContinuousEvent(length(positions), (it, state) -> map(x -> x - getp(state), positions), labels)
+end
 ####################################################################################################
 # detection of Fold bifurcation, should be based on Bordered
 """
@@ -30,7 +33,7 @@ function detect_bifurcation_event(iter, state)
     # state should be thus up to date at this stage
     @assert state.n_unstable[1] >=0 "Issue with `detect_bifurcation_event`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues."
     # put the max because n_unstable is initialized at -1 at the beginning of the continuation
-    return max(0, state.n_unstable[1])
+    return convert_to_tuple_eve(max(0, state.n_unstable[1]))
 end
 
 """
@@ -40,6 +43,12 @@ This event implements the detection of bifurcations points along a continuation 
 """
 BifDetectEvent = BifEvent(1, detect_bifurcation_event)
 
-function get_event_type(event::BifEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :; typeE = :user) where T
+function get_event_type(event::BifEvent,
+                        iter::AbstractContinuationIterable, 
+                        state, 
+                        verbosity, 
+                        status::Symbol, 
+                        interval::Tuple{T, T}, 
+                        ind = :; typeE = :user) where T
     return get_bifurcation_type(iter, state, status, interval)
 end

@@ -465,9 +465,15 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # define event for detecting bifurcations. Coupled it with user passed events
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
-        event = PairOfEvents(ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)))
+        event = PairOfEvents(
+            ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0),
+            DiscreteEvent(1, test_zh, false, ("zh",)))
     else
-        event = SetOfEvents(ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0), DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
+        event = SetOfEvents(
+            ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0),
+            DiscreteEvent(1, test_zh, false, ("zh",)),
+            event_user
+            )
     end
 
     # solve the Fold equations

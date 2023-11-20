@@ -236,7 +236,7 @@ end
 # function to update the state according to the event
 function update_event!(it::ContIterable, state::ContState)
     # if the event is not active, we return false (not detected)
-    if (is_event_active(it) == false) return false; end
+    if (is_event_active(it) == false); return false; end
     outcb = it.event(it, state)
     state.eventValue = (outcb, state.eventValue[1])
     # update number of positive values
