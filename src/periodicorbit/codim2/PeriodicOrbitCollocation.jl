@@ -83,7 +83,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    continuation_fold(probcoFold,
+    br_fold_po = continuation_fold(probcoFold,
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen = start_with_eigen,
@@ -91,6 +91,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         kind = FoldPeriodicOrbitCont(),
         kwargs...
         )
+    correct_bifurcation(br_fold_po)
 end
 
 function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
