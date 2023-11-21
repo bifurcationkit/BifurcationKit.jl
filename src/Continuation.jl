@@ -109,28 +109,28 @@ Returns a variable containing the state of the continuation procedure. The field
 - `is_stable(state)` whether the current state is stable
 """
 @with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
-    z_pred::Tv                                # predictor
+    z_pred::Tv                               # predictor
     τ::Tv                                    # tangent to the curve
     z::Tv                                    # current solution
     z_old::Tv                                # previous solution
 
-    converged::Bool                            # boolean for newton correction
-    itnewton::Int64 = 0                        # number of newton iteration (in corrector)
-    itlinear::Int64 = 0                        # number of linear iteration (in newton corrector)
+    converged::Bool                          # boolean for newton correction
+    itnewton::Int64 = 0                      # number of newton iteration (in corrector)
+    itlinear::Int64 = 0                      # number of linear iteration (in newton corrector)
 
-    step::Int64 = 0                            # current continuation step
+    step::Int64 = 0                          # current continuation step
     ds::T                                    # step size
 
-    stopcontinuation::Bool = false            # boolean to stop continuation
-    stepsizecontrol::Bool = true            # perform step size adaptation
+    stopcontinuation::Bool = false           # boolean to stop continuation
+    stepsizecontrol::Bool = true             # perform step size adaptation
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
     n_unstable::Tuple{Int64,Int64}  = (-1, -1)    # (current, previous)
-    n_imag::Tuple{Int64,Int64}         = (-1, -1)    # (current, previous)
-    convergedEig::Bool                = true
+    n_imag::Tuple{Int64,Int64}      = (-1, -1)    # (current, previous)
+    convergedEig::Bool              = true
 
-    eigvals::Teigvals = nothing                # current eigenvalues
+    eigvals::Teigvals = nothing               # current eigenvalues
     eigvecs::Teigvec = nothing                # current eigenvectors
 
     eventValue::Tcb = nothing
@@ -310,7 +310,8 @@ function iterate_from_two_points(it::ContIterable, u₀, p₀::T, u₁, p₁::T;
                         eigvecs = eigvecs,
                         eventValue = (cbval, cbval))
 
-    # compute the state for the continuation algorithm, at this point the tangent is set up
+    # compute the state for the continuation algorithm
+    # at this stage, the tangent is set up
     initialize!(state, it)
 
     # update stability
@@ -326,7 +327,7 @@ end
 
 function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
     if !done(it, state) return nothing end
-    # next line is to overwrite verbosity behaviour, for example when locating bifurcations
+    # the next line is to overwrite verbosity behaviour, for example when locating bifurcations
     verbosity = min(it.verbosity, _verbosity)
     verbose = verbosity > 0; verbose1 = verbosity > 1
 

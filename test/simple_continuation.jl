@@ -4,10 +4,9 @@ using Test
 using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
-k = 2
 N = 1
-F = (x, p) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
-Jac_m = (x, p) -> diagm(0 => p[1] .+ x.^k)
+F = (x, p; k = 2) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
+Jac_m = (x, p; k = 2) -> diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
 # test creation of specific scalar product
 _dt = BK.DotTheta(dot)
@@ -38,8 +37,6 @@ BK.empty(PALC(tangent = Bordered()))
 BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
 ####################################################################################################
-normInf(x) = norm(x, Inf)
-
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
 
@@ -109,17 +106,17 @@ br2 = continuation(prob, PALC(), opts)
 BK.arcLengthScaling(0.5, PALC(), BorderedArray(rand(2), 0.1), true)
 
 # test for different norms
-br3 = continuation(prob, PALC(), opts, normC = normInf)
+br3 = continuation(prob, PALC(), opts, normC = norminf)
 
 # test for linesearch in Newton method
 opts = @set opts.newton_options.linesearch = true
-br4 = continuation(prob, PALC(), opts, normC = normInf) # (15.61 k allocations: 1.020 MiB)
+br4 = continuation(prob, PALC(), opts, normC = norminf) # (15.61 k allocations: 1.020 MiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts = @set opts.newton_options.linesearch = false
-br5 = continuation(prob, PALC(bls = BorderingBLS()), opts, normC = normInf)
+br5 = continuation(prob, PALC(bls = BorderingBLS()), opts, normC = norminf)
 
-br5 = continuation(prob, PALC(bls = MatrixBLS()), opts, normC = normInf)
+br5 = continuation(prob, PALC(bls = MatrixBLS()), opts, normC = norminf)
 
 # test for stopping continuation based on user defined function
 finalise_solution = (z, tau, step, contResult; k...) -> (step < 20)
@@ -144,26 +141,26 @@ BK.empty!(Multiple(copy(x0), 0.01, 13))
 
 ## same but with failed prediction
 opts9_1 = ContinuationPar(opts9, dsmax = 0.2, max_steps = 125, ds = 0.1)
-    @set! opts9_1.newton_options.tol = 1e-14
-    @set! opts9_1.newton_options.verbose = false
-    @set! opts9_1.newton_options.max_iterations = 3
-    br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
-    @test length(br9_1) == 126
-    BK.empty!(Multiple(copy(x0), 0.01, 13))
+@set! opts9_1.newton_options.tol = 1e-14
+@set! opts9_1.newton_options.verbose = false
+@set! opts9_1.newton_options.max_iterations = 3
+br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
+@test length(br9_1) == 126
+BK.empty!(Multiple(copy(x0), 0.01, 13))
 
 
 # tangent prediction with Polynomial predictor
 polpred = Polynomial(Bordered(), 2, 6, x0)
-    opts9 = (@set opts.newton_options.verbose=false)
-    opts9 = ContinuationPar(opts9; max_steps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plot_every_step = 3,)
-    br10 = continuation(prob, PALC(tangent = polpred), opts9,
+opts9 = (@set opts.newton_options.verbose=false)
+opts9 = ContinuationPar(opts9; max_steps = 76, ds = 0.005, dsmin = 1e-4, dsmax = 0.02, plot_every_step = 3,)
+br10 = continuation(prob, PALC(tangent = polpred), opts9,
     plot=false,
     )
-    # plot(br10) |> display
-    polpred(0.1)
-    BK.empty!(polpred)
-    # plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
-    # plot!(br9)
+# plot(br10) |> display
+polpred(0.1)
+BK.empty!(polpred)
+# plot(br10, title = "$(length(br10))",marker=:dplot,fold=false)
+# plot!(br9)
 
 # polpred(0.0)
 #     for _ds in LinRange(-0.51,.1,161)
@@ -212,7 +209,7 @@ MoorePenrose(method = BK.iterative)
 
 
 # further testing with sparse Jacobian operator
-prob_sp = @set prob.VF.J = (x, p) -> SparseArrays.spdiagm(0 => p .+ x.^k)
+prob_sp = @set prob.VF.J = (x, p; k = 2) -> SparseArrays.spdiagm(0 => p .+ x.^k)
 brsp = continuation(prob_sp, PALC(), opts)
 brsp = continuation(prob_sp, PALC(bls = BK.BorderingBLS(solver = BK.DefaultLS(), check_precision = false)), opts)
 brsp = continuation(prob_sp, PALC(bls = BK.MatrixBLS()), opts)

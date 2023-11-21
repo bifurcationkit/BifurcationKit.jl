@@ -33,7 +33,7 @@ end
 nstest(JacNS, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
 
 # this function encodes the functional
-function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::T, ω::T, params) where T
+function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Neimark-Sacker bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -44,7 +44,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::T, ω::T, para
     # update parameter
     par = set(params, getlens(𝐍𝐒), p)
     J = jacobian_neimark_sacker(𝐍𝐒.prob_vf, x, par, ω)
-    σ1 = nstest(J, a, b, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)[2]
+    σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
 
@@ -63,9 +63,9 @@ end
 # Struct to invert the jacobian of the pd MA problem.
 struct NSLinearSolverMinAug <: AbstractLinearSolver; end
 
-function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
+function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
                             duu, dup, duω;
-                            debugArray = nothing) where T
+                            debugArray = nothing) where 𝒯
     ################################################################################################
     # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
     ################################################################################################
@@ -105,22 +105,22 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
     JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, par0, ω) : adjoint(JNS)
 
     # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = nstest(JNS, a, b, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)
+    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
 
     # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = nstest(JNS★, b, a, zero(T), 𝐍𝐒.zero, one(T); lsbd = 𝐍𝐒.linbdsolver)
+    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
-                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, T(1 / (2ϵ1)))
+                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p + ϵ3), ω), v),
                   apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p - ϵ3), ω), v));
-    rmul!(dJvdp, T(1/(2ϵ3)))
+    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
     # case of ∂σ_ω
@@ -137,11 +137,11 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
         u2 = apply(JNS★, cw)
         σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
         σxv2i = @. -(u1i - u2) / ϵ2
-        σx = @. σxv2r + Complex{T}(0, 1) * σxv2i
+        σx = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
         dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0*vr,1),par0, ω), v),
                   apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0*vr,1),par0, ω), v));
-        rmul!(dJvdt, T(1/(2ϵ3)))
+        rmul!(dJvdt, 𝒯(1/(2ϵ3)))
         σt = -dot(w, dJvdt) 
 
         _Jpo = jacobian(POWrap, x, par0)
@@ -185,7 +185,7 @@ function NSMALinearSolver(x, p::T, ω::T, 𝐍𝐒::NeimarkSackerProblemMinimall
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
+function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = NSMALinearSolver((Jns.x).u,
                 (Jns.x).p[1],
@@ -195,7 +195,7 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, T}; debug
                 rhs.u, rhs.p[1], rhs.p[2];
                 debugArray = debugArray)
     # this type annotation enforces type stability
-    return BorderedArray{vectype, T}(out[1], [out[2], out[3]]), out[4], out[5]
+    return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
 residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)

@@ -35,7 +35,7 @@ end
 pdtest(JacPD, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 
 # this function encodes the functional
-function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::T, params) where T
+function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Period-Doubling bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -56,7 +56,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::T, params) wh
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>
     # @debug "" x par
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
-    σ = pdtest(J, a, b, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)[2]
+    σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
 
@@ -75,9 +75,9 @@ end
 # Struct to invert the jacobian of the pd MA problem.
 struct PDLinearSolverMinAug <: AbstractLinearSolver; end
 
-function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, par,
+function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, par,
                             rhsu, rhsp;
-                            debugArray = nothing) where T
+                            debugArray = nothing) where 𝒯
     ################################################################################################
     # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
     ################################################################################################
@@ -114,22 +114,22 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
 
     # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = pdtest(JPD, a, b, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)
+    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
 
     # # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, T(1); lsbd = 𝐏𝐝.linbdsolver)
+    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
-    ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
+    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
-                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, T(1 / (2ϵ1)))
+                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵ3)), v),
                   apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵ3)), v));
-    rmul!(dJvdp, T(1/(2ϵ3)))
+    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
     if has_hessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
@@ -167,7 +167,7 @@ function PDMALinearSolver(x, p::T, 𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
+function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = PDMALinearSolver((Jpd.x).u,
                  (Jpd.x).p,
@@ -176,7 +176,7 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, T}; debug
                  rhs.u, rhs.p;
                  debugArray = debugArray)
     # this type annotation enforces type stability
-    return BorderedArray{vectype, T}(out[1], out[2]), out[3], out[4]
+    return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
 @inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)

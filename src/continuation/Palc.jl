@@ -107,23 +107,29 @@ function initialize!(state::AbstractContinuationState,
     # we want to start at (u0, p0), not at (u1, p1)
     copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
-    addtangent!(state::AbstractContinuationState, nrm)
+    addtangent!(state, nrm)
 end
 
 function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::PALC,
                         nrm = false)
-    # we first compute the tangent
-    gettangent!(state, iter, alg.tangent, getdot(alg))
+    # we compute the tangent
+    # if the state has not converged, we dot not update the tangent
+    # state.z has been updated only if converged(state) == true
+    if converged(state)
+        @debug "Update tangent"
+        gettangent!(state, iter, alg.tangent, getdot(alg))
+    end
     # then update the predictor state.z_pred
-    addtangent!(state::AbstractContinuationState, nrm)
+    addtangent!(state, nrm)
 end
 
 # this function only mutates z_pred
 # the nrm argument allows to just the increment z_pred.p by ds
 function addtangent!(state::AbstractContinuationState, nrm = false)
     # we perform z_pred = z + ds * τ
+    # note that state.z contains the last converged state
     copyto!(state.z_pred, state.z)
     ds = state.ds
     ρ = nrm ? ds / state.τ.p : ds
@@ -143,7 +149,11 @@ function corrector!(state::AbstractContinuationState,
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newton_palc(it, state, getdot(alg); linearbdalgo = alg.bls, normN = it.normC, callback = it.callback_newton, kwargs...)
+    sol = newton_palc(it, state, getdot(alg); 
+                    linearbdalgo = alg.bls, 
+                    normN = it.normC, 
+                    callback = it.callback_newton, 
+                    kwargs...)
 
     # update fields
     _update_field_but_not_sol!(state, sol)
@@ -207,7 +217,7 @@ function gettangent!(state::AbstractContinuationState,
     minus!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
     rmul!(dFdl, 1/ϵ)
 
-    # compute jacobian
+    # compute jacobian at the current solution
     J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
