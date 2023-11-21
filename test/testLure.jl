@@ -33,18 +33,18 @@ optn_po = NewtonPar(tol = 1e-8,  max_iterations = 25)
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-5., max_steps = 122, newton_options = (@set optn_po.tol = 1e-8), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step=1, n_inversion = 6)
 
 Mt = 90 # number of time sections
-    br_po = continuation(
-    br, 2, opts_po_cont,
-    PeriodicOrbitTrapProblem(M = Mt; update_section_every_step = 1,
-    jacobian = :Dense);
-    ampfactor = 1., δp = 0.01,
-    verbosity = 0, plot = false,
-    record_from_solution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
-    finalise_solution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
-            return z.u[end] < 40
-            true
-        end,
-    normC = norminf)
+br_po = continuation(
+br, 2, opts_po_cont,
+PeriodicOrbitTrapProblem(M = Mt; update_section_every_step = 1,
+jacobian = :Dense);
+ampfactor = 1., δp = 0.01,
+verbosity = 0, plot = false,
+record_from_solution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
+finalise_solution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
+        return z.u[end] < 40
+        true
+    end,
+normC = norminf)
 
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
@@ -176,8 +176,9 @@ for _ind in (1,)
 end
 
 # aBS from PD
-br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 2, ds = 0.01, plot_every_step = 1);
-    # verbosity = 3, plot = true,
+br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 1, ds = 0.01, plot_every_step = 1);
+    verbosity = 3, 
+    # plot = true,
     ampfactor = .3, δp = -0.005,
     normC = norminf,
     callback_newton = BK.cbMaxNorm(10),
