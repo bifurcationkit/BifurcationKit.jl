@@ -107,14 +107,15 @@ SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, i
 
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
     if bp.type == :none ; return; end
+    @printf(io, "- #%3i, ", ii)
     if bp.type == :endpoint
-        @printf(io, "- #%3i, \033[1m%5s\033[0m at %s ≈ %+4.8f,                                                                     step = %3i\n", ii, "endpoint", p, bp.param, bp.step)
-        return
-    end
-    if bp.status == :converged
-        @printf(io, "- #%3i,\e[1;34m %8s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;32m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+        printstyled(io, @sprintf("%8s", bp.type); bold=true)
+        @printf(io, " at %s ≈ %+4.8f,                                                                     step = %3i\n", p, bp.param, bp.step)
     else
-        @printf(io, "- #%3i,\e[1;34m %8s\e[0m at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [\e[1;31m%9s\e[0m], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", ii, bp.type, p, bp.param, bp.interval..., bp.precision, bp.status, bp.δ..., bp.step, bp.idx, bp.ind_ev)
+        printstyled(io, @sprintf("%8s", bp.type); bold=true, color=:blue)
+        @printf(io, " at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [", p, bp.param, bp.interval..., bp.precision)
+        printstyled(io, @sprintf("%9s", bp.status); bold=true, color=(bp.status == :converged) ? :green : :red)
+        @printf(io, "], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", bp.δ..., bp.step, bp.idx, bp.ind_ev)
     end
 end
 
