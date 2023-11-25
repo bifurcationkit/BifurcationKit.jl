@@ -36,7 +36,7 @@ Create a problem to implement the Standard Simple / Parallel Multiple Standard S
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
 - `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, par, du; δ = 1e-9)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`. The optional argument `δ` is used to compute a finite difference approximation of the derivative of the section.
+- `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`.
 - `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 

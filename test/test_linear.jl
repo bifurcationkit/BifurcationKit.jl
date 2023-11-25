@@ -53,6 +53,15 @@ out2 = a₀ * dx + a₁ * J0 * dx
 @test out1 ≈ out2
 @test a₀ * I + a₁ * J0  ≈ BK._axpy(J0, a₀, a₁)
 ####################################################################################################
+# test of MatrixFreeBLSmap
+map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)
+x_bd = BorderedArray(rand(100), rand())
+x_bd_v = vcat(copy(x_bd.u), x_bd.p)
+o1 = map_bls(x_bd)
+o2 = map_bls(x_bd_v)
+@test o1.u ≈ o2[1:end-1]
+@test o1.p ≈ o2[end]
+####################################################################################################
 let
     # test of the linear  solvers
     J0 = rand(100,100) * 0.1 - I

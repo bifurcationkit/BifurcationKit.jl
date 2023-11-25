@@ -45,7 +45,7 @@ probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_secti
 solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
 
-_sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
+_sol = BK.get_periodic_orbit(probcoll, solpo.u, 1)
 
 opts_po_cont = setproperties(opts_br, max_steps = 40, save_eigenvectors = true, tol_stability = 1e-8)
 @set! opts_po_cont.newton_options.verbose = false
@@ -61,9 +61,9 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     argspo...
     )
 
-pt = get_normal_form(brpo_pd, 1)
+pd = get_normal_form(brpo_pd, 1)
 # test PD normal form computation using Iooss method
-pt = get_normal_form(brpo_pd, 1, prm = false)
+pd = get_normal_form(brpo_pd, 1, prm = false)
 
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)

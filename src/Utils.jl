@@ -211,10 +211,10 @@ function detect_loop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
     N = length(br)
     out = false
     for bp in br.specialpoint[1:end-1]
-        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ", norm(minus(bp.x, x), Inf),", norm(δp) = ",abs(bp.param - p)," \n")
-        if (norm(minus(bp.x, x), Inf) / norm(x, Inf) < rtol) && isapprox(bp.param , p ; rtol = rtol)
+        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ", norminf(minus(bp.x, x)),", norm(δp) = ",abs(bp.param - p)," \n")
+        if (norminf(minus(bp.x, x)) / norminf(x) < rtol) && isapprox(bp.param , p ; rtol = rtol)
             out = true
-            verbose && printstyled(color = :magenta, "    └─ Loop detected!, n = $N\n")
+            verbose && printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
             break
         end
     end

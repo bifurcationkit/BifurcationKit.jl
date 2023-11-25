@@ -58,7 +58,7 @@ Note that you can generate this guess from a function solution using `generate_s
     M::Int64 = 0                     # number of Poincaré sections
     flow::Tf = Flow()                # should be a Flow
     section::Tsection = SectionPS(M) # Poincaré sections
-    δ::Float64 = 0e-8                # Numerical value used for the Matrix-Free Jacobian by finite differences. If set to 0, analytical jacobian is used
+    δ::Float64 = 0e-8                # Numerical value used for the Matrix-Free Jacobian by finite differences.
     parallel::Bool = false           # whether we use DE in Ensemble mode for multiple shooting
     par::Tpar = nothing
     lens::Tlens = nothing

@@ -355,12 +355,12 @@ MatrixFreeBLS(use_bordered_array::Bool = true) = MatrixFreeBLS(nothing, use_bord
 MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
 MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 
-extractVecBLS(x::AbstractVector, m::Int = 1) = @view x[1:end-m]
-extractVecBLS(x::BorderedArray, m::Int = 1)  = x.u
+get_vec_bls(x::AbstractVector, m::Int = 1) = @view x[1:end-m]
+get_vec_bls(x::BorderedArray, m::Int = 1)  = x.u
 
-extractParBLS(x::AbstractVector, m::Int) = @view x[end-m+1:end]
-extractParBLS(x::AbstractVector) = x[end]
-extractParBLS(x::BorderedArray, m::Int = 1)  = x.p
+get_par_bls(x::AbstractVector, m::Int) = @view x[end-m+1:end]
+get_par_bls(x::AbstractVector) = x[end]
+get_par_bls(x::BorderedArray, m::Int = 1)  = x.p
 
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J,     dR,
@@ -369,17 +369,18 @@ function (lbs::MatrixFreeBLS{S})(J,     dR,
     linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
-    return extractVecBLS(sol), extractParBLS(sol), cv, it
+    return get_vec_bls(sol), get_par_bls(sol), cv, it
 end
 
 # version used in PALC
-(lbs::MatrixFreeBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
-                J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
-                            (lbs)(J, dR,
-                                state.τ.u, state.τ.p,
-                                R, n,
-                                getθ(iter), one(T) - getθ(iter);
-                                shift = shift, dotp = getdot(iter).dot)
+(lbs::MatrixFreeBLS)(iter::AbstractContinuationIterable, 
+                    state::AbstractContinuationState,
+                    J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
+          (lbs)(J, dR,
+                state.τ.u, state.τ.p,
+                R, n,
+                getθ(iter), one(T) - getθ(iter);
+                shift = shift, dotp = getdot(iter).dot)
 
 # version for blocks
 function (lbs::MatrixFreeBLS)(::Val{:Block}, J, a,
@@ -387,7 +388,7 @@ function (lbs::MatrixFreeBLS)(::Val{:Block}, J, a,
     linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
-    return extractVecBLS(sol, length(a)), extractParBLS(sol, length(a)), cv, it
+    return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it
 end
 ####################################################################################################
 # Linear Solvers based on a bordered solver
