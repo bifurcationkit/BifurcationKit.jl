@@ -31,6 +31,7 @@ end
 # Test function for Fold bifurcation
 @inline detect_fold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
 
+# if fold point is located, store it in contres
 function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
     # Fold point detection based on continuation parameter monotony

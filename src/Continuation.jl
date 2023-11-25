@@ -288,9 +288,10 @@ end
 # same as previous function but when two (initial guesses) points are provided
 function iterate_from_two_points(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
     ds = it.contparams.ds
+    z = BorderedArray(_copy(u₁), p₁)
     # compute eigenvalues to get the type. Necessary to give a ContResult
     if compute_eigenelements(it)
-        eigvals, eigvecs, cveig, = compute_eigenvalues(it, nothing, u₀, getparams(it.prob), it.contparams.nev)
+        eigvals, eigvecs, cveig, = compute_eigenvalues(it, (z = z,), u₀, getparams(it.prob), it.contparams.nev)
         if ~save_eigenvectors(it)
             eigvecs = nothing
         end
@@ -302,7 +303,7 @@ function iterate_from_two_points(it::ContIterable, u₀, p₀::T, u₁, p₁::T;
     cbval = is_event_active(it) ? initialize(it.event, T) : nothing
     state = ContState(z_pred = BorderedArray(_copy(u₀), p₀),
                         τ = BorderedArray(0*u₁, zero(p₁)),
-                        z = BorderedArray(_copy(u₁), p₁),
+                        z = z,
                         z_old = BorderedArray(_copy(u₀), p₀),
                         converged = true,
                         ds = it.contparams.ds,

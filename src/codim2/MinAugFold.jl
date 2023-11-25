@@ -117,8 +117,8 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         σx = minus(u2, u1); rmul!(σx, 1 / ϵ2)
         ########## Resolution of the bordered linear system ########
         # we invert Jfold
-        dX, dsig, flag, it = 𝐅.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
-        ~flag && @debug "Bordered linear solver for J did not converge."
+        dX, dsig, cv, it = 𝐅.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
+        ~cv && @debug "Bordered linear solver for J did not converge."
     else
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
         # we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx

@@ -148,7 +148,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `jacobian = AutoDiffDenseAnalytical()` describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()`.
 - `meshadapt::Bool = false` whether to use mesh adaptation
 - `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
-- `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size
+- `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps.
 
 ## Methods
 
