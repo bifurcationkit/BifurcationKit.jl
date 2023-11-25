@@ -488,12 +488,15 @@ Compute the continuation curve associated to the functional `F` which is stored 
 # Arguments:
 - `prob::AbstractBifurcationFunction` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
 - `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(),...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
-- `contparams` parameters for continuation. See [`ContinuationPar`](@ref)
+- `contparams::ContinuationPar` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution/branch/spectrum while computing the branch
-- `bothside = true` compute the branches on the two sides of `p0`, merge them and return it.
-- `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), saving personal data, plotting... The notations are ``z=(x, p)`` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau` is the tangent at `z`, `step` is the index of the current continuation step and `ContResult` is the current branch. For advanced use, the current `state::ContState` of the continuation is passed in `kwargs`. Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
+- `bothside = true` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
+- `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are ``z = BorderedArray(x, p)`` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch. For advanced use:
+    - the current `state::ContState` of the continuation is passed in `kwargs`. 
+    - the switch `bisection::Bool` is passed whenever `finalise_solution` is called during bisection for locating bifurcation points / events. This allows to escape some personal code in this case.
+Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newton_options.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
@@ -501,7 +504,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
     - case 3: print information during bisection to locate bifurcations / events
 - `normC = norm` norm used in the Newton solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
-- `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change preconditioners.
+- `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change the preconditioners.
 - `kind::AbstractContinuationKind` [Internal] flag to describe continuation kind (equilibrium, codim 2, ...). Default = `EquilibriumCont()`
 
 # Output:

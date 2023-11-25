@@ -10,7 +10,7 @@ function foldpoint(br::AbstractBranchResult, index::Int)
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
-@inline getvec(x, ::FoldProblemMinimallyAugmented) = extractVecBLS(x)
+@inline getvec(x, ::FoldProblemMinimallyAugmented) = get_vec_bls(x)
 @inline getp(x, ::FoldProblemMinimallyAugmented) = extractParBLS(x)
 
 function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯

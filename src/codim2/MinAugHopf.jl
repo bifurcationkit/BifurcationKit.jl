@@ -10,8 +10,8 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
     return BorderedArray(specialpoint.x, [p, ω] )
 end
 ####################################################################################################
-@inline getvec(x, ::HopfProblemMinimallyAugmented) = extractVecBLS(x, 2)
-@inline getp(x, ::HopfProblemMinimallyAugmented) = extractParBLS(x, 2)
+@inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
+@inline getp(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
 
 # this function encodes the functional
 function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
