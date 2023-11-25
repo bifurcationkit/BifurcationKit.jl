@@ -573,11 +573,13 @@ function continuation_hopf(prob,
         𝒯 = typeof(ω)
         L = jacobian(prob, bifpt.x, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
+        ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
         @debug "EIGENVECTORS" ω cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L,newb) - complex(0,ω)*newb, Inf) norm(apply(L,newb) + complex(0,ω)*newb, Inf)
 
         L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, ω))
+        ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
         @debug "EIGENVECTORS" ω cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L★,newa) - complex(0,ω)*newa, Inf) norm(apply(L★,newa) + complex(0,ω)*newa, Inf)
 
