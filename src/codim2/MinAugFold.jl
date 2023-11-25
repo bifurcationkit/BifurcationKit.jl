@@ -33,7 +33,8 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
     J = jacobian(𝐅.prob_vf, x, par)
-    σ = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))[2]
+    _, σ, cv, = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
+    ~cv && @debug "Linear solver for J did not converge."
     return residual(𝐅.prob_vf, x, par), σ
 end
 
@@ -92,7 +93,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
     v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "Bordered linear solver for J did not converge."
+    ~cv && @debug "Bordered linear solver for J did not converge. it = $(itv)"
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
         w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))

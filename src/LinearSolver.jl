@@ -172,9 +172,10 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1,
                                  log = l.log, verbose = l.verbose, restart = l.restart,
                                  maxiter = l.maxiter, initially_zero = l.initially_zero,
                                  Pl = l.Pl, Pr = l.Pr, kwargs...)
-    (res[2].iters >= l.maxiter) &&
-        (@debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n")
-    return res[1], length(res) > 1, res[2].iters
+    if res[2].iters >= l.maxiter
+        @debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n"
+    end
+    return res[1], length(res) > l.maxiter, res[2].iters
 end
 ####################################################################################################
 # Solvers for KrylovKit
