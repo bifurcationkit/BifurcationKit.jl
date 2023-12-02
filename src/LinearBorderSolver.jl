@@ -376,7 +376,7 @@ end
 (lbs::MatrixFreeBLS)(iter::AbstractContinuationIterable, 
                     state::AbstractContinuationState,
                     J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
-          (lbs)(J, dR,
+        (lbs)(J, dR,
                 state.τ.u, state.τ.p,
                 R, n,
                 getθ(iter), one(T) - getθ(iter);

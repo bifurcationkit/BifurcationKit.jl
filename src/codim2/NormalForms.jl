@@ -548,13 +548,13 @@ function bogdanov_takens_normal_form(_prob,
     Lᵗ = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
     _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
     Ivp = sortperm(_λ★, by = abs)
-    # in case the prob is HopfMA, we real it
+    # in case the prob is HopfMA, we enforce real values
     zerov = real.(prob_ma.zero)
     vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
-    q0, = bls(L, vl, vr, zero(𝒯), zerov, one(𝒯))
+    q0, = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
     p1, = bls(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
-    q1, = bls(L, p1, q0, zero(𝒯), q0, zero(𝒯))
-    p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1, zero(𝒯))
+    q1, = bls(L,  p1, q0, zero(𝒯), q0,    zero(𝒯))
+    p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1,    zero(𝒯))
     # we want
     # A⋅q0 = 0, A⋅q1 = q0
     # At⋅p1 = 0, At⋅p0 = p1

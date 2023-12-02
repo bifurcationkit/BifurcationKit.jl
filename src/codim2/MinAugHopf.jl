@@ -11,7 +11,7 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
 end
 ####################################################################################################
 @inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline getp(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
+@inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
 
 # this function encodes the functional
 function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯

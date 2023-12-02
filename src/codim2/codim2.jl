@@ -43,7 +43,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
         linbdsolverAdjoint::Sbda
         "whether to use the hessian of prob_vf"
         usehessian::Bool
-        "whether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
+        "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I"
         massmatrix::Tmass
     end
 
@@ -57,65 +57,82 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
     # constructor
-    function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); linsolve_adjoint = linsolve, usehessian = true, massmatrix = LinearAlgebra.I, linbdsolve_adjoint = linbdsolver)
+    function $op(prob, a, b,
+                    linsolve::AbstractLinearSolver,
+                    linbdsolver = MatrixBLS();
+                    linsolve_adjoint = linsolve,
+                    usehessian = true,
+                    massmatrix = LinearAlgebra.I,
+                    linbdsolve_adjoint = linbdsolver)
         # determine scalar type associated to vectors a and b
         α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         Ty = eltype(α)
         return $op(prob, a, b, 0*a,
-            complex(zero(Ty)), # l1
-            real(one(Ty)),    # cp
-            real(one(Ty)),    # bt
-            real(one(Ty)),    # gh
-            1,                # zh
-            linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
+                    complex(zero(Ty)), # l1
+                    real(one(Ty)),     # cp
+                    real(one(Ty)),     # bt
+                    real(one(Ty)),     # gh
+                    1,                 # zh
+                    linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
     end
 
     # empty constructor, mainly used for dispatch
-    function $op(prob ;linsolve = DefaultLS(), linbdsolver = MatrixBLS(), usehessian = true, massmatrix = LinearAlgebra.I)
+    function $op(prob ;linsolve = DefaultLS(),
+                    linbdsolver = MatrixBLS(),
+                    usehessian = true,
+                    massmatrix = LinearAlgebra.I)
         a = b = 0.
         α = norm(a) 
         Ty = eltype(α)
         return $op(prob, a, b, 0*a,
-            complex(zero(Ty)), # l1
-            real(one(Ty)),     # cp
-            real(one(Ty)),     # bt
-            real(one(Ty)),     # gh
-            1,                 # zh
-            linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+                    complex(zero(Ty)), # l1
+                    real(one(Ty)),     # cp
+                    real(one(Ty)),     # bt
+                    real(one(Ty)),     # gh
+                    1,                 # zh
+                    linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
     end
     end
 end
 
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
     if detect_codim2_bifurcation > 0
-    if get(kwargs, :update_minaug_every_step, 0) == 0
-        @error "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`. The bifurcation detection algorithm may not work faithfully. Please use `update_minaug_every_step > 0`."
-    end
-    return setproperties(options_cont; detect_bifurcation = 0, detect_event = detect_codim2_bifurcation, detect_fold = false)
+        if get(kwargs, :update_minaug_every_step, 0) == 0
+            @error "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`. The bifurcation detection algorithm may not work faithfully. Please use `update_minaug_every_step > 0`."
+        end
+        return setproperties(options_cont; detect_bifurcation = 0, detect_event = detect_codim2_bifurcation, detect_fold = false)
     else
-    return options_cont
+        return options_cont
     end
+end
+
+function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
+    _prob = br.prob
+    prob_ma = _prob.prob
+    return getlens(prob_ma), getlens(br)
 end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     prob_ma = br.prob.prob
-    Teigvec = getvectortype(br)
+    𝒯 = getvectortype(br)
 
     bifpt = br.specialpoint[ind]
-    # jacobian at bifurcation point
-    if Teigvec <: BorderedArray
-    x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
+    # get the BT point. We perform a conversion in case GPU is used
+    if 𝒯 <: BorderedArray
+        x0 = convert(𝒯.parameters[1], getvec(bifpt.x, prob_ma))
     else
-    x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
+        x0 = convert(𝒯, getvec(bifpt.x , prob_ma))
     end
 
     # parameters for vector field
-    p = bifpt.param
-    parbif = set(getparams(br), getlens(br), p)
-    parbif = set(parbif, getlens(prob_ma), get(bifpt.printsol, getlens(prob_ma)))
+    p2 = bifpt.param
+    lens1, lens2 = get_lenses(br)
+    parbif = set(getparams(br), lens2, p2)
+
+    p1 = getp(bifpt.x , prob_ma)[1] # get(bifpt.printsol, lens1)
+    parbif = set(parbif, lens1, p1)
 
     return (x = x0, params = parbif)
-
 end
 ################################################################################
 """
@@ -142,18 +159,19 @@ This function turns an initial guess for a Fold / Hopf point into a solution to 
     It is recommended that you use the option `start_with_eigen=true`
 """
 function newton(br::AbstractBranchResult,
-        ind_bif::Int64; normN = norm,
+        ind_bif::Int64; 
+        normN = norm,
         options = br.contparams.newton_options,
         start_with_eigen = false,
         lens2::Lens = (@lens _),
         kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
-    return newton_hopf(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_hopf(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
-    return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     else
-    return newton_fold(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_fold(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
     end
 end
 ################################################################################

@@ -11,7 +11,7 @@ function foldpoint(br::AbstractBranchResult, index::Int)
 end
 ####################################################################################################
 @inline getvec(x, ::FoldProblemMinimallyAugmented) = get_vec_bls(x)
-@inline getp(x, ::FoldProblemMinimallyAugmented) = extractParBLS(x)
+@inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
 
 function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point

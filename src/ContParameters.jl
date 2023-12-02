@@ -90,7 +90,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     @assert iseven(n_inversion) "The option `n_inversion` number must be even"
     @assert 0 <= detect_bifurcation <= 3 "The option `detect_bifurcation` must belong to {0,1,2,3}"
     @assert 0 <= detect_event <= 2 "The option `detect_event` must belong to {0,1,2}"
-    @assert (detect_bifurcation > 1 && detect_event == 0) || (detect_bifurcation <= 1 && detect_event >= 0)  "One of these options must be disabled detect_bifurcation = $detect_bifurcation and detect_event = $detect_event"
+    @assert (detect_bifurcation > 1 && detect_event == 0) || (detect_bifurcation <= 1 && detect_event >= 0)  "One of these options must be put to zero: detect_bifurcation = $detect_bifurcation and detect_event = $detect_event"
     @assert tol_bisection_eigenvalue >= 0 "The option `tol_bisection_eigenvalue` must be positive"
     @assert plot_every_step > 0 "plot_every_step must be positive. You can turn off plotting by passing plot = false to `continuation`"
     @assert ~(detect_bifurcation > 1 && save_eig_every_step > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use save_eig_every_step = 1 or detect_bifurcation = 1."

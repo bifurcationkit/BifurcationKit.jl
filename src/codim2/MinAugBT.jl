@@ -8,7 +8,7 @@ Structure to encode Bogdanov-Takens functional based on a Minimally Augmented fo
 
 $(FIELDS)
 """
-mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tlens <: Lens} <: AbstractProblemMinimallyAugmented
+mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Sbdblock <: AbstractBorderedLinearSolver, Tlens <: Lens} <: AbstractProblemMinimallyAugmented
     "Functional F(x, p) - vector field - with all derivatives"
     prob_vf::Tprob
     "close to null vector of Jᵗ"
@@ -25,6 +25,8 @@ mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, 
     linbdsolver::Sbd
     "linear bordered solver for the jacobian adjoint"
     linbdsolverAdjoint::Sbda
+    "bordered linear solver for blocks"
+    linbdsolverBlock::Sbdblock
     "second parameter axis"
     lens2::Tlens
     "whether to use the hessian of prob_vf"
@@ -37,7 +39,7 @@ end
 @inline has_adjoint_MF(pb::BTProblemMinimallyAugmented) = has_adjoint_MF(pb.prob_vf)
 @inline isinplace(pb::BTProblemMinimallyAugmented) = isinplace(pb.prob_vf)
 @inline getlens(pb::BTProblemMinimallyAugmented) = getlens(pb.prob_vf)
-@inline getlenses(pb::BTProblemMinimallyAugmented) = (getlens(pb.prob_vf), pb.lens2)
+@inline _getlenses(pb::BTProblemMinimallyAugmented) = (getlens(pb.prob_vf), pb.lens2)
 jad(pb::BTProblemMinimallyAugmented, args...) = jad(pb.prob_vf, args...)
 
 # constructor
@@ -45,9 +47,11 @@ function BTProblemMinimallyAugmented(prob, a, b,
                             linsolve::AbstractLinearSolver,
                             lens2::Lens;
                             linbdsolver = MatrixBLS(),
+                            linbdsolverAdjoint = linbdsolver,
+                            linbdsolverBlock = linbdsolver,
                             usehessian = true)
     return BTProblemMinimallyAugmented(prob, a, b, 0*a,
-                linsolve, linsolve, linbdsolver, linbdsolver, lens2, usehessian)
+                linsolve, linsolve, linbdsolver, linbdsolverAdjoint, linbdsolverBlock, lens2, usehessian)
 end
 
 """
@@ -92,16 +96,15 @@ function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where 
     #       a should be a null vector of J'
     # we solve Jv + a σ1 = 0 with <b, v> = n
     # the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
-    n = T(1)
     J = jacobian(𝐁𝐓.prob_vf, x, par)
-    v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, T(0), 𝐁𝐓.zero, n)
+    v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, zero(T), 𝐁𝐓.zero, one(T))
     ~cv && @debug "Linear solver for J did not converge."
     # ┌      ┐┌  ┐   ┌   ┐
     # │ J  a ││v2│ = │ v1│
     # │ b  0 ││σ2│   │ 0 │
     # └      ┘└  ┘   └   ┘
     # this could be greatly improved by saving the factorization
-    _, σ2, cv, _ = 𝐁𝐓.linbdsolver(J, a, b, T(0), v1, zero(T))
+    _, σ2, cv, _ = 𝐁𝐓.linbdsolver(J, a, b, zero(T), v1, zero(T))
     ~cv && @debug "Linear solver for J did not converge."
     return residual(𝐁𝐓.prob_vf, x, par), σ1, σ2
 end
@@ -166,25 +169,26 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
 
     # we solve Jv + a σ1 = 0 with <b, v> = n
     # the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
-    v1, σ1, cv, itv1 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, T(0), 𝐁𝐓.zero, n)
-    ~cv && @debug "Linear solver for J did not converge."
+    v1, σ1, cv, itv1 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, zero(T), 𝐁𝐓.zero, n)
+    ~cv && @debug "Bordered linear solver for J did not converge."
 
-    v2, σ2, cv, itv2 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, T(0), v1, zero(T))
-    ~cv && @debug "Linear solver for J did not converge."
+    v2, σ2, cv, itv2 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, zero(T), v1, zero(T))
+    ~cv && @debug "Bordered linear solver for J did not converge."
 
     # we solve J'w + b σ2 = 0 with <a, w> = n
     # the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-    w1, _, cv, itw1 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, T(0), 𝐁𝐓.zero, n)
-    ~cv && @debug "Linear solver for J' did not converge."
+    w1, _, cv, itw1 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, zero(T), 𝐁𝐓.zero, one(T))
+    ~cv && @debug "Bordered linear solver for J' did not converge."
+    @assert cv
 
-    w2, _, cv, itw2 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, T(0), w1, zero(T))
-    ~cv && @debug "Linear solver for J' did not converge."
+    w2, _, cv, itw2 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, zero(T), w1, zero(T))
+    ~cv && @debug "Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐁𝐓.prob_vf)
     ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jbt ####################
-    lens1, lens2 = getlenses(𝐁𝐓)
+    lens1, lens2 = _getlenses(𝐁𝐓)
     dp1F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ1)),
                  residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
     dp2F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ1)),
@@ -292,6 +296,8 @@ function newton_bt(prob::AbstractBifurcationProblem,
                 jacobian_ma::Symbol = :autodiff,
                 usehessian = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
+                bdlinsolver_block::AbstractBorderedLinearSolver = bdlinsolver,
                 kwargs...)
 
     @assert jacobian_ma in (:autodiff, :finitedifferences, :minaug)
@@ -304,6 +310,8 @@ function newton_bt(prob::AbstractBifurcationProblem,
         lens2;
         # do not change linear solver if user provides it
         linbdsolver = (@set bdlinsolver.solver = isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver),
+        linbdsolverAdjoint = bdlinsolver_adjoint,
+        linbdsolverBlock = bdlinsolver_block,
         usehessian = usehessian)
 
     Ty = eltype(btpointguess)
@@ -312,7 +320,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
         prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par)
         optn_bt = @set options.linsolver = DefaultLS()
     elseif jacobian_ma == :finitedifferences
-        prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par;
+        prob_bt = BifurcationProblem(𝐁𝐓, btpointguess, par;
             J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else
@@ -325,10 +333,10 @@ function newton_bt(prob::AbstractBifurcationProblem,
     sol = newton(prob_f, optn_bt; normN = normN, kwargs...)
 
     # save the solution in BogdanovTakens
-    pbt = extractParBLS(sol.u, 2)
+    pbt = get_vec_bls(sol.u, 2)
     parbt = set(par, getlens(prob), pbt[1])
     parbt = set(parbt, lens2, pbt[2])
-    bt = BogdanovTakens(x0 = get_vec_bls(sol.u, 2), params = parbt, lens = (getlens(prob), lens2), ζ = nothing, ζ★ = nothing, type = :none, nf = (a = missing, b = missing ),
+    bt = BogdanovTakens(x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), ζ = 𝐁𝐓.b, ζ★ = 𝐁𝐓.a, type = :none, nf = (a = missing, b = missing ),
     nfsupp = (K2 = zero(Ty),))
     @set sol.u = bt
 end
@@ -374,12 +382,12 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
     btpointguess = vcat(getvec(btpointguess, prob_ma), getp(btpointguess, prob_ma))
 
     bifpt = br.specialpoint[ind_bt]
-    eigenvec = getvec(bifpt.τ.u, prob_ma); rmul!(eigenvec, 1/normN(eigenvec))
+    ζ = getvec(bifpt.τ.u, prob_ma); rmul!(ζ, 1/normN(ζ))
     # in the case of Fold continuation, this could be ill-defined.
-    if ~isnothing(findfirst(isnan, eigenvec)) && ~start_with_eigen
-        @warn "Eigenvector ill defined (has NaN). Use the option start_with_eigen = true"
+    if ~isnothing(findfirst(isnan, ζ)) && ~start_with_eigen
+        @warn "ζtor ill defined (has NaN). Use the option start_with_eigen = true"
     end
-    eigenvec_ad = _copy(eigenvec)
+    ζad = _copy(ζ)
 
     if start_with_eigen
         x0, parbif = get_bif_point_codim2(br, ind_bt)
@@ -389,17 +397,26 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 
         # computation of zero eigenvector
         λ = zero(getvectoreltype(br))
-        ζ, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
-        eigenvec .= real.(ζ)
-        rmul!(eigenvec, 1/normN(eigenvec))
+        ζ0, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
+        ζ .= real.(ζ0)
+        rmul!(ζ, 1/normN(ζ))
 
         # computation of adjoint eigenvector
-        Lt = has_adjoint(prob_ma.prob_vf) ? jad(prob_ma.prob_vf, x0, parbif) : adjoint(L)
+        Lt = has_adjoint(prob_ma.prob_vf) ? jad(prob_ma.prob_vf, x0, parbif) : transpose(L)
         ζstar, = get_adjoint_basis(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
-        eigenvec_ad .= real.(ζstar)
-        rmul!(eigenvec_ad, 1/normN(eigenvec_ad))
+        ζad .= real.(ζstar)
+        rmul!(ζad, 1/normN(ζad))
     end
 
     # solve the BT equations
-    return newton_bt(prob_ma.prob_vf, btpointguess, getparams(br), getlens(br), eigenvec, eigenvec_ad, options; normN = normN, bdlinsolver = bdlinsolver, kwargs...)
+    return newton_bt(prob_ma.prob_vf,
+                    btpointguess,
+                    getparams(br),
+                    getlens(br),
+                    ζ,
+                    ζad,
+                    options; 
+                    normN = normN,
+                    bdlinsolver = bdlinsolver,
+                    kwargs...)
 end
