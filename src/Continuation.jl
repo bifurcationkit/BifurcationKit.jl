@@ -512,6 +512,9 @@ Note that you can have a better control over the continuation procedure by using
 
 !!! tip "Continuing the branch in the opposite direction"
     Just change the sign of `ds` in `ContinuationPar`.
+
+!!! tip "Debug mode"
+    Use debug mode to access more irformation about the progression of the continuation run, like iterative solvers convergence, problem update, ...
 """
 function continuation(prob::AbstractBifurcationProblem,
                         alg::AbstractContinuationAlgorithm,
@@ -528,7 +531,7 @@ function continuation(prob::AbstractBifurcationProblem,
         # we deepcopy the iterator here because some problems
         # are changed inplace like in Min. Aug. problems or 
         # periodic orbits computation
-        itbwd = ContIterable(deepcopy(prob), deepcopy(alg), contparams; kwargs...)
+        itbwd = deepcopy(itfwd)
         @set! itbwd.contparams.ds = -contparams.ds
 
         resfwd = continuation(itfwd)
