@@ -408,7 +408,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         else
             JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
-        newa, _, cv, it = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+        newa, _, cv, it = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
         ~cv && @debug "[FOLD Fin] Bordered linear solver for J' did not converge. it = $(it). This is to update 𝐅.a"
 
         copyto!(𝐅.a, newa); rmul!(𝐅.a, 1 / normC(newa))
@@ -447,7 +447,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new a
         JAd_at_xp = has_adjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
-        ζstar, _, cv, it = probfold.linbdsolver(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))
+        ζstar, _, cv, it = probfold.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))
         ~cv && @debug "[FOLD test] Bordered linear solver for J' did not converge. it = $(it). This is to update ζstar"
         rmul!(ζstar, 1 / normC(ζstar))
 
