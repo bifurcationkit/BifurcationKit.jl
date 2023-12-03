@@ -399,7 +399,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
 
         # compute new b, close to right null vector
-        newb = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))[1]
+        newb, _, cv, it = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
+        ~cv && @debug "[FOLD Fin] Bordered linear solver for J did not converge. it = $(it). This is to update 𝐅.b"
 
         # compute new a, close to left null vector
         if is_symmetric(𝐅)
@@ -407,7 +408,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         else
             JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
-        newa = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))[1]
+        newa, _, cv, it = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+        ~cv && @debug "[FOLD Fin] Bordered linear solver for J' did not converge. it = $(it). This is to update 𝐅.a"
 
         copyto!(𝐅.a, newa); rmul!(𝐅.a, 1 / normC(newa))
 
@@ -439,12 +441,14 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         J_at_xp = jacobian(probfold.prob_vf, x, newpar)
 
         # compute new b
-        ζ = probfold.linbdsolver(J_at_xp, a, b, zero(𝒯), probfold.zero, one(𝒯))[1]
+        ζ, _, cv, it = probfold.linbdsolver(J_at_xp, a, b, zero(𝒯), probfold.zero, one(𝒯))
+        ~cv && @debug "[FOLD test] Bordered linear solver for J did not converge. it = $(it). This is to update ζ"
         rmul!(ζ, 1 / normC(ζ))
 
         # compute new a
         JAd_at_xp = has_adjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
-        ζstar = probfold.linbdsolver(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))[1]
+        ζstar, _, cv, it = probfold.linbdsolver(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))
+        ~cv && @debug "[FOLD test] Bordered linear solver for J' did not converge. it = $(it). This is to update ζstar"
         rmul!(ζstar, 1 / normC(ζstar))
 
         probfold.BT = dot(ζstar, ζ)
@@ -500,7 +504,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_fold,
         event = event
         )
-        @assert ~isnothing(br) "Empty branch!"
+    @assert ~isnothing(br) "Empty branch!"
     return correct_bifurcation(br)
 end
 
@@ -517,7 +521,7 @@ function continuation_fold(prob,
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    ζ = bifpt.τ.u; rmul!(ζ, 1/norm(ζ))
+    ζ = bifpt.τ.u; rmul!(ζ, 1 / norm(ζ))
     ζad = _copy(ζ)
 
     p = bifpt.param
@@ -541,7 +545,7 @@ function continuation_fold(prob,
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
-        rmul!(ζad, 1/dot(ζ, ζ★))
+        rmul!(ζad, 1 / dot(ζ, ζ★))
     end
 
     return continuation_fold(prob, alg,
