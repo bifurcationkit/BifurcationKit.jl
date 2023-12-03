@@ -177,11 +177,10 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
 
     # we solve J'w + b σ2 = 0 with <a, w> = n
     # the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
-    w1, _, cv, itw1 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, zero(T), 𝐁𝐓.zero, one(T))
+    w1, _, cv, itw1 = 𝐁𝐓.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), 𝐁𝐓.zero, n)
     ~cv && @debug "Bordered linear solver for J' did not converge."
-    @assert cv
 
-    w2, _, cv, itw2 = 𝐁𝐓.linbdsolver(JAd_at_xp, b, a, zero(T), w1, zero(T))
+    w2, _, cv, itw2 = 𝐁𝐓.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), w1, zero(T))
     ~cv && @debug "Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐁𝐓.prob_vf)
@@ -333,7 +332,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
     sol = newton(prob_f, optn_bt; normN = normN, kwargs...)
 
     # save the solution in BogdanovTakens
-    pbt = get_vec_bls(sol.u, 2)
+    pbt = get_par_bls(sol.u, 2)
     parbt = set(par, getlens(prob), pbt[1])
     parbt = set(parbt, lens2, pbt[2])
     bt = BogdanovTakens(x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), ζ = 𝐁𝐓.b, ζ★ = 𝐁𝐓.a, type = :none, nf = (a = missing, b = missing ),
@@ -372,6 +371,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                 nev = br.contparams.nev,
                 start_with_eigen = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
                 kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     prob_ma = br.prob.prob
@@ -418,5 +418,6 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                     options; 
                     normN = normN,
                     bdlinsolver = bdlinsolver,
+                    bdlinsolver_adjoint = bdlinsolver_adjoint,
                     kwargs...)
 end
