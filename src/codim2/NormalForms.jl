@@ -551,14 +551,15 @@ function bogdanov_takens_normal_form(_prob,
     # in case the prob is HopfMA, we enforce real values
     zerov = real.(prob_ma.zero)
     vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+
     q0, = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
     p1, = bls(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
     q1, = bls(L,  p1, q0, zero(𝒯), q0,    zero(𝒯))
     p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1,    zero(𝒯))
+
     # we want
     # A⋅q0 = 0, A⋅q1 = q0
     # At⋅p1 = 0, At⋅p0 = p1
-
     μ = √(abs(dot(q0, q0)))
     q0 ./= μ
     q1 ./= μ

@@ -19,10 +19,6 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # - x guess for the point at which the jacobian is singular
     # - p guess for the parameter value `<: Real` at which the jacobian is singular
     # The jacobian of the MA problem is solved with a BLS method
-    a = 𝐅.a
-    b = 𝐅.b
-    # update parameter
-    par = set(params, getlens(𝐅), p)
     # ┌      ┐┌  ┐   ┌ ┐
     # │ J  a ││v │ = │0│
     # │ b  0 ││σ │   │1│
@@ -32,6 +28,10 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     #       a should be a null vector of J'
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
+    a = 𝐅.a
+    b = 𝐅.b
+    # update parameter
+    par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
     _, σ, cv, = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Linear solver for J did not converge."
@@ -57,11 +57,12 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
                             rhsu, rhsp;
                             debugArray = nothing) where 𝒯
     ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
+    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing,
+    # then no debugging mode is entered. If it is AbstractArray, then it is populated
     ################################################################################################
-    # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the function above.
-    # The Jacobian Jfold of the vector field is expressed at (x, p)
-    # We solve here Jfold⋅res = rhs := [rhsu, rhsp]
+    # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
+    # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
+    # We solve Jfold⋅res = rhs := [rhsu, rhsp]
     # The Jacobian expression of the Fold problem is
     #           ┌         ┐
     #  Jfold =  │  J  dpF │
@@ -80,7 +81,8 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # update parameter
     par0 = set(par, lens, p)
 
-    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
+    # we compute the jacobian. It is used at least 3 times below. This avoids doing 3 times the 
+    # (possibly) costly building of J(x, p)
     J_at_xp = jacobian(𝐅.prob_vf, x, par0)
 
     # we do the following in order to avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
@@ -94,6 +96,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
     v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge. it = $(itv)"
+
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
         w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
@@ -135,7 +138,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
 
         dsig = (rhsp - σx1) / (σp - σx2)
 
-        # dX = x1 .- dsig .* x2
+        # dX = @. x1 - dsig * x2
         dX = _copy(x1); axpy!(-dsig, x2, dX)
     end
 
@@ -177,10 +180,10 @@ $(SIGNATURES)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`
-- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as returned by the function `FoldPoint`
+- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
 - `par` parameters used for the vector field
-- `eigenvec` guess for the 0 eigenvector
-- `eigenvec_ad` guess for the 0 adjoint eigenvector
+- `eigenvec` guess for the right null vector
+- `eigenvec_ad` guess for the left null vector
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
@@ -215,7 +218,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
         _copy(eigenvec),
         _copy(eigenvec_ad),
         options.linsolver,
-        # do not change linear solver if user provides it
+        # do not change linear solver if the user provides it
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian = usehessian)
 
@@ -238,7 +241,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    eigenvec = bifpt.τ.u; rmul!(eigenvec, 1/normN(eigenvec))
+    eigenvec = bifpt.τ.u; rmul!(eigenvec, 1 / normN(eigenvec))
     eigenvec_ad = _copy(eigenvec)
 
     if start_with_eigen
@@ -257,11 +260,19 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
         ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev = nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
-        rmul!(eigenvec_ad, 1/normN(eigenvec_ad))
+        rmul!(eigenvec_ad, 1 / normN(eigenvec_ad))
     end
 
     # solve the Fold equations
-    return newton_fold(prob, foldpointguess, getparams(br), eigenvec, eigenvec_ad, options; normN = normN, bdlinsolver = bdlinsolver, kwargs...)
+    return newton_fold(prob,
+                        foldpointguess,
+                        getparams(br),
+                        eigenvec,
+                        eigenvec_ad,
+                        options; 
+                        normN = normN,
+                        bdlinsolver = bdlinsolver,
+                        kwargs...)
 end
 
 """
@@ -269,12 +280,12 @@ $(SIGNATURES)
 
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`
-- `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as returned by the function `FoldPoint`
+- `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
 - `par` set of parameters
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2
-- `eigenvec` guess for the 0 eigenvector at p1_0
-- `eigenvec_ad` guess for the 0 adjoint eigenvector
+- `eigenvec` guess for the right null vector
+- `eigenvec_ad` guess for the left null vector
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
@@ -298,7 +309,7 @@ where the parameters are as above except that you have to pass the branch `br` f
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`. This is the default setting.
 
 !!! tip "Detection of Bogdanov-Takens and Cusp bifurcations"
-    In order to trigger the detection, pass `detect_event = 1,2` in `options_cont`.
+    In order to trigger the detection, pass `detect_event = 1 or 2` in `options_cont`.
 """
 function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                 foldpointguess::BorderedArray{vectype, 𝒯}, par,
@@ -387,10 +398,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         # expression of the jacobian
         J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
 
-        # compute new b
+        # compute new b, close to right null vector
         newb = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))[1]
 
-        # compute new a
+        # compute new a, close to left null vector
         if is_symmetric(𝐅)
             JAd_at_xp = J_at_xp
         else
@@ -398,9 +409,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         end
         newa = 𝐅.linbdsolver(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))[1]
 
-        copyto!(𝐅.a, newa); rmul!(𝐅.a, 1/normC(newa))
+        copyto!(𝐅.a, newa); rmul!(𝐅.a, 1 / normC(newa))
+
         # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
-        copyto!(𝐅.b, newb); rmul!(𝐅.b, 1/normC(newb))
+        copyto!(𝐅.b, newb); rmul!(𝐅.b, 1 / normC(newb))
 
         # call the user-passed finalizer
         finaliseUser = get(kwargs, :finalise_solution, nothing)
@@ -428,12 +440,12 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new b
         ζ = probfold.linbdsolver(J_at_xp, a, b, zero(𝒯), probfold.zero, one(𝒯))[1]
-        ζ ./= norm(ζ)
+        rmul!(ζ, 1 / normC(ζ))
 
         # compute new a
         JAd_at_xp = has_adjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
         ζstar = probfold.linbdsolver(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))[1]
-        ζstar ./= norm(ζstar)
+        rmul!(ζstar, 1 / normC(ζstar))
 
         probfold.BT = dot(ζstar, ζ)
         probfold.CP = getp(state.τ)
@@ -463,7 +475,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_f)
 
-    # define event for detecting bifurcations. Coupled it with user passed events
+    # define event for detecting bifurcations. Coupled with user passed events
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
         event = PairOfEvents(

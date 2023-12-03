@@ -525,6 +525,9 @@ function continuation(prob::AbstractBifurcationProblem,
     # perform continuation
     itfwd = ContIterable(prob, alg, contparams; kwargs...)
     if bothside
+        # we deepcopy the iterator here because some problems
+        # are changed inplace like in Min. Aug. problems or 
+        # periodic orbits computation
         itbwd = ContIterable(deepcopy(prob), deepcopy(alg), contparams; kwargs...)
         @set! itbwd.contparams.ds = -contparams.ds
 
