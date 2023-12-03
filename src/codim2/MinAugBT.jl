@@ -69,16 +69,12 @@ getvec(x, ::BTProblemMinimallyAugmented) = getvec(x)
 getp(x, ::BTProblemMinimallyAugmented) = getp(x)
 
 function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where T
-    # These are the equations of the minimally augmented (MA) formulation of the bt bifurcation point
+    # These are the equations of the minimally augmented (MA) formulation of 
+    # the bt bifurcation point.
     # input:
     # - x guess for the point at which the jacobian is singular
     # - p guess for the parameter value `<: Real` at which the jacobian is singular
     # The jacobian of the MA problem is solved with a BLS method
-    a = 𝐁𝐓.a
-    b = 𝐁𝐓.b
-    # update parameter
-    par = set(params, getlens(𝐁𝐓.prob_vf), p1)
-    par = set(par, 𝐁𝐓.lens2, p2)
     # ┌      ┐┌  ┐   ┌ ┐
     # │ J  a ││v1│ = │0│
     # │ b  0 ││σ1│   │1│
@@ -88,6 +84,11 @@ function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where 
     #       a should be a null vector of J'
     # we solve Jv + a σ1 = 0 with <b, v> = n
     # the solution is v = -σ1 J\a with σ1 = -n/<b, J^{-1}a>
+    a = 𝐁𝐓.a
+    b = 𝐁𝐓.b
+    # update parameter
+    par = set(params, getlens(𝐁𝐓.prob_vf), p1)
+    par = set(par, 𝐁𝐓.lens2, p2)
     J = jacobian(𝐁𝐓.prob_vf, x, par)
     v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, zero(T), 𝐁𝐓.zero, one(T))
     ~cv && @debug "Linear solver for J did not converge."

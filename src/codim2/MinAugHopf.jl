@@ -15,15 +15,12 @@ end
 
 # this function encodes the functional
 function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
-    # These are the equations of the minimally augmented (MA) formulation of the Hopf bifurcation point
+    # These are the equations of the minimally augmented (MA) formulation of the 
+    # Hopf bifurcation point
     # input:
     # - x guess for the point at which the jacobian has a purely imaginary eigenvalue
     # - p guess for the parameter for which the jacobian has a purely imaginary eigenvalue
     # The jacobian of the MA problem is solved with a BLS method
-    a = 𝐇.a
-    b = 𝐇.b
-    # update parameter
-    par = set(params, getlens(𝐇), p)
     # ┌         ┐┌  ┐   ┌ ┐
     # │ J-iω  a ││v │ = │0│
     # │  b    0 ││σ1│   │1│
@@ -31,6 +28,10 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) whe
     # In the notations of Govaerts 2000, a = w, b = v
     # Thus, b should be a null vector of J - iω
     #       a should be a null vector of J'+ iω
+    a = 𝐇.a
+    b = 𝐇.b
+    # update parameter
+    par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
     _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
@@ -407,11 +408,14 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # compute new b
         T = typeof(p1)
         local n = T(1)
-        newb = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))[1]
+        newb, _, cv, it = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))
+        ~cv && @debug "[Hopf update] Bordered linear solver for (J-iω) did not converge. it = $it. This is to upate 𝐇.b"
+
 
         # compute new a
         JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-        newa = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))[1]
+        newa, _, cv, it = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
+        ~cv && @debug "[Hopf upate] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate 𝐇.a"
 
         𝐇.a .= newa ./ normC(newa)
         # do not normalize with dot(newb, 𝐇.a), it prevents BT detection
@@ -452,12 +456,16 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # compute new b
         T = typeof(p1)
         n = T(1)
-        ζ = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))[1]
+        ζ, _, cd, it = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))
+        ~cv && @debug "[Hopf test] Bordered linear solver for (J-iω) did not converge. it = $it. This is to compute ζ"
+
         ζ ./= normC(ζ)
 
         # compute new a
         JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-        ζ★ = probhopf.linbdsolver(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))[1]
+        ζ★, _, cd, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
+        ~cv && @debug "[Hopf test] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate ζ★"
+
         # test function for Bogdanov-Takens
         probhopf.BT = ω
         BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
