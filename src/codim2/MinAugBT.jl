@@ -296,8 +296,8 @@ function newton_bt(prob::AbstractBifurcationProblem,
 
     𝐁𝐓 = BTProblemMinimallyAugmented(
         prob,
-        _copy(eigenvec_ad), # a
-        _copy(eigenvec),    # b
+        _copy(eigenvec_ad), # a close to right null vector
+        _copy(eigenvec),    # b close to left null vector
         options.linsolver,
         lens2;
         # do not change linear solver if user provides it
@@ -317,7 +317,12 @@ function newton_bt(prob::AbstractBifurcationProblem,
         prob_bt = BifurcationProblem(𝐁𝐓, brpoint_v, par)
         optn_bt = @set options.linsolver = DefaultLS()
     elseif jacobian_ma == :finitedifferences
-        prob_bt = BifurcationProblem(𝐁𝐓, btpointguess, par;
+        if btpointguess isa BorderedArray
+            brpoint_v = vcat(btpointguess.u, btpointguess.p[1:2]...)
+        else
+            brpoint_v = btpointguess
+        end
+        prob_bt = BifurcationProblem(𝐁𝐓, brpoint_v, par;
             J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else

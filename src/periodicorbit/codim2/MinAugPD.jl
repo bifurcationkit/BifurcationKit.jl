@@ -29,8 +29,8 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::PeriodDoublingProblemMinimallyAugmented) = extractVecBLS(x)
-@inline getp(x, ::PeriodDoublingProblemMinimallyAugmented) = extractParBLS(x)
+@inline getvec(x, ::PeriodDoublingProblemMinimallyAugmented) = get_vec_bls(x)
+@inline getp(x, ::PeriodDoublingProblemMinimallyAugmented) = get_par_bls(x)
 
 pdtest(JacPD, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 

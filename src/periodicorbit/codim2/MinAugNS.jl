@@ -25,9 +25,10 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::NeimarkSackerProblemMinimallyAugmented) = extractVecBLS(x, 2)
-@inline getp(x, ::NeimarkSackerProblemMinimallyAugmented) = extractParBLS(x, 2)
+@inline getvec(x, ::NeimarkSackerProblemMinimallyAugmented) = get_vec_bls(x, 2)
+@inline getp(x, ::NeimarkSackerProblemMinimallyAugmented) = get_par_bls(x, 2)
 
+is_symmetric(::NSMAProblem) = false
 
 # test function for NS bifurcation
 nstest(JacNS, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)

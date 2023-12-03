@@ -418,7 +418,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         ~cv && @debug "[Hopf upate] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate 𝐇.a"
 
         𝐇.a .= newa ./ normC(newa)
-        # do not normalize with dot(newb, 𝐇.a), it prevents BT detection
+        # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
         𝐇.b .= newb ./ normC(newb)
 
         # we stop continuation at Bogdanov-Takens points
@@ -456,14 +456,14 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # compute new b
         T = typeof(p1)
         n = T(1)
-        ζ, _, cd, it = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))
+        ζ, _, cv, it = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))
         ~cv && @debug "[Hopf test] Bordered linear solver for (J-iω) did not converge. it = $it. This is to compute ζ"
 
         ζ ./= normC(ζ)
 
         # compute new a
         JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-        ζ★, _, cd, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
+        ζ★, _, cv, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
         ~cv && @debug "[Hopf test] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate ζ★"
 
         # test function for Bogdanov-Takens
