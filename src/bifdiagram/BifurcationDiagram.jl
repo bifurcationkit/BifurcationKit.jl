@@ -164,8 +164,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 end
 
             catch ex
-            #     @error ex
-            #     return node
+                @error "Failed to compute new branch at p = $(pt.param)" exception=ex
             end
         end
     end
