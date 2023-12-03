@@ -57,15 +57,7 @@ end
 """
 For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonBT`.
 """
-function bt_point(br::AbstractResult{FoldCont, Tprob}, index::Int) where {Tprob}
-    bptype = br.specialpoint[index].type
-    @assert bptype == :bt "This should be a BT point"
-    specialpoint = br.specialpoint[index]
-    prob_ma = br.prob.prob
-    return BorderedArray(_copy(getvec(specialpoint.x, prob_ma)), [getp(specialpoint.x, prob_ma), specialpoint.param])
-end
-
-function bt_point(br::AbstractResult{HopfCont, Tprob}, index::Int) where {Tprob}
+function bt_point(br::AbstractResult{<: TwoParamCont, Tprob}, index::Int) where {Tprob}
     bptype = br.specialpoint[index].type
     @assert bptype == :bt "This should be a BT point"
     specialpoint = br.specialpoint[index]
@@ -232,8 +224,8 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
         σ2x = σ2x1 + σ2x2
         ########## Resolution of the bordered linear system ########
         # we invert Jbt
-        dX, dsig, flag, it = 𝐁𝐓.linbdsolver(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
-        ~flag && @debug "Linear solver for J did not converge."
+        dX, dsig, flag, it = 𝐁𝐓.linbdsolverBlock(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
+        ~flag && @debug "Block Bordered Linear solver for J did not converge."
     end
 
     return dX, dsig, true, sum(it) + sum(itv1) + sum(itw1) + sum(itv2) + sum(itw2)
@@ -287,7 +279,7 @@ The parameters / options are as usual except that you have to pass the branch `b
     For ODE problems, it is more efficient to pass the option `jacobian_ma = :autodiff`
 """
 function newton_bt(prob::AbstractBifurcationProblem,
-                btpointguess, par,
+                btpointguess::BorderedArray, par,
                 lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options::NewtonPar;
@@ -316,14 +308,19 @@ function newton_bt(prob::AbstractBifurcationProblem,
     Ty = eltype(btpointguess)
 
     if jacobian_ma == :autodiff
-        prob_f = BifurcationProblem(𝐁𝐓, btpointguess, par)
+        if btpointguess isa BorderedArray
+            brpoint_v = vcat(btpointguess.u, btpointguess.p[1:2]...)
+        else
+            brpoint_v = btpointguess
+        end
+        prob_bt = BifurcationProblem(𝐁𝐓, brpoint_v, par)
         optn_bt = @set options.linsolver = DefaultLS()
     elseif jacobian_ma == :finitedifferences
         prob_bt = BifurcationProblem(𝐁𝐓, btpointguess, par;
             J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else
-        prob_f = BTMAProblem(𝐁𝐓, jacobian_ma, BorderedArray(btpointguess[1:end-2], btpointguess[end-1:end]), par, nothing, prob.plotSolution, prob.recordFromSolution)
+        prob_bt = BTMAProblem(𝐁𝐓, jacobian_ma, btpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
         # options for the Newton Solver
         optn_bt = @set options.linsolver = BTLinearSolverMinAug()
     end
@@ -379,7 +376,6 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
     btpointguess = bt_point(br, ind_bt)
 
     # we look for a solution which is a Vector so we can use ForwardDiff
-    btpointguess = vcat(getvec(btpointguess, prob_ma), getp(btpointguess, prob_ma))
 
     bifpt = br.specialpoint[ind_bt]
     ζ = getvec(bifpt.τ.u, prob_ma); rmul!(ζ, 1/normN(ζ))
