@@ -702,20 +702,24 @@ function bautin_normal_form(_prob,
     # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
     # formula (7.2) in REF1
-    H20, = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+    H20,cv,it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+    ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
 
     # formula (7.3) in REF1
-    H11, = ls(L, -B(q0, cq0))
+    H11,cv,it = ls(L, -B(q0, cq0))
+    ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
 
     # formula (7.4) in REF1
-    H30, = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+    H30,cv,it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+    ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
 
     # formula (7.5) in REF1
     h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
     G21 = dot(p0, h21)      # (7.6)
     h21 .= G21 .* q0 .- h21 # (7.7)
     # formula (7.7) in REF1
-    H21, = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+    H21,_,cv,it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+    ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
 
     # 4-th order coefficient
     d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ .* dx4, parbif, dx1, dx2, dx3) .-
@@ -735,13 +739,15 @@ function bautin_normal_form(_prob,
     # h40 is not needed, so we compute the next formula on page 1114 in REF1
     h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
     h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
-    H31, = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
+    H31,cv,it = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
+    ~cv && @debug "[Bautin H31] Linear solver for J did not converge. it = $it"
 
     h22 = D(x0, q0, q0, cq0, cq0) .+
         4 .* C(q0, cq0, H11) .+ C(cq0, cq0, H20) .+ C(q0, q0, conj.(H20)) .+
         2 .* B(H11, H11) .+ 2 .* B(q0, conj.(H21)) .+ 2 .* B(cq0, H21) .+ B(conj.(H20), H20) .-
         (2G21 + 2conj(G21)) .* H11
-    H22, = ls(L, h22)
+    H22,cv,it = ls(L, h22)
+    ~cv && @debug "[Bautin H22] Linear solver for J did not converge. it = $it"
     H22 .*= -1
 
     # 5-th order coefficient
