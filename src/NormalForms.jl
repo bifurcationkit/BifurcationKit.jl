@@ -118,7 +118,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     a = dot(R01, ζ★)
-    Ψ01, _ = ls(L, E(R01))
+    Ψ01, cv, it = ls(L, E(R01))
+    ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
     verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
     verbose && println("├─── a    = ", a)
 
@@ -138,7 +139,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── b2/2 = ", b2/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ)
-    wst, _ = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
+    wst, cv, it = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
+    ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
     b3 = dot(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b3/6)
@@ -570,8 +572,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     d2gidxjdpk = zeros(Tvec, N, N)
     for ii in 1:N, jj in 1:N
         R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
-        Ψ01, flag = ls(Linv, E(R01))
-        ~flag && @warn "linear solver did not converge"
+        Ψ01, cv, it = ls(Linv, E(R01))
+        ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
     end
     verbose && (printstyled(color=:green, "\n──> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
@@ -597,18 +599,18 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         b3v = R3(ζs[jj], ζs[kk], ζs[ll])
         # d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζ★s[ii])
 
-        wst, flag = ls(Linv, E(R2(ζs[ll], ζs[kk])))
-        ~flag && @warn "linear solver did not converge"
+        wst, flag, it = ls(Linv, E(R2(ζs[ll], ζs[kk])))
+        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[jj], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζ★s[ii])
 
-        wst, flag = ls(Linv, E(R2(ζs[ll], ζs[jj])))
-        ~flag && @warn "linear solver did not converge"
+        wst, flag, it = ls(Linv, E(R2(ζs[ll], ζs[jj])))
+        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[kk], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζ★s[ii])
 
-        wst, flag = ls(Linv, E(R2(ζs[kk], ζs[jj])))
-        ~flag && @warn "linear solver did not converge"
+        wst, flag, it = ls(Linv, E(R2(ζs[kk], ζs[jj])))
+        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[ll], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζ★s[ii])
         for ii in 1:N
@@ -709,16 +711,19 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     # −LΨ001 = R01
     δ = getdelta(prob)
     R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    Ψ001, _ = ls(L, -R01)
+    Ψ001, cv, it = ls(L, -R01)
+    ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
     # (2iω−L)Ψ200 = R20(ζ,ζ)
     R20 = R2(ζ, ζ)
-    Ψ200, _ = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
+    Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
+    ~cv && @debug "[Hopf Ψ200] Linear solver for J did not converge. it = $it"
     # @assert Ψ200 ≈ (Complex(0, 2ω)*I - L) \ R20
 
     # −LΨ110 = 2R20(ζ,cζ).
     R20 = 2 .* R2(ζ, cζ)
-    Ψ110, _ = ls(L, -R20)
+    Ψ110, cv, it = ls(L, -R20)
+    ~cv && @debug "[Hopf Ψ110] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
     av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)

@@ -415,8 +415,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                     btpointguess,
                     getparams(br),
                     getlens(br),
-                    ζ,
-                    ζad,
+                    ζ, ζad,
                     options; 
                     normN = normN,
                     bdlinsolver = bdlinsolver,

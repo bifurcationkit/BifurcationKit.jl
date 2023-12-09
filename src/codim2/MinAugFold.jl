@@ -336,8 +336,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
     𝐅 = FoldProblemMinimallyAugmented(
             prob,
-            _copy(eigenvec_ad), # carefull a = left null vector
-            _copy(eigenvec),    # carefull b = left null vector
+            _copy(eigenvec_ad), # carefull a =  left null vector
+            _copy(eigenvec),    # carefull b = right null vector
             options_newton.linsolver,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);

@@ -36,7 +36,9 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
     # Fold point detection based on continuation parameter monotony
     if iter.contparams.detect_fold && length(branch) > 2 && detect_fold(branch[end-2:end].param...)
-        (iter.verbosity > 0) && printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
+        if iter.verbosity > 0
+            printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
+        end
         npar = length(branch[1]) - 8
         push!(contres.specialpoint, SpecialPoint(
             type = :fold,

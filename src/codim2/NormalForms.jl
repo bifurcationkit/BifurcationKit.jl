@@ -104,7 +104,8 @@ function cusp_normal_form(_prob,
 
     h2 = B(q, q)
     h2 .= dot(p, h2) .* q .- h2
-    H2, = bls(L, q, p, zero(𝒯), h2, zero(𝒯))
+    H2,_,cv,it = bls(L, q, p, zero(𝒯), h2, zero(𝒯))
+    ~cv && @debug "[CUSP (H2)] Bordered linear solver for J did not converge. it = $it"
 
     c = dot(p, C(q, q, q)) + 3dot(p, B(q, H2))
     c /= 6

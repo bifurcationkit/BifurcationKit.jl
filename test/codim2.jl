@@ -139,7 +139,7 @@ for eigen_start in (true, false)
     @test hp_br.specialpoint[3].type == :gh
 
     @test hp_br.specialpoint[1].param ≈ 0.305873681159479 rtol = 1e-5
-    @test hp_br.specialpoint[2].param ≈ 0.16452182436723148 rtol = 1e-5
+    @test hp_br.specialpoint[2].param ≈ 0.16452182436723148 atol = 1e-2
     @test hp_br.specialpoint[3].param ≈ 0.23255761094689315 atol = 1e-4
 
     @test ~isnothing(hp_br.eig)

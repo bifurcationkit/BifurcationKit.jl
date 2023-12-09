@@ -190,6 +190,8 @@ for _jac in (:autodiff, :minaug, :finiteDifferences)
     @test BK.converged(solbt)
     solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = :minaug)
     @test BK.converged(solbt)
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = false, jacobian_ma = :autodiff)
+    @test BK.converged(solbt)
     solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = :autodiff)
     @test BK.converged(solbt)
     @test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8

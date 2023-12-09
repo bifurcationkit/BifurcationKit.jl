@@ -63,7 +63,7 @@ function _step_size_control!(state, contparams::ContinuationPar, verbosity)
     ds = state.ds
     if converged(state) == false
         if  abs(ds) <= contparams.dsmin
-            @error "Failure to converge with given tolerances. We reached the smallest value [dsmin] valid for ds, namely $(contparams.dsmin)"
+            @error "Failure to converge with given tolerances.\n We reached the smallest value [dsmin] valid for ds, namely $(contparams.dsmin).\n Stopping continuation."
             # we stop the continuation
             state.stopcontinuation = true
             return

@@ -224,7 +224,6 @@ function gettangent!(state::AbstractContinuationState,
     τu, τp, flag, itl = getlinsolver(it)( it, state,
                                         J, dFdl,
                                         0*state.z.u, one(T)) # Right-hand side
-
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
