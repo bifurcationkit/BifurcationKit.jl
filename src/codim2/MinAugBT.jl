@@ -408,6 +408,26 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         ζstar, = get_adjoint_basis(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         ζad .= real.(ζstar)
         rmul!(ζad, 1/normN(ζad))
+    else
+        # we use a minimally augmented formulation to set the initial vectors
+        @assert ζ isa AbstractVector "We only handle Vectors for now."
+        a = ζ
+        a = rand(length(ζ))
+        b = ζad
+        b = rand(length(ζ))
+        𝒯 = eltype(a)
+        x0, parbif = get_bif_point_codim2(br, ind_bt)
+        L = jacobian(prob_ma.prob_vf, x0, parbif)
+        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯))
+        ~cv && @debug "Bordered linear solver for J did not converge."
+
+        L★ = ~has_adjoint(prob_ma.prob_vf) ? transpose(L) : jad(prob_ma.prob_vf, x0, parbif)
+        n = length(a)
+        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯))
+        ~cv && @debug "Bordered linear solver for J' did not converge."
+
+        ζad = newa ./ normN(newa)
+        ζ = newb ./ normN(newb)
     end
 
     # solve the BT equations
