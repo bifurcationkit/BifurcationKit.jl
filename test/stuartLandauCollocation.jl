@@ -1,4 +1,4 @@
-# using Revise, AbbreviatedStackTraces, Plots, Plots
+# using Revise, AbbreviatedStackTraces, Plots
 using Test
 using BifurcationKit, Parameters, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
@@ -259,12 +259,14 @@ _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 ####################################################################################################
 # test Hopf aBS
 let
-    for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
+    for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical(), BK.FullSparse())
+        useGEV = jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
+
         br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10).newton_options.verbose = false),
             PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
             δp = 0.1,
             usedeflation = true,
-            eigsolver = BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2),
+            eigsolver = useGEV ? BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2) : BK.FloquetColl(),
             )
 
         br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10).newton_options.verbose = false),

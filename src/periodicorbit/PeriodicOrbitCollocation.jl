@@ -894,15 +894,22 @@ newton(probPO::PeriodicOrbitOCollProblem,
     _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
 
 
-function build_jacobian(probPO::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
-    jacobianPO = probPO.jacobian
-    @assert jacobianPO in (AutoDiffDense(), AutoDiffDenseAnalytical()) "This jacobian is not defined. Please chose another one."
+function build_jacobian(coll::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+    jacobianPO = coll.jacobian
+    @assert jacobianPO in (AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
 
     if jacobianPO isa AutoDiffDenseAnalytical
-        jac = (x, p) -> FloquetWrapper(probPO, analytical_jacobian(probPO, x, p), x, p)
+        jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
+    elseif jacobianPO isa FullSparse
+        jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
+    elseif jacobianPO isa FullSparseInplace
+        _J = analytical_jacobian_sparse(coll, orbitguess, par)
+        indx = get_blocks(coll, _J)
+        # jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian!(_J, coll, x, p), x, p)
+        jac = (x, p) -> FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
     else
-        _J = zeros(eltype(probPO), length(orbitguess), length(orbitguess))
-        jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian!(_J, z -> probPO(z, p), x), x, p)
+        _J = zeros(eltype(coll), length(orbitguess), length(orbitguess))
+        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian!(_J, z -> coll(z, p), x), x, p)
     end
 end
 
