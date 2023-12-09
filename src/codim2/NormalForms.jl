@@ -530,10 +530,6 @@ function bogdanov_takens_normal_form(_prob,
     𝒯 = eltype(Teigvec)
     L = jacobian(prob_vf, x0, parbif)
 
-    # "zero" eigenvalues at bifurcation point
-    rightEv = br.eig[bifpt.idx].eigenvals
-    indev = br.specialpoint[ind_bif].ind_ev
-
     # and corresponding eigenvectors
     eigsolver = getsolver(optionsN.eigsolver)
     if isnothing(ζs) # do we have a basis for the kernel?
@@ -550,6 +546,9 @@ function bogdanov_takens_normal_form(_prob,
             end
             ζs = [copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
         else
+            # "zero" eigenvalues at bifurcation point
+            rightEv = br.eig[bifpt.idx].eigenvals
+            # indev = br.specialpoint[ind_bif].ind_ev
             # find the 2 eigenvalues closest to zero
             Ind = sortperm(abs.(rightEv))
             ind0 = Ind[1]
@@ -565,11 +564,14 @@ function bogdanov_takens_normal_form(_prob,
     ###########################
     vr = real.(ζs[1])
     Lᵗ = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
-    _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
-    Ivp = sortperm(_λ★, by = abs)
-    # in case the prob is HopfMA, we enforce real values
-    zerov = real.(prob_ma.zero)
-    vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+    if isnothing(ζs_ad) # do we have a basis for the kernel of the adjoint?
+        _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
+        Ivp = sortperm(_λ★, by = abs)
+        # in case the prob is HopfMA, we enforce real values
+        vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+    else
+        vl = real(ζs[1])
+    end
 
     zerov = real.(prob_ma.zero)
     q0, _, cv, it = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
