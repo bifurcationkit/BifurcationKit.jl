@@ -234,7 +234,6 @@ function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
     return nothing
 end
 ####################################################################################################
-# type for bifurcation point Nd kernel for the jacobian
 function factor3d(i,j,k)
     if i == j == k
         return 1/6
@@ -262,10 +261,10 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
     out .= p .* nf.a
 
     # factor to account for factorials
-    factor = T(1)
+    factor = one(T)
 
     @inbounds for ii in 1:N
-        factor = T(1)
+        factor = one(T)
         out[ii] = 0
         # coefficient x*p
         for jj in 1:N
@@ -359,7 +358,7 @@ end
 """
 $(SIGNATURES)
 
-Bi-orthogonalise the arguments.
+Bi-orthogonalise the two sets of vectors.
 """
 function biorthogonalise(ζs, ζ★s, verbose)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
@@ -440,12 +439,16 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,
+                        ζs_ad = nothing,
                         lens = getlens(br),
                         Teigvec = getvectortype(br),
                         scaleζ = norm,
                         detailed = true,
                         autodiff = false,
-                        bls = MatrixBLS())
+                        bls = MatrixBLS(),
+                        bls_adjoint = bls,
+                        bls_block = bls,
+                        )
     bifpt = br.specialpoint[id_bif]
 
     @assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
@@ -458,7 +461,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff, bls = bls)
+        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff, bls = bls, bls_adjoint = bls_adjoint, bls_block = bls_block, ζs = ζs, ζs_ad = ζs_ad)
     elseif bifpt.type == :gh
         return bautin_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed)
     elseif bifpt.type == :zh

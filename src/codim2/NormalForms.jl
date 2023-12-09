@@ -141,7 +141,8 @@ function bogdanov_takens_normal_form(prob_ma, L,
                             detailed = true,
                             autodiff = true,
                             # bordered linear solver
-                            bls = prob_ma.linbdsolver)
+                            bls = prob_ma.linbdsolver,
+                            bls_block = bls)
     x0 = pt.x0
     parbif = pt.params
     Ty = eltype(x0)
@@ -199,12 +200,15 @@ function bogdanov_takens_normal_form(prob_ma, L,
     B(dx1, dx2) = d2F(VF, x0, parbif, dx1, dx2)
     Ainv(dx) = bls(L, p1, q0, zero(Ty), dx, zero(Ty))
 
-    H2000, = Ainv(2 .* a .* q1 .- B(q0, q0))
+    H2000,_,cv,it = Ainv(2 .* a .* q1 .- B(q0, q0))
+    ~cv && @debug "[BT H2000] Linear solver for J did not converge. it = $it"
     γ = (-2dot(p0, H2000) + 2dot(p0, B(q0, q1)) + dot(p1, B(q1, q1))) / 2
     H2000 .+= γ .* q0
 
-    H1100, = Ainv(b .* q1 .+ H2000 .- B(q0, q1))
-    H0200, = Ainv(2 .* H1100 .- B(q1, q1))
+    H1100,_,cv,it = Ainv(b .* q1 .+ H2000 .- B(q0, q1))
+    ~cv && @debug "[BT H1100] Linear solver for J did not converge. it = $it"
+    H0200,_,cv,it = Ainv(2 .* H1100 .- B(q1, q1))
+    ~cv && @debug "[BT H0200] Linear solver for J did not converge. it = $it"
 
     # first order derivatives
     pBq(p, q) = 2 .* (apply_jacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
@@ -246,9 +250,11 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # solving the linear system of size n+2
     c = 3dot(p0, H1100) - dot(p0, B(q1, q1))
-    H0010, K10, cv, it = bls(Val(:Block), L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
+    H0010, K10, cv, it = bls_block(Val(:Block), L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
+    ~cv && @debug "[BT K10] Linear solver for J did not converge. it = $it"
     @assert size(H0010) == size(x0)
-    H0001, K11, cv, it = bls(Val(:Block), L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
+    H0001, K11, cv, it = bls_block(Val(:Block), L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
+    ~cv && @debug "[BT K11] Linear solver for J did not converge. it = $it"
     @assert size(H0001) == size(x0)
 
     # computation of K2
@@ -264,27 +270,31 @@ function bogdanov_takens_normal_form(prob_ma, L,
     h0002 .+= A1(H0001, lens1) .* (2K11[1]) .+ A1(H0001, lens2) .* (2K11[2])
     h0002 .+= J2K
     h0002 .+= J1s[1] .* K2[1] .+ J1s[2] .* K2[2]
-    H0002, = Ainv(h0002)
+    H0002,_,ct,it = Ainv(h0002)
+    ~cv && @debug "[BT H0002] Linear solver for J did not converge. it = $it"
     H0002 .*= -1
 
     # computation of H1001
     h1001 = B(q0, H0001)
     h1001 .+= A1(q0, lens1) .* K11[1] .+ A1(q0, lens2) .* K11[2]
-    H1001, = Ainv(h1001)
+    H1001,_,cv,it = Ainv(h1001)
+    ~cv && @debug "[BT H1001] Linear solver for J did not converge. it = $it"
     H1001 .*= -1
 
     # computation of H0101
     h0101 = B(q1, H0001)
     h0101 .+= A1(q1, lens1) .* K11[1] .+ A1(q1, lens2) .* K11[2]
     h0101 .-= H1001 .+ q1
-    H0101, = Ainv(h0101)
+    H0101,_,cv,it = Ainv(h0101)
+    ~cv && @debug "[BT H0101] Linear solver for J did not converge. it = $it"
     H0101 .*= -1
 
     # computation of H3000 and d
     h3000 = d3F(VF, x0, parbif, q0, q0, q0) .+ 3 .* B(q0, H2000) .- (6a) .* H1100
     d = dot(p1, h3000)/6
     h3000 .-= (6d) .* q1
-    H3000, = Ainv(h3000)
+    H3000,_,cv,it = Ainv(h3000)
+    ~cv && @debug "[BT H3000] Linear solver for J did not converge. it = $it"
     H3000 .*= -1
 
     # computation of e
@@ -300,7 +310,8 @@ function bogdanov_takens_normal_form(prob_ma, L,
     h2001 .-= (2a) .* H0101
     a1 = dot(p1, h2001) / 2
     h2001 .-= (2a1) .* q1
-    H2001, = Ainv(h2001)
+    H2001,_,cv,it = Ainv(h2001)
+    ~cv && @debug "[BT H2001] Linear solver for J did not converge. it = $it"
     H2001 .*= -1
 
     # computation of b1
@@ -453,11 +464,16 @@ Compute the Bogdanov-Takens normal form.
 - `options` options for the Newton solver
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences for parameters
+- `δ = 1e-8` used for finite differences with respect to parameters
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
-- `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
-- `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
+- `autodiff = true` Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
+- `detailed = true` Whether to compute only a simplified normal form where not all coefficients are computed.
+- `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
+- `ζs_ad` list of vectors spanning the kernel of `transpose(dF)` at the bifurcation point. Useful to enforce the basis for the normal form. The vectors must be listed so that the corresponding eigenvalues are equals to the ones associated to each vector in ζs. 
+- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
+- `bls` specify Bordered linear solver for dF.
+- `bls_adjoint` specify Bordered linear solver for transpose(dF).
 """
 function bogdanov_takens_normal_form(_prob,
         br::AbstractBranchResult, ind_bif::Int;
@@ -465,11 +481,14 @@ function bogdanov_takens_normal_form(_prob,
         nev = length(eigenvalsfrombif(br, ind_bif)),
         verbose = false,
         ζs = nothing,
+        ζs_ad = nothing,
         lens = getlens(br),
         Teigvec = getvectortype(br),
         scaleζ = norm,
         # bordered linear solver
         bls = _prob.prob.linbdsolver,
+        bls_adjoint = bls,
+        bls_block = bls,
         detailed = true,
         autodiff = true)
     @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
@@ -552,10 +571,15 @@ function bogdanov_takens_normal_form(_prob,
     zerov = real.(prob_ma.zero)
     vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
 
-    q0, = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
-    p1, = bls(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
-    q1, = bls(L,  p1, q0, zero(𝒯), q0,    zero(𝒯))
-    p0, = bls(Lᵗ, q0, p1, zero(𝒯), p1,    zero(𝒯))
+    zerov = real.(prob_ma.zero)
+    q0, _, cv, it = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J did not converge. it = $it"
+    p1, _, cv, it = bls_adjoint(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J' did not converge. it = $it"
+    q1, _, cv, it = bls(L,  p1, q0, zero(𝒯), q0,    zero(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J did not converge. it = $it"
+    p0, _, cv, it = bls_adjoint(Lᵗ, q0, p1, zero(𝒯), p1,    zero(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J' did not converge. it = $it"
 
     # we want
     # A⋅q0 = 0, A⋅q1 = q0
@@ -576,7 +600,7 @@ function bogdanov_takens_normal_form(_prob,
         (K2 = zero(𝒯),),
         :none
     )
-    return bogdanov_takens_normal_form(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls)
+    return bogdanov_takens_normal_form(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls, bls_block = bls_block)
 end
 ####################################################################################################
 function bautin_normal_form(_prob,
