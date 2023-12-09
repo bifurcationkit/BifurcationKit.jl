@@ -43,7 +43,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
         push!(contres.specialpoint, SpecialPoint(
             type = :fold,
             idx = length(branch) - 1,
-            param = branch[end-1].param,
+            param = getp(state),
             norm = iter.normC(getx(state)),
             printsol = NamedTuple{keys(branch[end-1])[1:npar]}(values(branch[end-1])[1:npar]),
             x = getsolution(iter.prob, _copy(getx(state))),

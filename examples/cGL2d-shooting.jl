@@ -89,15 +89,15 @@ end
 
 ####################################################################################################
 Nx = 41*1
-    Ny = 21*1
-    n = Nx*Ny
-    lx = pi
-    ly = pi/2
+Ny = 21*1
+n = Nx*Ny
+lx = pi
+ly = pi/2
 
-    Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
-    par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ))
-    sol0 = 0.1rand(2Nx, Ny)
-    sol0_f = vec(sol0)
+Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ))
+sol0 = 0.1rand(2Nx, Ny)
+sol0_f = vec(sol0)
 
 prob = BK.BifurcationProblem(Fcgl!, sol0_f, par_cgl, (@lens _.r); J = Jcgl)
 ####################################################################################################

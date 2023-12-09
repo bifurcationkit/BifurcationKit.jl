@@ -40,8 +40,11 @@ plot(sol)
 ################################################################################
 function recordFromSolution(x, p)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-    return (max = maximum(xtt[1,:]),
-            min = minimum(xtt[1,:]),
+    _max = maximum(xtt[1,:])
+    _min = minimum(xtt[1,:])
+    return (max = _max,
+            min = _min,
+            amplitude = _max - _min,
             period = getperiod(p.prob, x, p.p))
 end
 
@@ -152,7 +155,7 @@ brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
     )
-pt = get_normal_form(brpo_fold, 1; prm = true)
+pd = get_normal_form(brpo_fold, 1; prm = true)
 
 prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, max_steps=250);
@@ -160,6 +163,16 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     argspo...
     )
 pt = get_normal_form(brpo_pd, 1, prm = true)
+#########
+# pd branch switching
+brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,
+                ContinuationPar(brpo_pd.contparams, max_steps = 150);
+                verbosity = 0, plot = true,
+                δp = 0.001, ampfactor = 0.1,
+                linear_algo = MatrixBLS(),
+                argspo...,)
+plot(brpo_pd, brpo_pd_sw)
+########
 
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 120, p_min = 0., p_max=1.2, n_inversion = 4, plot_every_step = 10)
@@ -170,15 +183,20 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
         start_with_eigen = false,
         bothside = true,
         jacobian_ma = :minaug,
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
 fold_po_coll2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
+        update_minaug_every_step = 1,
         start_with_eigen = false,
         bothside = true,
         jacobian_ma = :minaug,
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
@@ -190,6 +208,7 @@ opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max
 pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
+        update_minaug_every_step = 1,
         start_with_eigen = false,
         usehessian = false,
         jacobian_ma = :minaug,
@@ -249,7 +268,7 @@ get_normal_form(brpo_pd, 2, prm = true)
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
 @set! opts_pocoll_pd.newton_options.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
-        verbosity = 3, plot = false,
+        verbosity = 3, plot = true,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
         usehessian = false,
