@@ -100,7 +100,10 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwarg
         if get(kwargs, :update_minaug_every_step, 0) == 0
             @error "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`.\n The bifurcation detection algorithm may not work faithfully.\n Please use `update_minaug_every_step > 0`."
         end
-        return setproperties(options_cont; detect_bifurcation = 0, detect_event = detect_codim2_bifurcation, detect_fold = false)
+        return setproperties(options_cont; 
+                    detect_bifurcation = 0,
+                    detect_event = detect_codim2_bifurcation,
+                    detect_fold = false)
     else
         return options_cont
     end
@@ -159,19 +162,32 @@ This function turns an initial guess for a Fold / Hopf point into a solution to 
     It is recommended that you use the option `start_with_eigen=true`
 """
 function newton(br::AbstractBranchResult,
-        ind_bif::Int64; 
-        normN = norm,
-        options = br.contparams.newton_options,
-        start_with_eigen = false,
-        lens2::Lens = (@lens _),
-        kwargs...)
+                ind_bif::Int64; 
+                normN = norm,
+                options = br.contparams.newton_options,
+                start_with_eigen = false,
+                lens2::Lens = (@lens _),
+                kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
-        return newton_hopf(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_hopf(br, ind_bif; 
+                            normN = normN, 
+                            options = options, 
+                            start_with_eigen = start_with_eigen, 
+                            kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
-        return newton_bt(br, ind_bif; lens2 = lens2, normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_bt(br, ind_bif; 
+                        lens2 = lens2, 
+                        normN = normN, 
+                        options = options, 
+                        start_with_eigen = start_with_eigen, 
+                        kwargs...)
     else
-        return newton_fold(br, ind_bif; normN = normN, options = options, start_with_eigen = start_with_eigen, kwargs...)
+        return newton_fold(br, ind_bif; 
+                        normN = normN,
+                        options = options,
+                        start_with_eigen = start_with_eigen,
+                        kwargs...)
     end
 end
 ################################################################################
@@ -237,7 +253,11 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         start_with_eigen = false,
         autodiff = false,
         detailed = true,
+        ζs = nothing,
+        ζs_ad = nothing,
         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+        bdlinsolver_adjoint = bdlinsolver,
+        bdlinsolver_block = bdlinsolver,
         kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -262,7 +282,18 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     Ty = eltype(Teigvec)
 
     # compute the normal form of the bifurcation point
-    nf = get_normal_form(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, autodiff = autodiff, detailed = detailed, bls = bdlinsolver)
+    nf = get_normal_form(br, ind_bif; 
+                            nev,
+                            verbose,
+                            Teigvec,
+                            scaleζ,
+                            autodiff,
+                            detailed,
+                            bls = bdlinsolver,
+                            bls_adjoint = bdlinsolver_adjoint,
+                            bls_block = bdlinsolver_block,
+                            ζs,
+                            ζs_ad)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? optionsCont.ds : δp
