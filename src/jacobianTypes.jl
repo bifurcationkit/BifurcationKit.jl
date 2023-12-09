@@ -24,3 +24,6 @@ struct FiniteDifferencesMF <: AbstractJacobianFree end
 Singleton type to trigger the computation of the jacobian using finite differences. It can be used for example in newton or in deflated newton.
 """
 struct FiniteDifferences <: AbstractJacobianType end
+
+struct FullSparse <: AbstractJacobianType end
+struct FullSparseInplace <: AbstractJacobianType end

@@ -835,10 +835,15 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
             kwargs...) where {T, Tf, vectype}
     jacobianPO = probPO.jacobian
     @assert jacobianPO in
-            (AutoDiffDense(), AutoDiffDenseAnalytical(),) "This jacobian $jacobianPO is not defined. Please chose another one."
+            (AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse()) "This jacobian $jacobianPO is not defined. Please chose another one."
 
     if jacobianPO isa AutoDiffDenseAnalytical
         jac = (x, p) -> analytical_jacobian(probPO, x, p)
+    elseif jacobianPO isa FullSparse
+        jac = (x, p) -> analytical_jacobian_sparse(probPO, x, p)
+    elseif jacobianPO isa FullSparseInplace
+        _J = analytical_jacobian_sparse(probPO, orbitguess, par)
+        jac = (x, p) -> analytical_jacobian!(_J, probPO, x, p)
     else
         jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
     end

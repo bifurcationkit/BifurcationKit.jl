@@ -356,7 +356,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         branch = continuation_fold(prob_vf, alg,
             foldpt, params,
             nf.lens...,
-            ζstar, ζ,
+            ζ, ζstar,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
             compute_eigen_elements = compute_eigen_elements,
@@ -373,19 +373,19 @@ This function uses information in the branch to detect codim 2 bifurcations like
 """
 function correct_bifurcation(contres::ContResult)
     if contres.prob.prob isa AbstractProblemMinimallyAugmented == false
-    return contres
+        return contres
     end
     if contres.prob.prob isa FoldProblemMinimallyAugmented
-    conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd, :btbp => :bt)
+        conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd, :btbp => :bt)
     elseif contres.prob.prob isa HopfProblemMinimallyAugmented
-    conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt, :btbp => :bt)
+        conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt, :btbp => :bt)
     else
-    throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
+        throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
     end
     for (ind, bp) in pairs(contres.specialpoint)
-    if bp.type in keys(conversion)
-        @set! contres.specialpoint[ind].type = conversion[bp.type]
-    end
+        if bp.type in keys(conversion)
+            @set! contres.specialpoint[ind].type = conversion[bp.type]
+        end
     end
     return contres
 end

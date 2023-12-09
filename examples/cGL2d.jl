@@ -488,8 +488,10 @@ plot(outfoldco, label="", xlabel="c5", ylabel="r")
 
 ####################################################################################################
 # Continuation of periodic orbits on the GPU
-using CUDA, Test
-CUDA.allowscalar(false)
+# using CUDA, Test
+# CUDA.allowscalar(false)
+using Metal, Test
+
 import LinearAlgebra: mul!, axpby!
 mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
 mul!(x::CuArray, α::T, y::CuArray) where {T <: Number} = (x .= α .* y)

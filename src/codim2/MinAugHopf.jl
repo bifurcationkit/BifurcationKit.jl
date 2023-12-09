@@ -470,7 +470,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         probhopf.BT = ω
         BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
         ζ★ ./= dot(ζ, ζ★)
-    
+        @debug "Hopf normal form computation"
         hp = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
         hopf_normal_form(prob_vf, hp, options_newton.linsolver, verbose = false)
 
