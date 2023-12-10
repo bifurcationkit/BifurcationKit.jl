@@ -68,7 +68,9 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
                             duu, dup, duω;
                             debugArray = nothing) where 𝒯
     ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
+    # debugArray is used as a temp to be filled with values used for debugging. 
+	# If debugArray = nothing, then no debugging mode is entered. 
+	# If it is AbstractArray, then it is populated
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
     # where σ(x,p) is computed in the above functions and F is the periodic orbit
@@ -107,11 +109,11 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
     # we solve N[v, σ1] = [0, 1]
     v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
-    ~cv && @debug "Linear solver for N did not converge."
+    ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
     # we solve Nᵗ[w, σ2] = [0, 1]
     w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
-    ~cv && @debug "Linear solver for Nᵗ did not converge."
+    ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
@@ -147,6 +149,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
         _Jpo = jacobian(POWrap, x, par0)
         x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
+        ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
         σxx1 = dot(vcat(σx,σt), x1)
         σxx2 = dot(vcat(σx,σt), x2)
@@ -230,6 +233,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # options for the Newton Solver inheritated from the ones the user provided
     options_newton = options_cont.newton_options
+    # tolerance for detecting R1 bifurcation and stopping continuation
+    ϵR1 = 100options_newton.tol
 
     𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
             prob,
@@ -286,7 +291,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         if ~mod_counter(step, update_minaug_every_step)
             return true
         end
-        @debug "Update a / b dans NS"
+        @debug "[codim2 NS] Update a / b dans NS"
 
         x = getvec(z.u, 𝐍𝐒)   # NS point
         p1, ω = getp(z.u, 𝐍𝐒) # first parameter
@@ -302,20 +307,35 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new b
         JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
-        newb = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[1]
+        newb,_,cv,it = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+        ~cv && @debug "[codim2 NS] Linear solver for N did not converge. it = $it"
 
         # compute new a
         JNS★ = has_adjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, newpar, ω) : adjoint(JNS)
         @debug has_adjoint(𝐍𝐒)
-        newa = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[1]
+        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+        ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
         𝐍𝐒.a .= newa ./ normC(newa)
         # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
         𝐍𝐒.b .= newb ./ normC(newb)
 
+        # we stop continuation at R1, PD points
         # test if we jumped to PD branch
         pdjump = abs(abs(ω) - pi) < 100options_newton.tol
-        return ~pdjump
+        @debug "pdjump - UPDATE" pdjump abs(abs(ω) - pi) ω
+
+        isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
+
+         # if the frequency is null, this is not a NS point, we halt the process
+         if abs(ω) < ϵR1
+            @warn "[Codim 2 NS - Finalizer] The NS curve seems to be close to a R1 point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the R1 point is not detected, try lowering Newton tolerance or dsmax."
+        end
+
+        # call the user-passed finalizer
+        resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
+
+        return abs(ω) >= ϵR1 && isbif && resFinal
     end
 
     function test_ch(iter, state)

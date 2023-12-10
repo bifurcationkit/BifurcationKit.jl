@@ -68,6 +68,7 @@ function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
             # if not, we do not update the problem with bad information!
             success = converged(get(kF, :state, nothing))
             if success && mod_counter(step, updateSectionEveryStep) == 1
+                @debug "[Periodic orbit] update section"
                 updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             return _finsol(z, tau, step, contResult; prob = prob, kF...)
@@ -86,6 +87,7 @@ function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSecti
             success = isnothing(state) ? false : converged(state)
             # mesh adaptation
             if success && prob.meshadapt
+                @debug "[Collocation] update mesh"
                 oldsol = _copy(z)
                 oldmesh = get_times(prob) .* getperiod(prob, z.u, nothing)
                 adapt = compute_error!(prob, z.u;
@@ -98,6 +100,7 @@ function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSecti
                 # @info norm(oldsol.u - z.u, Inf)
             end
             if success && mod_counter(step, updateSectionEveryStep) == 1
+                @debug "[collocation] update section"
                 updatesection!(prob, z.u, setparam(contResult, z.p))
             end
             if isnothing(_finsol)

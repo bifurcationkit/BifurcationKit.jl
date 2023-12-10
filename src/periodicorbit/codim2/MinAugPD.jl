@@ -79,7 +79,9 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
                             rhsu, rhsp;
                             debugArray = nothing) where 𝒯
     ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractArray, then it is populated
+    # debugArray is used as a temp to be filled with values used for debugging. 
+    # If debugArray = nothing, then no debugging mode is entered. 
+    # If it is AbstractArray, then it is populated
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
     # where σ(x,p) is computed in the above functions and F is the periodic orbit
@@ -256,7 +258,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         if (~mod_counter(step, update_minaug_every_step) && success)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
         end
-        @debug "Update a / b dans PD"
+        @debug "[codim2 PD] Update a / b dans PD"
 
         x = getvec(z.u) # PD point
         p1 = getp(z.u)  # first parameter
