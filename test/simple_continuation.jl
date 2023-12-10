@@ -16,6 +16,11 @@ BK.mergefromuser(1., (a = 1,))
 BK.mergefromuser(rand(2), (a = 1,))
 BK.mergefromuser((1, 2), (a = 1,))
 
+BK._reverse!(rand(2))
+BK._reverse!(nothing)
+BK._append!(rand(2),rand(2))
+BK._append!(rand(2),nothing)
+
 BK.Fold(rand(2), nothing, 0.1, 0.1, (@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
 BK._print_line(1, 1, (1,1))
 BK._print_line(1, nothing, (1,1))
@@ -29,6 +34,8 @@ BK.PDCont()
 BK.FoldPeriodicOrbitCont()
 BK.PDPeriodicOrbitCont()
 BK.NSPeriodicOrbitCont()
+####################################################################################################
+BK.SpecialPoint(param=0., interval=(0.,0.),x=zeros(2),norm=0.,τ=BorderedArray(rand(20),2.),precision=0.1) |> BK.type
 ####################################################################################################
 # test continuation algorithm
 BK.empty(Natural())
@@ -55,6 +62,7 @@ BK.getprob(br0)
 br0[1]
 br0[end]
 BK.bifurcation_points(br0)
+BK.kernel_dimension(br0, 1)
 
 branch = Branch(br0, rand(2));
 branch[end]

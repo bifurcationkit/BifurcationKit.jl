@@ -91,7 +91,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
         itlineartot += sum(itlinear)
 
         # x = x - J \ fx
-		minus!(x, u)
+        minus!(x, u)
 
         fx = residual(prob, x, p0)
         res = normN(fx)

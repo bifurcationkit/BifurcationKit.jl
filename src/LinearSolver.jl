@@ -162,8 +162,7 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1,
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
         @assert ((a₀ == 0) && (a₁ == 1)) "Perturbed inplace linear problem not done yet!"
-        @debug methods(J)
-        Jmap = LinearMap{T}((o, v) -> J(o, v), l.N, l.N; ismutating = true)
+        Jmap = J isa AbstractArray ? J : LinearMap{T}(J, l.N, l.N; ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
         Jmap = LinearMap{T}(J_map, length(rhs), length(rhs); ismutating = false)

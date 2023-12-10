@@ -48,6 +48,8 @@ J0 = rand(100, 100)
 dx = rand(size(J0, 1))
 a₀ = rand(ComplexF64)
 a₁ = -1.432
+BK._axpy(J0, 0, a₁)
+BK._axpy(J0, 1, 1)
 out1 = BK._axpy_op(J0, dx, a₀, a₁)
 out2 = a₀ * dx + a₁ * J0 * dx
 @test out1 ≈ out2
@@ -69,6 +71,10 @@ let
     sol_explicit = J0 \ rhs
 
     ls = DefaultLS()
+    _sol, = ls(J0, rhs)
+    @test _sol == sol_explicit
+
+    ls = BK.DefaultPILS()
     _sol, = ls(J0, rhs)
     @test _sol == sol_explicit
 
@@ -434,8 +440,7 @@ let
     outit = ls(J0, x0; a₀ = 0.5, a₁ = 1.5)
 
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9, ismutating = true)
-    Jom = (o,x) -> mul!(o,J0,x)
-    outit = ls(Jom, x0)
+    outit = ls(J0, x0)
     @test out[1] ≈ outit[1]
 end
 ####################################################################################################
