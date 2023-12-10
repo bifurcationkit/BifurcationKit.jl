@@ -105,18 +105,18 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jhopf ####################
-    dpF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
+    dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
              apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
-    σp = -dot(w, dJvdp)
+    σₚ = -dot(w, dJvdp)
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
     σω = Complex{𝒯}(0, 1) * dot(w, v)
 
-    # we solve J⋅x1 = duu and J⋅x2 = dpF
-    x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dpF)
+    # we solve J⋅x1 = duu and J⋅x2 = dₚF
+    x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dₚF)
     ~cv && @debug "Linear solver for J did not converge"
 
     # the case of ∂_xσ is a bit more involved
@@ -143,12 +143,12 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
         σxx2 = -conj(dot(w, d2Fv))
     end
     # we need to be carefull here because the dot produces conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
-    dp, dω = [real(σp - σxx2) real(σω);
-              imag(σp + σxx2) imag(σω) ] \
+    dp, dω = [real(σₚ - σxx2) real(σω);
+              imag(σₚ + σxx2) imag(σω) ] \
               [dup - real(σxx1), duω + imag(σxx1)]
 
     if debugArray isa AbstractVector
-        debugArray .= vcat(σp, σω, σx)
+        debugArray .= vcat(σₚ, σω, σx)
     end
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end

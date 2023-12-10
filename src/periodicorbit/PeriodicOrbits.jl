@@ -280,7 +280,7 @@ function continuation(probPO::AbstractShootingProblem, orbitguess,
     end
 
     # change the user provided functions by passing probPO in its parameters
-    _finsol    = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
+    _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))

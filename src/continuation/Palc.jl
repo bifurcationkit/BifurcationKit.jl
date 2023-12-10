@@ -248,7 +248,7 @@ $(TYPEDFIELDS)
 
 - `n` order of the polynomial
 - `k` length of the last solutions vector used for the polynomial fit
-- `v0` example of solution to be stored. It is only used to get the `eltype` of the tangent!!
+- `v0` example of solution to be stored. It is only used to get the `eltype` of the tangent.
 """
 mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <: AbstractTangentComputation
     "Order of the polynomial"
@@ -305,7 +305,6 @@ end
 function getstats(polypred::Polynomial)
     Sbar = sum(polypred.arclengths) / length(polypred.arclengths)
     σ = sqrt(sum(x->(x-Sbar)^2, polypred.arclengths ) / length(polypred.arclengths))
-    # return 0,1
     return Sbar, σ
 end
 
@@ -454,7 +453,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         # │ τ0.u  τ0.p ││up│   │res_n│
         # └            ┘└  ┘   └     ┘
         u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
-        ~flag && @debug "Linear solver for J did not converge."
+        ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
 
         if linesearch

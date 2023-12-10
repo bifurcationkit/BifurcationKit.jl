@@ -106,28 +106,28 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jfold ####################
-    dpF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
-                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dpF, 𝒯(1 / (2ϵ1)))
+    dₚF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
+                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
                   apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
     rmul!(dJvdp, 𝒯(1/(2ϵ3)))
-    σp = -dot(w, dJvdp)
+    σₚ = -dot(w, dJvdp)
 
     if has_hessian(𝐅) == false || 𝐅.usehessian == false
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
         u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
-        u2 = apply(JAd_at_xp, w)
-        σx = minus(u2, u1); rmul!(σx, 1 / ϵ2)
+        u2 = apply(JAd_at_xp, w) # TODO ON CONNAIT u2!!
+        σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
         ########## Resolution of the bordered linear system ########
         # we invert Jfold
-        dX, dsig, cv, it = 𝐅.linbdsolver(J_at_xp, dpF, σx, σp, rhsu, rhsp)
+        dX, dσ, cv, it = 𝐅.linbdsolver(J_at_xp, dₚF, σₓ, σₚ, rhsu, rhsp)
         ~cv && @debug "Bordered linear solver for J did not converge."
     else
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is known analytically.
-        # we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σx
+        # we solve it here instead of calling linearBorderedSolver because this removes the need to pass the linear form associated to σₓ
         # !!! Careful, this method makes the linear system singular
-        x1, x2, cv, it = 𝐅.linsolver(J_at_xp, rhsu, dpF)
+        x1, x2, cv, it = 𝐅.linsolver(J_at_xp, rhsu, dₚF)
         ~cv && @debug "Linear solver for J did not converge."
 
         d2Fv = d2F(𝐅.prob_vf, x, par0, x1, v)
@@ -136,17 +136,17 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         copyto!(d2Fv, d2F(𝐅.prob_vf, x, par0, x2, v))
         σx2 = -dot(w, d2Fv )
 
-        dsig = (rhsp - σx1) / (σp - σx2)
+        dσ = (rhsp - σx1) / (σₚ - σx2)
 
-        # dX = @. x1 - dsig * x2
-        dX = _copy(x1); axpy!(-dsig, x2, dX)
+        # dX = @. x1 - dσ * x2
+        dX = _copy(x1); axpy!(-dσ, x2, dX)
     end
 
     if debugArray isa AbstractArray
-        debugArray .= [jacobian(𝐅.prob_vf, x, par0) dpF ; σx' σp]
+        debugArray .= [jacobian(𝐅.prob_vf, x, par0) dₚF ; σₓ' σₚ]
     end
 
-    return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
+    return dX, dσ, true, sum(it) + sum(itv) + sum(itw)
 end
 
 function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
