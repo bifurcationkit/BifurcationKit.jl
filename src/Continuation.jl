@@ -270,9 +270,9 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     # we pass additional kwargs to newton so that it is sent to the newton callback
     sol₀ = newton(prob, newton_options; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀)
     if  ~converged(sol₀)
-        println("Newton failed to converge the initial guess on the branch.")
+        printstyled("\nNewton failed to converge the initial guess on the branch. Residuals:\n", color=:red)
         display(sol₀.residuals)
-        throw("")
+        throw("Stopping continuation.")
     end
     verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀, ", initial step")

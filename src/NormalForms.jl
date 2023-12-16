@@ -831,7 +831,7 @@ end
 """
 $(SIGNATURES)
 
-This function provides prediction for the periodic orbits branching of the Hopf bifurcation point.
+This function provides prediction for the periodic orbits branching off the Hopf bifurcation point.
 
 # Arguments
 - `bp::Hopf` the bifurcation point

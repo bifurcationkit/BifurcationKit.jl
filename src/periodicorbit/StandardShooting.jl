@@ -242,7 +242,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
-            out.u[ii] .= tmp.du .+ sh.flow.F(tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
+            out.u[ii] .= tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
         end
     else
         @assert 1==0 "Not implemented yet. Try using AbstractVectors instead"
@@ -416,6 +416,9 @@ Generate a periodic orbit problem from a solution.
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically, and `ODEProblem
 - `tspan::Tuple` estimate of the period of the periodic orbit
+- `alg` algorithm for solving the Cauchy problem
+- `prob_mono` problem for monodromy
+- `alg_mono` algorithm for solving the monodromy Cauchy problem
 - `k` kwargs arguments passed to the constructor of `ShootingProblem`
 
 ## Output
@@ -425,8 +428,10 @@ function generate_ci_problem(pb::ShootingProblem,
                             bifprob::AbstractBifurcationProblem, 
                             prob_de, 
                             sol::AbstractTimeseriesSolution, 
-                            tspan::Tuple; 
-                            alg = sol.alg, 
+                            tspan::Tuple;
+                            prob_mono = nothing,
+                            alg = sol.alg,
+                            alg_mono = sol.alg,
                             use_bordered_array = false, 
                             ksh...)
     u0 = sol(0)

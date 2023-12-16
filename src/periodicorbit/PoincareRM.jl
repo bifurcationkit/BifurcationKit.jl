@@ -106,7 +106,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
                                 par)
 
     solΠ = newton(probΠ, Π.options)
-    ~solΠ.converged && @warn "Newton failed!! We did not succeed in computing the Poincaré return map."
+    ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map."
     return solΠ.u
 end
 
@@ -161,7 +161,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
                                 x₀,
                                 par)
     solΠ = newton(probΠ, NewtonPar(verbose = false))
-    ~solΠ.converged && @warn "Newton failed!! We did not succeed in computing the Poincaré return map."
+    ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map."
     return solΠ.u
 end
 
@@ -214,7 +214,7 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     ∂2t = -dot(normal, y) / dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(dot(normal, y)) > 1e-10 && @warn "d2F not precise $(abs(dot(normal, y)))"
+    abs(dot(normal, y)) > 1e-10 && @error "d2F computation is not precise $(abs(dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end
@@ -271,6 +271,6 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
     ∂3t = -dot(normal, y) / dot(normal, Fx)
     out = y .+ ∂3t .* Fx
 
-    @assert abs(dot(normal, out)) < 1e-10
+    abs(dot(normal, out)) > 1e-10 && @error "This product is $(abs(dot(normal, out)))"
     return (u=out, t = ∂3t)
 end
