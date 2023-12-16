@@ -249,6 +249,10 @@ $(TYPEDFIELDS)
 - `n` order of the polynomial
 - `k` length of the last solutions vector used for the polynomial fit
 - `v0` example of solution to be stored. It is only used to get the `eltype` of the tangent.
+
+Can be used like
+
+    PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1)))
 """
 mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <: AbstractTangentComputation
     "Order of the polynomial"
@@ -300,6 +304,7 @@ isready(ppd::Polynomial) = length(ppd.solutions) >= ppd.k
 
 function Base.empty!(ppd::Polynomial)
     empty!(ppd.solutions); empty!(ppd.parameters); empty!(ppd.arclengths);
+    ppd
 end
 
 function getstats(polypred::Polynomial)

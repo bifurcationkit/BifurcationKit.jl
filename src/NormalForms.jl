@@ -168,11 +168,14 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 - `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
 
 # Optional arguments
-- `verbose`    display information
+- `verbose` display information
 - `ampfactor = 1` factor multiplying prediction
 """
 function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
-    # this is the predictor from a Transcritical bifurcation. After computing the normal form, we have an issue. We need to determine if the already computed branch corresponds to the solution x = 0 of the normal form. This leads to the two cases below.
+    # this is the predictor from a Transcritical bifurcation.
+    # After computing the normal form, we have an issue.
+    # We need to determine if the already computed branch corresponds to the solution x = 0 of the normal form.
+    # This leads to the two cases below.
     nf = bp.nf
     τ = bp.τ
     a, b1, b2, b3, Ψ01 = nf
