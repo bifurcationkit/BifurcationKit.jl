@@ -181,7 +181,7 @@ optcontpo = setproperties(optconteq; detect_bifurcation = 2, tol_stability = 1e-
 @set! optcontpo.newton_options.verbose = false
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
-@set! prob_col2.jacobian = BK.AutoDiffDenseAnalytical()
+@set! prob_col2.jacobian = BK.AutoDiffDense()
 sol_po = newton(prob_col2, _ci, optcontpo.newton_options)
 
 # test solution

@@ -22,12 +22,9 @@ par_chan = (α = 3.3, β = 0.01)
 n = 101
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 opt_newton = NewtonPar(tol = 1e-9, verbose = false)
-prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@lens _.α); plot_solution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
-
+prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@lens _.α);
+    plot_solution = (x, p; kwargs...) -> (plot!(x;label="", kwargs...)))
 out = newton( prob, opt_newton)
-
-# _J = J_chan(sol, par_chan)
-# heatmap(_J - _J', yflip=true)
 
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, p_max = 4.1, max_steps = 120, newton_options = opt_newton, detect_bifurcation = 3)
