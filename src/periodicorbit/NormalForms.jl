@@ -59,7 +59,7 @@ function branch_normal_form(pbwrap,
     ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # we normalize it by the sup norm because it could be too small/big in L2 norm
     # TODO: user defined scaleζ
-    ζ ./= norm(ζ, Inf)
+    ζ ./= norminf(ζ)
     verbose && println("Done!")
 
     # compute the full eigenvector
@@ -942,18 +942,18 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampf
     orbitguess = vec(orbitguess_c[:,1:2:end])
     # we append twice the period
     orbitguess = vcat(orbitguess, 2nf.T)
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pb)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pb, ampfactor = ampfactor)
 end
 
 function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
     orbitguess = copy(nf.po)
     orbitguess[1:end-1] .+= ampfactor .*  nf.ζ
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
 end
 
 function predictor(nf::NeimarkSackerPO, δp, ampfactor)
     orbitguess = copy(nf.po)
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, ampfactor)
@@ -975,11 +975,12 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     orbitguess = vcat(orbitguess, 2nf.T)
 
     # no need to change pbnew.cache
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor = ampfactor)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
     pbnew = deepcopy(nf.prob)
+    pnew = nf.nf.p + δp
     ζs = nf.ζ
     orbitguess = copy(nf.po)[1:end-1] .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, copy(nf.po)[1:end-1] .- ampfactor .* ζs, nf.po[end])
@@ -987,14 +988,14 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
     @set! pbnew.M = 2nf.prob.M
     @set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
+    return (orbitguess = orbitguess, pnew = pnew, prob = pbnew, ampfactor = ampfactor)
 end
 
 function predictor(nf::BranchPointPO{ <: ShootingProblem }, δp, ampfactor)
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess[1:length(ζs)] .+= ampfactor .* ζs
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampfactor)
@@ -1006,12 +1007,12 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampf
     orbitguess = copy(nf.po) .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
 
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor = ampfactor)
 end
 
 function predictor(nf::BranchPointPO{ <: PoincareShootingProblem}, δp, ampfactor)
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess .+= ampfactor .* ζs
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob)
+    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
 end

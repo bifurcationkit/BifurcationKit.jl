@@ -561,7 +561,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
-            if ~_transpose
+            if _transpose == false
                 J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
             else
                 J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))

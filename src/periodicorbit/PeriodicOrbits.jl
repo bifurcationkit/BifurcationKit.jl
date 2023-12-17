@@ -363,7 +363,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     kwargs...)
     # compute the normal form of the branch point
-    verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+    verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
     cb = get(kwargs, :callback_newton, cb_default)
@@ -392,8 +392,8 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
             "\n├─ Method = \n", probPO, "\n")
 
-    if pred.amp < 0.1
-        @error "The amplitude for the predictor for the first periodic orbit on the bifurcated branch is not small $(pred.amp). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start. Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor"
+    if pred.amp > 0.1
+        @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.amp). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start. Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
     M = get_mesh_size(probPO)
@@ -487,7 +487,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             ind_bif::Int,
             _contParams::ContinuationPar;
             alg = br.alg,
-            δp = 0.1, ampfactor = 1,
+            δp = _contParams.ds, ampfactor = 1,
             usedeflation = false,
             linear_algo = nothing,
             detailed = false,
@@ -499,15 +499,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     @assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
     @assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
 
-    verbose = get(kwargs, :verbosity, 0) > 0
-    verbose && printstyled(color = :green, "━"^55*
-            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [PRM = $(prm)]",
-            "\n├─── bif. param  p0 = ", bifpt.param,
-            "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
-            "\n├─── new param    p = ", bifpt.param + δp, ", p - p0 = ", δp,
-            "\n├─── amplitude p.o. = ", ampfactor,
-            "\n")
-
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
     # we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
@@ -518,6 +509,15 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     pbnew = pred.prob # modified problem
+
+    verbose = get(kwargs, :verbosity, 0) > 0
+    verbose && printstyled(color = :green, "━"^55*
+            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [PRM = $(prm & (pbnew isa PeriodicOrbitOCollProblem))]",
+            "\n├─── bif. param  p0 = ", bifpt.param,
+            "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
+            "\n├─── new param    p = ", newp, ", p - p0 = ", newp - bifpt.param,
+            "\n└─── amplitude p.o. = ", pred.ampfactor,
+            "\n")
 
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact
