@@ -653,7 +653,7 @@ function predictor(bp::NdBranchPoint, δp::T;
     n = length(bp.ζ)
 
     # find zeros of the normal on each side of the bifurcation point
-    function getRootsNf(_ds)
+    function _get_roots_nf(_ds)
         deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
                                     (rand(n) .- 0.5) .* 1.1, _ds)
@@ -673,8 +673,8 @@ function predictor(bp::NdBranchPoint, δp::T;
         end
         return deflationOp.roots
     end
-    rootsNFm =  getRootsNf(-abs(δp))
-    rootsNFp =  getRootsNf(abs(δp))
+    rootsNFm = _get_roots_nf(-abs(δp))
+    rootsNFp = _get_roots_nf(abs(δp))
     println("\n──> BS from Non simple branch point")
     printstyled(color=:green, "──> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
     return (before = rootsNFm, after = rootsNFp)
@@ -705,7 +705,7 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
     end
 
     # find zeros of the normal on each side of the bifurcation point
-    function getRootsNf(_ds)
+    function _get_roots_nf(_ds)
         deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
 
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
@@ -728,8 +728,8 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
         end
         return deflationOp.roots
     end
-    rootsNFm = getRootsNf(-abs(δp))
-    rootsNFp = getRootsNf(abs(δp))
+    rootsNFm = _get_roots_nf(-abs(δp))
+    rootsNFp = _get_roots_nf(abs(δp))
     println("\n──▶ BS from Non simple branch point")
     printstyled(color=:green, "──▶ we found $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
     return (before = rootsNFm, after = rootsNFp)

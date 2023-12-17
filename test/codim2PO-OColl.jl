@@ -64,7 +64,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 pd = get_normal_form(brpo_pd, 1)
 # test PD normal form computation using Iooss method
 pd = get_normal_form(brpo_pd, 1, prm = false)
-
+################################################################################
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
 @set! opts_pocoll_fold.newton_options.tol = 1e-12
@@ -93,8 +93,7 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
         )
 
 @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
-
-#####
+################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
@@ -145,8 +144,7 @@ ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         )
-
-#####
+################################################################################
 # test of the implementation of the jacobian for the PD case
 using ForwardDiff
 _probpd = pd_po_coll2.prob

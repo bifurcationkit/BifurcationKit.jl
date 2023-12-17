@@ -189,7 +189,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     pbwrap = getprob(br)
     probsh = pbwrap.prob
 
-    probshFold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getparams(br), getlens(br);
+    probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getparams(br), getlens(br);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probsh(z, p), x, dx1, dx2)
@@ -198,7 +198,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    br_fold_po = continuation_fold(probshFold,
+    br_fold_po = continuation_fold(probsh_fold,
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen = start_with_eigen,
