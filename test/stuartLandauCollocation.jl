@@ -47,7 +47,7 @@ _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
 _ci = BK.generate_solution(prob_col, _orbit, 1.)
 BK.get_periodic_orbit(prob_col, _ci, par_sl)
 BK.getmaximum(prob_col, _ci, par_sl)
-BK.∂(sin, 2)(0.)
+@test BK.∂(sin, 2)(0.) == 0
 prob_col(_ci, par_sl) #|> scatter
 BK.get_time_slices(prob_col, _ci)
 # interpolate solution
@@ -185,7 +185,7 @@ prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
 @set! prob_col2.jacobian = BK.AutoDiffDense()
 sol_po = newton(prob_col2, _ci, optcontpo.newton_options)
 
-# test Solution
+# test solution
 solc = BK.POSolution(prob_col2, sol_po.u)
 # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
 let
@@ -252,7 +252,7 @@ Jco_sp = BK.analytical_jacobian_sparse(prob_col, _ci, par_sl);
 Jco = BK.analytical_jacobian(prob_col_dense, _ci, par_sl);
 @assert norminf(Jco - Array(Jco_sp)) == 0
 Jco2 = copy(Jco) |> sparse;
-Jco2.=0
+Jco2 .= 0
 _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
 @test norminf(Jco - Jco2) < 1e-14
@@ -262,15 +262,23 @@ let
     for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical(), BK.FullSparse())
         useGEV = jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
 
-        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10).newton_options.verbose = false),
+        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
             PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
             δp = 0.1,
             usedeflation = true,
             eigsolver = useGEV ? BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2) : BK.FloquetColl(),
             )
 
-        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10).newton_options.verbose = false),
+        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
             PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
+            δp = 0.1,
+            usedeflation = true,
+            eigsolver = BK.FloquetColl(),
+            )
+
+        # test mesh adaptation
+        br_po_adapt = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
+            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1, meshadapt = true);
             δp = 0.1,
             usedeflation = true,
             eigsolver = BK.FloquetColl(),
@@ -278,16 +286,9 @@ let
 
         # we test that the 2 methods give the same floquet exponents
         for i=1:length(br_po)-1
-            @info i
             @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
         end
 
-        # test mesh adaptation
-        br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 2).newton_options.verbose = false),
-            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1, meshadapt = true);
-            δp = 0.1,
-            usedeflation = true,
-            eigsolver = BK.FloquetColl(),
-            )
     end
 end
+

@@ -112,7 +112,7 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
 
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
-- `ind_bif` index of the fold point
+- `ind_bif` index of the PD point
 - `lens2::Lens` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
@@ -162,7 +162,6 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         )
 end
 
-
 """
 $(SIGNATURES)
 
@@ -170,7 +169,7 @@ Continuation of curve of Neimark-Sacker bifurcations of periodic orbits computed
 
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
-- `ind_bif` index of the fold point
+- `ind_bif` index of the NS point
 - `lens2::Lens` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
