@@ -55,6 +55,17 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     nothing
 end
 
+"""
+$(SIGNATURES)
+
+Continuation of curve of fold bifurcations of periodic orbits computed using collocation method.
+
+# Arguments
+- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `ind_bif` index of the fold point
+- `lens2::Lens` second parameter axis
+- `options_cont` parameters to be used by a regular [`continuation`](@ref)
+"""
 function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
@@ -94,6 +105,17 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     correct_bifurcation(br_fold_po)
 end
 
+"""
+$(SIGNATURES)
+
+Continuation of curve of period-doubling bifurcations of periodic orbits computed using collocation method.
+
+# Arguments
+- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `ind_bif` index of the fold point
+- `lens2::Lens` second parameter axis
+- `options_cont` parameters to be used by a regular [`continuation`](@ref)
+"""
 function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
@@ -140,6 +162,18 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         )
 end
 
+
+"""
+$(SIGNATURES)
+
+Continuation of curve of Neimark-Sacker bifurcations of periodic orbits computed using collocation method.
+
+# Arguments
+- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `ind_bif` index of the fold point
+- `lens2::Lens` second parameter axis
+- `options_cont` parameters to be used by a regular [`continuation`](@ref)
+"""
 function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,

@@ -150,14 +150,15 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
+    compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
-        return continuation_sh_fold(br, ind_bif, lens2, options_cont; kwargs... )
+        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
     elseif biftype == :pd
-        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
     elseif biftype == :ns
-        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; kwargs... )
+        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
     end
     throw("You passed the bifurcation type = $biftype. We continue only Fold / PD / NS points of periodic orbits for now.")
 end
