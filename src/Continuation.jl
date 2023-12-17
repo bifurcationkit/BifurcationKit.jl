@@ -272,7 +272,8 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     if  ~converged(sol₀)
         printstyled("\nNewton failed to converge the initial guess on the branch. Residuals:\n", color=:red)
         display(sol₀.residuals)
-        throw("Stopping continuation.")
+        @error "Stopping continuation."
+        return nothing
     end
     verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀, ", initial step")

@@ -10,7 +10,7 @@ isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
 # function to save the full solution on the branch. It is useful to define This
 # in order to allow for redefinition. Indeed, some problem are mutable (adaptive
-# mesh for periodic orbit) and this approach seems efficient
+# mesh for periodic orbit) and this approach seems convenient
 @inline getsolution(::AbstractBifurcationProblem, x) = x
 
 """
