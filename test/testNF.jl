@@ -123,6 +123,8 @@ let
         length(bp2d)
         bp2d(rand(2), 0.2)
         bp2d(Val(:reducedForm), rand(2), 0.2)
+        predictor(bp2d, 0.01)
+        predictor(bp2d, Val(:exhaustive), 0.01)
 
         @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -prob2d.params.α * 0.123) < 1e-10
         @test abs(bp2d.nf.b3[1,1,2,2] / 2 - -prob2d.params.α * 0.234) < 1e-10

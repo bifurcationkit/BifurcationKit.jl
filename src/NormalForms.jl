@@ -235,7 +235,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
-    @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is aδμ + b1⋅x + b2⋅x^2 + b3⋅x^3\n with coefficients \n a = $(bp.nf.a), b1 = $(bp.nf.b1), b2 = $(bp.nf.b2), b3 = $(bp.nf.b3)."
+    @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is aδμ + b1⋅x + b2⋅x² + b3⋅x³\n with coefficients \n a = $(bp.nf.a), b1 = $(bp.nf.b1), b2 = $(bp.nf.b2), b3 = $(bp.nf.b3)."
     return nothing
 end
 ####################################################################################################
@@ -646,7 +646,7 @@ function predictor(bp::NdBranchPoint, δp::T;
         maxiter = 100,
         perturb = identity,
         J = nothing,
-        normN = x -> norm(x, Inf),
+        normN = norminf,
         optn = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
 
     # dimension of the kernel
@@ -677,6 +677,61 @@ function predictor(bp::NdBranchPoint, δp::T;
     rootsNFp =  getRootsNf(abs(δp))
     println("\n──> BS from Non simple branch point")
     printstyled(color=:green, "──> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
+    return (before = rootsNFm, after = rootsNFp)
+end
+
+"""
+$(SIGNATURES)
+
+This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the cube.
+"""
+function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
+                verbose::Bool = false,
+                ampfactor = T(1),
+                nbfailures = 30,
+                maxiter = 100,
+                perturb = identity,
+                J = nothing,
+                igs = nothing,
+                normN = norminf,
+                optn = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+
+    # dimension of the kernel
+    n = length(bp.ζ)
+
+    # initial guesses for newton
+    if isnothing(igs)
+        igs = Iterators.product((-1:1 for _= 1:n)...)
+    end
+
+    # find zeros of the normal on each side of the bifurcation point
+    function getRootsNf(_ds)
+        deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
+
+        prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
+                                    zeros(n), _ds, @lens _)
+        if ~isnothing(J)
+            @set! prob.VF.J = J
+        end
+        failures = 0
+        # we allow for 30 failures of nonlinear deflation
+        for ci in igs
+            prob.u0 .= [ci...] * ampfactor
+            # outdef1 = newton(prob, deflationOp, optn, Val(:autodiff); normN = normN)
+            outdef1 = newton(prob, optn; normN = normN)
+            @debug _ds ci outdef1.converged prob.u0 outdef1.u
+            if converged(outdef1)
+                push!(deflationOp, outdef1.u)
+            else
+                failures += 1
+            end
+        end
+        return deflationOp.roots
+    end
+    rootsNFm = getRootsNf(-abs(δp))
+    rootsNFp = getRootsNf(abs(δp))
+    println("\n──▶ BS from Non simple branch point")
+    printstyled(color=:green, "──▶ we found $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
     return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################

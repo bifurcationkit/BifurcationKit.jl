@@ -343,7 +343,7 @@ _pred = BK.predictor(zh, Val(:NS), 0.1)
 _pred.orbit(0.1)
 
 hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, max_steps = 100) ;
-    plot = false, verbosity = 3,
+    plot = false, verbosity = 0,
     normC = norminf,
     # δp = 0.001,
     detect_codim2_bifurcation = 2,
@@ -384,8 +384,9 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifu
 @set! opts_fold_po.newton_options.tol = 1e-8
 
 for probPO in (
-        PeriodicOrbitOCollProblem(20, 3), 
-        ShootingProblem(9, prob_ode, Rodas5(), parallel = true))
+                PeriodicOrbitOCollProblem(20, 3), 
+                ShootingProblem(9, prob_ode, Rodas5(), parallel = true)
+              )
     @info probPO
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
             normC = norminf,

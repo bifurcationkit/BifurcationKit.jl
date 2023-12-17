@@ -197,7 +197,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     contParams = (@set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
 
     # set second derivative
-    probshFold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
+    probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> probPO(z, p), x, dx1, dx2),
@@ -209,7 +209,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     foldpointguess = BorderedArray(orbitguess, get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(probshFold, orbitguess, getparams(probshFold)).jacpb
+    jacpo = jacobian(probsh_fold, orbitguess, getparams(probsh_fold)).jacpb
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -223,8 +223,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     @assert sum(isnan, q) == 0 "Please report this error to the website."
 
     # perform continuation
-    branch = continuation_fold(probshFold, alg,
-        foldpointguess, getparams(probshFold),
+    branch = continuation_fold(probsh_fold, alg,
+        foldpointguess, getparams(probsh_fold),
         lens1, lens2,
         p, q,
         # q, p,
