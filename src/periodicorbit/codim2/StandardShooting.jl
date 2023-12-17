@@ -200,7 +200,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     # perform continuation
     br_fold_po = continuation_fold(probshFold,
         br, ind_bif, lens2,
-        options_cont;
+        options_foldpo;
         start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
