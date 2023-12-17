@@ -26,16 +26,15 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 
     if bifpt.type == :pd
-        return period_doubling_normal_form(prob, br, id_bif; prm = prm, detailed = detailed, δ = δ, kwargs_nf...)
+        return period_doubling_normal_form(prob, br, id_bif; prm, detailed, δ, kwargs_nf...)
     elseif bifpt.type == :bp
         return branch_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(prob, br, id_bif; δ = δ, detailed = detailed, prm = prm, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif; δ = δ, detailed, prm, kwargs_nf...)
     end
 
     throw("Normal form for $(bifpt.type) not yet implemented.")
 end
-
 ####################################################################################################
 """
 [WIP] Note that the computation of this normal form is not implemented yet.
@@ -961,7 +960,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     pbnew = deepcopy(nf.prob)
     N, m, Ntst = size(nf.prob)
 
-    # we update the problem by doubling the Ntst
+    # we update the problem by doubling Ntst
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
 
     orbitguess0 = nf.po[1:end-1]

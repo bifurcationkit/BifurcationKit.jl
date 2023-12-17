@@ -10,6 +10,7 @@ function continuation(prob::AbstractBifurcationProblem,
                     x1::Tv, p1::Real, # second point on the branch
                     alg, lens::Lens,
                     contParams::ContinuationPar;
+                    bothside::Bool = false,
                     kwargs...) where Tv
     # update alg linear solver with contParams.newton_options.linsolver
     alg = update(alg, contParams, nothing)
@@ -18,8 +19,16 @@ function continuation(prob::AbstractBifurcationProblem,
     # create an iterable
     _contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
     prob2 = re_make(prob; lens = lens, params = par0)
-    it = ContIterable(prob2, alg, _contParams; kwargs...)
-    return continuation(it, x0, get(par0, lens), x1, p1)
+    if ~bothside
+        it = ContIterable(prob2, alg, _contParams; kwargs...)
+        return continuation(it, x0, get(par0, lens), x1, p1)
+    else
+        itfw = ContIterable(prob2, alg, _contParams; kwargs...)
+        itbw = deepcopy(itfw)
+        resfw = continuation(itfw, x0, get(par0, lens), x1, p1)
+        resbw = continuation(itbw, x1, p1, x0, get(par0, lens))
+        return _merge(resfw, resbw)
+    end
 end
 
 function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)

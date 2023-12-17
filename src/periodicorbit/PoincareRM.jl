@@ -214,7 +214,7 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     ∂2t = -dot(normal, y) / dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(dot(normal, y)) > 1e-10 && @error "d2F computation is not precise $(abs(dot(normal, y)))"
+    abs(dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end

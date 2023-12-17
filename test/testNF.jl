@@ -54,6 +54,9 @@ br3 = continuation(br, 1, setproperties(opts_br; ds = -0.01); verbosity = 0, use
 # plot(br,br2,br3)
 @test isnothing(BK.multicontinuation(br, 1))
 
+br4 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); verbosity = 0, bothside = true)
+# plot(br,br4)
+
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(prob, PALC(tangent=Bordered()), 2,
     (args...) -> setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = (@set opt_newton.verbose=false), max_steps = 15);

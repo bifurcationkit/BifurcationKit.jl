@@ -193,7 +193,7 @@ end
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
     printstyled(io, type(bp), color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x^2/2 + b3⋅x^3/6):")
+    println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end

@@ -103,7 +103,7 @@ function plot_branch_cont(contres::ContResult,
 
     if compute_eigenelements(contparms)
         eigvals = contres.eig[end].eigenvals
-        ax_ev = fig[3, 1:2] = Axis(fig, xlabel = "Re", ylabel = "Im")
+        ax_ev = fig[3, 1:2] = Axis(fig, xlabel = "ℜ", ylabel = "ℑ")
         scatter!(ax_ev, real.(eigvals), imag.(eigvals), markerstrokewidth = 0, markersize = 10, color = :black)
         # add stability boundary
         maxIm = maximum(imag, eigvals)

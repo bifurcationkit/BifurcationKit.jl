@@ -491,6 +491,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             usedeflation = false,
             linear_algo = nothing,
             detailed = false,
+            prm = true,
             kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
@@ -500,7 +501,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
-            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
+            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [PRM = $(prm)]",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", bifpt.param + δp, ", p - p0 = ", δp,
@@ -512,7 +513,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
-    nf = get_normal_form(br, ind_bif; detailed = detailed)
+    nf = get_normal_form(br, ind_bif; detailed, prm)
     pred = predictor(nf, δp, ampfactor)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
@@ -541,7 +542,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         # find the bifurcated branch using deflation
         @assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method or ShootingProblem"
         deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
-        verbose && println("\n──> Compute point on bifurcated branch...")
+        verbose && println("\n──> Compute point on the bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         @assert converged(solbif) "Deflated newton did not converge"
