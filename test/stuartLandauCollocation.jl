@@ -5,13 +5,12 @@ const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
+# no allocation
 function Fsl!(f, u, p, t = 0)
     @unpack r, μ, ν, c3 = p
     u1 = u[1]
     u2 = u[2]
-
     ua = u1^2 + u2^2
-
     f[1] = r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2)
     f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1)
     return f
@@ -182,7 +181,7 @@ optcontpo = setproperties(optconteq; detect_bifurcation = 2, tol_stability = 1e-
 @set! optcontpo.newton_options.verbose = false
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
-@set! prob_col2.jacobian = BK.AutoDiffDense()
+@set! prob_col2.jacobian = BK.AutoDiffDenseAnalytical()
 sol_po = newton(prob_col2, _ci, optcontpo.newton_options)
 
 # test solution
@@ -196,12 +195,12 @@ let
     end
 end
 
-# 0.90855762 seconds (1.24 M allocations: 3.658 GiB, 12.54% gc time)
+# 0.131970 seconds (32.51 k allocations: 309.737 MiB, 14.97% gc time)
 @set! prob_col2.update_section_every_step = 1
 br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
     verbosity = 0, plot = false,
     args...,
-    )
+    );
 ####################################################################################################
 # test analytical jacobian
 Ntst = 10
@@ -288,7 +287,6 @@ let
         for i=1:length(br_po)-1
             @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
         end
-
     end
 end
 

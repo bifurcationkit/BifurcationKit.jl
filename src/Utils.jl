@@ -72,22 +72,30 @@ end
 
 ####################################################################################################
 """
-    finite_differences(F, x::AbstractVector; δ = 1e-9)
+$(SIGNATURES)
 
-Compute a Jacobian by Finite Differences
+Compute a Jacobian by Finite Differences. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
 """
 function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
     Nf = length(F(x))
     J = zeros(eltype(x), Nf, N)
-    finite_differences!(F, J, x; δ = δ)
+    finite_differences!(F, J, x; δ)
+    return J
+end
+
+function finite_differences(F, x::AbstractVector, p; δ = 1e-9)
+    N = length(x)
+    Nf = length(F(x, p))
+    J = zeros(eltype(x), Nf, N)
+    finite_differences!(F, J, x, p; δ = δ)
     return J
 end
 
 """
-    finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
+$(SIGNATURES)
 
-Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(x+δ)-f(x-δ))/2δ
+Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
 """
 function finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
     f = F(x)
@@ -97,6 +105,20 @@ function finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
         J[:, i] .= F(x1)
         x1[i] -= 2δ
         J[:, i] .-= F(x1)
+        J[:, i] ./= 2δ
+        x1[i] += δ
+    end
+    return J
+end
+
+function finite_differences!(F, J, x::AbstractVector, p; δ = 1e-9)
+    f = F(x,p)
+    x1 = copy(x)
+    @inbounds for i in eachindex(x)
+        x1[i] += δ
+        J[:, i] .= F(x1,p)
+        x1[i] -= 2δ
+        J[:, i] .-= F(x1,p)
         J[:, i] ./= 2δ
         x1[i] += δ
     end

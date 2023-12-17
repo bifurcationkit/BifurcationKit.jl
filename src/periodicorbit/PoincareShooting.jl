@@ -295,7 +295,7 @@ This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x)
 """
 function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
     normal = psh.section.normals[ii]
-    abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
+    abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) > 1e-12 and $(dot(dx, dx))"
     # compute the Poincare map from x
     tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), x, par, Inf)
     z = vf(psh.flow, solΣ, par)

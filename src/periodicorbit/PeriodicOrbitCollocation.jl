@@ -124,11 +124,11 @@ struct POCollCache{T}
     uj::T
 end
 
-function POCollCache(Ty::Type, n::Int, m::Int)
-    gj  = (zeros(Ty, n, m), [n, m])
-    gi  = (zeros(Ty, n, m), [n, m])
-    ∂gj = (zeros(Ty, n, m), [n, m])
-    uj  = (zeros(Ty, n, m+1), [n, (1 + m)])
+function POCollCache(𝒯::Type, n::Int, m::Int)
+    gj  = (zeros(𝒯, n, m), [n, m])
+    gi  = (zeros(𝒯, n, m), [n, m])
+    ∂gj = (zeros(𝒯, n, m), [n, m])
+    uj  = (zeros(𝒯, n, m+1), [n, (1 + m)])
     return POCollCache(gj, gi, ∂gj, uj)
 end
 ####################################################################################################
@@ -218,12 +218,12 @@ end
 # trivial constructor
 function PeriodicOrbitOCollProblem(Ntst::Int, 
                                     m::Int,
-                                    Ty = Float64;
+                                    𝒯 = Float64;
                                     kwargs...)
     # @assert iseven(Ntst) "Ntst must be even (otherwise issue with Floquet coefficients)"
     N = get(kwargs, :N, 1)
-    PeriodicOrbitOCollProblem(; mesh_cache = MeshCollocationCache(Ntst, m, Ty),
-                                    cache = POCollCache(Ty, N, m),
+    PeriodicOrbitOCollProblem(; mesh_cache = MeshCollocationCache(Ntst, m, 𝒯),
+                                    cache = POCollCache(𝒯, N, m),
                                     kwargs...)
 end
 
@@ -424,7 +424,7 @@ end
 """
 $(SIGNATURES)
 
-[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it must work for non uniform mesh.
+[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it works for non uniform mesh.
 
 # Arguments
 - uj   n x (m + 1)
@@ -432,7 +432,7 @@ $(SIGNATURES)
 """
 @views function phase_condition(pb::PeriodicOrbitOCollProblem,
                                 uc,
-                                (L, ∂L), 
+                                (L, ∂L),
                                 period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
@@ -510,9 +510,10 @@ end
     T = getperiod(prob, u, nothing)
     result = zero(u)
     resultc = get_time_slices(prob, result)
-    functional_coll!(prob, resultc, uc, T, get_Ls(prob.mesh_cache), pars)
+    Ls = get_Ls(prob.mesh_cache)
+    functional_coll!(prob, resultc, uc, T, Ls, pars)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt / T
-    result[end] = phase_condition(prob, uc, get_Ls(prob.mesh_cache), T)
+    result[end] = phase_condition(prob, uc, Ls, T)
     return result
 end
 
@@ -546,8 +547,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     J0 = zeros(𝒯, n, n)
 
     # put boundary condition
-    J[end-n:end-1, 1:n] .= -In
     J[end-n:end-1, end-n:end-1] .= In
+    J[end-n:end-1, 1:n] .= (-1) .* In
 
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
@@ -568,7 +569,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             end
 
             for l2 in 1:m+1
-                J[rgNx .+ (l-1)*n ,rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 .+ ρI .* In) .+
+                J[rgNx .+ (l-1)*n, rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 .+ ρI .* In) .+
                                                         (ρD * ∂L[l2, l]) .* In
             end
             # add derivative w.r.t. the period

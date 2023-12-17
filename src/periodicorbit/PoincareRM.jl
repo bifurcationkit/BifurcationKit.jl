@@ -161,7 +161,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
                                 x₀,
                                 par)
     solΠ = newton(probΠ, NewtonPar(verbose = false))
-    ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map."
+    ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map. Residuals = $(solΠ.residuals)"
     return solΠ.u
 end
 
@@ -271,6 +271,6 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
     ∂3t = -dot(normal, y) / dot(normal, Fx)
     out = y .+ ∂3t .* Fx
 
-    abs(dot(normal, out)) > 1e-10 && @error "This product is $(abs(dot(normal, out)))"
+    abs(dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(dot(normal, out))) > 1e-10"
     return (u=out, t = ∂3t)
 end
