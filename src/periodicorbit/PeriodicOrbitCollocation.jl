@@ -186,9 +186,6 @@ Note that you can generate this guess from a function using `generate_solution`.
     # dimension of the problem in case of an AbstractVector
     N::Int = 0
 
-    # whether the time discretisation is adaptive
-    adaptmesh::Bool = false
-
     # whether the problem is nonautonomous
     isautonomous::Bool = true
 
@@ -265,6 +262,9 @@ get_Ls(pb::PeriodicOrbitOCollProblem) = get_Ls(pb.mesh_cache)
 @inline getparams(pb::PeriodicOrbitOCollProblem) = getparams(pb.prob_vf)
 @inline getlens(pb::PeriodicOrbitOCollProblem) = getlens(pb.prob_vf)
 @inline setparam(pb::PeriodicOrbitOCollProblem, p) = setparam(pb.prob_vf, p)
+
+@inline getperiod(::PeriodicOrbitOCollProblem, x, par = nothing) = x[end]
+@inline getperiod(coll::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh), T}, par = nothing) where T = getperiod(coll, x.sol, par)
 
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
