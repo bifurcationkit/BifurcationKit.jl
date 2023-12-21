@@ -147,7 +147,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `N::Int` dimension of the state space
 - `mesh_cache::MeshCollocationCache` cache for collocation. See docs of `MeshCollocationCache`
 - `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian = AutoDiffDenseAnalytical()` describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()`.
+- `jacobian = DenseAnalytical()` describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace()`.
 - `meshadapt::Bool = false` whether to use mesh adaptation
 - `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
 - `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps.
@@ -198,7 +198,7 @@ Note that you can generate this guess from a function using `generate_solution`.
     update_section_every_step::Int = 1
 
     # variable to control the way the jacobian of the functional is computed
-    jacobian::Tjac = AutoDiffDenseAnalytical()
+    jacobian::Tjac = DenseAnalytical()
 
     # collocation mesh cache
     mesh_cache::Tmcache = nothing
@@ -432,25 +432,39 @@ $(SIGNATURES)
 - uj   n x (m + 1)
 - guj  n x m
 """
-@views function phase_condition(pb::PeriodicOrbitOCollProblem,
-                                uc,
-                                (L, ∂L),
-                                period)
+function phase_condition(pb::PeriodicOrbitOCollProblem,
+                        uc,
+                        (L, ∂L),
+                        period)
     𝒯 = eltype(uc)
-    phase = zero(𝒯)
-
     n, m, Ntst = size(pb)
 
     puj = zeros(𝒯, n, m)
     uj  = zeros(𝒯, n, m+1)
 
-    vc = get_time_slices(pb.ϕ, size(pb)...)
+    # vc = get_time_slices(pb.ϕ, size(pb)...)
     pvj = zeros(𝒯, n, m)
     vj  = zeros(𝒯, n, m+1)
 
-    ω = pb.mesh_cache.gauss_weight
+    _phase_condition(pb,
+                    uc,
+                    (L, ∂L),
+                    (puj, uj, pvj, vj),
+                    period)
+end
 
+@views function _phase_condition(pb::PeriodicOrbitOCollProblem,
+    uc,
+    (L, ∂L),
+    (puj, uj, pvj, vj),
+    period)
+    𝒯 = eltype(uc)
+    phase = zero(𝒯)
+    n, m, Ntst = size(pb)
+    ω = pb.mesh_cache.gauss_weight
+    vc = get_time_slices(pb.ϕ, size(pb)...)
     rg = UnitRange(1, m+1)
+    
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg] # uj : n x m+1
         vj .= vc[:, rg]
@@ -831,7 +845,7 @@ end
 const DocStrjacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
-    - For `AutoDiffDenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
+    - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
 
 function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
@@ -841,9 +855,9 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
             kwargs...) where {T, Tf, vectype}
     jacobianPO = probPO.jacobian
     @assert jacobianPO in
-            (AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse()) "This jacobian $jacobianPO is not defined. Please chose another one."
+            (AutoDiffDense(), DenseAnalytical(), FullSparse()) "This jacobian $jacobianPO is not defined. Please chose another one."
 
-    if jacobianPO isa AutoDiffDenseAnalytical
+    if jacobianPO isa DenseAnalytical
         jac = (x, p) -> analytical_jacobian(probPO, x, p)
     elseif jacobianPO isa FullSparse
         jac = (x, p) -> analytical_jacobian_sparse(probPO, x, p)
@@ -902,9 +916,9 @@ newton(probPO::PeriodicOrbitOCollProblem,
 
 function build_jacobian(coll::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = coll.jacobian
-    @assert jacobianPO in (AutoDiffDense(), AutoDiffDenseAnalytical(), FullSparse(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
+    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
 
-    if jacobianPO isa AutoDiffDenseAnalytical
+    if jacobianPO isa DenseAnalytical
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
     elseif jacobianPO isa FullSparse
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
