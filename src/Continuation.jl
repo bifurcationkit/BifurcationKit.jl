@@ -272,8 +272,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     if  ~converged(sol₀)
         printstyled("\nNewton failed to converge the initial guess on the branch. Residuals:\n", color=:red)
         display(sol₀.residuals)
-        @error "Stopping continuation."
-        return nothing
+        throw("Stopping continuation.")
     end
     verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀, ", initial step")
@@ -430,7 +429,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                     end
                     success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, intervalevent)
                     state.stopcontinuation |= ~success
-                    if event_pt.type != :none; push!(contRes.specialpoint, event_pt); end
+                    if event_pt.type != :none
+                        push!(contRes.specialpoint, event_pt)
+                    end
                     # detect loop in the branch
                     contparams.detect_loop && (state.stopcontinuation |= detect_loop(contRes, event_pt))
                 end
