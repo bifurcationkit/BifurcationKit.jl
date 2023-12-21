@@ -464,7 +464,7 @@ end
     ω = pb.mesh_cache.gauss_weight
     vc = get_time_slices(pb.ϕ, size(pb)...)
     rg = UnitRange(1, m+1)
-    
+
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg] # uj : n x m+1
         vj .= vc[:, rg]
@@ -556,9 +556,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    pj = zeros(𝒯, n, m)
-    ϕj = zeros(𝒯, n, m)
-    uj = zeros(𝒯, n, m+1)
+    pj = coll.cache.gi #zeros(𝒯, n, m)
+    ϕj = coll.cache.gj #zeros(𝒯, n, m)
+    uj = coll.cache.uj #zeros(𝒯, n, m+1)
     In = I(n)
     J0 = zeros(𝒯, n, n)
 
@@ -582,9 +582,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         # put the jacobian of the vector field
         for l in 1:m
             if _transpose == false
-                J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
+                J0 .= jacobian(VF, pj[:,l], pars)
             else
-                J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
+                J0 .= transpose(jacobian(VF, pj[:,l], pars))
             end
 
             for l2 in 1:m+1
@@ -592,7 +592,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                                         (ρD * ∂L[l2, l]) .* In
             end
             # add derivative w.r.t. the period
-            J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
+            J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -612,7 +612,10 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         end
     end
     J[end, 1:end-1] ./= period
-    J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
+
+    vj = coll.cache.vj
+    phase = _phase_condition(coll, uc, (L, ∂L), (pj, uj, ϕj, vj), period)
+    J[end, end] = -phase / period
     return J
 end
 analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; 𝒯 = eltype(u), k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), coll, u, pars; k...)
