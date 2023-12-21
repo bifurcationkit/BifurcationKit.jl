@@ -407,7 +407,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
         @warn "The value h₂[end] should be zero. We found $(h₂[end])"
     end
 
-    # computation of c. 
+    # computation of c
     # we need B(t, v₁(t), h₂(t))
     for i=1:size(Bₛ, 2)
         Bₛ[:,i]  .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])

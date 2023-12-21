@@ -67,7 +67,7 @@ function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
     _prob = remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
     # the use of concrete_solve makes it compatible with Zygote
     sol = solve(_prob, alg; save_everystep = false, kwargs...)
-    return (t = sol.t[end], u = sol[end])
+    return (t = sol.t[end], u = sol.u[end])
 end
 ####################################################################################################
 ######### methods for the flow

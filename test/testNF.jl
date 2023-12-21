@@ -30,6 +30,11 @@ nf = bp.nf
 @test norm(nf.b1 - 3.23) < 1e-10
 @test norm(nf.b2/2 - -1.12) < 1e-10
 @test norm(nf.b3/6 - 0.234) < 1e-10
+
+# test normal form predictor
+pred = predictor(bp, 0.1)
+@test norm(pred.x0) < 1e-12
+@test pred.x1[1] ≈ 3.23 * 0.1 / prob.params.x2 rtol=1e-5
 ####################################################################################################
 # same but when the eigenvalues are not saved in the branch but computed on the fly
 br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
@@ -79,6 +84,11 @@ nf = bpp.nf
 @test norm(nf.b1 - 3.23) < 1e-9
 @test norm(nf.b2/2 - 0) < 1e-9
 @test norm(nf.b3/6 + 0.234) < 1e-9
+
+# test predictor
+pred = predictor(bpp, 0.1)
+@test norm(pred.x0) < 1e-12
+@test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol=1e-5
 
 # test automatic branch switching
 br2 = continuation(brp, 1, setproperties(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2, newton_options = (@set opt_newton.verbose=false)); verbosity = 0, ampfactor = 1)
@@ -189,7 +199,6 @@ function FbpD6(x, p)
              p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c * (x[2]^2 + x[1]^2) * x[3])]
 end
 probD6 = BK.BifurcationProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@lens _.μ),)
-
 br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds = 0.001); normC = norminf)
 
 # plot(br;  plotfold = false)

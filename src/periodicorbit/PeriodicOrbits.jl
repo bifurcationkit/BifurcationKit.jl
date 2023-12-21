@@ -355,7 +355,8 @@ A modified version of `prob` is passed to `plot_solution` and `finalise_solution
 """
 function continuation(br::AbstractBranchResult, ind_bif::Int,
                     _contParams::ContinuationPar,
-                    probPO::AbstractPeriodicOrbitProblem ;
+                    pbPO::AbstractPeriodicOrbitProblem ;
+                    prob_vf = br.prob,
                     alg = br.alg,
                     δp = nothing,
                     ampfactor = 1,
@@ -368,7 +369,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 
     cb = get(kwargs, :callback_newton, cb_default)
 
-    hopfpt = hopf_normal_form(br.prob, br, ind_bif; nev = nev, verbose = verbose)
+    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev = nev, verbose = verbose)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
@@ -390,20 +391,20 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─── amplitude p.o. = ", pred.amp,
             "\n├─── period       T = ", pred.period,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
-            "\n├─ Method = \n", probPO, "\n")
+            "\n├─ Method = \n", pbPO, "\n")
 
     if pred.amp > 0.1
         @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.amp). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start. Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
-    M = get_mesh_size(probPO)
+    M = get_mesh_size(pbPO)
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
-    prob_vf = re_make(br.prob, params = setparam(br, pred.p))
+    prob_vf_rm = re_make(prob_vf, params = setparam(br, pred.p))
 
     # build the variable to hold the functional for computing PO based on finite differences
-    probPO, orbitguess = re_make(probPO, prob_vf, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+    probPO, orbitguess = re_make(pbPO, prob_vf_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)

@@ -98,7 +98,7 @@ end
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
     if detect_codim2_bifurcation > 0
         if get(kwargs, :update_minaug_every_step, 0) == 0
-            @error "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`.\n The bifurcation detection algorithm may not work faithfully.\n Please use `update_minaug_every_step > 0`."
+            @warn "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`.\n The bifurcation detection algorithm may not work faithfully.\n Please use `update_minaug_every_step > 0`."
         end
         return setproperties(options_cont; 
                     detect_bifurcation = 0,

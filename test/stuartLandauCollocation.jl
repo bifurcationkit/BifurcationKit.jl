@@ -26,6 +26,11 @@ probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r), inplace = tru
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(probsl, PALC(), optconteq)
 ####################################################################################################
+# test hopf predictor
+hp = get_normal_form(br, 1)
+pred = predictor(hp, 0.1)
+@test pred.orbit(0)[1] ≈ sqrt(0.1/1)
+####################################################################################################
 Ntst = 4
 m = 4
 N = 3
@@ -148,7 +153,11 @@ _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
 Ntst = 50
 m = 4
 N = 2
-prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = 2, ϕ = zeros(N*( 1 + m * Ntst)), xπ = zeros(N*( 1 + m * Ntst)))
+prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; 
+                                prob_vf = probsl,
+                                N = 2,
+                                ϕ = zeros(N*( 1 + m * Ntst)),
+                                xπ = zeros(N*( 1 + m * Ntst)))
 prob_col.ϕ[2] = 1 #phase condition
 
 _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
@@ -182,7 +191,7 @@ optcontpo = setproperties(optconteq; detect_bifurcation = 2, tol_stability = 1e-
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
 @set! prob_col2.jacobian = BK.AutoDiffDense()
-sol_po = newton(prob_col2, _ci, optcontpo.newton_options)
+sol_po = newton(prob_col2, _ci, optcontpo.newton_options);
 
 # test solution
 solc = BK.POSolution(prob_col2, sol_po.u)

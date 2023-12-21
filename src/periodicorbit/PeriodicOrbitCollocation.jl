@@ -122,14 +122,16 @@ struct POCollCache{T}
     gi::T
     ∂gj::T
     uj::T
+    vj::T
 end
 
 function POCollCache(𝒯::Type, n::Int, m::Int)
-    gj  = (zeros(𝒯, n, m), [n, m])
-    gi  = (zeros(𝒯, n, m), [n, m])
-    ∂gj = (zeros(𝒯, n, m), [n, m])
-    uj  = (zeros(𝒯, n, m+1), [n, (1 + m)])
-    return POCollCache(gj, gi, ∂gj, uj)
+    gj  = zeros(𝒯, n, m)
+    gi  = zeros(𝒯, n, m)
+    ∂gj = zeros(𝒯, n, m)
+    uj  = zeros(𝒯, n, m+1)
+    vj  = zeros(𝒯, n, m+1)
+    return POCollCache(gj, gi, ∂gj, uj, vj)
 end
 ####################################################################################################
 
@@ -450,9 +452,9 @@ $(SIGNATURES)
 
     rg = UnitRange(1, m+1)
     @inbounds for j in 1:Ntst
-        uj .= uc[:, rg]
+        uj .= uc[:, rg] # uj : n x m+1
         vj .= vc[:, rg]
-        mul!(puj, uj, L)
+        mul!(puj, uj, L) # puj : n x m
         mul!(pvj, vj, ∂L)
         @inbounds for l in 1:m
             phase += dot(puj[:, l], pvj[:, l]) * ω[l]
@@ -545,6 +547,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     uj = zeros(𝒯, n, m+1)
     In = I(n)
     J0 = zeros(𝒯, n, n)
+
+    # vector field
+    VF = coll.prob_vf
 
     # put boundary condition
     J[end-n:end-1, end-n:end-1] .= In

@@ -259,6 +259,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
     # formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
     # dimension of the kernel
     N = length(bp.ζ)
+    @assert N == length(x)
     out = zero(x)
     # normal form
     nf = bp.nf
@@ -275,7 +276,6 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
         for jj in 1:N
             # coefficient x*p
             out[ii] += p * nf.b1[ii , jj] * x[jj]
-
             for kk in 1:N
                 # coefficients of x^2
                 factor = jj == kk ? 1/2 : 1
@@ -637,7 +637,12 @@ get_normal_form(br::Branch, id_bif::Int; kwargs...) = get_normal_form(get_contre
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding these zeros is based on deflated newton.
+This function provides prediction for what the zeros of the reduced equation / normal form should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton.
+
+## Arguments
+- `J` jacobian of the normal form. It is evaluated with ForwardDiff otherwise.
+- `perturb` perturb function used in Deflated newton
+- `normN` norm used for newton.
 """
 function predictor(bp::NdBranchPoint, δp::T;
         verbose::Bool = false,
@@ -647,7 +652,7 @@ function predictor(bp::NdBranchPoint, δp::T;
         perturb = identity,
         J = nothing,
         normN = norminf,
-        optn = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+        optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -683,7 +688,13 @@ end
 """
 $(SIGNATURES)
 
-This function provides prediction for what the zeros of the reduced equation / normal form should be. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the cube.
+This function provides prediction for what the zeros of the reduced equation / normal form should be should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the hypercube.
+
+## Arguments
+- `J` jacobian of the normal form. It is evaluated with ForwardDiff otherwise.
+- `perturb` perturb function used in Deflated newton
+- `normN` norm used for newton.
+- `igs` vector of initial guesses. If not passed, these are the vertices of the hypercube.
 """
 function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
                 verbose::Bool = false,
@@ -694,7 +705,7 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
                 J = nothing,
                 igs = nothing,
                 normN = norminf,
-                optn = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+                optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -772,23 +783,23 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
-    # (2iω−L)Ψ200 = R20(ζ,ζ)
+    # (2iω−L)Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
     Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
     ~cv && @debug "[Hopf Ψ200] Linear solver for J did not converge. it = $it"
     # @assert Ψ200 ≈ (Complex(0, 2ω)*I - L) \ R20
 
-    # −LΨ110 = 2R20(ζ,cζ).
+    # −LΨ110 = 2R20(ζ, cζ)
     R20 = 2 .* R2(ζ, cζ)
     Ψ110, cv, it = ls(L, -R20)
     ~cv && @debug "[Hopf Ψ110] Linear solver for J did not converge. it = $it"
 
-    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
+    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
     av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     av .+= 2 .* R2(ζ, Ψ001)
     a = dot(av, ζ★)
 
-    # b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
+    # b = ⟨2R20(ζ, Ψ110) + 2R20(cζ, Ψ200) + 3R30(ζ, ζ, cζ), ζ∗⟩)
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
     b = dot(bv, ζ★)
 

@@ -44,7 +44,7 @@ Builds a preconditioner based on deflation of `nev` eigenvalues chosen according
 function PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0, kwargs...)
     H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, KrylovKit.Arnoldi(;krylovdim = krylovdim, verbosity = verbosity, kwargs...))
     Q, S = qr(H)
-    U = VectorOfArray(V) * Matrix(Q) # (m, nev) * (nev, nev) = (m, nev)
+    U = convert(Array, VectorOfArray(V)) * Matrix(Q) # (m, nev) * (nev, nev) = (m, nev)
     return PrecPartialSchur(S, U, inv(S), vals)
 end
 
