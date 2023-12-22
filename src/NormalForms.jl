@@ -984,6 +984,20 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     verbose && printstyled(color = :red,"──▶ Period-doubling bifurcation point is: ", type, "\n")
     return setproperties(pt, nf = nf, type = type)
 end
+
+function predictor(pd::PeriodDoubling, δp ; verbose = false, ampfactor = 1 )
+    # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
+    # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
+    # the predictor is sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2))
+    c = pd.nf.b3
+    ∂p = pd.nf.a * δp
+    if c * ∂p > 0
+        ∂p *= -1
+        δp *= -1
+    end
+    x1 = abs(sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)))
+    return (;x0 = zero(x1), x1, δp)
+end
 ################################################################################
 """
 $(SIGNATURES)
