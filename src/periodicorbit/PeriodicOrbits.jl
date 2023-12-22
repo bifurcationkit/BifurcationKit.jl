@@ -136,6 +136,7 @@ LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 ####################################################################################################
 # different jacobian types which parametrize the way jacobians of PO are computed
 struct AutoDiffDense <: AbstractJacobianMatrix end
+struct DenseAnalytical <: AbstractJacobianMatrix end
 struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
 struct MatrixFree <: AbstractJacobianMatrix end
 ####################################################################################################

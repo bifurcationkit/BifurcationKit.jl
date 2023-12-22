@@ -805,7 +805,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
 
     # return coefficients of the normal form
     verbose && println((a = a, b = b))
-    pt.nf = (a = a, b = b)
+    pt.nf = (;a, b)
     if real(a) * real(b) < 0
         pt.type = :SuperCritical
     elseif real(a) * real(b) > 0
@@ -959,14 +959,16 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     # coefficient of x*p
     R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-    Ψ01, _ = ls(L, E(R01))
+    Ψ01, cv, it = ls(L, E(R01))
+    ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
     a = dot(ζ★, R11 .- R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   (-1+ a⋅δμ)⋅x + b3⋅x^3")
     verbose && println("──▶ a  = ", a)
 
     # coefficient of x^2
     b2v = R2(ζ, ζ)
-    wst, _ = ls(L, (b2v); a₀ = -1)
+    wst, cv, it = ls(L, (b2v); a₀ = -1)
+    ~cv && @debug "[PD wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
     b = dot(ζ★, b3v) / 6
     verbose && println("──▶ b3 = ", b)
