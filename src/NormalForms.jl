@@ -962,7 +962,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     Ψ01, cv, it = ls(L, E(R01))
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
     a = dot(ζ★, R11 .- R2(ζ, Ψ01))
-    verbose && println("──▶ Normal form:   (-1+ a⋅δμ)⋅x + b3⋅x^3")
+    verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
     verbose && println("──▶ a  = ", a)
 
     # coefficient of x^2
@@ -971,7 +971,8 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     ~cv && @debug "[PD wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
     b = dot(ζ★, b3v) / 6
-    verbose && println("──▶ b3 = ", b)
+    verbose && println("──▶ b₃ = ", b)
+
     nf = (a = a, b3 = b)
     if real(a) * real(b) < 0
         type = :SuperCritical

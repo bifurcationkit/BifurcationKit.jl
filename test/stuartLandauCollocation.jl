@@ -267,8 +267,8 @@ _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 ####################################################################################################
 # test Hopf aBS
 let
-    for jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical(), BK.FullSparse())
-        useGEV = jacPO in (BK.AutoDiffDense(), BK.AutoDiffDenseAnalytical())
+    for jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical(), BK.FullSparse())
+        useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
 
         br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
             PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
