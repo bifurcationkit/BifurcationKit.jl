@@ -201,13 +201,13 @@ for _ind in (1,)
 end
 
 # aBS from PD
-br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 3, ds = -0.01, plot_every_step = 1);
-    # verbosity = 3, plot = true,
-    ampfactor = .1, δp = -0.005,
-    normC = norminf,
-    callback_newton = BK.cbMaxNorm(10),
-    record_from_solution = recordPO,
-    plot_solution = plotPO,
-    )
+# br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 3, ds = -0.01, plot_every_step = 1);
+#     # verbosity = 3, plot = true,
+#     ampfactor = .1, δp = -0.005,
+#     normC = norminf,
+#     callback_newton = BK.cbMaxNorm(10),
+#     record_from_solution = recordPO,
+#     plot_solution = plotPO,
+#     )
 
 # plot(br_po_pd, br_po)

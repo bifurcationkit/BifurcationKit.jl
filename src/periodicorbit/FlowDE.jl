@@ -81,7 +81,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: Ens
     # modify the function which assigns new initial conditions
     # see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
-    _epb = setproperties(fl.prob, output_func = (sol, i) -> ((t = sol.t[end], u = sol[end]), false), prob_func = _prob_func)
+    _epb = setproperties(fl.prob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
