@@ -833,8 +833,6 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                 @debug ""  -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
     d += -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2
 
-
-
     nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2
     return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, (@set ns.nf = nf), coll, false)
 end
@@ -971,7 +969,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     pbnew.xπ .= orbitguess
     pbnew.ϕ .= circshift(orbitguess, length(orbitguess)÷1)
 
-    # we append twice the period
+    # we append the doubled period
     orbitguess = vcat(orbitguess, 2nf.T)
 
     # no need to change pbnew.cache

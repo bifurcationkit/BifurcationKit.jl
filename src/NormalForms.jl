@@ -803,12 +803,11 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
     b = dot(bv, ζ★)
 
-    # return coefficients of the normal form
     verbose && println((a = a, b = b))
     pt.nf = (;a, b)
-    if real(a) * real(b) < 0
+    if real(b) < 0
         pt.type = :SuperCritical
-    elseif real(a) * real(b) > 0
+    elseif real(b) > 0
         pt.type = :SubCritical
     else
         pt.type = :Singular
