@@ -290,7 +290,9 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     T = getperiod(coll, pd.x0, par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
+    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p0 + δ)) .- residual(coll.prob_vf, u, set(p, lens, p0 - δ))) ./ (2δ)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
+    F11(u, p, du) = (A(u, set(p, lens, p0 + δ), du) .- A(u, set(p, lens, p0 - δ), du)) ./ (2δ)
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
@@ -1027,10 +1029,15 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     orbitguess = vcat(orbitguess, 2nf.T)
 
     # no need to change pbnew.cache
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
+    if ~isnothing(nf.nf.nf)
+        ampfactor = predictor(nf.nf, δp).x1
+        @debug "PD Branch switching" δp ∂p nf.nf ampfactor nf.nf.p nf.nf.p+δp
+    end
+
     pbnew = deepcopy(nf.prob)
     pnew = nf.nf.p + δp
     ζs = nf.ζ
@@ -1040,6 +1047,7 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
     @set! pbnew.M = 2nf.prob.M
     @set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
+    updatesection!(pbnew, orbitguess, setparam(pbnew, pnew))
     return (orbitguess = orbitguess, pnew = pnew, prob = pbnew, ampfactor = ampfactor)
 end
 
