@@ -973,9 +973,9 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     verbose && println("──▶ b₃ = ", b)
 
     nf = (a = a, b3 = b)
-    if real(a) * real(b) < 0
+    if real(b) < 0
         type = :SuperCritical
-    elseif real(a) * real(b) > 0
+    elseif real(b) > 0
         type = :SubCritical
     else
         type = :Singular
@@ -987,6 +987,7 @@ end
 function predictor(pd::PeriodDoubling, δp ; verbose = false, ampfactor = 1 )
     # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
     # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
+    #               = (1-2∂p)x -2cx^3 + h.o.t.
     # the predictor is sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2))
     c = pd.nf.b3
     ∂p = pd.nf.a * δp
