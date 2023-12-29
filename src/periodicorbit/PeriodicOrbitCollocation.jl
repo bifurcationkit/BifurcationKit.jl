@@ -1142,8 +1142,7 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
 end
 
 # condensation of parameters in Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
-
-
+####################################################################################################
 """
 $(SIGNATURES)
 

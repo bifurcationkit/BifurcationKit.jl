@@ -54,8 +54,13 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
         if ~pd.prm
             println("├─ ", get_lens_symbol(pd.nf.lens)," ≈ $(pd.nf.p)")
             println("├─ type: ", "$(pd.nf.type)")
-            println(io, "├─ (Iooss) Normal form:\n├\t∂τ = 1 + a₀⋅δp + a⋅ξ²\n├\t∂ξ = ξ⋅(c₀⋅δp + c⋅ξ²)")
-            println(io, "├─── a = ", pd.nf.nf.a, "\n└─── c = ", pd.nf.nf.b3)
+            println(io, "├─ (Iooss) Normal form:\n├\t∂τ = 1 + a₀₁⋅δp + a₂⋅ξ²\n├\t∂ξ = ξ⋅(c₁₁⋅δp + c₃⋅ξ²)")
+            if get(pd.nf.nf, :a₀₁, nothing) != nothing
+                println(io,"├─── a₀₁ = ", pd.nf.nf.a₀₁,
+                            "\n├─── a₂  = ", pd.nf.nf.a,
+                            "\n├─── c₁₁ = ", pd.nf.nf.c₁₁,
+                            "\n└─── c₃  = ", pd.nf.nf.b3)
+            end
         else
             show(io, pd.nf)
         end

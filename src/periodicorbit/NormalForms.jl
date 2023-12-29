@@ -420,9 +420,42 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
          2a₁/T * ∫( v₁★ₛ, Aₛ )
                     @debug "" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
-    nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ) # keep b3 for PD-codim 2
+    # computation of a₀₁
+    ∂Fu₀ₛ = copy(u₀ₛ)
+    for i = 1:size(u₀ₛ, 2)
+        ∂Fu₀ₛ[:,i] .= dₚF(u₀ₛ[:,i], par)
+    end
+    a₀₁ = ∫(ψ₁★ₛ, ∂Fu₀ₛ)
+
+    # computation of h₀₁
+    # ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
+    rhsₛ = copy(u₀ₛ)
+    for i = 1:size(u₀ₛ, 2)
+        rhsₛ[:,i] .= ∂Fu₀ₛ[:,i] .- a₀₁ .* Fu₀ₛ[:,i]
+    end
+    rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
+    # we could perhaps save the re-computation of J here and use the previous J
+    jac = jacobian(pbwrap, pd.x0, par)
+    J = copy(jac.jacpb)
+    J[end-N:end-1, 1:N] .= -I(N)
+    J[end-N:end-1, end-N:end-1] .= I(N)
+    h₀₁ = J \ (Icoll * rhs)
+    h₀₁ₛ = get_time_slices(coll, h₀₁)
+
+    
+    # computation of c₁₁
+    # < w★, -B(t,h01,w) - F11*w + c11*w + a01*wdot > = 0
+    # hence:
+    # c11 = < w★, B(t,h01,w) + F11*w + c11*w - a01*wdot >
+    for i = 1:size(u₀ₛ, 2)
+        rhsₛ[:,i] .= B(u₀ₛ[:,i], par, v₁★ₛ[:,i], h₀₁ₛ[:,i]) .+ F11(u₀ₛ[:,i], par, v₁★ₛ[:,i])
+    end
+
+    c₁₁ = ∫(ψ₁★ₛ, rhsₛ)- a₀₁ * ∫(ψ₁★ₛ, Fu₀ₛ)
+
+    nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ, a₀₁, c₁₁) # keep b3 for PD-codim 2
     newpd = @set pd.nf = nf
-    @debug "" a₁ c
+    @debug "[PD-NF-Iooss]" a₁ c
     if real(c) < 0
         @set! newpd.type = :SuperCritical
     else
