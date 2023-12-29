@@ -992,9 +992,30 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     N, m, Ntst = size(nf.prob)
 
     # we update the problem by doubling Ntst
+    # we need to keep the mesh for adaptation
+    old_mesh = getmesh(pbnew)
+    new_mesh = vcat(old_mesh[1:end-1] /2, old_mesh ./2 .+ 1/2)
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
+    update_mesh!(pbnew, new_mesh)
 
     orbitguess0 = nf.po[1:end-1]
+
+    if nf.prm == true && ~isnothing(nf.nf.nf)
+        # normal form based on Poincare return map
+        pred = predictor(nf.nf, δp)
+        ampfactor = pred.x1
+        δp = pred.δp
+    elseif nf.prm == false && get(nf.nf.nf, :c₁₁, nothing) != nothing
+        # Iooss normal form
+        @unpack c₁₁, b3 = nf.nf.nf
+        c₃ = b3
+        ∂p = c₁₁ * δp
+        if c₃ * ∂p >0
+            ∂p *= -1
+            δp *= -1
+        end
+        ampfactor = sqrt(abs(∂p / c₃))
+    end
 
     orbitguess_c = orbitguess0 .+ ampfactor .*  nf.ζ
     orbitguess = vcat(orbitguess_c[1:end-N], orbitguess0 .- ampfactor .*  nf.ζ)
