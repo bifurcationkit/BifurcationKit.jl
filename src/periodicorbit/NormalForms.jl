@@ -290,6 +290,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     T = getperiod(coll, pd.x0, par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
+    p0 = get(par, lens)
     dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p0 + δ)) .- residual(coll.prob_vf, u, set(p, lens, p0 - δ))) ./ (2δ)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
     F11(u, p, du) = (A(u, set(p, lens, p0 + δ), du) .- A(u, set(p, lens, p0 - δ), du)) ./ (2δ)
@@ -1012,7 +1013,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
         @unpack c₁₁, b3 = nf.nf.nf
         c₃ = b3
         ∂p = c₁₁ * δp
-        if c₃ * ∂p >0
+        if c₃ * ∂p > 0
             ∂p *= -1
             δp *= -1
         end
