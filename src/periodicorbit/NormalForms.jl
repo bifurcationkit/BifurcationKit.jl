@@ -288,6 +288,14 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     N, m, Ntst = size(coll)
     par = pd.params
     T = getperiod(coll, pd.x0, par)
+    lens = getlens(coll)
+    δ = getdelta(coll)
+    # identity matrix for collocation problem
+    Icoll = analytical_jacobian(coll, pd.x0, par; ρD = 0, ρF = 0, ρI = -1/T)
+    Icoll[:,end] .=0; Icoll[end,:] .=0
+    Icoll[end-N:end-1, 1:N] .= 0
+    Icoll[end-N:end-1, end-N:end-1] .= 0
+
 
     F(u, p) = residual(coll.prob_vf, u, p)
     p0 = get(par, lens)

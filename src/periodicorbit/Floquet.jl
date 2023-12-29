@@ -451,7 +451,7 @@ end
 
 @views function (eig::FloquetColl)(JacColl, nev; kwargs...)
     pbcoll = JacColl.pb
-    Ty = eltype(pbcoll)
+    𝒯 = eltype(pbcoll)
     J = JacColl.jacpb
     n, m, Ntst = size(pbcoll)
     nbcoll = n * m
@@ -460,7 +460,7 @@ end
     # this removes the internal unknowns of each mesh interval
     # this matrix is diagonal by blocks and each block is the L Matrix
     # which makes the corresponding J block upper triangular
-    P = Matrix{Ty}(LinearAlgebra.I(size(J, 1)))
+    P = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
     rg = 1:nbcoll # range
     for k = 1:Ntst
         F = lu(J[rg, rg .+ n])
@@ -471,17 +471,17 @@ end
 
     Jcond = P \ J
 
-    Ai = Matrix{Ty}(undef, n, n)
-    Bi = Matrix{Ty}(undef, n, n)
+    Ai = Matrix{𝒯}(undef, n, n)
+    Bi = Matrix{𝒯}(undef, n, n)
     r1 = 1:n
     r2 = n*(m-1)+1:(m*n)
 
     # monodromy matrix
-    M = Array{Ty}(LinearAlgebra.I(n))
+    M = Array{𝒯}(LinearAlgebra.I(n))
 
     for _ in 1:Ntst
         Ai .= Jcond[r2, r1]
-        Bi .= Jcond[r2, r1 .+ n*m]
+        Bi .= Jcond[r2, r1 .+ n * m]
         r1  = r1 .+ m * n
         r2  = r2 .+ m * n
         M = (Bi \ Ai) * M
