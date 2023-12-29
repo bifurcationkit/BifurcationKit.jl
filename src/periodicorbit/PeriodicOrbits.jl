@@ -107,7 +107,7 @@ Define a structure to interface the jacobian of the periodic orbits functional w
 
 $(TYPEDFIELDS)
 """
-struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
+mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
     pb::Tpb
     jacpb::Tjacpb
     x::Torbitguess

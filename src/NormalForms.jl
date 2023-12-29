@@ -434,7 +434,7 @@ You can directly call
 
     get_normal_form(br, ind_bif ; kwargs...)
 
-which is a shortcut for `get_normal_form(getProb(br), br, ind_bif ; kwargs...)`.
+which is a shortcut for `get_normal_form(getprob(br), br, ind_bif ; kwargs...)`.
 
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
 
@@ -887,7 +887,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         ω,
         parbif, lens,
         ζ, ζ★,
-        (a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
+        (a = zero(Complex{eltype(bifpt.x)}), 
+                b = zero(Complex{eltype(bifpt.x)})
+                 ),
         :SuperCritical
     )
     return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose = verbose)
@@ -923,7 +925,7 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1 )
     # we solve a * ds + b * amp^2 = 0
     amp::𝒯 = ampfactor * sqrt(-dsnew * real(a) / real(b))
 
-    # o(1) correction to Hopf Frequency
+    # correction to Hopf Frequency
     ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
 
     return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
