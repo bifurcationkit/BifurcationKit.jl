@@ -1056,9 +1056,9 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::Neimar
     # return coefficients of the normal form
     verbose && println((a = a, b = b))
     @set! pt.nf = (a = a, b = b)
-    if real(a) * real(b) < 0
+    if real(b) < 0
         pt.type = :SuperCritical
-    elseif real(a) * real(b) > 0
+    elseif real(b) > 0
         pt.type = :SubCritical
     else
         pt.type = :Singular
