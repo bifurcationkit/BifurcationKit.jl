@@ -264,6 +264,7 @@ prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
 alg = BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.]]),
     perturb_solution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
     )
+show(alg)
 brdc = continuation(prob, alg,
     ContinuationPar(opts, ds = -0.001, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 6), plot_every_step = 40, detect_bifurcation = 3);
     plot=false, verbosity = 0,

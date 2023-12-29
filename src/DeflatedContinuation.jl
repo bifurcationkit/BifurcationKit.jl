@@ -33,6 +33,16 @@ $(TYPEDFIELDS)
     jacobian::Tk = DeflatedProblemCustomLS()
 end
 
+function Base.show(io::IO, alg::DefCont; comment = "", prefix = "")
+    print(io, prefix * "┌─ Continuation algorithm: deflated continuation")
+    println(io, prefix * "\n├─ max_branches: ", alg.max_branches)
+    println(io, prefix * "├─ seek every: ", alg.seek_every_step)
+    println(io, prefix * "├─ deflated newton iterations: ", alg.max_iter_defop)
+    println(io, prefix * "├─ jacobian (def. newton): ", alg.jacobian)
+    println(io, prefix * "└─ deflation operator: ")
+    show(io, alg.deflation_operator; prefix = "\t")
+end
+
 # iterable which contains the options associated with Deflated Continuation
 @with_kw struct DefContIterable{Tit, Talg <: DefCont}
     it::Tit                        # replicate continuation iterator
