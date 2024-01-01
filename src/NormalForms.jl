@@ -948,6 +948,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     parbif = set(pt.params, lens, p)
     ζ = pt.ζ |> real
     ζ★ = pt.ζ★ |> real
+    δ = getdelta(prob)
 
     abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
     abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
@@ -960,24 +961,26 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3)  )
     E(x) = x .- dot(ζ★, x) .* ζ
 
-    # −LΨ001 = R01
-    δ = getdelta(prob)
     # coefficient of x*p
     R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
            residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
            apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-    Ψ01, cv, it = ls(L, E(R01))
+
+    # (I − L)⋅Ψ01 = R01
+    Ψ01, cv, it = ls(L, -E(R01); a₀ = -1)
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
-    a = dot(ζ★, R11 .- R2(ζ, Ψ01))
+    a = dot(ζ★, R11 .+ R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
     verbose && println("──▶ a  = ", a)
 
-    # coefficient of x^2
-    b2v = R2(ζ, ζ)
-    wst, cv, it = ls(L, (b2v); a₀ = -1)
-    ~cv && @debug "[PD wst] Linear solver for J did not converge. it = $it"
-    b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
+    # coefficient of x^3
+    # b = <ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
+    # (I - L)⋅h20 = B(ζ,ζ)
+    h2v = R2(ζ, ζ)
+    h20, cv, it = ls(L, h2v; a₀ = -1) # h20 = (L - I) \ h2v
+    ~cv && @debug "[PD h20] Linear solver for J did not converge. it = $it"
+    b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, h20)
     b = dot(ζ★, b3v) / 6
     verbose && println("──▶ b₃ = ", b)
 
@@ -1023,6 +1026,7 @@ Compute the Neimark-Sacker normal form.
 - `verbose` bool to print information
 """
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::NeimarkSacker, ls; verbose::Bool = false)
+    δ = getdelta(prob)
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
@@ -1040,7 +1044,6 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::Neimar
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
     # −LΨ001 = R01
-    δ = getdelta(prob)
     R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
            residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     Ψ001, _ = ls(L, -R01)
