@@ -759,7 +759,11 @@ Compute the Hopf normal form.
 # Optional arguments
 - `verbose` bool to print information
 """
-function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose::Bool = false)
+function hopf_normal_form(prob::AbstractBifurcationProblem, 
+                            pt::Hopf, 
+                            ls; 
+                            verbose::Bool = false,
+                            L = nothing)
     δ = getdelta(prob)
     x0 = pt.x0
     p = pt.p
@@ -771,8 +775,10 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     ζ★ = pt.ζ★
 
     # jacobian at the bifurcation point
-    # c'est recalculé ici!!!! 2x
-    L = jacobian(prob, x0, parbif)
+    # do not recompute it if passed
+    if isnothing(L)
+        L = jacobian(prob, x0, parbif)
+    end
 
     # we use BilinearMap to be able to call on complex valued arrays
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
@@ -784,6 +790,12 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
+    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
+    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
+          apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    av .+= 2 .* R2(ζ, Ψ001)
+    a = dot(av, ζ★)
+
     # (2iω−L)Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
     Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
@@ -794,12 +806,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     R20 = 2 .* R2(ζ, cζ)
     Ψ110, cv, it = ls(L, -R20)
     ~cv && @debug "[Hopf Ψ110] Linear solver for J did not converge. it = $it"
-
-    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
-    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
-          apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-    av .+= 2 .* R2(ζ, Ψ001)
-    a = dot(av, ζ★)
 
     # b = ⟨2R20(ζ, Ψ110) + 2R20(cζ, Ψ200) + 3R30(ζ, ζ, cζ), ζ∗⟩)
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
@@ -894,7 +900,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                  ),
         :SuperCritical
     )
-    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose = verbose)
+    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose = verbose, L)
 end
 
 """
