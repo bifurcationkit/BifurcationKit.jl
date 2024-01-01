@@ -424,8 +424,7 @@ end
     if vp0 > 1e-8
         @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
     end
-
-    return log.(μ), Complex.(vecs[indvalid, :]), true
+    return log.(μ), Complex.(vecs[indvalid, :]), true, 1
 end
 
 """
@@ -502,5 +501,5 @@ end
     if vp0 > 1e-9
         @warn "The precision on the Floquet multipliers is $vp0.\n It may be not enough.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl`"
     end
-    return σ, Complex.(vecs[I, :]), true
+    return σ, Complex.(vecs[I, :]), true, 1
 end

@@ -44,11 +44,11 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
 
     if biftype == :bp
-        return continuation_coll_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_coll_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
     elseif biftype == :pd
-        return continuation_coll_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_coll_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
     elseif biftype == :ns
-        return continuation_coll_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_coll_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
     else
         throw("We continue only Fold / PD / NS points of periodic orbits. Please report this error on the website.")
     end

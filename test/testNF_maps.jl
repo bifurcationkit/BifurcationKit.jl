@@ -58,7 +58,10 @@ br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
 prob = BK.BifurcationProblem(Fns, [0.0], pars_pd, (@lens _.μ))
 ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 
-nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true)
+nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
 @test nf.nf.a ≈ pars_ns.a
 @test nf.nf.b ≈ pars_ns.c3
 show(nf)
+
+nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = false)
+@test nf.nf.a == nothing

@@ -65,7 +65,7 @@ function compute_eigenvalues!(iter::ContIterable, state::ContState; saveEigenVec
     if saveEigenVec && save_eigenvectors(iter)
         state.eigvecs = eiginfo[2]
     end
-    # iteration number in eigen-solver
+    # iteration number in eigen solver
     it_number = eiginfo[end]
     return it_number
 end

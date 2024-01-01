@@ -760,6 +760,7 @@ Compute the Hopf normal form.
 - `verbose` bool to print information
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbose::Bool = false)
+    δ = getdelta(prob)
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
@@ -778,8 +779,8 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
     # −LΨ001 = R01
-    δ = getdelta(prob)
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
@@ -795,7 +796,8 @@ function hopf_normal_form(prob::AbstractBifurcationProblem, pt::Hopf, ls; verbos
     ~cv && @debug "[Hopf Ψ110] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
-    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
+          apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     av .+= 2 .* R2(ζ, Ψ001)
     a = dot(av, ζ★)
 
@@ -941,7 +943,10 @@ end
 # and on
 # Kuznetsov, Yuri A. Elements of Applied Bifurcation Theory. Vol. 112. Applied Mathematical Sciences. Cham: Springer International Publishing, 2023. https://doi.org/10.1007/978-3-031-22007-4.
 # on page 202
-function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::PeriodDoubling, ls; verbose::Bool = false)
+function period_doubling_normal_form(prob::AbstractBifurcationProblem,
+                                pt::PeriodDoubling, 
+                                ls; 
+                                verbose::Bool = false)
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
@@ -1025,7 +1030,11 @@ Compute the Neimark-Sacker normal form.
 # Optional arguments
 - `verbose` bool to print information
 """
-function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::NeimarkSacker, ls; verbose::Bool = false)
+function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
+                            pt::NeimarkSacker,
+                            ls;
+                            detailed = false,
+                            verbose::Bool = false)
     δ = getdelta(prob)
     x0 = pt.x0
     p = pt.p
@@ -1043,25 +1052,33 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::Neimar
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
-    # −LΨ001 = R01
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    Ψ001, _ = ls(L, -R01)
+    a = nothing
 
-    # (exp(2iω)−L)Ψ200 = R20(ζ,ζ)
+    # (I−L)⋅Ψ001 = R001
+    if detailed
+        R001 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        Ψ001, cv, it = ls(L, -R001; a₁ = -1)
+        ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
+
+        # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
+        av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
+            apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        av .+= 2 .* R2(ζ, Ψ001)
+        a = dot(ζ★, av) * cis(-ω)
+        verbose && println("──▶ a  = ", a)
+    end
+
+    # (exp(2iω)−L)⋅Ψ200 = R20(ζ,ζ)
     R20 = R2(ζ, ζ)
-    Ψ200, _ = ls(L, R20; a₀ = cis(2ω), a₁ = -1)
+    Ψ200, cv, it = ls(L, R20; a₀ = cis(2ω), a₁ = -1)
+    ~cv && @debug "[NS Ψ200] Linear solver for J did not converge. it = $it"
     # @assert Ψ200 ≈ (exp(Complex(0, 2ω))*I - L) \ R20
 
-    # (I−L)Ψ110 = 2R20(ζ,cζ).
+    # (I−L)⋅Ψ110 = 2R20(ζ,cζ)
     R20 = 2 .* R2(ζ, cζ)
-    Ψ110, _ = ls(L, -R20; a₀ = -1)
-
-    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ∗⟩
-    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-    av .+= 2 .* R2(ζ, Ψ001)
-    a = dot(ζ★, av) * cis(-ω)
-    verbose && println("──▶ a  = ", a)
+    Ψ110, cv, it = ls(L, -R20; a₀ = -1)
+    ~cv && @debug "[NS Ψ110] Linear solver for J did not converge. it = $it"
 
     # b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
@@ -1096,6 +1113,7 @@ Compute the Neimark-Sacker normal form.
 # Optional arguments
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
+- `detailed = false` compute the coefficient a in the normal form
 
 """
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
@@ -1104,6 +1122,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     verbose::Bool = false,
                     lens = getlens(br),
                     Teigvec = getvectortype(br),
+                    detailed = true,
                     scaleζ = norm)
 
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
@@ -1152,5 +1171,5 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         (a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
         :SuperCritical
     )
-    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose = verbose)
+    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed)
 end

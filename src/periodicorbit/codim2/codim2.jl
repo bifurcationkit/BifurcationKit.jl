@@ -125,7 +125,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-    nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff = autodiff)
+    nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)
 
     # options to detect codim2 bifurcations
     _contParams = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
