@@ -185,7 +185,7 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     # differential of return time
     ∂th = - dot(normal, y) / dot(normal, Fx)
     out = @. y + ∂th * Fx
-    return (u=out, t = ∂th)
+    return (u = out, t = ∂th)
 end
 
 function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
@@ -272,5 +272,5 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
     out = y .+ ∂3t .* Fx
 
     abs(dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(dot(normal, out))) > 1e-10"
-    return (u=out, t = ∂3t)
+    return (u = out, t = ∂3t)
 end

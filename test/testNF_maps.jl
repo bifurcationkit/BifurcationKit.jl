@@ -36,7 +36,7 @@ show(nf)
 # test of the predictor
 pred = predictor(nf, 0.1)
 @test pred.x0 ≈ 0
-@test pred.x1 ≈ sqrt(-pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)*(pars_pd.a*0.1)*((pars_pd.a*0.1) - 2))/(pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2))
+@test pred.x1 ≈ abs(sqrt(-pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)*(pars_pd.a*0.1)*((pars_pd.a*0.1) - 2))/(pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)))
 ####################################################################################################
 # case of the Neimark-Sacker
 function Fns!(f, u, p, t)

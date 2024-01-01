@@ -15,8 +15,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             Teigvec = getvectortype(br),
             scaleζ = norm,
             prm = true,
-            δ = 1e-8,
             detailed = true, # to get detailed normal form
+            δ = 1e-8,
             )
     bifpt = br.specialpoint[id_bif]
 
@@ -30,7 +30,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :bp
         return branch_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(prob, br, id_bif; δ = δ, detailed, prm, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif; δ, detailed, prm, kwargs_nf...)
     end
 
     throw("Normal form for $(bifpt.type) not yet implemented.")
@@ -483,11 +483,10 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
                                     verbose = false,
                                     lens = getlens(pbwrap),
                                     kwargs_nf...)
-    @debug "method PRM"
+    @debug "PD normal form collocation, method PRM"
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     pars = pd0.params
-    @debug pars typeof(pd0.x0)
     T = getperiod(coll, pd0.x0, pars)
 
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
@@ -1057,7 +1056,7 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
     @set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
     updatesection!(pbnew, orbitguess, setparam(pbnew, pnew))
-    return (orbitguess = orbitguess, pnew = pnew, prob = pbnew, ampfactor = ampfactor)
+    return (orbitguess, pnew, prob = pbnew, ampfactor, δp)
 end
 
 function predictor(nf::BranchPointPO{ <: ShootingProblem }, δp, ampfactor)

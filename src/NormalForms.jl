@@ -936,6 +936,11 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1 )
             dsfactor = dsfactor)
 end
 ################################################################################
+# computation based on 
+# James. “Centre Manifold Reduction for Quasilinear Discrete Systems.” Journal of Nonlinear Science 13, no. 1 (February 2003): 27–63. https://doi.org/10.1007/s00332-002-0525-x.
+# and on
+# Kuznetsov, Yuri A. Elements of Applied Bifurcation Theory. Vol. 112. Applied Mathematical Sciences. Cham: Springer International Publishing, 2023. https://doi.org/10.1007/978-3-031-22007-4.
+# on page 202
 function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::PeriodDoubling, ls; verbose::Bool = false)
     x0 = pt.x0
     p = pt.p
@@ -958,8 +963,10 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     # −LΨ001 = R01
     δ = getdelta(prob)
     # coefficient of x*p
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
+           apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     Ψ01, cv, it = ls(L, E(R01))
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
     a = dot(ζ★, R11 .- R2(ζ, Ψ01))
@@ -975,9 +982,10 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem, pt::Perio
     verbose && println("──▶ b₃ = ", b)
 
     nf = (a = a, b3 = b)
-    if real(b) < 0
+    # the second iterate of the normal for is x → -x -2⋅b3⋅x³
+    if real(b) > 0
         type = :SuperCritical
-    elseif real(b) > 0
+    elseif real(b) < 0
         type = :SubCritical
     else
         type = :Singular
@@ -1033,7 +1041,8 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, pt::Neimar
 
     # −LΨ001 = R01
     δ = getdelta(prob)
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     Ψ001, _ = ls(L, -R01)
 
     # (exp(2iω)−L)Ψ200 = R20(ζ,ζ)
