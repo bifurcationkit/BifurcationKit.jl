@@ -1,10 +1,10 @@
 """
 $(SIGNATURES)
 
-Compute the normal form of periodic orbits. Same arguments as the function `get_normal_form` for equilibria. We detail the additional keyword arguments specific to periodic orbits
+Compute the normal form of periodic orbits. We detail the additional keyword arguments specific to periodic orbits
 
 # Optional arguments
-- `prm = true` compute the normal form using Poincaré return map. For collocation, there will be another way to compute the normal form in the future.
+- `prm = true` compute the normal form using Poincaré return map (PRM). If false, use the Iooss normal form. 
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
             br::ContResult{ <: PeriodicOrbitCont}, id_bif::Int ;
@@ -16,14 +16,14 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             scaleζ = norm,
             prm = true,
             detailed = true, # to get detailed normal form
-            δ = 1e-8,
+            δ = getdelta(prob),
             )
     bifpt = br.specialpoint[id_bif]
 
-    @assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
+    @assert !(bifpt.type == :endpoint) "Normal form for $(bifpt.type) not implemented"
 
     # parameters for normal form
-    kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
 
     if bifpt.type == :pd
         return period_doubling_normal_form(prob, br, id_bif; prm, detailed, δ, kwargs_nf...)
@@ -46,6 +46,7 @@ function branch_normal_form(pbwrap,
                             verbose = false,
                             lens = getlens(br),
                             Teigvec = vectortype(br),
+                            scaleζ = norminf,
                             kwargs_nf...)
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
@@ -58,8 +59,7 @@ function branch_normal_form(pbwrap,
     verbose && print("├─ computing nullspace of Periodic orbit problem...")
     ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # we normalize it by the sup norm because it could be too small/big in L2 norm
-    # TODO: user defined scaleζ
-    ζ ./= norminf(ζ)
+    ζ ./= scaleζ(ζ)
     verbose && println("Done!")
 
     # compute the full eigenvector
@@ -80,6 +80,7 @@ function period_doubling_normal_form(pbwrap,
                                 verbose = false,
                                 lens = getlens(br),
                                 Teigvec = vectortype(br),
+                                scaleζ = norminf,
                                 kwargs_nf...)
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
@@ -89,11 +90,9 @@ function period_doubling_normal_form(pbwrap,
 
     # let us compute the kernel
     λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-    verbose && print("├─ computing nullspace of Periodic orbit problem...")
     ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # we normalize it by the sup norm because it could be too small/big in L2 norm
-    # TODO: user defined scaleζ
-    ζ ./= norm(ζ, Inf)
+    ζ ./= scaleζ(ζ)
     verbose && println("Done!")
 
     # compute the full eigenvector
@@ -114,6 +113,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
                                 lens = getlens(br),
                                 Teigvec = vectortype(br),
                                 detailed = true,
+                                scaleζ = norminf,
                                 kwargs_nf...)
     verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
@@ -125,8 +125,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
     verbose && print("├─ computing nullspace of Periodic orbit problem...")
     ζ₋₁ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev) .|> real
     # we normalize it by the sup norm because it could be too small/big in L2 norm
-    # TODO: user defined scaleζ
-    ζ₋₁ ./= norm(ζ₋₁, Inf)
+    ζ₋₁ ./= scaleζ(ζ₋₁)
     verbose && println("Done!")
 
     # compute the full eigenvector
@@ -172,9 +171,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
-    # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
     xₛ = get_time_slices(sh, Π.po)[:, 1]
-    # ζ₁ = getVectorField(br.prob.prob.flow.prob)(xₛ,pars) |> normalize
 
     # If M is the monodromy matrix and E = x - <x,e>e with e the eigen
     # vector of M for the eigenvalue 1, then, we find that
@@ -184,43 +181,19 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
 
-    # dP = ForwardDiff.jacobian( x -> Π(x,pars).u, xₛ)
-    dP = finite_differences(x -> Π(x,pars).u, xₛ; δ = δ)
+    # dP = ForwardDiff.jacobian( x -> Π(x, pars).u, xₛ)
+    dP = finite_differences(x -> Π(x, pars).u, xₛ; δ = δ)
     J = jacobian(pbwrap, pd0.x0, pars)
     M = MonodromyQaD(J)
 
     Fₘ = eigen(M)
     F = eigen(dP)
 
-    # N = length(xₛ)
-    # q = rand(N); p = rand(N)
-    # rhs = vcat(zeros(N), 1)
-    #
-    # Pbd = zeros(N+1, N+1)
-    # Pbd[1:N, 1:N] .= dP + I;
-    # Pbd[end, 1:N] .= p
-    # Pbd[1:N, end] .= q
-    # ψ = Pbd \ rhs
-    # ϕ = Pbd' \ rhs
-    #
-    # ev₋₁ = ψ[1:end-1]; normalize!(ev₋₁)
-    # ev₋₁p = ϕ[1:end-1]; normalize!(ev₋₁p)
-
-    ####
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
     Fp = eigen(dP')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
-    ####
-
-    @debug "" Fₘ.values F.values Fp.values
-
-    # @info "Essai de VP"
-    # dP * ζ₋₁ + ζ₋₁ |> display # not good, need projector E
-    # dP * ev₋₁ + ev₋₁ |> display
-    # dP' * ev₋₁p + ev₋₁p |> display
-    # e = Fₘ.vectors[:,end]; e ./= norm(e)
 
     # normalize eigenvectors
     ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
@@ -230,13 +203,13 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
             J = (x,p) -> finite_differences(z -> Π(z,p).u, x; δ = δ),
-            d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
+            d2F = (x,p,h1,h2)    -> d2F(Π,x,p,h1,h2).u,
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
     # normal form computation
-    pd = period_doubling_normal_form(probΠ, pd1, DefaultLS(); verbose = verbose)
+    pd = period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose)
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd, sh, true)
 end
 
@@ -265,13 +238,11 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     if ~prm || ~detailed
         # method based on Iooss method
         return period_doubling_normal_form(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
-    else
-        # method based on Poincare Return Map (PRM)
-        # newton parameter
-        optn = br.contparams.newton_options
-        return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose, nev, kwargs_nf...)
     end
-    return nothing
+    # method based on Poincaré Return Map (PRM)
+    # newton parameter
+    optn = br.contparams.newton_options
+    return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose, nev, kwargs_nf...)
 end
 
 function period_doubling_normal_form(pbwrap::WrapPOColl,
@@ -284,9 +255,11 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.
     # on page 1243
+    # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     par = pd.params
+    p₀ = get(par, lens)
     T = getperiod(coll, pd.x0, par)
     lens = getlens(coll)
     δ = getdelta(coll)
@@ -298,17 +271,19 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
 
     F(u, p) = residual(coll.prob_vf, u, p)
-    p0 = get(par, lens)
-    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p0 + δ)) .- residual(coll.prob_vf, u, set(p, lens, p0 - δ))) ./ (2δ)
+    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
+    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p₀ + δ)) .- 
+                 residual(coll.prob_vf, u, set(p, lens, p₀ - δ))) ./ (2δ)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
-    F11(u, p, du) = (A(u, set(p, lens, p0 + δ), du) .- A(u, set(p, lens, p0 - δ), du)) ./ (2δ)
+    F11(u, p, du) = (A(u, set(p, lens, p₀ + δ), du) .- 
+                     A(u, set(p, lens, p₀ - δ), du)) ./ (2δ)
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
     _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
     local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
-    # we first compute the PD floquet eigenvector (for μ = -1)
+    # we first compute the floquet eigenvector for μ = -1
     # we use an extended linear system for this
     #########
     # compute v1
@@ -326,7 +301,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) #≈ ker(J)
     l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
-    # update the borders to have less singular matrix Jψ
+    # update the borders to have less singular matrix J
     J[end, 1:end-1] .= k
     J[1:end-1, end] .= l
 
@@ -368,7 +343,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # computation of ψ★, recall the BC ψ★(0) = ψ★(1)
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
-    # the previous linear problem Jψ
+    # the previous linear problem J
     Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -I(N)
     Jψ[end-N:end-1, end-N:end-1] .= I(N)
@@ -387,6 +362,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
     ψ₁★ ./= 2∫( ψ₁★ₛ, Fu₀ₛ)
     @assert ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
+
+    # computation of a₁
     a₁ = ∫(ψ₁★ₛ, Bₛ)
             # _plot(vcat(vec(ψ₁★ₛ),1), label = "ψ1star")
             # _plot(vcat(vec(@. Bₛ ),1), label = "Bₛ")
@@ -412,7 +389,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     h₂ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
     h₂ₛ = get_time_slices(coll, h₂)
     if abs(∫( ψ₁★ₛ, h₂ₛ)) > 1e-10
-        @warn "The integral ∫(coll, ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
+        @warn "The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
     end
     if abs(h₂[end]) > 1e-10
         @warn "The value h₂[end] should be zero. We found $(h₂[end])"
@@ -429,6 +406,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
                  ∫( v₁★ₛ, Bₛ ) -
          2a₁/T * ∫( v₁★ₛ, Aₛ )
+
                     @debug "" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
     # computation of a₀₁
@@ -439,13 +417,12 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     a₀₁ = ∫(ψ₁★ₛ, ∂Fu₀ₛ)
 
     # computation of h₀₁
-    # ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
+    #                     ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
     rhsₛ = copy(u₀ₛ)
     for i = 1:size(u₀ₛ, 2)
         rhsₛ[:,i] .= ∂Fu₀ₛ[:,i] .- a₀₁ .* Fu₀ₛ[:,i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
-    # we could perhaps save the re-computation of J here and use the previous J
     jac = jacobian(pbwrap, pd.x0, par)
     J = copy(jac.jacpb)
     J[end-N:end-1, 1:N] .= -I(N)
@@ -455,14 +432,14 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
     
     # computation of c₁₁
-    # < w★, -B(t,h01,w) - F11*w + c11*w + a01*wdot > = 0
+    #                   < w★, -B(t,h01,w) - F11*w + c11*w + a01*wdot > = 0
     # hence:
-    # c11 = < w★, B(t,h01,w) + F11*w + c11*w - a01*wdot >
+    #                   c11 = < w★, B(t,h01,w) + F11*w + c11*w - a01*wdot >
     for i = 1:size(u₀ₛ, 2)
         rhsₛ[:,i] .= B(u₀ₛ[:,i], par, v₁★ₛ[:,i], h₀₁ₛ[:,i]) .+ F11(u₀ₛ[:,i], par, v₁★ₛ[:,i])
     end
 
-    c₁₁ = ∫(ψ₁★ₛ, rhsₛ)- a₀₁ * ∫(ψ₁★ₛ, Fu₀ₛ)
+    c₁₁ = ∫(v₁★ₛ, rhsₛ)- a₀₁ * ∫(v₁★ₛ, Aₛ)
 
     nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ, a₀₁, c₁₁) # keep b3 for PD-codim 2
     newpd = @set pd.nf = nf
@@ -494,16 +471,11 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     dP = finite_differences(x -> Π(x,pars).u, xₛ)
     F = eigen(dP)
 
-    ####
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
     Fp = eigen(dP')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
-    ####
-    # Π(xₛ, pars).u - xₛ |> display
-    # dP * ev₋₁ + ev₋₁ |> display
-    # dP' * ev₋₁p + ev₋₁p |> display
 
     # normalize eigenvectors
     ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
@@ -519,16 +491,14 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
             J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
-            # d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
-            # d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             d2F = d2Π,
             d3F = d3Π,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
-    pd = period_doubling_normal_form(probΠ, pd1, DefaultLS(); verbose = verbose)
+    pd = period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose)
 
-    # we first try to get the floquet eigenvectors for μ = -1
+    # we get the floquet eigenvectors for μ = -1
     jac = jacobian(pbwrap, pd0.x0, pars)
     # remove borders
     J = jac.jacpb
@@ -547,7 +517,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     vl = J' \ rhs
     vr = J  \ rhs
 
-    v₁ = @view vr[1:end-1]
+    v₁  = @view vr[1:end-1]
     v₁★ = @view vl[1:end-1]
 
     return PeriodDoublingPO(pd0.x0, pd0.x0[end], v₁, v₁★, pd, coll, true)
@@ -561,10 +531,10 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                 prm = true,
                                 detailed = true,
                                 kwargs_nf...)
+    verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
     # get the bifurcation point parameters
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
-    verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
     par = setparam(br, bifpt.param)
@@ -668,7 +638,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
             )
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
-    ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose = verbose)
+    ns = neimark_sacker_normal_form(probΠ, ns1, optn.linsolver; verbose)
     return NeimarkSackerPO(ns0.x0, T, ns0.p, ns0.ω, ev, nothing, ns, coll, true)
 end
 
@@ -971,7 +941,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor; override = false)
     pb = nf.prob
 
     M, N = size(pb)
@@ -983,21 +953,21 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem}, δp, ampf
     orbitguess = vec(orbitguess_c[:,1:2:end])
     # we append twice the period
     orbitguess = vcat(orbitguess, 2nf.T)
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pb, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pb, ampfactor)
 end
 
-function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem}, δp, ampfactor; override = false)
     orbitguess = copy(nf.po)
     orbitguess[1:end-1] .+= ampfactor .*  nf.ζ
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
 end
 
-function predictor(nf::NeimarkSackerPO, δp, ampfactor)
+function predictor(nf::NeimarkSackerPO, δp, ampfactor; override = false)
     orbitguess = copy(nf.po)
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, ampfactor; override = false)
     pbnew = deepcopy(nf.prob)
     N, m, Ntst = size(nf.prob)
 
@@ -1040,10 +1010,11 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, δp, am
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
-    if ~isnothing(nf.nf.nf)
-        ampfactor = predictor(nf.nf, δp).x1
-        @debug "PD Branch switching" δp ∂p nf.nf ampfactor nf.nf.p nf.nf.p+δp
+function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor; override = false)
+    if ~isnothing(nf.nf.nf) && ~override
+        pred = predictor(nf.nf, δp)
+        ampfactor = pred.x1
+        δp = pred.δp
     end
 
     pbnew = deepcopy(nf.prob)
@@ -1056,17 +1027,17 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem }, δp, ampfactor)
     @set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
     updatesection!(pbnew, orbitguess, setparam(pbnew, pnew))
-    return (orbitguess, pnew, prob = pbnew, ampfactor, δp)
+    return (;orbitguess, pnew, prob = pbnew, ampfactor, δp)
 end
 
-function predictor(nf::BranchPointPO{ <: ShootingProblem }, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: ShootingProblem }, δp, ampfactor; override = false)
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess[1:length(ζs)] .+= ampfactor .* ζs
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
 end
 ####################################################################################################
-function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampfactor)
+function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampfactor; override = false)
     pbnew = deepcopy(nf.prob)
     ζs = nf.ζ
 
@@ -1075,12 +1046,12 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, δp, ampf
     orbitguess = copy(nf.po) .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
 
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor)
 end
 
-function predictor(nf::BranchPointPO{ <: PoincareShootingProblem}, δp, ampfactor)
+function predictor(nf::BranchPointPO{ <: PoincareShootingProblem}, δp, ampfactor; override = false)
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess .+= ampfactor .* ζs
-    return (orbitguess = orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor = ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
 end

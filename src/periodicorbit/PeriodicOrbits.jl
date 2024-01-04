@@ -494,6 +494,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             linear_algo = nothing,
             detailed = false,
             prm = true,
+            override = false,
             kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
@@ -503,18 +504,18 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
-    # we copy the problem for not mutating the one passed by the user. This is a AbstractPeriodicOrbitProblem.
+    # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
     nf = get_normal_form(br, ind_bif; detailed, prm)
-    pred = predictor(nf, δp, ampfactor)
+    pred = predictor(nf, δp, ampfactor; override)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     pbnew = pred.prob # modified problem
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
-            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [PRM = $(prm & (pbnew isa PeriodicOrbitOCollProblem))]",
+            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [PRM = $(prm)]",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, ", p - p0 = ", newp - bifpt.param,
