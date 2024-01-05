@@ -5,6 +5,7 @@ end
 struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver
     solver::T # use solver as a field is good for BLS
 end
+
 (ls::FloquetWrapperBLS)(J, args...; k...) = ls.solver(J, args...; k...)
 (ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(J.jacpb, args...; k...)
 Base.transpose(J::FloquetWrapper) = transpose(J.jacpb)
@@ -121,10 +122,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             detect_codim2_bifurcation::Int = 0,
             autodiff = true,
             kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
-    # compute the normal form of the bifurcation point
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-
+    # compute the normal form of the bifurcation point
     nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)
 
     # options to detect codim2 bifurcations

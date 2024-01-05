@@ -190,7 +190,7 @@ jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) w
 
 jacobian(pdpb::PDMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
 
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finiteDifferences(z -> pdpb.prob(z, p), x; δ = 1e-8)
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
 
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################

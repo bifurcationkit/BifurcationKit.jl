@@ -489,7 +489,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             ind_bif::Int,
             _contParams::ContinuationPar;
             alg = br.alg,
-            δp = _contParams.ds, ampfactor = 1,
+            δp = _contParams.ds, 
+            ampfactor = 1,
             usedeflation = false,
             linear_algo = nothing,
             detailed = false,
@@ -521,6 +522,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n├─── new param    p = ", newp, ", p - p0 = ", newp - bifpt.param,
             "\n└─── amplitude p.o. = ", pred.ampfactor,
             "\n")
+
+    if pred.ampfactor > 0.1
+        @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.ampfactor). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start."
+    end
 
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact
