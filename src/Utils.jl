@@ -55,14 +55,14 @@ function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
 end
 
 # same as previous but we save the eigen-elements in state
-function compute_eigenvalues!(iter::ContIterable, state::ContState; saveEigenVec = true, kwargs...)
+function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
     eiginfo, _isstable, n_unstable, n_imag, cveig = compute_eigenvalues(iter, state; kwargs...)
     # we update the state
     update_stability!(state, n_unstable, n_imag, cveig)
     if isnothing(state.eigvals) == false
         state.eigvals = eiginfo[1]
     end
-    if saveEigenVec && save_eigenvectors(iter)
+    if save_eigenvectors(iter)
         state.eigvecs = eiginfo[2]
     end
     # iteration number in eigen solver

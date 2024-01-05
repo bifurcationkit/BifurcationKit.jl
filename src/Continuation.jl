@@ -260,7 +260,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     # newton parameters
     @unpack p_min, p_max, max_steps, newton_options, η, ds = it.contparams
     if !(p_min <= p₀ <= p_max)
-        @error "Initial parameter $p₀ must be within bounds [$p_min, $p_max]"
+        @error "Initial parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
         return nothing
     end
 

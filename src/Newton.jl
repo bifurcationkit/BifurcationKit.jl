@@ -149,3 +149,19 @@ struct cbMaxNorm{T}
     maxres::T
 end
 (cb::cbMaxNorm)(state; k...) = (return state.residual < cb.maxres)
+
+struct cbMaxNormAndΔp{T}
+    maxres::T
+    δp::T
+end
+
+function (cb::cbMaxNormAndΔp)(state; k...)
+    fromnewton = get(k, :fromNewton, true)
+    z0 = get(state, :z0, nothing)
+    p = get(state, :p, 0)
+    if fromnewton || isnothing(z0)
+        return state.residual < cb.maxres
+    else
+        return (state.residual < cb.maxres) && (abs(z0.p - p) < cb.δp)
+    end
+end
