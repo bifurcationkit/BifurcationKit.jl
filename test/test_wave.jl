@@ -159,14 +159,14 @@ BK.applyD(probTW, rand(2n))
 BK.updatesection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
-sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5))
+sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
 @test BK.converged(sol)
 BK.is_symmetric(sol.prob)
-sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5))
+sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
 @test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5, linsolver = GMRESKrylovKit()))
+sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
 @test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFreeAD), vcat(uold, .1), NewtonPar(verbose = true, max_iterations = 5, linsolver = GMRESKrylovKit()))
+sol = newton((@set probTW.jacobian = :MatrixFreeAD), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
 @test BK.converged(sol)
 ####################################################################################################
 # test continuation method with different Generalised eigensolvers
