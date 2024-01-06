@@ -205,6 +205,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
+                prm = false,
                 kind = PDCont(),
                 usehessian = true,
                 kwargs...) where {T, vectype}
@@ -353,7 +354,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
     prob_pd = re_make(prob_pd, record_from_solution = _printsol2)
 
-    event = ContinuousEvent(2, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp"), 0)
+    event = ContinuousEvent(2, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp"), opt_pd_cont.tol_stability)
 
     # solve the PD equations
     br_pd_po = continuation(

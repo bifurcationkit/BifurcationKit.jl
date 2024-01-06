@@ -271,6 +271,11 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # current lyapunov coefficient
     𝒯 = eltype(𝒯b)
     𝐍𝐒.l1 = Complex{𝒯}(0, 0)
+    R1 = zero(𝒯)
+    R2 = zero(𝒯)
+    R3 = zero(𝒯)
+    R4 = zero(𝒯)
+
 
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem
@@ -328,14 +333,14 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
 
          # if the frequency is null, this is not a NS point, we halt the process
-         if abs(ω) < ϵR1
+         if 1-cos(ω) <= ϵR1
             @warn "[Codim 2 NS - Finalizer] The NS curve seems to be close to a R1 point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the R1 point is not detected, try lowering Newton tolerance or dsmax."
         end
 
         # call the user-passed finalizer
         resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
 
-        return abs(ω) >= ϵR1 && isbif && resFinal
+        return 1-cos(ω) > ϵR1 && isbif && resFinal
     end
 
     function test_ch(iter, state)
@@ -363,7 +368,13 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             prob_ns.l1 = ns.nf.nf.b
             prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
         end
-        return real(prob_ns.l1)
+        # Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
+        c = cos(ω)
+        R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
+        R2 = c+1  # μ = {1, -1}
+        R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
+        R4 = c    # μ = {1, exp(±2iπ/2)}
+        return R1, R2, R3, R4, real(prob_ns.l1)
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
@@ -372,7 +383,11 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         (u, p; kw...) -> (; zip(lenses, 
                 (getp(u, 𝐍𝐒)[1], p))..., 
                 ωₙₛ = getp(u, 𝐍𝐒)[2], 
-                CH = 𝐍𝐒.l1, 
+                CH = 𝐍𝐒.l1,
+                R₁ = R1,
+                R₂ = R2,
+                R₃ = R3,
+                R₄ = R4, 
                 namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
         (u, p; kw...) -> (; 
             namedprintsol(_printsol(getvec(u, 𝐍𝐒), p; kw...))..., 
@@ -389,7 +404,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # event for detecting codim 2 points
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
-        event = ContinuousEvent(1, test_ch, compute_eigen_elements, ("ch",), 0)
+        event = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
     else
         event = PairOfEvents(
                 ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0),
