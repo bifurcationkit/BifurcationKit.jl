@@ -391,7 +391,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     if isnothing(event_user)
         event = ContinuousEvent(1, test_ch, compute_eigen_elements, ("ch",), 0)
     else
-        event = PairOfEvents(ContinuousEvent(1, test_ch, compute_eigen_elements, ("ch",), 0), event_user)
+        event = PairOfEvents(
+                ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0),
+                event_user)
     end
 
     # solve the NS equations

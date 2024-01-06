@@ -228,14 +228,18 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
+    elseif jacobian_ma == :finiteDifferences
+        pdpointguess = vcat(pdpointguess.u, pdpointguess.p...)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferencesMF
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_f = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_f = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 
@@ -347,13 +351,13 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver))
 
-    prob_f = re_make(prob_f, record_from_solution = _printsol2)
+    prob_pd = re_make(prob_pd, record_from_solution = _printsol2)
 
     event = ContinuousEvent(2, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp"), 0)
 
     # solve the PD equations
     br_pd_po = continuation(
-        prob_f, alg,
+        prob_pd, alg,
         (@set opt_pd_cont.newton_options.eigsolver = eigsolver);
         linear_algo = BorderingBLS(solver = opt_pd_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
