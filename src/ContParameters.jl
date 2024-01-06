@@ -45,10 +45,10 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     # parameters for arclength continuation
     dsmin::T    = 1e-3
     dsmax::T    = 1e-1
-    ds::T        = 1e-2
+    ds::T       = 1e-2
 
     # parameters for continuation
-    a::T    = 0.5 # aggressiveness factor
+    a::T    = 0.5 # aggressiveness factor for step size adaptation
 
     # parameters bound
     p_min::T    = -1.0
@@ -72,19 +72,20 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     plot_every_step::Int64 = 10
 
     # handling bifurcation points
-    tol_stability::T = 1e-10            # lower bound for stability of equilibria and periodic orbits
-    detect_fold::Bool = true            # detect fold points?
-    detect_bifurcation::Int64 = 3       # detect other bifurcation points?
-    dsmin_bisection::T = 1e-16          # dsmin for the bisection algorithm when locating bifurcation points
-    n_inversion::Int64 = 2              # number of sign inversions in bisection algorithm
-    max_bisection_steps::Int64 = 15      # maximum number of bisection steps
-    tol_bisection_eigenvalue::T = 1e-16  # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+    tol_stability::T = 1e-10              # lower bound for stability of equilibria and periodic orbits
+    detect_fold::Bool = true              # detect fold points?
+    detect_bifurcation::Int64 = 3         # detect other bifurcation points?
+    dsmin_bisection::T = 1e-16            # dsmin for the bisection algorithm when locating bifurcation points
+    n_inversion::Int64 = 2                # number of sign inversions in bisection algorithm
+    max_bisection_steps::Int64 = 15       # maximum number of bisection steps
+    tol_bisection_eigenvalue::T = 1e-16   # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
     # handling event detection
     detect_event::Int64 = 0               # event location
     tol_param_bisection_event::T = 1e-16  # tolerance on value of parameter
-    detect_loop::Bool = false                # detect if the branch loops
+    detect_loop::Bool = false             # detect if the branch loops
 
+    @assert tol_stability >0 "You must provide a positive tolerance for tol_stability"
     @assert dsmax >= abs(ds) >= dsmin > 0 "You must provide a valid interval (ordered) for ds. You passed $(dsmax) >= $(abs(ds)) >= $(dsmin) with \ndsmax = $dsmax\nds    = $ds\ndsmin = $dsmin"
     @assert p_max >= p_min "You must provide a valid interval [p_min, p_max]"
     @assert iseven(n_inversion) "The option `n_inversion` number must be even"

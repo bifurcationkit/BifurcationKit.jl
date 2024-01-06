@@ -843,7 +843,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
                 @debug "" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
-        @warn "The integral ∫(coll,ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
+        @warn "The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
     end
     if abs(h₁₁[end]) > 1e-10
         @warn "The value h₁₁[end] should be zero. We found $(h₁₁[end])"

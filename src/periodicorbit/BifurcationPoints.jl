@@ -10,6 +10,8 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
 
         $(TYPEDFIELDS)
 
+        # Associated methods
+
         ## Predictor
 
         You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
@@ -108,7 +110,7 @@ mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSi
     "Left eigenvector(s)."
     ζ★::Tevl
 
-    "Underlying normal form for Poincaré return map"
+    "Normal form"
     nf::Tnf
 
     "Periodic orbit problem"
