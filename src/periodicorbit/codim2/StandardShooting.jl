@@ -146,19 +146,20 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     start_with_eigen = false,
                     detect_codim2_bifurcation::Int = 0,
+                    update_minaug_every_step = 1,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
-    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if biftype == :bp
-        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
     elseif biftype == :pd
-        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     elseif biftype == :ns
-        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements = compute_eigen_elements, kwargs... )
+        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     end
     throw("You passed the bifurcation type = $biftype. We continue only Fold / PD / NS points of periodic orbits for now.")
 end
@@ -179,7 +180,6 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
                     start_with_eigen = false,
-                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
@@ -224,7 +224,6 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
                     start_with_eigen = false,
-                    detect_codim2_bifurcation::Int = 0,
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
         verbose = get(kwargs, :verbosity, 0) > 0
@@ -292,7 +291,6 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
                     start_with_eigen = false,
-                    detect_codim2_bifurcation::Int = 0,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
     bifpt = br.specialpoint[ind_bif]

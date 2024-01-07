@@ -220,7 +220,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
-                update_minaug_every_step = 0,
+                update_minaug_every_step = 1,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
@@ -276,7 +276,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     R2 = zero(𝒯)
     R3 = zero(𝒯)
     R4 = zero(𝒯)
-
 
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem

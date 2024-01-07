@@ -200,7 +200,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
-                update_minaug_every_step = 0,
+                update_minaug_every_step = 1,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
