@@ -78,23 +78,24 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
 
     # we get the collocation problem
-    probco = getprob(br).prob
+    coll = getprob(br).prob
 
     if get_plot_backend() == BK_Makie()
-        plotsol = (ax,x,p;ax1 = nothing, k...) -> br.prob.plotSolution(ax,x.u,p;k...)
+        plotsol = (ax, x, p;ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p;k...)
     else
-        plotsol = (x,p;k...) -> br.prob.plotSolution(x.u,p;k...)
+        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p;k...)
     end
-    probcoFold = BifurcationProblem((x, p) -> probco(x, p), bifpt, getparams(br), getlens(br);
-                J = (x, p) -> FloquetWrapper(probco, ForwardDiff.jacobian(z -> probco(z, p), x), x, p),
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> probco(z, p), x, dx1, dx2),
+
+    collFold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);
+                J = getprob(br).jacobian,
+                d2F = (x, p, dx1, dx2) -> d2PO(z -> coll(z, p), x, dx1, dx2),
                 plot_solution = plotsol
                 )
 
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    br_fold_po = continuation_fold(probcoFold,
+    br_fold_po = continuation_fold(collFold,
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen = start_with_eigen,

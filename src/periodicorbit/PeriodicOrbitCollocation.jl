@@ -1053,7 +1053,7 @@ Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution
 See also:
 R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
-function compute_error!(pb::PeriodicOrbitOCollProblem, x::Vector{Ty};
+function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
                     normE = norm,
                     verbosity::Bool = false,
                     K = Inf,

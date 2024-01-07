@@ -483,7 +483,7 @@ end
         Bi .= Jcond[r2, r1 .+ n * m]
         r1  = r1 .+ m * n
         r2  = r2 .+ m * n
-        M = (Bi \ Ai) * M
+        M .= (Bi \ Ai) * M
     end
 
     # floquet multipliers

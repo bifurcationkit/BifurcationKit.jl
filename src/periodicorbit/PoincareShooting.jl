@@ -87,7 +87,7 @@ R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
 E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xbar, k)
 
 """
-    update!(pb::PoincareShootingProblem, centers_bar; _norm = norm)
+$(SIGNATURES)
 
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
