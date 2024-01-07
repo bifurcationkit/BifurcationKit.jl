@@ -316,7 +316,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                 lens1::Lens, lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
-                update_minaug_every_step = 0,
+                update_minaug_every_step = 1,
                 normC = norm,
 
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
@@ -383,6 +383,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
+        # if we are in a bisection, we still update the MA problem, this does not work well otherwise
         success = get(kUP, :state, nothing).converged
         if (~mod_counter(step, update_minaug_every_step) || success == false)
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)

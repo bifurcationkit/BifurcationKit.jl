@@ -95,9 +95,9 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     end
 end
 
-function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
+function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step = 1, kwargs...)
     if detect_codim2_bifurcation > 0
-        if get(kwargs, :update_minaug_every_step, 0) == 0
+        if update_minaug_every_step == 0
             @warn "You asked for detection of codim 2 bifurcations but passed the option `update_minaug_every_step = 0`.\n The bifurcation detection algorithm may not work faithfully.\n Please use `update_minaug_every_step > 0`."
         end
         return setproperties(options_cont; 
@@ -219,21 +219,24 @@ function continuation(br::AbstractBranchResult,
             prob = br.prob,
             start_with_eigen = false,
             detect_codim2_bifurcation::Int = 0,
+            update_minaug_every_step = 1,
             kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
-    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
     return continuation_hopf(prob, br, ind_bif, lens2, _options_cont;
-        start_with_eigen = start_with_eigen,
-        compute_eigen_elements = compute_eigen_elements,
+        start_with_eigen,
+        compute_eigen_elements,
+        update_minaug_every_step,
         kwargs...)
     else
     return continuation_fold(prob, br, ind_bif, lens2, _options_cont;
-        start_with_eigen = start_with_eigen,
-        compute_eigen_elements = compute_eigen_elements,
+        start_with_eigen,
+        compute_eigen_elements,
+        update_minaug_every_step,
         kwargs...)
     end
 end

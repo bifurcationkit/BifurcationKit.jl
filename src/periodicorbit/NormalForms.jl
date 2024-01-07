@@ -675,7 +675,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                         lens = getlens(pbwrap),
                                         _NRMDEBUG = false, # normalise to compare to ApproxFun
                                         kwargs_nf...)
-    @warn "method IOOSS, NRM = $_NRMDEBUG"
+    @debug "method IOOSS, NRM = $_NRMDEBUG"
 
     # based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.

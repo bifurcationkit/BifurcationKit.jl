@@ -128,7 +128,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
     # case of ∂σ_ω
     σω = -(dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω+ϵ2), v)) - 
-            dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
+           dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
 
     if has_hessian(𝐍𝐒) == false || 𝐍𝐒.usehessian == false
         cw = conj(w)
@@ -225,7 +225,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 jacobian_ma::Symbol = :autodiff,
                 compute_eigen_elements = false,
                 kind = NSCont(),
-                usehessian = true,
+                usehessian = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm = false,
                 kwargs...) where {𝒯b, vectype}

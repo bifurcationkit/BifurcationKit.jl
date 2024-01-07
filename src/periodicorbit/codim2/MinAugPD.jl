@@ -207,7 +207,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm = false,
                 kind = PDCont(),
-                usehessian = true,
+                usehessian = false,
                 kwargs...) where {T, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
