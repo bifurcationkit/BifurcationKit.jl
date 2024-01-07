@@ -499,7 +499,7 @@ end
     # give indications on the precision on the Floquet coefficients
     vp0 = minimum(abs, σ)
     if vp0 > 1e-9
-        @warn "The precision on the Floquet multipliers is $vp0.\n It may be not enough.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl`"
+        @warn "The precision on the Floquet multipliers is $vp0.\n It may be not enough.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
     end
     return σ, Complex.(vecs[I, :]), true, 1
 end

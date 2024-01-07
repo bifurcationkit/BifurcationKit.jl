@@ -1,4 +1,4 @@
-abstract type AbstractProblemMinimallyAugmented end
+abstract type AbstractProblemMinimallyAugmented{Tprob} end
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
@@ -14,7 +14,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
     $(FIELDS)
     """
-    mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented
+    mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
         "Functional F(x, p) - vector field - with all derivatives"
         prob_vf::Tprob
         "close to null vector of Jᵗ"
