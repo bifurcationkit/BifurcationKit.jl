@@ -149,7 +149,7 @@ solpo = newton(probcoll, ci, NewtonPar(verbose = true))
 _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8)
+opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8, n_inversion = 6)
 @set! opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,

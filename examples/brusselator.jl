@@ -12,7 +12,18 @@ function plotsol(x; kwargs...)
     plot!(x[N+1:2N], label="v"; kwargs...)
 end
 
-function Fbru!(f, x, p, t = 0)
+# for Makie.jl
+function plotsol(ax, x::AbstractVector; kwargs...)
+    N = div(length(x), 2)
+    X = collect(1:N)
+    lines!(ax, X, x[1:N],label = "u")
+    lines!(ax, X, x[N+1:2N], label = "v")
+    axislegend(ax)
+end
+
+plotsol(ax, x::BorderedArray; k...) = plotsol(ax, x.u; k...)
+
+function Fbru!(f, x, p)
     @unpack α, β, D1, D2, l = p
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h

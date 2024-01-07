@@ -271,7 +271,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # current lyapunov coefficient
     𝒯 = eltype(𝒯b)
-    𝐍𝐒.l1 = Complex{𝒯}(0, 0)
+    𝐍𝐒.l1 = Complex{𝒯}(1, 0)
     R1 = zero(𝒯)
     R2 = zero(𝒯)
     R3 = zero(𝒯)
@@ -379,11 +379,12 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = get(kwargs, :record_from_solution, nothing)
-    _printsol2 = isnothing(_printsol) ?
+    _recordsol = get(kwargs, :record_from_solution, nothing)
+    _recordsol2 = isnothing(_recordsol) ?
         (u, p; kw...) -> (; zip(lenses, 
-                (getp(u, 𝐍𝐒)[1], p))..., 
-                ωₙₛ = getp(u, 𝐍𝐒)[2], 
+                (getp(u, 𝐍𝐒)[1], p))...,
+                # period = getperiod(prob, getvec(u, 𝐍𝐒), nothing), # do not work for PoincareShootingProblem
+                ωₙₛ = getp(u, 𝐍𝐒)[2],
                 CH = 𝐍𝐒.l1,
                 R₁ = R1,
                 R₂ = R2,
@@ -391,7 +392,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 R₄ = R4, 
                 namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
         (u, p; kw...) -> (; 
-            namedprintsol(_printsol(getvec(u, 𝐍𝐒), p; kw...))..., 
+            namedprintsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
             zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
             ωₙₛ = getp(u, 𝐍𝐒)[2], 
             CH = 𝐍𝐒.l1, )
@@ -399,7 +400,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
-    prob_ns = re_make(prob_ns, record_from_solution = _printsol2)
+    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2)
 
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points

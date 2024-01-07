@@ -66,13 +66,13 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     linbdsolve_adjoint = linbdsolver)
         # determine scalar type associated to vectors a and b
         α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
-        Ty = eltype(α)
+        𝒯 = eltype(α)
         return $op(prob, a, b, 0*a,
-                    complex(zero(Ty)), # l1
-                    real(one(Ty)),     # cp
-                    real(one(Ty)),     # bt
-                    real(one(Ty)),     # gh
-                    1,                 # zh
+                    complex(zero(𝒯)), # l1
+                    real(one(𝒯)),     # cp
+                    real(one(𝒯)),     # bt
+                    real(one(𝒯)),     # gh
+                    1,                # zh
                     linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
     end
 
@@ -83,13 +83,13 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     massmatrix = LinearAlgebra.I)
         a = b = 0.
         α = norm(a) 
-        Ty = eltype(α)
+        𝒯 = eltype(α)
         return $op(prob, a, b, 0*a,
-                    complex(zero(Ty)), # l1
-                    real(one(Ty)),     # cp
-                    real(one(Ty)),     # bt
-                    real(one(Ty)),     # gh
-                    1,                 # zh
+                    complex(zero(𝒯)), # l1
+                    real(one(𝒯)),     # cp
+                    real(one(𝒯)),     # bt
+                    real(one(𝒯)),     # gh
+                    1,                # zh
                     linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
     end
     end
@@ -115,7 +115,7 @@ function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
     return getlens(prob_ma), getlens(br)
 end
 ################################################################################
-function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     prob_ma = br.prob.prob
     𝒯 = getvectortype(br)
 
@@ -128,13 +128,10 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     end
 
     # parameters for vector field
-    p2 = bifpt.param
-    lens1, lens2 = get_lenses(br)
-    parbif = set(getparams(br), lens2, p2)
-
     p1 = getp(bifpt.x , prob_ma)[1] # get(bifpt.printsol, lens1)
-    parbif = set(parbif, lens1, p1)
-
+    p2 = bifpt.param
+    lenses = get_lenses(br)
+    parbif = set(getparams(br), lenses, (p1,p2))
     return (x = x0, params = parbif)
 end
 ################################################################################

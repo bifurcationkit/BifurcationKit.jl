@@ -126,8 +126,8 @@ Returns a variable containing the state of the continuation procedure. The field
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
-    n_unstable::Tuple{Int64,Int64}  = (-1, -1)    # (current, previous)
-    n_imag::Tuple{Int64,Int64}      = (-1, -1)    # (current, previous)
+    n_unstable::Tuple{Int64, Int64}  = (-1, -1)    # (current, previous)
+    n_imag::Tuple{Int64, Int64}      = (-1, -1)    # (current, previous)
     convergedEig::Bool              = true
 
     eigvals::Teigvals = nothing               # current eigenvalues
@@ -499,7 +499,8 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change the preconditioners.
 - `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch. For advanced use:
-    - the current `state::ContState` of the continuation is passed in `kwargs`. 
+    - the state `state::ContState` of the continuation iterator is passed in `kwargs`.
+    - the iterator `iter::ContIterable` of the continuation is passed in `kwargs`.
     - the switch `bisection::Bool` is passed whenever `finalise_solution` is called during bisection for locating bifurcation points / events. This allows to escape some personal code in this case.
 Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newton_options.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:

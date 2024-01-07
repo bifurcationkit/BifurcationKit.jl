@@ -69,7 +69,13 @@ function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
     it_number = eiginfo[end]
     return it_number
 end
-
+####################################################################################################
+import Setfield: set
+function set(obj, lenses::Tuple{<:Lens,<:Lens}, val::Tuple)
+    obj2 = set(obj, lenses[1], val[1])
+    obj2 = set(obj2, lenses[2], val[2])
+    obj2
+end
 ####################################################################################################
 """
 $(SIGNATURES)

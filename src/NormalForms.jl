@@ -466,15 +466,15 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff, bls = bls, bls_adjoint = bls_adjoint, bls_block = bls_block, ζs = ζs, ζs_ad = ζs_ad)
+        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff, bls, bls_adjoint = bls_adjoint, bls_block = bls_block, ζs, ζs_ad)
     elseif bifpt.type == :gh
-        return bautin_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed)
+        return bautin_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
     elseif bifpt.type == :zh
-        return zero_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
+        return zero_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
     elseif bifpt.type == :hh
-        return hopf_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed = detailed, autodiff = autodiff)
+        return hopf_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
     elseif abs(bifpt.δ[1]) == 1 # simple branch point
-        return get_normal_form1d(prob, br, id_bif ; autodiff = autodiff, kwargs_nf...)
+        return get_normal_form1d(prob, br, id_bif ; autodiff, kwargs_nf...)
     end
 
     τ = bifpt.τ
@@ -876,13 +876,13 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         @assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
         ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
     else
-        ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+        ζ = copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
     end
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
     _Jt = has_adjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+    ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
@@ -891,16 +891,17 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     ζ★ ./= dot(ζ, ζ★)
     @assert dot(ζ, ζ★) ≈ 1
 
+    𝒯 = eltype(bifpt.x)
     hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
         ω,
         parbif, lens,
         ζ, ζ★,
-        (a = zero(Complex{eltype(bifpt.x)}), 
-                b = zero(Complex{eltype(bifpt.x)})
+        (a = zero(Complex{𝒯}), 
+         b = zero(Complex{𝒯})
                  ),
         :SuperCritical
     )
-    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose = verbose, L)
+    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L)
 end
 
 """
