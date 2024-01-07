@@ -325,16 +325,19 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         # compute new a
         ζ★ = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, n)[1]
         ζ★ ./= norm(ζ★)
-        #############
+
         pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
         if pbwrap.prob isa ShootingProblem
             pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
             prob_pd.GPD = pd.nf.nf.b3
-            #############
         end
         if pbwrap.prob isa PeriodicOrbitOCollProblem
-            pd = period_doubling_normal_form_prm(pbwrap, pd0, NewtonPar(options_newton, verbose = false); verbose = false)
-            prob_pd.GPD = pd.nf.nf.b3
+            if prm
+                pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
+            else
+                pd = period_doubling_normal_form(pbwrap, pd0; verbose = false)
+                prob_pd.GPD = pd.nf.nf.b3
+            end
         end
 
         return prob_pd.GPD, prob_pd.CP

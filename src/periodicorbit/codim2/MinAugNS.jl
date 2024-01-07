@@ -364,9 +364,18 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             #############
         end
         if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
-            ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(options_newton, verbose = true,); verbose = false)
-            prob_ns.l1 = ns.nf.nf.b
-            prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
+            if prm
+                ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(options_newton, verbose = true))
+            else
+                ns = neimark_sacker_normal_form(pbwrap, ns0)
+            end
+            if ns.prm
+                prob_ns.l1 = ns.nf.nf.b
+                prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
+            else
+                prob_ns.l1 = ns.nf.nf.d
+                prob_ns.l1 = abs(real(prob_ns.l1)) < 1e5 ? real(prob_ns.l1) : state.eventValue[2][2]
+            end
         end
         # Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
         c = cos(ω)
