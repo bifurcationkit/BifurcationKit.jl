@@ -96,11 +96,11 @@ end
 
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldProblemMinimallyAugmented
-        conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1)
+        conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1)
     elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
         conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2)
     elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
-        conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS,)
+        conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS, :R1ch => :R1, :fold => :R1)
     else
         throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
     end

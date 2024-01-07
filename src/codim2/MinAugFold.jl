@@ -331,6 +331,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
+    if alg isa PALC && alg.tangent isa Bordered
+        @warn "You selected the PALC continuation algorithm with Bordered predictor. The jacobian being singular on Fold points, this could lead to bad prediction and converge. If you have issues, try a different tangent predictor like Secant for example."
+    end
+
     # options for the Newton Solver inherited from the ones the user provided
     options_newton = options_cont.newton_options
 

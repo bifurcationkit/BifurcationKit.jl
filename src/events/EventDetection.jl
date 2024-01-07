@@ -174,11 +174,11 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 
     if verbose
         printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
-        printstyled(color=:blue, "─"^40*"\n────> Stopping reason:\n──────> isnothing(next)           = ", isnothing(next),
-                "\n──────> |ds| < dsmin_bisection     = ", abs(state.ds) < contParams.dsmin_bisection,
+        printstyled(color=:blue, "─"^40*"\n────> Stopping reason:\n──────> isnothing(next)             = ", isnothing(next),
+                "\n──────> |ds| < dsmin_bisection      = ", abs(state.ds) < contParams.dsmin_bisection,
                 "\n──────> step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
-                "\n──────> n_inversion >= n_inversion = ", n_inversion >= contParams.n_inversion,
-                "\n──────> eventlocated              = ", eventlocated == true, "\n")
+                "\n──────> n_inversion >= n_inversion  = ", n_inversion >= contParams.n_inversion,
+                "\n──────> eventlocated                = ", eventlocated == true, "\n")
 
     end
 

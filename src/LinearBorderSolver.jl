@@ -30,7 +30,7 @@ $(TYPEDFIELDS)
 
 """
 @with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
-    "Linear solver used for the Bordering method."
+    "Linear solver for the Bordering method."
     solver::S = nothing
 
     "Tolerance for checking precision"
@@ -167,7 +167,7 @@ function (lbs::BorderingBLS)(::Val{:Block}, J, b::NTuple{M, AbstractVector}, c::
 
     u2 = δd \ (rhsb - cx1)
     # TODO USE mul!
-    u1 = x1 -  x2_mat * u2
+    u1 = x1 - x2_mat * u2
 
     return u1, u2, cv, (its...)
 end
@@ -344,7 +344,7 @@ This struct is used to  provide the bordered linear solver based a matrix free o
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
-    "Linear solver used to solve the extended linear system"
+    "Linear solver for solving the extended linear system"
     solver::S
     "What is the structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
     use_bordered_array::Bool

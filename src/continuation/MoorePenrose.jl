@@ -17,9 +17,9 @@ Additional information is available on the [website](https://bifurcationkit.gith
 $(TYPEDFIELDS)
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
-    "Tangent predictor, example `PALC()`"
+    "Tangent predictor, for example `PALC()`"
     tangent::T
-    "Use a direct linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative"
+    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative"
     method::MoorePenroseLS
     "(Bordered) linear solver"
     ls::Tls
@@ -32,7 +32,9 @@ internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.t
 """
 $(SIGNATURES)
 """
-function MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)
+function MoorePenrose(;tangent = PALC(), 
+                        method = direct, 
+                        ls = nothing)
     if ~(method == iterative)
         ls = isnothing(ls) ? DefaultLS() : ls
     else
@@ -55,7 +57,9 @@ function Base.empty!(alg::MoorePenrose)
     alg
 end
 
-function update(alg0::MoorePenrose, contParams::ContinuationPar, linearAlgo)
+function update(alg0::MoorePenrose,
+                contParams::ContinuationPar,
+                linearAlgo)
     tgt = update(alg0.tangent, contParams, linearAlgo)
     alg = @set alg0.tangent = tgt
     if isnothing(linearAlgo)

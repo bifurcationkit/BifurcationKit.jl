@@ -227,6 +227,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 kind = NSCont(),
                 usehessian = true,
                 plot_solution = BifurcationKit.plot_solution(prob),
+                prm = false,
                 kwargs...) where {𝒯b, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)

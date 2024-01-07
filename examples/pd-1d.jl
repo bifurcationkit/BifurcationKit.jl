@@ -62,19 +62,19 @@ using SparseDiffTools
 
 ####################################################################################################
 N = 100
-    n = 2N
-    lx = 3pi /2
-    X = LinRange(-lx,lx, N)
-    Δ = Laplacian(N, lx, :Neumann)
-    D = 0.08
-    par_br = (η = 1.0, a = -1., b = -3/2., H = 3.0, D = D, C = -0.6, Δ = blockdiag(D*Δ, Δ))
+n = 2N
+lx = 3pi /2
+X = LinRange(-lx,lx, N)
+Δ = Laplacian(N, lx, :Neumann)
+D = 0.08
+par_br = (η = 1.0, a = -1., b = -3/2., H = 3.0, D = D, C = -0.6, Δ = blockdiag(D*Δ, Δ))
 
-    u0 = cos.(2X)
-    solc0 = vcat(u0, u0)
+u0 = cos.(2X)
+solc0 = vcat(u0, u0)
 
 probBif = BifurcationProblem(Fbr, solc0, par_br, (@lens _.C) ;J = Jbr,
-        record_from_solution = (x, p) -> norm(x, Inf),
-        plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
+    record_from_solution = (x, p) -> norm(x, Inf),
+    plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
 # eigls = DefaultEig()
 eigls = EigArpack(0.5, :LM)

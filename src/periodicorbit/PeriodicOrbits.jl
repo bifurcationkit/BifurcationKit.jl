@@ -262,7 +262,8 @@ Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingPro
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 $DocStrjacobianPOSh
 """
-function continuation(probPO::AbstractShootingProblem, orbitguess,
+function continuation(probPO::AbstractShootingProblem,
+                        orbitguess,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
                         linear_algo::AbstractBorderedLinearSolver;

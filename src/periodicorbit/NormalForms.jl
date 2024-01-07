@@ -265,12 +265,12 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     T = getperiod(coll, pd.x0, par)
     lens = getlens(coll)
     δ = getdelta(coll)
+
     # identity matrix for collocation problem
     Icoll = analytical_jacobian(coll, pd.x0, par; ρD = 0, ρF = 0, ρI = -1/T)
     Icoll[:,end] .=0; Icoll[end,:] .=0
     Icoll[end-N:end-1, 1:N] .= 0
     Icoll[end-N:end-1, end-N:end-1] .= 0
-
 
     F(u, p) = residual(coll.prob_vf, u, p)
     # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
@@ -464,7 +464,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     c₁₁ = ∫(v₁★ₛ, rhsₛ) - a₀₁ * ∫(v₁★ₛ, Aₛ)
     c₁₁ *= 2
 
-    nf = (a = a₁, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ, a₀₁, c₁₁) # keep b3 for PD-codim 2
+    # we want the parameter a, not the rescaled a₁
+    nf = (a = a₁/T, b3 = c, h₂ₛ, ψ₁★ₛ, v₁ₛ, a₀₁, c₁₁) # keep b3 for PD-codim 2
     newpd = @set pd.nf = nf
     @debug "[PD-NF-Iooss]" a₁ c
     if real(c) < 0
