@@ -1,5 +1,6 @@
 abstract type AbstractBifurcationFunction end
 abstract type AbstractBifurcationProblem end
+abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 # this type is based on the type BifFunction, see below
 # it provides all derivatives
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
@@ -89,18 +90,20 @@ plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
 # create specific problems where pretty much is available
-for op in (:BifurcationProblem,
-           :ODEBifProblem,
-           :PDEBifProblem,
-           :FoldMAProblem,
-           :HopfMAProblem,
-           :PDMAProblem,
-           :NSMAProblem,
-           :WrapPOTrap,
-           :WrapPOSh,
-           :WrapPOColl,
-           :WrapTW,
-           :BTMAProblem)
+for (op, at) in (
+                (:BifurcationProblem, AbstractBifurcationProblem),
+                (:ODEBifProblem, AbstractBifurcationProblem),
+                (:PDEBifProblem, AbstractBifurcationProblem),
+                (:FoldMAProblem, AbstractMABifurcationProblem),
+                (:HopfMAProblem, AbstractMABifurcationProblem),
+                (:PDMAProblem, AbstractMABifurcationProblem),
+                (:NSMAProblem, AbstractMABifurcationProblem),
+                (:BTMAProblem, AbstractMABifurcationProblem),
+                (:WrapPOTrap, AbstractBifurcationProblem),
+                (:WrapPOSh, AbstractBifurcationProblem),
+                (:WrapPOColl, AbstractBifurcationProblem),
+                (:WrapTW, AbstractBifurcationProblem),
+           )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
         @eval begin
             """
@@ -148,16 +151,16 @@ for op in (:BifurcationProblem,
             plot_solution(prob::$op) = prob.plotSolution
             record_from_solution(prob::$op) = prob.recordFromSolution
         end
-    else
-        """
-        $(TYPEDEF)
-
-        Problem wrap of a functional. It is not meant to be used directly albeit perhaps by advanced users.
-
-        $(TYPEDFIELDS)
-        """
+    elseif op in (:FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :BTMAProblem)
         @eval begin
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, Lens}, Tplot, Trecord} <: AbstractBifurcationProblem
+            """
+            $(TYPEDEF)
+
+            Problem wrap of a functional. It is not meant to be used directly albeit perhaps by advanced users.
+
+            $(TYPEDFIELDS)
+            """
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, Lens}, Tplot, Trecord} <: $at{Tprob}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -169,6 +172,32 @@ for op in (:BifurcationProblem,
 
             getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
+            # dummy constructor
+            $op(prob, lens = nothing) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+        end
+    else
+        @eval begin
+            """
+            $(TYPEDEF)
+
+            Problem wrap of a functional. It is not meant to be used directly albeit perhaps by advanced users.
+
+            $(TYPEDFIELDS)
+            """
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, Lens}, Tplot, Trecord} <: $at
+                prob::Tprob
+                jacobian::Tjac
+                u0::Tu0
+                params::Tp
+                lens::Tl
+                plotSolution::Tplot
+                recordFromSolution::Trecord
+            end
+
+            getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
+            isinplace(pb::$op) = isinplace(pb.prob)
+            # dummy constructor
+            $op(prob, lens = nothing) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
         end
     end
 

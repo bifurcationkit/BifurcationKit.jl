@@ -317,7 +317,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new a
         JNS★ = has_adjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, newpar, ω) : adjoint(JNS)
-        @debug has_adjoint(𝐍𝐒)
         newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
         ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
