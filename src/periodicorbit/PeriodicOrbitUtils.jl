@@ -50,66 +50,62 @@ function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
 end
 ####################################################################################################
 # functions to insert the problem into the user passed parameters
+struct FinalisePO{Tp, Tf}
+    prob::Tp
+    finalise_solution::Tf
+    updateSectionEveryStep::Int
+end
+
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
-    _finsol = get(kwargs, :finalise_solution, nothing)
-    _finsol2 = isnothing(_finsol) ? (z, tau, step, contResult; kF...) ->
-        begin
-            # we first check that the continuation step was successful
-            # if not, we do not update the problem with bad information
-            success = converged(get(kF, :state, nothing))
-            if success && mod_counter(step, updateSectionEveryStep) == 1
-                updatesection!(prob, z.u, setparam(contResult, z.p))
-            end
-            return true
-        end :
-        (z, tau, step, contResult; kF...) ->
-        begin
-            # we first check that the continuation step was successful
-            # if not, we do not update the problem with bad information!
-            success = converged(get(kF, :state, nothing))
-            if success && mod_counter(step, updateSectionEveryStep) == 1
-                @debug "[Periodic orbit] update section"
-                updatesection!(prob, z.u, setparam(contResult, z.p))
-            end
-            return _finsol(z, tau, step, contResult; prob = prob, kF...)
-        end
-    return _finsol2
+    return FinalisePO(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
+end
+
+function (finalizer::FinalisePO)(z, tau, step, contResult; bisection = false, kF...)
+    updateSectionEveryStep = finalizer.updateSectionEveryStep
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information
+    success = converged(get(kF, :state, nothing))
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+        @debug "[Periodic orbit] update section"
+        updatesection!(finalizer.prob, z.u, setparam(contResult, z.p))
+    end
+    if isnothing(finalizer.finalise_solution)
+        return true
+    else
+        return finalizer.finalise_solution(z, tau, step, contResult; prob = finalizer.prob, kF...)
+    end
 end
 
 # version specific to collocation. Handle mesh adaptation
-function modify_po_finalise(prob::PeriodicOrbitOCollProblem, kwargs, updateSectionEveryStep)
-    _finsol = get(kwargs, :finalise_solution, nothing)
-    _finsol2 = (z, tau, step, contResult; kF...) ->
-        begin
-            # we first check that the continuation step was successful
-            # if not, we do not update the problem with bad information
-            state = get(kF, :state, nothing)
-            success = isnothing(state) ? false : converged(state)
-            # mesh adaptation
-            if success && prob.meshadapt
-                @debug "[Collocation] update mesh"
-                oldsol = _copy(z)
-                oldmesh = get_times(prob) .* getperiod(prob, z.u, nothing)
-                adapt = compute_error!(prob, z.u;
-                        verbosity = prob.verbose_mesh_adapt,
-                        par = setparam(contResult, z.p),
-                        K = prob.K)
-                if ~adapt.success
-                    return false
-                end
-                # @info norm(oldsol.u - z.u, Inf)
-            end
-            if success && mod_counter(step, updateSectionEveryStep) == 1
-                @debug "[collocation] update section"
-                updatesection!(prob, z.u, setparam(contResult, z.p))
-            end
-            if isnothing(_finsol)
-                return true
-            else
-                return _finsol(z, tau, step, contResult; prob = prob, kF...)
-            end
+function (finalizer::FinalisePO{ <: PeriodicOrbitOCollProblem})(z, tau, step, contResult; bisection = false, kF...)
+    updateSectionEveryStep = finalizer.updateSectionEveryStep
+    coll = finalizer.prob
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information
+    state = get(kF, :state, nothing)
+    success = isnothing(state) ? false : converged(state)
+    # mesh adaptation
+    if success && coll.meshadapt && ~bisection
+        @debug "[Collocation] update mesh"
+        oldsol = _copy(z) # avoid possible overwrite in compute_error!
+        oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
+        adapt = compute_error!(coll, oldsol.u;
+                    verbosity = coll.verbose_mesh_adapt,
+                    K = coll.K
+                    )
+        if ~adapt.success # stop continuation if mesh adaptation fails
+            return false
         end
-    return _finsol2
+    end
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+        @debug "[collocation] update section"
+        updatesection!(coll, z.u, setparam(contResult, z.p))
+    end
+    if isnothing(finalizer.finalise_solution)
+        return true
+    else
+        return _finsol(z, tau, step, contResult; prob = coll, kF...)
+    end
 end
 
 function modify_po_record(probPO, kwargs, par, lens)
