@@ -7,6 +7,10 @@ abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 # Periodic orbit computations by shooting
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
+# wrapper problems
+abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
+abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
 
 # get the number of time slices
 @inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
