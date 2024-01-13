@@ -23,7 +23,6 @@ prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); record_from_solution 
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
 @set! opts_br.newton_options.verbose = false
-
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)

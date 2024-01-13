@@ -2,7 +2,7 @@ abstract type AbstractBranchResult end
 abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
 
 ####################################################################################################
-# functions used in RecordFromSolution
+# functions used in record_from_solution
 namedprintsol(x) = (x = x,)
 namedprintsol(x::Real) = (x = x,)
 namedprintsol(x::NamedTuple) = x
@@ -191,12 +191,15 @@ end
 
 @inline get_lens_symbol(br::AbstractBranchResult) = get_lens_symbol(getlens(br))
 
-function Base.show(io::IO, br::ContResult; comment = "", prefix = " ")
+function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") where {Kind}
     print(io, prefix * "┌─ Curve type: ")
     printstyled(io, typeof(br.kind).name.name, comment, "\n", color=:cyan, bold = true)
     println(io, prefix * "├─ Number of points: ", length(br.branch))
     print(io, prefix * "├─ Type of vectors: ")
     printstyled(io, getvectortype(br), color=:cyan, bold = true)
+    if Kind <: TwoParamCont
+        print(io, "\n" * prefix * "├─ Parameters ", map(get_lens_symbol, get_lenses(br)))
+    end
     print(io, "\n" * prefix * "├─ Parameter ")
     printstyled(io, get_lens_symbol(br), color=:cyan, bold = true)
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)

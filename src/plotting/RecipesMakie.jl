@@ -72,6 +72,7 @@ function plot_branch_cont(contres::ContResult,
         sol::BorderedArray,
         contparms,
         plotuserfunction;
+        iter,
         plotfold = false,
         plotstability = true,
         plotspecialpoints = true,

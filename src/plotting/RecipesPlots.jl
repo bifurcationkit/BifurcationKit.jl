@@ -2,18 +2,18 @@ using RecipesBase
 
 # allow to plot a single branch
 RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
-    plotfold = false,
-    putspecialptlegend = true,
-    filterspecialpoints = false,
-    vars = nothing,
-    plotstability = true,
-    plotspecialpoints = true,
-    branchlabel = "",
-    linewidthunstable = 1.0,
-    linewidthstable = 2linewidthunstable,
-    plotcirclesbif = true,
-    applytoY = identity,
-    applytoX = identity)
+                            plotfold = false,
+                            putspecialptlegend = true,
+                            filterspecialpoints = false,
+                            vars = nothing,
+                            plotstability = true,
+                            plotspecialpoints = true,
+                            branchlabel = "",
+                            linewidthunstable = 1.0,
+                            linewidthstable = 2linewidthunstable,
+                            plotcirclesbif = true,
+                            applytoY = identity,
+                            applytoX = identity)
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
@@ -67,17 +67,17 @@ end
 
 # allow to plot branches specified by splatting
 RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
-        plotfold = false,
-        putspecialptlegend = true,
-        filterspecialpoints = false,
-        vars = nothing,
-        plotstability = true,
-        plotspecialpoints = true,
-        branchlabel = fill("", length(brs)),
-        linewidthunstable = 1.0,
-        linewidthstable = 2linewidthunstable,
-        applytoY = identity,
-        applytoX = identity)
+                            plotfold = false,
+                            putspecialptlegend = true,
+                            filterspecialpoints = false,
+                            vars = nothing,
+                            plotstability = true,
+                            plotspecialpoints = true,
+                            branchlabel = fill("", length(brs)),
+                            linewidthunstable = 1.0,
+                            linewidthstable = 2linewidthunstable,
+                            applytoY = identity,
+                            applytoX = identity)
     ind1, ind2 = get_plot_vars(brs[1], vars)
     if length(brs) == 0; return; end
     # handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
@@ -267,24 +267,23 @@ end
 RecipesBase.@recipe function f(bd::Nothing)
     nothing
 end
-
 ####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
 RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
-    plotfold = false,
-    putspecialptlegend = true,
-    filterspecialpoints = false,
-    vars = nothing,
-    plotstability = true,
-    plotspecialpoints = true,
-    branchlabel = "",
-    linewidthunstable = 1.0,
-    linewidthstable = 2linewidthunstable,
-    plotcirclesbif = false,
-    _basicplot = true,
-    applytoY = identity,
-    applytoX = identity) where {Tk <: TwoParamCont, Tprob}
+                                    plotfold = false,
+                                    putspecialptlegend = true,
+                                    filterspecialpoints = false,
+                                    vars = nothing,
+                                    plotstability = true,
+                                    plotspecialpoints = true,
+                                    branchlabel = "",
+                                    linewidthunstable = 1.0,
+                                    linewidthstable = 2linewidthunstable,
+                                    plotcirclesbif = false,
+                                    _basicplot = true,
+                                    applytoY = identity,
+                                    applytoX = identity) where {Tk <: TwoParamCont, Tprob}
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)

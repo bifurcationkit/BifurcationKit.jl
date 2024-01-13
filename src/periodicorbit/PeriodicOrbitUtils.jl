@@ -71,7 +71,8 @@ function (finalizer::Finaliser{ <: AbstractPeriodicOrbitProblem})(z, tau, step, 
 end
 
 # version specific to collocation. Handle mesh adaptation
-function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem, <: WrapPOColl}})(z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
+                                <: WrapPOColl}})(z, tau, step, contResult; bisection = false, kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     coll = finalizer.prob
     # we first check that the continuation step was successful
