@@ -462,7 +462,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
 
     if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif; kwargs_nf...)
+        return hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :bt
@@ -850,6 +850,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                     verbose::Bool = false,
                     lens = getlens(br),
                     Teigvec = getvectortype(br),
+                    detailed = true,
                     scaleζ = norm)
     @assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")

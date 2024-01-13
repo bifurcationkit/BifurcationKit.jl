@@ -116,12 +116,73 @@ _wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
 _wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
 _wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
+function (finalizer::FinalisePO{<: AbstractMABifurcationProblem})(z, tau, step, contResult; bisection = false, kF...)
+    updateSectionEveryStep = finalizer.updateSectionEveryStep
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information
+    success = converged(get(kF, :state, nothing))
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+        # we get the MA problem
+        wrap_ma = finalizer.prob
+        𝐏𝐛 = wrap_ma.prob
+        prob_sh = 𝐏𝐛.prob_vf.prob
+        # we get the state vector at bifurcation point
+        x = getvec(z.u, 𝐏𝐛)
+        # we get the parameters at the bifurcation point
+        lenses = get_lenses(wrap_ma)
+        p1, = getp(z.u, 𝐏𝐛)   # first parameter, ca bug pour Folds si p1,_ = getp(...)
+        p2 = z.p              # second parameter
+        pars = set(getparams(prob_sh), lenses, (p1, p2))
+        @debug "[Periodic orbit] update section"
+        updatesection!(prob_sh, x, pars)
+    end
+    if isnothing(finalizer.finalise_solution)
+        return true
+    else
+        return finalizer.finalise_solution(z, tau, step, contResult; prob = finalizer.prob, kF...)
+    end
+end
+
+function (finalizer::FinalisePO{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; bisection = false, kF...)
+    updateSectionEveryStep = finalizer.updateSectionEveryStep
+    𝐏𝐛 = finalizer.prob.prob
+    coll = 𝐏𝐛.prob_vf.prob
+     # we get the state vector at bifurcation point
+     x = getvec(Z.u, 𝐏𝐛)
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information
+    state = get(kF, :state, nothing)
+    success = isnothing(state) ? false : converged(state)
+    # mesh adaptation
+    if success && coll.meshadapt && ~bisection
+        @debug "[Collocation] update mesh"
+        oldsol = _copy(x) # avoid possible overwrite in compute_error!
+        oldmesh = get_times(coll) .* getperiod(coll, oldsol, nothing)
+        adapt = compute_error!(coll, oldsol;
+                    verbosity = coll.verbose_mesh_adapt,
+                    K = coll.K
+                    )
+        if ~adapt.success # stop continuation if mesh adaptation fails
+            return false
+        end
+    end
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+        @debug "[collocation] update section"
+        updatesection!(coll, x, nothing) # collocation does not need the parameter for updatesection!
+    end
+    if isnothing(finalizer.finalise_solution)
+        return true
+    else
+        return finalizer.finalise_solution(Z, tau, step, contResult; prob = coll, kF...)
+    end
+end
+####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
-            options_cont::ContinuationPar,
-            probPO::AbstractPeriodicOrbitProblem;
-            detect_codim2_bifurcation::Int = 0,
-            autodiff = true,
-            kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+                    options_cont::ContinuationPar,
+                    probPO::AbstractPeriodicOrbitProblem;
+                    detect_codim2_bifurcation::Int = 0,
+                    autodiff = true,
+                    kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
     nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)å
@@ -131,19 +192,19 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 end
 
 function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
-            _contParams::ContinuationPar,
-            probPO::AbstractPeriodicOrbitProblem;
-            alg = br.alg,
-            linear_algo = nothing,
-            δp = nothing, ampfactor::Real = 1,
-            nev = _contParams.nev,
-            detect_codim2_bifurcation::Int = 0,
-            Teigvec = getvectortype(br),
-            scaleζ = norm,
-            # start_with_eigen = false,
-            Jᵗ = nothing,
-            bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-            kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+                        _contParams::ContinuationPar,
+                        probPO::AbstractPeriodicOrbitProblem;
+                        alg = br.alg,
+                        linear_algo = nothing,
+                        δp = nothing, ampfactor::Real = 1,
+                        nev = _contParams.nev,
+                        detect_codim2_bifurcation::Int = 0,
+                        Teigvec = getvectortype(br),
+                        scaleζ = norm,
+                        # start_with_eigen = false,
+                        Jᵗ = nothing,
+                        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+                        kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
@@ -229,7 +290,6 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
-        # linear_algo = linear_algo,
         finalise_solution = _finsol
     )
     return Branch(branch, gh)
@@ -356,7 +416,6 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             contParams;
             kind = NSPeriodicOrbitCont(),
             kwargs...,
-            # linear_algo = linear_algo,
             plot_solution = _plotsol,
             bdlinsolver = FloquetWrapperBLS(bdlinsolver),
             finalise_solution = _finsol

@@ -109,7 +109,7 @@ end
 
 let
     for Ntst in 2:10:100
-        @info "Ntst" Ntst
+        # @info "Ntst" Ntst
         prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
         # test non uniform mesh
         BK.update_mesh!(prob_col, sort(vcat(0,rand(Ntst-1),1)))

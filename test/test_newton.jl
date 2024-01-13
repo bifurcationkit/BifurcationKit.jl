@@ -12,7 +12,6 @@ function test_newton(x0)
         end
         J0
     end
-    norminf(x) = norm(x, Inf)
 
     opts = NewtonPar( tol = Ty(1e-8), verbose = false)
     prob = BifurcationProblem(F, x0, nothing; J = Jac)

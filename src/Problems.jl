@@ -173,7 +173,7 @@ for (op, at) in (
             getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
-            $op(prob, lens = nothing) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
         end
     else
         @eval begin
@@ -197,7 +197,7 @@ for (op, at) in (
             getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
-            $op(prob, lens = nothing) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
         end
     end
 

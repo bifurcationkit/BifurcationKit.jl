@@ -949,8 +949,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     ev ./= sqrt(dot(ev, ev))
     evp ./= dot(evp, ev)
 
-    @debug "" xₛ ev evp dP _nrm pars F.values[ind] Fp.values[indp]
-    @debug "" F.values ns0.x0
+    # @debug "" xₛ ev evp dP _nrm pars F.values[ind] Fp.values[indp]
+    # @debug "" F.values ns0.x0
 
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,

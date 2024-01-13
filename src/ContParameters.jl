@@ -85,9 +85,9 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     tol_param_bisection_event::T = 1e-16  # tolerance on value of parameter
     detect_loop::Bool = false             # detect if the branch loops
 
-    @assert tol_stability > 0 "You must provide a positive tolerance for tol_stability"
-    @assert dsmax >= abs(ds) >= dsmin > 0 "You must provide a valid interval (ordered) for ds. You passed $(dsmax) >= $(abs(ds)) >= $(dsmin) with \ndsmax = $dsmax\nds    = $ds\ndsmin = $dsmin"
-    @assert abs(ds) >= dsmin_bisection > 0 "You must provide a valid interval for `ds` and `dsmin_bisection`"
+    @assert tol_stability >= 0 "You must provide a positive tolerance for tol_stability"
+    @assert dsmax >= abs(ds) >= dsmin >= 0 "You must provide a valid interval (ordered) for ds. You passed $(dsmax) >= $(abs(ds)) >= $(dsmin) with \ndsmax = $dsmax\nds    = $ds\ndsmin = $dsmin"
+    @assert abs(ds) >= dsmin_bisection >= 0 "You must provide a valid interval for `ds` and `dsmin_bisection`"
     @assert p_max >= p_min "You must provide a valid interval [p_min, p_max]"
     @assert iseven(n_inversion) "The option `n_inversion` number must be even"
     @assert 0 <= detect_bifurcation <= 3 "The option `detect_bifurcation` must belong to {0,1,2,3}"

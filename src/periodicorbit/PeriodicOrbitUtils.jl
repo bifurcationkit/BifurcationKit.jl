@@ -104,7 +104,7 @@ function (finalizer::FinalisePO{ <: PeriodicOrbitOCollProblem})(z, tau, step, co
     if isnothing(finalizer.finalise_solution)
         return true
     else
-        return _finsol(z, tau, step, contResult; prob = coll, kF...)
+        return finalizer.finalise_solution(z, tau, step, contResult; prob = coll, kF...)
     end
 end
 
