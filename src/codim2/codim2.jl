@@ -3,6 +3,19 @@ abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 
+# function to get the two lenses associated to 2-param continuation
+@inline function get_lenses(_prob :: Union{FoldMAProblem,
+                                    HopfMAProblem,
+                                    PDMAProblem,
+                                    NSMAProblem})
+    prob_ma = _prob.prob
+    return getlens(prob_ma), getlens(_prob)
+end
+
+@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
+    get_lenses(br.prob)
+end
+
 for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     @eval begin
     """
@@ -107,12 +120,6 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; updat
     else
         return options_cont
     end
-end
-
-function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
-    _prob = br.prob
-    prob_ma = _prob.prob
-    return getlens(prob_ma), getlens(br)
 end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}

@@ -33,6 +33,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
     end
 
     @testset "Fold Codim 2" begin
+        include("codim2_core.jl")
         include("testJacobianFoldDeflation.jl")
         include("codim2.jl")
     end
