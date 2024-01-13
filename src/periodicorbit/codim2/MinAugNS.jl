@@ -328,19 +328,23 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch
         pdjump = abs(abs(ω) - pi) < 100options_newton.tol
-        @debug "pdjump - UPDATE" pdjump abs(abs(ω) - pi) ω
 
         isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
 
          # if the frequency is null, this is not a NS point, we halt the process
-         if 1-cos(ω) <= ϵR1
+         stop_R1 = 1-cos(ω) <= ϵR1
+         if stop_R1
             @warn "[Codim 2 NS - Finalizer] The NS curve seems to be close to a R1 point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the R1 point is not detected, try lowering Newton tolerance or dsmax."
+        end
+
+        if pdjump
+            @warn "[Codim 2 NS - Finalizer] The NS curve seems to jump to a PD curve. Stopping computations at ($p1, $p2). Perhaps it is close to a R2 bifurcation for example."
         end
 
         # call the user-passed finalizer
         resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
 
-        return 1-cos(ω) > ϵR1 && isbif && resFinal
+        return ~stop_R1 && isbif && resFinal && ~pdjump
     end
 
     function test_ch(iter, state)
@@ -377,7 +381,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 prob_ns.l1 = abs(real(prob_ns.l1)) < 1e5 ? real(prob_ns.l1) : state.eventValue[2][2]
             end
         end
-        # Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
+        # Witte, Virginie De “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
         c = cos(ω)
         R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
         R2 = c+1  # μ = {1, -1}

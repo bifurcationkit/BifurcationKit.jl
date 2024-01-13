@@ -929,7 +929,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
-    _nrm > 1e-12 && @warn  "$_nrm"
+    _nrm > 1e-12 && @warn  "[NS normal form PRM], residual = $_nrm"
 
     dP = finite_differences(x -> Π(x,pars).u, xₛ)
     # dP = ForwardDiff.jacobian(x -> Π(x,pars).u, xₛ)
