@@ -35,7 +35,7 @@ poTrap = PeriodicOrbitTrapProblem(
     prob2,
     [1., 0.],
     zeros(2),
-    10, 2)
+    10, 2; update_section_every_step = 1)
 
 show(poTrap)
 BK.isinplace(poTrap)
@@ -63,9 +63,8 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
 
     br_po = continuation((@set poTrap.jacobian = jacobianPO), outpo_f.u,
         PALC(),    (@set opts_po_cont.newton_options.linsolver = _ls);
-        verbosity = 0,    plot = false,
+        verbosity = 0, plot = false,
         linear_algo = BorderingBLS(solver = _ls, check_precision = false),
-        # plotSolution = (x, p; kwargs...) -> BK.plotPeriodicPOTrap(x, poTrap.M, 2, 1; ratio = 2, kwargs...),
         record_from_solution = (u, p) -> BK.getamplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 
     BK.get_periodic_orbit(br_po, 1)

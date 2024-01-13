@@ -99,9 +99,9 @@ for (op, at) in (
                 (:PDMAProblem, AbstractMABifurcationProblem),
                 (:NSMAProblem, AbstractMABifurcationProblem),
                 (:BTMAProblem, AbstractMABifurcationProblem),
-                (:WrapPOTrap, AbstractWrapperFDProblem),
-                (:WrapPOSh, AbstractWrapperShootingProblem),
-                (:WrapPOColl, AbstractWrapperFDProblem),
+                (:WrapPOTrap, AbstractBifurcationProblem),
+                (:WrapPOSh, AbstractBifurcationProblem),
+                (:WrapPOColl, AbstractBifurcationProblem),
                 (:WrapTW, AbstractBifurcationProblem),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)

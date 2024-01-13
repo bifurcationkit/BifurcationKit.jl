@@ -654,7 +654,7 @@ Compute the maximum of the periodic orbit associated to `x`. The keyword argumen
 end
 
 # this function updates the section during the continuation run
-@views function updatesection!(prob::PeriodicOrbitTrapProblem, x, par; stride = 0)
+@views function updatesection!(prob::PeriodicOrbitTrapProblem, x, par)
     @debug "Update section TRAP"
     M, N = size(prob)
     xc = get_time_slices(prob, x)
@@ -669,7 +669,6 @@ end
         applyF(prob, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], par)
         prob.ϕ[ii*N+1:ii*N+N] ./= M
     end
-
     return true
 end
 ####################################################################################################

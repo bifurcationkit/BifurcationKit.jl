@@ -49,24 +49,18 @@ function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
     maximum(x[1:n, :])
 end
 ####################################################################################################
-# functions to insert the problem into the user passed parameters
-struct FinalisePO{Tp, Tf}
-    prob::Tp
-    finalise_solution::Tf
-    updateSectionEveryStep::Int
-end
-
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
-    return FinalisePO(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
+    return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
 end
 
-function (finalizer::FinalisePO)(z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{ <: AbstractPeriodicOrbitProblem})(z, tau, step, contResult; bisection = false, kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     success = converged(get(kF, :state, nothing))
     if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
         @debug "[Periodic orbit] update section"
+        # Trapezoid and Shooting need the parameters for section update:
         updatesection!(finalizer.prob, z.u, setparam(contResult, z.p))
     end
     if isnothing(finalizer.finalise_solution)
@@ -77,7 +71,7 @@ function (finalizer::FinalisePO)(z, tau, step, contResult; bisection = false, kF
 end
 
 # version specific to collocation. Handle mesh adaptation
-function (finalizer::FinalisePO{ <: PeriodicOrbitOCollProblem})(z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem, <: WrapPOColl}})(z, tau, step, contResult; bisection = false, kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     coll = finalizer.prob
     # we first check that the continuation step was successful

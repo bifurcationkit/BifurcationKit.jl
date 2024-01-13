@@ -116,7 +116,7 @@ _wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
 _wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
 _wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
-function (finalizer::FinalisePO{<: AbstractMABifurcationProblem})(z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, contResult; bisection = false, kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
@@ -143,7 +143,7 @@ function (finalizer::FinalisePO{<: AbstractMABifurcationProblem})(z, tau, step, 
     end
 end
 
-function (finalizer::FinalisePO{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; bisection = false, kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     𝐏𝐛 = finalizer.prob.prob
     coll = 𝐏𝐛.prob_vf.prob
