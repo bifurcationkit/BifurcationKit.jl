@@ -245,7 +245,7 @@ plot();BK.plot_periodic_potrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
 opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 2.2, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 0, dsmin_bisection = 1e-7)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 1.2, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 3)
 
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
@@ -417,6 +417,7 @@ out_po = copy(orbitguess_f)
 opt_po_inp = @set opt_po.linsolver = ls
 
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
+
 
 @assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
 @assert 1==0 "tester code_warntype dans potrap_functional_jac! st POTrapFunctional!"

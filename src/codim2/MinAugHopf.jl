@@ -394,9 +394,9 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
 
         @debug "[Hopf] Update vectors a and b"
-        x = getvec(z.u, 𝐇) # hopf point
-        p1, ω = getp(z.u, 𝐇)
-        p2 = z.p           # second parameter
+        x = getvec(z.u, 𝐇)   # hopf point
+        p1, ω = getp(z.u, 𝐇) # first parameter
+        p2 = z.p              # second parameter
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
 
@@ -408,22 +408,21 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
         # compute new b
         T = typeof(p1)
-        local n = T(1)
-        newb, _, cv, it = 𝐇.linbdsolver(J_at_xp, a, b, T(0), 𝐇.zero, n; shift = Complex{T}(0, -ω))
+        local n = one(T)
+        newb, _, cv, it = 𝐇.linbdsolver(J_at_xp, a, b, zero(T), 𝐇.zero, n; shift = Complex{T}(0, -ω))
         ~cv && @debug "[Hopf update] Bordered linear solver for (J-iω) did not converge. it = $it. This is to upate 𝐇.b"
-
 
         # compute new a
         JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-        newa, _, cv, it = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
+        newa, _, cv, it = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), 𝐇.zero, n; shift = Complex{T}(0, ω))
         ~cv && @debug "[Hopf upate] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate 𝐇.a"
 
         𝐇.a .= newa ./ normC(newa)
+
         # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
         𝐇.b .= newb ./ normC(newb)
 
         # we stop continuation at Bogdanov-Takens points
-
         # CA NE DEVRAIT PAS ETRE ISSNOT?
         isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
 

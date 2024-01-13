@@ -390,7 +390,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         end
 
         @debug "[Fold] Update vectors a and b"
-
         x = getvec(z.u) # fold point
         p1 = getp(z.u)  # first parameter
         p2 = z.p        # second parameter
@@ -422,7 +421,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         copyto!(𝐅.b, newb); rmul!(𝐅.b, 1 / normC(newb))
 
         # call the user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
         if isnothing(finaliseUser) == false
             return finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)
         end
