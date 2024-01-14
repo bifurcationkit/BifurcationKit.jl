@@ -20,7 +20,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             )
     bifpt = br.specialpoint[id_bif]
 
-    @assert !(bifpt.type == :endpoint) "Normal form for $(bifpt.type) not implemented"
+    @assert !(bifpt.type == :endpoint) "Don't select an end point!"
 
     # parameters for normal form
     kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
@@ -182,7 +182,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
 
     # dP = ForwardDiff.jacobian( x -> Π(x, pars).u, xₛ)
-    dP = finite_differences(x -> Π(x, pars).u, xₛ; δ = δ)
+    dP = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     J = jacobian(pbwrap, pd0.x0, pars)
     M = MonodromyQaD(J)
 

@@ -123,11 +123,11 @@ end
 type(bp::NeimarkSackerPO) = type(bp.nf)
 
 function Base.show(io::IO, ns::NeimarkSackerPO)
-    printstyled(io, ns.nf.type, " - ",type(ns), color=:cyan, bold = true)
+    printstyled(io, ns.nf.type, " - Neimark-Sacker", color=:cyan, bold = true)
     println(io, " bifurcation point of periodic orbit\n┌─ ", get_lens_symbol(ns.nf.lens)," ≈ $(ns.p).")
     println(io, "├─ Frequency θ ≈ ", ns.ω)
     println(io, "├─ Period at the periodic orbit T ≈ ", abs(ns.T))
-    println(io, "├─ Second frequency of the bifurcated torus ≈ ", abs(2pi/ns.ω))
+    println(io, "├─ Second period of the bifurcated torus ≈ ", abs(2pi/ns.ω))
     if ns.prm
         println(io, "├─ Normal form z -> z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
     else

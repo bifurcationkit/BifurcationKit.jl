@@ -31,7 +31,8 @@ function get_adjoint_basis(L★, λ::Number, eigsolver; nev = 3, verbose = false
     ~cv && @warn "Eigen Solver did not converge"
     I = argmin(abs.(λ★ .- λ))
     verbose && (println("┌── left eigenvalues = "); display(λ★))
-    verbose && println( "├── right eigenvalue = ", λ, "\n└──  left eigenvalue = ", λ★[I])
+    verbose && println( "├── right eigenvalue = ", λ, 
+                      "\n└──  left eigenvalue = ", λ★[I])
     abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
     ζ★ = geteigenvector(eigsolver, ev★, I)
     return copy(ζ★), λ★[I]
@@ -43,7 +44,8 @@ $(SIGNATURES)
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function get_normal_form1d(prob::AbstractBifurcationProblem,
-                    br::ContResult, ind_bif::Int;
+                    br::ContResult,
+                    ind_bif::Int;
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     verbose = false,
                     lens = getlens(br),
@@ -81,7 +83,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # corresponding eigenvector, it must be real
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        @info "Eigen-elements not saved in the branch. Recomputing them..."
+        verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
         @assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
         ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
@@ -115,7 +117,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if autodiff
         R01 = ForwardDiff.derivative(z->residual(prob, x0, set(parbif, lens, z)),p)
     else
-        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     a = dot(R01, ζ★)
     Ψ01, cv, it = ls(L, E(R01))
@@ -127,7 +130,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if autodiff
         R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
     else
-        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
+               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     end
 
     b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
@@ -440,7 +444,8 @@ Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` t
 
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
-                        br::ContResult, id_bif::Int ;
+                        br::ContResult,
+                        id_bif::Int ;
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,
@@ -761,7 +766,7 @@ Compute the Hopf normal form.
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem, 
                             pt::Hopf, 
-                            ls; 
+                            ls::AbstractLinearSolver; 
                             verbose::Bool = false,
                             L = nothing)
     δ = getdelta(prob)
@@ -845,7 +850,8 @@ Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf,
 
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem,
-                    br::AbstractBranchResult, ind_hopf::Int;
+                    br::AbstractBranchResult,
+                    ind_hopf::Int;
                     nev = length(eigenvalsfrombif(br, id_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),
@@ -953,7 +959,7 @@ end
 # on page 202
 function period_doubling_normal_form(prob::AbstractBifurcationProblem,
                                 pt::PeriodDoubling, 
-                                ls; 
+                                ls::AbstractLinearSolver; 
                                 verbose::Bool = false)
     x0 = pt.x0
     p = pt.p
@@ -1040,7 +1046,7 @@ Compute the Neimark-Sacker normal form.
 """
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
                             pt::NeimarkSacker,
-                            ls;
+                            ls::AbstractLinearSolver;
                             detailed = false,
                             verbose::Bool = false)
     δ = getdelta(prob)
@@ -1125,7 +1131,8 @@ Compute the Neimark-Sacker normal form.
 
 """
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
-                    br::AbstractBranchResult, ind_ns::Int;
+                    br::AbstractBranchResult,
+                    ind_ns::Int;
                     nev = length(eigenvalsfrombif(br, id_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),

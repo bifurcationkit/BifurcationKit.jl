@@ -669,10 +669,10 @@ function bautin_normal_form(_prob,
     # TODO IMPROVE THIS
     if 1==1#haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        @info "Recomputing eigenvector on the fly"
+        verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
         _ind = argmin(abs.(_λ .- λ))
-        @info "The eigenvalue is $(_λ[_ind])"
+        verbose && @info "The eigenvalue is $(_λ[_ind])"
         abs(_λ[_ind] - λ) > 10br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
         ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
     else
@@ -931,24 +931,18 @@ function zero_hopf_normal_form(_prob,
     # scalar type
     𝒯 = eltype(Teigvec)
     ϵ = 𝒯(δ)
-
     # get the MA problem
     prob_ma = _prob.prob
-
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
-
     @assert prob_ma isa AbstractProblemMinimallyAugmented
 
     # linear solver
     ls = prob_ma.linsolver
-
     # bordered linear solver
     bls = prob_ma.linbdsolver
-
     # kernel dimension
     N = 3
-
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(N, nev)
 
@@ -958,7 +952,6 @@ function zero_hopf_normal_form(_prob,
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
     eigRes = br.eig
-
     # parameter for vector field
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
@@ -976,11 +969,11 @@ function zero_hopf_normal_form(_prob,
     # TODO IMPROVE THIS
     if 1==1#haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        @info "Recomputing eigenvector on the fly"
+        verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
         # null eigenvalue
         _ind0 = argmin(abs.(_λ))
-        @info "The eigenvalue is $(_λ[_ind0])"
+        verbose && @info "The eigenvalue is $(_λ[_ind0])"
         abs(_λ[_ind0]) > br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
         q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
         # imaginary eigenvalue
@@ -991,7 +984,7 @@ function zero_hopf_normal_form(_prob,
         _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
         λI = _λ[_ind2[_indIm]]
         q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
-        @info "Second eigenvalue = $(λI)"
+        verbose && @info "Second eigenvalue = $(λI)"
     else
         @assert 1==0 "Not done"
         ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
@@ -1294,19 +1287,19 @@ function hopf_hopf_normal_form(_prob,
     # TODO IMPROVE THIS
     if 1==1#haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        @info "Recomputing eigenvector on the fly"
+        verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
         # imaginary eigenvalue iω0
         _ind0 = argmin(abs.(_λ .- im * ω0))
         λ1 = _λ[_ind0]
-        @info "The first eigenvalue  is $(λ1), ω0 = $ω0"
+        verbose && @info "The first eigenvalue  is $(λ1), ω0 = $ω0"
         q1 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
         tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
         # imaginary eigenvalue iω1
         _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
         _indIm = argmin(real(_λ[ii]) for ii in _ind2)
         λ2 = _λ[_ind2[_indIm]]
-        @info "The second eigenvalue is $(λ2)"
+        verbose && @info "The second eigenvalue is $(λ2)"
         q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
     else
         @assert 1==0 "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"

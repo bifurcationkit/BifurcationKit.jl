@@ -271,7 +271,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
     bif_type = br.specialpoint[ind_bif].type
-    @assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf is allowed (for now)."
+    @assert bif_type in (:bt, :zh, :hh) "Only branching from Bogdanov-Takens, Zero-Hopf and Hopf-Hopf is allowed."
 
     if bif_type == :hh
         @assert Tkind <: HopfCont

@@ -76,6 +76,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
                             branchlabel = fill("", length(brs)),
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
+                            plotcirclesbif = true,
                             applytoY = identity,
                             applytoX = identity)
     ind1, ind2 = get_plot_vars(brs[1], vars)
@@ -108,6 +109,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
 
     for (id, res) in pairs(brs)
         @series begin
+            plotcirclesbif --> plotcirclesbif
             putspecialptlegend --> false
             plotfold --> plotfold
             plotspecialpoints --> plotspecialpoints
@@ -236,6 +238,14 @@ function plot_periodic_shooting(x, M; kwargs...)
     plot();plot_periodic_shooting!(x, M; kwargs...)
 end
 ####################################################################################################
+RecipesBase.@recipe function Plots(sol::SolPeriodicOrbit;
+                           )
+    ndim = size(sol.u, 1)
+    @series begin
+        sol.t, sol.u'
+    end
+end
+####################################################################################################
 # plot recipes for the bifurcation diagram
 RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
     for b in bd
@@ -268,6 +278,16 @@ RecipesBase.@recipe function f(bd::Nothing)
     nothing
 end
 ####################################################################################################
+function plot_eigenvals(br::ContResult, with_param = true)
+    p = br.param
+    data = mapreduce(x->x.eigenvals, hcat, br.eig)
+    if with_param
+        plot(p, real.(data'))
+    else
+        plot(real.(data'))
+    end
+end
+####################################################################################################
 # plot recipe for codim 2 plot
 # TODO Use dispatch for this
 RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
@@ -280,7 +300,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
                                     branchlabel = "",
                                     linewidthunstable = 1.0,
                                     linewidthstable = 2linewidthunstable,
-                                    plotcirclesbif = false,
+                                    plotcirclesbif = true,
                                     _basicplot = true,
                                     applytoY = identity,
                                     applytoX = identity) where {Tk <: TwoParamCont, Tprob}

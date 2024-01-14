@@ -54,7 +54,7 @@ function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     println(io, prefix*"ω = ", bp.nf.ω)
     println(io, prefix*"Second lyapunov coefficient l₂ = ", bp.nf.l2)
-    println(io, prefix*"Normal form: i⋅ω⋅u + l₂⋅u⋅|u|⁴")
+    println(io, prefix*"Normal form: i⋅ω⋅z + l₂⋅z⋅|z|⁴")
     detailed && println(io, prefix*"Normal form coefficients (detailed):")
     detailed && println(io, bp.nf)
     nothing

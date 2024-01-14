@@ -200,7 +200,7 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint)
 end
 
 function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
-    printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
+    printstyled(io, bp.type, " - Pitchfork", color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
     println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
     if ~isnothing(bp.nf)
