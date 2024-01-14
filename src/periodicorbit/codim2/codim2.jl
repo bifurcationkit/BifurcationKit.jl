@@ -239,7 +239,11 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     end
 
     # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_2params_finalise(probPO, kwargs, FoldProblemMinimallyAugmented(probPO))
+    if probPO isa PeriodicOrbitOCollProblem
+        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(probPO))), kwargs, probPO.update_section_every_step)
+    else
+        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probPO))), kwargs, probPO.update_section_every_step)
+    end
     _recordsol = modify_po_record(probPO, kwargs, getparams(probPO), getlens(probPO))
     _plotsol = modify_po_plot(probPO, kwargs)
 
