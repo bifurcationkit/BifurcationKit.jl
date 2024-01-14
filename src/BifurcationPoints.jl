@@ -130,6 +130,9 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
                     (:Fold, AbstractSimpleBranchPoint),
                     (:Transcritical, AbstractSimpleBranchPoint),
                     (:PeriodDoubling, AbstractSimpleBranchPointForMaps),
+                    (:BranchPointMap, AbstractSimpleBranchPointForMaps),
+                    (:PitchforkMap, AbstractSimpleBranchPointForMaps),
+                    (:TranscriticalMap, AbstractSimpleBranchPointForMaps)
                     )
     @eval begin
         """
@@ -173,13 +176,18 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
     end
 end
 
-Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf) = Pitchfork(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+for op in (:Pitchfork, :PitchforkMap)
+    @eval begin
+    $op(x0, τ, p, params, lens, ζ, ζ★, nf) = $op(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+    end
+end
 
 istranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::BranchPoint) = :BranchPoint
 type(bp::Pitchfork) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
+type(bp::TranscriticalMap) = :Transcritical
 type(bp::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
@@ -192,17 +200,31 @@ end
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint)
     printstyled(io, type(bp), color=:cyan, bold = true)
+    if bp isa AbstractSimpleBranchPointForMaps
+        printstyled(io, " (Maps)", color=:cyan, bold = true)
+    end
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6):")
+    if bp isa AbstractSimpleBranchPointForMaps
+        println(io, "Normal form x ─▶ x + (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+    else
+        println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+    end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
 end
 
-function Base.show(io::IO, bp::Pitchfork) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     printstyled(io, bp.type, " - Pitchfork", color=:cyan, bold = true)
+    if bp isa PitchforkMap
+        printstyled(io, " (Maps)", color=:cyan, bold = true)
+    end
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
+    if bp isa PitchforkMap
+        println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+    else
+        println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+    end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
@@ -219,6 +241,15 @@ function Base.show(io::IO, bp::PeriodDoubling)
         println(io, "┌─ Normal form:\n├\t x⋅(a⋅δp - 1 + c⋅x²)")
         println(io, "├─ a = ", missing)
         println(io, "└─ c = ", missing)
+    end
+end
+
+function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+    printstyled(io, bp.type, " - Branch point ", color=:cyan, bold = true)
+    println(io, "(Maps) bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
+    println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
+    if ~isnothing(bp.nf)
+        printnf1d(io, bp.nf)
     end
 end
 

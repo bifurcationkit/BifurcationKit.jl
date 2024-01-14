@@ -15,6 +15,19 @@ end
 opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = false)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 100, n_inversion = 4, tol_bisection_eigenvalue = 1e-8, dsmin_bisection = 1e-9)
 ####################################################################################################
+# case of the branch point
+Fbp(u, p) = @. u + (p.μ * p.a) * u + p.c * u^3 + p.b * u^2
+pars_bp = (μ = -0.2, a = -0.456, c = -1.234, b = 0.21)
+
+probMap = BK.BifurcationProblem((x, p) -> Fbp(x, p) .- x, [0.0], pars_bp, (@lens _.μ))
+
+@set! opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
+br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
+
+prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@lens _.μ))
+
+bp = BK.BranchPointMap(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_bp.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
+show(bp)
 # case of the period doubling
 Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
 pars_pd = (μ = -0.2, a = 0.456, c = -1.234)
