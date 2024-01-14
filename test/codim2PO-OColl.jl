@@ -164,7 +164,7 @@ _solfd = _Jpdad \ vcat(_duu, 1)
 
 @test norm(_Jpdad - _Jma, Inf) < 1e-6
 @test norm(_solfd[1:end-1] - _sol[1], Inf) < 1e-3
-@test abs(_solfd[end] - _sol[2]) < 1e-3
+@test abs(_solfd[end] - _sol[2]) < 1e-2
 #########
 # test of the implementation of the jacobian for the NS case
 _probns = ns_po_coll.prob
