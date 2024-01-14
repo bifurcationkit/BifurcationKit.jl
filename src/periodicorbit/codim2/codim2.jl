@@ -356,8 +356,6 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
 
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_2params_finalise(probPO, kwargs, NeimarkSackerProblemMinimallyAugmented(probPO))
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))
@@ -408,6 +406,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     @assert sum(isnan, q) == 0 "Please report this error to the website."
 
     # perform continuation
+    # the finalizer is handled in NS continuation
     branch = continuation_ns(pbwrap, alg,
             nspointguess, getparams(pbwrap),
             lens1, lens2,
@@ -418,7 +417,6 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             kwargs...,
             plot_solution = _plotsol,
             bdlinsolver = FloquetWrapperBLS(bdlinsolver),
-            finalise_solution = _finsol
     )
     return Branch(branch, hh)
 end
