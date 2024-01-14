@@ -435,15 +435,26 @@ function generate_ci_problem(pb::ShootingProblem,
                             use_bordered_array = false, 
                             ksh...)
     u0 = sol(0)
-    @assert u0 isa AbstractVector
-    N = length(u0)
     M = pb.M
 
+    # points for the sections
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
-    probsh = ShootingProblem(prob_de, alg, centers; lens = getlens(bifprob), ksh...)
 
-    cish = reduce(vcat, centers)
-    cish = vcat(cish, tspan[2]-tspan[1])
+    if isnothing(prob_mono)
+        probsh = ShootingProblem(prob_de, alg, centers; lens = getlens(bifprob), ksh...)
+    else
+        @info "here" prob_mono
+        probsh = ShootingProblem(prob_de, alg, prob_mono, alg, centers; lens = getlens(bifprob), ksh...)
+        @info has_mono_DE(probsh.flow)
+    end
+
+    if ~use_bordered_array
+        @assert u0 isa AbstractVector
+        cish = reduce(vcat, centers)
+        cish = vcat(cish, tspan[2]-tspan[1])
+    else
+        cish = BorderedArray(VectorOfArray(deepcopy(centers)), tspan[2]-tspan[1])
+    end
 
     return probsh, cish
 end
