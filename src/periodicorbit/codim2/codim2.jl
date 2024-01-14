@@ -41,6 +41,14 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             GPD::T
             "Fold-NS test values"
             FLIPNS::Int
+            "Resonance 1"
+            R1::T
+            "Resonance 2"
+            R2::T
+            "Resonance 3"
+            R3::T
+            "Resonance 4"
+            R4::T
             "linear solver. Used to invert the jacobian of MA functional"
             linsolver::S
             "linear solver for the jacobian adjoint"
@@ -75,6 +83,10 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # fold-ns
                         real(one(Ty)),     # gpd
                         1,                 # flip-ns
+                        real(one(Ty)),     # R1
+                        real(one(Ty)),     # R2
+                        real(one(Ty)),     # R3
+                        real(one(Ty)),     # R4
                         linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
         end
 
@@ -89,6 +101,10 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # fold-ns
                         real(one(Ty)),     # gpd
                         1,                 # flip-ns
+                        real(one(Ty)),     # R1
+                        real(one(Ty)),     # R2
+                        real(one(Ty)),     # R3
+                        real(one(Ty)),     # R4
                         linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
         end
     end

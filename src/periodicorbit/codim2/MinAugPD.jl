@@ -250,6 +250,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # global variables to save call back
     𝐏𝐝.CP  = one(𝒯)
     𝐏𝐝.GPD = one(𝒯)
+    𝐏𝐝.R2  = one(𝒯)
 
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem
@@ -331,6 +332,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
         ζ★ ./= norm(ζ★)
+        𝐏𝐝.R2 = dot(ζ★, ζ)
 
         pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
         if pbwrap.prob isa ShootingProblem
@@ -357,10 +359,15 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _recordsol2 = isnothing(_recordsol) ?
         (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))...,
                     period = getperiod(prob, getvec(u), nothing), # do not work for PoincareShootingProblem
-                    CP = 𝐏𝐝.CP, 
-                    GPD = 𝐏𝐝.GPD, 
+                    CP = 𝐏𝐝.CP,
+                    GPD = 𝐏𝐝.GPD,
+                    R₂ = 𝐏𝐝.R2,
                     namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
-        (u, p; kw...) -> (; namedprintsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., CP = 𝐏𝐝.CP, GPD = 𝐏𝐝.GPD,)
+        (u, p; kw...) -> (; namedprintsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., 
+                            CP = 𝐏𝐝.CP, 
+                            GPD = 𝐏𝐝.GPD,
+                            R₂ = 𝐏𝐝.R2,
+                            )
 
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver))

@@ -272,10 +272,10 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # current lyapunov coefficient
     𝒯 = eltype(𝒯b)
     𝐍𝐒.l1 = Complex{𝒯}(1, 0)
-    R1 = zero(𝒯)
-    R2 = zero(𝒯)
-    R3 = zero(𝒯)
-    R4 = zero(𝒯)
+    𝐍𝐒.R1 = zero(𝒯)
+    𝐍𝐒.R2 = zero(𝒯)
+    𝐍𝐒.R3 = zero(𝒯)
+    𝐍𝐒.R4 = zero(𝒯)
 
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem
@@ -376,11 +376,11 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         end
         # Witte, Virginie De “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
         c = cos(ω)
-        R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
-        R2 = c+1  # μ = {1, -1}
-        R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
-        R4 = c    # μ = {1, exp(±iπ/2)}
-        return R1, R2, R3, R4, real(prob_ns.l1)
+        𝐍𝐒.R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
+        𝐍𝐒.R2 = c+1  # μ = {1, -1}
+        𝐍𝐒.R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
+        𝐍𝐒.R4 = c    # μ = {1, exp(±iπ/2)}
+        return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
     end
 
     # change the user provided functions by passing probPO in its parameters
@@ -394,10 +394,10 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 # period = getperiod(prob, getvec(u, 𝐍𝐒), nothing), # do not work for PoincareShootingProblem
                 ωₙₛ = getp(u, 𝐍𝐒)[2],
                 CH = 𝐍𝐒.l1,
-                R₁ = R1,
-                R₂ = R2,
-                R₃ = R3,
-                R₄ = R4, 
+                R₁ = 𝐍𝐒.R1,
+                R₂ = 𝐍𝐒.R2,
+                R₃ = 𝐍𝐒.R3,
+                R₄ = 𝐍𝐒.R4, 
                 namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
         (u, p; kw...) -> (; 
             namedprintsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
