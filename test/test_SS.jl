@@ -34,23 +34,24 @@ fl = BK.Flow(vf, flow, dflow); @set! fl.flowFull = flow
 BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,
-    ds = LinRange(0, 1, M+1) |> diff,
-    section = section)
+ds = LinRange(0, 1, M+1) |> diff,
+section = section)
 
 show(probSh)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
-    po = BorderedArray(poguess, 1.)
+po = BorderedArray(poguess, 1.)
 
 dpoguess = VectorOfArray([rand(N) for ii=1:M])
-    dpo = BorderedArray(dpoguess, 2.)
+dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractVector structure
-pov = vcat(vec(po.u), po.p)
-dpov = vcat(vec(dpo.u), dpo.p)
+poguess = VectorOfArray([rand(N) for ii=1:M])
+pov = vcat(reduce(vcat, po.u), po.p)
+dpov = vcat(reduce(vcat, dpo.u), dpo.p)
 resv = probSh(pov, par)
 
-dresv = probSh(pov, par, dpov; δ = δ)
+dresv = probSh(pov, par, dpov; δ)
 resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
@@ -59,7 +60,7 @@ res = probSh(po, par)
 @test norm(vec(res.u[:,:]) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
-dres = probSh(po, par, dpo; δ = δ)
+dres = probSh(po, par, dpo; δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
 @test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
@@ -71,14 +72,14 @@ dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 fl = BK.Flow(vf, flow, dflow)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,
-    ds = LinRange(0,1,M+1) |> diff ,
-    section = section)
+ds = LinRange(0,1,M+1) |> diff ,
+section = section)
 
 poguess = VectorOfArray([rand(N) for ii=1:M])
-    po = BorderedArray(poguess, 1.)
+po = BorderedArray(poguess, 1.)
 
 dpoguess = VectorOfArray([rand(N) for ii=1:M])
-    dpo = BorderedArray(dpoguess, 2.)
+dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractArray structure
 pov = vcat(vec(po.u), po.p)

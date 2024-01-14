@@ -23,7 +23,7 @@ end
 """
     pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
 
-Create a problem to implement the Standard Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
+Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
 - `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
 - `ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
@@ -124,7 +124,7 @@ end
     N = div(length(x) - 1, M)
     return reshape(x[1:end-1], N, M)
 end
-get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
+@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 
 @inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
@@ -180,7 +180,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
         for ii in 1:M
             # we can use views but Sundials will complain
             ip1 = (ii == M) ? 1 : ii+1
-            out.u[ii] .= evolve(sh.flow, xc[ii], par, sh.ds[ii] * T).u .- xc[ip1]
+            copyto!(out.u[ii], evolve(sh.flow, xc[ii], par, sh.ds[ii] * T).u .- xc[ip1])
         end
     else
         @assert 1==0 "Not implemented yet. Try to use an AbstractVector instead"
@@ -242,7 +242,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
-            out.u[ii] .= tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1]
+            copyto!(out.u[ii], tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1])
         end
     else
         @assert 1==0 "Not implemented yet. Try using AbstractVectors instead"
