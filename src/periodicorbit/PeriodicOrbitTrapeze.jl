@@ -1077,7 +1077,13 @@ end
 
 ####################################################################################################
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(prob::PeriodicOrbitTrapProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; kwargs...)
+function re_make(prob::PeriodicOrbitTrapProblem, 
+                prob_vf,
+                hopfpt,
+                ζr::AbstractVector,
+                orbitguess_a,
+                period; 
+                kwargs...)
     M = length(orbitguess_a)
     N = length(ζr)
 
@@ -1088,9 +1094,16 @@ function re_make(prob::PeriodicOrbitTrapProblem, prob_vf, hopfpt, ζr::AbstractV
     # update the problem
     probPO = setproperties(prob, N = N, prob_vf = prob_vf, ϕ = zeros(N*M), xπ = zeros(N*M))
 
-	probPO.ϕ[1:N] .= ζr
-	probPO.xπ[1:N] .= hopfpt.x0
+    orbit = get(kwargs, :orbit, nothing)
 
+    if isnothing(orbit)
+        probPO.ϕ[1:N] .= real.(ζr)
+        probPO.xπ[1:N] .= hopfpt.x0
+    else
+        probPO.xπ .= orbitguess[1:end-1]
+        _sol = get_periodic_orbit(probPO, orbitguess, nothing)
+        probPO.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:,i], getparams(prob_vf)) for i=1:probPO.M])
+    end
     return probPO, orbitguess
 end
 
