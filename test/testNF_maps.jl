@@ -28,6 +28,13 @@ prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@lens _.μ))
 
 bp = BK.BranchPointMap(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_bp.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 show(bp)
+
+nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(), verbose = true)
+@test nf.nf.a ≈ 0 
+@test nf.nf.b1 ≈ pars_bp.a
+@test nf.nf.b2/2 ≈ pars_bp.b
+@test nf.nf.b3/6 ≈ pars_bp.c
+show(nf)
 # case of the period doubling
 Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
 pars_pd = (μ = -0.2, a = 0.456, c = -1.234)

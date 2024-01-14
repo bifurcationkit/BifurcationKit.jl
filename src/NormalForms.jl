@@ -115,7 +115,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # coefficient of p
     δ = getdelta(prob)
     if autodiff
-        R01 = ForwardDiff.derivative(z->residual(prob, x0, set(parbif, lens, z)),p)
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
     else
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
@@ -128,7 +128,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
+        R11 = ForwardDiff.derivative(z -> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
     else
         R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
                apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
@@ -1187,4 +1187,93 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         :SuperCritical
     )
     return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed)
+end
+####################################################################################################
+"""
+$(SIGNATURES)
+
+Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
+
+## Note
+We could have copied the implementation of `get_normal_form1d` but we would have to redefine the jacobian which for shooting problem might sound a bit hacky. Nevertheless, it amounts to applying the same result to G(x) ≡ F(x) - x. Hence, we only chnage the linear solvers below.
+"""
+function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
+                    bp::BranchPointMap,
+                    ls::AbstractLinearSolver;
+                    verbose = false,
+                    tol_fold = 1e-3,
+                    scaleζ = norm,
+                    autodiff = false)
+
+    verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
+    verbose && println("├─ analyse bifurcation at p = ", bp.p)
+
+    x0 = bp.x0
+    p = bp.p
+    lens = bp.lens
+    parbif = bp.params
+    ζ = bp.ζ |> real
+    ζ★ = bp.ζ★ |> real
+    δ = getdelta(prob)
+
+    abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
+    abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
+
+    # jacobian at bifurcation point
+    L = jacobian(prob, x0, parbif)
+
+    @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    ζ★ ./= dot(ζ, ζ★)
+
+    # differentials and projector on Range(L), there are real valued
+    R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
+    R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
+    E(x) = x .- dot(x, ζ★) .* ζ
+
+    # we compute the reduced equation: x + a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+    # coefficient of p
+    δ = getdelta(prob)
+    if autodiff
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
+    else
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    end
+    a = dot(R01, ζ★)
+    Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
+    ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
+    verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
+    verbose && println("├─── a    = ", a)
+
+    # coefficient of x*p
+    if autodiff
+        R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
+    else
+        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
+               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    end
+
+    b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
+    verbose && println("├─── b1   = ", b1)
+
+    # coefficient of x^2
+    b2v = R2(ζ, ζ)
+    b2 = dot(b2v, ζ★)
+    verbose && println("├─── b2/2 = ", b2/2)
+
+    # coefficient of x^3, recall b2v = R2(ζ, ζ)
+    wst, cv, it = ls(L, E(b2v); a₀ = -1) # Golub. Schaeffer Vol 1 page 33, eq 3.22
+    ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
+    b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
+    b3 = dot(b3v, ζ★)
+    verbose && println("└─── b3/6 = ", b3/6)
+
+    bp = (x0, nothing, p, parbif, lens, ζ, ζ★, (;a, b1, b2, b3, Ψ01, wst), :NA)
+    if abs(a) < tol_fold
+        return 100abs(b2/2) < abs(b3/6) ? PitchforkMap(bp[1:end-1]...) : TranscriticalMap(bp...)
+    else
+        return Fold(bp...)
+    end
+    # we should never hit this
+    return nothing
 end
