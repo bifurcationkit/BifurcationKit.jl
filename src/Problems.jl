@@ -208,6 +208,7 @@ for (op, at) in (
                          jvp = nothing,
                          vjp = nothing,
                          J = nothing,
+                         J! = nothing,
                          Jᵗ = nothing,
                          d2F = nothing,
                          d3F = nothing,

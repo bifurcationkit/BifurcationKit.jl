@@ -195,7 +195,7 @@ jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
-                pdpointguess::BorderedArray{vectype, T}, par,
+                pdpointguess::BorderedArray{vectype, 𝒯}, par,
                 lens1::Lens, lens2::Lens,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
@@ -208,7 +208,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 prm = false,
                 kind = PDCont(),
                 usehessian = false,
-                kwargs...) where {T, vectype}
+                kwargs...) where {𝒯, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
@@ -248,8 +248,8 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     lenses = get_lens_symbol(lens1, lens2)
 
     # global variables to save call back
-    𝐏𝐝.CP = one(T)
-    𝐏𝐝.GPD = one(T)
+    𝐏𝐝.CP = one(𝒯)
+    𝐏𝐝.GPD = one(𝒯)
 
     # this function is used as a Finalizer
     # it is called to update the Minimally Augmented problem
@@ -260,8 +260,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) && success)
-            return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
+        if (~mod_counter(step, update_minaug_every_step) || success == false)
+            # we call the user finalizer
+            return _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
         end
         @debug "[codim2 PD] Update a / b dans PD"
 
@@ -281,20 +282,24 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         JPD★ = has_adjoint(𝐏𝐝) ? jad(POWrap, x, newpar) : transpose(JPD)
 
         # normalization
-        n = T(1)
+        n = one(𝒯)
 
         # we solve N[v, σ1] = [0, 1]
-        newb, σ1, cv, itv = pdtest(JPD, a, b, T(0), 𝐏𝐝.zero, n)
+        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n)
         ~cv && @debug "Linear solver for N did not converge."
 
         # # we solve Nᵗ[w, σ2] = [0, 1]
-        newa, σ2, cv, itw = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, n)
+        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n)
         ~cv && @debug "Linear solver for Nᵗ did not converge."
 
         copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))
         # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
         copyto!(𝐏𝐝.b, newb); rmul!(𝐏𝐝.b, 1/normC(newb))
-        return true
+
+        # call the user-passed finalizer
+        resFinal = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
+
+        return resFinal
     end
 
     function test_for_gpd_cp(iter, state)
@@ -318,12 +323,12 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         JPD★ = has_adjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
 
         # compute new b
-        n = T(1)
-        ζ = pdtest(JPD, a, b, T(0), 𝐏𝐝.zero, n)[1]
+        n = one(𝒯)
+        ζ = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n)[1]
         ζ ./= norm(ζ)
 
         # compute new a
-        ζ★ = pdtest(JPD★, b, a, T(0), 𝐏𝐝.zero, n)[1]
+        ζ★ = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n)[1]
         ζ★ ./= norm(ζ★)
 
         pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
@@ -342,6 +347,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
         return prob_pd.GPD, prob_pd.CP
     end
+
+    # change the user provided functions by passing probPO in its parameters
+    _finsol = modify_po_finalise(prob_pd, kwargs, prob.prob.update_section_every_step)
 
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)

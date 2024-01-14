@@ -390,6 +390,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         # if we are in a bisection, we still update the MA problem, this does not work well otherwise
         success = get(kUP, :state, nothing).converged
         if (~mod_counter(step, update_minaug_every_step) || success == false)
+            # we call the user finalizer
             return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
         end
 

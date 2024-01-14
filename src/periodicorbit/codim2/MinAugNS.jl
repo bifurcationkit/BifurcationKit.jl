@@ -286,15 +286,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         # we first check that the continuation step was successful
         # if not, we do not update the problem with bad information!
         success = get(kUP, :state, nothing).converged
-        if (mod_counter(step, 1) && success)
-            resFin = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
-            if ~resFin
-                return false
-            end
-        end
-
-        if ~mod_counter(step, update_minaug_every_step)
-            return true
+        if (~mod_counter(step, update_minaug_every_step) || success == false)
+            # we call the user finalizer
+            return _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
         end
         @debug "[codim2 NS] Update a / b dans NS"
 
@@ -341,7 +335,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         end
 
         # call the user-passed finalizer
-        resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
+        resFinal = _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
 
         return ~stop_R1 && isbif && resFinal && ~pdjump
     end
@@ -388,6 +382,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         R4 = c    # μ = {1, exp(±iπ/2)}
         return R1, R2, R3, R4, real(prob_ns.l1)
     end
+
+    # change the user provided functions by passing probPO in its parameters
+    _finsol = modify_po_finalise(prob_ns, kwargs, prob.prob.update_section_every_step)
 
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)
