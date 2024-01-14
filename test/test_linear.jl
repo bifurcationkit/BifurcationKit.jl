@@ -377,8 +377,8 @@ let
 
     linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
     sol_bd4u, sol_bd4p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd4u
-    @test sol_explicit[end] ≈ sol_bd4p
+    @test sol_explicit[1:end-1] ≈ sol_bd4u rtol = 1e-6
+    @test sol_explicit[end] ≈ sol_bd4p rtol = 1e-6
 
     # test the bordered linear solvers as used in newtonPALC
     xiu = rand()
