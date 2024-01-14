@@ -80,6 +80,8 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     # we get the collocation problem
     coll = getprob(br).prob
 
+    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
+
     if get_plot_backend() == BK_Makie()
         plotsol = (ax, x, p;ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p;k...)
     else
@@ -101,6 +103,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
+        finalise_solution = _finsol,
         kwargs...
         )
     correct_bifurcation(br_fold_po)

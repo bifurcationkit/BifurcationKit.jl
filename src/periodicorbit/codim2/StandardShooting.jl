@@ -189,6 +189,8 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     pbwrap = getprob(br)
     probsh = pbwrap.prob
 
+    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probsh)),lens2), kwargs, probsh.update_section_every_step)
+
     probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getparams(br), getlens(br);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
@@ -204,6 +206,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
         start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
+        finalise_solution = _finsol,
         kwargs...)
 end
 
