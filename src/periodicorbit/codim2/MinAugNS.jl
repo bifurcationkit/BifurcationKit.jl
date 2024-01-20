@@ -56,7 +56,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::BorderedArray, pa
 end
 
 @views function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐍𝐒(x[1:end-2], x[end-1], x[end], params)
+    res = 𝐍𝐒(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
 

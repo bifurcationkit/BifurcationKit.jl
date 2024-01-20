@@ -176,7 +176,7 @@ end
 # function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)
 #     @assert ratio > 0 "You need at least one component"
 #     n = Nx*Ny
-#     outpo = reshape(x[1:end-1], ratio * n, M)
+#     outpo = reshape(x[begin:end-1], ratio * n, M)
 #     po = reshape(x[1:n,1], Nx, Ny)
 #     rg = 2:6:M
 #     for ii in rg

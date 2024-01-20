@@ -44,7 +44,7 @@ norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p
 zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
 
 # getters, useful for dispatch
-getvec(x::AbstractVector) = @view x[1:end-1]
+getvec(x::AbstractVector) = @view x[begin:end-1]
 getp(x::AbstractVector) = x[end]
 getvec(x::BorderedArray) = x.u
 getp(x::BorderedArray{vectype, T}) where {vectype, T <: Number} = x.p

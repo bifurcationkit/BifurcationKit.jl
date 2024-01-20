@@ -231,7 +231,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
 
     M = get_mesh_size(probPO)
     ϕ = 0
-    orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
+    orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = gh.lens
@@ -348,7 +348,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
 
     M = get_mesh_size(probPO)
     ϕ = 0
-    orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
+    orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = hh.lens
@@ -411,8 +411,8 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1
-        q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) #≈ ker(J)
-        p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+        q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
+        p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
         @set! contParams.newton_options.eigsolver = FloquetColl()
     else

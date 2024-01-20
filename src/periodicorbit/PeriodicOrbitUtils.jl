@@ -40,12 +40,12 @@ end
 amplitude(x::AbstractMatrix, n) =  maximum(x[1:n, :]) - minimum(x[1:n, :])
 
 function amplitude(x::AbstractVector, n, M; ratio = 1)
-    xc = reshape(x[1:end-1], ratio * n, M)
+    xc = reshape(x[begin:end-1], ratio * n, M)
     amplitude(xc, n)
 end
 
 function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
-    xc = reshape(x[1:end-1], ratio * n, M)
+    xc = reshape(x[begin:end-1], ratio * n, M)
     maximum(x[1:n, :])
 end
 ####################################################################################################

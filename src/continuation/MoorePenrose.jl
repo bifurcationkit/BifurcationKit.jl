@@ -182,14 +182,14 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
                 # pinv(Array(Jb)) * res_f seems to work better than the following
                 dx = LinearAlgebra.pinv(Array(Jb)) * res_f; flag = true;
             end
-            x .-= @view dx[1:end-1]
+            x .-= @view dx[begin:end-1]
             p -= dx[end]
             itlinear = 1
         else
             @debug "Moore-Penrose Iterative"
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # X .= X .- A \ vcat(res_f, 0)
-            # x .= X[1:end-1]; p = X[end]
+            # x .= X[begin:end-1]; p = X[end]
             du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(T), one(T), one(T))
             minus!(x, du)
             p -= dup

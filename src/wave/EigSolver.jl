@@ -25,7 +25,7 @@ function (l::DefaultGEig)(Jac, nev; kwargs...)
     nev2 = min(nev, length(I))
     J = findall( abs.(F.values[I]) .< 100000)
     # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
-    return Complex.(F.values[I[J[1:nev2]]]), Complex.(F.vectors[:, I[J[1:nev2]]]), true, 1
+    return Complex.(F.values[I[J[begin:nev2]]]), Complex.(F.vectors[:, I[J[begin:nev2]]]), true, 1
 end
 
 convertToGEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B from sparse to Array

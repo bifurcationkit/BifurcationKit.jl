@@ -204,21 +204,21 @@ end
 function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)
     @assert ratio > 0 "You need at least one component"
     n = Nx*Ny
-    outpo = reshape(x[1:end-1], ratio * n, M)
+    outpo = reshape(x[begin:end-1], ratio * n, M)
     po = reshape(x[1:n,1], Nx, Ny)
     rg = 2:6:M
     for ii in rg
         po = hcat(po, reshape(outpo[1:n,ii], Nx, Ny))
     end
     heatmap!(po; color = :viridis, fill=true, xlabel = "space", ylabel = "space", kwargs...)
-    for ii in 1:length(rg)
+    for ii in eachindex(rg)
         plot!([ii*Ny, ii*Ny], [1, Nx]; color = :red, width = 3, label = "", kwargs...)
     end
 end
 
 function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
-    outpo = reshape(outpof[1:end-1], ratio * n, M)
+    outpo = reshape(outpof[begin:end-1], ratio * n, M)
     if ratio == 1
         heatmap(outpo[1:n,:]', ylabel="Time", color=:viridis)
     else

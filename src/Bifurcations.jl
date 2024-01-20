@@ -45,7 +45,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
             idx = length(branch) - 1,
             param = getp(state),
             norm = iter.normC(getx(state)),
-            printsol = NamedTuple{keys(branch[end-1])[1:npar]}(values(branch[end-1])[1:npar]),
+            printsol = NamedTuple{keys(branch[end-1])[begin:npar]}(values(branch[end-1])[begin:npar]),
             x = getsolution(iter.prob, _copy(getx(state))),
             τ = copy(state.τ),
             ind_ev = 0,
@@ -247,7 +247,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
                 "\n├─── bifurcation ∈ ", getinterval(interval...),
                 ", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
                 "\n├─── ", length(ct0)," Eigenvalues closest to ℜ=0:\n")
-            verbose && Base.display(sort(ct0[1:min(5, length(ct0))],by=real))
+            verbose && Base.display(sort(ct0[begin:min(5, length(ct0))], by = real))
         end
 
         biflocated = abs(real.(rightmost(state.eigvals))[1]) < contParams.tol_bisection_eigenvalue

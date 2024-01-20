@@ -446,7 +446,7 @@ function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, p
     M = get_mesh_size(probPSh)
     @assert length(normals) == M
     orbitguess_bar = zeros(length(centers[1])-1, M)
-    for ii in 1:length(normals)
+    for ii in eachindex(normals)
         orbitguess_bar[:, ii] .= R(hyper, centers[ii], ii)
     end
     # set jacobian for the flow too

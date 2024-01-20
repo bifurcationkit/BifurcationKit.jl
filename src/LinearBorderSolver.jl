@@ -216,7 +216,7 @@ function (lbs::MatrixBLS)(J, dR,
     # solve the equations and return the result
     rhs = vcat(R, n)
     res = A \ rhs
-    return (@view res[1:end-1]), res[end], true, 1
+    return (@view res[begin:end-1]), res[end], true, 1
 end
 
 # version used in PALC
@@ -241,7 +241,7 @@ function (lbs::MatrixBLS)(::Val{:Block}, J, a::Tuple, b::Tuple, c::AbstractMatri
     # A = [J hcat(a...); hcat(b...)' c]
     A = vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
     sol = A \ vcat(rhst, rhsb)
-    return (@view sol[1:end-n]), (@view sol[end-n+1:end]), true, 1
+    return (@view sol[begin:end-n]), (@view sol[end-n+1:end]), true, 1
 end
 ####################################################################################################
 # composite type to save the bordered linear system with expression
@@ -275,13 +275,13 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     # This implements the case where Tc is a number, ie there is one scalar constraint in the
     # bordered linear system
     out = similar(x)
-    xu = @view x[1:end-1]
+    xu = @view x[begin:end-1]
     xp = x[end]
     # copyto!(out.u, apply(lbmap.J, x.u))
     if isnothing(lbmap.shift)
-        out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
+        out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
     else # we do this to fuse for-loops
-        out[1:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
+        out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
     end
     out[end] = lbmap.dot(lbmap.b, xu)  + lbmap.c  * xp
     return out
@@ -309,13 +309,13 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::AbstractArray) where {Tj, Ta <
     # bordered linear system
     out = similar(x)
     m = length(lbmap.a)
-    xu = @view x[1:end-m]
+    xu = @view x[begin:end-m]
     xp = @view x[end-m+1:end]
 
-    outu = @view out[1:end-m]
+    outu = @view out[begin:end-m]
     outp = @view out[end-m+1:end]
 
-    out[1:end-m] .= apply(lbmap.J, xu)
+    out[begin:end-m] .= apply(lbmap.J, xu)
     for ii in eachindex(lbmap.a)
         axpy!(xp[ii], lbmap.a[ii], outu)
     end
@@ -355,7 +355,7 @@ MatrixFreeBLS(use_bordered_array::Bool = true) = MatrixFreeBLS(nothing, use_bord
 MatrixFreeBLS(::Nothing) = MatrixFreeBLS()
 MatrixFreeBLS(S::AbstractLinearSolver) = MatrixFreeBLS(S, ~(S isa GMRESIterativeSolvers))
 
-get_vec_bls(x::AbstractVector, m::Int = 1) = @view x[1:end-m]
+get_vec_bls(x::AbstractVector, m::Int = 1) = @view x[begin:end-m]
 get_vec_bls(x::BorderedArray, m::Int = 1)  = x.u
 
 get_par_bls(x::AbstractVector, m::Int) = @view x[end-m+1:end]

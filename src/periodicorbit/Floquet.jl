@@ -75,7 +75,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, du::A
     N = div(length(x) - 1, M)
 
     # extract the time slices
-    xv = @view x[1:end-1]
+    xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
 
     out = copy(du)
@@ -103,7 +103,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
     Mono = zeros(N, N)
 
     # extract the time slices
-    xv = @view x[1:end-1]
+    xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
     du = zeros(N)
 
@@ -154,7 +154,7 @@ end
     N = div(length(x) - 1, M)
 
     # extract the time slices
-    xv = x[1:end-1]
+    xv = x[begin:end-1]
     xc = reshape(xv, N, M)
 
     out = evolve(sh.flow, Val(:SerialdFlow), xc[:, 1], par, ζ, sh.ds[1] * T).du

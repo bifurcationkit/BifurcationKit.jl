@@ -20,7 +20,7 @@ end
         return x
     end
     N = div(length(x) - 1, M)
-    return reshape(x[1:end-1], N, M)
+    return reshape(x[begin:end-1], N, M)
 end
 
 # constructors for the Poincaré return map

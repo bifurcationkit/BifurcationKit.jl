@@ -181,17 +181,17 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
 
-    # dP = ForwardDiff.jacobian( x -> Π(x, pars).u, xₛ)
-    dP = finite_differences(x -> Π(x, pars).u, xₛ; δ)
+    # dΠ = ForwardDiff.jacobian( x -> Π(x, pars).u, xₛ)
+    dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     J = jacobian(pbwrap, pd0.x0, pars)
     M = MonodromyQaD(J)
 
     Fₘ = eigen(M)
-    F = eigen(dP)
+    F = eigen(dΠ)
 
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
-    Fp = eigen(dP')
+    Fp = eigen(dΠ')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
 
@@ -492,12 +492,12 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
 
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
     xₛ = pd0.x0[1:N]
-    dP = finite_differences(x -> Π(x,pars).u, xₛ)
-    F = eigen(dP)
+    dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
+    F = eigen(dΠ)
 
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
-    Fp = eigen(dP')
+    Fp = eigen(dΠ')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
 
@@ -632,8 +632,8 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
 
     Π = PoincareMap(pbwrap, ns0.x0, pars, optn)
     xₛ = ns0.x0[1:N]
-    dP = finite_differences(x -> Π(x,pars).u, xₛ)
-    F = eigen(dP)
+    dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
+    F = eigen(dΠ)
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-12 && @warn  "$_nrm"
@@ -641,7 +641,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     ####
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
     ev = F.vectors[:, ind]
-    Fp = eigen(dP')
+    Fp = eigen(dΠ')
     indp = argmin(abs.(log.(complex.(Fp.values)) .+ Complex(0, ns0.ω )))
     evp = Fp.vectors[:, indp]
 
@@ -931,17 +931,17 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
 
-    dP = finite_differences(x -> Π(x,pars).u, xₛ)
-    # dP = ForwardDiff.jacobian(x -> Π(x,pars).u, xₛ)
+    dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
+    # dΠ = ForwardDiff.jacobian(x -> Π(x,pars).u, xₛ)
     J = jacobian(pbwrap, ns0.x0, pars)
     M = MonodromyQaD(J)
 
     Fₘ = eigen(M)
-    F = eigen(dP)
+    F = eigen(dΠ)
 
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
     ev = F.vectors[:, ind]
-    Fp = eigen(dP')
+    Fp = eigen(dΠ')
     indp = argmin(abs.(log.(complex.(Fp.values)) .+ Complex(0, ns0.ω )))
     evp = Fp.vectors[:, indp]
 

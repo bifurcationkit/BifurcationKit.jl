@@ -45,7 +45,7 @@ function (𝐅::FoldProblemMinimallyAugmented)(x::BorderedArray, params)
 end
 
 @views function (𝐅::FoldProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐅(x[1:end-1], x[end], params)
+    res = 𝐅(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
 

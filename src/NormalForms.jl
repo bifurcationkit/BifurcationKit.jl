@@ -151,7 +151,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01, wst), :NA)
     if abs(a) < tol_fold
-        return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[1:end-1]...) : Transcritical(bp...)
+        return 100abs(b2/2) < abs(b3/6) ? Pitchfork(bp[begin:end-1]...) : Transcritical(bp...)
     else
         return Fold(bp...)
     end
@@ -259,7 +259,7 @@ function factor3d(i,j,k)
     end
 end
 
-function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
+function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::𝒯) where 𝒯
     # formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
     # dimension of the kernel
     N = length(bp.ζ)
@@ -271,10 +271,10 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::T) where T
     out .= p .* nf.a
 
     # factor to account for factorials
-    factor = one(T)
+    factor = one(𝒯)
 
     @inbounds for ii in 1:N
-        factor = one(T)
+        factor = one(𝒯)
         out[ii] = 0
         # coefficient x*p
         for jj in 1:N

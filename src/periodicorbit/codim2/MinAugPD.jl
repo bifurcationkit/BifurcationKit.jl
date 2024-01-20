@@ -67,7 +67,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x::BorderedArray, p
 end
 
 @views function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐏𝐝(x[1:end-1], x[end], params)
+    res = 𝐏𝐝(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
 

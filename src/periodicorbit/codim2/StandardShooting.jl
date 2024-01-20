@@ -260,7 +260,7 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         # compute the full eigenvector, version with bordered problem
         ls = options_cont.newton_options.linsolver
         J = jacobian_period_doubling(pbwrap, bifpt.x, par_pd)
-        rhs = zero(bifpt.x)[1:end-1]; rhs[end] = 1
+        rhs = zero(bifpt.x)[begin:end-1]; rhs[end] = 1
         q, = ls(J, rhs); q ./= norm(q) #≈ ker(J)
         # p, = ls(transpose(J), rhs); p ./= norm(p)
         p = copy(q)

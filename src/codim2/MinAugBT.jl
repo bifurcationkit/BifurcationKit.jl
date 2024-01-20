@@ -109,7 +109,7 @@ function (𝐁𝐓::BTProblemMinimallyAugmented)(x::BorderedArray, params)
 end
 
 @views function (𝐁𝐓::BTProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐁𝐓(x[1:end-2], x[end-1], x[end], params)
+    res = 𝐁𝐓(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
 ################################################################################

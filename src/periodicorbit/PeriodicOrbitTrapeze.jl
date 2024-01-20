@@ -180,8 +180,8 @@ function PeriodicOrbitTrapProblem(prob_vf,
     prob.xπ .= 0
     prob.ϕ .= 0
 
-    prob.xπ[1:length(xπ)] .= xπ
-    prob.ϕ[1:length(ϕ)] .= ϕ
+    prob.xπ[eachindex(xπ)] .= xπ
+    prob.ϕ[eachindex(ϕ)] .= ϕ
     return prob
 end
 
@@ -257,9 +257,9 @@ function potrap_functional!(pb::AbstractPOFDProblem, out, u, par)
 
         # this is for CuArrays.jl to work in the mode allowscalar(false)
         if on_gpu(pb)
-            return @views vcat(out[1:end-1], dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
+            return @views vcat(out[begin:end-1], dot(u[begin:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
         else
-            out[end] = @views dot(u[1:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
+            out[end] = @views dot(u[begin:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
             return out
         end
 end
@@ -320,7 +320,7 @@ function Aγ!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::A
     u0c = get_time_slices(pb, u0)
 
     # compute the cyclic part
-    @views Jc(pb, outc, u0[1:end-1-N], par, T, du[1:end-N], outc[:, M])
+    @views Jc(pb, outc, u0[begin:end-1-N], par, T, du[begin:end-N], outc[:, M])
 
     # closure condition ensuring a periodic orbit
     duc = reshape(du, N, M)
@@ -438,14 +438,14 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
     AγBlock = jacobian_potrap_block(pb, u0, par; γ = γ)
 
     # we now set up the last line / column
-    @views ∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
+    @views ∂TGpo = (pb(vcat(u0[begin:end-1], T + δ), par) .- pb(u0, par)) ./ δ
 
     # this is "bad" for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
-    @views Aγ = hcat(Aγ, ∂TGpo[1:end-1])
+    @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
     Aγ = vcat(Aγ, spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, 1:length(pb.ϕ)] .= pb.ϕ
+    Aγ[N*M+1, eachindex(pb.ϕ)] .= pb.ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
     return Aγ
 end
@@ -499,7 +499,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
+        J0[N*M+1, eachindex(pb.ϕ)] .=  pb.ϕ
 
         return J0
 end
@@ -553,7 +553,7 @@ end
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, 1:length(pb.ϕ)] .=  pb.ϕ
+        J0[N*M+1, eachindex(pb.ϕ)] .=  pb.ϕ
     end
 
     return J0
@@ -579,7 +579,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 
     In = get_mass_matrix(pb)
 
-    u0c = reshape(u0[1:end-1], N, M)
+    u0c = reshape(u0[begin:end-1], N, M)
     outc = similar(u0c)
 
     h = T * get_time_step(pb, 1)
@@ -606,7 +606,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 @views function get_periodic_orbit(prob::AbstractPOFDProblem, u, p)
     T = getperiod(prob, u, p)
     M, N = size(prob)
-    uv = u[1:end-1]
+    uv = u[begin:end-1]
     uc = reshape(uv, N, M)
     return SolPeriodicOrbit(t = cumsum(T .* collect(prob.mesh)), u = uc)
 end
@@ -627,7 +627,7 @@ Compute `norm(du/dt)`
 @views function get_time_diff(pb::PeriodicOrbitTrapProblem, u)
     M, N = size(pb)
     T = extract_period_fdtrap(pb, u)
-    uc = reshape(u[1:end-1], N, M)
+    uc = reshape(u[begin:end-1], N, M)
     return [norm(uc[:,ii+1].-uc[:,ii]) * T/M for ii in 1:M-1]
 end
 
@@ -661,7 +661,7 @@ end
     T = extract_period_fdtrap(prob, x)
 
     # update the reference point
-    prob.xπ .= x[1:end-1]
+    prob.xπ .= x[begin:end-1]
 
     # update the normals
     for ii in 0:M-1
@@ -752,7 +752,7 @@ end
 @views function (ls::AγLinearSolver)(A::AγOperatorLU, rhs)
     # dimension of a time slice
     N = A.N
-    xbar, flag, numiter = ls.linsolver(A.Jc, rhs[1:end - N])
+    xbar, flag, numiter = ls.linsolver(A.Jc, rhs[begin:end - N])
     !flag && @warn "Sparse solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
@@ -761,7 +761,7 @@ end
     # dimension of a time slice
     N = A.prob.N
     # we invert the cyclic part Jc of Aγ
-    xbar, flag, numiter = ls.linsolver(A.Jcfact, rhs[1:end - N])
+    xbar, flag, numiter = ls.linsolver(A.Jcfact, rhs[begin:end - N])
     !flag && @warn "Sparse solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
@@ -778,7 +778,7 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltyp
     T = extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE CE vcat!
-    @views J.∂TGpo .= (J.Aγ.prob(vcat(u0[1:end-1], T + δ), par) .- J.Aγ.prob(u0, par)) ./ δ
+    @views J.∂TGpo .= (J.Aγ.prob(vcat(u0[begin:end-1], T + δ), par) .- J.Aγ.prob(u0, par)) ./ δ
 
     J.Aγ(u0, par) # update Aγ
 
@@ -794,9 +794,9 @@ end
 @views function apply(J::POTrapJacobianBordered, dx)
     # this function would be much more efficient if
     # we call J.Aγ.prob(x, par, dx) but we dont have (x, par)
-    out1 = apply(J.Aγ, dx[1:end-1])
-    out1 .+= J.∂TGpo[1:end-1] .* dx[end]
-    return vcat(out1, dot(J.Aγ.prob.ϕ, dx[1:end-1]) + dx[end] * J.∂TGpo[end])
+    out1 = apply(J.Aγ, dx[begin:end-1])
+    out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
+    return vcat(out1, dot(J.Aγ.prob.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
 ####################################################################################################
 # linear solver for the PO functional, akin to a bordered linear solver
@@ -1100,7 +1100,7 @@ function re_make(prob::PeriodicOrbitTrapProblem,
         probPO.ϕ[1:N] .= real.(ζr)
         probPO.xπ[1:N] .= hopfpt.x0
     else
-        probPO.xπ .= orbitguess[1:end-1]
+        probPO.xπ .= orbitguess[begin:end-1]
         _sol = get_periodic_orbit(probPO, orbitguess, nothing)
         probPO.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:,i], getparams(prob_vf)) for i=1:probPO.M])
     end
@@ -1141,7 +1141,7 @@ function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
 
     ci = generate_solution(probtrap, t -> sol(tspan[1] + t*period/(2pi)), period)
     _sol = get_periodic_orbit(probtrap, ci, nothing)
-    probtrap.xπ .= ci[1:end-1]
+    probtrap.xπ .= ci[begin:end-1]
     probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:,i], sol.prob.p) for i=1:probtrap.M])
 
     return probtrap, ci
