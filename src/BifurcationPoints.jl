@@ -185,6 +185,7 @@ end
 istranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
 type(bp::BranchPoint) = :BranchPoint
 type(bp::Pitchfork) = :Pitchfork
+type(bp::PitchforkMap) = :Pitchfork
 type(bp::Fold) = :Fold
 type(bp::Transcritical) = :Transcritical
 type(bp::TranscriticalMap) = :Transcritical
@@ -198,19 +199,19 @@ function printnf1d(io, nf; prefix = "")
     println(io, prefix * "└─ b3 = ", nf.b3)
 end
 
-function Base.show(io::IO, bp::AbstractBifurcationPoint)
-    printstyled(io, type(bp), color=:cyan, bold = true)
+function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
+    printstyled(io, prefix*string(type(bp)), color=:cyan, bold = true)
     if bp isa AbstractSimpleBranchPointForMaps
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
     if bp isa AbstractSimpleBranchPointForMaps
-        println(io, "Normal form x ─▶ x + (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form x ─▶ x + (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
     else
-        println(io, "Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
     end
     if ~isnothing(bp.nf)
-        printnf1d(io, bp.nf)
+        printnf1d(io, bp.nf; prefix)
     end
 end
 

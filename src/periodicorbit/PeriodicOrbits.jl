@@ -491,17 +491,17 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
-            ind_bif::Int,
-            _contParams::ContinuationPar;
-            alg = br.alg,
-            δp = _contParams.ds, 
-            ampfactor = 1,
-            usedeflation = false,
-            linear_algo = nothing,
-            detailed = false,
-            prm = true,
-            override = false,
-            kwargs...) where Tprob
+                    ind_bif::Int,
+                    _contParams::ContinuationPar;
+                    alg = br.alg,
+                    δp = _contParams.ds, 
+                    ampfactor = 1,
+                    usedeflation = false,
+                    linear_algo = nothing,
+                    detailed = false,
+                    prm = true,
+                    override = false,
+                    kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type

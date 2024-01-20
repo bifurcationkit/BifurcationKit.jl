@@ -74,7 +74,9 @@ function Base.show(io::IO, bp::BranchPointPO)
     printstyled(io, type(bp), color=:cyan, bold = true)
     println(io, " bifurcation point of periodic orbit\n┌─ ", get_lens_symbol(bp.nf.lens)," ≈ $(bp.nf.p)")
     println(io, "├─ Period = ", abs(bp.T))
-    println(io, "└─ Problem: ", typeof(bp.prob).name.name)
+    println(io, "├─ Problem: ", typeof(bp.prob).name.name)
+    println(io, "└─ normal form =")
+    show(io, bp.nf; prefix = "\t")
 end
 
 ####################################################################################################

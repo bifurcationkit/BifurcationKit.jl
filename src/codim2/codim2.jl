@@ -333,7 +333,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             ζ, ζstar,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
-            compute_eigen_elements = compute_eigen_elements,
+            compute_eigen_elements,
             kwargs...
             )
         return Branch(branch, nf)
@@ -366,7 +366,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             ζ, ζstar,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
-            compute_eigen_elements = compute_eigen_elements,
+            compute_eigen_elements,
             kwargs...
             )
         return Branch(branch, nf)

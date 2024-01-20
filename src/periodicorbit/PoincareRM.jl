@@ -134,7 +134,6 @@ function (Π::PoincaréMap)(xₛ, par)
 end
 
 @views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
-    # x has size ?? - N
     # shooting problem
     coll = Π.probpo.prob
     N,_,_ = size(coll)
@@ -152,7 +151,6 @@ end
 function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
-    # get the size of the state space
     # we construct the initial guess
     x₀ = Π.po
 
@@ -160,7 +158,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
-    solΠ = newton(probΠ, NewtonPar(verbose = false))
+    solΠ = newton(probΠ, NewtonPar())
     ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map. Residuals = $(solΠ.residuals)"
     return solΠ.u
 end

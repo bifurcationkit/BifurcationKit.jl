@@ -193,7 +193,8 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProbl
     end
 end
 ####################################################################################################
-function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
+function continuation(br::AbstractResult{Tkind, Tprob},
+                    ind_bif::Int,
                     options_cont::ContinuationPar,
                     probPO::AbstractPeriodicOrbitProblem;
                     detect_codim2_bifurcation::Int = 0,
@@ -292,10 +293,10 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
     rhs = zero(orbitguess); #rhs[end] = 1
-    q, = bdlinsolver(jacpo, p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
+    q, = bdlinsolver(jacpo,  p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
     p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
 
-    q, = bdlinsolver(jacpo, p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
+    q, = bdlinsolver(jacpo,  p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
     p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
 
     @assert sum(isnan, q) == 0 "Please report this error to the website."
@@ -338,11 +339,11 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
     𝒯 = typeof(ds)
-    pred = predictor(hh, Val(:NS), ds; verbose = verbose, ampfactor = 𝒯(ampfactor))
-    pred0 = predictor(hh, Val(:NS), 0; verbose = verbose, ampfactor = 𝒯(ampfactor))
+    pred = predictor(hh, Val(:NS), ds; verbose, ampfactor = 𝒯(ampfactor))
+    pred0 = predictor(hh, Val(:NS), 0; verbose, ampfactor = 𝒯(ampfactor))
 
-    _orbit = whichns == 1 ? pred.ns1 : pred.ns2
-    period = whichns == 1 ? pred.T1 : pred.T2
+    _orbit  = whichns == 1 ? pred.ns1 : pred.ns2
+    period  = whichns == 1 ? pred.T1  : pred.T2
     period0 = whichns == 1 ? pred0.T1 : pred0.T2
 
     M = get_mesh_size(probPO)
@@ -368,7 +369,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         "\n├─── Hopf-Hopf params = ", pred0.params1,
         "\n├─── new params     p = ", _params, ", p - p0 = ", _params - pred0.params1,
         "\n├─── period         T = ", period, " (from T = $(period0))",
-        "\n├─ Method = \n", probPO, "\n")
+        "\n└─ Method = \n", probPO, "\n")
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)

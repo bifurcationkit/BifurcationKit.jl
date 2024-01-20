@@ -378,6 +378,8 @@ $(SIGNATURES)
 
 [INTERNAL] Implementation of ∫_0^T < u(t), v(t) > dt.
 
+```∫(pb, uc, vc, T = 1)```
+
 # Arguments
 - uj  n x (m + 1)
 - vj  n x (m + 1)

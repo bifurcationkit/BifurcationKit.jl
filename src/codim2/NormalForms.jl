@@ -1363,7 +1363,7 @@ function hopf_hopf_normal_form(_prob,
         x0, parbif,
         lenses,
         (;q1, q2), (;p1, p2),
-        (;λ1 = λ1, λ2 = λ2),
+        (;λ1, λ2),
         :none
     )
 
@@ -1441,7 +1441,7 @@ function hopf_hopf_normal_form(_prob,
     dω1, dω2 = [imag(G1011), imag(G0021)/2] .- (imag.(Γ) * α) # formula (28) in REF2
     ns2 = (; dω1, dω2, α)
 
-    return @set pt.nf = (;λ1 = λ1, λ2 = λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
+    return @set pt.nf = (;λ1, λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
 end
 
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
@@ -1503,18 +1503,18 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor =
         @. x2 + 2ϵ * real(q2 * cis(θ)) + 2ϵ^2 * real(h₀₀₂₀ * cis(2θ))
     end
     
-    return (ns1 = t -> NS1(t),
+    return (;ns1 = t -> NS1(t),
             ns2 = t -> NS2(t),
             params1 = (@. par0 - ns1.α * ϵ^2),
             params2 = (@. par0 - ns2.α * ϵ^2),
-            ω11 = ω11,
-            ω12 = ω12,
-            ω21 = ω21,
-            ω22 = ω22,
+            ω11,
+            ω12,
+            ω21,
+            ω22,
             T1 = 2pi / ω11,
             T2 = 2pi / ω22,
-            k1 = k1,
-            k2 = k2,
+            k1,
+            k2,
     )
 end
 

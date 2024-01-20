@@ -175,7 +175,7 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 - `verbose` display information
 - `ampfactor = 1` factor multiplying prediction
 """
-function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) where T
+function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = false, ampfactor = T(1)) where T
     # this is the predictor from a Transcritical bifurcation.
     # After computing the normal form, we have an issue.
     # We need to determine if the already computed branch corresponds to the solution x = 0 of the normal form.
@@ -190,8 +190,8 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
-    # xm1 previous point on bifurcated branch 
-    if norm(τ.u)>0 && abs(dot(bp.ζ, τ.u)) >= 0.9*norm(τ.u)
+    # xm1 previous point on bifurcated branch
+    if norm(τ.u) >0 && abs(dot(bp.ζ, τ.u)) >= 0.9 * norm(τ.u)
         @debug "Constant predictor in Transcritical"
         x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01  = L \ R01 and GS Vol 1 uses w = -L\R01
         xm1 = bp.x0
@@ -203,7 +203,7 @@ function predictor(bp::Transcritical, ds::T; verbose = false, ampfactor = T(1)) 
     end
 
     verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (x0 = x0, x1 = x1, xm1 = xm1, p = pnew, pm1 = bp.p - ds, dsfactor = dsfactor, amp = amp)
+    return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp)
 end
 
 """
@@ -219,7 +219,7 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 - `verbose`    display information
 - `ampfactor = 1` factor multiplying prediction
 """
-function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) where T
+function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, ampfactor = T(1)) where T
     nf = bp.nf
     a, b1, b2, b3 = nf
 
@@ -235,7 +235,7 @@ function predictor(bp::Pitchfork, ds::T; verbose = false, ampfactor = T(1)) wher
     #     pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
     end
     verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor = dsfactor, amp = amp)
+    return (;x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor, amp)
 end
 
 function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
@@ -368,12 +368,15 @@ end
 $(SIGNATURES)
 
 Bi-orthogonalise the two sets of vectors.
+
+# Optional argument
+- `_dot = dot` specify your own dot product
 """
-function biorthogonalise(ζs, ζ★s, verbose)
+function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use projector P=A(A^{T}A)^{-1}A^{T}
     # we use Gram-Schmidt algorithm instead
-    G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     @assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
 
     # save those in case the first algo fails
@@ -386,19 +389,19 @@ function biorthogonalise(ζs, ζ★s, verbose)
         tmp .= ζ★s[ii]
         for jj in eachindex(ζs)
             if ii != jj
-                tmp .-= dot(tmp, ζs[jj]) .* ζs[jj] ./ dot(ζs[jj], ζs[jj])
+                tmp .-= _dot(tmp, ζs[jj]) .* ζs[jj] ./ _dot(ζs[jj], ζs[jj])
             end
         end
-        ζ★s[ii] .= tmp ./ dot(tmp, ζs[ii])
+        ζ★s[ii] .= tmp ./ _dot(tmp, ζs[ii])
     end
 
-    G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 
     # we switch to another algo if the above fails
     if norm(G - LinearAlgebra.I, Inf) >= 1e-5
         @warn "Gram matrix not equal to identity. Switching to LU algorithm."
         println("G (det = $(det(G))) = "); display(G)
-        G = [ dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
+        G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
         _F = lu(G; check = true)
         display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
         ζs = inv(_F.L) * inv(_F.P) * _ζs
@@ -406,7 +409,7 @@ function biorthogonalise(ζs, ζ★s, verbose)
     end
 
     # test the bi-orthogonalization
-    G = [ dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
     @assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
     return ζs, ζ★s
@@ -1216,8 +1219,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     ζ★ = bp.ζ★ |> real
     δ = getdelta(prob)
 
-    abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
-    abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
+    abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier 1 not normalized, dot = $(dot(ζ, ζ))"
+    abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier 1 not normalized, dot = $(dot(ζ★, ζ))"
 
     # jacobian at bifurcation point
     L = jacobian(prob, x0, parbif)
@@ -1268,11 +1271,11 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     b3 = dot(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b3/6)
 
-    bp = (x0, nothing, p, parbif, lens, ζ, ζ★, (;a, b1, b2, b3, Ψ01, wst), :NA)
+    bp_args = (x0, bp.τ, p, parbif, lens, ζ, ζ★, (;a, b1, b2, b3, Ψ01, wst), :NA)
     if abs(a) < tol_fold
-        return 100abs(b2/2) < abs(b3/6) ? PitchforkMap(bp[1:end-1]...) : TranscriticalMap(bp...)
+        return 100abs(b2/2) < abs(b3/6) ? PitchforkMap(bp_args[1:end-1]...) : TranscriticalMap(bp_args...)
     else
-        return Fold(bp...)
+        return Fold(bp_args...)
     end
     # we should never hit this
     return nothing

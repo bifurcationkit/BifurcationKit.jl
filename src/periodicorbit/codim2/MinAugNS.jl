@@ -393,7 +393,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 (getp(u, 𝐍𝐒)[1], p))...,
                 # period = getperiod(prob, getvec(u, 𝐍𝐒), nothing), # do not work for PoincareShootingProblem
                 ωₙₛ = getp(u, 𝐍𝐒)[2],
-                CH = 𝐍𝐒.l1,
+                CH = real(𝐍𝐒.l1),
                 R₁ = 𝐍𝐒.R1,
                 R₂ = 𝐍𝐒.R2,
                 R₃ = 𝐍𝐒.R3,
@@ -403,7 +403,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             namedprintsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
             zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
             ωₙₛ = getp(u, 𝐍𝐒)[2], 
-            CH = 𝐍𝐒.l1, )
+            CH = real(𝐍𝐒.l1), )
 
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)

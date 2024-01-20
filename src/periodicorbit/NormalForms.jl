@@ -68,7 +68,7 @@ function branch_normal_form(pbwrap,
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    nf = BranchPoint(nothing, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    nf = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
 
     return BranchPointPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
@@ -308,7 +308,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     J[1:end-1, end] .= l
 
     # right Floquet eigenvectors
-    vr = J  \ rhs
+    vr = J \ rhs
 
     v₁  = @view vr[1:end-1]
     v₁ ./= sqrt(∫(vr, vr)) # this modifies v₁ by reference
@@ -910,7 +910,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     # newton parameter
     optn = br.contparams.newton_options
-    return neimark_sacker_normal_form(pbwrap, ns0, (1, 1), optn; verbose = verbose, nev = nev, kwargs_nf...)
+    return neimark_sacker_normal_form(pbwrap, ns0, (1, 1), optn; verbose, nev, kwargs_nf...)
 end
 
 function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
@@ -929,7 +929,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
-    _nrm > 1e-12 && @warn  "[NS normal form PRM], residual = $_nrm"
+    _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
 
     dP = finite_differences(x -> Π(x,pars).u, xₛ)
     # dP = ForwardDiff.jacobian(x -> Π(x,pars).u, xₛ)
@@ -962,7 +962,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)
     # normal form computation
-    ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose = verbose)
+    ns = neimark_sacker_normal_form(probΠ, ns1, DefaultLS(); verbose)
 
     return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
