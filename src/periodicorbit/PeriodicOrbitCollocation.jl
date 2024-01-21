@@ -195,7 +195,7 @@ Note that you can generate this guess from a function using `generate_solution`.
     massmatrix::Tmass = nothing
 
     # update the section every step
-    update_section_every_step::Int = 1
+    update_section_every_step::UInt = 1
 
     # variable to control the way the jacobian of the functional is computed
     jacobian::Tjac = DenseAnalytical()
@@ -361,7 +361,12 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     par = sol.prob.p
     prob_vf = re_make(bifprob, params = par)
 
-    pbcoll = setproperties(pb, N = N, prob_vf = prob_vf, ϕ = zeros(nunknows), xπ = zeros(nunknows), cache = POCollCache(eltype(pb), N, m))
+    pbcoll = setproperties(pb,
+                            N = N,
+                            prob_vf = prob_vf,
+                            ϕ = zeros(nunknows),
+                            xπ = zeros(nunknows),
+                            cache = POCollCache(eltype(pb), N, m))
 
     ci = generate_solution(pbcoll, t -> sol(t), period)
     pbcoll.ϕ .= @view ci[1:end-1]

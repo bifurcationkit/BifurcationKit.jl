@@ -111,7 +111,7 @@ $DocStrjacobianPOTrap
     # mass matrix
     massmatrix::Tmass = nothing
 
-    update_section_every_step::Int = 1
+    update_section_every_step::UInt = 1
     jacobian::Symbol = :Dense
 end
 

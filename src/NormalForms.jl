@@ -1243,6 +1243,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     a = dot(R01, ζ★)
+
     Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
     verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")

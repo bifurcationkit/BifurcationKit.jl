@@ -24,7 +24,7 @@ $(TYPEDEF)
     normC::TnormC
     finalise_solution::Tfinalisesolution
     callback_newton::TcallbackN
-    verbosity::Int64 = 2
+    verbosity::UInt8 = 2
     filename::String
 end
 
@@ -44,17 +44,17 @@ function ContIterable(prob::AbstractBifurcationProblem,
                     event = nothing,
                     verbosity = 0, kwargs...) where {T <: Real, S, E}
 
-    return ContIterable(kind = kind,
-                prob = prob,
-                alg = alg,
-                contparams = contparams,
-                plot = plot,
-                normC = normC,
-                finalise_solution = finalise_solution,
-                callback_newton = callback_newton,
-                event = event,
-                verbosity = verbosity,
-                filename = filename)
+    return ContIterable(;kind,
+                prob,
+                alg,
+                contparams,
+                plot,
+                normC,
+                finalise_solution,
+                callback_newton,
+                event,
+                verbosity,
+                filename)
 end
 
 Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent}) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} = T
@@ -128,12 +128,12 @@ Returns a variable containing the state of the continuation procedure. The field
     # it is initialized as -1 when unknown
     n_unstable::Tuple{Int64, Int64}  = (-1, -1)    # (current, previous)
     n_imag::Tuple{Int64, Int64}      = (-1, -1)    # (current, previous)
-    convergedEig::Bool              = true
+    convergedEig::Bool               = true
 
     eigvals::Teigvals = nothing               # current eigenvalues
-    eigvecs::Teigvec = nothing                # current eigenvectors
+    eigvecs::Teigvec  = nothing               # current eigenvectors
 
-    eventValue::Tcb = nothing
+    eventValue::Tcb = nothing                 # store the current event values
 end
 
 function Base.copy(state::ContState)
@@ -195,7 +195,15 @@ function get_state_summary(it, state)
     p = getp(state)
     pt = record_from_solution(it)(x, p)
     stable = compute_eigenelements(it) ? is_stable(state) : nothing
-    return mergefromuser(pt, (param = p, itnewton = state.itnewton, itlinear = state.itlinear, ds = state.ds, n_unstable = state.n_unstable[1], n_imag = state.n_imag[1], stable = stable, step = state.step))
+    return mergefromuser(pt, 
+                        (param = p,
+                        itnewton = state.itnewton,
+                        itlinear = state.itlinear,
+                        ds = state.ds,
+                        n_unstable = state.n_unstable[1],
+                        n_imag = state.n_imag[1],
+                        stable = stable,
+                        step = state.step))
 end
 
 function update_stability!(state::ContState, n_unstable::Int, n_imag::Int, converged::Bool)
@@ -209,12 +217,17 @@ function save!(br::ContResult, it::AbstractContinuationIterable, state::Abstract
     push!(br.branch, get_state_summary(it, state))
     # save solution
     if it.contparams.save_sol_every_step > 0 && (mod_counter(state.step, it.contparams.save_sol_every_step) || ~done(it, state))
-        push!(br.sol, (x = getsolution(it.prob, _copy(getx(state))), p = getp(state), step = state.step))
+        push!(br.sol, (x = getsolution(it.prob, _copy(getx(state))),
+                         p = getp(state), 
+                         step = state.step))
     end
     # save eigen elements
     if compute_eigenelements(it)
         if mod(state.step, it.contparams.save_eig_every_step) == 0
-            push!(br.eig, (eigenvals = state.eigvals, eigenvecs = state.eigvecs, converged = state.convergedEig, step = state.step))
+            push!(br.eig, (eigenvals = state.eigvals, 
+                            eigenvecs = state.eigvecs, 
+                            converged = state.convergedEig, 
+                            step = state.step))
         end
     end
 end
@@ -268,7 +281,11 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && printstyled("━"^18*"  INITIAL GUESS   "*"━"^18, bold = true, color = :magenta)
 
     # we pass additional kwargs to newton so that it is sent to the newton callback
-    sol₀ = newton(prob, newton_options; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀)
+    sol₀ = newton(prob, newton_options; 
+                    normN = it.normC,
+                    callback = callback(it),
+                    iterationC = 0,
+                    p = p₀)
     if  ~converged(sol₀)
         printstyled("\nNewton failed to converge for the initial guess on the branch. Residuals:\n", color=:red)
         display(sol₀.residuals)
@@ -278,11 +295,17 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && println("──▶ parameter = ", p₀, ", initial step")
     verbose && printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
     sol₁ = newton(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
-            newton_options; normN = it.normC, callback = callback(it), iterationC = 0, p = p₀ + ds / η)
+                            newton_options; 
+                            normN = it.normC,
+                            callback = callback(it),
+                            iterationC = 0,
+                            p = p₀ + ds / η)
     @assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
     verbose && (print("\n──▶ convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
-    return iterate_from_two_points(it, sol₀.u, p₀, sol₁.u, p₀ + ds / η; _verbosity = _verbosity)
+    return iterate_from_two_points(it, sol₀.u, p₀, 
+                                    sol₁.u, p₀ + ds / η; 
+                                    _verbosity)
 end
 
 # same as previous function but when two (initial guesses) points are provided
