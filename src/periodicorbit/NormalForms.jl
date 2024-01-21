@@ -15,6 +15,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             Teigvec = getvectortype(br),
             scaleζ = norm,
             prm = true,
+            autodiff = false,
             detailed = true, # to get detailed normal form
             δ = getdelta(prob),
             )
@@ -28,7 +29,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     if bifpt.type == :pd
         return period_doubling_normal_form(prob, br, id_bif; prm, detailed, δ, kwargs_nf...)
     elseif bifpt.type == :bp
-        return branch_normal_form(prob, br, id_bif; kwargs_nf...)
+        return branch_normal_form(prob, br, id_bif; prm, detailed, δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :ns
         return neimark_sacker_normal_form(prob, br, id_bif; δ, detailed, prm, kwargs_nf...)
     end

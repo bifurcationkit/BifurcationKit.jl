@@ -1,22 +1,15 @@
 # using Revise, Test
 # using Plots
 using BifurcationKit, OrdinaryDiffEq, ForwardDiff
-# using Zygote, DiffEqSensitivity
 using LinearAlgebra, Parameters
-    
-# using Pkg
-# pkg"st OrdinaryDiffEq"
 
 function Fsl!(f, u, p, t)
     @unpack r, μ, ω, c3 = p
     u1 = u[1]
     u2 = u[2]
-
     ua = u1^2 + u2^2
-
     f[1] = r * u1 - ω * u2 - ua * (c3 * u1 - μ * u2)
     f[2] = r * u2 + ω * u1 - ua * (c3 * u2 + μ * u1)
-
     return f
 end
 
@@ -26,7 +19,7 @@ dFsl(x, dx, p) = ForwardDiff.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 # function to compute differentials
 function diffAD(f, x, dx)
     # Zygote.pullback(t->f(x .+ t.* dx), 0.)[1]
-    ForwardDiff.derivative(t->f(x .+ t.* dx), 0.)
+    ForwardDiff.derivative(t -> f(x .+ t.* dx), 0.)
 end
 
 ####################################################################################################

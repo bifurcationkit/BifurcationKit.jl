@@ -39,7 +39,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
     end
 
     GC.gc()
-    
+
     @testset "Hopf Codim 2" begin
         include("testHopfMA.jl")
         include("lorenz84.jl")

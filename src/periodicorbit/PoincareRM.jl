@@ -23,7 +23,16 @@ end
     return reshape(x[begin:end-1], N, M)
 end
 
-# constructors for the Poincaré return map
+function (Π::PoincaréMap)(xₛ, par)
+    solΠ = _solve(Π, xₛ, par)
+    _extend(Π, solΠ, par)
+end
+
+"""
+$(SIGNATURES)
+
+Constructor for the Poincaré return map. Return a `PoincaréMap`
+"""
 function PoincareMap(wrap::WrapPOSh, po, par, optn)
     sh = wrap.prob
     Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
@@ -33,6 +42,11 @@ function PoincareMap(wrap::WrapPOSh, po, par, optn)
     return Π
 end
 
+"""
+$(SIGNATURES)
+
+Constructor for the Poincaré return map. Return a `PoincaréMap`
+"""
 function PoincareMap(wrap::WrapPOColl, po, par, optn)
     coll = wrap.prob
     N, m, Ntst = size(coll)
@@ -126,11 +140,6 @@ function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
         xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰)[1].u
     end
     return (u = xᵣ, t = tᵣ)
-end
-
-function (Π::PoincaréMap)(xₛ, par)
-    solΠ = _solve(Π, xₛ, par)
-    _extend(Π, solΠ, par)
 end
 
 @views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
