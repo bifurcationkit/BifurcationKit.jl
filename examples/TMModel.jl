@@ -20,7 +20,7 @@ z0 = [0.238616, 0.982747, 0.367876 ]
 prob = BifurcationProblem(TMvf!, z0, par_tm, (@lens _.E0); record_from_solution = (x, p) -> (E = x[1], x = x[2], u = x[3]),)
 
 opts_br = ContinuationPar(p_min = -10.0, p_max = -0.9, ds = 0.04, dsmax = 0.1, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3)
-br = continuation(prob, PALC(), opts_br; plot = true, normC = norminf)
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; plot = true, normC = norminf)
 
 BK.plot(br, plotfold=false)
 ####################################################################################################
@@ -44,7 +44,8 @@ args_po = (	record_from_solution = (x, p) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,
     plot_solution = plotSolution,
-    normC = norminf)
+    normC = norminf
+    )
 
 br_potrap = continuation(br, 4, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 250, jacobian = :Dense, update_section_every_step = 1);
@@ -61,7 +62,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.1, ds= 0.0001, dsmin = 1e-4, p_max = 0.
 
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
-    PeriodicOrbitOCollProblem(30, 5, update_section_every_step = 1, meshadapt = true);
+    PeriodicOrbitOCollProblem(30, 5; meshadapt = true);
     verbosity = 2,
     plot = true,
     args_po...,
@@ -87,7 +88,7 @@ br_posh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Standard Shooting
-    ShootingProblem(15, prob_ode, Rodas4P(), parallel = true, update_section_every_step = 1, jacobian = BK.AutoDiffDense(),);
+    ShootingProblem(15, prob_ode, Rodas4P(), parallel = true, jacobian = BK.AutoDiffDense(),);
     linear_algo = MatrixBLS(),
     verbosity = 2,
     plot = true,
@@ -105,7 +106,7 @@ br_popsh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Poincaré Shooting
-    PoincareShootingProblem(5, prob_ode, Rodas4P(); parallel = true, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
+    PoincareShootingProblem(5, prob_ode, Rodas4P(); parallel = true, jacobian = BK.AutoDiffDenseAnalytical());
     alg = PALC(tangent = Bordered()),
     ampfactor = 1.0, δp = 0.005,
     # usedeflation = true,

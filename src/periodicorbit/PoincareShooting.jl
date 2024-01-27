@@ -73,14 +73,14 @@ setparam(prob::PoincareShootingProblem, p) = set(getparams(prob), getlens(prob),
 
 function Base.show(io::IO, psh::PoincareShootingProblem)
     println(io, "┌─ Poincaré shooting functional for periodic orbits")
-    println(io, "├─ time slices : ", get_mesh_size(psh))
-    println(io, "├─ lens        : ", get_lens_symbol(psh.lens))
-    println(io, "├─ jacobian    : ", psh.jacobian)
-    println(io, "├─ update section : ", psh.update_section_every_step)
+    println(io, "├─ time slices     : ", get_mesh_size(psh))
+    println(io, "├─ lens            : ", get_lens_symbol(psh.lens))
+    println(io, "├─ jacobian        : ", psh.jacobian)
+    println(io, "├─ update section  : ", psh.update_section_every_step)
     if psh.flow isa FlowDE
         println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
     end
-    println(io, "└─ parallel    : ", isparallel(psh))
+    println(io, "└─ parallel        : ", isparallel(psh))
 end
 
 R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)

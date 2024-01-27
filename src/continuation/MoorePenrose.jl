@@ -36,7 +36,7 @@ function MoorePenrose(;tangent = PALC(),
                         method = direct,
                         ls = nothing)
     if ~(method == iterative)
-        ls = isnothing(ls) ? DefaultLS() : ls
+        ls = DefaultLS()
     else
         if isnothing(ls)
             if tangent isa PALC
@@ -62,7 +62,11 @@ function update(alg0::MoorePenrose,
                 linearAlgo)
     tgt = update(alg0.tangent, contParams, linearAlgo)
     alg = @set alg0.tangent = tgt
-    if isnothing(linearAlgo)
+
+    # for direct methods, we need a direct solver
+    if ~(alg.method == iterative) || alg.ls isa AbstractBorderedLinearSolver
+        @set! alg.ls = DefaultLS()
+    end
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
             return @set alg.ls.solver = contParams.newton_options.linsolver
         end
