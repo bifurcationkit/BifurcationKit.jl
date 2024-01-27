@@ -56,6 +56,32 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     nothing
 end
 
+function foldpoint(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+    bptype = br.specialpoint[index].type
+    @assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point"
+    specialpoint = br.specialpoint[index]
+    if specialpoint.x isa NamedTuple
+        # the solution is mesh adapted, we need to restore the mesh.
+        pbwrap = deepcopy(br.prob)
+        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+        specialpoint = @set specialpoint.x = specialpoint.x.sol
+    end
+    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+end
+
+function pd_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+    bptype = br.specialpoint[index].type
+    @assert bptype == :pd "This should be a PD point"
+    specialpoint = br.specialpoint[index]
+    if specialpoint.x isa NamedTuple
+        # the solution is mesh adapted, we need to restore the mesh.
+        pbwrap = deepcopy(br.prob)
+        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+        specialpoint = @set specialpoint.x = specialpoint.x.sol
+    end
+    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+end
+
 """
 $(SIGNATURES)
 
@@ -76,6 +102,14 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     biftype = br.specialpoint[ind_bif].type
     bifpt = br.specialpoint[ind_bif]
+
+    # if mesh adaptation, we need to extract the solution specifically
+    if bifpt.x isa NamedTuple
+        # the solution is mesh adapted, we need to restore the mesh.
+        pbwrap = deepcopy(br.prob)
+        update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        bifpt = @set bifpt.x = bifpt.x.sol
+    end
 
     # we get the collocation problem
     coll = getprob(br).prob
@@ -142,7 +176,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
 
     # get the PD eigenvectors
     par = setparam(br, bifpt.param)
-    jac = jacobian(br.prob, bifpt.x, par)
+    jac = jacobian(br.prob, pdpointguess.u, par)
     J = jac.jacpb
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
@@ -189,9 +223,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
-
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
-
     nspointguess = ns_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
@@ -200,10 +232,10 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
 
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
-    jac = jacobian(br.prob, bifpt.x, par)
+    jac = jacobian(br.prob, nspointguess.u, par)
     J = Complex.(copy(jac.jacpb))
     nj = size(J, 1)
-    J[end, :] .= rand(nj) # must be close to eigensapce
+    J[end, :] .= rand(nj) # must be close to eigenspace
     J[:, end] .= rand(nj)
     J[end, end] = 0
     # enforce NS boundary condition

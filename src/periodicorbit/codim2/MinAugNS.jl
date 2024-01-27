@@ -11,6 +11,20 @@ function ns_point(br::AbstractBranchResult, index::Int)
     return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
 end
 
+function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+    bptype = br.specialpoint[index].type
+    @assert bptype == :ns "This should be a NS point"
+    specialpoint = br.specialpoint[index]
+    ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
+    if specialpoint.x isa NamedTuple
+        # the solution is mesh adapted, we need to restore the mesh.
+        pbwrap = deepcopy(br.prob)
+        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+        specialpoint = @set specialpoint.x = specialpoint.x.sol
+    end
+    return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
+end
+
 function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     if _transpose == false
         @assert 1==0
