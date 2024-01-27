@@ -172,8 +172,11 @@ end
 """
 Plot the branch of solutions during the continuation
 """
-function plot_branch_cont(contres::ContResult, sol::BorderedArray, contparms, plotuserfunction)
-    l = compute_eigenelements(contparms) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
+function plot_branch_cont(contres::ContResult, 
+        sol::BorderedArray, 
+        iter, 
+        plotuserfunction)
+    l = compute_eigenelements(iter) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
     plot(layout = l )
 
     plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
@@ -186,7 +189,7 @@ function plot_branch_cont(contres::ContResult, sol::BorderedArray, contparms, pl
     # put arrow to indicate the order of computation
     length(contres) > 1 && plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
 
-    if compute_eigenelements(contparms)
+    if compute_eigenelements(iter)
         eigvals = contres.eig[end].eigenvals
         scatter!(real.(eigvals), imag.(eigvals), subplot=4, label = "", markerstrokewidth = 0, markersize = 3, color = :black, xlabel = "ℜ", ylabel = "ℑ")
         # add stability boundary

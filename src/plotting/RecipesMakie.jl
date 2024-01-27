@@ -70,9 +70,8 @@ end
 
 function plot_branch_cont(contres::ContResult,
         sol::BorderedArray,
-        contparms,
-        plotuserfunction;
         iter,
+        plotuserfunction;
         plotfold = false,
         plotstability = true,
         plotspecialpoints = true,
@@ -102,7 +101,7 @@ function plot_branch_cont(contres::ContResult,
     ax2 = fig[1, 2] = Axis(fig, xlabel = "step", ylabel = String(xlab))
     lines!(ax2, contres.step, contres.param, linewidth = linewidth)
 
-    if compute_eigenelements(contparms)
+    if compute_eigenelements(iter)
         eigvals = contres.eig[end].eigenvals
         ax_ev = fig[3, 1:2] = Axis(fig, xlabel = "ℜ", ylabel = "ℑ")
         scatter!(ax_ev, real.(eigvals), imag.(eigvals), markerstrokewidth = 0, markersize = 10, color = :black)
