@@ -818,7 +818,7 @@ get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = get_periodic_o
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t->t, k...)
+function re_make(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t -> t, k...)
     M = length(orbitguess_a)
     N = length(ζr)
 
@@ -1006,13 +1006,15 @@ function getmaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
 end
 
 # this function updates the section during the continuation run
-@views function updatesection!(prob::PeriodicOrbitOCollProblem, x, par; stride = 0)
+@views function updatesection!(prob::PeriodicOrbitOCollProblem, 
+                                x::AbstractVector, 
+                                par)
     @debug "Update section Collocation"
     # update the reference point
     prob.xπ .= 0
 
     # update the "normals"
-    prob.ϕ .= x[1:end-1]
+    prob.ϕ .= x[begin:end-1]
     return true
 end
 ####################################################################################################
@@ -1020,7 +1022,7 @@ end
 
 # iterated derivatives
 ∂(f) = x -> ForwardDiff.derivative(f, x)
-∂(f, n) = n == 0 ? f : ∂(∂(f), n-1)
+∂(f, n::Int) = n == 0 ? f : ∂(∂(f), n-1)
 
 @views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
     n, m, Ntst = size(sol.pb)

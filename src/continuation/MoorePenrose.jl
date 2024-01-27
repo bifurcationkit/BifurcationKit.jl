@@ -32,8 +32,8 @@ internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.t
 """
 $(SIGNATURES)
 """
-function MoorePenrose(;tangent = PALC(), 
-                        method = direct, 
+function MoorePenrose(;tangent = PALC(),
+                        method = direct,
                         ls = nothing)
     if ~(method == iterative)
         ls = isnothing(ls) ? DefaultLS() : ls
@@ -120,7 +120,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     ϵ = getdelta(prob)
     paramlens = getlens(iter)
     contparams = getcontparams(iter)
-    T = eltype(iter)
+    𝒯 = eltype(iter)
 
     @unpack method = iter.alg
 
@@ -142,7 +142,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     dX = _copy(res_f) # copy(res_f)
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
+    minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
 
     res = normN(res_f)
     residuals = [res]
@@ -162,14 +162,14 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     X = BorderedArray(x, p)
     if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
         ϕ = _copy(τ0)
-        rmul!(ϕ,  T(1) / norm(ϕ))
+        rmul!(ϕ,  one(𝒯) / norm(ϕ))
     end
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
+        minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -177,20 +177,22 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             @debug "Moore-Penrose direct/pInv"
             Jb = hcat(J, dFdp)
             if method == direct
-                dx, flag, converged = linsolver(Jb, res_f)
+                dx, flag, itlinear = linsolver(Jb, res_f)
+                ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             else
-                # pinv(Array(Jb)) * res_f seems to work better than the following
-                dx = LinearAlgebra.pinv(Array(Jb)) * res_f; flag = true;
+                # dx = pinv(Array(Jb)) * res_f #seems to work better than the following
+                dx = LinearAlgebra.pinv(Array(Jb)) * res_f
+                flag = true;
+                itlinear = 1
             end
             x .-= @view dx[begin:end-1]
             p -= dx[end]
-            itlinear = 1
         else
             @debug "Moore-Penrose Iterative"
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # X .= X .- A \ vcat(res_f, 0)
             # x .= X[begin:end-1]; p = X[end]
-            du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(T), one(T), one(T))
+            du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(𝒯), one(𝒯), one(𝒯))
             minus!(x, du)
             p -= dup
             verbose && print_nonlinear_step(step, nothing, itlinear1)
@@ -204,13 +206,13 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
             copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-            minus!(dFdp, res_f); rmul!(dFdp, T(1) / ϵ)
+            minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)
-            u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(T), one(T), one(T))
-            ~flag && @debug "Linear solver for (J-iω) did not converge."
+            u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯))
+            ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             ϕ.u .= u; ϕ.p = up
-            # rmul!(ϕ,  T(1) / norm(ϕ))
+            # rmul!(ϕ,  one(𝒯) / norm(ϕ))
             itlinear = (itlinear1 .+ itlinear2)
         end
         push!(residuals, res)
@@ -222,5 +224,11 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
     flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
-    return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
+
+    return NonLinearSolution(BorderedArray(x, p),
+                            prob,
+                            residuals,
+                            flag,
+                            step,
+                            itlineartot)
 end

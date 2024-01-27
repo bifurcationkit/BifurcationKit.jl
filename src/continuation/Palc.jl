@@ -506,6 +506,12 @@ function newton_palc(iter::AbstractContinuationIterable,
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
-    flag = (residuals[end] < tol) & callback((;x, res_f, residual=res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
-    return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, itlineartot)
+    flag = (residuals[end] < tol) & callback((;x, res_f, residual = res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+
+    return NonLinearSolution(BorderedArray(x, p),
+                            prob,
+                            residuals,
+                            flag,
+                            step,
+                            itlineartot)
 end

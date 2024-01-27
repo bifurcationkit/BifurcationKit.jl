@@ -15,9 +15,9 @@ It incorporates continuation algorithms (PALC, deflated continuation, ...) based
 
 > The idea is to be able to seemingly switch the continuation algorithm a bit like changing the time stepper (Euler, RK4,...) for ODEs.
 
-`BifurcationKit` can also seek for periodic orbits of Cauchy problems. **It is by now, one of the only softwares which provides shooting methods *and* methods based on finite differences or collocation to compute periodic orbits.**
+`BifurcationKit` can also seek for [periodic orbits](https://bifurcationkit.github.io/BifurcationKitDocs.jl/stable/periodicOrbit/) of Cauchy problems. **It is by now, one of the only software which provides shooting methods *and* methods based on finite differences / collocation to compute periodic orbits.**
 
-The current focus is on large scale nonlinear problems and multiple hardwares. Hence, the goal is to use Matrix Free methods on **GPU** (see [PDE example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on a **cluster** to solve non linear PDE, nonlocal problems, compute sub-manifolds...
+The current focus is on large scale nonlinear problems and multiple hardwares. Hence, the goal is to provide Matrix Free methods on **GPU** (see [PDE example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on **cluster** to study non linear PDE, nonlocal problems, compute sub-manifolds...
 
 > Despite this focus, the package can easily handle low dimensional problems and specific optimizations are regularly added.
 
@@ -56,7 +56,7 @@ To install the bleeding edge version, please run
 
 Most plugins are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
 
-- [HclinicBifurcationKit.jl](https://github.com/bifurcationkit/HclinicBifurcationKit.jl) computation and bifurcation analysis of homoclinic / heteroclinic orbits of ordinary differential equations (ODE)
+- [HclinicBifurcationKit.jl](https://github.com/bifurcationkit/HclinicBifurcationKit.jl) bifurcation analysis of homoclinic / heteroclinic orbits of ordinary differential equations (ODE)
 - [DDEBifurcationKit.jl](https://github.com/bifurcationkit/DDEBifurcationKit.jl) bifurcation analysis of delay differential equations (DDE)
 - [AsymptoticNumericalMethod.jl](https://github.com/bifurcationkit/AsymptoticNumericalMethod.jl) provides the numerical continuation algorithm **Asymptotic Numerical Method** (ANM) which can be used directly in `BifurcationKit.jl`
 - [GridapBifurcationKit.jl](https://github.com/bifurcationkit/GridapBifurcationKit) bifurcation analysis of PDEs solved with the Finite Elements Method (FEM) using the package [Gridap.jl](https://github.com/gridap/Gridap.jl).
