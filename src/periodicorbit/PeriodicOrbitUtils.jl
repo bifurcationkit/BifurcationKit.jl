@@ -37,7 +37,7 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplit
 end
 ####################################################################################################
 # Amplitude of the u component of the cycle
-amplitude(x::AbstractMatrix, n) =  maximum(x[1:n, :]) - minimum(x[1:n, :])
+amplitude(x::AbstractMatrix, n) = maximum(x[1:n, :]) - minimum(x[1:n, :])
 
 function amplitude(x::AbstractVector, n, M; ratio = 1)
     xc = reshape(x[begin:end-1], ratio * n, M)

@@ -33,7 +33,7 @@ sol = solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
 function flowTS(x, t, pb; alg = algsl, kwargs...)
     _pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
-    sol = DiffEqBase.solve(_pb, alg; abstol =1e-10, reltol=1e-9, save_everystep = false, kwargs...)
+    sol = OrdinaryDiffEq.solve(_pb, alg; abstol=1e-10, reltol=1e-9, save_everystep = false, kwargs...)
     return sol.t, sol
 end
 flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2][end]
@@ -43,8 +43,6 @@ dflowDE = (x, dx, ts; kwargs...) -> diffAD(z -> flowDE(z, ts; kwargs...), x, dx)
 dflowDEfd = (x, dx, ts) -> (flowDE(x .+ δ .* dx, ts) - flowDE(x, ts)) ./ δ
 
 @test dflowDE(u0,u0,1.) .- dflowDEfd(u0,u0,1.) |> norminf < 10δ
-
-flowDE(u0,1.)
 ####################################################################################################
 # defining the Poincare Map
 normals = [[-1., 0.]]

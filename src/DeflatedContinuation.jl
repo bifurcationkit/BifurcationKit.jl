@@ -213,11 +213,12 @@ function continuation(prob::AbstractBifurcationProblem,
 
     # underlying continuation iterator
     # we "hack" the save_sol_every_step option because we always want to record the first point on each branch
-    contIt = ContIterable(prob, algdc.alg, ContinuationPar(contParams, save_sol_every_step = contParams.save_sol_every_step == 0 ? Int(1e14) : contParams.save_sol_every_step);
+    contIt = ContIterable(prob, algdc.alg, ContinuationPar(contParams, 
+                    save_sol_every_step = contParams.save_sol_every_step == 0 ? Int(1e14) : contParams.save_sol_every_step);
                     plot = plot,
                     normC = normC,
                     callback_newton = callback_newton,
-                    verbosity = verbosity-2,
+                    verbosity = max(0, verbosity - 2),
                     kwcont...)
 
     iter = DefContIterable(contIt, algdc)

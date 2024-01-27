@@ -265,5 +265,5 @@ struct Finaliser{Tp, Tf}
     "Finalizer to be called"
     finalise_solution::Tf
     "Section updated every updateSectionEveryStep step"
-    updateSectionEveryStep::Int
+    updateSectionEveryStep::UInt
 end

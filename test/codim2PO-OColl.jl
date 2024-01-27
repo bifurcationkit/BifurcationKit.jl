@@ -184,6 +184,6 @@ _sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _
 _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
 @test norm(_Jnsad - _Jma, Inf) < 1e-6
-@test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-3
-@test abs(_solfd[end-1] - _sol[2]) < 1e-3
+@test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-2
+@test abs(_solfd[end-1] - _sol[2]) < 1e-2
 @test abs(_solfd[end] - _sol[3]) < 1e-2

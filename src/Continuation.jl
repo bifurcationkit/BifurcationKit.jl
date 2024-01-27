@@ -53,7 +53,7 @@ function ContIterable(prob::AbstractBifurcationProblem,
                 finalise_solution,
                 callback_newton,
                 event,
-                verbosity,
+                verbosity = convert(UInt8, verbosity),
                 filename)
 end
 

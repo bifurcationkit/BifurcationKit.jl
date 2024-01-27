@@ -267,7 +267,7 @@ alg = BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.]]),
 show(alg)
 brdc = continuation(prob, alg,
     ContinuationPar(opts, ds = -0.001, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 6), plot_every_step = 40, detect_bifurcation = 3);
-    plot=false, verbosity = 0,
+    plot = false, verbosity = 0,
     callback_newton = BK.cbMaxNorm(1e3))
 
 # test that the saved points are true solutions

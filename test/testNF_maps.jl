@@ -22,7 +22,9 @@ for b in (0, 0.21)
 
     probMap = BK.BifurcationProblem((x, p) -> Fbp(x, p) .- x, [0.0], pars_bp, (@lens _.μ))
 
-    @set! opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
+    _opts = opts_br
+
+    @set! _opts.newton_options.eigsolver = EigMaps(DefaultEig())
     br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
     prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@lens _.μ))
