@@ -174,6 +174,12 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 # Optional arguments
 - `verbose` display information
 - `ampfactor = 1` factor multiplying prediction
+
+# Returned values
+- `x0` trivial solution (which bifurcates)
+- `x1` non trivial guess, corrected with Lyapunov-Schmidt expansion
+- `p` new parameter value 
+- `amp` non trivial zero of the normal form (not corrected)
 """
 function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = false, ampfactor = T(1)) where T
     # this is the predictor from a Transcritical bifurcation.
@@ -218,6 +224,13 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 # Optional arguments
 - `verbose`    display information
 - `ampfactor = 1` factor multiplying prediction
+
+# Returned values
+- `x0` trivial solution (which bifurcates)
+- `x1` non trivial guess
+- `p` new parameter value
+- `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
+- `amp` non trivial zero of the normal form
 """
 function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, ampfactor = T(1)) where T
     nf = bp.nf
@@ -647,7 +660,7 @@ $(SIGNATURES)
 
 This function provides prediction for what the zeros of the reduced equation / normal form should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton.
 
-## Arguments
+## Optional arguments
 - `J` jacobian of the normal form. It is evaluated with ForwardDiff otherwise.
 - `perturb` perturb function used in Deflated newton
 - `normN` norm used for newton.
@@ -698,7 +711,7 @@ $(SIGNATURES)
 
 This function provides prediction for what the zeros of the reduced equation / normal form should be should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the hypercube.
 
-## Arguments
+## Optional arguments
 - `J` jacobian of the normal form. It is evaluated with ForwardDiff otherwise.
 - `perturb` perturb function used in Deflated newton
 - `normN` norm used for newton.
@@ -924,8 +937,16 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
 
 # Optional arguments
-- `verbose`    display information
+- `verbose` display information
 - `ampfactor = 1` factor multiplied to the amplitude of the periodic orbit.
+
+# Returned values
+- `t -> orbit(t)` 2π periodic function guess for the bifurcated orbit.
+- `amp` amplitude of the guess of the bifurcated periodic orbits.
+- `ω` frequency of the periodic orbit (corrected with normal form coefficients)
+- `period` of the periodic orbit (corrected with normal form coefficients)
+- `p` new parameter value
+- `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
 function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1 )
     # get the type

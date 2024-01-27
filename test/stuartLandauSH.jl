@@ -304,7 +304,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max =
 # outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
 # BK.converged(outpo)
 #
-# for ii=1:length(normals)
+# for ii=eachindex(normals)
 #     BK.E(probPsh, [outpo.u[ii]], ii)
 # end
 #

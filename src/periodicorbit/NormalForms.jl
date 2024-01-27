@@ -1055,6 +1055,11 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+Compute the predictor for the period bifurcation of periodic orbit.
+"""
 function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
                     δp,
                     ampfactor;
@@ -1078,6 +1083,11 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
     return (;orbitguess, pnew, prob = pbnew, ampfactor, δp)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the simple branch point of periodic orbit.
+"""
 function predictor(nf::BranchPointPO{ <: ShootingProblem },
                     δp,
                     ampfactor;

@@ -1,12 +1,12 @@
 # using Revise
 # using Test, Plots
-using BifurcationKit, LinearAlgebra, Setfield
+using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 # display internal information about the branch
 function displayBr(contRes)
     println("#"^50)
-    for ii in 1:length(contRes.branch)
+    for ii in eachindex(contRes.branch)
         println("- $ii --------------")
         println("step = ", contRes[ii][end])
         println("eiv = "); display(contRes.eig[ii].eigenvals)

@@ -329,6 +329,11 @@ function bogdanov_takens_normal_form(prob_ma, L,
     return @set pt.nfsupp = (; γ, c, K10, K11, K2, d, e, a1, b1, H0001, H0010, H0002, H1001, H2000)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the Hopf curve near the Bogdanov-Takens point.
+"""
 function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
     # If we write the normal form [y2, β1 + β2 y2 + a y1^2 + b y1 y2]
     # equilibria y2 = 0, 0 = β1 + a y1^2
@@ -389,6 +394,12 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; verbose = false
             x0 = t -> getx(t) .* bt.ζ[1])
 end
 
+
+"""
+$(SIGNATURES)
+
+Compute the predictor for the Fold curve near the Bogdanov-Takens point.
+"""
 function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
     # If we write the normal form [y2, β1 + β2 y2 + a y1^2 + b y1 y2]
     # equilibria y2 = 0, 0 = β1 + a y1^2
@@ -413,6 +424,15 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; verbose = false
             x0 = t -> getx(t) .* bt.ζ[1])
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of homoclinic orbits near the Bogdanov-Takens point.
+
+## Reference
+
+Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
+"""
 function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T; verbose = false, ampfactor = one(T)) where T
     # we follow
     # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
@@ -896,6 +916,16 @@ function bautin_normal_form(_prob,
     @set pt.nf = (;ω, G21, G32, l2, l1, h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, α )
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of Folds of periodic orbits near the Bautin bifurcation point.
+
+## Reference
+
+Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs.” Physica D: Nonlinear Phenomena 237, no. 23 (December 2008): 3061–68. https://doi.org/10.1016/j.physd.2008.06.006.
+
+"""
 function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; verbose = false, ampfactor = T(1)) where T
     @unpack h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁ = gh.nf
     lens1, lens2 = gh.lens
@@ -973,7 +1003,7 @@ function zero_hopf_normal_form(_prob,
 
     # right eigenvector
     # TODO IMPROVE THIS
-    if 1==1#haseigenvector(br) == false
+    if true #haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
@@ -1155,6 +1185,11 @@ function zero_hopf_normal_form(_prob,
     @set pt.nf = (;ω = imag(λI), λ0 = _λ[_ind0], dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011, g110, f011 )
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of Hopf bifurcations near the Zero-Hopf bifurcation point.
+"""
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
     @unpack ω, λ0 = zh.nf
     lens1, lens2 = zh.lens
@@ -1179,6 +1214,11 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
             x0 = t -> 0)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of Fold bifurcations near the Zero-Hopf bifurcation point.
+"""
 function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
     @unpack ω, λ0 = zh.nf
     lens1, lens2 = zh.lens
@@ -1203,6 +1243,15 @@ function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; verbose = false, ampf
             x0 = t -> 0)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of Neimark-Sacker bifurcations near the Zero-Hopf bifurcation point.
+
+## Reference
+
+Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs.” Physica D: Nonlinear Phenomena 237, no. 23 (December 2008): 3061–68. https://doi.org/10.1016/j.physd.2008.06.006.
+"""
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor = T(1)) where T
     @unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS = zh.nf
     lens1, lens2 = zh.lens
@@ -1450,6 +1499,11 @@ function hopf_hopf_normal_form(_prob,
     return @set pt.nf = (;λ1, λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
+"""
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampfactor = T(1)) where T
     @unpack λ1, λ2 = hh.nf
     lens1, lens2 = hh.lens
@@ -1474,6 +1528,15 @@ function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; verbose = false, ampf
             x0 = t -> 0)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the curve of Neimark-Sacker points near the Hopf-Hopf bifurcation point.
+
+## Reference
+
+Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs.” Physica D: Nonlinear Phenomena 237, no. 23 (December 2008): 3061–68. https://doi.org/10.1016/j.physd.2008.06.006.
+"""
 function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; verbose = false, ampfactor = T(1)) where T
     @unpack λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2 = hh.nf
     lens1, lens2 = hh.lens
