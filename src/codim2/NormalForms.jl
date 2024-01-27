@@ -477,21 +477,21 @@ Compute the Bogdanov-Takens normal form.
 - `bls_adjoint` specify Bordered linear solver for transpose(dF).
 """
 function bogdanov_takens_normal_form(_prob,
-        br::AbstractBranchResult, ind_bif::Int;
-        δ = 1e-8,
-        nev = length(eigenvalsfrombif(br, ind_bif)),
-        verbose = false,
-        ζs = nothing,
-        ζs_ad = nothing,
-        lens = getlens(br),
-        Teigvec = getvectortype(br),
-        scaleζ = norm,
-        # bordered linear solver
-        bls = _prob.prob.linbdsolver,
-        bls_adjoint = bls,
-        bls_block = bls,
-        detailed = true,
-        autodiff = true)
+            br::AbstractBranchResult, ind_bif::Int;
+            δ = 1e-8,
+            nev = length(eigenvalsfrombif(br, ind_bif)),
+            verbose = false,
+            ζs = nothing,
+            ζs_ad = nothing,
+            lens = getlens(br),
+            Teigvec = getvectortype(br),
+            scaleζ = norm,
+            # bordered linear solver
+            bls = _prob.prob.linbdsolver,
+            bls_adjoint = bls,
+            bls_block = bls,
+            detailed = true,
+            autodiff = true)
     @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
     # functional
@@ -575,12 +575,12 @@ function bogdanov_takens_normal_form(_prob,
     end
 
     zerov = real.(prob_ma.zero)
-    q0, _, cv, it = bls(L,  vl, vr, zero(𝒯), zerov, one(𝒯))
-    ~cv && @debug "[BT basis] Linear solver for J did not converge. it = $it"
+    q0, _, cv, it = bls(L, vl, vr, zero(𝒯), zerov, one(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J  did not converge. it = $it"
     p1, _, cv, it = bls_adjoint(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
     ~cv && @debug "[BT basis] Linear solver for J' did not converge. it = $it"
-    q1, _, cv, it = bls(L,  p1, q0, zero(𝒯), q0,    zero(𝒯))
-    ~cv && @debug "[BT basis] Linear solver for J did not converge. it = $it"
+    q1, _, cv, it = bls(L, p1, q0, zero(𝒯), q0,    zero(𝒯))
+    ~cv && @debug "[BT basis] Linear solver for J  did not converge. it = $it"
     p0, _, cv, it = bls_adjoint(Lᵗ, q0, p1, zero(𝒯), p1,    zero(𝒯))
     ~cv && @debug "[BT basis] Linear solver for J' did not converge. it = $it"
 
@@ -603,7 +603,13 @@ function bogdanov_takens_normal_form(_prob,
         (K2 = zero(𝒯),),
         :none
     )
-    return bogdanov_takens_normal_form(prob_ma, L, pt; δ = δ, verbose = verbose, detailed = detailed, autodiff = autodiff, bls = bls, bls_block = bls_block)
+    return bogdanov_takens_normal_form(prob_ma, L, pt; 
+                δ,
+                verbose,
+                detailed,
+                autodiff,
+                bls,
+                bls_block)
 end
 ####################################################################################################
 function bautin_normal_form(_prob,

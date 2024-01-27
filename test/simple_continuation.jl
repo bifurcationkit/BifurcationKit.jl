@@ -271,9 +271,9 @@ brdc = continuation(prob, alg,
     callback_newton = BK.cbMaxNorm(1e3))
 
 # test that the saved points are true solutions
-for i in 1:length(brdc)
+for i in eachindex(brdc.branches)
     brs = brdc[i]
-    for j=1:length(brs.sol)
+    for j in eachindex(brs.sol)
         res = BifurcationKit.residual(prob, brs.sol[j].x, BifurcationKit.setparam(prob, brs.sol[j].p)) |> norminf
         @test res < brs.contparams.newton_options.tol
     end

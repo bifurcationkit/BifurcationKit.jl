@@ -122,7 +122,7 @@ using KrylovKit, Parameters
 function Fr(x, p)
     @unpack r, s = p
     out = similar(x)
-    for ii=1:length(x)
+    for ii in 1:length(x)
         out[ii] .= @. r +  s * x[ii] - x[ii]^3
     end
     out

@@ -221,11 +221,7 @@ function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}) #a⋅(p - pbif) +
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    if bp isa PitchforkMap
-        println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
-    else
-        println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
-    end
+    println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
@@ -234,12 +230,11 @@ end
 function Base.show(io::IO, bp::PeriodDoubling)
     printstyled(io, bp.type, " - Period-Doubling ", color=:cyan, bold = true)
     println("bifurcation point at ", get_lens_symbol(bp.lens), " ≈ $(bp.p)")
+    println(io, "┌─ Normal form:\n├\t x ─▶ x⋅(a⋅δp - 1 + c⋅x²)")
     if ~isnothing(bp.nf)
-        println(io, "┌─ Normal form:\n├\t x⋅(a⋅δp - 1 + c⋅x²)")
         println(io, "├─ a = ", bp.nf.a)
         println(io, "└─ c = ", bp.nf.b3)
     else
-        println(io, "┌─ Normal form:\n├\t x⋅(a⋅δp - 1 + c⋅x²)")
         println(io, "├─ a = ", missing)
         println(io, "└─ c = ", missing)
     end
@@ -248,7 +243,7 @@ end
 function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     printstyled(io, bp.type, " - Branch point ", color=:cyan, bold = true)
     println(io, "(Maps) bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
+    println(io, "Normal form x ─▶ a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
@@ -429,7 +424,7 @@ function Base.show(io::IO, bp::NeimarkSacker)
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p).")
     println(io, "Frequency θ ≈ ", abs(bp.ω))
     println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
-    println(io, "Normal form z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+    println(io, "Normal form z ─▶ z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
     if ~isnothing(bp.nf)
         println(io,"┌─ a = ", bp.nf.a)
         println(io,"└─ b = ", bp.nf.b)

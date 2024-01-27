@@ -157,7 +157,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     verbose && print_nonlinear_step(step, res)
     line_step = true
 
-    compute = callback((;x, res_f, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
+    compute = callback((;x, res_f, residual = res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 
     X = BorderedArray(x, p)
     if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
@@ -174,8 +174,8 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
         if method == direct || method == pInv
-            @debug "Moore-Penrose direct/pInv"
             Jb = hcat(J, dFdp)
+
             if method == direct
                 dx, flag, itlinear = linsolver(Jb, res_f)
                 ~flag && @debug "[MoorePenrose] Linear solver did not converge."

@@ -16,9 +16,9 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
     end
 
     @testset "Continuation" begin
+        include("simple_continuation.jl")
         include("test_bif_detection.jl")
         include("test-cont-non-vector.jl")
-        include("simple_continuation.jl")
     end
 
     GC.gc()

@@ -220,12 +220,12 @@ where the parameters are as above except that you have to pass the branch `br` f
     It is recommended that you use the option `start_with_eigen = true`
 """
 function continuation(br::AbstractBranchResult,
-            ind_bif::Int64,
+            ind_bif,
             lens2::Lens,
             options_cont::ContinuationPar = br.contparams ;
             prob = br.prob,
             start_with_eigen = false,
-            detect_codim2_bifurcation::Int = 0,
+            detect_codim2_bifurcation = 0,
             update_minaug_every_step = 1,
             kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"

@@ -4,6 +4,17 @@ import Base: iterate
 """
 $(TYPEDEF)
 
+Define a continuation iterator. This allows for example to do
+
+```
+iter = ContIterable(prob, alg, opts; kwargs...)
+for state in iter
+	println("Continuation step = ", state.step)
+end
+```
+
+More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
+
 # Useful functions
 - `setparam(iter, p)` set parameter with lens `iter.prob.lens` to `p`
 - `is_event_active(iter)` whether the event detection is active
@@ -234,7 +245,7 @@ end
 
 function plot_branch_cont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
     if iter.plot && mod(state.step, getcontparams(iter).plot_every_step) == 0
-        return plot_branch_cont(contres, getsolution(state), getcontparams(iter), plot_solution(iter))
+        return plot_branch_cont(contres, getsolution(state), iter, plot_solution(iter))
     end
 end
 
@@ -478,7 +489,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
         next = iterate(it, state)
     end
 
-    it.plot && plot_branch_cont(contRes, state.z, contparams, plot_solution(it))
+    it.plot && plot_branch_cont(contRes, state.z, it, plot_solution(it))
 
     # return current solution in case the corrector did not converge
     push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, :converged, (getp(state), getp(state))))
