@@ -67,11 +67,13 @@ function update(alg0::MoorePenrose,
     if ~(alg.method == iterative) || alg.ls isa AbstractBorderedLinearSolver
         @set! alg.ls = DefaultLS()
     end
+
+    if isnothing(linearAlgo) && ~(alg.method == iterative)
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
             return @set alg.ls.solver = contParams.newton_options.linsolver
         end
     else
-        return @set alg.ls = linearAlgo
+        return @set alg.ls = isnothing(linearAlgo) ? MatrixBLS() : linearAlgo
     end
     alg
 end
