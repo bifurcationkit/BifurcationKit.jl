@@ -84,13 +84,30 @@ We also provide the method
 
 where `br` is a branch computed after a call to [`continuation`](@ref) from which we want to compute the bifurcating branches recursively.
 """
-function bifurcationdiagram(prob::AbstractBifurcationProblem, alg::AbstractContinuationAlgorithm, level::Int, options; kwargs...)
+function bifurcationdiagram(prob::AbstractBifurcationProblem,
+                            alg::AbstractContinuationAlgorithm, 
+                            level::Int, 
+                            options; 
+                            kwargs...)
     γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs...)
     bifurcationdiagram(prob, γ, level, options; code = "0", kwargs...)
 end
 
+function bifurcationdiagram(prob::AbstractBifurcationProblem,
+                            alg::AbstractContinuationAlgorithm, 
+                            level::Int, 
+                            options::ContinuationPar; 
+                            kwargs...)
+    bifurcationdiagram(prob, alg, level, (args...)->options; kwargs...)
+end
+
 # TODO, BifDiagNode[] makes it type unstable it seems
-function bifurcationdiagram(prob::AbstractBifurcationProblem, br::AbstractBranchResult, maxlevel::Int, options; verbosediagram = false, kwargs...)
+function bifurcationdiagram(prob::AbstractBifurcationProblem,
+                            br::AbstractBranchResult, 
+                            maxlevel::Int, 
+                            options; 
+                            verbosediagram = false, 
+                            kwargs...)
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
     verbose && printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
     bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram = verbosediagram, kwargs...)
@@ -114,14 +131,14 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
-        node::BifDiagNode,
-        maxlevel::Int,
-        options;
-        code = "0",
-        usedeflation = false,
-        halfbranch = false,
-        verbosediagram = false,
-        kwargs...)
+                            node::BifDiagNode,
+                            maxlevel::Int,
+                            options;
+                            code = "0",
+                            usedeflation = false,
+                            halfbranch = false,
+                            verbosediagram = false,
+                            kwargs...)
     if node.level >= maxlevel || isnothing(node.γ); return node; end
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
 

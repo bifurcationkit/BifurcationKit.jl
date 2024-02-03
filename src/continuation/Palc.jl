@@ -69,12 +69,12 @@ $(TYPEDFIELDS)
     dotθ::Tdot                  = DotTheta()
 
     @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
-    @assert 0 <= θ <=1 "θ must belong to [0, 1]"
+    @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
 end
 getlinsolver(alg::PALC) = alg.bls
 @inline getdot(alg::PALC) = alg.dotθ
 @inline getθ(alg::PALC) = alg.θ
-# we also extend this for a ContIterable
+# we also extend this for ContIterable
 @inline getdot(it::ContIterable) = getdot(it.alg)
 @inline getθ(it::ContIterable) = getθ(it.alg)
 
@@ -172,7 +172,7 @@ end
 """
 struct Secant <: AbstractTangentComputation end
 
-# This function is used for initialisation in iterateFromTwoPoints
+# This function is used for initialisation in iterate_from_two_points
 function _secant_computation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIterable, ds, θ, verbosity, dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)

@@ -41,7 +41,7 @@ update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
 # helper functions to update ::ContState when calling the corrector
 function _update_field_but_not_sol!(state::AbstractContinuationState,
-                            sol::NonLinearSolution)
+                                    sol::NonLinearSolution)
     state.converged = sol.converged
     state.itnewton = sol.itnewton
     state.itlinear = sol.itlineartot

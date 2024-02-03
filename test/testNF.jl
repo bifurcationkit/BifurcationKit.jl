@@ -63,9 +63,9 @@ br4 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_ste
 # plot(br,br4)
 
 # automatic bifurcation diagram (Transcritical)
-bdiag = bifurcationdiagram(prob, PALC(tangent=Bordered()), 2,
-    (args...) -> setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = (@set opt_newton.verbose=false), max_steps = 15);
-    plot = false, verbosity = 0,
+bdiag = bifurcationdiagram(prob, PALC(), 2,
+    setproperties(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(opt_newton, verbose=false, tol = 1e-12), max_steps = 15);
+    plot = false, verbosity = 1,
     normC = norminf)
 
 # plot(bdiag)
@@ -103,7 +103,7 @@ BK.propertynames(br2)
 
 # automatic bifurcation diagram (Pitchfork)
 bdiag = bifurcationdiagram(prob_pf, PALC(#=tangent=Bordered()=#), 2,
-    (args...) -> setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = (@set opt_newton.verbose=false), max_steps = 15);
+    (args...) -> setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = NewtonPar(opt_newton, verbose=false, tol = 1e-12), max_steps = 15);
     plot = false, verbosity = 0, normC = norminf)
 
 # plot(bdiag)
