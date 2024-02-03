@@ -55,9 +55,9 @@ end
 @inline getmesh(pb::MeshCollocationCache) = pb.mesh
 @inline get_mesh_coll(pb::MeshCollocationCache) = pb.mesh_coll
 get_max_time_step(pb::MeshCollocationCache) = maximum(diff(getmesh(pb)))
-τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j])
+@inline τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j])
 # get the sigma corresponding to τ in the interval (𝜏s[j], 𝜏s[j+1])
-σj(τ, τs, j) = -(2*τ - τs[j] - τs[j + 1])/(-τs[j + 1] + τs[j])
+@inline σj(τ, τs, j) = -(2*τ - τs[j] - τs[j + 1])/(-τs[j + 1] + τs[j])
 
 # code from Jacobi.lagrange
 function lagrange(i::Int, x, z)
@@ -78,7 +78,8 @@ dlagrange(i, x, z) = ForwardDiff.derivative(x -> lagrange(i, x, z), x)
 function getL(σs::AbstractVector)
     m = length(σs) - 1
     zs, = gausslegendre(m)
-    L = zeros(m + 1, m); ∂L = zeros(m + 1, m)
+    L  = zeros(m + 1, m)
+    ∂L = zeros(m + 1, m)
     for j in 1:m+1
         for i in 1:m
              L[j, i] =  lagrange(j, zs[i], σs)
@@ -1096,6 +1097,10 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
     ############
     # monitor function
     ϕ = sk.^(1/m)
+    # if the monitor function is too small, dont do anything
+    if maximum(ϕ) < 1e-7
+        return (success = true, newmesh = nothing)
+    end
     ϕ = max.(ϕ, maximum(ϕ) / K)
     @assert length(ϕ) == Ntst "Error. Please open an issue of the website of BifurcationKit.jl"
     # compute θ = ∫ϕ but also all intermediate values
@@ -1122,7 +1127,8 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
         newmeshT[i+1] = meshT[ind-1] + (θeq - θs[ind-1]) / α
         @assert newmeshT[i+1] > newmeshT[i] "Error. Please open an issue on the website of BifurcationKit.jl"
     end
-    newmesh = newmeshT ./ period; newmesh[end] = 1
+    newmesh = newmeshT ./ period
+    newmesh[end] = 1
 
     if verbosity
         h = maximum(diff(newmesh))

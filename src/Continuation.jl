@@ -529,7 +529,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 # Optional Arguments:
 - `plot = false` whether to plot the solution/branch/spectrum while computing the branch
 - `bothside = true` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
-- `normC = norm` norm used in the Newton solves
+- `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change the preconditioners.
 - `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch. For advanced use:

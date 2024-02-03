@@ -934,7 +934,7 @@ This function provides prediction for the periodic orbits branching off the Hopf
 
 # Arguments
 - `bp::Hopf` the bifurcation point
-- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
+- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the new parameter is `p = bp.p + ds`.
 
 # Optional arguments
 - `verbose` display information
@@ -948,8 +948,8 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `p` new parameter value
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
-function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1 )
-    # get the type
+function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
+    # get the element type
     𝒯 = eltype(hp.x0)
 
     # get the normal form

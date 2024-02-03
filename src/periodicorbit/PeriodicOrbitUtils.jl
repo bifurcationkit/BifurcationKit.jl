@@ -33,7 +33,7 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplit
 
     orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii in 0:M-1]
 
-    return p_hopf, 2pi/ωH, orbitguess, hopfpoint, vec_hopf
+    return p_hopf, 2π/ωH, orbitguess, hopfpoint, vec_hopf
 end
 ####################################################################################################
 # Amplitude of the u component of the cycle
