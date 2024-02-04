@@ -56,15 +56,6 @@ $(TYPEDFIELDS)
     _bothside::Bool = false
     "Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
     bls::Tbls = MatrixBLS()
-    # parameters for scaling arclength step size
-    "Unused for now, "
-    doArcLengthScaling::Bool = false
-    "Unused for now, "
-    gGoal::T                 = 0.5
-    "Unused for now, "
-    gMax::T                  = 0.8
-    "Unused for now, "
-    θMin::T                  = 0.001
     "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)"
     dotθ::Tdot                  = DotTheta()
 
@@ -155,7 +146,7 @@ function corrector!(state::AbstractContinuationState,
                     callback = it.callback_newton, 
                     kwargs...)
 
-    # update fields
+    # update fields, in particular the `converged` one
     _update_field_but_not_sol!(state, sol)
 
     # update solution

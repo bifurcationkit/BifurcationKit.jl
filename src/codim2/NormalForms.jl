@@ -693,7 +693,7 @@ function bautin_normal_form(_prob,
 
     # right eigenvector
     # TODO IMPROVE THIS
-    if 1==1#haseigenvector(br) == false
+    if true#haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
@@ -1022,7 +1022,7 @@ function zero_hopf_normal_form(_prob,
         q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
         verbose && @info "Second eigenvalue = $(λI)"
     else
-        @assert 1==0 "Not done"
+        @assert false "Not done"
         ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
     end
 
@@ -1340,7 +1340,7 @@ function hopf_hopf_normal_form(_prob,
 
     # right eigenvector
     # TODO IMPROVE THIS
-    if 1==1#haseigenvector(br) == false
+    if true#haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
@@ -1357,7 +1357,7 @@ function hopf_hopf_normal_form(_prob,
         verbose && @info "The second eigenvalue is $(λ2)"
         q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
     else
-        @assert 1==0 "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
+        @assert false "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
     end
 
     # for easier debugging, we normalise the case to ω1 > ω2 > 0

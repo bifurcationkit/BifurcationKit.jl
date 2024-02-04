@@ -4,7 +4,7 @@ abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 
 # function to get the two lenses associated to 2-param continuation
-@inline function get_lenses(_prob :: Union{FoldMAProblem,
+@inline function get_lenses(_prob::Union{FoldMAProblem,
                                     HopfMAProblem,
                                     PDMAProblem,
                                     NSMAProblem})
