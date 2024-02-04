@@ -158,6 +158,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     after = copy(_state)  # after the bifurcation point
     state = copy(_state)  # current state of the bisection
     before = copy(_state) # before the bifurcation point
+    state.in_bisection = true # we signal to the state the we are entering bisection
 
     # we reverse some indicators for `before`. It is OK, it will never be used other than for getp(before)
     before.n_unstable = (before.n_unstable[2], before.n_unstable[1])

@@ -313,8 +313,6 @@ function Base.show(io::IO, bp::NdBranchPoint)
     println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
 end
 ####################################################################################################
-# type for Hopf bifurcation point
-
 """
 $(TYPEDEF)
 
