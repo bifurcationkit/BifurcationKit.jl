@@ -145,6 +145,7 @@ Returns a variable containing the state of the continuation procedure. The field
     eigvecs::Teigvec  = nothing               # current eigenvectors
 
     eventValue::Tcb = nothing                 # store the current event values
+    in_bisection::Bool = false                # whether the state is in bisection for locating special points
 end
 
 function Base.copy(state::ContState)
@@ -194,6 +195,7 @@ getx(state::AbstractContinuationState)              = state.z.u
 @inline getpreviousp(state::AbstractContinuationState) = state.z_old.p
 @inline is_stable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
+@inline in_bisection(state::AbstractContinuationState) = state.in_bisection
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -243,18 +245,30 @@ function save!(br::ContResult, it::AbstractContinuationIterable, state::Abstract
     end
 end
 
-function plot_branch_cont(contres::ContResult, state::AbstractContinuationState, iter::ContIterable)
+function plot_branch_cont(contres::ContResult, 
+                            state::AbstractContinuationState, 
+                            iter::ContIterable)
     if iter.plot && mod(state.step, getcontparams(iter).plot_every_step) == 0
         return plot_branch_cont(contres, getsolution(state), iter, plot_solution(iter))
     end
 end
 
-function ContResult(it::AbstractContinuationIterable, state::AbstractContinuationState)
+function ContResult(it::AbstractContinuationIterable, 
+                    state::AbstractContinuationState)
     x0 = _copy(getx(state))
     p0 = getp(state)
     pt = record_from_solution(it)(x0, p0)
     eiginfo = compute_eigenelements(it) ? (state.eigvals, state.eigvecs) : nothing
-    return _contresult(it.prob, getalg(it), pt, get_state_summary(it, state), getsolution(it.prob, x0), state.τ, eiginfo, getcontparams(it), compute_eigenelements(it), it.kind)
+    return _contresult(it.prob,
+                        getalg(it),
+                        pt,
+                        get_state_summary(it, state), 
+                        getsolution(it.prob, x0), 
+                        state.τ, 
+                        eiginfo,
+                        getcontparams(it),
+                        compute_eigenelements(it),
+                        it.kind)
 end
 
 # function to update the state according to the event
@@ -263,12 +277,11 @@ function update_event!(it::ContIterable, state::ContState)
     if (is_event_active(it) == false); return false; end
     outcb = it.event(it, state)
     state.eventValue = (outcb, state.eventValue[1])
-    # update number of positive values
+    # update the number of positive values
     return is_event_crossed(it.event, it, state)
 end
 ####################################################################################################
 # Continuation Iterator
-#
 # function called at the beginning of the continuation
 # used to determine first point on branch and tangent at this point
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
@@ -277,9 +290,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     prob = it.prob
     p₀ = getparam(prob)
 
-    T = eltype(it)
-
-    verbose && printstyled("━"^54*"\n"*"─"^18*" ",typeof(getalg(it)).name.name," "*"─"^18*"\n\n", bold = true, color = :red)
+    verbose && printstyled("━"^54*"\n"*"─"^18*" ", typeof(getalg(it)).name.name, " "*"─"^18*"\n\n", bold = true, color = :red)
 
     # newton parameters
     @unpack p_min, p_max, max_steps, newton_options, η, ds = it.contparams
@@ -288,7 +299,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
         return nothing
     end
 
-    # apply Newton algo to initial guess
+    # apply Newton algorithm to initial guess
     verbose && printstyled("━"^18*"  INITIAL GUESS   "*"━"^18, bold = true, color = :magenta)
 
     # we pass additional kwargs to newton so that it is sent to the newton callback
@@ -384,7 +395,6 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
             @printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
         end
 
-        # Eigen-elements computation, they are stored in state
         if compute_eigenelements(it)
             # this computes eigen-elements, store them in state and update the stability indices in state
             it_eigen = compute_eigenvalues!(it, state)
@@ -396,7 +406,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
     end
 
     # step size control
-    # we update the parameters ds stored in state
+    # we update the parameter ds stored in state
     step_size_control!(state, it)
 
     # predictor: state.z_pred. The following method only mutates z_pred and τ

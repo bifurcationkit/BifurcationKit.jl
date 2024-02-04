@@ -173,7 +173,14 @@ end
 struct Secant <: AbstractTangentComputation end
 
 # This function is used for initialisation in iterate_from_two_points
-function _secant_computation!(τ::M, z₁::M, z₀::M, it::AbstractContinuationIterable, ds, θ, verbosity, dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
+function _secant_computation!(τ::M, 
+                                z₁::M, 
+                                z₀::M, 
+                                it::AbstractContinuationIterable, 
+                                ds, 
+                                θ, 
+                                verbosity, 
+                                dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
     copyto!(τ, z₁)

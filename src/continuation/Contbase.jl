@@ -8,8 +8,9 @@ initialize!(state::AbstractContinuationState,
 getpredictor!(state::AbstractContinuationState,
                 iter::AbstractContinuationIterable) = getpredictor!(state, iter, getalg(iter))
 
-# update the predictor given the tangent already
+# update the predictor given the tangent already contained in state
 # this is used in Bifurcation / Event detection using bisection
+# basically a dispatch to next method
 update_predictor!(state::AbstractContinuationState,
                 iter::AbstractContinuationIterable) = update_predictor!(state, iter, getalg(iter))
 
@@ -43,8 +44,8 @@ update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 function _update_field_but_not_sol!(state::AbstractContinuationState,
                                     sol::NonLinearSolution)
     state.converged = sol.converged
-    state.itnewton = sol.itnewton
-    state.itlinear = sol.itlineartot
+    state.itnewton  = sol.itnewton
+    state.itlinear  = sol.itlineartot
     # record previous solution
     if converged(sol)
         copyto!(state.z_old, state.z)
@@ -52,8 +53,8 @@ function _update_field_but_not_sol!(state::AbstractContinuationState,
 end
 ####################################################################################################
 function step_size_control!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        ::AbstractContinuationAlgorithm)
+                            iter::AbstractContinuationIterable,
+                            ::AbstractContinuationAlgorithm)
     if ~state.stopcontinuation && stepsizecontrol(state)
         _step_size_control!(state, getcontparams(iter), iter.verbosity)
     end

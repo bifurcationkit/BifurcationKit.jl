@@ -42,8 +42,8 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
 """
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
-    # parameters for arclength continuation
-    dsmin::T    = 1e-3
+    # tangent predictor parameters for continuation
+    dsmin::T    = 1e-4
     dsmax::T    = 1e-1
     ds::T       = 1e-2
 
@@ -55,11 +55,11 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     p_max::T    =  1.0
 
     # maximum number of continuation steps
-    max_steps::Int64  = 100
+    max_steps::Int64  = 400
 
     # Newton solver parameters
     newton_options::NewtonPar{T, S, E} = NewtonPar()
-    η::T = 150.                         # parameter to estimate tangent at first point
+    η::T = 150.                         # parameter to estimate tangent at first point by finite differences
 
     save_to_file::Bool = false          # save to file?
     save_sol_every_step::Int64 = 1      # at what steps do we save the current solution
@@ -85,6 +85,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     tol_param_bisection_event::T = 1e-16  # tolerance on value of parameter
     detect_loop::Bool = false             # detect if the branch loops
 
+    # various tests to ensure everything is right
     @assert tol_stability >= 0 "You must provide a positive tolerance for tol_stability"
     @assert dsmax >= abs(ds) >= dsmin >= 0 "You must provide a valid interval (ordered) for ds. You passed $(dsmax) >= $(abs(ds)) >= $(dsmin) with \ndsmax = $dsmax\nds    = $ds\ndsmin = $dsmin"
     @assert abs(ds) >= dsmin_bisection >= 0 "You must provide a valid interval for `ds` and `dsmin_bisection`"
