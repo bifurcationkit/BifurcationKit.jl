@@ -183,7 +183,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
             copyto!(out.u[ii], evolve(sh.flow, xc[ii], par, sh.ds[ii] * T).u .- xc[ip1])
         end
     else
-        @assert 1==0 "Not implemented yet. Try to use an AbstractVector instead"
+        @assert false "Not implemented yet. Try to use an AbstractVector instead"
     end
 
     # add constraint
@@ -245,7 +245,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
             copyto!(out.u[ii], tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1])
         end
     else
-        @assert 1==0 "Not implemented yet. Try using AbstractVectors instead"
+        @assert false "Not implemented yet. Try using AbstractVectors instead"
     end
 
     # add constraint

@@ -238,7 +238,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
         state.step > 0 && (interval = @set interval[indinterval] = getp(state))
 
         # we call the finalizer
-        # iter.finalise_solution(state.z_old, state.tau, state.step, nothing; bisection = true)
+        # iter.finalise_solution(state.z_old, state.tau, state.step, nothing; )
 
         if verbose
             ct0 = rightmost(state.eigvals)

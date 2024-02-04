@@ -410,13 +410,13 @@ end
 #                 _ps = getParamValues(brs)
 #                 display(_ps)
 #                 if δp > 0
-#                     @assert 1==1 "searchsorted?"
+#                     @assert true "searchsorted?"
 #                     idp = findfirst(x -> x.p > startingpoint.p, _ps)
 #                     @show  idp
 #                     pspan = (startingpoint.p, ~isnothing(idp) ? _ps[idp].p : pMax)
 #                     printstyled(color=:blue, "──▶ to the right\n")
 #                 else
-#                     @assert 1==1 "searchsorted?"
+#                     @assert true "searchsorted?"
 #                     idp = findfirst(x -> x.p < startingpoint.p, _ps)
 #                     pspan = (~isnothing(idp) ? _ps[idp].p : pMin, startingpoint.p)
 #                     printstyled(color=:green, "──▶ to the left\n")

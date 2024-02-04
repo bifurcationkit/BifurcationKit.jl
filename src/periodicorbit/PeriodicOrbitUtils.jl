@@ -17,7 +17,7 @@ The arguments are
 - `M` number of time slices in the periodic orbit guess
 - `amplitude`: amplitude of the periodic orbit guess
 """
-function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplitude; phase = 0)
+function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M::Int, amplitude; phase = 0)
     hopfpoint = HopfPoint(br, ind_hopf)
     specialpoint = br.specialpoint[ind_hopf]
 
@@ -29,7 +29,7 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M, amplit
 
     # vec_hopf is the eigenvector for the eigenvalues iω
     vec_hopf = geteigenvector(eigsolver, br.eig[specialpoint.idx][2], specialpoint.ind_ev-1)
-    vec_hopf ./=  norm(vec_hopf)
+    vec_hopf ./= norm(vec_hopf)
 
     orbitguess = [real.(hopfpoint.u .+ amplitude .* vec_hopf .* exp(-2pi * complex(0, 1) .* (ii/(M-1) - phase))) for ii in 0:M-1]
 
@@ -53,12 +53,14 @@ function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
 end
 
-function (finalizer::Finaliser{ <: AbstractPeriodicOrbitProblem})(z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{ <: AbstractPeriodicOrbitProblem})(z, tau, step, contResult; kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    success = converged(get(kF, :state, nothing))
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+    state = get(kF, :state, nothing)
+    success = converged(state)
+    bisection = in_bisection(state)
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
         @debug "[Periodic orbit] update section"
         # Trapezoid and Shooting need the parameters for section update:
         updatesection!(finalizer.prob, z.u, setparam(contResult, z.p))
@@ -72,15 +74,16 @@ end
 
 # version specific to collocation. Handle mesh adaptation
 function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
-                                <: WrapPOColl}})(z, tau, step, contResult; bisection = false, kF...)
+                                <: WrapPOColl}})(z, tau, step, contResult; kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     coll = finalizer.prob
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     state = get(kF, :state, nothing)
-    success = isnothing(state) ? false : converged(state)
+    success = converged(state)
+    bisection = in_bisection(state)
     # mesh adaptation
-    if success && coll.meshadapt && ~bisection
+    if success && coll.meshadapt && bisection == false
         @debug "[Collocation] update mesh"
         oldsol = _copy(z) # avoid possible overwrite in compute_error!
         oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
@@ -92,7 +95,7 @@ function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
             return false
         end
     end
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
         @debug "[collocation] update section"
         updatesection!(coll, z.u, setparam(contResult, z.p))
     end

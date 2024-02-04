@@ -194,6 +194,7 @@ function Base.copyto!(dest::ContState, src::ContState)
 end
 
 # getters
+@inline converged(::Nothing) = false
 @inline converged(state::AbstractContinuationState) = state.converged
 getsolution(state::AbstractContinuationState)       = state.z
 getx(state::AbstractContinuationState)              = state.z.u
@@ -202,6 +203,7 @@ getx(state::AbstractContinuationState)              = state.z.u
 @inline is_stable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState) = state.in_bisection
+@inline in_bisection(::Nothing) = false
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =

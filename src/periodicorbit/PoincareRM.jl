@@ -114,7 +114,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     x₀ = Π.po[N+1:end]
     x₀[end] = sh.ds[end]
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
-    # @assert 1==0 "needs a jacobian"
+    # @assert false "needs a jacobian"
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)

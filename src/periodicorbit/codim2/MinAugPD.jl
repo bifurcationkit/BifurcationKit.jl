@@ -18,7 +18,7 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
         # else
         #  return apply(jacobian_period_doubling(pb, x, par), dx)
         # end
-        @assert 1==0 "Please report to the website of BifurcationKit"
+        @assert false "Please report to the website of BifurcationKit"
     else
         # if matrix-free:
         if has_adjoint(pb)

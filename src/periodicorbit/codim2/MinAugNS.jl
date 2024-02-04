@@ -27,7 +27,7 @@ end
 
 function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     if _transpose == false
-        @assert 1==0
+        @assert false
         return jacobian_adjoint_neimark_sacker_matrix_free(pb, x, par, ω, dx)
     else
         # if matrix-free:
@@ -197,7 +197,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         
         return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
     else
-        @assert 1==0 "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
+        @assert false "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
     end
 
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)

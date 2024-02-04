@@ -338,7 +338,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par, dx_bar::Abst
             @views outc[:, ii] .= dxc[:, ii] .- diff_poincare_map(psh, xc[:, im1], par, dxc[:, im1], im1)
         end
     else
-        @assert 1==0 "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences."
+        @assert false "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences."
     end
 
     # build the array to be returned

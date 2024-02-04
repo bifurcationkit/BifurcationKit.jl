@@ -136,8 +136,10 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, c
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    success = converged(get(kF, :state, nothing))
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+    state = get(kF, :state, nothing)
+    success = converged(state)
+    bisection = in_bisection(state)
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
         # we get the MA problem
         wrap_ma = finalizer.prob
         𝐏𝐛 = wrap_ma.prob
@@ -159,7 +161,7 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, c
     end
 end
 
-function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; bisection = false, kF...)
+function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; kF...)
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     𝐏𝐛 = finalizer.prob.prob
     coll = 𝐏𝐛.prob_vf.prob
@@ -168,9 +170,10 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProbl
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     state = get(kF, :state, nothing)
-    success = isnothing(state) ? false : converged(state)
+    success = converged(state)
+    bisection = in_bisection(state)
     # mesh adaptation
-    if success && coll.meshadapt && ~bisection
+    if success && coll.meshadapt && bisection == false
         @debug "[Collocation] update mesh"
         oldsol = _copy(x) # avoid possible overwrite in compute_error!
         oldmesh = get_times(coll) .* getperiod(coll, oldsol, nothing)
@@ -182,7 +185,7 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProbl
             return false
         end
     end
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && ~bisection
+    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
         @debug "[collocation] update section"
         updatesection!(coll, x, nothing) # collocation does not need the parameter for updatesection!
     end
