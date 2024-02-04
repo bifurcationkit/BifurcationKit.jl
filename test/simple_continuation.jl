@@ -52,7 +52,7 @@ BK.isinplace(prob)
 BK.getvectortype(prob)
 show(prob)
 
-br0 = @time continuation(prob, PALC(doArcLengthScaling = true), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(17.98 k allocations: 1.155 MiB)
+br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(17.98 k allocations: 1.155 MiB)
 BK.getfirstusertype(br0)
 BK.propertynames(br0)
 BK.compute_eigenvalues(opts)
@@ -111,7 +111,6 @@ BK.getparams(br1)
 
 @set! prob.recordFromSolution = (x,p) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
-BK.arcLengthScaling(0.5, PALC(), BorderedArray(rand(2), 0.1), true)
 
 # test for different norms
 br3 = continuation(prob, PALC(), opts, normC = norminf)

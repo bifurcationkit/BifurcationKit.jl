@@ -362,25 +362,6 @@ end
 
 
 ####################################################################################################
-function arcLengthScaling(θ, alg, τ::M, verbosity) where {M <: BorderedArray}
-    # the arclength scaling algorithm is based on Salinger, Andrew G, Nawaf M Bou-Rabee,
-    # Elizabeth A Burroughs, Roger P Pawlowski, Richard B Lehoucq, Louis Romero, and Edward D
-    # Wilkes. “LOCA 1.0 Library of Continuation Algorithms: Theory and Implementation Manual,
-    # ” March 1, 2002. https://doi.org/10.2172/800778.
-    thetanew = θ
-    g = abs(τ.p * θ)
-    (verbosity > 0) && print("Theta changes from $(θ) to ")
-    if (g > alg.gMax)
-        thetanew = alg.gGoal / τ.p * sqrt( abs(1.0 - g^2) / abs(1.0 - τ.p^2) )
-        if (thetanew < alg.thetaMin)
-          thetanew = alg.thetaMin;
-        end
-    end
-    (verbosity > 0) && print("$(thetanew)\n")
-    return thetanew
-end
-
-####################################################################################################
 """
 This is the classical Newton-Krylov solver for `F(x, p) = 0` together
 with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1-θ) ⋅ (p - p0) * τp - n0 = 0`. This makes a problem of dimension N + 1.
