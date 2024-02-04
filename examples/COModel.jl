@@ -58,7 +58,7 @@ args_po = (    record_from_solution = (x, p) -> begin
     plot_solution = plotSolution,
     normC = norminf)
 
-opts_po_cont = ContinuationPar(opts_br, dsmax = 1.95, ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
+opts_po_cont = ContinuationPar(opts_br, dsmax = 1.9, ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
 max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 
 # @set! opts_po_cont.newton_options.verbose = false
@@ -131,8 +131,3 @@ hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@lens _.k), Con
 BK.plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotcirclesbif = true)
 plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf",plotcirclesbif = true)
 plot!(br,xlims=(0.6,1.5))
-
-BK.plot(sn_codim2, vars=(:k, :q2), branchlabel = "Fold")
-plot!(hp_codim2, vars=(:k, :q2), branchlabel = "Hopf",)
-
-BK.plot(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")

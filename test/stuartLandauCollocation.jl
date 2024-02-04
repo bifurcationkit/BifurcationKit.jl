@@ -265,6 +265,21 @@ _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
 @test norminf(Jco - Jco2) < 1e-14
 ####################################################################################################
+# condensation of parameters
+Ntst = 100
+m = 4
+prob_col = PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+_ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl)
+
+Jco[1:end-1,end] .= 0
+Jco[end,1:end-1] .= 0; Jco[end, end] = 1
+
+_rhs = rand(size(Jco, 1))
+sol_bs = @time Jco \ _rhs;
+sol_cop = @time BK.condensation_of_parameters(prob_col, Jco, _rhs);
+####################################################################################################
 # test Hopf aBS
 let
     for jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical(), BK.FullSparse())

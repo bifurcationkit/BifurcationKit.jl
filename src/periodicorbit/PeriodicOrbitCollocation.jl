@@ -1164,16 +1164,6 @@ $(SIGNATURES)
 This function extracts the indices of the blocks composing the matrix J which is a M x M Block matrix where each block N x N has the same sparsity.
 """
 function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
-    # N, m, Ntst = size(coll)
-    # M = div(size(Jac,1)-1, N)
-    # I, J, K = findnz(Jac)
-    # out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
-    # for k in eachindex(I)
-    #     m, l = div(I[k]-1, N), div(J[k]-1, N)
-    #     push!(out[1+m, 1+l], k)
-    # end
-    # res = [length(m) for m in out]
-    # out
     N, m, Ntst = size(coll)
     blocks = N * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)
@@ -1184,4 +1174,82 @@ function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
         push!(out[1+i, 1+j], k)
     end
     out
+end
+####################################################################################################
+@views function condensation_of_parameters(coll::PeriodicOrbitOCollProblem, J, rhs0)
+    N, m, Ntst = size(coll)
+    nbcoll = N * m
+    nⱼ = size(J, 1)
+    𝒯 = eltype(coll)
+
+    P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
+    blockⱼ = zeros(𝒯, nbcoll, nbcoll)
+    rg = 1:nbcoll
+    for _ in 1:Ntst
+        F = lu(J[rg, rg .+ N])
+        P[rg, rg] .= (F.P \ F.L)
+        rg = rg .+ nbcoll
+    end
+
+    Fₚ = lu(P)
+    Jcond = Fₚ \ J
+    rhs = Fₚ \ rhs0
+
+    Aᵢ = Matrix{𝒯}(undef, N, N)
+    Bᵢ = Matrix{𝒯}(undef, N, N)
+
+    r1 = 1:N
+    r2 = N*(m-1)+1:(m*N)
+    rN = 1:N
+
+    # solving for the external variables
+    In = I(N)
+    Jext = zeros(Ntst*N+N+1, Ntst*N+N+1)
+    Jext[end-N:end-1,end-N:end-1] .= In
+    Jext[end-N:end-1,1:N] .= -In
+    Jext[end, end] = J[end,end]
+    rhs_ext = 𝒯[]
+
+    # we solve for the external unknowns
+    for _ in 1:Ntst
+        Aᵢ .= Jcond[r2, r1]
+        Bᵢ .= Jcond[r2, r1 .+ nbcoll]
+
+        Jext[rN, rN] .= Aᵢ
+        Jext[rN, rN .+ N] .= Bᵢ
+        Jext[end, rN] .= Jcond[end, r1]
+        Jext[end, rN .+ N] .= Jcond[end, r1 .+ nbcoll]
+
+        append!(rhs_ext, copy(rhs[r2]))
+        r1 = r1 .+ nbcoll
+        r2 = r2 .+ nbcoll
+        rN = rN .+ N
+    end
+    append!(rhs_ext, rhs[r1])
+    append!(rhs_ext, [rhs[end]])
+
+    sol_ext = Jext \ rhs_ext
+
+    # we solver for the internal unknowns
+    sol_cop = copy(sol_ext[1:N])
+    r2 = N+1:(m)*N
+    r1 = 1:(m-1)*N
+    rsol = 1:(m-1)*N
+    rN_left = 1:N
+    rN = 1:N
+    for iₜ in 1:Ntst
+        Jtemp = UpperTriangular(Jcond[r1, r2])
+        left_part = Jcond[r1, rN_left]
+        right_part = Jcond[r1, r2[end]+1:r2[end]+N]
+        rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N]
+        sol_tmp = Jtemp \ rhs_tmp
+        append!(sol_cop, sol_tmp, sol_ext[rN .+ N])
+        r1 = r1 .+ nbcoll
+        r2 = r2 .+ nbcoll
+        rN_left = rN_left .+ nbcoll
+        rsol = rsol .+ nbcoll
+        rN = rN .+ N
+    end
+    push!(sol_cop, sol_ext[end])
+    sol_cop
 end
