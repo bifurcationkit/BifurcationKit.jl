@@ -459,16 +459,17 @@ end
     # this removes the internal unknowns of each mesh interval
     # this matrix is diagonal by blocks and each block is the L Matrix
     # which makes the corresponding J block upper triangular
-    P = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
+    # the following matrix collects the LU factorizations by blocks
+    𝐅𝐬 = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
     rg = 1:nbcoll # range
     for k = 1:Ntst
         F = lu(J[rg, rg .+ n])
-        P[rg, rg] .= (F.P \ F.L)
+        𝐅𝐬[rg, rg] .= (F.P \ F.L)
         # ldiv!(P[rg, rg], F.P, F.L)
         rg = rg .+ m * n
     end
 
-    Jcond = P \ J
+    Jcop = 𝐅𝐬 \ J
 
     Ai = Matrix{𝒯}(undef, n, n)
     Bi = Matrix{𝒯}(undef, n, n)
@@ -476,14 +477,14 @@ end
     r2 = n*(m-1)+1:(m*n)
 
     # monodromy matrix
-    M = Array{𝒯}(LinearAlgebra.I(n))
+    M = Matrix{𝒯}(LinearAlgebra.I(n))
 
     for _ in 1:Ntst
-        Ai .= Jcond[r2, r1]
-        Bi .= Jcond[r2, r1 .+ n * m]
+        Ai .= Jcop[r2, r1]
+        Bi .= Jcop[r2, r1 .+ n * m]
+        M .= (Bi \ Ai) * M
         r1  = r1 .+ m * n
         r2  = r2 .+ m * n
-        M .= (Bi \ Ai) * M
     end
 
     # floquet multipliers
