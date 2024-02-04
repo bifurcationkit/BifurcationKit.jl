@@ -156,15 +156,18 @@ function Base.copy(state::ContState)
         z_old  = _copy(state.z_old),
         converged = state.converged,
         itnewton         = state.itnewton,
+        itlinear         = state.itlinear,
         step             = state.step,
         ds               = state.ds,
         stopcontinuation = state.stopcontinuation,
         stepsizecontrol  = state.stepsizecontrol,
         n_unstable          = state.n_unstable,
         n_imag              = state.n_imag,
-        eventValue          = state.eventValue,
+        convergedEig        = state.convergedEig,
         eigvals             = state.eigvals,
-        eigvecs             = state.eigvecs # can be removed? to save memory?
+        eigvecs             = state.eigvecs, # can be removed? to save memory?
+        eventValue          = state.eventValue,
+        in_bisection        = state.in_bisection
     )
 end
 
@@ -175,15 +178,18 @@ function Base.copyto!(dest::ContState, src::ContState)
         copyto!(dest.z_old , src.z_old)
         dest.converged        = src.converged
         dest.itnewton         = src.itnewton
+        dest.itlinear         = src.itlinear
         dest.step             = src.step
         dest.ds               = src.ds
         dest.stopcontinuation = src.stopcontinuation
         dest.stepsizecontrol  = src.stepsizecontrol
         dest.n_unstable       = src.n_unstable
         dest.n_imag           = src.n_imag
-        dest.eventValue       = src.eventValue
+        dest.convergedEig     = src.convergedEig
         dest.eigvals          = src.eigvals
         dest.eigvecs          = src.eigvecs # can be removed? to save memory?
+        dest.eventValue       = src.eventValue
+        dest.in_bisection     = src.in_bisection
     return dest
 end
 
