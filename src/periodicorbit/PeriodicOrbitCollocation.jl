@@ -626,7 +626,16 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     J[end, end] = -phase / period
     return J
 end
-analytical_jacobian(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars; 𝒯 = eltype(u), k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), coll, u, pars; k...)
+
+analytical_jacobian(coll::PeriodicOrbitOCollProblem, 
+                            u, 
+                            pars; 
+                            𝒯 = eltype(u), 
+                            k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
+                                                        coll, 
+                                                        u, 
+                                                        pars; 
+                                                        k...)
 
 function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector,
@@ -1181,8 +1190,9 @@ end
     nbcoll = N * m
     nⱼ = size(J, 1)
     𝒯 = eltype(coll)
+    In = I(N)
 
-    P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
+    𝐅𝐬 = Matrix{𝒯}(I(nⱼ))
     blockⱼ = zeros(𝒯, nbcoll, nbcoll)
     rg = 1:nbcoll
     for _ in 1:Ntst
@@ -1203,11 +1213,10 @@ end
     rN = 1:N
 
     # solving for the external variables
-    In = I(N)
     Jext = zeros(Ntst*N+N+1, Ntst*N+N+1)
     Jext[end-N:end-1,end-N:end-1] .= In
     Jext[end-N:end-1,1:N] .= -In
-    Jext[end, end] = J[end,end]
+    Jext[end, end] = J[end, end]
     rhs_ext = 𝒯[]
 
     # we solve for the external unknowns

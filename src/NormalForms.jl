@@ -238,7 +238,7 @@ function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, a
 
     # we need to find the type, supercritical or subcritical
     dsfactor = b1 * b3 < 0 ? T(1) : T(-1)
-    if 1==1
+    if true
         # we solve b1 * ds + b3 * amp^2 / 6 = 0
         amp = ampfactor * sqrt(-6abs(ds) * dsfactor * b1 / b3)
         pnew = bp.p + abs(ds) * dsfactor

@@ -459,9 +459,13 @@ end
     # this removes the internal unknowns of each mesh interval
     # this matrix is diagonal by blocks and each block is the L Matrix
     # which makes the corresponding J block upper triangular
-    # the following matrix collects the LU factorizations by blocks
+    # the following matrix 𝐅𝐬 collects the LU factorizations by blocks
+    # recall that if F = lu(A) then
+    # F.L * F.U = A * F.P
+    # (F.P⁻¹ * F.L) * F.U = A
+    # hence 𝐅𝐬⁻¹ = (P⁻¹ * L)⁻¹ = L⁻¹ * P
     𝐅𝐬 = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
-    rg = 1:nbcoll # range
+    rg = 1:nbcoll
     for k = 1:Ntst
         F = lu(J[rg, rg .+ n])
         𝐅𝐬[rg, rg] .= (F.P \ F.L)
@@ -487,11 +491,14 @@ end
         r2  = r2 .+ m * n
     end
 
+    # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
+    factor = iseven(Ntst) ? 1 : -1
+
     # floquet multipliers
     vals, vecs = eigen(M)
 
     nev = min(n, nev)
-    logvals = log.(Complex.(vals))
+    logvals = @. log(Complex(factor * vals))
     I = sortperm(logvals, by = real, rev = true)[1:nev]
 
     # floquet exponents
