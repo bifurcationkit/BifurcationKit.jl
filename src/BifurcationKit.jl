@@ -5,7 +5,7 @@ module BifurcationKit
     using Parameters: @with_kw, @unpack, @with_kw_noshow
     using RecursiveArrayTools: VectorOfArray
     using DocStringExtensions
-    using DataStructures: CircularBuffer
+    using DataStructures: CircularBuffer # used for Polynomial predictor
     using ForwardDiff
 
 
