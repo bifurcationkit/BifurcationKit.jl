@@ -1194,20 +1194,23 @@ end
     #https://github.com/DynareJulia/FastLapackInterface.jl
     N, m, Ntst = size(coll)
     nbcoll = N * m
+    n = N
     nⱼ = size(J, 1)
     𝒯 = eltype(coll)
-    In = I(N)
 
-    𝐅𝐬 = Matrix{𝒯}(I(nⱼ))
+    P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
     blockⱼ = zeros(𝒯, nbcoll, nbcoll)
     rg = 1:nbcoll
     for _ in 1:Ntst
-        F = lu(J[rg, rg .+ N])
-        𝐅𝐬[rg, rg] .= (F.P \ F.L)
+        Jtmp = J[rg, rg .+ n]
+        Jtmp = vcat(Jtmp, J[end, rg .+ n]')
+        F = lu(Jtmp)
+        P[rg, rg] .= ( F.P\F.L)[1:end-1, :]
+        P[end, rg] .= ( F.P\F.L)[end, :]
         rg = rg .+ nbcoll
     end
 
-    Fₚ = lu(𝐅𝐬)
+    Fₚ = lu(P)
     Jcond = Fₚ \ J
     rhs = Fₚ \ rhs0
 
@@ -1219,10 +1222,11 @@ end
     rN = 1:N
 
     # solving for the external variables
+    In = I(N)
     Jext = zeros(Ntst*N+N+1, Ntst*N+N+1)
     Jext[end-N:end-1,end-N:end-1] .= In
     Jext[end-N:end-1,1:N] .= -In
-    Jext[end, end] = J[end, end]
+    Jext[end, end] = Jcond[end,end]
     rhs_ext = 𝒯[]
 
     # we solve for the external unknowns
@@ -1232,6 +1236,9 @@ end
 
         Jext[rN, rN] .= Aᵢ
         Jext[rN, rN .+ N] .= Bᵢ
+
+        Jext[rN, end] .= Jcond[r2, end]
+
         Jext[end, rN] .= Jcond[end, r1]
         Jext[end, rN .+ N] .= Jcond[end, r1 .+ nbcoll]
 
@@ -1244,6 +1251,7 @@ end
     append!(rhs_ext, [rhs[end]])
 
     sol_ext = Jext \ rhs_ext
+    ΔT = sol_ext[end]
 
     # we solver for the internal unknowns
     sol_cop = copy(sol_ext[1:N])
@@ -1256,7 +1264,7 @@ end
         Jtemp = UpperTriangular(Jcond[r1, r2])
         left_part = Jcond[r1, rN_left]
         right_part = Jcond[r1, r2[end]+1:r2[end]+N]
-        rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N]
+        rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N] - ΔT * Jcond[r1, end]
         sol_tmp = Jtemp \ rhs_tmp
         append!(sol_cop, sol_tmp, sol_ext[rN .+ N])
         r1 = r1 .+ nbcoll
@@ -1267,4 +1275,5 @@ end
     end
     push!(sol_cop, sol_ext[end])
     sol_cop
+
 end

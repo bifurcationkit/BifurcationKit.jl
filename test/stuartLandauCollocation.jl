@@ -268,17 +268,21 @@ _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 # condensation of parameters
 Ntst = 100
 m = 4
+N = 2
+const _al = I(N) + 0.1 .*rand(N,N)
+# prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> I(N))
+prob_ana =       BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _al)
 prob_col = PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl)
-
-Jco[1:end-1,end] .= 0
-Jco[end,1:end-1] .= 0; Jco[end, end] = 1
+Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
 
 _rhs = rand(size(Jco, 1))
 sol_bs = @time Jco \ _rhs;
+Jco_tmp = zero(Jco)
+Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
 sol_cop = @time BK.condensation_of_parameters(prob_col, Jco, _rhs);
+@test sol_bs ≈ sol_cop
 ####################################################################################################
 # test Hopf aBS
 let
