@@ -42,7 +42,7 @@ length(prob_col)
 BK.get_times(prob_col)
 BK.get_max_time_step(prob_col)
 size(prob_col.mesh_cache)
-BK.update_mesh!(prob_col, prob_col.mesh_cache.mesh)
+BK.update_mesh!(prob_col, prob_col.mesh_cache.τs)
 PeriodicOrbitOCollProblem(10, 2) |> BK.get_mesh_size
 BK.get_Ls(prob_col)
 show(prob_col)

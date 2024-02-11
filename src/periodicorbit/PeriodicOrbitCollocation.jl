@@ -403,7 +403,7 @@ $(SIGNATURES)
     n, m, Ntst = size(pb)
     L, ∂L = get_Ls(pb.mesh_cache)
     ω = pb.mesh_cache.gauss_weight
-    mesh = pb.mesh_cache.mesh
+    mesh = pb.mesh_cache.τs
 
     guj = zeros(Ty, n, m)
     uj  = zeros(Ty, n, m+1)
@@ -1203,11 +1203,11 @@ end
     rg = 1:nbcoll
     for _ in 1:Ntst
         F = lu(J[rg, rg .+ N])
-        P[rg, rg] .= (F.P \ F.L)
+        𝐅𝐬[rg, rg] .= (F.P \ F.L)
         rg = rg .+ nbcoll
     end
 
-    Fₚ = lu(P)
+    Fₚ = lu(𝐅𝐬)
     Jcond = Fₚ \ J
     rhs = Fₚ \ rhs0
 
