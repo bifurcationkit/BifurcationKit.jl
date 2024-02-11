@@ -527,6 +527,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
 
     # we invert L repeatedly, so we try to factorize it
     Linv = L isa AbstractMatrix ? factorize(L) : L
+    @error "" typeof(L)
 
     # "zero" eigenvalues at bifurcation point
     rightEv = br.eig[bifpt.idx].eigenvals
@@ -596,6 +597,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     d2gidxjdpk = zeros(Tvec, N, N)
     for ii in 1:N, jj in 1:N
         R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
+        @error "" typeof(E(R01)) Linv
         Ψ01, cv, it = ls(Linv, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])

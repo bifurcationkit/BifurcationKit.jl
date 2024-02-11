@@ -63,13 +63,13 @@ function plot!(ax1, contres::AbstractBranchResult;
                 markersize = 10,
                 label = "$(pt.type)")
         end
-        GLMakie.axislegend(ax1, merge = true, unique = true)
+        # GLMakie.axislegend(ax1, merge = true, unique = true)
     end
     ax1
 end
 
 function plot_branch_cont(contres::ContResult,
-        sol::BorderedArray,
+        state,
         iter,
         plotuserfunction;
         plotfold = false,
@@ -82,7 +82,7 @@ function plot_branch_cont(contres::ContResult,
         plotcirclesbif = true,
         applytoY = identity,
         applytoX = identity)
-
+    sol = getsolution(state)
     if length(contres) == 0; return ; end
 
     # names for axis labels
@@ -95,10 +95,10 @@ function plot_branch_cont(contres::ContResult,
         linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
     end
 
-    fig = Figure(resolution = (1200, 700))
+    fig = Figure(size = (1200, 700))
     ax1 = fig[1:2, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
 
-    ax2 = fig[1, 2] = Axis(fig, xlabel = "step", ylabel = String(xlab))
+    ax2 = fig[1, 2] = Axis(fig, xlabel = "step [$(state.step)]", ylabel = String(xlab))
     lines!(ax2, contres.step, contres.param, linewidth = linewidth)
 
     if compute_eigenelements(iter)
@@ -140,7 +140,7 @@ function plot(contres::AbstractBranchResult; kP...)
     ind1, ind2 = get_plot_vars(contres, nothing)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
-    fig = Figure(resolution = (1200, 700))
+    fig = Figure(size = (1200, 700))
     ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
     
     plot!(ax1, contres; kP...)
@@ -153,7 +153,7 @@ function plot(brs::AbstractBranchResult...;
         branchlabel = fill("", length(brs)),
         kP...)
     if length(brs) == 0; return ;end
-    fig = Figure(resolution = (1200, 700))
+    fig = Figure(size = (1200, 700))
     ax1 = fig[1, 1] = Axis(fig)
 
     for (id, contres) in pairs(brs)
@@ -218,7 +218,7 @@ end
 function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd); return; end
 
-    fig = Figure(resolution = (1200, 700))
+    fig = Figure(size = (1200, 700))
     ax = fig[1, 1] = Axis(fig)
 
     _plot_bifdiag_makie!(ax, bd; code, level, k...)

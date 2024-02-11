@@ -233,11 +233,16 @@ function update_stability!(state::ContState, n_unstable::Int, n_imag::Int, conve
     state.convergedEig = converged
 end
 
-function save!(br::ContResult, it::AbstractContinuationIterable, state::AbstractContinuationState)
+function save!(br::ContResult, 
+                it::AbstractContinuationIterable, 
+                state::AbstractContinuationState)
+    @debug "Saving data on the branch" state.step
     # update branch field
     push!(br.branch, get_state_summary(it, state))
     # save solution
-    if it.contparams.save_sol_every_step > 0 && (mod_counter(state.step, it.contparams.save_sol_every_step) || ~done(it, state))
+    if it.contparams.save_sol_every_step > 0 && 
+        (mod_counter(state.step, it.contparams.save_sol_every_step) || 
+        ~done(it, state))
         push!(br.sol, (x = getsolution(it.prob, _copy(getx(state))),
                          p = getp(state), 
                          step = state.step))
@@ -257,7 +262,10 @@ function plot_branch_cont(contres::ContResult,
                             state::AbstractContinuationState, 
                             iter::ContIterable)
     if iter.plot && mod(state.step, getcontparams(iter).plot_every_step) == 0
-        return plot_branch_cont(contres, getsolution(state), iter, plot_solution(iter))
+        return plot_branch_cont(contres, 
+                                state, 
+                                iter, 
+                                plot_solution(iter))
     end
 end
 
@@ -507,7 +515,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
         next = iterate(it, state)
     end
 
-    it.plot && plot_branch_cont(contRes, state.z, it, plot_solution(it))
+    plot_branch_cont(contRes, state, it)
 
     # return current solution in case the corrector did not converge
     push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, :converged, (getp(state), getp(state))))

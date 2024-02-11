@@ -173,9 +173,10 @@ end
 Plot the branch of solutions during the continuation
 """
 function plot_branch_cont(contres::ContResult, 
-        sol::BorderedArray, 
-        iter, 
-        plotuserfunction)
+                        state, 
+                        iter, 
+                        plotuserfunction)
+    sol = getsolution(state)
     l = compute_eigenelements(iter) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
     plot(layout = l )
 
@@ -198,7 +199,7 @@ function plot_branch_cont(contres::ContResult,
         plot!([0, 0], [maxIm, minIm], subplot=4, label = "", color = :blue)
     end
 
-    plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step", ylabel = get_lens_symbol(contres), label = "", subplot = 2) |> display
+    plot!(contres; vars = (:step, :param), putspecialptlegend = false, plotspecialpoints = false, xlabel = "step [$(state.step)]", ylabel = get_lens_symbol(contres), label = "", subplot = 2) |> display
 
 end
 
@@ -242,10 +243,16 @@ function plot_periodic_shooting(x, M; kwargs...)
 end
 ####################################################################################################
 RecipesBase.@recipe function Plots(sol::SolPeriodicOrbit;
-                           )
+                                    indx = nothing
+                                    )
+    @assert indx isa Int || indx isa Nothing
     ndim = size(sol.u, 1)
     @series begin
-        sol.t, sol.u'
+        if indx === nothing
+            sol.t, sol.u'
+        else
+            sol.t, sol.u[indx, :]
+        end
     end
 end
 ####################################################################################################
@@ -281,9 +288,9 @@ RecipesBase.@recipe function f(bd::Nothing)
     nothing
 end
 ####################################################################################################
-function plot_eigenvals(br::ContResult, with_param = true)
-    p = br.param
-    data = mapreduce(x->x.eigenvals, hcat, br.eig)
+function plot_eigenvals(br::AbstractResult, with_param = true; var = :param)
+    p = getproperty(br.branch, var)
+    data = mapreduce(x -> x.eigenvals, hcat, br.eig)
     if with_param
         plot(p, real.(data'))
     else

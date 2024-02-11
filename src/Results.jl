@@ -206,7 +206,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     print(io, prefix * "├─ Algo: ")
     printstyled(io, typeof(br.alg).name.name, "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
-        println(io, prefix * "└─ Special points:\n\nIf `br` is the name of the branch,\nind_ev = index of the bifurcating eigenvalue e.g. `br.eig[idx].eigenvals[ind_ev]`\n")
+        println(io, prefix * "└─ Special points:\n")
         for ii in eachindex(br.specialpoint)
             _show(io, br.specialpoint[ii], ii, String(get_lens_symbol(br)))
         end

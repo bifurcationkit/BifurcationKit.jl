@@ -115,7 +115,7 @@ function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
         printstyled(io, @sprintf("%8s", bp.type); bold=true, color=:blue)
         @printf(io, " at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [", p, bp.param, bp.interval..., bp.precision)
         printstyled(io, @sprintf("%9s", bp.status); bold=true, color=(bp.status == :converged) ? :green : :red)
-        @printf(io, "], δ = (%2i, %2i), step = %3i, eigenelements in eig[%3i], ind_ev = %3i\n", bp.δ..., bp.step, bp.idx, bp.ind_ev)
+        @printf(io, "], δ = (%2i, %2i), step = %3i\n", bp.δ..., bp.step)
     end
 end
 
