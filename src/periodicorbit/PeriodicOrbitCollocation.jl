@@ -1192,21 +1192,32 @@ end
 ####################################################################################################
 @views function condensation_of_parameters(coll::PeriodicOrbitOCollProblem, J, rhs0)
     #https://github.com/DynareJulia/FastLapackInterface.jl
+@views function condensation_of_parameters(coll::PeriodicOrbitOCollProblem, J, rhs0, Jtmp, Jext)
+    @assert size(J, 1) == size(J, 2) == length(rhs0) "The right hand side does not have the right dimension or the jacobian is not square."
     N, m, Ntst = size(coll)
-    nbcoll = N * m
     n = N
+    nbcoll = N * m
+    # size of the periodic orbit problem.
+    # We use this to tackle the case where size(J, 1) > Nₚₒ
+    Npo = length(coll) + 1
     nⱼ = size(J, 1)
+    is_bordered = nⱼ == Npo
+    δn =  nⱼ - Npo # this allows to compute the border side
+    @assert δn >= 0
+    @assert size(Jext, 1) == size(Jext, 2) == Ntst*N+N+1+δn "Error with matrix of external variables. Please report this issue on the website of BifurcationKit. δn = $δn"
     𝒯 = eltype(coll)
+    In = I(N)
 
     P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
     blockⱼ = zeros(𝒯, nbcoll, nbcoll)
     rg = 1:nbcoll
+    rN = 1:N
     for _ in 1:Ntst
         Jtmp = J[rg, rg .+ n]
-        Jtmp = vcat(Jtmp, J[end, rg .+ n]')
+        Jtmp = vcat(Jtmp, J[Npo:(Npo+δn), rg .+ n])
         F = lu(Jtmp)
-        P[rg, rg] .= ( F.P\F.L)[1:end-1, :]
-        P[end, rg] .= ( F.P\F.L)[end, :]
+        P[rg, rg] .= ( F.P\F.L)[1:end-1-δn, :]
+        P[Npo:(Npo+δn), rg] .= ( F.P\F.L)[end-δn:end, :]
         rg = rg .+ nbcoll
     end
 
@@ -1222,12 +1233,11 @@ end
     rN = 1:N
 
     # solving for the external variables
-    In = I(N)
-    Jext = zeros(Ntst*N+N+1, Ntst*N+N+1)
-    Jext[end-N:end-1,end-N:end-1] .= In
-    Jext[end-N:end-1,1:N] .= -In
-    Jext[end, end] = Jcond[end,end]
-    rhs_ext = 𝒯[]
+    Jext .= 0
+    Jext[end-δn-N:end-δn-1,end-δn-N:end-δn-1] .= In
+    Jext[end-δn-N:end-δn-1,1:N] .= -In
+    Jext[end-δn:end, end-δn:end] = Jcond[end-δn:end, end-δn:end]
+    rhs_ext = zeros(𝒯, size(Jext, 1))
 
     # we solve for the external unknowns
     for _ in 1:Ntst
@@ -1237,43 +1247,68 @@ end
         Jext[rN, rN] .= Aᵢ
         Jext[rN, rN .+ N] .= Bᵢ
 
-        Jext[rN, end] .= Jcond[r2, end]
+        Jext[rN, end-δn:end] .= Jcond[r2, Npo:(Npo+δn)]
 
-        Jext[end, rN] .= Jcond[end, r1]
-        Jext[end, rN .+ N] .= Jcond[end, r1 .+ nbcoll]
+        Jext[end-δn:end, rN] .= Jcond[Npo:(Npo+δn), r1]
+        Jext[end-δn:end, rN .+ N] .= Jcond[Npo:(Npo+δn), r1 .+ nbcoll]
 
-        append!(rhs_ext, copy(rhs[r2]))
+        rhs_ext[rN] .= rhs[r2]
+
         r1 = r1 .+ nbcoll
         r2 = r2 .+ nbcoll
         rN = rN .+ N
     end
-    append!(rhs_ext, rhs[r1])
-    append!(rhs_ext, [rhs[end]])
+    rhs_ext[rN] .= rhs[r1]
+    rhs_ext[end-δn:end] = rhs[end-δn:end]
 
-    sol_ext = Jext \ rhs_ext
-    ΔT = sol_ext[end]
+    F = lu!(Jext)
+    sol_ext = F \ rhs_ext
+    ΔT = sol_ext[end-δn]
+    Δp = sol_ext[end]
 
     # we solver for the internal unknowns
-    sol_cop = copy(sol_ext[1:N])
     r2 = N+1:(m)*N
     r1 = 1:(m-1)*N
     rsol = 1:(m-1)*N
     rN_left = 1:N
     rN = 1:N
+
+    sol_cop = copy(rhs)
+    rhs_tmp = zeros(𝒯, (m-1)*N)
+    sol_tmp = copy(rhs_tmp)
+
+    sol_cop[1:N] .= sol_ext[1:N]
+
     for iₜ in 1:Ntst
         Jtemp = UpperTriangular(Jcond[r1, r2])
         left_part = Jcond[r1, rN_left]
         right_part = Jcond[r1, r2[end]+1:r2[end]+N]
-        rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N] - ΔT * Jcond[r1, end]
-        sol_tmp = Jtemp \ rhs_tmp
-        append!(sol_cop, sol_tmp, sol_ext[rN .+ N])
+
+        # rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N] - ΔT * Jcond[r1, end]
+        if δn == 0
+            rhs_tmp .= @. rhs[rsol] -  ΔT * Jcond[r1, end] 
+        elseif δn == 1
+            rhs_tmp .= @. rhs[rsol] -  ΔT * Jcond[r1, end-1] - Δp * Jcond[r1, end] 
+        else
+            throw("")
+        end
+        mul!(rhs_tmp, left_part,  sol_ext[rN],      -1, 1)
+        mul!(rhs_tmp, right_part, sol_ext[rN .+ N], -1, 1)
+
+        ldiv!(sol_tmp, Jtemp, rhs_tmp)
+
+        # append!(sol_cop, sol_tmp, sol_ext[rN .+ N])
+        sol_cop[rsol .+ N] .= sol_tmp
+        sol_cop[rsol[end]+N+1:rsol[end]+2N] .= sol_ext[rN .+ N]
+
         r1 = r1 .+ nbcoll
         r2 = r2 .+ nbcoll
         rN_left = rN_left .+ nbcoll
         rsol = rsol .+ nbcoll
         rN = rN .+ N
     end
-    push!(sol_cop, sol_ext[end])
+    sol_cop[end-δn:end] = sol_ext[end-δn:end]
     sol_cop
+
 
 end

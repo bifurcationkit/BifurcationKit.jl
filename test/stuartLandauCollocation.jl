@@ -281,8 +281,18 @@ _rhs = rand(size(Jco, 1))
 sol_bs = @time Jco \ _rhs;
 Jco_tmp = zero(Jco)
 Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
-sol_cop = @time BK.condensation_of_parameters(prob_col, Jco, _rhs);
+sol_cop = @time BK.condensation_of_parameters(prob_col, Jco, _rhs, Jco_tmp, Jext_tmp);
 @test sol_bs ≈ sol_cop
+
+# test case of a bordered system to test PALC like linear problems
+Jco_bd = vcat(hcat(Jco, rand(size(Jco, 1))), rand(size(Jco, 1)+1)')
+Jco_bd[end-1-N:end-2, end] .= 0
+_rhs = rand(size(Jco_bd, 1))
+sol_bs_bd = @time Jco_bd \ _rhs;
+Jco_tmp = zero(Jco_bd)
+Jext_tmp= zeros(Ntst*N+N+1+1, Ntst*N+N+1+1)
+sol_cop_bd = @time BK.condensation_of_parameters(prob_col, Jco_bd, _rhs, Jco_tmp, Jext_tmp);
+@test sol_bs_bd ≈ sol_cop_bd
 ####################################################################################################
 # test Hopf aBS
 let
