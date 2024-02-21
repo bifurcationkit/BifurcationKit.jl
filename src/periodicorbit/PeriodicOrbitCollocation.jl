@@ -1190,8 +1190,6 @@ function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
     out
 end
 ####################################################################################################
-@views function condensation_of_parameters(coll::PeriodicOrbitOCollProblem, J, rhs0)
-    #https://github.com/DynareJulia/FastLapackInterface.jl
 @views function condensation_of_parameters(coll::PeriodicOrbitOCollProblem, J, rhs0, Jtmp, Jext)
     @assert size(J, 1) == size(J, 2) == length(rhs0) "The right hand side does not have the right dimension or the jacobian is not square."
     N, m, Ntst = size(coll)
