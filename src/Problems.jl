@@ -250,7 +250,12 @@ end
 
 # getters for AbstractBifurcationProblem
 getu0(pb::AbstractBifurcationProblem) = pb.u0
-getparams(pb::AbstractBifurcationProblem) = pb.params
+"""
+Return the parameters of the bifurcation problem.
+"""
+function getparams(pb::AbstractBifurcationProblem) 
+    pb.params
+end
 @inline getlens(pb::AbstractBifurcationProblem) = pb.lens
 getparam(pb::AbstractBifurcationProblem) = get(pb.params, pb.lens)
 setparam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)

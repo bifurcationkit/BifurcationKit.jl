@@ -94,7 +94,12 @@ end
 
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
-getparams(br::AbstractBranchResult) = getparams(br.prob)
+"""
+Return the parameters of the bifurcation problem of the branch.
+"""
+function getparams(br::AbstractBranchResult) 
+    getparams(br.prob)
+end
 getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline getprob(br::AbstractBranchResult) = br.prob
 

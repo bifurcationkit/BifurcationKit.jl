@@ -57,12 +57,12 @@ resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 
 # use of BorderedArray structure
 res = probSh(po, par)
-@test norm(vec(res.u[:,:]) - resv[1:end-1] , Inf) ≈ 0
+@test norm(reduce(vcat,res.u) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
 dres = probSh(po, par, dpo; δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
-@test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
+@test norm(reduce(vcat,dres.u) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using nonLinear flow
 vf(x, p) = x.^2
@@ -92,12 +92,12 @@ resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 
 # use of BorderedArray structure
 res = probSh(po, par)
-@test norm(vec(res.u[:,:]) - resv[1:end-1] , Inf) ≈ 0
+@test norm(Vector(res.u) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
 dres = probSh(po, par, dpo; δ = δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
-@test norm(vec(dres.u[:,:]) - dresv[1:end-1], Inf) ≈ 0
+@test norm(Vector(dres.u) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the hyperplane projections for Poincare Shooting
 M = 1

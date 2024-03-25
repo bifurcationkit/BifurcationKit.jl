@@ -332,19 +332,20 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, par; kode.
     # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(prob)
         sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T; kode...) for ii in 1:M]
-        time = sol[1].t; u = sol[1][:,:]
+        time = sol[1].t; u = VectorOfArray(sol[1].u)
+        # we could also use Matrix(sol[1])
         for ii in 2:M
             append!(time, sol[ii].t .+ time[end])
-            u = hcat(u, sol[ii][:,:])
+            append!(u.u, sol[ii].u)
         end
         return SolPeriodicOrbit(t = time, u = u)
 
     else # threaded version
         sol = evolve(prob.flow, Val(:Full), xc, par, prob.ds .* T; kode...)
-        time = sol[1].t; u = sol[1][:,:]
+        time = sol[1].t; u = VectorOfArray(sol[1].u)
         for ii in 2:M
             append!(time, sol[ii].t .+ time[end])
-            u = hcat(u, sol[ii][:,:])
+            append!(u.u, sol[ii].u)
         end
         return SolPeriodicOrbit(t = time, u = u)
     end

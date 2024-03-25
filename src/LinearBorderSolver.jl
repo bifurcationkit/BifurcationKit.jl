@@ -209,7 +209,7 @@ function (lbs::MatrixBLS)(J, dR,
     A = vcat(hcat(A, dR), hcat(adjoint(dzu .* ξu), dzp * ξp))
 
     # apply a linear operator to ξu
-    if ~isnothing(applyξu!)
+    if isnothing(applyξu!) == false
         applyξu!(@view(A[end, begin:end-1]))
     end
 
