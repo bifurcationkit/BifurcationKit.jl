@@ -123,26 +123,26 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
-    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
+    ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
-    dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
-                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
-    dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵ3)), v),
-                  apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵ3)), v));
-    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
+    dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
+                residual(POWrap, x, set(par, lens, p - ϵₚ))); rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
+    dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
+                  apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
+    rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
     σₚ = -dot(w, dJvdp)
 
     if has_hessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
         # We invert the jacobian of the PD problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
-        u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵ2 .* vcat(v,0), par0, w, true)
-        u2 = apply(JPD★, w) #TODO this has been already computed !!!
-        σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
+        u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
+        u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
+        σₓ = minus(u2, u1); rmul!(σₓ, 1 / (2ϵₓ))
 
         # a bit of a hack
-        xtmp = copy(x); xtmp[end] += ϵ1
-        σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / ϵ1
+        xtmp = copy(x); xtmp[end] += ϵₜ
+        σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / (ϵₜ)
         ########## Resolution of the bordered linear system ########
         # we invert Jpd
         _Jpo = jacobian(POWrap, x, par0)
