@@ -199,6 +199,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             # X .= X .- A \ vcat(res_f, 0)
             # x .= X[begin:end-1]; p = X[end]
             du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(𝒯), one(𝒯), one(𝒯))
+            ~flag && @debug "[MoorePenrose] Bordered linear solver did not converge."
             minus!(x, du)
             p -= dup
             verbose && print_nonlinear_step(step, nothing, itlinear1)

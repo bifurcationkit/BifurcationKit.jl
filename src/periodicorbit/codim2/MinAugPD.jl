@@ -54,7 +54,6 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     #       a should be a null vector of J'+I
     # we solve Jv + v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>
-    # @debug "" x par
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
     σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
@@ -150,9 +149,9 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ, σₜ), σₚ, rhsu, rhsp)
         ~flag && @debug "Linear solver for J did not converge."
 
-        # Jfd = finiteDifferences(z->𝐏𝐝(z,par0),vcat(x,p))
+        # Jfd = finiteDifferences(z -> 𝐏𝐝(z, par0), vcat(x, p))
         # _Jpo = jacobian(POWrap, x, par0).jacpb |> copy
-        # Jana = [_Jpo dₚF ; vcat(σₓ,σₜ)' σₚ]
+        # Jana = [_Jpo dₚF ; vcat(σₓ, σₜ)' σₚ]
         #
         # # @debug "" size(σₓ) σₚ size(dₚF) size(_Jpo)
         # @infiltrate
@@ -332,7 +331,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
         ζ★ ./= norm(ζ★)
-        𝐏𝐝.R2 = dot(ζ★, ζ)
+        prob_pd.R2 = dot(ζ★, ζ)
 
         pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
         if pbwrap.prob isa ShootingProblem
@@ -348,7 +347,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             end
         end
 
-        return prob_pd.GPD, prob_pd.CP
+        return prob_pd.GPD, prob_pd.CP, prob_pd.R2
     end
 
     # change the user provided functions by passing probPO in its parameters
@@ -374,7 +373,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2)
 
-    event = ContinuousEvent(2, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp"), opt_pd_cont.tol_stability)
+    event = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
 
     # solve the PD equations
     br_pd_po = continuation(
