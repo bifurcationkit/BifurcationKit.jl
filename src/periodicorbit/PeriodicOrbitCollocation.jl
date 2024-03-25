@@ -567,9 +567,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    pj = coll.cache.gi #zeros(𝒯, n, m)
-    ϕj = coll.cache.gj #zeros(𝒯, n, m)
-    uj = coll.cache.uj #zeros(𝒯, n, m+1)
+    pj = coll.cache.gi # zeros(𝒯, n, m)
+    ϕj = coll.cache.gj # zeros(𝒯, n, m)
+    uj = coll.cache.uj # zeros(𝒯, n, m+1)
     In = I(n)
     J0 = zeros(𝒯, n, n)
 
@@ -1047,19 +1047,18 @@ function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
     t = mod(t0, T) / T
 
     mesh = getmesh(sol.pb)
-    indτ = searchsortedfirst(mesh, t) - 1
-    if indτ <= 0
+    index_t = searchsortedfirst(mesh, t) - 1
+    if index_t <= 0
         return sol.x[1:n]
-    elseif indτ > Ntst
+    elseif index_t > Ntst
         return xc[:, end]
     end
-    # println("--> ", t, " belongs to ", (mesh[indτ], mesh[indτ+1])) # waste lots of ressources
-    @assert mesh[indτ] <= t <= mesh[indτ+1] "Please open an issue on the website of BifurcationKit.jl"
-    σ = σj(t, mesh, indτ)
+    @assert mesh[index_t] <= t <= mesh[index_t+1] "Please open an issue on the website of BifurcationKit.jl"
+    σ = σj(t, mesh, index_t)
     # @assert -1 <= σ <= 1 "Strange value of $σ"
     σs = get_mesh_coll(sol.pb)
     out = zeros(typeof(t), sol.pb.N)
-    rg = (1:m+1) .+ (indτ-1) * m
+    rg = (1:m+1) .+ (index_t-1) * m
     for l in 1:m+1
         out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
     end
@@ -1071,37 +1070,40 @@ $(SIGNATURES)
 
 Perform mesh adaptation of the periodic orbit problem. Modify `pb` and `x` inplace if the adaptation is successfull.
 
-See page 367 of:
-Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
+See page 367 of [1] and also [2].
 
-See also:
-R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
+References:
+[1] Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
+
+[2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
 function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
                     normE = norm,
                     verbosity::Bool = false,
                     K = Inf,
                     kw...) where Ty
-    n, m, Ntst = size(pb)
+    n, m, Ntst = size(pb) # recall that m = ncol
     period = getperiod(pb, x, nothing)
-    # get solution, we copy x because it is overwritten at the end
+    # get solution, we copy x because it is overwritten at the end of this function
     sol = POSolution(deepcopy(pb), copy(x))
-    # derivative of degree m, indeed ∂(sol, m+1) = 0
+    # we need to estimate yᵐ⁺¹ where y is the true periodic orbit.
+    # sol is the piecewise polynomial approximation of y.
+    # However, sol is of degree m, hence ∂(sol, m+1) = 0
+    # we thus estimate yᵐ⁺¹ using ∂(sol, m)
     dmsol = ∂(sol, m)
     # we find the values of vm := ∂m(x) at the mid points
-    τs = getmesh(pb)
-    τsT = τs .* period
+    τsT = getmesh(pb) .* period
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]
     ############
     # Approx. IA
-    # this is the function s^{(k)} in the above paper on page 63
+    # this is the function s^{(k)} in the above paper [2] on page 63
     # we want to estimate sk = s^{(m+1)} which is 0 by definition, pol of degree m
     if isempty(findall(diff(τsT) .<= 0)) == false
         @error "[Mesh-adaptation]. The mesh is non monotonic! Please report the error to the website of BifurcationKit.jl"
         return (success = false, newτsT = τsT, ϕ = τsT)
     end
     sk = zeros(Ty, Ntst)
-    sk[1] = 2normE(vm[1])/(τsT[2]-τsT[1])
+    sk[1] = 2normE(vm[1]) / (τsT[2] - τsT[1])
     for i in 2:Ntst-1
         sk[i] = normE(vm[i])   / (τsT[i+1] - τsT[i-1]) +
                 normE(vm[i+1]) / (τsT[i+2] - τsT[i])
@@ -1111,7 +1113,7 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
     ############
     # monitor function
     ϕ = sk.^(1/m)
-    # if the monitor function is too small, dont do anything
+    # if the monitor function is too small, don't do anything
     if maximum(ϕ) < 1e-7
         return (success = true, newmesh = nothing)
     end
