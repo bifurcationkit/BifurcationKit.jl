@@ -51,7 +51,7 @@ $(TYPEDFIELDS)
     "Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
-    θ::T                        = 0.5 # parameter in the dot product of the extended system
+    θ::T                        = 0.5
     "[internal], "
     _bothside::Bool = false
     "Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "

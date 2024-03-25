@@ -146,7 +146,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         state.step > 0 && (@set! interval[indinterval] = getp(state))
 
         # we call the finalizer
-        state.stopcontinuation = ~iter.finalise_solution(state.z, state.τ, state.step, nothing; state = state)
+        state.stopcontinuation = ~iter.finalise_solution(state.z, state.τ, state.step, nothing; state = state, bisection = true)
 
         if verbose
             printstyled(color=:blue, bold = true, "────> ", state.step,
