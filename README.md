@@ -13,7 +13,7 @@ This Julia package aims at performing **automatic bifurcation analysis** of poss
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free/Dense/Sparse eigensolver is used to compute stability and bifurcation points.
 
-> The idea is to be able to seemingly switch the continuation algorithm a bit like changing the time stepper (Euler, RK4,...) for ODEs.
+> The idea is to be able to seamlessly switch the continuation algorithm a bit like changing the time stepper (Euler, RK4,...) for ODEs.
 
 `BifurcationKit` can also seek for [periodic orbits](https://bifurcationkit.github.io/BifurcationKitDocs.jl/stable/periodicOrbit/) of Cauchy problems. **It is by now, one of the only software which provides shooting methods *and* methods based on finite differences / collocation to compute periodic orbits.**
 
