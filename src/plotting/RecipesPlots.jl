@@ -246,7 +246,6 @@ RecipesBase.@recipe function Plots(sol::SolPeriodicOrbit;
                                     indx = nothing
                                     )
     @assert indx isa Int || indx isa Nothing
-    ndim = size(sol.u, 1)
     @series begin
         if indx === nothing
             sol.t, sol.u'

@@ -124,11 +124,10 @@ end
     N = div(length(x) - 1, M)
     return reshape(x[1:end-1], N, M)
 end
-@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
-
 @inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
 @inline get_time_slice(sh::ShootingProblem, x::BorderedArray, ii::Int) = x.u[ii]
+@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, par)

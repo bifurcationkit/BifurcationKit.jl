@@ -1,13 +1,20 @@
 # BifurcationKit.jl
 
-| **Documentation** | **Build Status** | **Downloads** |
-|:-----------------:|:----------------:|:-------------:|
-| [![docs-stable][docs-stable-img]][docs-stable-url] [![docs-dev][docs-dev-img]][docs-dev-url] | [![Build status](https://badge.buildkite.com/fc3fdd514333077cbb6600923ed0ef631a59de5226b197665f.svg)](https://buildkite.com/julialang/bifurcationkit-dot-jl) [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/BifurcationKit)](https://pkgs.genieframework.com?packages=BifurcationKit)|
+| **Documentation** | **Build Status** | **Coverage** | **Version** |
+| :-: | :-: | :-: | :-: |
+| [![][docs-stable-img]][docs-stable-url] | [![Build status](https://badge.buildkite.com/fc3fdd514333077cbb6600923ed0ef631a59de5226b197665f.svg)](https://buildkite.com/julialang/bifurcationkit-dot-jl) | [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![ver-img]][ver-url] |
+| [![][docs-dev-img]][docs-dev-url] | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) |  [![](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/BifurcationKit)](https://pkgs.genieframework.com?packages=BifurcationKit) | [![deps-img]][deps-url] |
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/stable
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-purple.svg
 [docs-dev-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev
+
+[ver-img]: https://juliahub.com/docs/BifurcationKit/version.svg
+[ver-url]: https://juliahub.com/ui/Packages/BifurcationKit/UDEDl
+
+[deps-img]: https://juliahub.com/docs/General/BifurcationKit/stable/deps.svg
+[deps-url]: https://juliahub.com/ui/Packages/General/BifurcationKit?t=2
 
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ is real by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
 
