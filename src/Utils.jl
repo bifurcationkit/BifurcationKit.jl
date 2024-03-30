@@ -49,6 +49,7 @@ function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
     # we compute the eigen-elements
     n = state.n_unstable[2]
     nev_ = max(n + 5, iter.contparams.nev)
+    @debug "Computing spectrum..."
     eiginfo = compute_eigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
     @unpack isstable, n_unstable, n_imag = is_stable(iter.contparams, eiginfo[1])
     return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]

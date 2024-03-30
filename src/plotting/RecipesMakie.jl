@@ -164,7 +164,7 @@ function plot(brs::AbstractBranchResult...;
         plot!(ax1, contres; branchlabel = branchlabel[id], kP...)
 
     end
-    GLMakie.axislegend(ax1, merge = true, unique = true)
+    # GLMakie.axislegend(ax1, merge = true, unique = true)
 
     display(fig)
     fig, ax1

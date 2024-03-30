@@ -461,7 +461,7 @@ end
     # which makes the corresponding J block upper triangular
     # the following matrix 𝐅𝐬 collects the LU factorizations by blocks
     # recall that if F = lu(A) then
-    # F.L * F.U = A * F.P
+    # F.L * F.U = F.P * A
     # (F.P⁻¹ * F.L) * F.U = A
     # hence 𝐅𝐬⁻¹ = (P⁻¹ * L)⁻¹ = L⁻¹ * P
     𝐅𝐬 = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
