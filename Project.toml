@@ -29,7 +29,7 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [compat]
 ArnoldiMethod = "0.0.4, 0.1, 0.2, 0.3, 0.4"
-Arpack = "=0.5.3"
+Arpack = "=0.5.3, 0.5"
 BlockArrays = "0.14, 0.15, ^0.16"
 DataStructures = "0.17, 0.18"
 DocStringExtensions = "^0.8, ^0.9"
