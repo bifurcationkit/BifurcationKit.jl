@@ -62,7 +62,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `verbosedeflation` print deflated newton iterations
 - `max_iter_deflation` number of newton steps in deflated newton
 - `perturb = identity` which perturbation function to use during deflated newton
-- `Teigvec = getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
+- `Teigvec = _getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `scaleζ = norm` pass a norm to normalize vectors during normal form computation
 - `plot_solution` change plot solution method in the problem `br.prob`
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`get_normal_form`](@ref).
@@ -79,7 +79,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         max_iter_deflation::Int = min(50, 15options_cont.newton_options.max_iterations),
         perturb = identity,
         plot_solution = plot_solution(br.prob),
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         scaleζ = norm,
         tol_fold = 1e-3,
         kwargs...) where Tprob
@@ -158,7 +158,7 @@ function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont:
         δp = nothing,
         ampfactor::Real = getvectoreltype(br)(1),
         nev::Int = options_cont.nev,
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         ζs = nothing,
         verbosedeflation::Bool = false,
         scaleζ = norm,
@@ -206,7 +206,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
         bpnf::NdBranchPoint, solfromRE,
         options_cont::ContinuationPar = br.contparams ;
         δp = nothing,
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         usedeflation = true,
         verbosedeflation = false,
         max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
@@ -263,7 +263,7 @@ function multicontinuation(br::AbstractBranchResult,
         bpnf::NdBranchPoint, solfromRE,
         options_cont::ContinuationPar = br.contparams ;
         δp = nothing,
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         verbosedeflation = false,
         max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
         lsdefop = DeflatedProblemCustomLS(),
@@ -301,7 +301,7 @@ function multicontinuation(br::AbstractBranchResult,
         options_cont::ContinuationPar = br.contparams ;
         alg = br.alg,
         δp = nothing,
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         verbosedeflation = false,
         max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
         lsdefop = DeflatedProblemCustomLS(),

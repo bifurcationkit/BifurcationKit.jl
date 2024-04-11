@@ -6,7 +6,7 @@ abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 using SciMLBase: numargs
 
-getvectortype(::AbstractBifurcationProblem) = Nothing
+_getvectortype(::AbstractBifurcationProblem) = Nothing
 isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
 # function to save the full solution on the branch. It is useful to define This
@@ -147,7 +147,7 @@ for (op, at) in (
                 recordFromSolution::Trec
             end
 
-            getvectortype(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
+            _getvectortype(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
             plot_solution(prob::$op) = prob.plotSolution
             record_from_solution(prob::$op) = prob.recordFromSolution
         end
@@ -170,7 +170,7 @@ for (op, at) in (
                 recordFromSolution::Trecord
             end
 
-            getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
+            _getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
@@ -194,7 +194,7 @@ for (op, at) in (
                 recordFromSolution::Trecord
             end
 
-            getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
+            _getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
@@ -299,7 +299,7 @@ end
 
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     print(io, prefix * "┌─ Bifurcation Problem with uType ")
-    printstyled(io, getvectortype(prob), color = :cyan, bold = true)
+    printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
     print(io, prefix * "\n├─ Inplace:  ")
     printstyled(io, isinplace(prob), color = :cyan, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")

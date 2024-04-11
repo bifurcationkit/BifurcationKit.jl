@@ -105,7 +105,7 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 
 # check whether the eigenvalues are saved in the branch
 # this is a good test bifucause we always fill br.eig with a dummy vector :(
-@inline haseigenvalues(br::ContResult) = hasstability(br)
+@inline haseigenvalues(br::ContResult) = _hasstability(br)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the solution are saved in the branch
@@ -118,9 +118,9 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 
 @inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
 
-getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
-@inline getvectortype(br::AbstractBranchResult) = getvectortype(eltype(br.specialpoint))
-@inline getvectoreltype(br::AbstractBranchResult) = eltype(getvectortype(br))
+_getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
+@inline _getvectortype(br::AbstractBranchResult) = _getvectortype(eltype(br.specialpoint))
+@inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
 """
     setparam(br, p0)
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.
@@ -201,7 +201,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     printstyled(io, typeof(br.kind).name.name, comment, "\n", color=:cyan, bold = true)
     println(io, prefix * "├─ Number of points: ", length(br.branch))
     print(io, prefix * "├─ Type of vectors: ")
-    printstyled(io, getvectortype(br), color=:cyan, bold = true)
+    printstyled(io, _getvectortype(br), color=:cyan, bold = true)
     if Kind <: TwoParamCont
         print(io, "\n" * prefix * "├─ Parameters ", map(get_lens_symbol, get_lenses(br)))
     end
@@ -292,7 +292,7 @@ Return the bifurcation point of a `::Branch`.
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
-getfirstusertype(br::Branch) = getfirstusertype(br.γ)
+_getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.lastindex(br::Branch) = lastindex(br.γ)
 @inline getparams(br::Branch) = getparams(br.γ)

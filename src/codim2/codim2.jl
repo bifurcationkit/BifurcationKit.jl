@@ -124,7 +124,7 @@ end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     prob_ma = br.prob.prob
-    𝒯 = getvectortype(br)
+    𝒯 = _getvectortype(br)
 
     bifpt = br.specialpoint[ind]
     # get the BT point. We perform a conversion in case GPU is used
@@ -255,7 +255,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         δp = nothing, ampfactor::Real = 1,
         nev = options_cont.nev,
         detect_codim2_bifurcation::Int = 0,
-        Teigvec = getvectortype(br),
+        Teigvec = _getvectortype(br),
         scaleζ = norm,
         start_with_eigen = false,
         autodiff = false,

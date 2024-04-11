@@ -398,7 +398,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         L = jacobian(prob_ma.prob_vf, x0, parbif)
 
         # computation of zero eigenvector
-        λ = zero(getvectoreltype(br))
+        λ = zero(_getvectoreltype(br))
         ζ0, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         ζ .= real.(ζ0)
         rmul!(ζ, 1/normN(ζ))

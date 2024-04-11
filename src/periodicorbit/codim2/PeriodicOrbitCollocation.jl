@@ -45,11 +45,23 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if biftype == :bp
-        return continuation_coll_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
+        return continuation_coll_fold(br,
+                                    ind_bif,
+                                    lens2,
+                                    _options_cont; compute_eigen_elements,
+                                    kwargs... )
     elseif biftype == :pd
-        return continuation_coll_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
+        return continuation_coll_pd(br,
+                                    ind_bif,
+                                    lens2,
+                                    _options_cont; compute_eigen_elements,
+                                    kwargs... )
     elseif biftype == :ns
-        return continuation_coll_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
+        return continuation_coll_ns(br,
+                                    ind_bif,
+                                    lens2,
+                                    _options_cont; compute_eigen_elements,
+                                    kwargs... )
     else
         throw("We continue only Fold / PD / NS points of periodic orbits. Please report this error on the website.")
     end
@@ -177,7 +189,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     # get the PD eigenvectors
     par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, pdpointguess.u, par)
-    J = jac.jacpb
+    J = _get_matrix(jac)
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
@@ -187,6 +199,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+    
 
     # perform continuation
     continuation_pd(br.prob, alg,
@@ -233,7 +246,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, nspointguess.u, par)
-    J = Complex.(copy(jac.jacpb))
+    J = Complex.(copy(_get_matrix(jac)))
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace
     J[:, end] .= rand(nj)

@@ -21,6 +21,8 @@ $(SIGNATURES)
 Compute the period of the periodic orbit associated to `x`.
 """
 @inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extract_period(x)
+@inline getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
+@inline getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
 @inline extract_period(x::AbstractVector) = x[end]
 @inline extract_period(x::BorderedArray)  = x.p
 set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
@@ -28,8 +30,6 @@ set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
 get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
-getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
-getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
 @inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
 @inline has_hessian(::WrapPOSh) = true
 
@@ -118,6 +118,8 @@ mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
     par::Tp
 end
 FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
+_get_matrix(pb::AbstractMatrix) = pb
+_get_matrix(pb::FloquetWrapper) = pb.jacpb 
 
 # jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)

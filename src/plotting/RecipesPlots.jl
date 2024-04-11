@@ -18,7 +18,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
-        if hasstability(contres) && plotstability
+        if _hasstability(contres) && plotstability
             linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
         end
         xguide --> xlab
@@ -182,7 +182,7 @@ function plot_branch_cont(contres::ContResult,
 
     plot!(contres ; filterspecialpoints = true, putspecialptlegend = false,
         xlabel = get_lens_symbol(contres),
-        ylabel = getfirstusertype(contres),
+        ylabel = _getfirstusertype(contres),
         label = "", plotfold = false, subplot = 1)
 
     plotuserfunction(sol.u, sol.p; subplot = 3)
@@ -317,7 +317,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
-        if hasstability(contres) && false
+        if _hasstability(contres) && false
             linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
         end
         xguide --> xlab

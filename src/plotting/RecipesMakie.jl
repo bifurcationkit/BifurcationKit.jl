@@ -25,7 +25,7 @@ function plot!(ax1, contres::AbstractBranchResult;
     
     # stability linewidth
     linewidth = linewidthunstable
-    if hasstability(contres) && plotstability
+    if _hasstability(contres) && plotstability
         linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
     end
     if branchlabel == ""
@@ -91,7 +91,7 @@ function plot_branch_cont(contres::ContResult,
 
     # stability linewidth
     linewidth = linewidthunstable
-    if hasstability(contres) && plotstability
+    if _hasstability(contres) && plotstability
         linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
     end
 

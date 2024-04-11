@@ -124,6 +124,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
 
     δ = getdelta(POWrap)
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
+    # ϵₜ = ϵₚ/10
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
@@ -143,6 +144,10 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         # a bit of a hack
         xtmp = copy(x); xtmp[end] += ϵₜ
         σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / (ϵₜ)
+        
+        # xtmp2 = copy(x); xtmp2[end] -= ϵₜ
+        # σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(xtmp2, p, par0)[end]) / (2ϵₜ)
+        # σₜ = 𝐏𝐝(xtmp, p, par0)[end]; xtmp[end] -= 2ϵₜ; σₜ -= 𝐏𝐝(xtmp, p, par0)[end]; σₜ /= 2ϵₜ
         ########## Resolution of the bordered linear system ########
         # we invert Jpd
         _Jpo = jacobian(POWrap, x, par0)

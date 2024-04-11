@@ -143,7 +143,7 @@ struct DeflatedProblem{Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype
 end
 @inline length(prob::DeflatedProblem) = length(prob.M)
 @inline isinplace(prob::DeflatedProblem) = isinplace(prob.prob)
-@inline getvectortype(prob::DeflatedProblem) = getvectortype(prob.prob)
+@inline _getvectortype(prob::DeflatedProblem) = _getvectortype(prob.prob)
 @inline is_symmetric(::DeflatedProblem) = false
 
 """
@@ -193,7 +193,7 @@ setparam(dfp::DeflatedProblem, p0) = setparam(dfp.prob, p0)
 function Base.show(io::IO, prob::DeflatedProblem; prefix = "")
     print(io, prefix * "┌─ " );    printstyled(io, "Deflated Problem", bold = true)
     print(" with uType ")
-    printstyled(io, getvectortype(prob), color=:cyan, bold = true)
+    printstyled(io, _getvectortype(prob), color=:cyan, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")
     printstyled(io, is_symmetric(prob), color=:cyan, bold = true)
     print(io, "\n" * prefix * "├─ jacobian: ")
