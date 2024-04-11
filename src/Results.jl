@@ -116,7 +116,8 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline haseigenvector(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} ) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg } = Teigvec != Nothing
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
-@inline hasstability(br::AbstractBranchResult) = typeof(br.branch).parameters[1].parameters[2].parameters[end-1] == Bool
+@inline _hasstability(br::AbstractBranchResult) = _hasstability(br.branch)
+@inline _hasstability(::StructArray{T,N,C,I}) where {T,N,C,I} = fieldtype(T, fieldcount(T) - 1) == Bool
 
 _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectortype(br::AbstractBranchResult) = _getvectortype(eltype(br.specialpoint))
