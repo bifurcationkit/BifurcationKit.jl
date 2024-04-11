@@ -197,7 +197,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
     # xm1 previous point on bifurcated branch
-    if norm(τ.u) >0 && abs(dot(bp.ζ, τ.u)) >= 0.9 * norm(τ.u)
+    if norm(τ.u) >0 && abs(dot(bp.ζ, τ.u[eachindex(bp.ζ)])) >= 0.9 * norm(τ.u)
         @debug "Constant predictor in Transcritical"
         x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01  = L \ R01 and GS Vol 1 uses w = -L\R01
         xm1 = bp.x0
@@ -1226,6 +1226,7 @@ We could have copied the implementation of `get_normal_form1d` but we would have
 function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                     bp::BranchPointMap,
                     ls::AbstractLinearSolver;
+                    bls = MatrixBLS(),
                     verbose = false,
                     tol_fold = 1e-3,
                     scaleζ = norm,
@@ -1268,6 +1269,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     a = dot(R01, ζ★)
 
     Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
+    # Ψ01, _, cv, it = bls(L - I, rand(length(x0)), rand(length(x0)), zero(𝒯), E(R01), zero(𝒯))
+
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
     verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
     verbose && println("├─── a    = ", a)

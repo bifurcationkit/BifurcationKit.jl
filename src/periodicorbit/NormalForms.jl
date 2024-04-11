@@ -172,6 +172,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
+    # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     # If M is the monodromy matrix and E = x - <x,e>e with e the eigen
@@ -182,8 +183,8 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
 
-    # dΠ = ForwardDiff.jacobian( x -> Π(x, pars).u, xₛ)
-    dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
+    # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
+    dΠ = jacobian(Π, xₛ, pars)
     J = jacobian(pbwrap, pd0.x0, pars)
     M = MonodromyQaD(J)
 
@@ -195,6 +196,15 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     Fp = eigen(dΠ')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
+    ####
+
+    @debug "" Fₘ.values F.values Fp.values
+
+    # @info "Essai de VP"
+    # dΠ * ζ₋₁ + ζ₋₁ |> display # not good, need projector E
+    # dΠ * ev₋₁ + ev₋₁ |> display
+    # dΠ' * ev₋₁p + ev₋₁p |> display
+    # e = Fₘ.vectors[:,end]; e ./= norm(e)
 
     # normalize eigenvectors
     ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
@@ -203,7 +213,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            J = (x,p) -> finite_differences(z -> Π(z,p).u, x; δ = δ),
+            J = (x,p) -> jacobian(Π, x, p),
             d2F = (x,p,h1,h2)    -> d2F(Π,x,p,h1,h2).u,
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             )
@@ -932,8 +942,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
 
-    dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
-    # dΠ = ForwardDiff.jacobian(x -> Π(x,pars).u, xₛ)
+    dΠ = jacobian(Π, xₛ, pars)
     J = jacobian(pbwrap, ns0.x0, pars)
     M = MonodromyQaD(J)
 
@@ -956,7 +965,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
+            J = (x,p) -> jacobian(Π, x, p),
             d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             )

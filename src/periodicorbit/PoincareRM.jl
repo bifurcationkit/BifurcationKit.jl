@@ -195,6 +195,29 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     return (u = out, t = ∂th)
 end
 
+function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x, pars)
+    sh = Π.probpo.prob
+    normal = Π.Σ.normal
+
+    Πx, tΣ = Π(x, pars)
+    Fx = vf(sh.flow, Πx, pars)
+    # monodromy matrix
+    N = length(x)
+    M = zeros(N, N)
+    h = zeros(N)
+    for i = eachindex(h)
+        h[i] += 1
+        y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
+        # differential of return time
+        ∂th = - dot(normal, y) / dot(normal, Fx)
+        out = @. y + ∂th * Fx
+        M[:, i] .= out
+        h[i] -= 1
+    end
+    return M
+end
+
+
 function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
     sh = Π.probpo.prob
