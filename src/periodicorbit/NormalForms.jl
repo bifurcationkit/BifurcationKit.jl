@@ -278,10 +278,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     δ = getdelta(coll)
 
     # identity matrix for collocation problem
-    Icoll = analytical_jacobian(coll, pd.x0, par; ρD = 0, ρF = 0, ρI = -1/T)
-    Icoll[:,end] .=0; Icoll[end,:] .=0
-    Icoll[end-N:end-1, 1:N] .= 0
-    Icoll[end-N:end-1, end-N:end-1] .= 0
+    Icoll = I(coll, pd.x0, par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
     # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
@@ -696,10 +693,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     par = ns.params
     T = getperiod(coll, ns.x0, par)
     # identity matrix for collocation problem
-    Icoll = analytical_jacobian(coll, ns.x0, par; ρD = 0, ρF = 0, ρI = -1/T)
-    Icoll[:,end] .=0; Icoll[end,:] .=0
-    Icoll[end-N:end-1, 1:N] .= 0
-    Icoll[end-N:end-1, end-N:end-1] .= 0
+    Icoll = I(coll, ns.x0, par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)

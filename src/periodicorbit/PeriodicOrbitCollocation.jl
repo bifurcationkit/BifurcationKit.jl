@@ -549,6 +549,22 @@ end
 """
 $(SIGNATURES)
 
+
+"""
+$(SIGNATURES)
+
+Compute the identity matrix associated with the collocation problem.
+"""
+function LinearAlgebra.I(coll::PeriodicOrbitOCollProblem, u, par)
+    T = getperiod(coll, u, par)
+    N, _, _ = size(coll)
+    Icoll = analytical_jacobian(coll, u, par; ρD = 0, ρF = 0, ρI = -1/T)
+    Icoll[:, end] .= 0
+    Icoll[end, :] .= 0
+    Icoll[end-N:end-1, 1:N] .= 0
+    Icoll[end-N:end-1, end-N:end-1] .= 0
+    Icoll
+end
 Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
 
 ρD * D - T*(ρF * F + ρI * I)
