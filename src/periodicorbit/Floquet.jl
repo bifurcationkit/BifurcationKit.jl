@@ -454,6 +454,8 @@ end
     J = JacColl.jacpb
     n, m, Ntst = size(pbcoll)
     nbcoll = n * m
+    N = n
+    In = LinearAlgebra.I(N)
 
     # condensation of parameters
     # this removes the internal unknowns of each mesh interval
@@ -464,16 +466,36 @@ end
     # F.L * F.U = F.P * A
     # (F.P⁻¹ * F.L) * F.U = A
     # hence 𝐅𝐬⁻¹ = (P⁻¹ * L)⁻¹ = L⁻¹ * P
-    𝐅𝐬 = Matrix{𝒯}(LinearAlgebra.I(size(J, 1)))
+    
+    blockⱼ = zeros(𝒯, nbcoll, nbcoll)
+    blockₙ = zeros(𝒯, nbcoll, N)
+    blockₙ₂ = copy(blockₙ)
     rg = 1:nbcoll
-    for k = 1:Ntst
-        F = lu(J[rg, rg .+ n])
-        𝐅𝐬[rg, rg] .= (F.P \ F.L)
-        # ldiv!(P[rg, rg], F.P, F.L)
-        rg = rg .+ m * n
-    end
+    rN = 1:N
 
-    Jcop = 𝐅𝐬 \ J
+    Jcop = copy(J)
+    Jcop[end-N:end-1,end-N:end-1] .= In
+    Jcop[end-N:end-1,1:N] .= -In
+    Jcop[end, end] = J[end,end]
+    Lₜ = LowerTriangular(copy(blockⱼ))
+    for 𝐢 in 1:Ntst
+        blockⱼ .= J[rg, rg .+ N]
+        F = lu!(blockⱼ)
+        p = F.p
+        # Lₜ = LowerTriangular(F.L) # zero allocation?
+        Lₜ.data .= F.factors
+        for i in axes(Lₜ, 1); Lₜ[i,i] = one(𝒯); end
+
+        # we put the blocks in Jcop
+        Jcop[rg, rg .+ N] .= UpperTriangular(F.factors)
+        # Jcop[rg, rN] .= F.L \ (F.P * J[rg, rN])
+        blockₙ .= J[rg, rN][p,:]
+        ldiv!(blockₙ₂, Lₜ, blockₙ)
+        Jcop[rg, rN] .= blockₙ₂
+
+        rg = rg .+ nbcoll
+        rN = rN .+ nbcoll
+    end
 
     Ai = Matrix{𝒯}(undef, n, n)
     Bi = Matrix{𝒯}(undef, n, n)
