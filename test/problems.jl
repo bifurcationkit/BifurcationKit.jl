@@ -14,7 +14,7 @@ prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@lens 
 BK.WrapPOTrap(prob, prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show
 BK.PDMAProblem((prob_vf = prob,), prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show    
 
-BK.getvectortype(prob)
+BK._getvectortype(prob)
 
 BK.d3F(prob, rand(2), rand(2), rand(2), rand(2), rand(2))
 BK.d3Fc(prob, rand(2), rand(2), rand(2), rand(2), rand(2))

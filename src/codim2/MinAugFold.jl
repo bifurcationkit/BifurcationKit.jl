@@ -245,7 +245,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
     eigenvec_ad = _copy(eigenvec)
 
     if start_with_eigen
-        λ = zero(getvectoreltype(br))
+        λ = zero(_getvectoreltype(br))
         p = bifpt.param
         parbif = setparam(br, p)
 

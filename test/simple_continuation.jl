@@ -49,11 +49,11 @@ x0 = 0.01 * ones(N)
 
 prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
 BK.isinplace(prob)
-BK.getvectortype(prob)
+BK._getvectortype(prob)
 show(prob)
 
 br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(17.98 k allocations: 1.155 MiB)
-BK.getfirstusertype(br0)
+BK._getfirstusertype(br0)
 BK.propertynames(br0)
 BK.compute_eigenvalues(opts)
 BK.save_eigenvectors(opts)
@@ -103,8 +103,8 @@ br1[1]
 BK.eigenvals(br1,20)
 BK.eigenvec(br1,20,1)
 BK.haseigenvector(br1)
-BK.getvectortype(br1)
-BK.getvectoreltype(br1)
+BK._getvectortype(br1)
+BK._getvectoreltype(br1)
 BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
 BK.getparams(br1)

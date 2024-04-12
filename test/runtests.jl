@@ -1,7 +1,7 @@
 # using Revise
 using Test
 
-using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
+using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
 @testset "BifurcationKit" begin
 
@@ -21,8 +21,6 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
         include("test-cont-non-vector.jl")
     end
 
-    GC.gc()
-    
     @testset "Normal forms" begin
         include("testNF.jl")
         include("testNF_maps.jl")
@@ -37,8 +35,6 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
         include("testJacobianFoldDeflation.jl")
         include("codim2.jl")
     end
-
-    GC.gc()
 
     @testset "Hopf Codim 2" begin
         include("testHopfMA.jl")
@@ -72,22 +68,16 @@ using Base.Threads; println("--> There are ", Threads.nthreads()," threads")
         @info "Entry in testLure.jl"
         include("testLure.jl")
     end
-    
-    GC.gc()
 
     @testset "codim 2 PO Shooting MF" begin
         @info "Entry in codim2PO-shooting-mf.jl"
         include("codim2PO-shooting-mf.jl")
     end
-
-    GC.gc()
     
     @testset "codim 2 PO Shooting" begin
         @info "Entry in codim2PO-shooting.jl"
         include("codim2PO-shooting.jl")
     end
-
-    GC.gc()
 
     @testset "codim 2 PO Collocation" begin
         @info "Entry in codim2PO-OColl.jl"

@@ -156,7 +156,7 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams;
         δp = nothing,
-        ampfactor::Real = getvectoreltype(br)(1),
+        ampfactor::Real = _getvectoreltype(br)(1),
         nev::Int = options_cont.nev,
         Teigvec = _getvectortype(br),
         ζs = nothing,

@@ -10,9 +10,9 @@ vals = eigvals(Array(A))
 
 # test some definitions
 P = PrecPartialSchurKrylovKit(A, rand(N), 4, :LM)
-P = PrecPartialSchurArnoldiMethod(A, 4, LM())
-P = PrecPartialSchurArnoldiMethod(A, N, 4, LM())
-P = PrecPartialSchurArnoldiMethod(x -> A*x, N, 4, LM())
+P = PrecPartialSchurArnoldiMethod(A, 4, ArnoldiMethod.LM())
+P = PrecPartialSchurArnoldiMethod(A, N, 4, ArnoldiMethod.LM())
+P = PrecPartialSchurArnoldiMethod(x -> A*x, N, 4, ArnoldiMethod.LM())
 
 # test some function
 ldiv!(P, rand(N))
@@ -20,7 +20,7 @@ ldiv!(rand(N), P, rand(N))
 
 # test that it deflates the eigenvalues
 Jmap = LinearMap(x-> A * (P \ x), N, N ; ismutating = false)
-decomp, history = ArnoldiMethod.partialschur(Jmap, nev = 110, tol=1e-9, which=LM());
+decomp, history = ArnoldiMethod.partialschur(Jmap, nev = 110, tol=1e-9, which=ArnoldiMethod.LM());
 @test Base.setdiff(round.(vals, digits = 5), round.(decomp.eigenvalues, digits = 5)) |> length in [4,5]
 
 #

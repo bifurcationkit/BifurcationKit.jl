@@ -159,7 +159,7 @@ end
 Return the jacobian of the deflated function M(u) * F(u) where M(u) ∈ R
 """
 function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u::vectype, par, du) where {Tprob, Tp, Tdot, T, vectype}
-	out = dF(dfp.prob, u, par, du)
+    out = dF(dfp.prob, u, par, du)
     # dF(u)⋅du * M(u) + F(u) dM(u)⋅du
     # out = dF(u)⋅du * M(u)
     M = dfp.M(u)

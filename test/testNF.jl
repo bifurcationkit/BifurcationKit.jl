@@ -51,7 +51,7 @@ br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_ste
 @test BK.haseigenvalues(br2) == true
 @test BK.haseigenvector(br2) == true
 BK.eigenvals(br2, 1, true)
-BK.getfirstusertype(br2)
+BK._getfirstusertype(br2)
 @test length(br2) == 12
 # plot(br,br2)
 
