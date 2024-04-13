@@ -102,7 +102,6 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
-
     @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
     ζ★ ./= dot(ζ, ζ★)
 
@@ -181,8 +180,8 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 - `p` new parameter value 
 - `amp` non trivial zero of the normal form (not corrected)
 """
-function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = false, ampfactor = T(1)) where T
-    # this is the predictor from a Transcritical bifurcation.
+function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = false, ampfactor = one(T)) where T
+    # this is the predictor for the Transcritical bifurcation.
     # After computing the normal form, we have an issue.
     # We need to determine if the already computed branch corresponds to the solution x = 0 of the normal form.
     # This leads to the two cases below.
@@ -192,14 +191,14 @@ function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = 
     pnew = bp.p + ds
     # we solve b1 * ds + b2 * amp / 2 = 0
     amp = -2ds * b1 / b2 * ampfactor
-    dsfactor = T(1)
+    dsfactor = one(T)
 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
     # xm1 previous point on bifurcated branch
     if norm(τ.u) >0 && abs(dot(bp.ζ, τ.u[eachindex(bp.ζ)])) >= 0.9 * norm(τ.u)
         @debug "Constant predictor in Transcritical"
-        x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01  = L \ R01 and GS Vol 1 uses w = -L\R01
+        x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01 = L \ R01 and GS Vol 1 uses w = -L\R01
         xm1 = bp.x0
         x0  = bp.x0 .+ ds/τ.p .* τ.u
     else
@@ -941,7 +940,7 @@ end
 """
 $(SIGNATURES)
 
-This function provides prediction for the periodic orbits branching off the Hopf bifurcation point.
+This function provides prediction for the periodic orbits branching off the Hopf bifurcation point. This is based on a second order appromimation of the periodic orbit.
 
 # Arguments
 - `bp::Hopf` the bifurcation point
@@ -978,8 +977,13 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
 
     # correction to Hopf Frequency
     ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+    A(t) = amp * exp(complex(0, t))
 
-    return (orbit = t -> hp.x0 .+ 2amp .* real.(hp.ζ .* exp(complex(0, t))),
+    return (orbit = t -> hp.x0 .+ 
+                    2 .* real.(hp.ζ .* A(t)) .+
+                    ds .* nf.Ψ001 .+
+                    abs2(A(t)) .* real.(nf.Ψ110) .+
+                    2 .* real.(A(t)^2 * nf.Ψ200) ,
             amp = 2amp,
             ω = ω,
             period = abs(2pi/ω),
