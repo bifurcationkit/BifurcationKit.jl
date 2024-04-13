@@ -561,12 +561,12 @@ function LinearAlgebra.I(coll::PeriodicOrbitOCollProblem, u, par)
     Icoll[end-N:end-1, end-N:end-1] .= 0
     Icoll
 end
-Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
-
-ρD * D - T*(ρF * F + ρI * I)
 
 """
 $(SIGNATURES)
+Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
+
+ρD * D - T*(ρF * F + ρI * I)
 """
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
