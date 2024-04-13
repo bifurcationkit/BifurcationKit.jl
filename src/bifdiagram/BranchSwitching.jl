@@ -72,7 +72,8 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, options_cont::ContinuationPar = br.contparams ;
         alg = br.alg,
-        δp = nothing, ampfactor::Real = 1,
+        δp = nothing, 
+        ampfactor::Real = 1,
         nev = options_cont.nev,
         usedeflation::Bool = false,
         verbosedeflation::Bool = false,

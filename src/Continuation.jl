@@ -41,6 +41,13 @@ end
 
 # default finalizer
 finalise_default(z, tau, step, contResult; k...) = true
+"""
+Internal function to select the keys out of nt that are valid for the continuation function below.
+Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
+"""
+function _keep_opts_cont(nt) 
+    NamedTuple{filter(in((:kind, :filename, :plot, :normC, :finalise_solution, :callback_newton, :event, :verbosity)), keys(nt))}(nt)
+end
 
 # constructor
 function ContIterable(prob::AbstractBifurcationProblem,
@@ -53,7 +60,8 @@ function ContIterable(prob::AbstractBifurcationProblem,
                     finalise_solution = finalise_default,
                     callback_newton = cb_default,
                     event = nothing,
-                    verbosity = 0, kwargs...) where {T <: Real, S, E}
+                    verbosity = 0, 
+                    kwargs...) where {T <: Real, S, E}
 
     return ContIterable(;kind,
                 prob,

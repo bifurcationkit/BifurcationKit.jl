@@ -88,17 +88,27 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
                             alg::AbstractContinuationAlgorithm, 
                             level::Int, 
                             options; 
+                            verbosediagram = false,
+                            usedeflation = false,
+                            halfbranch = false,
                             kwargs...)
-    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs...)
-    bifurcationdiagram(prob, γ, level, options; code = "0", kwargs...)
+    kwargs_cont = _keep_opts_cont(values(kwargs))
+    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs_cont...)
+    bifurcationdiagram(prob, γ, level, options; 
+                        code = "0", 
+                        verbosediagram, 
+                        usedeflation,
+                        halfbranch,
+                        kwargs...)
 end
 
+# simplified function where the user does not need to provide a function for the options
 function bifurcationdiagram(prob::AbstractBifurcationProblem,
                             alg::AbstractContinuationAlgorithm, 
                             level::Int, 
                             options::ContinuationPar; 
                             kwargs...)
-    bifurcationdiagram(prob, alg, level, (args...)->options; kwargs...)
+    bifurcationdiagram(prob, alg, level, (args...) -> options; kwargs...)
 end
 
 # TODO, BifDiagNode[] makes it type unstable it seems
@@ -110,7 +120,7 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
                             kwargs...)
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
     verbose && printstyled(color = :magenta, "━"^50 * "\n───▶ Automatic computation of bifurcation diagram\n\n")
-    bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram = verbosediagram, kwargs...)
+    bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram, kwargs...)
 end
 
 """
