@@ -49,7 +49,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     verbose = false,
                     lens = getlens(br),
-                    Teigvec = vectortype(br),
+                    Teigvec = _getvectortype(br),
                     tol_fold = 1e-3,
                     scaleζ = norm,
                     autodiff = false)
@@ -833,7 +833,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     b = dot(bv, ζ★)
 
     verbose && println((a = a, b = b))
-    pt.nf = (;a, b)
+    @set! pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
     if real(b) < 0
         pt.type = :SuperCritical
     elseif real(b) > 0
@@ -859,6 +859,7 @@ Compute the Hopf normal form.
 # Optional arguments
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
+- `detailed = true`, if `false`, then the normal form is not computed. Just the left/right eigenvectors and frequency are returned.
 
 # Available method
 
@@ -891,6 +892,16 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
     L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
+
+    if ~detailed
+        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+                        ω,
+                        parbif, lens,
+                        missing, missing,
+                        (a = missing, b = missing),
+                        :Missing
+                    )
+    end
 
     # right eigenvector
     if haseigenvector(br) == false

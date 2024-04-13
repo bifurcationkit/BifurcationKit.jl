@@ -85,6 +85,8 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         kwargs...) where Tprob
     # The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
+    @assert br.specialpoint[ind_bif].type == :bp "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
+
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("──▶ Considering bifurcation point:")
     verbose && _show(stdout, br.specialpoint[ind_bif], ind_bif)
@@ -93,14 +95,17 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         return multicontinuation(br, ind_bif, options_cont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, perturb = perturb, Teigvec = Teigvec, alg = alg, plot_solution = plot_solution, kwargs...)
     end
 
-    @assert br.specialpoint[ind_bif].type == :bp "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
-
     # compute predictor for point on new branch
     ds = isnothing(δp) ? options_cont.ds : δp
     Ty = typeof(ds)
 
     # compute the normal form of the bifurcation point
-    bp = get_normal_form1d(br, ind_bif; nev = nev, verbose = verbose, Teigvec = Teigvec, scaleζ = scaleζ, tol_fold = tol_fold)
+    bp = get_normal_form1d(br, ind_bif; 
+                            nev,
+                            verbose,
+                            Teigvec,
+                            scaleζ,
+                            tol_fold)
 
     # compute predictor for a point on new branch
     pred = predictor(bp, ds; verbose = verbose, ampfactor = Ty(ampfactor))
@@ -156,7 +161,7 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams;
         δp = nothing,
-        ampfactor::Real = _getvectoreltype(br)(1),
+        ampfactor::Real = getvectoreltype(br)(1),
         nev::Int = options_cont.nev,
         Teigvec = _getvectortype(br),
         ζs = nothing,
