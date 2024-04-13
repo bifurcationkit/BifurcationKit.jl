@@ -472,8 +472,9 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
         ζ★ ./= dot(ζ, ζ★)
         @debug "Hopf normal form computation"
-        hp = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
-        hopf_normal_form(prob_vf, hp, options_newton.linsolver, verbose = false)
+        hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
+        hp = hopf_normal_form(prob_vf, hp0, options_newton.linsolver, verbose = false) # CA ALLOUE DANS hp !!!
+        @debug "" hp.nf.a hp.nf.b
 
         # lyapunov coefficient
         probhopf.l1 = hp.nf.b
@@ -498,10 +499,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points
     event_user = get(kwargs, :event, nothing)
-    if compute_eigen_elements
+
+    if compute_eigen_elements #|| event_user == BifDetectEvent
         if isnothing(event_user)
             event = PairOfEvents(
-                    ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), 
+                    ContinuousEvent(2, test_bt_gh, true, ("bt", "gh"), threshBT), 
                     BifDetectEvent)
         else
             event = SetOfEvents(

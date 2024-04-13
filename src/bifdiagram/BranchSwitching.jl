@@ -86,7 +86,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         kwargs...) where Tprob
     # The usual branch switching algorithm is described in Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
-    @assert br.specialpoint[ind_bif].type == :bp "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
+    @assert br.specialpoint[ind_bif].type in (:bp, :nd) "This bifurcation type is not handled.\n Branch point from $(br.specialpoint[ind_bif].type)"
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("──▶ Considering bifurcation point:")
@@ -162,7 +162,7 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams;
         δp = nothing,
-        ampfactor::Real = getvectoreltype(br)(1),
+        ampfactor::Real = _getvectoreltype(br)(1),
         nev::Int = options_cont.nev,
         Teigvec = _getvectortype(br),
         ζs = nothing,
