@@ -549,10 +549,6 @@ end
 """
 $(SIGNATURES)
 
-
-"""
-$(SIGNATURES)
-
 Compute the identity matrix associated with the collocation problem.
 """
 function LinearAlgebra.I(coll::PeriodicOrbitOCollProblem, u, par)
@@ -569,6 +565,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 
 ρD * D - T*(ρF * F + ρI * I)
 
+"""
+$(SIGNATURES)
 """
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
