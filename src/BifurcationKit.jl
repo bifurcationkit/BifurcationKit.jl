@@ -73,6 +73,7 @@ module BifurcationKit
     include("periodicorbit/PeriodicOrbits.jl")
     include("periodicorbit/PeriodicOrbitTrapeze.jl")
     include("periodicorbit/PeriodicOrbitCollocation.jl")
+    include("periodicorbit/cop.jl")
     include("periodicorbit/Flow.jl")
     include("periodicorbit/FlowDE.jl")
     include("periodicorbit/StandardShooting.jl")

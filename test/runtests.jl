@@ -48,6 +48,10 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("stuartLandauCollocation.jl")
     end
 
+    @testset "Condensation of parameters" begin
+        include("cop.jl")
+    end
+
     @testset "Periodic orbits function SH1" begin
         @info "Entry in test_SS.jl"
         include("test_SS.jl")
