@@ -86,7 +86,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         kwargs...) where Tprob
     # The usual branch switching algorithm is described in the work of Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
-    @assert br.specialpoint[ind_bif].type == :bp "You cannot banch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n "
+    @assert br.specialpoint[ind_bif].type in (:bp, :nd) "You cannot banch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n "
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("──▶ Considering bifurcation point:")
