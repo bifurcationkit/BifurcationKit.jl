@@ -265,35 +265,6 @@ _indx = BifurcationKit.get_blocks(prob_col, Jco2);
 @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
 @test norminf(Jco - Jco2) < 1e-14
 ####################################################################################################
-# condensation of parameters
-Ntst = 100
-m = 4
-N = 2
-const _al = I(N) + 0.1 .*rand(N,N)
-# prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> I(N))
-prob_ana =       BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _al)
-prob_col = PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-_ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
-
-_rhs = rand(size(Jco, 1))
-sol_bs = @time Jco \ _rhs;
-Jco_tmp = zero(Jco)
-Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
-sol_cop = @time BK.condensation_of_parameters(prob_col, Jco, _rhs, Jco_tmp, Jext_tmp);
-@test sol_bs ≈ sol_cop
-
-# test case of a bordered system to test PALC like linear problems
-Jco_bd = vcat(hcat(Jco, rand(size(Jco, 1))), rand(size(Jco, 1)+1)')
-Jco_bd[end-1-N:end-2, end] .= 0
-_rhs = rand(size(Jco_bd, 1))
-sol_bs_bd = @time Jco_bd \ _rhs;
-Jco_tmp = zero(Jco_bd)
-Jext_tmp= zeros(Ntst*N+N+1+1, Ntst*N+N+1+1)
-sol_cop_bd = @time BK.condensation_of_parameters(prob_col, Jco_bd, _rhs, Jco_tmp, Jext_tmp);
-@test sol_bs_bd ≈ sol_cop_bd
-####################################################################################################
 # test Hopf aBS
 let
     for jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical(), BK.FullSparse())
