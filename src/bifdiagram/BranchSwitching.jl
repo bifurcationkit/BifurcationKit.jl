@@ -83,6 +83,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
         Teigvec = _getvectortype(br),
         scaleζ = norm,
         tol_fold = 1e-3,
+        kwargs_deflated_newton = (),
         kwargs...) where Tprob
     # The usual branch switching algorithm is described in the work of Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 

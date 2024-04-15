@@ -101,18 +101,13 @@ where `br` is a branch computed after a call to [`continuation`](@ref) from whic
 function bifurcationdiagram(prob::AbstractBifurcationProblem,
                             alg::AbstractContinuationAlgorithm, 
                             level::Int, 
-                            options; 
-                            verbosediagram = false,
-                            usedeflation = false,
-                            halfbranch = false,
+                            options;
+                            linear_algo = nothing,
                             kwargs...)
     kwargs_cont = _keep_opts_cont(values(kwargs))
-    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs_cont...)
+    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs_cont..., linear_algo)
     bifurcationdiagram(prob, γ, level, options; 
-                        code = "0", 
-                        verbosediagram, 
-                        usedeflation,
-                        halfbranch,
+                        code = (0,), 
                         kwargs...)
 end
 
