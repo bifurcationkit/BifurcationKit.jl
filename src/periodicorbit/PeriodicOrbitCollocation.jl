@@ -1100,12 +1100,13 @@ References:
 
 [2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
-function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
-                    normE = norminf,
-                    verbosity::Bool = false,
-                    K = Inf,
-                    par = nothing,
-                    kw...) where Ty
+function compute_error!(coll::PeriodicOrbitOCollProblem, 
+                        x::AbstractVector{Ty};
+                        normE = norminf,
+                        verbosity::Bool = false,
+                        K = Inf,
+                        par = nothing,
+                        kw...) where Ty
     n, m, Ntst = size(coll) # recall that m = ncol
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function
@@ -1185,7 +1186,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
 
     ############
     # modify meshes
-    update_mesh!(pb, newmesh)
+    update_mesh!(coll, newmesh)
 
     ############
     # update solution
