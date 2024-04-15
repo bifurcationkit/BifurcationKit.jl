@@ -37,6 +37,15 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
     `DeflationOperator(p, CustomDist(dist), α, roots)`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
+
+## Linear solvers
+
+When used with newton, you have access to the following linear solvers
+
+- custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
+- For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
+- if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
+- if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflationFactor
     "power `p`. You can use an `Int` for example"
@@ -335,12 +344,21 @@ end
 $(TYPEDEF)
 
 This specific Newton-Krylov method first tries to converge to a solution `sol0` close the guess `x0`. It then attempts to converge from the guess `x1` while avoiding the previous converged solution close to `sol0`. This is very handy for branch switching. The method is based on a deflated Newton-Krylov solver.
+
+# Arguments
+Compared to [`newton`](@ref), the only different arguments are
+- `defOp::DeflationOperator` deflation operator
+- `linsolver` linear solver used to invert the Jacobian of the deflated functional.
+    - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
+    - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
+    - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
+    - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 function newton(prob::AbstractBifurcationProblem,
                 x0::vectype,
                 x1::vectype, p0,
                 options::NewtonPar{T, L, E},
-                defOp::DeflationOperator = DeflationOperator(2, 1.0, Vector{vectype}(), _copy(x0); autodiff = true),
+                defOp::DeflationOperator = DeflationOperator(2, one(eltype(x0)), Vector{vectype}(), _copy(x0); autodiff = true),
                 linsolver = DeflatedProblemCustomLS();
                 kwargs...) where {T, vectype, L, E}
     prob0 = re_make(prob, u0 = x0, params = p0)
