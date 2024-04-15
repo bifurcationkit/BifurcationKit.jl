@@ -42,6 +42,10 @@ For example
 ## Fields
 
 $(TYPEDFIELDS)
+
+## methods
+
+- `converged(sol)` return whether the solution has converged.
 """
 struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
     "solution"

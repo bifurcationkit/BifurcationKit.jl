@@ -161,6 +161,7 @@ end
 get_normal_form1d(br::Branch, ind_bif::Int; kwargs...) = get_normal_form1d(get_contresult(br), ind_bif; kwargs...)
 
 get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(br.prob, br, ind_bif; kwargs...)
+
 """
 $(SIGNATURES)
 
@@ -168,7 +169,7 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 
 # Arguments
 - `bp::Transcritical` the bifurcation point
-- `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
+- `ds` distance to the bifurcation point for the prediction. Can be negative. Basically the parameter is `p = bp.p + ds`
 
 # Optional arguments
 - `verbose` display information
@@ -179,6 +180,8 @@ This function provides prediction for the zeros of the Transcritical bifurcation
 - `x1` non trivial guess, corrected with Lyapunov-Schmidt expansion
 - `p` new parameter value 
 - `amp` non trivial zero of the normal form (not corrected)
+- `xm1` non trivial guess for the parameter `pm1`
+- `pm1` parameter value `bp.p - ds`
 """
 function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = false, ampfactor = one(T)) where T
     # this is the predictor for the Transcritical bifurcation.
@@ -208,7 +211,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = 
     end
 
     verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp)
+    return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp, p0 = bp.p)
 end
 
 """
@@ -221,7 +224,7 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 - `ds` at with distance relative to the bifurcation point do you want the prediction. Based on the criticality of the Picthfork, its sign is enforced no matter what you pass. Basically the parameter is `bp.p + abs(ds) * dsfactor` where `dsfactor = ±1` depending on the criticality.
 
 # Optional arguments
-- `verbose`    display information
+- `verbose` display information
 - `ampfactor = 1` factor multiplying prediction
 
 # Returned values
@@ -231,7 +234,7 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 - `amp` non trivial zero of the normal form
 """
-function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, ampfactor = T(1)) where T
+function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, ampfactor = one(T)) where T
     nf = bp.nf
     a, b1, b2, b3 = nf
 
@@ -858,7 +861,6 @@ Compute the Hopf normal form.
 # Optional arguments
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
-- `detailed = true`, if `false`, then the normal form is not computed. Just the left/right eigenvectors and frequency are returned.
 
 # Available method
 
