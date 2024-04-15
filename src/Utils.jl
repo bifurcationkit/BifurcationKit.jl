@@ -240,7 +240,7 @@ function detect_loop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
     N = length(br)
     out = false
     for bp in br.specialpoint[1:end-1]
-        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", norm(δx) = ", norminf(minus(bp.x, x)),", norm(δp) = ",abs(bp.param - p)," \n")
+        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", ||δx|| = ", norminf(minus(bp.x, x)),", |δp| = ",abs(bp.param - p)," \n")
         if (norminf(minus(bp.x, x)) / norminf(x) < rtol) && isapprox(bp.param , p ; rtol = rtol)
             out = true
             verbose && printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
@@ -268,3 +268,5 @@ struct Finaliser{Tp, Tf}
     "Section updated every updateSectionEveryStep step"
     updateSectionEveryStep::UInt
 end
+
+finalise_default(z, tau, step, contResult; k...) = true
