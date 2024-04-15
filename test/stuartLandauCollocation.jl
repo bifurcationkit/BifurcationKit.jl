@@ -221,7 +221,7 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = ra
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 prob_col(_ci, par_sl);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000463 seconds (2.82 k allocations: 304.016 KiB)
+D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000186 seconds (461 allocations: 164.859 KiB)
 @test norminf(Jcofd - D) < 1e-15
 
 # same but with linear vector field
@@ -234,7 +234,7 @@ prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) 
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.006155 seconds (21.30 k allocations: 62.150 MiB)
+Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
 @test norminf(Jcofd - Jco) < 1e-15
 
 # same but with Stuart-Landau vector field

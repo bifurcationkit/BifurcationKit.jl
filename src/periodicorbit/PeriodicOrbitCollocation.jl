@@ -375,14 +375,10 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             cache = POCollCache(eltype(pb), N, m))
 
     ci = generate_solution(pbcoll, t -> sol(t), period)
-    pbcoll.ϕ .= @view ci[1:end-1]
+    pbcoll.ϕ .= @view ci[begin:end-1]
 
     return pbcoll, ci
 end
-
-# @views function phase_condition(prob::PeriodicOrbitOCollProblem, u)
-#     dot(u[1:end-1], prob.ϕ) - dot(prob.xπ, prob.ϕ)
-# end
 
 """
 $(SIGNATURES)
@@ -399,7 +395,7 @@ $(SIGNATURES)
                     uc::AbstractMatrix, 
                     vc::AbstractMatrix,
                     T = one(eltype(uc)))
-    Ty = promote_type(eltype(uc),eltype(vc)) 
+    Ty = promote_type(eltype(uc), eltype(vc)) 
     phase = zero(Ty)
 
     n, m, Ntst = size(pb)
@@ -466,17 +462,19 @@ function phase_condition(pb::PeriodicOrbitOCollProblem,
                     period)
 end
 
+# we do not check the indexing of uc, puj, ...
+# these matrices were passed by the previous function
 @views function _phase_condition(pb::PeriodicOrbitOCollProblem,
-    uc,
-    (L, ∂L),
-    (puj, uj, pvj, vj),
-    period)
+                                    uc,
+                                    (L, ∂L),
+                                    (puj, uj, pvj, vj),
+                                    period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
     n, m, Ntst = size(pb)
     ω = pb.mesh_cache.gauss_weight
     vc = get_time_slices(pb.ϕ, size(pb)...)
-    rg = UnitRange(1, m+1)
+    rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
         uj .= uc[:, rg] # uj : n x m+1
@@ -496,9 +494,12 @@ function _POO_coll_scheme!(coll::PeriodicOrbitOCollProblem, dest, ∂u, u, par, 
     dest .= @. ∂u - h * tmp
 end
 
-# function for collocation problem
-@views function functional_coll_bare!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
-    𝒯 = eltype(u)
+# functional for collocation problem
+@views function functional_coll_bare!(pb::PeriodicOrbitOCollProblem,
+                                    out::AbstractMatrix, 
+                                    u::AbstractMatrix{𝒯}, 
+                                    period, 
+                                    (L, ∂L), pars) where 𝒯
     n, ntimes = size(u)
     m = pb.mesh_cache.degree
     Ntst = pb.mesh_cache.Ntst
@@ -509,18 +510,17 @@ end
     ∂pj = zeros(𝒯, n, m)
     uj  = zeros(𝒯, n, m+1)
     # out is of size (n, m⋅Ntst + 1)
-
     mesh = getmesh(pb)
     # range for locating time slices
-    rg = UnitRange(1, m+1)
+    rg = axes(out, 2)[UnitRange(1, m+1)]
     for j in 1:Ntst
         uj .= u[:, rg]    # size (n, m+1)
         mul!( pj, uj, L)  # size (n, m)
         mul!(∂pj, uj, ∂L) # size (n, m)
         # compute the collocation residual
-        for l in 1:m
+        for l in Base.OneTo(m)
             # !!! out[:, end] serves as buffer for now !!!
-            _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * (mesh[j+1]-mesh[j]) / 2, out[:, end])
+            _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * (mesh[j+1] - mesh[j]) / 2, out[:, end])
         end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
         rg = rg .+ m
@@ -528,7 +528,12 @@ end
     out
 end
 
-@views function functional_coll!(pb::PeriodicOrbitOCollProblem, out, u, period, (L, ∂L), pars)
+@views function functional_coll!(pb::PeriodicOrbitOCollProblem, 
+                                out::AbstractMatrix, 
+                                u::AbstractMatrix, 
+                                period, 
+                                (L, ∂L), 
+                                pars)
     functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
     out[:, end] .= u[:, end] .- u[:, 1]
@@ -564,9 +569,11 @@ end
 
 """
 $(SIGNATURES)
+
 Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
 
 ρD * D - T*(ρF * F + ρI * I)
+
 """
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
@@ -604,7 +611,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     for j in 1:Ntst
         uj .= uc[:, rg]
         mul!(pj, uj, L) # pj ≈ (L * uj')'
-        α = period * (mesh[j+1]-mesh[j]) / 2
+        α = period * (mesh[j+1] - mesh[j]) / 2
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
@@ -1045,7 +1052,7 @@ end
     prob.xπ .= 0
 
     # update the "normals"
-    prob.ϕ .= x[begin:end-1]
+    prob.ϕ .= x[eachindex(prob.ϕ)]
     return true
 end
 ####################################################################################################
@@ -1093,22 +1100,23 @@ References:
 
 [2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
-function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
-                    normE = norm,
+function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
+                    normE = norminf,
                     verbosity::Bool = false,
                     K = Inf,
+                    par = nothing,
                     kw...) where Ty
-    n, m, Ntst = size(pb) # recall that m = ncol
-    period = getperiod(pb, x, nothing)
+    n, m, Ntst = size(coll) # recall that m = ncol
+    period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function
-    sol = POSolution(deepcopy(pb), copy(x))
+    sol = POSolution(deepcopy(coll), copy(x))
     # we need to estimate yᵐ⁺¹ where y is the true periodic orbit.
     # sol is the piecewise polynomial approximation of y.
     # However, sol is of degree m, hence ∂(sol, m+1) = 0
     # we thus estimate yᵐ⁺¹ using ∂(sol, m)
     dmsol = ∂(sol, m)
     # we find the values of vm := ∂m(x) at the mid points
-    τsT = getmesh(pb) .* period
+    τsT = getmesh(coll) .* period
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]
     ############
     # Approx. IA
@@ -1181,7 +1189,7 @@ function compute_error!(pb::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
 
     ############
     # update solution
-    newsol = generate_solution(pb, sol, period)
+    newsol = generate_solution(coll, sol, period)
     x .= newsol
 
     success = true

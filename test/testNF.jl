@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff, Parameters
+using BifurcationKit, LinearAlgebra, Parameters
 const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
@@ -65,7 +65,7 @@ br4 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_ste
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(prob, PALC(), 2,
     setproperties(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(opt_newton, verbose=false, tol = 1e-12), max_steps = 15);
-    plot = false, verbosity = 1,
+    plot = false, verbosity = 0,
     normC = norminf)
 
 # plot(bdiag)
@@ -187,7 +187,7 @@ BK.hasbranch(bdiag)
 BK.from(bdiag.child[1].γ)
 BK.get_branches_from_BP(bdiag, 2)
 BK.get_contresult(br)
-BK.get_contresult(get_branch(bdiag, (1,)).γ)
+BK.get_contresult(get_branch(bdiag,(1,)).γ)
 size(bdiag)
 get_branch(bdiag, (1,))
 show(stdout, bdiag)

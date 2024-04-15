@@ -44,7 +44,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
-    if biftype == :bp
+    if biftype == :bp || biftype == :fold
         return continuation_coll_fold(br,
                                     ind_bif,
                                     lens2,
@@ -199,7 +199,6 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
-    
 
     # perform continuation
     continuation_pd(br.prob, alg,
