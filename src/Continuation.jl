@@ -39,14 +39,20 @@ More information is available on the [website](https://bifurcationkit.github.io/
     filename::String
 end
 
-# default finalizer
-finalise_default(z, tau, step, contResult; k...) = true
 """
 Internal function to select the keys out of nt that are valid for the continuation function below.
 Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
 """
 function _keep_opts_cont(nt) 
-    NamedTuple{filter(in((:kind, :filename, :plot, :normC, :finalise_solution, :callback_newton, :event, :verbosity)), keys(nt))}(nt)
+    NamedTuple{filter(in((:kind,
+                            :filename,
+                            :plot,
+                            :normC,
+                            :finalise_solution,
+                            :callback_newton,
+                            :event,
+                            :verbosity,
+                            :bothside)), keys(nt))}(nt)
 end
 
 # constructor
