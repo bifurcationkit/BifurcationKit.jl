@@ -540,7 +540,7 @@ function continuation_fold(prob,
             ζ .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
             rmul!(ζ, 1/normC(ζ))
         else
-            @assert false "This is an issue. Please open an issue on the website of BifurcationKit."
+            @assert false "No index for the eigenvalue has been saved. Please open an issue on the website of BifurcationKit."
         end
 
         # jacobian adjoint at bifurcation point

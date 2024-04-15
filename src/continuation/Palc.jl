@@ -164,7 +164,7 @@ end
 struct Secant <: AbstractTangentComputation end
 
 # This function is used for initialisation in iterate_from_two_points
-function _secant_computation!(τ::M, 
+function _secant_tangent!(τ::M, 
                                 z₁::M, 
                                 z₀::M, 
                                 it::AbstractContinuationIterable, 
@@ -185,7 +185,14 @@ internal_adaptation!(::Secant, ::Bool) = nothing
 gettangent!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable,
             algo::Secant,
-            dotθ) = _secant_computation!(state.τ, state.z, state.z_old, iter, state.ds, getθ(iter), iter.verbosity, dotθ)
+            dotθ) = _secant_tangent!(state.τ, 
+                                        state.z, 
+                                        state.z_old, 
+                                        iter, 
+                                        state.ds, 
+                                        getθ(iter), 
+                                        iter.verbosity, 
+                                        dotθ)
 ###############################################
 """
     Bordered Tangent predictor
@@ -470,9 +477,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         else
             minus!(x, u)
             p = clamp(p - up, p_min, p_max)
-
             copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
-
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 

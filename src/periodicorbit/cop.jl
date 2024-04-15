@@ -226,7 +226,6 @@ end
 
         # the pivoting strategy is to ensure that the constraints 
         # get not mixed up with the collocation blocks
-        # @error "" k blockⱼ
         F = lu!(blockⱼ, RowNonZero())
         @assert issuccess(F) "Failed LU factorization! Please report to the website of BifurcationKit."
 
@@ -406,7 +405,6 @@ function (ls::COPBLS)(Jc, dR,
                     Mass::Tm = LinearAlgebra.I, 
                     applyξu! = nothing)  where {T <: Number, Ts, Tm}
     Jc = _get_matrix(Jc) # to handle FloquetWrapper
-    # @assert false
     if isnothing(shift)
         A = Jc
     else

@@ -20,8 +20,7 @@ More information is available on the [website](https://bifurcationkit.github.io/
 - `is_event_active(iter)` whether the event detection is active
 - `compute_eigenelements(iter)` whether to compute eigen elements
 - `save_eigenvectors(iter)` whether to save eigen vectors
-- `getparams(iter)` get full list of params
-- `length(iter)`
+- `getparams(iter)` get full list of continuation parameters
 - `isindomain(iter, p)` whether `p` in is domain [p_min, p_max]. (See [`ContinuationPar`](@ref))
 - `is_on_boundary(iter, p)` whether `p` in is {p_min, p_max}
 """
@@ -110,9 +109,12 @@ Base.length(it::ContIterable) = it.contparams.max_steps
 clamp_predp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contparams.p_min, it.contparams.p_max)
 ####################################################################################################
 """
-    state = ContState(ds = 1e-4,...)
+$(TYPEDEF)
 
-Returns a variable containing the state of the continuation procedure. The fields are meant to change during the continuation procedure.
+Structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
+
+!!! danger
+    If you mutate these fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
 
 # Arguments
 - `z_pred` current solution on the branch
@@ -126,10 +128,14 @@ Returns a variable containing the state of the continuation procedure. The field
 
 # Useful functions
 - `copy(state)` returns a copy of `state`
-- `copyto!(dest, state)` returns a copy of `state`
+- `copyto!(dest, state)`  copy `state` into `dest`
 - `getsolution(state)` returns the current solution (x, p)
+- `gettangent(state)` return the tangent at the current solution
+- `getpredictor(state)` return the predictor at the current solution
 - `getx(state)` returns the x component of the current solution
 - `getp(state)` returns the p component of the current solution
+- `get_previous_solution(state)` returns the previous solution (x, p)
+- `getpreviousx(state)` returns the x component of the previous solution
 - `getpreviousp(state)` returns the p component of the previous solution
 - `is_stable(state)` whether the current state is stable
 """
@@ -210,9 +216,13 @@ end
 # getters
 @inline converged(::Nothing) = false
 @inline converged(state::AbstractContinuationState) = state.converged
-getsolution(state::AbstractContinuationState)       = state.z
-getx(state::AbstractContinuationState)              = state.z.u
+@inline gettangent(state::AbstractContinuationState)        = state.τ
+@inline getsolution(state::AbstractContinuationState)       = state.z
+@inline getpredictor(state::AbstractContinuationState)      = state.z_pred
+@inline getx(state::AbstractContinuationState)              = state.z.u
 @inline getp(state::AbstractContinuationState)  = state.z.p
+@inline get_previous_solution(state::AbstractContinuationState) = state.z_old
+@inline getpreviousx(state::AbstractContinuationState) = state.z_old.u
 @inline getpreviousp(state::AbstractContinuationState) = state.z_old.p
 @inline is_stable(state::AbstractContinuationState) = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
@@ -311,7 +321,11 @@ function update_event!(it::ContIterable, state::ContState)
     return is_event_crossed(it.event, it, state)
 end
 ####################################################################################################
-# Continuation Iterator
+# Continuation Iterator based on the Julia interface:
+# https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration
+# In a nutshell, one needs to provide
+# - iterate(iter)
+# - iterate(iter, state)
 # function called at the beginning of the continuation
 # used to determine first point on branch and tangent at this point
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
@@ -346,6 +360,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀, ", initial step")
     verbose && printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
+
     sol₁ = newton(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
                             newton_options; 
                             normN = it.normC,
@@ -599,7 +614,8 @@ function continuation(prob::AbstractBifurcationProblem,
                         linear_algo = nothing,
                         bothside::Bool = false,
                         kwargs...)
-    # create a bordered linear solver using the newton linear solver provided by the user
+    # update the parameters of alg
+    # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
     alg = update(alg, contparams, linear_algo)
 
     # perform continuation
@@ -617,9 +633,7 @@ function continuation(prob::AbstractBifurcationProblem,
 
         # we have to update the branch if saved on a file
         itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
-
         return contresult
-
     else
         contresult = continuation(itfwd)
         # we have to update the branch if saved on a file,

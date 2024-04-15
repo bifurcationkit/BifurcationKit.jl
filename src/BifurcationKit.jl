@@ -215,7 +215,7 @@ module BifurcationKit
     export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
 
     # iterators for continuation
-    export ContIterable, iterate, ContState, getsolution, getx, getp
+    export ContIterable, iterate, ContState, getsolution, getx, getp, getpreviousx, getpreviousp, gettangent, getpredictor, get_previous_solution
 
     # codim2 Fold continuation
     export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolverMinAug
@@ -239,7 +239,7 @@ module BifurcationKit
     export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
-    export PeriodicOrbitOCollProblem
+    export PeriodicOrbitOCollProblem, COPBLS, COPLS
 
     # Floquet multipliers computation
     export FloquetQaD

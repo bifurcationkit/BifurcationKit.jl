@@ -942,7 +942,7 @@ end
 """
 $(SIGNATURES)
 
-This function provides prediction for the periodic orbits branching off the Hopf bifurcation point. This is based on a second order appromimation of the periodic orbit.
+This function provides prediction for the periodic orbits branching off the Hopf bifurcation point.
 
 # Arguments
 - `bp::Hopf` the bifurcation point
