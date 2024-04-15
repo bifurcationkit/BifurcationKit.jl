@@ -1,16 +1,29 @@
+"""
+$(SIGNATURES)
+
+Structure to hold a connected component of a bifurcation diagram.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Methods
+
+- `hasbranch(diagram)`
+- `from(diagram)`
+- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`
+"""
 mutable struct BifDiagNode{Tγ, Tc}
-    # current level of recursion
+    "current recursion level"
     level::Int64
 
-    # code for finding the current node in the tree, this is the index of the bifurcation point
-    # from which γ branches off
+    "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off"
     code::Int64
 
-    # branch associated to the current node
+    "branch associated to the current node"
     γ::Tγ
 
-    # children of current node. These are the different branches off the bifurcation point
-    # in γ
+    "children of current node. These are the different branches off the bifurcation point in γ"
     child::Tc
 end
 
@@ -24,6 +37,7 @@ add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
 get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
 getalg(tree::BifDiagNode) = tree.γ.alg
+Base.getindex(tree::BifDiagNode, code...) = get_branch(tree, code)
 
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
@@ -46,22 +60,22 @@ Base.size(tree::BifDiagNode, code = ()) = _size(get_branch(tree, code))
 """
 $(SIGNATURES)
 
-Return the part of the tree (bifurcation diagram) by recursively descending down the tree using the `Int` valued tuple `code`. For example `get_branch(tree, (1,2,3,))` returns `tree.child[1].child[2].child[3]`.
+Return the part of the diagram (bifurcation diagram) by recursively descending down the diagram using the `Int` valued tuple `code`. For example `get_branch(diagram, (1,2,3,))` returns `diagram.child[1].child[2].child[3]`.
 """
-function get_branch(tree::BifDiagNode, code)
-    isempty(code) && return tree
-    return get_branch(tree.child[code[1]], code[2:end])
+function get_branch(diagram::BifDiagNode, code)
+    isempty(code) && return diagram
+    return get_branch(diagram.child[code[1]], code[2:end])
 end
 
 """
 $(SIGNATURES)
 
-Return the part of the tree corresponding to the indbif-th bifurcation point on the root branch.
+Return the part of the diagram corresponding to the indbif-th bifurcation point on the root branch.
 """
-function get_branches_from_BP(tree::BifDiagNode, indbif::Int)
+function get_branches_from_BP(diagram::BifDiagNode, indbif::Int)
     # parameter value at the bp
-    p = tree.γ.specialpoint[indbif].param
-    return BifDiagNode[br for br in tree.child if from(br).p == p]
+    p = diagram.γ.specialpoint[indbif].param
+    return BifDiagNode[br for br in diagram.child if from(br).p == p]
 end
 
 """
@@ -157,7 +171,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
     # convenient function for branching
     function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        plotfunc = get(kwargs, :plot_solution, (x, p; kws...) -> plot!(x; kws...))
+        plotfunc = get(kwargs, :plot_solution, plot_default)
         optscont = options(_pt.x, _pt.param, _level + 1)
         @set! optscont.ds *= _dsfactor
 
@@ -196,7 +210,13 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         end
     end
     for (ii, _node) in enumerate(node.child)
-        bifurcationdiagram!(prob, _node, maxlevel, options; code = code*"-$ii", verbosediagram = verbosediagram, kwargs...)
+        bifurcationdiagram!(prob, 
+                            _node, 
+                            maxlevel, 
+                            options; 
+                            code = (code..., ii), 
+                            verbosediagram, 
+                            kwargs...)
     end
     return node
 end

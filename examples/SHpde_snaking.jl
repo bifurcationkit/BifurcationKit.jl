@@ -76,15 +76,22 @@ function optrec(x, p, l; opt = opts)
     end
 end
 
-diagram = @time bifurcationdiagram(re_make(prob, params = @set parSH.λ = -0.1), PALC(), 2, optrec; kwargsC..., halfbranch = true, verbosity = 0, usedeflation = false)
+diagram = @time bifurcationdiagram(
+            re_make(prob, params = @set parSH.λ = -0.1), 
+            PALC(),
+            3, 
+            optrec; 
+            kwargsC..., 
+            halfbranch = true, 
+            verbosity = 0, 
+            usedeflation = false)
 
 code = ()
-    vars = (:param, :n2)
-    plot(diagram; code = code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars = vars)
-    plot!(brflat, putspecialptlegend = false, vars = vars)
-    title!("#branches = $(size(diagram, code))")
+vars = (:param, :n2)
+plot(diagram; code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars)
+title!("# branches = $(size(diagram, code))")
 
-diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.get_branch(diagram, (2,)), 3, optrec; kwargsC..., halfbranch = true)
+diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.get_branch(diagram, (1,)), 3, optrec; kwargsC..., halfbranch = true)
 
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol1.u])

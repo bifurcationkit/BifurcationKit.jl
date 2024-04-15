@@ -93,7 +93,20 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
     verbose && _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
     if kernel_dimension(br, ind_bif) > 1
-        return multicontinuation(br, ind_bif, options_cont; δp = δp, ampfactor = ampfactor, nev = nev, scaleζ = scaleζ, verbosedeflation = verbosedeflation, max_iter_deflation = max_iter_deflation, perturb = perturb, Teigvec = Teigvec, alg = alg, plot_solution = plot_solution, kwargs...)
+        return multicontinuation(br,
+                                ind_bif,
+                                options_cont; 
+                                δp,
+                                ampfactor,
+                                nev,
+                                scaleζ,
+                                verbosedeflation,
+                                max_iter_deflation,
+                                perturb,
+                                Teigvec,
+                                alg,
+                                plot_solution,
+                                kwargs...)
     end
 
     # compute predictor for point on new branch
@@ -128,12 +141,19 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int, 
             bp.x0, bp.params, # first point on the branch
             pred.x1, pred.p,  # second point on the branch
             alg, getlens(br),
-            options_cont; kwargs...)
+            options_cont; 
+            kwargs_cont...)
     return Branch(branch, bp)
 end
 
 # same but for a Branch
-continuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams ; kwargs...) = continuation(get_contresult(br), ind_bif, options_cont ; kwargs...)
+continuation(br::AbstractBranchResult, 
+            ind_bif::Int, 
+            options_cont::ContinuationPar = br.contparams ; 
+            kwargs...) = continuation(get_contresult(br), 
+                                    ind_bif, 
+                                    options_cont; 
+                                    kwargs...)
 
 """
 $(SIGNATURES)
@@ -162,7 +182,7 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function multicontinuation(br::AbstractBranchResult, ind_bif::Int, options_cont::ContinuationPar = br.contparams;
         δp = nothing,
-        ampfactor::Real = _getvectoreltype(br)(1),
+        ampfactor::Real = getvectoreltype(br)(1),
         nev::Int = options_cont.nev,
         Teigvec = _getvectortype(br),
         ζs = nothing,

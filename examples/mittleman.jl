@@ -66,15 +66,15 @@ end
 d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
 ####################################################################################################
 Nx = 30
-    Ny = 30
-    lx = 0.5
-    ly = 0.5
+Ny = 30
+lx = 0.5
+ly = 0.5
 
-    Δ, = Laplacian2D(Nx, Ny, lx, ly)
-    par_mit = (λ = .01, Δ = Δ)
-    sol0 = 0*ones(Nx, Ny) |> vec
-    const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
-    w .-= minimum(w)
+Δ, = Laplacian2D(Nx, Ny, lx, ly)
+par_mit = (λ = .01, Δ = Δ)
+sol0 = 0*ones(Nx, Ny) |> vec
+const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
+w .-= minimum(w)
 
 prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@lens _.λ);
         J = JFmit,
@@ -153,13 +153,13 @@ bifurcationdiagram!(prob, get_branch(diagram, (2,1)), 5, optionsCont;
     kwargsC..., usedeflation = true, halfbranch = true,)
 
 code = ()
-    plot(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, #vars = (:param, :n2)
-    vars = (:param, :nw)
-    )
-    # plot!(br)
-    # xlims!(0.01, 0.4)
-    title!("#branches = $(size(get_branch(diagram, code)))")
-    # xlims!(0.01, 0.065, ylims=(2.5,6.5))
+plot(diagram; code = code,  plotfold = false, putspecialptlegend=false, markersize=2, #vars = (:param, :n2)
+vars = (:param, :nw)
+)
+# plot!(br)
+# xlims!(0.01, 0.4)
+title!("#branches = $(size(get_branch(diagram, code)))")
+# xlims!(0.01, 0.065, ylims=(2.5,6.5))
 
 plot(get_branches_from_BP(diagram, 2); plotfold = false, legend = false, vars = (:param, :n2))
 
@@ -173,10 +173,10 @@ BK.nf(bp2d)[2] |> println
 
 using ProgressMeter
 Nd = 100
-    L = 3.9
-    X = LinRange(-L,L, Nd)
-    Y = LinRange(-L,L, Nd)
-    P = LinRange(-0.001,0.001, Nd+1)
+L = 3.9
+X = LinRange(-L,L, Nd)
+Y = LinRange(-L,L, Nd)
+P = LinRange(-0.001,0.001, Nd+1)
 
 V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
 
