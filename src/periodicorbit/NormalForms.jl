@@ -425,7 +425,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # computation of c
     # we need B(t, v₁(t), h₂(t))
     for i=1:size(Bₛ, 2)
-        Bₛ[:,i]  .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
+        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
     end
                 # _plot(vcat(vec( Bₛ ),1), label = "Bₛ for h2")
                 # _plot(vcat(vec(@. Bₛ * v₁★ₛ ),1), label = "Bₛ*v1star")

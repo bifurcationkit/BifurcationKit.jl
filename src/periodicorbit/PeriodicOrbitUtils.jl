@@ -82,9 +82,16 @@ function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
     state = get(kF, :state, nothing)
     success = converged(state)
     bisection = in_bisection(state)
+    is_mesh_updated = false
+
     # mesh adaptation
-    if success && coll.meshadapt && bisection == false
+    if success &&
+            coll.meshadapt && 
+            bisection == false && 
+            mod_counter(step, updateSectionEveryStep) == 1 &&
+            step > 2
         @debug "[Collocation] update mesh"
+        is_mesh_updated = true
         oldsol = _copy(z) # avoid possible overwrite in compute_error!
         oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
         adapt = compute_error!(coll, oldsol.u;
@@ -95,6 +102,7 @@ function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
             return false
         end
     end
+
     if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
         @debug "[collocation] update section"
         updatesection!(coll, z.u, setparam(contResult, z.p))
