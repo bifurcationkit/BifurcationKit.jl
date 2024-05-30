@@ -69,6 +69,18 @@ bdiag = bifurcationdiagram(prob, PALC(), 2,
     normC = norminf)
 
 # plot(bdiag)
+
+# same from the non-trivial branch
+prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@lens _.μ))
+br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf, verbosity = 0)
+bp = BK.get_normal_form(br, 1; verbose=false)
+nf = bp.nf
+@test norm(nf[1]) < 1e-4
+@test norm(nf[2] - 3.23) < 1e-4
+@test norm(nf[3]/2 - -1.12) < 1e-5
+@test norm(nf[4]/6 - 0.234) < 1e-5
+br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); verbosity = 0, bothside = true)
+# plot(br,br2)
 ####################################################################################################
 # Case of the pitchfork
 par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0)

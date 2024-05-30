@@ -22,9 +22,9 @@ prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2); record_from_solution =
 
 opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
 
-    # @set! opts_br.newton_options.verbose = true
-    alg = PALC()
-    br = @time continuation(prob, alg, opts_br;
+# @set! opts_br.newton_options.verbose = true
+alg = PALC()
+br = @time continuation(prob, alg, opts_br;
     plot = false, verbosity = 0, normC = norminf,
     bothside = true)
 

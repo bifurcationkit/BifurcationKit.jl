@@ -124,7 +124,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 - `options::NewtonPar` variable holding the internal parameters used by the `newton` method
 
 # Optional Arguments
-- `NormN = norm` specifies a norm for the convergence criteria
+- `normN = norm` specifies a norm for the convergence criteria
 - `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cb_default((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
     - `x` current solution
     - `fx` current residual

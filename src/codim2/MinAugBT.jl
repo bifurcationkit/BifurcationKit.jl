@@ -91,14 +91,14 @@ function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where 
     par = set(par, 𝐁𝐓.lens2, p2)
     J = jacobian(𝐁𝐓.prob_vf, x, par)
     v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, zero(T), 𝐁𝐓.zero, one(T))
-    ~cv && @debug "Linear solver for J did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Linear solver for J did not converge."
     # ┌      ┐┌  ┐   ┌   ┐
     # │ J  a ││v2│ = │ v1│
     # │ b  0 ││σ2│   │ 0 │
     # └      ┘└  ┘   └   ┘
     # this could be greatly improved by saving the factorization
     _, σ2, cv, _ = 𝐁𝐓.linbdsolver(J, a, b, zero(T), v1, zero(T))
-    ~cv && @debug "Linear solver for J did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Linear solver for J did not converge."
     return residual(𝐁𝐓.prob_vf, x, par), σ1, σ2
 end
 
@@ -163,18 +163,18 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
     # we solve Jv + a σ1 = 0 with <b, v> = n
     # the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
     v1, σ1, cv, itv1 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, zero(T), 𝐁𝐓.zero, n)
-    ~cv && @debug "Bordered linear solver for J did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J did not converge."
 
     v2, σ2, cv, itv2 = 𝐁𝐓.linbdsolver(J_at_xp, a, b, zero(T), v1, zero(T))
-    ~cv && @debug "Bordered linear solver for J did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J did not converge."
 
     # we solve J'w + b σ2 = 0 with <a, w> = n
     # the solution is w = -σ2 J'\b with σ2 = -n/<a, J'\b>
     w1, _, cv, itw1 = 𝐁𝐓.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), 𝐁𝐓.zero, n)
-    ~cv && @debug "Bordered linear solver for J' did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J' did not converge."
 
     w2, _, cv, itw2 = 𝐁𝐓.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), w1, zero(T))
-    ~cv && @debug "Bordered linear solver for J' did not converge."
+    ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐁𝐓.prob_vf)
     ϵ1, ϵ2, ϵ3 = T(δ), T(δ), T(δ)
@@ -419,12 +419,12 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         x0, parbif = get_bif_point_codim2(br, ind_bt)
         L = jacobian(prob_ma.prob_vf, x0, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯))
-        ~cv && @debug "Bordered linear solver for J did not converge."
+        ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J did not converge."
 
         L★ = ~has_adjoint(prob_ma.prob_vf) ? transpose(L) : jad(prob_ma.prob_vf, x0, parbif)
         n = length(a)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯))
-        ~cv && @debug "Bordered linear solver for J' did not converge."
+        ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J' did not converge."
 
         ζad = newa ./ normN(newa)
         ζ = newb ./ normN(newb)

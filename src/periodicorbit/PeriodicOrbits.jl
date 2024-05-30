@@ -402,7 +402,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─ Method = \n", pbPO, "\n")
 
     if pred.amp > 0.1
-        @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.amp). You can either decrease `ds`, or specify how far `δp` from the bifurcation point you want the branch of periodic orbits to start. Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
+        @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.amp). You can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
     M = get_mesh_size(pbPO)
@@ -485,8 +485,8 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 
 # Optional arguments
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
-- `ampfactor = 1` factor which alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `detailed = false` whether to fully compute the normal form. The normal form is only used to collect the eigenvector for now.
+- `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `detailed = false` whether to fully compute the normal form.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `record_from_solution = (u, p) -> u[end]`, record method used in the bifurcation diagram, by default this records the period of the periodic orbit.
 - `linear_algo = BorderingBLS()`, same as for [`continuation`](@ref)

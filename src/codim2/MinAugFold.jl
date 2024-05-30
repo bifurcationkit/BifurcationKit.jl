@@ -5,7 +5,7 @@ For an initial guess from the index of a Fold bifurcation point located in ContR
 """
 function foldpoint(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
-    @assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point"
+    @assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point. You passed a $bptype point."
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end

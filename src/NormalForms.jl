@@ -78,6 +78,9 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     # "zero" eigenvalue at bifurcation point, it must be real
     λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
+    if abs(λ) > 1e-5
+        @warn "The zero eigenvalue is not that small λ = $(λ), this can alter the computation of the normal form. You can either refine the point using Newton or use a more precise bisection by increasing `n_inversion`"
+    end
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
     # corresponding eigenvector, it must be real
@@ -482,7 +485,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     @assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
 
     # parameters for normal form
-    kwargs_nf = (nev = nev, verbose = verbose, lens = lens, Teigvec = Teigvec, scaleζ = scaleζ)
+    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
 
     if bifpt.type == :hopf
         return hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
