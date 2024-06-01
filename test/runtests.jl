@@ -1,4 +1,5 @@
 # using Revise
+# cd(@__DIR__)
 using Test
 
 using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")

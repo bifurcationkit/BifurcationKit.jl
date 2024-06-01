@@ -1,6 +1,7 @@
 # composite type for Bordered arrays
 import Base: eltype, zero, eltype
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
+import KrylovKit: VectorInterface, RecursiveVec
 
 """
 $(TYPEDEF)
@@ -64,6 +65,7 @@ function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, Tv <: 
 end
 
 rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <: Number, Tv} = rmul!(A, a, a)
+rmul!(A::RecursiveVec, a::Number) = VectorInterface.scale!(A, a)
 ################################################################################
 function mul!(A::BorderedArray{Tv1, Tp1}, B::BorderedArray{Tv2, Tp2}, α::T) where {Tv1, Tv2, Tp1, Tp2, T <: Number}
     mul!(A.u, B.u, α)
@@ -79,36 +81,46 @@ end
 
 mul!(A::BorderedArray{Tv1, Tp1}, α::T, B::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2, T} = mul!(A, B, α)
 ################################################################################
-function axpy!(a::T, X::BorderedArray{Tv1, Tp1}, Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1, Tp2}
-    # Overwrite Y with a*X + Y, where a is scalar
+function axpy!(a::Number, 
+               X::BorderedArray{Tv1, Tp1}, 
+               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1, Tp2}
+    # Overwrite Y with a * X + Y, where a is scalar
     axpy!(a, X.u, Y.u)
     axpy!(a, X.p, Y.p)
     return Y
 end
 
-function axpy!(a::T, X::BorderedArray{Tv1, Tp1}, Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1 <: Number, Tp2 <: Number}
-    # Overwrite Y with a*X + Y, where a is scalar
+function axpy!(a::Number,
+               X::BorderedArray{Tv1, Tp1}, 
+               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1 <: Number, Tp2 <: Number}
+    # Overwrite Y with a * X + Y, where a is scalar
     axpy!(a, X.u, Y.u)
     Y.p = a * X.p + Y.p
     return Y
 end
+axpy!(a::Number, X::RecursiveVec, Y::RecursiveVec) = VectorInterface.add!(Y, X, a, 1)
 ################################################################################
-function axpby!(a::T, X::BorderedArray{vectype, Tv1}, b::T, Y::BorderedArray{vectype, Tv2}) where {vectype, T <: Number, Tv1, Tv2}
+function axpby!(a::Number, X::BorderedArray{vectype, Tv1}, 
+                b::Number, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1, Tv2}
     # Overwrite Y with a * X + b * Y, where a, b are scalar
     axpby!(a, X.u, b, Y.u)
     axpby!(a, X.p, b, Y.p)
     return Y
 end
 
-function axpby!(a::T, X::BorderedArray{vectype, Tv1}, b::T, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1 <: Number, Tv2 <: Number, T <: Number}
+function axpby!(a::Number, X::BorderedArray{vectype, Tv1}, 
+                b::Number, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1 <: Number, Tv2 <: Number, T <: Number}
     # Overwrite Y with a * X + b * Y, where a is a scalar
     axpby!(a, X.u, b, Y.u)
     Y.p = a * X.p + b * Y.p
     return Y
 end
+
+axpby!(a::Number, X::RecursiveVec, b::Number, Y::RecursiveVec) = VectorInterface.add!(Y,X, a, b)
 ################################################################################
 # computes x-y into x and returns x
 minus!(x, y) = axpy!(-1, y, x)
+minus!(x::RecursiveVec, y::RecursiveVec) = VectorInterface.add!(x, y, -1, 1)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <: Number} = (x = x - y)
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T}
@@ -134,3 +146,26 @@ minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
 minus(x::T, y::T) where {T <:Real} = (return x - y)
 minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T} = (return BorderedArray(minus(x.u, y.u), minus(x.p, y.p)))
 minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T <: Number} = (return BorderedArray(minus(x.u, y.u), x.p - y.p))
+################################################################################
+# implements interface from VectorInterface
+# KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl
+
+function VectorInterface.add(W::BorderedArray{vectype, Tv1}, 
+             V::BorderedArray{vectype, Tv1}, 
+             α::Number = 1, 
+             β::Number = 1) where {vectype, Tv1 <: Number}
+    # compute W * β + V * α
+    Z = copy(W)
+    axpby!(α, V, β, Z)
+    Z
+end
+
+VectorInterface.add!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = axpby!(α, x, β, y)
+VectorInterface.add!!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = VectorInterface.add!(y, x, α, β)
+@inline VectorInterface.scalartype(W::BorderedArray{vectype, Tv1}) where {vectype, Tv1} = eltype(BorderedArray{vectype, Tv1})
+VectorInterface.zerovector(b::BorderedArray, S::Type{<:Number} = VectorInterface.scalartype(b)) = 0 * similar(b, S)
+VectorInterface.scale(x::BorderedArray, α::Number) = mul!(similar(x), x, α)# α * x
+VectorInterface.scale!(y::BorderedArray, x::BorderedArray, α::Number) = throw("")#mul!(y, x, α)
+VectorInterface.scale!!(x::BorderedArray, α::Number) = α * x
+VectorInterface.scale!!(y::BorderedArray, x::BorderedArray, α::Number) = mul!(y, x, α)
+VectorInterface.inner(x::BorderedArray, y::BorderedArray) = dot(x, y)
