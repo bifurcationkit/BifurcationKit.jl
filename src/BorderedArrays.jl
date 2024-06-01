@@ -2,6 +2,7 @@
 import Base: eltype, zero, eltype
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 import KrylovKit: VectorInterface, RecursiveVec
+const VI = VectorInterface
 
 """
 $(TYPEDEF)
@@ -150,7 +151,7 @@ minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype
 # implements interface from VectorInterface
 # KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl
 
-function VectorInterface.add(W::BorderedArray{vectype, Tv1}, 
+function VI.add(W::BorderedArray{vectype, Tv1}, 
              V::BorderedArray{vectype, Tv1}, 
              α::Number = 1, 
              β::Number = 1) where {vectype, Tv1 <: Number}
@@ -160,12 +161,12 @@ function VectorInterface.add(W::BorderedArray{vectype, Tv1},
     Z
 end
 
-VectorInterface.add!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = axpby!(α, x, β, y)
-VectorInterface.add!!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = VectorInterface.add!(y, x, α, β)
-@inline VectorInterface.scalartype(W::BorderedArray{vectype, Tv1}) where {vectype, Tv1} = eltype(BorderedArray{vectype, Tv1})
-VectorInterface.zerovector(b::BorderedArray, S::Type{<:Number} = VectorInterface.scalartype(b)) = 0 * similar(b, S)
-VectorInterface.scale(x::BorderedArray, α::Number) = mul!(similar(x), x, α)# α * x
-VectorInterface.scale!(y::BorderedArray, x::BorderedArray, α::Number) = throw("")#mul!(y, x, α)
-VectorInterface.scale!!(x::BorderedArray, α::Number) = α * x
-VectorInterface.scale!!(y::BorderedArray, x::BorderedArray, α::Number) = mul!(y, x, α)
-VectorInterface.inner(x::BorderedArray, y::BorderedArray) = dot(x, y)
+VI.add!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = axpby!(α, x, β, y)
+VI.add!!(y::BorderedArray, x::BorderedArray, α::Number = 1, β::Number = 1) = VI.add!(y, x, α, β)
+@inline VI.scalartype(W::BorderedArray{vectype, Tv1}) where {vectype, Tv1} = eltype(BorderedArray{vectype, Tv1})
+VI.zerovector(b::BorderedArray, S::Type{<:Number} = VI.scalartype(b)) = BorderedArray(VI.zerovector(b.u, S), VI.zerovector(b.p, S))
+VI.scale(x::BorderedArray, α::Number) = mul!(similar(x), x, α)
+VI.scale!(y::BorderedArray, x::BorderedArray, α::Number) = throw("")#mul!(y, x, α)
+VI.scale!!(x::BorderedArray, α::Number) = α * x
+VI.scale!!(y::BorderedArray, x::BorderedArray, α::Number) = mul!(y, x, α)
+VI.inner(x::BorderedArray, y::BorderedArray) = dot(x, y)
