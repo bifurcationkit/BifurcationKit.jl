@@ -27,14 +27,13 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     # put the NS boundary condition
     J = Complex.(copy(Jac.jacpb))
     J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ω))(N)
-    @set Jac.jacpb = J[1:end-1,1:end-1]
+    Jns = @set Jac.jacpb = J[1:end-1,1:end-1]
 end
 
 function continuation(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::Lens,
                     options_cont::ContinuationPar = br.contparams ;
-                    bdlinsolver = MatrixBLS(),
                     detect_codim2_bifurcation::Int = 0,
                     update_minaug_every_step = 1,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
@@ -120,11 +119,16 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
         update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        updatesection!(pbwrap.prob, bifpt.x.ϕ, nothing)
         bifpt = @set bifpt.x = bifpt.x.sol
     end
 
     # we get the collocation problem
     coll = getprob(br).prob
+
+    # update section
+    # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
+    updatesection!(coll, bifpt.x, nothing)
 
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
@@ -209,6 +213,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         kwargs...,
         prm,
         # detect_codim2_bifurcation = detect_codim2_bifurcation,
+        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = PDPeriodicOrbitCont(),
         )
 end
@@ -268,5 +273,6 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
         prm,
         # detect_codim2_bifurcation = detect_codim2_bifurcation,
         kind = NSPeriodicOrbitCont(),
+        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         )
 end
