@@ -1,7 +1,7 @@
-using Revise, Parameters, KrylovKit
+using Revise, KrylovKit
 using GLMakie
 using BifurcationKit
-using LinearAlgebra, SparseArrays, DiffEqOperators, LinearMaps
+using LinearAlgebra, SparseArrays, LinearMaps
 const BK = BifurcationKit
 
 Makie.inline!(true)
@@ -13,34 +13,48 @@ contour3dMakie(ax, x::AbstractVector; k...) = contour3dMakie(ax, reshape(x,Nx,Ny
 contour3dMakie!(ax, x; k...) = (contour!(ax, x;  k...))
 contour3dMakie!(ax, x::AbstractVector; k...) = contour3dMakie!(ax, reshape(x,Nx,Ny,Nz); k...)
 
-function Laplacian3D(Nx, Ny, Nz, lx, ly, lz, bc = :Neumann)
+function Laplacian3D(Nx, Ny, Nz, lx, ly, lz)
     speye(n) = sparse(I, n, n)
-    hx = 2lx/Nx; hy = 2ly/Ny; hz = 2lz/Nz
-    D2x = CenteredDifference{1}(2, 2, hx, Nx)
-    D2y = CenteredDifference{1}(2, 2, hy, Ny)
-    D2z = CenteredDifference{1}(2, 2, hz, Nz)
-    Qx = Neumann0BC(hx); Qy = Neumann0BC(hy); Qz = Neumann0BC(hz)
+    hx = 2lx/Nx
+    hy = 2ly/Ny
+    hz = 2lz/Nz
+    D2x = spdiagm(0 => -2ones(Nx), 1 => ones(Nx-1), -1 => ones(Nx-1) ) / hx^2
+    D2y = spdiagm(0 => -2ones(Ny), 1 => ones(Ny-1), -1 => ones(Ny-1) ) / hy^2
+    D2z = spdiagm(0 => -2ones(Nz), 1 => ones(Nz-1), -1 => ones(Nz-1) ) / hz^2
 
-    _A = kron(speye(Ny), sparse(D2x * Qx)[1]) + kron(sparse(D2y * Qy)[1], speye(Nx))
-    A = kron(speye(Nz), _A) + kron(kron(sparse(D2z * Qz)[1], speye(Ny)), speye(Nx))
-    return sparse(A), D2x
+    D2x[1,1] = -1/hx^2
+    D2x[end,end] = -1/hx^2
+
+    D2y[1,1] = -1/hy^2
+    D2y[end,end] = -1/hy^2
+
+    D2z[1,1] = -1/hz^2
+    D2z[end,end] = -1/hz^2
+
+    D2xsp = sparse(D2x)
+    D2ysp = sparse(D2y)
+    D2zsp = sparse(D2z)
+
+    _A = kron(speye(Ny), D2xsp) + kron(D2ysp, speye(Nx))
+    A = kron(speye(Nz), _A) + kron(kron(D2zsp, speye(Ny)), speye(Nx))
+    return A, D2x
 end
 
 # main functional
 function F_sh(u, p)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -(L1 * u) .+ (l .* u .+ ν .* u.^2 .- u.^3)
 end
 
 # differential of the functional
 function dF_sh(u, p, du)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -(L1 * du) .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
 end
 
 #Jacobian
 function J_sh(u, p)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -L1  .+ spdiagm(0 => l .+ 2 .* ν .* u .- 3 .* u.^2)
 end
 
@@ -66,7 +80,8 @@ sol0 ./= maximum(vec(sol0))
 sol0 .*= 1.2
 
 # parameters for PDE
-Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz, :Neumann);
+Δ, D2x = Laplacian3D(Nx, Ny, Nz, lx, ly, lz);
+
 L1 = (I + Δ)^2;
 par = (l = 0.1, ν = 1.2, L1 = L1);
 
@@ -113,6 +128,8 @@ println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 
 contour3dMakie(sol0)
 contour3dMakie(sol_hexa.u)
+
+@time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
 ###################################################################################################
 struct SH3dEigMB{Tf, Tσ} <: BK.AbstractEigenSolver
     σ::Tσ
@@ -133,12 +150,13 @@ function (sheig::SH3dEigMB)(J, nev::Int; verbosity = 0, kwargs...)
     # return vals2[Ind], vecs[:, Ind], true, info
     return vals2[Ind], vecs[Ind], true, info
 end
-BifurcationKit.geteigenvector(eigsolve::SH3dEigMB, vecs, n::Union{Int, Array{Int64,1}}) = vecs[:, n]
+BifurcationKit.geteigenvector(eigsolve::SH3dEigMB, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
 eigSH3d = SH3dEigMB(0.0, lu(L1))
+eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 @time eigSH3d(J_sh(sol_hexa.u, par), 10)
 @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 0, nev = 15, n_inversion = 4, plot_every_step  = 1)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 3, nev = 15, n_inversion = 4, plot_every_step  = 1)
 
 br = @time continuation(
     re_make(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
@@ -172,22 +190,22 @@ br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10,
     # callback_newton = cb,
     normC = norminf)
 
-BK.plotBranch(br, br1...)
-BK.plotBranch(br1[15])
+BK.plot(br, br1...)
+BK.plot(br1...)
 
-BK.plotBranch(br1...)
+BK.plot(br1...)
 
 fig = Figure(resolution = (1200, 900))
-    for i=1:min(25,length(br1))
-        ix = div(i,5)+1; iy = i%5+1
-        @show i, ix, iy
-        ax = Axis3(fig[ix, iy], title = "$i", aspect = (1, 1, 1))
-        hidedecorations!(ax, grid=false)
-        contour3dMakie!(ax, br1[i].sol[2].x)
-        ax.protrusions = (0, 0, 0, 10)
-        # out = AbstractPlotting.contour!(ax, reshape(br1[i].sol[2].x, Nx, Ny, Nz))
-        # @show out
-        # Colorbar(fig[ix, iy], )
-        # Colorbar(ax, hm)
-    end
-    display(fig)
+for i=1:min(25,length(br1))
+    ix = div(i,5)+1; iy = i%5+1
+    @show i, ix, iy
+    ax = Axis3(fig[ix, iy], title = "$i", aspect = (1, 1, 1))
+    hidedecorations!(ax, grid=false)
+    contour3dMakie!(ax, br1[i].sol[2].x)
+    ax.protrusions = (0, 0, 0, 10)
+    # out = AbstractPlotting.contour!(ax, reshape(br1[i].sol[2].x, Nx, Ny, Nz))
+    # @show out
+    # Colorbar(fig[ix, iy], )
+    # Colorbar(ax, hm)
+end
+display(fig)

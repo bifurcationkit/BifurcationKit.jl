@@ -1,11 +1,12 @@
-using Revise, Test, Parameters
+using Revise, Test
 using Plots
 # using GLMakie; Makie.inline!(true)
+# using CairoMakie; Makie.inline!(true)
 using BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
 function TMvf!(dz, z, p, t = 0)
-    @unpack J, α, E0, τ, τD, τF, U0 = p
+    (;J, α, E0, τ, τD, τF, U0) = p
     E, x, u = z
     SS0 = J * u * x * E + E0
     SS1 = α * log(1 + exp(SS0 / α))
@@ -19,10 +20,13 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 z0 = [0.238616, 0.982747, 0.367876 ]
 prob = BifurcationProblem(TMvf!, z0, par_tm, (@lens _.E0); record_from_solution = (x, p) -> (E = x[1], x = x[2], u = x[3]),)
 
-opts_br = ContinuationPar(p_min = -10.0, p_max = -0.9, dsmax = 0.1, n_inversion = 8, nev = 3)
-br = continuation(prob, PALC(tangent = Bordered()), opts_br; plot = true, normC = norminf)
+opts_br = ContinuationPar(p_min = -10.0, p_max = -0., dsmax = 0.1, n_inversion = 8, nev = 3)
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false, normC = norminf, bothside = true)
 
 BK.plot(br, plotfold=false)
+####################################################################################################
+br_fold = BK.continuation(br, 2, (@lens _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
+plot(br_fold)
 ####################################################################################################
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 80, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
@@ -30,7 +34,6 @@ opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 80,
 # arguments for periodic orbits
 function plotSolution(x, p; k...)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-    @show size(xtt[:,:]) maximum(xtt[1,:])
     plot!(xtt.t, xtt[1,:]; label = "E", k...)
     plot!(xtt.t, xtt[2,:]; label = "x", k...)
     plot!(xtt.t, xtt[3,:]; label = "u", k...)

@@ -1,5 +1,5 @@
 using Revise
-using SparseArrays, LinearAlgebra, DiffEqOperators, Parameters
+using SparseArrays, LinearAlgebra
 using BifurcationKit
 using Plots
 const BK = BifurcationKit
@@ -13,20 +13,18 @@ h = X[2]-X[1]
 const _weight = rand(N)
 normweighted(x) = norm(_weight .* x)
 
-# Q = Neumann0BC(h)
-Q = Dirichlet0BC(h |> typeof)
-Δ = sparse(CenteredDifference(2, 2, h, N) * Q)[1]
+Δ = spdiagm(0 => -2ones(N), 1 => ones(N-1), -1 => ones(N-1) ) / h^2
 L1 = -(I + Δ)^2
 
 function R_SH(u, par)
-    @unpack λ, ν, L1 = par
+    (;λ, ν, L1) = par
     out = similar(u)
     out .= L1 * u .+ λ .* u .+ ν .* u.^3 - u.^5
 end
 
 Jac_sp(u, par) = par.L1 + spdiagm(0 => par.λ .+ 3 .* par.ν .* u.^2 .- 5 .* u.^4)
-d2R(u,p,dx1,dx2) = @. p.ν * 6u*dx1*dx2 - 5*4u^3*dx1*dx2
-d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3*dx1*dx2 - 5*4*3u^2*dx1*dx2*dx3
+d2R(u,p,dx1,dx2) = @. p.ν * 6u * dx1 * dx2 - 5 * 4u^3 * dx1 * dx2
+d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3 * dx1 * dx2 - 5 * 4 * 3u^2 * dx1 * dx2 * dx3
 
 parSH = (λ = -0.1, ν = 2., L1 = L1)
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
@@ -36,9 +34,8 @@ prob = BifurcationProblem(R_SH, sol0, parSH, (@lens _.λ); J = Jac_sp,
     plot_solution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
     )
 ####################################################################################################
-optnew = NewtonPar(verbose = false, tol = 1e-12)
-# allocations 357, 0.8ms
-sol1 = @time newton(prob, optnew)
+optnew = NewtonPar(tol = 1e-12)
+sol1 = newton(prob, optnew)
 Plots.plot(X, sol1.u)
 
 opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,

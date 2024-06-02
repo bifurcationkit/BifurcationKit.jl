@@ -1,29 +1,30 @@
 using Revise
-using DiffEqOperators, ForwardDiff, DifferentialEquations
-using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters, LoopVectorization
+using ForwardDiff, DifferentialEquations
+using Plots
+# using GLMakie; Makie.inline!(true)
+using BifurcationKit, LinearAlgebra, SparseArrays, Parameters, LoopVectorization
 const BK = BifurcationKit
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
+function Laplacian2D(Nx, Ny, lx, ly)
     hx = 2lx/Nx
     hy = 2ly/Ny
-    D2x = CenteredDifference(2, 2, hx, Nx)
-    D2y = CenteredDifference(2, 2, hy, Ny)
-    if bc == :Neumann
-        Qx = Neumann0BC(hx)
-        Qy = Neumann0BC(hy)
-    elseif  bc == :Dirichlet
-        Qx = Dirichlet0BC(typeof(hx))
-        Qy = Dirichlet0BC(typeof(hy))
-    end
-    D2xsp = sparse(D2x * Qx)[1]
-    D2ysp = sparse(D2y * Qy)[1]
+    D2x = spdiagm(0 => -2ones(Nx), 1 => ones(Nx-1), -1 => ones(Nx-1) ) / hx^2
+    D2y = spdiagm(0 => -2ones(Ny), 1 => ones(Ny-1), -1 => ones(Ny-1) ) / hy^2
 
+    D2x[1,1] = -2/hx^2
+    D2x[end,end] = -2/hx^2
+
+    D2y[1,1] = -2/hy^2
+    D2y[end,end] = -2/hy^2
+
+    D2xsp = sparse(D2x)
+    D2ysp = sparse(D2y)
     A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
     return A, D2x
 end
 
 function NL!(f, u, p, t = 0.)
-    @unpack r, μ, ν, c3, c5 = p
+    (;r, μ, ν, c3, c5) = p
     n = div(length(u), 2)
     u1 = @view u[1:n]
     u2 = @view u[n+1:2n]
@@ -64,7 +65,7 @@ end
 dFcgl(x, p, dx) = dFcgl!(similar(dx), x, p, dx)
 
 function Jcgl(u, p, t = 0.)
-    @unpack r, μ, ν, c3, c5, Δ = p
+    (;r, μ, ν, c3, c5, Δ) = p
 
     n = div(length(u), 2)
     u1 = @view u[1:n]

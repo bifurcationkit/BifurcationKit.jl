@@ -1,5 +1,5 @@
 using Revise
-using ApproxFun, LinearAlgebra, Parameters
+using ApproxFun, LinearAlgebra
 using BifurcationKit, Plots
 const BK = BifurcationKit
 ####################################################################################################
@@ -30,21 +30,21 @@ N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
 
 function F_chan(u, p)
-    @unpack α, β = p
+    (;α, β) = p
     return [Fun(u(0.), domain(u)) - β,
             Fun(u(1.), domain(u)) - β,
             Δ * u + α * N(u, b = β)]
 end
 
 function dF_chan(u, v, p)
-    @unpack α, β = p
+    (;α, β) = p
     return [Fun(v(0.), domain(u)),
             Fun(v(1.), domain(u)),
             Δ * v + α * dN(u, b = β) * v]
 end
 
 function Jac_chan(u, p)
-    @unpack α, β = p
+    (;α, β) = p
     return [Evaluation(u.space, 0.),
             Evaluation(u.space, 1.),
             Δ + α * dN(u, b = β)]

@@ -152,9 +152,9 @@ minus(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype
 # KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl
 
 function VI.add(W::BorderedArray{vectype, Tv1}, 
-             V::BorderedArray{vectype, Tv1}, 
-             α::Number = 1, 
-             β::Number = 1) where {vectype, Tv1 <: Number}
+                V::BorderedArray{vectype, Tv1}, 
+                α::Number = 1, 
+                β::Number = 1) where {vectype, Tv1 <: Number}
     # compute W * β + V * α
     Z = copy(W)
     axpby!(α, V, β, Z)

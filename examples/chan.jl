@@ -1,5 +1,5 @@
 using Revise
-using BifurcationKit, LinearAlgebra, Plots, Parameters
+using BifurcationKit, LinearAlgebra, Plots
 const BK = BifurcationKit
 
 Nl(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
@@ -7,7 +7,7 @@ dNl(x; a = 0.5, b = 0.01) = (1-b*x^2+2*a*x)/(1+b*x^2)^2
 d2Nl(x; a = 0.5, b = 0.01) = -(2*(-a+3*a*b*x^2+3*b*x-b^2*x^3))/(1+b*x^2)^3
 
 function F_chan(x, p)
-    @unpack α, β = p
+    (;α, β) = p
     f = similar(x)
     n = length(x)
     f[1] = x[1] - β
@@ -87,7 +87,7 @@ outfoldco = continuation((@set br.prob = prob2), indfold, (@lens _.β), optcontf
 ###################################################################################################
 # Matrix Free example
 function dF_chan(x, dx, p)
-    @unpack α, β = p
+    (;α, β) = p
     out = similar(x)
     n = length(x)
     out[1] = dx[1]

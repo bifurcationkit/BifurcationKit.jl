@@ -1,32 +1,22 @@
 using Revise
-using DiffEqOperators, ForwardDiff, IncompleteLU
+using ForwardDiff, IncompleteLU
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
 const BK = BifurcationKit
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Dirichlet)
+function Laplacian2D(Nx, Ny, lx, ly)
     hx = 2lx/Nx
     hy = 2ly/Ny
-    D2x = CenteredDifference(2, 2, hx, Nx)
-    D2y = CenteredDifference(2, 2, hy, Ny)
-    if bc == :Neumann
-        Qx = Neumann0BC(hx)
-        Qy = Neumann0BC(hy)
-    elseif  bc == :Dirichlet
-        Qx = Dirichlet0BC(typeof(hx))
-        Qy = Dirichlet0BC(typeof(hy))
-    else
-        Qx = Dirichlet0BC(typeof(hx))
-        Qy = Dirichlet0BC(typeof(hy))
-    end
-    D2xsp = sparse(D2x * Qx)[1]
-    D2ysp = sparse(D2y * Qy)[1]
-    if bc == :Periodic
-        D2xsp[1,end] = D2xsp[1,2]
-        D2xsp[end,1] = D2xsp[1,2]
+    D2x = spdiagm(0 => -2ones(Nx), 1 => ones(Nx-1), -1 => ones(Nx-1) ) / hx^2
+    D2y = spdiagm(0 => -2ones(Ny), 1 => ones(Ny-1), -1 => ones(Ny-1) ) / hy^2
 
-        D2ysp[1,end] = D2ysp[1,2]
-        D2ysp[end,1] = D2ysp[1,2]
-    end
+    D2x[1,1] = -2/hx^2
+    D2x[end,end] = -2/hx^2
+
+    D2y[1,1] = -2/hy^2
+    D2y[end,end] = -2/hy^2
+
+    D2xsp = sparse(D2x)
+    D2ysp = sparse(D2y)
     A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
     return A, D2x
 end
@@ -96,7 +86,7 @@ n = Nx*Ny
 lx = pi
 ly = pi/2
 
-Δ = Laplacian2D(Nx, Ny, lx, ly)[1]
+Δ, = Laplacian2D(Nx, Ny, lx, ly)
 par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), γ = 0.)
 sol0 = zeros(2Nx, Ny)
 
@@ -251,7 +241,7 @@ br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
         plot = true,
         # plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-        # record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2),
+        record_from_solution = (u, p) -> BK.getamplitude(poTrapMF, u, par_cgl; ratio = 2),
         normC = norminf)
 
 branches = Any[br_pok2]

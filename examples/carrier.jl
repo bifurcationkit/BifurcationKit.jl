@@ -1,11 +1,11 @@
 using Revise
-using LinearAlgebra, Parameters, SparseArrays, BandedMatrices
+using LinearAlgebra, SparseArrays, BandedMatrices
 
 using Plots, BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
 function F_carr(x, p)
-    @unpack ϵ, X, dx = p
+    (;ϵ, X, dx) = p
     f = similar(x)
     n = length(x)
     f[1] = x[1]
@@ -18,7 +18,7 @@ function F_carr(x, p)
 end
 
 function Jac_carr!(J, x, p)
-    @unpack ϵ, X, dx = p
+    (;ϵ, X, dx) = p
     n = length(x)
     J[band(-1)] .= ϵ^2/dx^2                                     # set the diagonal band
     J[band(1)]  .= ϵ^2/dx^2                                     # set the super-diagonal band
@@ -43,7 +43,7 @@ prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@lens _.ϵ);
     record_from_solution = recordFromSolution)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-out = @time newton(prob, optnew, normN = x -> norm(x, Inf64))
+out = @time newton(prob, optnew, normN = norminf)
 plot(out.u, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), max_steps = 300, detect_bifurcation = 3, nev = 40, n_inversion = 6, max_bisection_steps = 25)
@@ -100,7 +100,7 @@ plot(brdc, legend=true)#, marker=:d)
 ####################################################################################################
 # bifurcation diagram
 diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS(), check_precision = false)), 2,
-        (arg...) -> @set optcont.newton_options.verbose=false;
+        (@set optcont.newton_options.verbose=false);
         plot = true)
 
 plot(diagram, legend=false)

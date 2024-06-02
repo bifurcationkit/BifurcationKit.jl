@@ -1,5 +1,5 @@
 using Revise
-using LinearAlgebra, Parameters, KrylovKit
+using LinearAlgebra, KrylovKit
 
 using BifurcationKit
 const BK = BifurcationKit
@@ -107,7 +107,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
 end
 
 function F_shfft(u, p)
-    @unpack l, ν, L = p
+    (;l, ν, L) = p
     return -(L * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
 end
 

@@ -1,5 +1,4 @@
 using Revise
-using DiffEqOperators, Parameters
 using BifurcationKit, Plots, SparseArrays, LinearAlgebra
 const BK = BifurcationKit
 
@@ -11,33 +10,31 @@ Ny = 100
 lx = 8pi
 ly = 2*2pi/sqrt(3)
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
+function Laplacian2D(Nx, Ny, lx, ly)
     hx = 2lx/Nx
     hy = 2ly/Ny
-    D2x = CenteredDifference(2, 2, hx, Nx)
-    D2y = CenteredDifference(2, 2, hy, Ny)
-    if bc == :Dirichlet
-        Qx = Dirichlet0BC(typeof(hx))
-        Qy = Dirichlet0BC(typeof(hy))
-    elseif bc == :Neumann
-        Qx = Neumann0BC(hx)
-        Qy = Neumann0BC(hy)
-    elseif bc == :Periodic
-        Qx = PeriodicBC(hx)
-        Qy = PeriodicBC(hy)
-    end
-    # @show norm(D2x - Circulant(D2x[1,:]))
-    A = kron(sparse(I, Ny, Ny), sparse(D2x * Qx)[1]) + kron(sparse(D2y * Qy)[1], sparse(I, Nx, Nx))
+    D2x = spdiagm(0 => -2ones(Nx), 1 => ones(Nx-1), -1 => ones(Nx-1) ) / hx^2
+    D2y = spdiagm(0 => -2ones(Ny), 1 => ones(Ny-1), -1 => ones(Ny-1) ) / hy^2
+
+    D2x[1,1] = -1/hx^2
+    D2x[end,end] = -1/hx^2
+
+    D2y[1,1] = -1/hy^2
+    D2y[end,end] = -1/hy^2
+
+    D2xsp = sparse(D2x)
+    D2ysp = sparse(D2y)
+    A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
     return A, D2x
 end
 
 function F_sh(u, p)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -L1 * u .+ (l .* u .+ ν .* u.^2 .- u.^3)
 end
 
 function dF_sh(u, p)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -L1 .+ spdiagm(0 => l .+ 2 .* ν .* u .- 3 .* u.^2)
 end
 
@@ -48,13 +45,13 @@ X = -lx .+ 2lx/(Nx) * collect(0:Nx-1)
 Y = -ly .+ 2ly/(Ny) * collect(0:Ny-1)
 
 sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
-    sol0 .= sol0 .- minimum(vec(sol0))
-    sol0 ./= maximum(vec(sol0))
-    sol0 = sol0 .- 0.25
-    sol0 .*= 1.7
-    heatmap(sol0', color=:viridis)
+sol0 .= sol0 .- minimum(vec(sol0))
+sol0 ./= maximum(vec(sol0))
+sol0 = sol0 .- 0.25
+sol0 .*= 1.7
+heatmap(sol0', color=:viridis)
 
-Δ, D2x = Laplacian2D(Nx, Ny, lx, ly, :Neumann)
+Δ, D2x = Laplacian2D(Nx, Ny, lx, ly)
 const L1 = (I + Δ)^2
 par = (l = -0.1, ν = 1.3, L1 = L1);
 
@@ -79,9 +76,9 @@ outdef = @time newton(
         (@set prob.u0 = 0.4vec(sol_hexa.u) .* vec([exp(-1(x+lx)^2/25) for x in X, y in Y])), deflationOp,
         # 0.4vec(sol_hexa) .* vec([1 .- exp(-1(x+lx)^2/55) for x in X, y in Y]),
         optnewd)
-    println("--> norm(sol) = ", norm(outdef.u))
-    plotsol(outdef.u) |> display
-    BK.converged(outdef) && push!(deflationOp, outdef.u)
+println("--> norm(sol) = ", norm(outdef.u))
+plotsol(outdef.u) |> display
+BK.converged(outdef) && push!(deflationOp, outdef.u)
 
 plotsol(deflationOp[end])
 
@@ -125,7 +122,7 @@ prec = lu(L1 + I);
 ls = GMRESIterativeSolvers(reltol = 1e-5, N = Nx*Ny, Pl = prec)
 
 function dF_sh2(du, u, p)
-    @unpack l, ν, L1 = p
+    (;l, ν, L1) = p
     return -L1 * du .+ (l .+ 2 .* ν .* u .- 3 .* u.^2) .* du
 end
 

@@ -1,12 +1,12 @@
 using Revise
-using Test, ForwardDiff, Parameters
+using Test
 using Plots
 # using GLMakie; Makie.inline!(true)
 using BifurcationKit, Test
 const BK = BifurcationKit
 ####################################################################################################
 function COm!(du, u, p, t = 0)
-    @unpack q1,q2,q3,q4,q5,q6,k = p
+    (;q1,q2,q3,q4,q5,q6,k) = p
     x, y, s = u
     z = 1-x-y-s
     du[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y

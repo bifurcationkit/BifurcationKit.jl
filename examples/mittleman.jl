@@ -1,8 +1,7 @@
 using Revise
-using DiffEqOperators, ForwardDiff
 using Plots
 # using GLMakie; Makie.inline!(true)
-using BifurcationKit, LinearAlgebra, SparseArrays, Parameters
+using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
 normbratu(x) = norm(x .* w) / sqrt(length(x))
@@ -12,22 +11,20 @@ plotsol!(x, nx = Nx, ny = Ny; kwargs...) = heatmap!(LinRange(0,1,nx), LinRange(0
 plotsol(x, nx = Nx, ny = Ny; kwargs...) = (plot();plotsol!(x, nx, ny; kwargs...))
 # plotsol!(ax, x, nx = Nx, ny = Ny; ax1=nothing, kwargs...) = heatmap!(ax, LinRange(0,1,nx), LinRange(0,1,ny), reshape(x, nx, ny)')
 
-function Laplacian2D(Nx, Ny, lx, ly, bc = :Neumann)
+function Laplacian2D(Nx, Ny, lx, ly)
     hx = 2lx/Nx
     hy = 2ly/Ny
-    D2x = CenteredDifference(2, 2, hx, Nx)
-    D2y = CenteredDifference(2, 2, hy, Ny)
+    D2x = spdiagm(0 => -2ones(Nx), 1 => ones(Nx-1), -1 => ones(Nx-1) ) / hx^2
+    D2y = spdiagm(0 => -2ones(Ny), 1 => ones(Ny-1), -1 => ones(Ny-1) ) / hy^2
 
-    if bc == :Neumann
-        Qx = Neumann0BC(hx)
-        Qy = Neumann0BC(hy)
-    elseif bc == :Dirichlet
-        Qx = Dirichlet0BC(typeof(hx))
-        Qy = Dirichlet0BC(typeof(hy))
-    end
+    D2x[1,1] = -1/hx^2
+    D2x[end,end] = -1/hx^2
 
-    D2xsp = sparse(D2x * Qx)[1]
-    D2ysp = sparse(D2y * Qy)[1]
+    D2y[1,1] = -1/hy^2
+    D2y[end,end] = -1/hy^2
+
+    D2xsp = sparse(D2x)
+    D2ysp = sparse(D2y)
     A = kron(sparse(I, Ny, Ny), D2xsp) + kron(D2ysp, sparse(I, Nx, Nx))
     return A, D2x
 end
@@ -36,7 +33,7 @@ end
 dϕ(u, λ) = -10(1-λ*exp(u))
 
 function NL!(dest, u, p)
-    @unpack λ = p
+    (;λ) = p
     dest .= ϕ.(u, λ)
     return dest
 end
@@ -70,7 +67,7 @@ Ny = 30
 lx = 0.5
 ly = 0.5
 
-Δ, = Laplacian2D(Nx, Ny, lx, ly)
+Δ, D = Laplacian2D(Nx, Ny, lx, ly)
 par_mit = (λ = .01, Δ = Δ)
 sol0 = 0*ones(Nx, Ny) |> vec
 const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
@@ -181,22 +178,21 @@ P = LinRange(-0.001,0.001, Nd+1)
 V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
 
 Ind1 = findall( abs.(V1a) .<= 9e-4 * maximum(abs.(V1a)))
+V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
 
-    V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
-
-    Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
-    @show length(Ind2)
+Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
+@show length(Ind2)
 
 resp = Float64[]
-    resx = Vector{Float64}[]
-    resnrm = Float64[]
-    @showprogress for k in Ind2
-        ii = Ind1[k]
-        push!(resp, P[ii[1]])
-        # push!(resx, max(X[ii[2]],Y[ii[3]]))
-        push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
-        push!(resx, [X[ii[2]], Y[ii[3]]])
-    end
+resx = Vector{Float64}[]
+resnrm = Float64[]
+@showprogress for k in Ind2
+    ii = Ind1[k]
+    push!(resp, P[ii[1]])
+    # push!(resx, max(X[ii[2]],Y[ii[3]]))
+    push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
+    push!(resx, [X[ii[2]], Y[ii[3]]])
+end
 
 using LaTeXStrings
 

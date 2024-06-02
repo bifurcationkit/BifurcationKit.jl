@@ -24,7 +24,7 @@ end
 plotsol(ax, x::BorderedArray; k...) = plotsol(ax, x.u; k...)
 
 function Fbru!(f, x, p)
-    @unpack α, β, D1, D2, l = p
+    (;α, β, D1, D2, l) = p
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h
     c1 = D1 / l^2 / h2
@@ -48,7 +48,7 @@ function Fbru!(f, x, p)
 end
 
 function Jbru_sp(x, p)
-    @unpack α, β, D1, D2, l = p
+    (;α, β, D1, D2, l) = p
     # compute the Jacobian using a sparse representation
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h

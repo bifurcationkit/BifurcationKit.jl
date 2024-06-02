@@ -1,24 +1,11 @@
 # example taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (August 8, 2012): 026201. https://doi.org/10.1103/PhysRevE.86.026201.
 using Revise
-using DiffEqOperators, ForwardDiff, DifferentialEquations
-using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
+using ForwardDiff, DifferentialEquations
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays
 const BK = BifurcationKit
 
 f(u, v, p) = p.η * (      u + p.a * v - p.C * u * v - u * v^2)
 g(u, v, p) = p.η * (p.H * u + p.b * v + p.C * u * v + u * v^2)
-
-function Laplacian(N, lx, bc = :Dirichlet)
-    hx = 2lx/N
-    D2x = CenteredDifference(2, 2, hx, N)
-    if bc == :Neumann
-        Qx = Neumann0BC(hx)
-    elseif bc == :Dirichlet
-        Qx = Dirichlet0BC(typeof(hx))
-    elseif bc == :Periodic
-        Qx = PeriodicBC(typeof(hx))
-    end
-    D2xsp = sparse(D2x * Qx)[1] |> sparse
-end
 
 function NL!(dest, u, p, t = 0.)
     N = div(length(u), 2)
@@ -64,8 +51,9 @@ using SparseDiffTools
 N = 100
 n = 2N
 lx = 3pi /2
+h = 2lx/N
 X = LinRange(-lx,lx, N)
-Δ = Laplacian(N, lx, :Neumann)
+Δ = spdiagm(0 => -2ones(N), 1 => ones(N-1), -1 => ones(N-1) ) / h^2; Δ[1,1]=Δ[end,end]=-1/h^2
 D = 0.08
 par_br = (η = 1.0, a = -1., b = -3/2., H = 3.0, D = D, C = -0.6, Δ = blockdiag(D*Δ, Δ))
 
