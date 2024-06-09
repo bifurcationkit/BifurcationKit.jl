@@ -547,7 +547,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
         p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-        @reset contParams.newton_options.eigsolver = FloquetColl()
+        @set! contParams.newton_options.eigsolver = FloquetColl()
     else
         @debug "Shooting, get borders"
         J = jacobian_neimark_sacker(pbwrap, orbitguess, getparams(pbwrap), ωₙₛ)
