@@ -84,7 +84,7 @@ mul!(A::BorderedArray{Tv1, Tp1}, α::T, B::BorderedArray{Tv2, Tp2}) where {Tv1, 
 ################################################################################
 function axpy!(a::Number, 
                X::BorderedArray{Tv1, Tp1}, 
-               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1, Tp2}
+               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1, Tp2}
     # Overwrite Y with a * X + Y, where a is scalar
     axpy!(a, X.u, Y.u)
     axpy!(a, X.p, Y.p)
@@ -93,7 +93,7 @@ end
 
 function axpy!(a::Number,
                X::BorderedArray{Tv1, Tp1}, 
-               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, T <: Number, Tp1 <: Number, Tp2 <: Number}
+               Y::BorderedArray{Tv2, Tp2}) where {Tv1, Tv2, Tp1 <: Number, Tp2 <: Number}
     # Overwrite Y with a * X + Y, where a is scalar
     axpy!(a, X.u, Y.u)
     Y.p = a * X.p + Y.p
@@ -110,7 +110,7 @@ function axpby!(a::Number, X::BorderedArray{vectype, Tv1},
 end
 
 function axpby!(a::Number, X::BorderedArray{vectype, Tv1}, 
-                b::Number, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1 <: Number, Tv2 <: Number, T <: Number}
+                b::Number, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1 <: Number, Tv2 <: Number}
     # Overwrite Y with a * X + b * Y, where a is a scalar
     axpby!(a, X.u, b, Y.u)
     Y.p = a * X.p + b * Y.p

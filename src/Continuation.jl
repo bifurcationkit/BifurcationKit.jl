@@ -147,11 +147,11 @@ Structure containing the state of the continuation procedure. The fields are mea
 - `getpreviousp(state)` returns the p component of the previous solution
 - `is_stable(state)` whether the current state is stable
 """
+Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
     z_pred::Tv                               # predictor
     τ::Tv                                    # tangent to the curve
     z::Tv                                    # current solution
     z_old::Tv                                # previous solution
-Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
 
     converged::Bool                          # boolean for newton correction
     itnewton::Int64 = 0                      # number of newton iteration (in corrector)
