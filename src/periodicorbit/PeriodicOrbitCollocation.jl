@@ -132,11 +132,11 @@ struct POCollCache{T}
 end
 
 function POCollCache(𝒯::Type, n::Int, m::Int)
-    gj  = zeros(𝒯, n, m)
-    gi  = zeros(𝒯, n, m)
-    ∂gj = zeros(𝒯, n, m)
-    uj  = zeros(𝒯, n, m+1)
-    vj  = zeros(𝒯, n, m+1)
+    gj  = DiffCache(zeros(𝒯, n, m))
+    gi  = DiffCache(zeros(𝒯, n, m))
+    ∂gj = DiffCache(zeros(𝒯, n, m))
+    uj  = DiffCache(zeros(𝒯, n, m+1))
+    vj  = DiffCache(zeros(𝒯, n, m+1))
     return POCollCache(gj, gi, ∂gj, uj, vj)
 end
 ####################################################################################################
@@ -505,10 +505,9 @@ end
     Ntst = pb.mesh_cache.Ntst
     # we want slices at fixed times, hence pj[:, j] is the fastest
     # temporaries to reduce allocations
-    # TODO REMOVE THESE TEMPS?
-    pj  = zeros(𝒯, n, m)
-    ∂pj = zeros(𝒯, n, m)
-    uj  = zeros(𝒯, n, m+1)
+    pj  = get_tmp(pb.cache.gj, u)  #zeros(𝒯, n, m)
+    ∂pj = get_tmp(pb.cache.∂gj, u) #zeros(𝒯, n, m)
+    uj  = get_tmp(pb.cache.uj, u)  #zeros(𝒯, n, m+1)
     # out is of size (n, m⋅Ntst + 1)
     mesh = getmesh(pb)
     # range for locating time slices
@@ -590,9 +589,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    pj = coll.cache.gi # zeros(𝒯, n, m)
-    ϕj = coll.cache.gj # zeros(𝒯, n, m)
-    uj = coll.cache.uj # zeros(𝒯, n, m+1)
+    pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
+    ϕj = get_tmp(coll.cache.gj, u) # zeros(𝒯, n, m)
+    uj = get_tmp(coll.cache.uj, u) # zeros(𝒯, n, m+1)
     In = I(n)
     J0 = zeros(𝒯, n, n)
 
@@ -647,7 +646,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     end
     J[end, 1:end-1] ./= period
 
-    vj = coll.cache.vj
+    vj = get_tmp(coll.cache.vj, u)
     phase = _phase_condition(coll, uc, (L, ∂L), (pj, uj, ϕj, vj), period)
     J[end, end] = -phase / period
     return J

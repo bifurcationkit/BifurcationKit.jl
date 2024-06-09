@@ -3,6 +3,7 @@ module BifurcationKit
     using Reexport
     @reexport using Setfield: setproperties, @set, @set!, Lens, get, set, @lens
     using Parameters: @with_kw, @unpack, @with_kw_noshow
+    using PreallocationTools: DiffCache, get_tmp
     using RecursiveArrayTools: VectorOfArray
     using DocStringExtensions
     using DataStructures: CircularBuffer # used for Polynomial predictor
