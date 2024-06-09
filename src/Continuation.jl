@@ -24,7 +24,7 @@ More information is available on the [website](https://bifurcationkit.github.io/
 - `isindomain(iter, p)` whether `p` in is domain [p_min, p_max]. (See [`ContinuationPar`](@ref))
 - `is_on_boundary(iter, p)` whether `p` in is {p_min, p_max}
 """
-@with_kw_noshow struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
     kind::Tkind
     prob::Tprob
     alg::Talg
@@ -139,11 +139,11 @@ Structure containing the state of the continuation procedure. The fields are mea
 - `getpreviousp(state)` returns the p component of the previous solution
 - `is_stable(state)` whether the current state is stable
 """
-@with_kw_noshow mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
     z_pred::Tv                               # predictor
     τ::Tv                                    # tangent to the curve
     z::Tv                                    # current solution
     z_old::Tv                                # previous solution
+Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
 
     converged::Bool                          # boolean for newton correction
     itnewton::Int64 = 0                      # number of newton iteration (in corrector)
@@ -337,7 +337,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && printstyled("━"^54*"\n"*"─"^18*" ", typeof(getalg(it)).name.name, " "*"─"^18*"\n\n", bold = true, color = :red)
 
     # newton parameters
-    @unpack p_min, p_max, max_steps, newton_options, η, ds = it.contparams
+    (;p_min, p_max, max_steps, newton_options, η, ds) = it.contparams
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
         return nothing
