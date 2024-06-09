@@ -135,7 +135,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     if get_plot_backend() == BK_Makie()
         plotsol = (ax, x, p;ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p;k...)
     else
-        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p;k...)
+        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p;fromcodim2 = true, k...)
     end
 
     collFold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);

@@ -163,7 +163,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
 
         ~flag && @debug "Linear solver for J did not converge."
     else
-        @assert 1==0 "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
+        @assert false "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
     end
 
     if debugArray isa AbstractArray
@@ -190,17 +190,74 @@ end
 @inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
 residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
 
-jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)
+jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)
 
-jacobian(pdpb::PDMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
+jacobian(pdpb::PDMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
 
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+################################################################################################### Newton / Continuation functions
+"""
+$(SIGNATURES)
+
+This function turns an initial guess for a PD point into a solution to the PD problem based on a Minimally Augmented formulation. The arguments are as follows
+- `prob::AbstractBifurcationFunction`
+- `pdpointguess` initial guess (x_0, p_0) for the PD point. It should be a `BorderedArray` as returned by the function `PDPoint`
+- `par` parameters used for the vector field
+- `eigenvec` guess for the 0 eigenvector
+- `eigenvec_ad` guess for the 0 adjoint eigenvector
+- `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
+
+# Optional arguments:
+- `normN = norm`
+- `bdlinsolver` bordered linear solver for the constraint equation
+- `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
+
+# Simplified call
+Simplified call to refine an initial guess for a PD point. More precisely, the call is as follows
+
+    newton_pd(br::AbstractBranchResult, ind_pd::Int; options = br.contparams.newton_options, kwargs...)
+
+The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
+
+!!! tip "Jacobian transpose"
+    The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!
+
+!!! tip "ODE problems"
+    For ODE problems, it is more efficient to pass the Bordered Linear Solver using the option `bdlinsolver = MatrixBLS()`
+"""
+function newton_pd(prob::AbstractBifurcationProblem,
+                pdpointguess, par,
+                eigenvec, eigenvec_ad,
+                options::NewtonPar;
+                normN = norm,
+                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                usehessian = true,
+                kwargs...)
+
+    pdproblem = PeriodDoublingProblemMinimallyAugmented(
+        prob,
+        _copy(eigenvec),
+        _copy(eigenvec_ad),
+        options.linsolver,
+        # do not change linear solver if user provides it
+        @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
+        usehessian = usehessian)
+
+    pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
+    prob_f = PDMAProblem(pdproblem, FiniteDifferences(), pdpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+
+    # options for the Newton Solver
+    opt_pd = deepcopy(options)
+
+    # solve the PD equations
+    return newton(prob_f, opt_pd; normN = normN, kwargs...)
+end
 ###################################################################################################
 function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 pdpointguess::BorderedArray{vectype, 𝒯}, par,
-                lens1::Lens, lens2::Lens,
+                lens1::AllOpticTypes, lens2::AllOpticTypes,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 normC = norm,
