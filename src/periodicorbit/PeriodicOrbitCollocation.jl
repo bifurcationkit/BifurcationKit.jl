@@ -444,21 +444,21 @@ $(SIGNATURES)
 """
 function phase_condition(pb::PeriodicOrbitOCollProblem,
                         uc,
-                        (L, ∂L),
+                        Ls,
                         period)
     𝒯 = eltype(uc)
     n, m, Ntst = size(pb)
 
-    puj = zeros(𝒯, n, m)
-    uj  = zeros(𝒯, n, m+1)
+    puj = get_tmp(pb.cache.gj, uc) # zeros(𝒯, n, m)
+    uj  = get_tmp(pb.cache.uj, uc)  #zeros(𝒯, n, m+1)
 
     # vc = get_time_slices(pb.ϕ, size(pb)...)
-    pvj = zeros(𝒯, n, m)
-    vj  = zeros(𝒯, n, m+1)
+    pvj = get_tmp(pb.cache.∂gj, uc) #zeros(𝒯, n, m)
+    vj  = get_tmp(pb.cache.vj, uc)  #zeros(𝒯, n, m+1)
 
     _phase_condition(pb,
                     uc,
-                    (L, ∂L),
+                    Ls,
                     (puj, uj, pvj, vj),
                     period)
 end
@@ -654,7 +654,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 end
 
 analytical_jacobian(coll::PeriodicOrbitOCollProblem, 
-                            u, 
+                            u::AbstractArray, 
                             pars; 
                             𝒯 = eltype(u), 
                             k...) = analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
