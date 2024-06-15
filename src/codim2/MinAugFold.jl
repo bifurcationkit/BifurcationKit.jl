@@ -549,7 +549,7 @@ function continuation_fold(prob,
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
-        rmul!(ζad, 1 / dot(ζ, ζ★))
+        rmul!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     end
 
     return continuation_fold(prob, alg,

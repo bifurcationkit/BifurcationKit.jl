@@ -40,12 +40,12 @@ end
 amplitude(x::AbstractMatrix, n) = maximum(x[1:n, :]) - minimum(x[1:n, :])
 
 function amplitude(x::AbstractVector, n, M; ratio = 1)
-    xc = reshape(x[begin:end-1], ratio * n, M)
+    xc = @views reshape(x[begin:end-1], ratio * n, M)
     amplitude(xc, n)
 end
 
 function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
-    xc = reshape(x[begin:end-1], ratio * n, M)
+    xc = @views reshape(x[begin:end-1], ratio * n, M)
     maximum(x[1:n, :])
 end
 ####################################################################################################
@@ -124,8 +124,8 @@ function modify_po_record(probPO, kwargs, par, lens)
             return _recordsol = (x, p; k...) -> begin
                 period = getperiod(probPO, x, set(par, lens, p))
                 sol = get_periodic_orbit(probPO, x, set(par, lens, p))
-                max = maximum(sol[1,:])
-                min = minimum(sol[1,:])
+                max = @views maximum(sol[1,:])
+                min = @views minimum(sol[1,:])
                 return (max = max, min = min, amplitude = max - min, period = period)
             end
         else

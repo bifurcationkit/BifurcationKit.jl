@@ -41,7 +41,7 @@ function Base.show(io::IO, bp::Cusp)
     # avoid aliasing with user defined parameters
     p1 = :β1 == get_lens_symbol(lens1) ? :p1 : :β1
     p2 = :β2 == get_lens_symbol(lens2) ? :p2 : :β2
-    println(io, "Normal form: $p1 + $p2⋅A + c⋅A³)")
+    println(io, "Normal form: $p1 + $p2⋅A + c⋅A³")
     c = bp.nf.c
     println(io, "Normal form coefficient:\n c = $c")
 end

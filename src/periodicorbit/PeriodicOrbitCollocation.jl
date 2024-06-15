@@ -438,6 +438,7 @@ $(SIGNATURES)
 [INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it works for non uniform mesh.
 
 # Arguments
+- `Ls = (L, ∂L)` from `get_Ls`
 - uj   n x (m + 1)
 - guj  n x m
 """

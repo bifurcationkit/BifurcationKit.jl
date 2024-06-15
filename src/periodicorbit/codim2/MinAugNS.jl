@@ -169,8 +169,8 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         σxx2 = dot(vcat(σx,σt), x2)
 
         dp, dω = [real(σₚ - σxx2) real(σω);
-              imag(σₚ + σxx2) imag(σω) ] \
-              [dup - real(σxx1), duω + imag(σxx1)]
+                  imag(σₚ + σxx2) imag(σω) ] \
+                  [dup - real(σxx1), duω + imag(σxx1)]
 
         # Jns = hcat(_Jpo, dₚF, zero(dₚF))
         # Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
@@ -328,9 +328,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
         ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
-        𝐍𝐒.a .= newa ./ normC(newa)
+        copyto!(𝐍𝐒.a, newa); rmul!(𝐍𝐒.a, 1/normC(newa))
         # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        𝐍𝐒.b .= newb ./ normC(newb)
+        copyto!(𝐍𝐒.b, newb); rmul!(𝐍𝐒.b, 1/normC(newb))
 
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch
@@ -405,7 +405,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     _recordsol2 = isnothing(_recordsol) ?
         (u, p; kw...) -> (; zip(lenses, 
                 (getp(u, 𝐍𝐒)[1], p))...,
-                # period = getperiod(prob, getvec(u, 𝐍𝐒), nothing), # do not work for PoincareShootingProblem
                 ωₙₛ = getp(u, 𝐍𝐒)[2],
                 CH = real(𝐍𝐒.l1),
                 R₁ = 𝐍𝐒.R1,

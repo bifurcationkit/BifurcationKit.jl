@@ -5,9 +5,9 @@ getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 
 # function to get the two lenses associated to 2-param continuation
 @inline function get_lenses(_prob::Union{FoldMAProblem,
-                                    HopfMAProblem,
-                                    PDMAProblem,
-                                    NSMAProblem})
+                                         HopfMAProblem,
+                                         PDMAProblem,
+                                         NSMAProblem})
     prob_ma = _prob.prob
     return getlens(prob_ma), getlens(_prob)
 end

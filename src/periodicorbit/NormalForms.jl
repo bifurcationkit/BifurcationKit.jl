@@ -298,7 +298,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     #########
     # compute v1
     jac = jacobian(pbwrap, pd.x0, par)
-    J = copy(jac.jacpb)
+    J = copy(_get_matrix(jac)) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
     J[:, end] .= _rand(nj)
@@ -402,7 +402,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
                                     )
     # we could perhaps save the re-computation of J here and use the previous J
     jac = jacobian(pbwrap, pd.x0, par)
-    J = copy(jac.jacpb)
+    J = copy(_get_matrix(jac))
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
@@ -451,7 +451,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     jac = jacobian(pbwrap, pd.x0, par)
-    J = copy(jac.jacpb)
+    J = copy(_get_matrix(jac))
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
@@ -535,7 +535,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     # we get the floquet eigenvectors for μ = -1
     jac = jacobian(pbwrap, pd0.x0, pars)
     # remove borders
-    J = jac.jacpb
+    J = copy(_get_matrix(jac))
     nj = size(J, 1)
     J[end, :] .= rand(nj)
     J[:, end] .= rand(nj)
@@ -600,7 +600,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # nf = PeriodDoubling(bifpt.x, period, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     neimark_sacker_normal_form(pbwrap, ns0; verbose, nev, kwargs_nf...)
 end
-####################################################################################################
+
 function neimark_sacker_normal_form(pbwrap,
                             br,
                             ind_bif::Int;

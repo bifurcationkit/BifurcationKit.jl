@@ -121,7 +121,7 @@ end
 # it is based on a matrix expression of the Jacobian of the shooting functional. We
 # just extract the blocks needed to compute the monodromy
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: ShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
-    J = JacSH.jacpb
+    J = _get_matrix(JacSH)
     sh = JacSH.pb
     M = get_mesh_size(sh)
     N = div(length(JacSH.x) - 1, M)
@@ -203,7 +203,7 @@ end
 # it is based on a matrix expression of the Jacobian of the shooting functional. We thus
 # just extract the blocks needed to compute the monodromy
 function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where {Tpb <: PoincareShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
-    J = JacSH.jacpb
+    J = _get_matrix(JacSH)
     sh = JacSH.pb
     T = eltype(J)
 
@@ -405,7 +405,7 @@ end
 
 @views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     prob = JacColl.pb
-    _J = JacColl.jacpb
+    _J = _get_matrix(JacColl)
     n, m, Ntst = size(prob)
     J = _J[1:end-1, 1:end-1]
     # case of v(0)
@@ -451,7 +451,7 @@ end
 @views function (eig::FloquetColl)(JacColl, nev; kwargs...)
     pbcoll = JacColl.pb
     𝒯 = eltype(pbcoll)
-    J = JacColl.jacpb
+    J = _get_matrix(JacColl)
     n, m, Ntst = size(pbcoll)
     nbcoll = n * m
     N = n

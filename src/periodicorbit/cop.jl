@@ -60,9 +60,9 @@ struct COPBLS{𝒯, TL, Ts, Tj} <: AbstractBorderedLinearSolver
 end
 
 COPLS(coll::PeriodicOrbitOCollProblem) = COPLS(COPCACHE(coll))
-COPBLS(coll::PeriodicOrbitOCollProblem; use_lu_for_jext = false) = COPBLS(COPCACHE(coll, 1), nothing, nothing)
-COPLS(;use_lu_for_jext = false) = COPLS(PeriodicOrbitOCollProblem(2,2;N=0))
-COPBLS(;use_lu_for_jext = false) = COPBLS(PeriodicOrbitOCollProblem(2,2;N=0))
+COPBLS(coll::PeriodicOrbitOCollProblem; use_lu_for_jext = false) = COPBLS(2, COPCACHE(coll, 1), nothing, nothing)
+COPLS(;use_lu_for_jext = false) = COPLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
+COPBLS(;use_lu_for_jext = false) = COPBLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
 
 # inplace version of LinearAlgebra.ipiv2perm
 function _ipiv2perm!(p, v, maxi::Integer)

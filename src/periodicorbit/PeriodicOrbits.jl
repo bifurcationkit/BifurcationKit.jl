@@ -65,7 +65,7 @@ get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.p
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0,2π] and the period `period`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`.
 """
 function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
     M = get_mesh_size(pb)
@@ -107,7 +107,7 @@ Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 """
 $(TYPEDEF)
 
-Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver that it should not use the jacobian but the monodromy matrix instead.
+Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell to the eigensolver that it should use the monodromy matrix instead of the jacobian.
 
 $(TYPEDFIELDS)
 """

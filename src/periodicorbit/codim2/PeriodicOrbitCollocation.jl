@@ -15,8 +15,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the PD boundary condition
-    @set Jac.jacpb = copy(Jac.jacpb)
-    J = Jac.jacpb
+    J = copy(Jac.jacpb)
     J[end-N:end-1, 1:N] .= I(N)
     @set Jac.jacpb = J[1:end-1,1:end-1]
 end
@@ -27,7 +26,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     # put the NS boundary condition
     J = Complex.(copy(Jac.jacpb))
     J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ω))(N)
-    Jns = @set Jac.jacpb = J[1:end-1,1:end-1]
+    Jns = @set Jac.jacpb = J[1:end-1, 1:end-1]
 end
 
 function continuation(br::AbstractResult{Tkind, Tprob},
@@ -124,7 +123,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     end
 
     # we get the collocation problem
-    coll = getprob(br).prob
+    coll = deepcopy(getprob(br).prob)
 
     # update section
     # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
@@ -133,9 +132,9 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
     if get_plot_backend() == BK_Makie()
-        plotsol = (ax, x, p;ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p;k...)
+        plotsol = (ax, x, p; ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p; ax1, k...)
     else
-        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p;fromcodim2 = true, k...)
+        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; fromcodim2 = true, k...)
     end
 
     collFold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);

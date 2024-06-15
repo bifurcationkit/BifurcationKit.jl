@@ -7,8 +7,8 @@ struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver
 end
 
 (ls::FloquetWrapperBLS)(J, args...; k...) = ls.solver(J, args...; k...)
-(ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(J.jacpb, args...; k...)
-Base.transpose(J::FloquetWrapper) = transpose(J.jacpb)
+(ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(_get_matrix(J), args...; k...)
+Base.transpose(J::FloquetWrapper) = transpose(_get_matrix(J))
 
 for op in (:NeimarkSackerProblemMinimallyAugmented,
             :PeriodDoublingProblemMinimallyAugmented)
@@ -404,7 +404,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa WrapPOColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(jac.jacpb))
+        J = Complex.(copy(_get_matrix(jac)))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)
@@ -534,7 +534,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa WrapPOColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(jac.jacpb))
+        J = Complex.(copy(_get_matrix(jac)))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)

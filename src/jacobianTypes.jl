@@ -3,7 +3,7 @@ abstract type AbstractJacobianFree <: AbstractJacobianType end
 abstract type AbstractJacobianMatrix <: AbstractJacobianType end
 abstract type AbstractJacobianSparseMatrix <: AbstractJacobianMatrix end
 
-# :autodiffMF, :MatrixFree, :autodiffDense, :autodiffDenseAnalytical, :FiniteDifferences, :FiniteDifferencesDense
+# :FiniteDifferencesDense
 
 """
 Singleton type to trigger the computation of the jacobian Matrix using ForwardDiff.jl. It can be used for example in newton or in deflated newton.
@@ -11,7 +11,7 @@ Singleton type to trigger the computation of the jacobian Matrix using ForwardDi
 struct AutoDiff <: AbstractJacobianType end
 
 """
-Singleton type to trigger the computation of the jacobian vector product (jvp) using ForwardDiff.jl. It can be used for example in newton or in deflated newton.
+Singleton type to trigger the computation of the jacobian vector product (jvp) using ForwardDiff.jl. It can be used for example in newton, in deflated newton or in continuation.
 """
 struct AutoDiffMF <: AbstractJacobianFree end
 

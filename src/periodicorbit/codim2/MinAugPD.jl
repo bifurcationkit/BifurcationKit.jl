@@ -124,7 +124,6 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
 
     δ = getdelta(POWrap)
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
-    # ϵₜ = ϵₚ/10
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
@@ -144,10 +143,6 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         # a bit of a hack
         xtmp = copy(x); xtmp[end] += ϵₜ
         σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / (ϵₜ)
-        
-        # xtmp2 = copy(x); xtmp2[end] -= ϵₜ
-        # σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(xtmp2, p, par0)[end]) / (2ϵₜ)
-        # σₜ = 𝐏𝐝(xtmp, p, par0)[end]; xtmp[end] -= 2ϵₜ; σₜ -= 𝐏𝐝(xtmp, p, par0)[end]; σₜ /= 2ϵₜ
         ########## Resolution of the bordered linear system ########
         # we invert Jpd
         _Jpo = jacobian(POWrap, x, par0)
@@ -167,7 +162,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     end
 
     if debugArray isa AbstractArray
-        debugArray .= [jacobian(POWrap, x, par0).jacpb dₚF ; vcat(σₓ,σₜ)' σₚ]
+        debugArray .= [_Jpo.jacpb dₚF ; vcat(σₓ, σₜ)' σₚ]
     end
 
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
@@ -420,14 +415,14 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _recordsol2 = isnothing(_recordsol) ?
         (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))...,
                     period = getperiod(prob, getvec(u), nothing), # do not work for PoincareShootingProblem
-                    CP = 𝐏𝐝.CP,
+                    CP  = 𝐏𝐝.CP,
                     GPD = 𝐏𝐝.GPD,
-                    R₂ = 𝐏𝐝.R2,
+                    R₂  = 𝐏𝐝.R2,
                     namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
         (u, p; kw...) -> (; namedprintsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., 
-                            CP = 𝐏𝐝.CP, 
+                            CP  = 𝐏𝐝.CP, 
                             GPD = 𝐏𝐝.GPD,
-                            R₂ = 𝐏𝐝.R2,
+                            R₂  = 𝐏𝐝.R2,
                             )
 
     # eigen solver
