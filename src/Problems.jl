@@ -129,7 +129,7 @@ for (op, at) in (
             - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`.
 
             """
-            struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec} <: AbstractAllJetBifProblem
+            struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)"
                 VF::Tvf
                 "Initial guess"
