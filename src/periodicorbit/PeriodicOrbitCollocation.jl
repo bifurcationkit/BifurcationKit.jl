@@ -272,12 +272,13 @@ get_Ls(pb::PeriodicOrbitOCollProblem) = get_Ls(pb.mesh_cache)
 @inline setparam(pb::PeriodicOrbitOCollProblem, p) = setparam(pb.prob_vf, p)
 
 @inline getperiod(::PeriodicOrbitOCollProblem, x, par = nothing) = x[end]
-@inline getperiod(coll::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh), T}, par = nothing) where T = getperiod(coll, x.sol, par)
+getperiod(pb::PeriodicOrbitOCollProblem, x::POSolutionAndState, par = nothing) = getperiod(pb, x.sol, par)
 
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
 # array of size Ntst ⋅ (m+1) ⋅ n
 get_time_slices(pb::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[1:end-1], size(pb)...)
+get_time_slices(pb::PeriodicOrbitOCollProblem, x::POSolutionAndState) = get_time_slices(pb, x.sol)
 get_times(pb::PeriodicOrbitOCollProblem) = get_times(pb.mesh_cache)
 """
 Returns the vector of size m+1,  0 = τ₁ < τ₂ < ... < τₘ < τₘ₊₁ = 1

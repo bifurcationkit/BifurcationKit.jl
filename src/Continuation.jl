@@ -89,9 +89,8 @@ function ContIterable(prob::AbstractBifurcationProblem,
                 filename)
 end
 
-Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent}) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} = T
-
-setparam(it::ContIterable{Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent}, p0::T) where {Tkind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} = setparam(it.prob, p0)
+Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T
+setparam(it::ContIterable{Tkind, Tprob, Talg, T}, p0::T) where {Tkind, Tprob, Talg, T} = setparam(it.prob, p0)
 
 # getters
 @inline getlens(it::ContIterable) = getlens(it.prob)
@@ -622,6 +621,9 @@ function continuation(prob::AbstractBifurcationProblem,
                       linear_algo = nothing,
                       bothside::Bool = false,
                       kwargs...)
+    # init the continuation parameters
+    contparams = init(contparams, prob, alg)
+
     # update the parameters of alg
     # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
     alg = update(alg, contparams, linear_algo)

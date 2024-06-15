@@ -287,13 +287,13 @@ RecipesBase.@recipe function f(bd::Nothing)
     nothing
 end
 ####################################################################################################
-function plot_eigenvals(br::AbstractResult, with_param = true; var = :param)
+function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, k...)
     p = getproperty(br.branch, var)
     data = mapreduce(x -> x.eigenvals, hcat, br.eig)
     if with_param
-        plot(p, real.(data'))
+        plot(p, real.(data'); k...)
     else
-        plot(real.(data'))
+        plot(real.(data'); k...)
     end
 end
 ####################################################################################################

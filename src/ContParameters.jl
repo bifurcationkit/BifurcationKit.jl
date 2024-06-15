@@ -105,3 +105,18 @@ end
 
 # clamp ds value
 clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)
+
+"""
+Allows to alter the continuation parameters based on the bifurcation problem and the continuation algorithm.
+"""
+function init(contparams::ContinuationPar, 
+               prob::AbstractBifurcationProblem, 
+               alg::AbstractContinuationAlgorithm)
+    if contparams.newton_options.eigsolver isa DefaultEig
+        n = length(getu0(prob))
+        if n <= 50
+            @reset contparams.nev = n
+        end
+    end
+    contparams
+end

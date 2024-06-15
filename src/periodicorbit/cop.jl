@@ -446,10 +446,10 @@ end
 
 # ~/.julia/juliaup/julia-1.10.2+0.aarch64.apple.darwin14/share/julia/stdlib/v1.10/LinearAlgebra/src/lu.jl:134
 @inbounds function _gaussian_elimination_external_pivoted!(J::AbstractMatrix{𝒯},
-                                                rhs,
-                                                n::Int,
-                                                Ntst::Int,
-                                                δn::Int ) where 𝒯
+                                                           rhs,
+                                                           n::Int,
+                                                           Ntst::Int,
+                                                           δn::Int ) where 𝒯
     st = 0
     nⱼ = size(J, 1)
     maxρ = zero(𝒯)
