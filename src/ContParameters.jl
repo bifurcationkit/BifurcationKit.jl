@@ -115,7 +115,7 @@ function init(contparams::ContinuationPar,
     if contparams.newton_options.eigsolver isa DefaultEig
         n = length(getu0(prob))
         if n <= 50
-            @reset contparams.nev = n
+            @set! contparams.nev = n
         end
     end
     contparams
