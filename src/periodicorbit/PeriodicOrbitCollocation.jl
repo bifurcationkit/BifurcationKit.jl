@@ -880,11 +880,13 @@ jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
 
 # for recording the solution in a branch
-function getsolution(wrap::WrapPOColl, x)
+function save_solution(wrap::WrapPOColl, x, pars)
     if wrap.prob.meshadapt
-        return (mesh = copy(get_times(wrap.prob)), 
-                sol = x, 
-                _mesh = copy(getmesh(wrap.prob.mesh_cache)))
+        return POSolutionAndState(copy(get_times(wrap.prob)), 
+                x, 
+                copy(getmesh(wrap.prob.mesh_cache)),
+                copy(wrap.prob.ϕ),
+                )
     else
         return x
     end

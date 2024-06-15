@@ -46,7 +46,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
             param = getp(state),
             norm = iter.normC(getx(state)),
             printsol = NamedTuple{keys(branch[end-1])[begin:npar]}(values(branch[end-1])[begin:npar]),
-            x = getsolution(iter.prob, _copy(getx(state))),
+            x = save_solution(iter.prob, _copy(getx(state)), setparam(iter.prob, getp(state))),
             τ = copy(state.τ),
             ind_ev = 0,
             # it means the fold occurs between step - 2 and step:

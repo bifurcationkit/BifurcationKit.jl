@@ -224,17 +224,17 @@ end
 # getters
 @inline converged(::Nothing) = false
 @inline converged(state::AbstractContinuationState) = state.converged
-@inline gettangent(state::AbstractContinuationState)        = state.τ
-@inline getsolution(state::AbstractContinuationState)       = state.z
-@inline getpredictor(state::AbstractContinuationState)      = state.z_pred
-@inline getx(state::AbstractContinuationState)              = state.z.u
-@inline getp(state::AbstractContinuationState)  = state.z.p
+@inline gettangent(state::AbstractContinuationState)    = state.τ
+@inline getsolution(state::AbstractContinuationState)   = state.z
+@inline getpredictor(state::AbstractContinuationState)  = state.z_pred
+@inline getx(state::AbstractContinuationState)          = state.z.u
+@inline getp(state::AbstractContinuationState)          = state.z.p
 @inline get_previous_solution(state::AbstractContinuationState) = state.z_old
 @inline getpreviousx(state::AbstractContinuationState) = state.z_old.u
 @inline getpreviousp(state::AbstractContinuationState) = state.z_old.p
-@inline is_stable(state::AbstractContinuationState) = state.n_unstable[1] == 0
+@inline is_stable(state::AbstractContinuationState)    = state.n_unstable[1] == 0
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
-@inline in_bisection(state::AbstractContinuationState) = state.in_bisection
+@inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
@@ -275,9 +275,9 @@ function save!(br::ContResult,
     if it.contparams.save_sol_every_step > 0 && 
         (mod_counter(state.step, it.contparams.save_sol_every_step) || 
         ~done(it, state))
-        push!(br.sol, (x = getsolution(it.prob, _copy(getx(state))),
-                         p = getp(state), 
-                         step = state.step))
+        push!(br.sol, (x = save_solution(it.prob, _copy(getx(state)), setparam(it.prob, getp(state))),
+                       p = getp(state), 
+                       step = state.step))
     end
     # save eigen elements
     if compute_eigenelements(it)
@@ -311,7 +311,7 @@ function ContResult(it::AbstractContinuationIterable,
                         getalg(it),
                         pt,
                         get_state_summary(it, state), 
-                        getsolution(it.prob, x0), 
+                        save_solution(it.prob, x0, setparam(it.prob, p0)), 
                         state.τ, 
                         eiginfo,
                         getcontparams(it),
@@ -617,11 +617,11 @@ Compute the continuation curve associated to the functional `F` which is stored 
     Use debug mode to access more irformation about the progression of the continuation run, like iterative solvers convergence, problem update, ...
 """
 function continuation(prob::AbstractBifurcationProblem,
-                        alg::AbstractContinuationAlgorithm,
-                        contparams::ContinuationPar;
-                        linear_algo = nothing,
-                        bothside::Bool = false,
-                        kwargs...)
+                      alg::AbstractContinuationAlgorithm,
+                      contparams::ContinuationPar;
+                      linear_algo = nothing,
+                      bothside::Bool = false,
+                      kwargs...)
     # update the parameters of alg
     # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
     alg = update(alg, contparams, linear_algo)

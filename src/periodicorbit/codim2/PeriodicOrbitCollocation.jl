@@ -70,7 +70,7 @@ function foldpoint(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <:
     bptype = br.specialpoint[index].type
     @assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point"
     specialpoint = br.specialpoint[index]
-    if specialpoint.x isa NamedTuple
+    if specialpoint.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
         update_mesh!(pbwrap.prob, specialpoint.x._mesh )
@@ -83,7 +83,7 @@ function pd_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     bptype = br.specialpoint[index].type
     @assert bptype == :pd "This should be a PD point"
     specialpoint = br.specialpoint[index]
-    if specialpoint.x isa NamedTuple
+    if specialpoint.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
         update_mesh!(pbwrap.prob, specialpoint.x._mesh )
@@ -112,9 +112,10 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     biftype = br.specialpoint[ind_bif].type
     bifpt = br.specialpoint[ind_bif]
+    ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
     # if mesh adaptation, we need to extract the solution specifically
-    if bifpt.x isa NamedTuple
+    if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
         update_mesh!(pbwrap.prob, bifpt.x._mesh )
@@ -127,7 +128,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # update section
     # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
-    updatesection!(coll, bifpt.x, nothing)
+    updatesection!(coll, ϕ, nothing)
 
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 

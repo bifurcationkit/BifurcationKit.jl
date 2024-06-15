@@ -191,6 +191,7 @@ end
 ################################################################################
 residual(tw::WrapTW, x, p) = tw.prob(x, p)
 jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
+@inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 @inline getdelta(::WrapTW) = 1e-8

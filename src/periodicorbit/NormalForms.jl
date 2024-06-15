@@ -239,7 +239,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     par = setparam(br, bifpt.param)
     period = getperiod(pbwrap.prob, bifpt.x, par)
 
-    if bifpt.x isa NamedTuple
+    if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
         update_mesh!(pbwrap.prob, bifpt.x._mesh )
@@ -278,7 +278,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     δ = getdelta(coll)
 
     # identity matrix for collocation problem
-    Icoll = I(coll, pd.x0, par)
+    Icoll = I(coll, _getsolution(pd.x0), par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
     # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
@@ -297,7 +297,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # we use an extended linear system for this
     #########
     # compute v1
-    jac = jacobian(pbwrap, pd.x0, par)
+    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
     J = copy(_get_matrix(jac)) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
@@ -323,7 +323,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
     #########
     # compute v1★
-    J★ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1)
+    J★ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = true, ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
@@ -368,7 +368,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
-    Jψ = analytical_jacobian(coll, pd.x0, par; _transpose = true, ρF = -1)
+    Jψ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = true, ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -I(N)
     Jψ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -400,8 +400,9 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     border_ψ₁ = ForwardDiff.gradient(x -> ∫( reshape(x, size(ψ₁★ₛ)), ψ₁★ₛ),
                                      zeros(length(ψ₁★ₛ))
                                     )
+                            # _plot(vcat(vec(rhsₛ),1))
     # we could perhaps save the re-computation of J here and use the previous J
-    jac = jacobian(pbwrap, pd.x0, par)
+    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
     J = copy(_get_matrix(jac))
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
@@ -450,7 +451,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
         rhsₛ[:,i] .= ∂Fu₀ₛ[:,i] .- a₀₁ .* Fu₀ₛ[:,i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
-    jac = jacobian(pbwrap, pd.x0, par)
+    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
     J = copy(_get_matrix(jac))
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
@@ -579,7 +580,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = abs(imag(λₙₛ))
 
-    if bifpt.x isa NamedTuple
+    if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
         update_mesh!(pbwrap.prob, bifpt.x._mesh )
@@ -1020,7 +1021,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
     update_mesh!(pbnew, new_mesh)
 
-    orbitguess0 = nf.po[begin:end-1]
+    orbitguess0 = _getsolution(nf.po)[begin:end-1]
 
     # parameter to scale time
     time_factor = 1

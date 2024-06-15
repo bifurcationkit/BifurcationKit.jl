@@ -30,6 +30,8 @@ set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
 get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
+# function to extract trajectories from branch
+get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
 @inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
 @inline has_hessian(::WrapPOSh) = true
 
@@ -58,9 +60,6 @@ function applyJ(pb, dest, x, p, dx)
     end
     dest
 end
-
-# function to extract trajectories from branch
-get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
 
 """
 $(SIGNATURES)
@@ -92,11 +91,26 @@ struct POSolution{Tpb, Tx, Tp}
     x::Tx
     pars::Tp
 end
-
-# simplified constructor
 POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
 ####################################################################################################
-# this struct allows to have a unified interface with Shooting methods in term of plotting
+# structure to save solution on the branch
+save_solution(::WrapPOSh, x, p) = x
+
+"""
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case of mesh adaptation or when the phase condition is adapted.
+"""
+struct POSolutionAndState{T1, T2, T3, T4}
+    mesh::T1
+    sol::T2
+    _mesh::T3
+    ϕ::T4
+end
+@inline _getsolution(x) = x
+@inline _getsolution(pb::POSolutionAndState) = pb.sol
+####################################################################################################
+"""
+This struct allows to have a unified interface with Shooting methods in term of plotting.
+"""
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
     t::Ts
     u::Tu

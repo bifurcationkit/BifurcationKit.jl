@@ -16,7 +16,7 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     @assert bptype == :ns "This should be a NS point"
     specialpoint = br.specialpoint[index]
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
-    if specialpoint.x isa NamedTuple
+    if specialpoint.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
         update_mesh!(pbwrap.prob, specialpoint.x._mesh )
@@ -218,6 +218,7 @@ end
 ###################################################################################################
 residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
 @inline getdelta(nspb::NSMAProblem) = getdelta(nspb.prob)
+save_solution(::NSMAProblem, x ,p) = x
 
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)

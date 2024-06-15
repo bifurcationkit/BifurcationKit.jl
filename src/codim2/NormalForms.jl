@@ -1004,9 +1004,9 @@ function zero_hopf_normal_form(_prob,
     x0, parbif = get_bif_point_codim2(br, ind_bif)
 
     if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec.parameters[1], x0)
     else
-        x0 = convert(Teigvec, getvec(bifpt.x, prob_ma))
+        x0 = convert(Teigvec, x0)
     end
 
     # jacobian at bifurcation point

@@ -819,6 +819,7 @@ end
 # problem wrappers
 residual(prob::WrapPOTrap, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOTrap, x, p) = prob.jacobian(x, p)
+@inline save_solution(::WrapPOTrap, x, p) = x
 get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(prob.prob, u, p)
 is_symmetric(::WrapPOTrap) = false
 has_adjoint(::WrapPOTrap) = false

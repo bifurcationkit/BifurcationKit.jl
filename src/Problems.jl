@@ -9,10 +9,7 @@ using SciMLBase: numargs
 _getvectortype(::AbstractBifurcationProblem) = Nothing
 isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
-# function to save the full solution on the branch. It is useful to define This
-# in order to allow for redefinition. Indeed, some problem are mutable (adaptive
-# mesh for periodic orbit) and this approach seems convenient
-@inline getsolution(::AbstractBifurcationProblem, x) = x
+save_solution_default(x, p) = x
 
 """
 Determine if the vector field is of the form `f!(out,z,p)`.
@@ -145,11 +142,14 @@ for (op, at) in (
                 plotSolution::Tplot
                 "`record_from_solution = (x, p) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
+                "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Signature `save_solution(x, p)`"
+                save_solution::Tgets
             end
 
             _getvectortype(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
             plot_solution(prob::$op) = prob.plotSolution
             record_from_solution(prob::$op) = prob.recordFromSolution
+            save_solution(prob::$op, x, p) = prob.save_solution(x, p)
         end
     elseif op in (:FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :BTMAProblem)
         @eval begin
@@ -242,7 +242,7 @@ for (op, at) in (
 
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.0) : d3F
                 VF = BifFunction(F, jvp, vjp, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
-                return $op(VF, u0, parms, lens, plot_solution, record_from_solution)
+                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution)
             end
         end
     end
@@ -300,7 +300,7 @@ end
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     print(io, prefix * "┌─ Bifurcation Problem with uType ")
     printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
-    print(io, prefix * "\n├─ Inplace:  ")
+    print(io, "\n" * prefix * "├─ Inplace:  ")
     printstyled(io, isinplace(prob), color = :cyan, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")
     printstyled(io, is_symmetric(prob), color = :cyan, bold = true)
