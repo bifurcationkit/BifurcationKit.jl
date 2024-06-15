@@ -171,6 +171,8 @@ end
 @inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
 @inline getdelta(hopfpb::HopfMAProblem) = getdelta(hopfpb.prob)
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
+save_solution(::HopfMAProblem, x ,p) = x
+
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
 jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
 

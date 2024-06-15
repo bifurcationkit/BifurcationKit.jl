@@ -184,6 +184,7 @@ end
 @inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
 @inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
 residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
+save_solution(::PDMAProblem, x, p) = x
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)
 

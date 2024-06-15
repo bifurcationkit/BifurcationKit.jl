@@ -1143,7 +1143,7 @@ function zero_hopf_normal_form(_prob,
     VF = prob_ma.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
-    _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, _get(parbif, lens) + ϵ), q) .-
+    _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
                     apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)

@@ -216,6 +216,7 @@ for (op, at) in (
                          record_from_solution = record_sol_default,
                          plot_solution = plot_default,
                          delta = convert(eltype(u0), 1e-8),
+                         save_solution = save_solution_default,
                          inplace = false)
                 if inplace
                     F = _F

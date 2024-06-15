@@ -166,6 +166,7 @@ end
 @inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
+save_solution(::FoldMAProblem, x, p) = x
 
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
 
