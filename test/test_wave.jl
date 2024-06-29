@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, SparseArrays, Parameters, LinearAlgebra, Setfield, ForwardDiff
+using BifurcationKit, SparseArrays, LinearAlgebra, Setfield, ForwardDiff
 const BK = BifurcationKit
 const FD = ForwardDiff
 
@@ -17,7 +17,7 @@ end
 
 # add to f the nonlinearity
 @views function NL!(f, u, p)
-    @unpack r, μ, ν, c3, c5, γ = p
+    (; r, μ, ν, c3, c5, γ) = p
     n = div(length(u), 2)
     u1 = u[1:n]
     u2 = u[n+1:2n]
@@ -42,7 +42,7 @@ Fcgl(u, p, t = 0) = Fcgl!(similar(u), u, p)
 
 # remark: I checked this against finite differences
 @views function Jcgl(u, p)
-    @unpack r, μ, ν, c3, c5, Δ = p
+    (; r, μ, ν, c3, c5, Δ) = p
 
     n = div(length(u), 2)
     u1 = u[1:n]

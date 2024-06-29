@@ -1,12 +1,12 @@
 # using Revise, Plots
-using Test, ForwardDiff, Parameters, LinearAlgebra
+using Test, ForwardDiff, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
 using ComponentArrays # this is for SciMLSensitivity and adjoint of flow
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
-    @unpack r,K,a,ϵ,b0,e,d, = p
+    (; r,K,a,ϵ,b0,e,d) = p
     x, y, u, v = X
     p = a * x / (b0 * (1 + ϵ * u) + x)
     du[1] = r * (1 - x/K) * x - p * y

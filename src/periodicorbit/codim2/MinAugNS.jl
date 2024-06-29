@@ -231,7 +231,7 @@ jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Treco
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
-                        lens1::AllOpticTypes, lens2::AllOpticTypes,
+                        lens1::Lens, lens2::Lens,
                         eigenvec, eigenvec_ad,
                         options_cont::ContinuationPar ;
                         normC = norm,

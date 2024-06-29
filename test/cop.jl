@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, Parameters, ForwardDiff, LinearAlgebra
+using BifurcationKit, ForwardDiff, LinearAlgebra
 const BK = BifurcationKit
 # ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
@@ -26,7 +26,7 @@ using BifurcationKit
 Jco_tmp = zero(Jco)
 Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
 cop_cache = BK.COPCACHE(prob_col)
-sol_cop = BK.solve_cop(prob_col, Jco, _rhs, cop_cache; USELU = true);
+sol_cop = BK.solve_cop(prob_col, Jco, _rhs, cop_cache; _USELU = true);
 @test sol_bs ≈ sol_cop
 
 # test case of a bordered system to test PALC like linear problem
@@ -35,5 +35,5 @@ Jco_bd = vcat(hcat(Jco, _t1),_t2) |> Array
 _rhs_bd = rand(size((Jco_bd), 1))
 sol_bs_bd = (Jco_bd) \ _rhs_bd;
 cop_cache_bd = BK.COPCACHE(prob_col, 1)
-sol_cop_bd = BK.solve_cop(prob_col, Jco_bd, _rhs_bd, cop_cache_bd; USELU = false);
+sol_cop_bd = BK.solve_cop(prob_col, Jco_bd, _rhs_bd, cop_cache_bd; _USELU = false);
 @test sol_bs_bd ≈ sol_cop_bd

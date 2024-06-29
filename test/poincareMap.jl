@@ -1,10 +1,10 @@
 # using Revise, Test
 # using Plots
 using BifurcationKit, OrdinaryDiffEq, ForwardDiff
-using LinearAlgebra, Parameters
+using LinearAlgebra
 
 function Fsl!(f, u, p, t)
-    @unpack r, μ, ω, c3 = p
+    (;r, μ, ω, c3) = p
     u1 = u[1]
     u2 = u[2]
     ua = u1^2 + u2^2

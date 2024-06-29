@@ -1,11 +1,11 @@
 # using Revise, Plots
 using OrdinaryDiffEq, ForwardDiff, Test
-using BifurcationKit, LinearAlgebra, Parameters
+using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 const FD = ForwardDiff
 
 function Fsl!(f, u, p, t = 0)
-    @unpack r, μ, ν, c3, c5 = p
+    (;r, μ, ν, c3, c5) = p
     u1 = u[1]
     u2 = u[2]
 

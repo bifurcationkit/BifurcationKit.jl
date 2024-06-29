@@ -1,12 +1,12 @@
 # using Revise, Plots, AbbreviatedStackTraces
-using Parameters, LinearAlgebra, Test
+using LinearAlgebra, Test
 using BifurcationKit, Test
 const BK = BifurcationKit
 
 recordFromSolution(x, p) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
 function lur!(dz, u, p, t)
-    @unpack α, β = p
+    (; α, β) = p
     x, y, z = u
     dz[1] = y
     dz[2] = z

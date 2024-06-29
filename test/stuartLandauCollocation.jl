@@ -1,13 +1,13 @@
 # using Revise, AbbreviatedStackTraces, Plots
 using Test
-using BifurcationKit, Parameters, LinearAlgebra, ForwardDiff, SparseArrays
+using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
 # no allocation
 function Fsl!(f, u, p, t = 0)
-    @unpack r, μ, ν, c3 = p
+    (;r, μ, ν, c3) = p
     u1 = u[1]
     u2 = u[2]
     ua = u1^2 + u2^2
