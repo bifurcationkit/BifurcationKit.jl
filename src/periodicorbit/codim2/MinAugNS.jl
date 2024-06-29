@@ -130,7 +130,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
-    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
+    ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
@@ -230,20 +230,23 @@ jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord
 jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
-                nspointguess::BorderedArray{vectype, 𝒯b}, par,
-                lens1::Lens, lens2::Lens,
-                eigenvec, eigenvec_ad,
-                options_cont::ContinuationPar ;
-                normC = norm,
-                update_minaug_every_step = 1,
-                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
-                jacobian_ma::Symbol = :autodiff,
-                compute_eigen_elements = false,
-                kind = NSCont(),
-                usehessian = false,
-                plot_solution = BifurcationKit.plot_solution(prob),
-                prm = false,
-                kwargs...) where {𝒯b, vectype}
+                        nspointguess::BorderedArray{vectype, 𝒯b}, par,
+                        lens1::AllOpticTypes, lens2::AllOpticTypes,
+                        eigenvec, eigenvec_ad,
+                        options_cont::ContinuationPar ;
+                        normC = norm,
+
+                        update_minaug_every_step = 1,
+                        bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                        bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
+
+                        jacobian_ma::Symbol = :autodiff,
+                        compute_eigen_elements = false,
+                        kind = NSCont(),
+                        usehessian = false,
+                        plot_solution = BifurcationKit.plot_solution(prob),
+                        prm = false,
+                        kwargs...) where {𝒯b, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
@@ -259,6 +262,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             options_newton.linsolver,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+            linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
@@ -422,7 +426,10 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
-    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2)
+    # change the plotter
+    _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
+    _plotsol = modify_po_plot(prob, _kwargs)
+    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points

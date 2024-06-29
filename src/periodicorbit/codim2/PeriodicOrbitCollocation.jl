@@ -15,7 +15,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the PD boundary condition
-    J = copy(Jac.jacpb)
+    J = copy(_get_matrix(Jac))
     J[end-N:end-1, 1:N] .= I(N)
     @set Jac.jacpb = J[1:end-1,1:end-1]
 end
@@ -24,7 +24,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
-    J = Complex.(copy(Jac.jacpb))
+    J = Complex.(_get_matrix(Jac))
     J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ω))(N)
     Jns = @set Jac.jacpb = J[1:end-1, 1:end-1]
 end
@@ -272,7 +272,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
         kwargs...,
         prm,
         # detect_codim2_bifurcation = detect_codim2_bifurcation,
-        kind = NSPeriodicOrbitCont(),
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        kind = NSPeriodicOrbitCont(),
         )
 end

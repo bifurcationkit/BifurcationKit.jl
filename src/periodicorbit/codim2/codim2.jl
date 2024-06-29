@@ -73,7 +73,13 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         jad(pb::$op, args...) = jad(pb.prob_vf, args...)
 
         # constructors
-        function $op(prob, a, b, linsolve::AbstractLinearSolver, linbdsolver = MatrixBLS(); usehessian = true, massmatrix = LinearAlgebra.I)
+        function $op(prob, a, b, 
+                        linsolve::AbstractLinearSolver, 
+                        linbdsolver = MatrixBLS(); 
+                        linsolve_adjoint = linsolve,
+                        usehessian = true, 
+                        massmatrix = LinearAlgebra.I,
+                        linbdsolve_adjoint = linbdsolver)
             # determine scalar type associated to vectors a and b
             α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
             Ty = eltype(α)
@@ -87,11 +93,14 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # R2
                         real(one(Ty)),     # R3
                         real(one(Ty)),     # R4
-                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
         end
 
         # empty constructor, mainly used for dispatch
-        function $op(prob ;linsolve = DefaultLS(), linbdsolver = MatrixBLS(), usehessian = true, massmatrix = LinearAlgebra.I)
+        function $op(prob ;linsolve = DefaultLS(), 
+                    linbdsolver = MatrixBLS(), 
+                    usehessian = true, 
+                    massmatrix = LinearAlgebra.I)
             a = b = 0.
             α = norm(a) 
             Ty = eltype(α)

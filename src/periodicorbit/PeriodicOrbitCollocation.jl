@@ -305,7 +305,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     println(io, "├─ update section     : ", pb.update_section_every_step)
     println(io, "├─ jacobian           : ", pb.jacobian)
     println(io, "├─ mesh adaptation    : ", pb.meshadapt)
-    println(io, "└─ # unknowns         : ", pb.N * (1 + m * Ntst))
+    println(io, "└─ # unknowns without phase condition) : ", pb.N * (1 + m * Ntst))
 end
 
 function get_matrix_phase_condition(coll::PeriodicOrbitOCollProblem)
@@ -976,7 +976,6 @@ function build_jacobian(coll::PeriodicOrbitOCollProblem, orbitguess, par; δ = c
     elseif jacobianPO isa FullSparseInplace
         _J = analytical_jacobian_sparse(coll, orbitguess, par)
         indx = get_blocks(coll, _J)
-        # jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian!(_J, coll, x, p), x, p)
         jac = (x, p) -> FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
     else
         _J = zeros(eltype(coll), length(orbitguess), length(orbitguess))
@@ -1103,13 +1102,12 @@ References:
 
 [2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
-function compute_error!(coll::PeriodicOrbitOCollProblem, 
-                        x::AbstractVector{Ty};
-                        normE = norminf,
-                        verbosity::Bool = false,
-                        K = Inf,
-                        par = nothing,
-                        kw...) where Ty
+function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
+                    normE = norminf,
+                    verbosity::Bool = false,
+                    K = Inf,
+                    par = nothing,
+                    kw...) where Ty
     n, m, Ntst = size(coll) # recall that m = ncol
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function

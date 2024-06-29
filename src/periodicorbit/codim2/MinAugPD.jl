@@ -53,7 +53,8 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     # Thus, b should be a null vector of J +I
     #       a should be a null vector of J'+I
     # we solve Jv + v + a σ1 = 0 with <b, v> = 1
-    # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>
+    # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>.
+    # In the case of collocation, the matrix J is simply Jpo without the phase condition and with PD boundary condition.
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
     σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
@@ -263,8 +264,8 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 compute_eigen_elements = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm = false,
-                kind = PDCont(),
                 usehessian = false,
+                kind = PDCont(),
                 kwargs...) where {𝒯, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
@@ -279,6 +280,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             options_newton.linsolver,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+            linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)

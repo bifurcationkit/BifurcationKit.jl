@@ -96,7 +96,8 @@ function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
         oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
         adapt = compute_error!(coll, oldsol.u;
                     verbosity = coll.verbose_mesh_adapt,
-                    K = coll.K
+                    K = coll.K,
+                    par = setparam(contResult, z.p)
                     )
         if ~adapt.success # stop continuation if mesh adaptation fails
             return false
