@@ -2,7 +2,7 @@ using Revise
 using ForwardDiff, DifferentialEquations
 using Plots
 # using GLMakie; Makie.inline!(true)
-using BifurcationKit, LinearAlgebra, SparseArrays, Parameters, LoopVectorization
+using BifurcationKit, LinearAlgebra, SparseArrays, LoopVectorization
 const BK = BifurcationKit
 
 function Laplacian2D(Nx, Ny, lx, ly)

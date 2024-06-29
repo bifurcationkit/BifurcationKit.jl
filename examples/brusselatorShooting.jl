@@ -101,7 +101,8 @@ br = @time continuation(
     opts_br_eq, verbosity = 0,
     plot = true,
     normC = norminf)
-#################################################################################################### Continuation of Periodic Orbit
+####################################################################################################
+# Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
@@ -110,7 +111,7 @@ orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ####################################################################################################
 # Standard Shooting
-using DifferentialEquations, DiffEqOperators, ForwardDiff
+using DifferentialEquations, ForwardDiff
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)

@@ -90,7 +90,7 @@ optcont = @set optcont.newton_options.eigsolver = EigArpack(0.1, :LM)
 
 br = @time continuation(
     prob, PALC(), optcont;
-    plot = true, verbosity = 3,
+    plot = true, verbosity = 2,
     # finalise_solution = (z, tau, step, contResult; k...) -> (Base.display(contResult.eig[end].eigenvals) ;true),
     # callback_newton = cb,
     normC = norminf)
@@ -116,6 +116,7 @@ brfold = continuation(br, 1, (@lens _.ν), optfold;
 
 plot(brfold)
 ###################################################################################################
+# using Jacobian free method
 using IncompleteLU
 prec = ilu(L1 + I, τ = 0.15);
 prec = lu(L1 + I);

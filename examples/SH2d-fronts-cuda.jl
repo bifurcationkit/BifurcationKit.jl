@@ -6,15 +6,6 @@ const BK = BifurcationKit
 
 TY = Float64
 AF = Array{TY}
-#################################################################
-# if 1==1
-#     ENV["GKSwstype"] = "nul"    # needed for the GR backend on headless servers
-#     using Plots
-#     using SixelTerm
-# else
-#     using Plots
-#     GR.inline("iterm")
-# end
 ####################################################################################################
 
 using CUDA

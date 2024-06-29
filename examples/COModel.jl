@@ -58,7 +58,7 @@ args_po = (    record_from_solution = (x, p) -> begin
     plot_solution = plotSolution,
     normC = norminf)
 
-opts_po_cont = ContinuationPar(opts_br, dsmax = 1.9, ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
+opts_po_cont = ContinuationPar(opts_br, dsmax = 2., ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
 max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 
 # @set! opts_po_cont.newton_options.verbose = false
@@ -66,8 +66,8 @@ max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 # @set! opts_po_cont.newton_options.max_iterations = 10
 # @set! opts_po_cont.newton_options.linesearch = true
 
-using DifferentialEquations
-prob_ode = ODEProblem(COm!, copy(z0), (0., 1000.), par_com; abstol = 1e-11, reltol = 1e-9)
+# using DifferentialEquations
+# prob_ode = ODEProblem(COm!, copy(z0), (0., 1000.), par_com; abstol = 1e-11, reltol = 1e-9)
 
 function callbackCO(state; fromNewton = false, kwargs...)
     # check that the solution is not too far
@@ -87,7 +87,7 @@ function callbackCO(state; fromNewton = false, kwargs...)
 end
 
 brpo = @time continuation(br, 5, opts_po_cont,
-    PeriodicOrbitOCollProblem(50, 4 ; update_section_every_step = 1, jacobian = BK.DenseAnalytical(), meshadapt = true, K = 5000, verbose_mesh_adapt = true);
+    PeriodicOrbitOCollProblem(60, 5 ; meshadapt = false, K = 1000, verbose_mesh_adapt = true);
     # ShootingProblem(25, prob_ode, TaylorMethod(25); parallel = true; update_section_every_step = 1, jacobian = BK.AutoDiffDense());
     verbosity = 3, plot = true,
     normC = norminf,
@@ -95,7 +95,6 @@ brpo = @time continuation(br, 5, opts_po_cont,
     # alg = PALC(),
     # alg = MoorePenrose(tangent=PALC(tangent = Bordered()), method = BK.direct),
     δp = 0.0005,
-    # linear_algo = DefaultLS(),
     callback_newton = callbackCO,
     args_po...
     )

@@ -1,6 +1,6 @@
 using Revise
 using ForwardDiff, IncompleteLU
-using BifurcationKit, LinearAlgebra, Plots, SparseArrays, Parameters
+using BifurcationKit, LinearAlgebra, Plots, SparseArrays
 const BK = BifurcationKit
 
 function Laplacian2D(Nx, Ny, lx, ly)
@@ -22,7 +22,7 @@ function Laplacian2D(Nx, Ny, lx, ly)
 end
 
 @views function NL(u, p)
-    @unpack r, μ, ν, c3, c5, γ = p
+    (;r, μ, ν, c3, c5, γ) = p
     n = div(length(u), 2)
     u1 = u[1:n]
     u2 = u[n+1:2n]
@@ -55,7 +55,7 @@ end
 
 # remark: I checked this against finite differences
 @views function Jcgl(u, p)
-    @unpack r, μ, ν, c3, c5, Δ = p
+   (;r, μ, ν, c3, c5, Δ) = p
 
     n = div(length(u), 2)
     u1 = u[1:n]
@@ -98,12 +98,6 @@ eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 out = @time newton(prob, opt_newton, normN = norminf)
 ####################################################################################################
-# test for the Jacobian expression
-# sol0 = rand(2Nx*Ny)
-# J0 = ForwardDiff.jacobian(x-> Fcgl(x, par_cgl), sol0) |> sparse
-# J1 = Jcgl(sol0, par_cgl)
-# norm(J0 - J1, Inf)
-####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 1060, n_inversion = 6)
 br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 ####################################################################################################
@@ -111,11 +105,8 @@ br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 hopfpt = get_normal_form(br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
-# we need to do start_with_eigen = true because the left eigenvector is not simply
-# the conjugate of the right one
 
 ind_hopf = 1
-# hopfpt = BK.HopfPoint(br, ind_hopf)
 optnew = NewtonPar(opts_br.newton_options, verbose = true)
 hopfpoint = newton(br, ind_hopf;
                     options = optnew, 
@@ -134,6 +125,7 @@ br_hopf = continuation(br, 1, (@lens _.γ),
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 
+# normal form of BT point
 get_normal_form(br_hopf, 2; autodiff = false)
 
 # improve estimation of BT point
@@ -154,6 +146,7 @@ brfold = continuation(br_hopf, indbt,
 br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
 plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
+# normal form of Zero-Hopf point
 get_normal_form(brfold, 4; autodiff = false, nev = 15)
 
 hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_bifurcation = 1, max_steps = 40, save_sol_every_step = 1);
@@ -187,21 +180,6 @@ poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 
 plot();BK.plot_periodic_potrap(orbitguess_f, M, Nx, Ny; ratio = 2);title!("")
 deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [zero(orbitguess_f)])
-
-####################################################################################################
-# circulant pre-conditioner
-# Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
-# kΔ = spdiagm(0 => ones(M-1), -1 => ones(M-2), M-2 => [1])
-#     kI = spdiagm(0 => ones(M-1), -1 => -ones(M-2), M-2 => [-1])
-#
-#     #diagonal precond
-#     kΔ = spdiagm(0 => ones(M-1))
-#     kI = spdiagm(0 => ones(M-1))
-#
-#     h = orbitguess_f[end] / M
-#     Precs2 = kron(kI, spdiagm(0 => ones(2n))) ./1 -  h/2 * kron(kΔ, par_cgl.Δ)
-#     ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-4, N = size(Precs2,1), restart = 20, maxiter = 40, Pl = lu(Precs2), log=true)
-#     ls(Jpo, rand(ls.N))
 ####################################################################################################
 #
 #                                     slow version DO NOT RUN!!!
@@ -261,74 +239,10 @@ br_po = continuation(
     (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
     record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
-
-###################################################################################################
-# preconditioner not taking into account the constraint
-# Jpo = @time poTrap(Val(:JacCyclicSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01) # 0.5sec
-# Precilu = poTrap(Val(:BlockDiagSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01)[1:end-2n,1:end-2n] |> lu
-# Precilu = lu(blockdiag([par_cgl.Δ .+ par_cgl.r for  _=1:M-1]...))
-# ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true)
-# ls(Jpo, rand(ls.N))
-###################################################################################################
-# this preconditioner does not work very well here
-Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
-Precilu = @time ilu(Jpo, τ = 0.003);
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 30, maxiter = 50, Pl = Precilu, log=true);
-ls(Jpo, rand(ls.N))
-
-probBMF = PeriodicOrbitTrapProblem(poTrapMF; jacobian = :BorderedMatrixFree)
-
-opt_po = @set opt_newton.verbose = true
-outpo_f = @time newton(probBMF,
-        orbitguess_f,
-        (@set opt_po.linsolver = ls);
-        normN = norminf)
-
-function callbackPO(state; linsolver = ls, prob = poTrap, p = par_cgl, kwargs...)
-    @show ls.N keys(kwargs)
-    # we update the preconditioner every 10 continuation steps
-    if mod(kwargs[:iterationC], 10) == 9 && iteration == 1
-        @info "update Preconditioner"
-        Jpo = poTrap(Val(:JacCyclicSparse), state.x, (@set p.r = kwargs[:p]))
-        Precilu = @time ilu(Jpo, τ = 0.003)
-        ls.Pl = Precilu
-    end
-    true
-end
-
-opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2n), verbose = 2, dim = 20))
-# opt_po = (@set opt_po.eigsolver = DefaultEig())
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.15, max_steps = 450, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-7, detect_bifurcation = 1)
-# opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.001, p_max = 1.5, max_steps = 400, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls))
-br_pok2 = @time continuation(
-                        probBMF, outpo_f.u, PALC(),
-                        opts_po_cont;
-                        verbosity = 2, plot = true,
-                        plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
-                        # callback_newton = callbackPO,
-                        record_from_solution = (u, p; kwargs...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2 ),
-                        normC = norminf)
-
-# branches = Any[br_pok2]
-# push!(branches, br_pok2)
-# plotBranch(branches,label="", xlabel="r",ylabel="Amplitude");title!("")
-####################################################################################################
-Jpo = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1))
-rhs = rand(size(Jpo,1))
-kΔ = spdiagm(0 => ones(M-1), -1 => ones(M-2), M-2 => [1])
-kI = spdiagm(0 => ones(M-1), -1 => -ones(M-2), M-2 => [-1])
-h = orbitguess_f[end] / M
-Jcglsp = Jcgl(orbitguess_f[1:2n], par_cgl)
-# Precs2 = kron(kI, spdiagm(0 => ones(2n))) -  h/2 * kron(kΔ, par_cgl.Δ)
-Precs2 = kron(kI, spdiagm(0 => ones(2n))) -  h/2 * kron(kΔ, Jcglsp)
-Precs2 = ilu(Precs2, τ = 0.004);
-ls = GMRESIterativeSolvers(verbose = true, reltol = 1e-3, N = 2n*M-2n, restart = 20, maxiter = 1000, Pl = (Precs2), log=true)
-#
-ls(Jpo, rand(ls.N))
 ####################################################################################################
 # Experimental, full Inplace
 @views function NL!(f, u, p, t = 0.)
-    @unpack r, μ, ν, c3, c5 = p
+    (; r, μ, ν, c3, c5) = p
     n = div(length(u), 2)
     u1v = u[1:n]
     u2v = u[n+1:2n]
@@ -347,7 +261,7 @@ ls(Jpo, rand(ls.N))
 end
 
 @views function dNL!(f, u, p, du)
-    @unpack r, μ, ν, c3, c5 = p
+    (; r, μ, ν, c3, c5) = p
     n = div(length(u), 2)
     u1v = u[1:n]
     u2v = u[n+1:2n]
@@ -436,12 +350,6 @@ function JacT2(F, x, v)
     # ForwardDiff.gradient(x -> dot(v, F(x)), x)
     Tracker.gradient(x -> dot(v, F(x)), x)
 end
-
-
-# dsol0 = rand(2n)
-#     dsol1 = rand(2n)
-#     sol0v = vec(sol0)
-#     @time d2Fcgl(sol0v, par_cgl, dsol0, dsol1)
 
 # we look at the second fold point
 indfold = 2

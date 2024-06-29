@@ -63,9 +63,7 @@ optdef = setproperties(optnew; tol = 1e-7, max_iterations = 200)
 
 function perturbsol(sol, p, id)
     sol0 = @. exp(-.01/(1-par_car.X^2)^2)
-    # solp = copy(sol)
     solp = 0.02*rand(length(sol))
-    # plot([sol, sol + solp * sol0], xlims=(-1,1),title = "Perturb $id") |> display
     return sol .+ solp .* sol0
 end
 

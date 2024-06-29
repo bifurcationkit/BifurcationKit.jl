@@ -161,45 +161,6 @@ title!("#branches = $(size(get_branch(diagram, code)))")
 plot(get_branches_from_BP(diagram, 2); plotfold = false, legend = false, vars = (:param, :n2))
 
 get_branch(diagram, (2,1)) |> plot
-
-####################################################################################################
-# analyse 2d bifurcation point
-bp2d = @time get_normal_form(br, 4, verbose = true, nev = 30)
-
-BK.nf(bp2d)[2] |> println
-
-using ProgressMeter
-Nd = 100
-L = 3.9
-X = LinRange(-L,L, Nd)
-Y = LinRange(-L,L, Nd)
-P = LinRange(-0.001,0.001, Nd+1)
-
-V1a = @showprogress [bp2d(Val(:reducedForm),[x1,y1], p1)[1] for p1 in P, x1 in X, y1 in Y]
-
-Ind1 = findall( abs.(V1a) .<= 9e-4 * maximum(abs.(V1a)))
-V2a = @showprogress [bp2d(Val(:reducedForm),[X[ii[2]],Y[ii[3]]], P[ii[1]])[2] for ii in Ind1]
-
-Ind2 = findall( abs.(V2a) .<= 3e-3 * maximum(abs.(V2a)))
-@show length(Ind2)
-
-resp = Float64[]
-resx = Vector{Float64}[]
-resnrm = Float64[]
-@showprogress for k in Ind2
-    ii = Ind1[k]
-    push!(resp, P[ii[1]])
-    # push!(resx, max(X[ii[2]],Y[ii[3]]))
-    push!(resnrm, sqrt(X[ii[2]]^2+Y[ii[3]]^2))
-    push!(resx, [X[ii[2]], Y[ii[3]]])
-end
-
-using LaTeXStrings
-
-plot(
-    scatter(1e4resp, map(x->x[1], resx), map(x->x[2], resx); label = "", markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"x_1", zlabel = L"x_2", zcolor = resnrm, color = :viridis,colorbar=false),
-    scatter(1e4resp, resnrm; label = "", markersize =2, markerstrokewidth=0, xlabel = L"10^4 \cdot \lambda", ylabel = L"\|x\|"))
-
 ####################################################################################################
 bp2d = @time get_normal_form(br, 2, nev = 30)
 
@@ -210,84 +171,6 @@ res = BK.continuation(br, 2,
     )
 
 plot(res..., br ;plotfold= false)
-
-δp = 0.005
-    deflationOp = DeflationOperator(2, 1.0, [zeros(2)])
-        success = [0]
-while sum(success) < 10
-    pb = BK.BifurcationProblem((x, p) -> bp2d(Val(:reducedForm), x, p[1]), rand(2), [δp])
-    outdef1 = newton(pb, deflationOp, NewtonPar(max_iterations = 50))
-    @show BK.converged(outdef1)
-    BK.converged(outdef1) && push!(deflationOp, outdef1.u)
-    (BK.converged(outdef1)==false) && push!(success, 1)
-end
-println("--> found $(length(deflationOp)) solutions")
-
-plotsol(bp2d(deflationOp[3], δp))
-solbif = newton(prob, bp2d.x0, bp2d(deflationOp[3], δp), (@set par_mit.λ = bp2d.p + δp), opts_br.newton_options)[1]
-
-plotsol(solbif.u-0*bp2d(deflationOp[2], δp))
-
-brnf1 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = 0.005);
-    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-    plot = true, verbosity = 3, normC = norminf)
-
-branches2 = Any[br,br1,br2,brnf1]
-push!(branches2, brnf1)
-# plot([br,br1,br2])
-# plot!(brnf1)
-
-brnf2 = continuation(re_make(prob, u0 = solbif.u, params = (@set par_mit.λ = bp2d.p + δp)), PALC(), setproperties(opts_br; ds = -0.005);
-    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...),
-    plot = true, verbosity = 3, normC = norminf)
-
-# plot([br,br1,br2]);plot!(brnf1);plot!(brnf2)
-plot(branches2...)
-plot!(brnf2)
-####################################################################################################
-# find isolated branch, see Farrell et al.
-deflationOp = DeflationOperator(2, 1.0, [sol0])
-optdef = setproperties(opt_newton; tol = 1e-8, max_iterations = 150)
-
-# eigen-elements close to the second bifurcation point on the branch
-# of homogeneous solutions
-vp, ve, _, _= eigls(JFmit(sol0, @set par_mit.λ = br.specialpoint[2].param), 5)
-
-for ii=1:size(ve, 1)
-        outdef1 = @time newton(
-            re_make(prob, u0 = real.(br.specialpoint[2].x .+ 0.01 .* ve[ii] .* (1 .+ 0.01 .* rand(Nx*Ny))), params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), deflationOp,
-            optdef)
-            BK.converged(outdef1) && push!(deflationOp, outdef1.u)
-    end
-    length(deflationOp)
-
-
-l = @layout grid(3,2)
-    plot(layout = l)
-    for ii=1:min(6,length(deflationOp))
-        plotsol!(deflationOp[ii], title="$ii", subplot = ii, label = "", xlabel="$ii", colorbar=true)
-    end
-    title!("")
-
-brdef1 = @time BK.continuation(
-    re_make(prob, u0 = deflationOp[3], params = (@set par_mit.λ = br.specialpoint[2].param + 0.005)), PALC(),
-    setproperties(opts_br;ds = 0.001, detect_bifurcation = 0, dsmax = 0.01, max_steps = 500);
-    verbosity = 3, plot = true,
-    normC = norminf)
-
-plot(br,br1,br2,brdef1,plotfold=false)
-
-
-brdef2 = @time BK.continuation(
-    re_make(brdef1.prob, u0 = deflationOp[5]), PALC(),
-    setproperties(opts_br;ds = -0.001, detect_bifurcation = 0, dsmax = 0.02);
-    verbosity = 3, plot = true,
-    record_from_solution = (x, p) ->  normbratu(x),
-    plot_solution = (x, p; kwargs...) -> plotsol!(x ; kwargs...), normC = norminf)
-
-plot(br,br1,br2, brdef1, brdef2,plotfold=false, putspecialptlegend = false)
-
-plot(brdef1, brdef2,plotfold = false, putspecialptlegend = false)
 ####################################################################################################
 # deflated continuation
 deflationOp = DeflationOperator(2, 1., ([sol0]))

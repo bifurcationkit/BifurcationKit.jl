@@ -87,37 +87,16 @@ function finalise_solution(z, tau, step, contResult)
     return true
 end
 
-n = 500
-####################################################################################################
-# test for the Jacobian expression
-# using ForwardDiff
-# sol0 = rand(2n)
-# J0 = ForwardDiff.jacobian(x-> Fbru(x, par_bru), sol0) |> sparse
-# J1 = Jbru_sp(sol0, par_bru)
-# J0 - J1
 ####################################################################################################
 # different parameters to define the Brusselator model and guess for the stationary solution
+n = 500
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l); 
         J = Jbru_sp, 
-        #plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), 
-        # plot_solution = (ax, x, p) -> plotsol(ax, x), 
+        # plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), # for Plots.jl
+        # plot_solution = (ax, x, p) -> plotsol(ax, x), # For Makie.jl
         record_from_solution = (x, p) -> x[div(n,2)])
-# # parameters for an isola of stationary solutions
-# par_bru = (α = 2., β = 4.6, D1 = 0.0016, D2 = 0.008, l = 0.061)
-#     xspace = LinRange(0, par_bru.l, n)
-#     sol0 = vcat(        par_bru.α .+ 2 .* sin.(pi*xspace/par_bru.l),
-#             par_bru.β/par_bru.α .- 0.5 .* sin.(pi*xspace/par_bru.l))
-
-# eigls = EigArpack(1.1, :LM)
-#     opt_newton = BK.NewtonPar(eigsolver = eigls)
-#     out, hist, flag = @time BK.newton(
-#         x ->    Fbru(x, par_bru),
-#         x -> Jbru_sp(x, par_bru),
-#         sol0, opt_newton, normN = norminf)
-#
-#     plot();plotsol(out);plotsol(sol0, label = "sol0",line=:dash)
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), max_steps = 1060, n_inversion = 6, tol_bisection_eigenvalue = 1e-20, max_bisection_steps = 30)
@@ -129,24 +108,14 @@ br = @time continuation(
     normC = norminf)
 ####################################################################################################
 hopfpt = get_normal_form(br, 1; verbose = true)
-#################################################################################################### Continuation of the Hopf Point using Jacobian expression
+#################################################################################################### 
+# Continuation of the Hopf Point using Jacobian expression
 ind_hopf = 1
-# hopfpt = BK.HopfPoint(br, ind_hopf)
 optnew = opts_br_eq.newton_options
 hopfpoint = @time newton(br, ind_hopf;
-                options = (@set optnew.verbose=true), 
+                options = optnew, 
                 normN = norminf);
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
-
-if 1==0
-    br_hopf = @time continuation(
-        br, ind_hopf, (@lens _.β),
-        ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, newton_options = optnew);
-        jacobian_ma = :minaug,
-        verbosity = 2, normC = norminf)
-
-    plot(br_hopf, label="")
-end
 
 if 1==1
     br_hopf = @time continuation(
@@ -214,14 +183,3 @@ branches = Any[br_po]
 push!(branches, br_po2)
 
 BK.plot(branches...)
-####################################################################################################
-using DifferentialEquations
-using Logging: global_logger
-using TerminalLoggers: TerminalLogger
-global_logger(TerminalLogger())
-
-vf = ODEFunction(Fbru!, jac = (J,u,p,t)-> J .= Jbru_sp(u,p))
-prob_ode = ODEProblem(vf, br_po2.specialpoint[1].x[1:2n], (0,150.), @set par_bru.l = 1.37)
-sol_ode = @time solve(prob_ode, Rodas4P(linsolve = KrylovJL_GMRES()), progress = true, progress_steps = 1); println("--> #steps = ", length(sol_ode))
-heatmap(sol_ode.t, 1:n, sol_ode[1:n,:], color = :viridis)
-plot(sol_ode.t, sol_ode[n÷2,:])

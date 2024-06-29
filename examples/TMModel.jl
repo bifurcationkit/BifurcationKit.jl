@@ -28,7 +28,7 @@ BK.plot(br, plotfold=false)
 br_fold = BK.continuation(br, 2, (@lens _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
 plot(br_fold)
 ####################################################################################################
-# continuation parameters
+# branching to PO from Hopf using Trapezoid
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 80, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
 # arguments for periodic orbits
@@ -50,7 +50,7 @@ args_po = (	record_from_solution = (x, p) -> begin
     normC = norminf
     )
 
-br_potrap = continuation(br, 4, opts_po_cont,
+br_potrap = continuation(br, 5, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 150);
     verbosity = 2, plot = true,
     args_po...,
@@ -60,12 +60,12 @@ br_potrap = continuation(br, 4, opts_po_cont,
 plot(br, br_potrap, markersize = 3)
 plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
-# continuation parameters
-opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 10, tol_stability = 1e-5, detect_bifurcation = 2, plot_every_step = 10)
+# branching to PO from Hopf using Collocation
+opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 80, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
 
 br_pocoll = @time continuation(
-    br, 4, opts_po_cont,
-    PeriodicOrbitOCollProblem(30, 5; meshadapt = true);
+    br, 5, opts_po_cont,
+    PeriodicOrbitOCollProblem(50, 5; meshadapt = true);
     verbosity = 2,
     plot = true,
     args_po...,
