@@ -66,7 +66,7 @@ Function for coarse detection of bifurcation points.
 """
 function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
     # this boolean ensures that edge cases are handled
-    known = false
+    known::Bool = false
 
     # get current number of unstable eigenvalues and
     # unstable eigenvalues with nonzero imaginary part

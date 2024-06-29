@@ -108,6 +108,12 @@ function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
         @debug "[collocation] update section"
         updatesection!(coll, z.u, setparam(contResult, z.p))
     end
+    if is_mesh_updated
+        # we recompute the tangent predictor
+        it = get(kF, :iter, nothing)
+        # @debug "[collocation] update predictor"
+        getpredictor!(state, it)
+    end
     if isnothing(finalizer.finalise_solution)
         return true
     else

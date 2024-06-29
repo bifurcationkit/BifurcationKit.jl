@@ -133,7 +133,7 @@ mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
 end
 FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
 _get_matrix(pb::AbstractMatrix) = pb
-_get_matrix(pb::FloquetWrapper) = pb.jacpb 
+_get_matrix(pb::FloquetWrapper) = pb.jacpb
 
 # jacobian evaluation
 (shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
