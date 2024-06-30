@@ -1,21 +1,46 @@
 BifurcationKit.jl, Changelog
 ========================
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
+
+## Near future
+- Setfield.jl has been changed to Accessors.jl
+
+## [0.3.6]
+- add field `save_solution` to `BifurcationProblem`. Allows to save problem state along with the current solution. Useful for periodic orbits for example where we can save the phase condition and the mesh when the latter is adapted.
+
+## [0.3.4]
+- add function `_keep_opts_cont` to filter continuation options
+- order 2 prediction for periodic orbit from Hopf bifurcation
+- add `jacobian(Π::PoincaréMap{ <: WrapPOSh }, x, pars)`
+- `hasstability` becomes `_hasstability`
+- `getvectortype` becomes `_getvectortype`
+- add condensation of parameters, great speedup for collocation of periodic orbits
+- add `in_bisection` field in struct `ContState`
+- allow to do codim 2 continuation of PO with collocation and mesh adaptation
+- `update_section_every_step` becomes a UInt
+- add fields in `PeriodDoublingProblemMinimallyAugmented` and `NeimarkSackerProblemMinimallyAugmented` for holding Resonance test values
+- add specific finalizer for Fold of PO when using Collocation or shooting
+- add struct `FinalisePO`
+- `update_minaug_every_step = 1` by default for Hopf / Fold continuation
+- `update_minaug_every_step = 1` is default for for PD / NS continuation
 
 ## [0.2.8] - 2023-05-18
-- add getDelta to the interface of AbstractFlow
-- remove finDiffEps from ContinuationPar. 
+- add `getDelta` to the interface of `AbstractFlow`
+- remove `finDiffEps` from `ContinuationPar`. 
 
 ## [0.2.8] - 2023-04-23
-- use jvp function name in Flow interface
+- use jvp function name in `Flow` interface
 - add radius to section of Poincare Shooting
 - add _mesh field to reconstruct POColl problem (adapted mesh) from previous solution
-- add new jacobian parametrisation using structs instead of Symbol 
-- remove θ from ContinuationPar
+- add new jacobian parametrization using `struct`s instead of Symbol 
+- remove `θ` from ContinuationPar
 
 ## [0.2.8] - 2023-04-17
 - add delta keyword to BifurcationProblem constructor
+
+MISSSINF 
+
 ## [0.2.0] - 2022-07-23
 - new interface based on the problem `BifurcationProblem`
 
