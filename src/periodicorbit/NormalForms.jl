@@ -281,12 +281,12 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     Icoll = I(coll, _getsolution(pd.x0), par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
-    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
-    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p₀ + δ)) .- 
-                 residual(coll.prob_vf, u, set(p, lens, p₀ - δ))) ./ (2δ)
+    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, _set_param(p, lens, z)), get(par, lens))
+    dₚF(u, p) = (residual(coll.prob_vf, u, _set_param(p, lens, p₀ + δ)) .- 
+                 residual(coll.prob_vf, u, _set_param(p, lens, p₀ - δ))) ./ (2δ)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
-    F11(u, p, du) = (A(u, set(p, lens, p₀ + δ), du) .- 
-                     A(u, set(p, lens, p₀ - δ), du)) ./ (2δ)
+    F11(u, p, du) = (A(u, _set_param(p, lens, p₀ + δ), du) .- 
+                     A(u, _set_param(p, lens, p₀ - δ), du)) ./ (2δ)
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 

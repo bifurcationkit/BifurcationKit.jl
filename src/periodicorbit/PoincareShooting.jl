@@ -69,7 +69,7 @@ end
 @inline isparallel(psh::PoincareShootingProblem) = psh.parallel
 @inline getlens(psh::PoincareShootingProblem) = psh.lens
 getparams(prob::PoincareShootingProblem) = prob.par
-setparam(prob::PoincareShootingProblem, p) = set(getparams(prob), getlens(prob), p)
+setparam(prob::PoincareShootingProblem, p) = _set_param(getparams(prob), getlens(prob), p)
 
 function Base.show(io::IO, psh::PoincareShootingProblem)
     println(io, "┌─ Poincaré shooting functional for periodic orbits")

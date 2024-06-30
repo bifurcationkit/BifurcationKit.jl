@@ -133,7 +133,7 @@ br5a = continuation(prob, PALC(), opts, finalise_solution = finalise_solution)
 # test for different predictors
 br6 = continuation(prob, PALC(tangent = Secant()), opts)
 
-optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
+optsnat = ContinuationPar(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
 br7 = continuation((@set prob.recordFromSolution = (x,p)->x[1]), Natural(), optsnat)
 
 # tangent prediction with Bordered predictor

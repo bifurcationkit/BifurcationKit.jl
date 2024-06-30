@@ -157,9 +157,9 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     lens1, lens2 = pt.lens
 
-    getp(l::Lens) = get(parbif, l)
-    setp(l::Lens, p::Number) = set(parbif, l, p)
-    setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    getp(l::Lens) = _get(parbif, l)
+    setp(l::Lens, p::Number) = _set_param(parbif, l, p)
+    setp(p1::Number, p2::Number) = _set_param(_set_param(parbif, lens1, p1), lens2, p2)
 
     ζ0, ζ1 = pt.ζ
     ζs0, ζs1 = pt.ζ★
@@ -837,8 +837,8 @@ function bautin_normal_form(_prob,
 
     lens1, lens2 = pt.lens
     _getp(l::Lens) = _get(parbif, l)
-    _setp(l::Lens, p::Number) = set(parbif, l, p)
-    _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    _setp(l::Lens, p::Number) = _set_param(parbif, l, p)
+    _setp(p1::Number, p2::Number) = _set_param(_set_param(parbif, lens1, p1), lens2, p2)
     _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
                        apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
@@ -1064,8 +1064,8 @@ function zero_hopf_normal_form(_prob,
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
     getp(l::Lens) = _get(parbif, l)
-    setp(l::Lens, p::Number) = set(parbif, l, p)
-    setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    setp(l::Lens, p::Number) = _set_param(parbif, l, p)
+    setp(p1::Number, p2::Number) = _set_param(_set_param(parbif, lens1, p1), lens2, p2)
     if autodiff
         Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)), p)
     else
@@ -1426,8 +1426,8 @@ function hopf_hopf_normal_form(_prob,
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
     # _getp(l::Lens) = _get(parbif, l)
-    # _setp(l::Lens, p::Number) = set(parbif, l, p)
-    # _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    # _setp(l::Lens, p::Number) = _set_param(parbif, l, p)
+    # _setp(p1::Number, p2::Number) = _set_param(_set_param(parbif, lens1, p1), lens2, p2)
     if autodiff
         Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
     else
@@ -1483,8 +1483,8 @@ function hopf_hopf_normal_form(_prob,
 
     lens1, lens2 = pt.lens
     _getp(l::Lens) = _get(parbif, l)
-    _setp(l::Lens, p::Number) = set(parbif, l, p)
-    _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    _setp(l::Lens, p::Number) = _set_param(parbif, l, p)
+    _setp(p1::Number, p2::Number) = _set_param(_set_param(parbif, lens1, p1), lens2, p2)
     _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)

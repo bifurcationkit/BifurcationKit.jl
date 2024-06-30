@@ -119,7 +119,7 @@ for (op, at) in (
             - `getparams(pb)` calls `pb.params`
             - `getlens(pb)` calls `pb.lens`
             - `getparam(pb)` calls `get(pb.params, pb.lens)`
-            - `setparam(pb, p0)` calls `set(pb.params, pb.lens, p0)`
+            - `setparam(pb, p0)` calls `_set_param(pb.params, pb.lens, p0)`
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
@@ -259,7 +259,7 @@ function getparams(pb::AbstractBifurcationProblem)
 end
 @inline getlens(pb::AbstractBifurcationProblem) = pb.lens
 getparam(pb::AbstractBifurcationProblem) = get(pb.params, pb.lens)
-setparam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)
+setparam(pb::AbstractBifurcationProblem, p0) = _set_param(pb.params, pb.lens, p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
 

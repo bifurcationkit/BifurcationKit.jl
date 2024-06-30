@@ -78,7 +78,7 @@ br1r = BK._reverse(br1)
 testBranch(BK._reverse(br1))
 
 
-br2 = continuation(prob, alg, setproperties(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 4, tol_bisection_eigenvalue = 1e-7); plot = false, verbosity = 0)
+br2 = continuation(prob, alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 4, tol_bisection_eigenvalue = 1e-7); plot = false, verbosity = 0)
 testBranch(br2)
 for bp in br2.specialpoint
     @test bp.interval[1] <= bp.param <= bp.interval[2]
@@ -92,12 +92,12 @@ dimBif2 = [abs(bp.δ[1]) for bp in br2.specialpoint if bp.type != :endpoint]
 
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
-br3 = continuation(prob, alg, setproperties(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 8, tol_bisection_eigenvalue = 1e-7); verbosity = 0)
+br3 = continuation(prob, alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 8, tol_bisection_eigenvalue = 1e-7); verbosity = 0)
 testBranch(br3)
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
 # in this case, we test if coming from above, and having no inversion, still leads to correct result
-br4 = continuation((@set prob.params.λ = 0.95), alg, setproperties(optc; detect_bifurcation = 3, p_max = 1.95, n_inversion = 8, ds = 0.7, dsmax = 1.5, max_bisection_steps = 1); verbosity = 0)
+br4 = continuation((@set prob.params.λ = 0.95), alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 1.95, n_inversion = 8, ds = 0.7, dsmax = 1.5, max_bisection_steps = 1); verbosity = 0)
 testBranch(br4)
 ####################################################################################################
 # this example is to test failures in Newton and how it affects the bifurcation points labels

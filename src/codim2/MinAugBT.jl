@@ -87,8 +87,8 @@ function (𝐁𝐓::BTProblemMinimallyAugmented)(x, p1::T, p2::T, params) where 
     a = 𝐁𝐓.a
     b = 𝐁𝐓.b
     # update parameter
-    par = set(params, getlens(𝐁𝐓.prob_vf), p1)
-    par = set(par, 𝐁𝐓.lens2, p2)
+    par = _set_param(params, getlens(𝐁𝐓.prob_vf), p1)
+    par = _set_param(par, 𝐁𝐓.lens2, p2)
     J = jacobian(𝐁𝐓.prob_vf, x, par)
     v1, σ1, cv, it = 𝐁𝐓.linbdsolver(J, a, b, zero(T), 𝐁𝐓.zero, one(T))
     ~cv && @debug "[Bogdanov-Takens] Linear solver for J did not converge."
@@ -142,10 +142,10 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
     # parameter axis
     lens = getlens(𝐁𝐓)
     # update parameter
-    par0 = set(par, getlens(𝐁𝐓.prob_vf), p1)
-    par0 = set(par0, 𝐁𝐓.lens2, p2)
+    par0 = _set_param(par, getlens(𝐁𝐓.prob_vf), p1)
+    par0 = _set_param(par0, 𝐁𝐓.lens2, p2)
 
-    # par0 = set(par, lens, p)
+    # par0 = _set_param(par, lens, p)
 
     # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
     J_at_xp = jacobian(𝐁𝐓.prob_vf, x, par0)
@@ -181,30 +181,30 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
     ################### computation of σx σp ####################
     ################### and inversion of Jbt ####################
     lens1, lens2 = _getlenses(𝐁𝐓)
-    dp1F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ1)),
-                 residual(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
-    dp2F = minus(residual(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ1)),
-                 residual(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ1))); rmul!(dp2F, T(1/(2ϵ1)))
+    dp1F = minus(residual(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 + ϵ1)),
+                 residual(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 - ϵ1))); rmul!(dp1F, T(1/(2ϵ1)))
+    dp2F = minus(residual(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 + ϵ1)),
+                 residual(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 - ϵ1))); rmul!(dp2F, T(1/(2ϵ1)))
 
-    dJvdp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
-                   apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJvdp1, T(1/(2ϵ3)))
+    dJvdp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 + ϵ3)), v1),
+                   apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 - ϵ3)), v1)); rmul!(dJvdp1, T(1/(2ϵ3)))
     σ1p1 = -dot(w1, dJvdp1) / n
 
-    dJvdp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
-                   apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJvdp2, T(1/(2ϵ3)))
+    dJvdp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 + ϵ3)), v1),
+                   apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 - ϵ3)), v1)); rmul!(dJvdp2, T(1/(2ϵ3)))
     σ1p2 = -dot(w1, dJvdp2) / n
 
-    dJv1dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
-                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJv1dp1, T(1/(2ϵ3)))
-    dJv2dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v2),
-                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v2)); rmul!(dJv2dp1, T(1/(2ϵ3)))
+    dJv1dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 + ϵ3)), v1),
+                    apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 - ϵ3)), v1)); rmul!(dJv1dp1, T(1/(2ϵ3)))
+    dJv2dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 + ϵ3)), v2),
+                    apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens1, p1 - ϵ3)), v2)); rmul!(dJv2dp1, T(1/(2ϵ3)))
     σ2p1 = -dot(w2, dJv1dp1) / n - dot(w1, dJv2dp1) / n
 
 
-    dJv1dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
-                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJv1dp2, T(1/(2ϵ3)))
-    dJv2dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v2),
-                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v2)); rmul!(dJv2dp2, T(1/(2ϵ3)))
+    dJv1dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 + ϵ3)), v1),
+                    apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 - ϵ3)), v1)); rmul!(dJv1dp2, T(1/(2ϵ3)))
+    dJv2dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 + ϵ3)), v2),
+                    apply(jacobian(𝐁𝐓.prob_vf, x, _set_param(par, lens2, p2 - ϵ3)), v2)); rmul!(dJv2dp2, T(1/(2ϵ3)))
     σ2p2 = -dot(w2, dJv1dp2) / n - dot(w1, dJv2dp2) / n
     σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
@@ -336,8 +336,8 @@ function newton_bt(prob::AbstractBifurcationProblem,
 
     # save the solution in BogdanovTakens
     pbt = get_par_bls(sol.u, 2)
-    parbt = set(par, getlens(prob), pbt[1])
-    parbt = set(parbt, lens2, pbt[2])
+    parbt = _set_param(par, getlens(prob), pbt[1])
+    parbt = _set_param(parbt, lens2, pbt[2])
     bt = BogdanovTakens(x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), ζ = 𝐁𝐓.b, ζ★ = 𝐁𝐓.a, type = :none, nf = (a = missing, b = missing ),
     nfsupp = (K2 = zero(Ty),))
     @set sol.u = bt

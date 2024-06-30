@@ -96,7 +96,7 @@ end
 @inline isparallel(sh::ShootingProblem) = sh.parallel
 @inline getlens(sh::ShootingProblem) = sh.lens
 getparams(prob::ShootingProblem) = prob.par
-setparam(prob::ShootingProblem, p) = set(getparams(prob), getlens(prob), p)
+setparam(prob::ShootingProblem, p) = _set_param(getparams(prob), getlens(prob), p)
 
 function Base.show(io::IO, sh::ShootingProblem)
     println(io, "┌─ Standard shooting functional for periodic orbits")

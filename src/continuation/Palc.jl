@@ -409,14 +409,14 @@ function newton_palc(iter::AbstractContinuationIterable,
     p = z_pred.p
     x_pred = _copy(x)
 
-    res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
+    res_f = residual(prob, x, _set_param(par, paramlens, p));  res_n = N(x, p)
 
     dX = _copy(res_f)
     dp = zero(T)
     up = zero(T)
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
-    dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
+    dFdp = _copy(residual(prob, x, _set_param(par, paramlens, p + ϵ)))
     minus!(dFdp, res_f) # dFdp = dFdp - res_f
     rmul!(dFdp, one(T) / ϵ)
 
@@ -432,11 +432,11 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+        copyto!(dFdp, residual(prob, x, _set_param(par, paramlens, p + ϵ)))
         minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
 
         # compute jacobian
-        J = jacobian(prob, x, set(par, paramlens, p))
+        J = jacobian(prob, x, _set_param(par, paramlens, p))
         
         # solve linear system
         # ┌            ┐┌  ┐   ┌     ┐
@@ -454,7 +454,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                 copyto!(x_pred, x); axpy!(-α, u, x_pred)
 
                 p_pred = p - α * up
-                copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                copyto!(res_f, residual(prob, x_pred, _set_param(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
                 res = normAC(res_f, res_n)
@@ -477,7 +477,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         else
             minus!(x, u)
             p = clamp(p - up, p_min, p_max)
-            copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            copyto!(res_f, residual(prob, x, _set_param(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 

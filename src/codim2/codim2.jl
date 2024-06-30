@@ -138,7 +138,7 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     p1 = getp(bifpt.x , prob_ma)[1] # get(bifpt.printsol, lens1)
     p2 = bifpt.param
     lenses = get_lenses(br)
-    parbif = _set(getparams(br), lenses, (p1, p2))
+    parbif = _set_param(getparams(br), lenses, (p1, p2))
     return (x = x0, params = parbif)
 end
 ################################################################################
@@ -313,7 +313,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         parcont = pred.hopf(ds)
 
         # new full parameters
-        params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
+        params = _set_param(_set_param(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
 
         # guess for the Hopf point
         hopfpt = BorderedArray(nf.x0 .+ pred.x0(ds), [parcont[1], pred.ω(ds)])
@@ -346,7 +346,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         parcont = pred.fold(ds)
 
         # new full parameters
-        params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
+        params = _set_param(_set_param(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
 
         # guess for the fold point
         foldpt = BorderedArray(nf.x0 .+ 0 .* pred.x0(ds), parcont[1])

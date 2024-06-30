@@ -1,7 +1,8 @@
 module BifurcationKit
     using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
     using Reexport
-    @reexport using Setfield: setproperties, @set, @set!, Lens, get, set, @lens
+    @reexport using Setfield: @lens, @set, @set!, Lens
+    import Setfield
     using Parameters: @with_kw, @unpack, @with_kw_noshow
     using PreallocationTools: DiffCache, get_tmp
     using RecursiveArrayTools: VectorOfArray

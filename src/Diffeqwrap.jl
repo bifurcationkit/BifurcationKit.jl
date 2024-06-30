@@ -71,7 +71,7 @@
 #     # we extract the vector field
 #     if de_prob isa DEP{false}
 #         fnewton = x -> de_prob.f(x, p0, de_prob.tspan[1])
-#         f = (x, p) -> de_prob.f(x, set(p0, param_axis, p), de_prob.tspan[1])
+#         f = (x, p) -> de_prob.f(x, _set_param(p0, param_axis, p), de_prob.tspan[1])
 #     else
 #         fnewton = x -> (out = similar(x);de_prob.f(out, x, p0, de_prob.tspan[1]);out)
 #         f =  (x, p) -> (out = similar(x);de_prob.f(out, x, set(p0, param_axis, p), de_prob.tspan[1]);out)
