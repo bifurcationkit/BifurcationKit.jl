@@ -120,7 +120,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     ~cv && @debug "Linear solver for N did not converge."
 
     # # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
+    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
@@ -286,7 +286,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
-    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
+    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
 
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
@@ -391,7 +391,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         ζ ./= norm(ζ)
 
         # compute new a
-        ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
+        ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
         ζ★ ./= norm(ζ★)
         prob_pd.R2 = dot(ζ★, ζ)

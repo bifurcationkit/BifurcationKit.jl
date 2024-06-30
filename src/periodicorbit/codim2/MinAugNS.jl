@@ -149,15 +149,15 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         vr = real(v); vi = imag(v)
         # u1r = jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω).jacpb' * cw
         # u1i = jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω).jacpb' * cw
-        u1r = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω, cw, true)
-        u1i = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω, cw, true)
+        u1r = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr, 0), par0, ω, cw, true)
+        u1i = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi, 0), par0, ω, cw, true)
         u2 = apply(JNS★, cw)
         σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
         σxv2i = @. -(u1i - u2) / ϵ2
         σx = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
-        dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0*vr,1),par0, ω), v),
-                  apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0*vr,1),par0, ω), v));
+        dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0 * vr, 1), par0, ω), v),
+                      apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0 * vr, 1), par0, ω), v));
         rmul!(dJvdt, 𝒯(1/(2ϵ3)))
         σt = -dot(w, dJvdt) 
 
@@ -265,7 +265,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
-    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF)
+    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
 
     # Jacobian for the NS problem
     if jacobian_ma == :autodiff
@@ -330,7 +330,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new a
         JNS★ = has_adjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, newpar, ω) : adjoint(JNS)
-        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolverAdjoint)
         ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
         copyto!(𝐍𝐒.a, newa); rmul!(𝐍𝐒.a, 1/normC(newa))
