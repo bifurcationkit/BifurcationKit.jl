@@ -1,11 +1,11 @@
 # using Revise
 using BifurcationKit
-using Test, Parameters, Setfield, LinearAlgebra
+using Test, Setfield, LinearAlgebra
 # using Plots
 const BK = BifurcationKit
 ####################################################################################################
 function COm(u, p)
-    @unpack q1,q2,q3,q4,q5,q6,k = p
+    (;q1,q2,q3,q4,q5,q6,k) = p
     x, y, s = u
     z = 1-x-y-s
     out = similar(u)

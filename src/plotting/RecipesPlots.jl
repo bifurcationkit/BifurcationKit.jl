@@ -256,27 +256,29 @@ RecipesBase.@recipe function Plots(sol::SolPeriodicOrbit;
 end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
-RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf))
-    for b in bd
+RecipesBase.@recipe function f(bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf), ind_br = code)
+    for (id, b) in pairs(bd)
         @series begin
             level --> level
+            ind_br --> (ind_br..., id)
             code --> code
             b
         end
     end
 end
 
-RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf))
+RecipesBase.@recipe function f(bd::BifDiagNode; code = (), level = (-Inf, Inf), ind_br = ())
     if ~hasbranch(bd); return; end
     _bd = get_branch(bd, code)
     @series begin
         level --> level
-        code --> ()
+        ind_br --> (ind_br..., _bd.code)
         _bd.child
     end
     # !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
     if level[1] <= _bd.level <= level[2]
         @series begin
+            branchlabel --> "$(ind_br[2:2:end])"
             _bd.γ
         end
     end

@@ -1,16 +1,4 @@
-using Setfield
 ####################################################################################################
-get_lens_symbol(lens) = :p
-get_lens_symbol(lens::Setfield.PropertyLens{F}) where F = F
-get_lens_symbol(lens::Setfield.ComposedLens) = get_lens_symbol(lens.inner)
-get_lens_symbol(::Setfield.IdentityLens) = :p
-get_lens_symbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
-
-function get_lens_symbol(lens1::Lens, lens2::Lens)
-    p1 = get_lens_symbol(lens1)
-    p2 = get_lens_symbol(lens2)
-    out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
-end
 
 function get_plot_vars(contres, vars)
     if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}

@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, LinearAlgebra, Parameters
+using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
@@ -244,7 +244,7 @@ bdiag = bifurcationdiagram(probD6, PALC(), 3,
 ####################################################################################################
 # test of the Hopf normal form
 function Fsl2!(f, u, p, t)
-    @unpack r, μ, ν, c3, c5 = p
+    (;r, μ, ν, c3, c5) = p
     u1 = u[1]
     u2 = u[2]
     ua = u1^2 + u2^2
@@ -393,7 +393,7 @@ solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newt
 ####################################################################################################
 # test of the Bautin normal form
 function Fsl2!(f, u, p, t)
-    @unpack r, μ, ν, c3, c5 = p
+    (;r, μ, ν, c3, c5) = p
     u1, u2 = u
     ua = u1^2 + u2^2
     f[1] = r * u1 - ν * u2 + ua * (c3 * u1 - μ * u2) + c5 * ua^2 * u1
@@ -427,7 +427,7 @@ BK.type(bautin)
 ####################################################################################################
 # test of the Zero-Hopf normal form
 function Fzh(u, p)
-    @unpack β1, β2, G200, G011, G300, G111, G110, G210, G021 = p
+    (;β1, β2, G200, G011, G300, G111, G110, G210, G021) = p
     w0, u1, u2 = u
     ua = u1^2 + u2^2
     w1 = complex(u1, u2)
@@ -465,7 +465,7 @@ pred.fold(0.1)
 ####################################################################################################
 # test of the Hopf-Hopf normal form
 function Fhh(u, p)
-    @unpack β1, β2, ω1, ω2, G2100, G1011, G3100, G2111, G1022, G1110, G0021, G2210, G1121, G0032 = p
+    (;β1, β2, ω1, ω2, G2100, G1011, G3100, G2111, G1022, G1110, G0021, G2210, G1121, G0032) = p
     w1 = complex(u[1], u[2])
     w2 = complex(u[3], u[4])
 

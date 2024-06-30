@@ -138,7 +138,7 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     p1 = getp(bifpt.x , prob_ma)[1] # get(bifpt.printsol, lens1)
     p2 = bifpt.param
     lenses = get_lenses(br)
-    parbif = set(getparams(br), lenses, (p1,p2))
+    parbif = _set(getparams(br), lenses, (p1, p2))
     return (x = x0, params = parbif)
 end
 ################################################################################

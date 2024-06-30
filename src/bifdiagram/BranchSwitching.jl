@@ -15,18 +15,18 @@ function continuation(prob::AbstractBifurcationProblem,
     # update alg linear solver with contParams.newton_options.linsolver
     alg = update(alg, contParams, nothing)
     # check the sign of ds
-    dsfactor = sign(p1 - get(par0, lens))
+    dsfactor = sign(p1 - _get(par0, lens))
     # create an iterable
     _contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
     prob2 = re_make(prob; lens = lens, params = par0)
     if ~bothside
         it = ContIterable(prob2, alg, _contParams; kwargs...)
-        return continuation(it, x0, get(par0, lens), x1, p1)
+        return continuation(it, x0, _get(par0, lens), x1, p1)
     else
         itfw = ContIterable(prob2, alg, _contParams; kwargs...)
         itbw = deepcopy(itfw)
-        resfw = continuation(itfw, x0, get(par0, lens), x1, p1)
-        resbw = continuation(itbw, x1, p1, x0, get(par0, lens))
+        resfw = continuation(itfw, x0, _get(par0, lens), x1, p1)
+        resbw = continuation(itbw, x1, p1, x0, _get(par0, lens))
         return _merge(resfw, resbw)
     end
 end

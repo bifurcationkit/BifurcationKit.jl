@@ -1,13 +1,13 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, Parameters, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
+using BifurcationKit, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
 
 function Fsl!(f, u, p, t)
-    @unpack r, μ, ν, c3 = p
+    (;r, μ, ν, c3) = p
     u1 = u[1]
     u2 = u[2]
 

@@ -210,13 +210,13 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # first order derivatives
     pBq(p, q) = 2 .* (apply_jacobian(VF, x0 .+ ϵ .* q, parbif, p, true) .-
-                      apply_jacobian(VF, x0, parbif, p, true)) ./ ϵ
-    A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
-                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
+                      apply_jacobian(VF, x0,           parbif, p, true)) ./ ϵ
+    A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, _get(parbif, lens) + ϵ), q) .-
+                   apply_jacobian(VF, x0, parbif, q)) ./ϵ
     pAq(p, q, lens) =  dot(p, A1(q, lens))
 
     # second order derivative
-    p10 = get(parbif, lens1); p20 = get(parbif, lens2);
+    p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
     if autodiff
         Jp(p, l)  = ForwardDiff.derivative( P -> F(x0, setp(l, P)), p)
@@ -239,7 +239,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
     end
 
     # build the big matrix of size (n+2) x (n+2) A = [L J1s; A12 A22]
-    J1 = lens -> F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    J1 = lens -> F(x0, setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
     J1s = (J1(lens1), J1(lens2))
 
     A12_1 = pBq(p1, q0) ./2
@@ -344,8 +344,8 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     @unpack a, b = bt.nf
     @unpack K10, K11, K2 = bt.nfsupp
     lens1, lens2 = bt.lens
-    p1 = get(bt.params, lens1)
-    p2 = get(bt.params, lens2)
+    p1 = _get(bt.params, lens1)
+    p2 = _get(bt.params, lens2)
     par0 = [p1, p2]
     getx(s) = a > 0 ? -sqrt(abs(s) / a) : sqrt(abs(s) / abs(a))
 
@@ -411,8 +411,8 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
     @unpack a, b = bt.nf
     @unpack K10, K11, K2 = bt.nfsupp
     lens1, lens2 = bt.lens
-    p1 = get(bt.params, lens1)
-    p2 = get(bt.params, lens2)
+    p1 = _get(bt.params, lens1)
+    p2 = _get(bt.params, lens2)
     par0 = [p1, p2]
     getx(s) = a > 0 ? -sqrt(abs(s) / a) : sqrt(abs(s) / abs(a))
     function FoldCurve(s)
@@ -446,8 +446,8 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T;
     @unpack H0001, H0010, H0002, H1001, H2000 = bt.nfsupp
 
     lens1, lens2 = bt.lens
-    p1 = get(bt.params, lens1)
-    p2 = get(bt.params, lens2)
+    p1 = _get(bt.params, lens1)
+    p2 = _get(bt.params, lens2)
     par0 = [p1, p2]
 
     # formula 63
@@ -836,16 +836,16 @@ function bautin_normal_form(_prob,
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
-    _getp(l::Lens) = get(parbif, l)
+    _getp(l::Lens) = _get(parbif, l)
     _setp(l::Lens, p::Number) = set(parbif, l, p)
     _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, get(parbif, lens) + ϵ), q) .-
+    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
                        apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
     B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, _setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    J1(lens) = F(x0, _setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
 
     # formula 17 in REF2
     h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
@@ -936,8 +936,8 @@ function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T;
                     ampfactor = T(1)) where T
     @unpack h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁ = gh.nf
     lens1, lens2 = gh.lens
-    p1 = get(gh.params, lens1)
-    p2 = get(gh.params, lens2)
+    p1 = _get(gh.params, lens1)
+    p2 = _get(gh.params, lens2)
     par0 = [p1, p2]
     
     # periodic orbit on the fold
@@ -1061,9 +1061,9 @@ function zero_hopf_normal_form(_prob,
     # parameters
     lenses = (getlens(prob_ma), lens)
     lens1, lens2 = lenses
-    p10 = get(parbif, lens1); p20 = get(parbif, lens2);
+    p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
-    getp(l::Lens) = get(parbif, l)
+    getp(l::Lens) = _get(parbif, l)
     setp(l::Lens, p::Number) = set(parbif, l, p)
     setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
     if autodiff
@@ -1143,13 +1143,13 @@ function zero_hopf_normal_form(_prob,
     VF = prob_ma.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
-    _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, get(parbif, lens) + ϵ), q) .-
+    _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, _get(parbif, lens) + ϵ), q) .-
                     apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
     B1(q, p, l) = (Bp(setp(l, getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    J1(lens) = F(x0, setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
 
     # compute change in parameters
     # formulas (24) in REF2
@@ -1206,8 +1206,8 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T;
                     ampfactor = T(1)) where T
     @unpack ω, λ0 = zh.nf
     lens1, lens2 = zh.lens
-    p1 = get(zh.params, lens1)
-    p2 = get(zh.params, lens2)
+    p1 = _get(zh.params, lens1)
+    p2 = _get(zh.params, lens2)
     par0 = [p1, p2]
 
     function HopfCurve(s)
@@ -1240,8 +1240,8 @@ function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T;
                     ampfactor = T(1)) where T
     @unpack ω, λ0 = zh.nf
     lens1, lens2 = zh.lens
-    p1 = get(zh.params, lens1)
-    p2 = get(zh.params, lens2)
+    p1 = _get(zh.params, lens1)
+    p2 = _get(zh.params, lens2)
     par0 = [p1, p2]
 
     function FoldCurve(s)
@@ -1278,8 +1278,8 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
                     ampfactor = T(1)) where T
     @unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2 = zh.nf
     lens1, lens2 = zh.lens
-    p1 = get(zh.params, lens1)
-    p2 = get(zh.params, lens2)
+    p1 = _get(zh.params, lens1)
+    p2 = _get(zh.params, lens2)
     par0 = [p1, p2]
 
     q0 = zh.ζ.q0
@@ -1423,9 +1423,9 @@ function hopf_hopf_normal_form(_prob,
     # parameters
     lenses = (getlens(prob_ma), lens)
     lens1, lens2 = lenses
-    p10 = get(parbif, lens1); p20 = get(parbif, lens2);
+    p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
-    # _getp(l::Lens) = get(parbif, l)
+    # _getp(l::Lens) = _get(parbif, l)
     # _setp(l::Lens, p::Number) = set(parbif, l, p)
     # _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
     if autodiff
@@ -1482,16 +1482,16 @@ function hopf_hopf_normal_form(_prob,
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
-    _getp(l::Lens) = get(parbif, l)
+    _getp(l::Lens) = _get(parbif, l)
     _setp(l::Lens, p::Number) = set(parbif, l, p)
     _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, get(parbif, lens) + ϵ), q) .-
+    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
     A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
     A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
     Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
     B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, _setp(lens, get(parbif, lens) + ϵ)) ./ ϵ
+    J1(lens) = F(x0, _setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
 
     # implement formula 26 from REF2
     h₀₀₀₀₁₀, = ls(L, J1(lens1)); h₀₀₀₀₁₀ .*= -1
@@ -1531,8 +1531,8 @@ function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T;
                     ampfactor = T(1)) where T
     @unpack λ1, λ2 = hh.nf
     lens1, lens2 = hh.lens
-    p1 = get(hh.params, lens1)
-    p2 = get(hh.params, lens2)
+    p1 = _get(hh.params, lens1)
+    p2 = _get(hh.params, lens2)
     par0 = [p1, p2]
 
     function HopfCurve(s)
@@ -1569,8 +1569,8 @@ function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T;
                     ampfactor = T(1)) where T
     @unpack λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2 = hh.nf
     lens1, lens2 = hh.lens
-    p1 = get(hh.params, lens1)
-    p2 = get(hh.params, lens2)
+    p1 = _get(hh.params, lens1)
+    p2 = _get(hh.params, lens2)
     par0 = [p1, p2]
 
     # formula in section "2.1.3. Double-Hopf"

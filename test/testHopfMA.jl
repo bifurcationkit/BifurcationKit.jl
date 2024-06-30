@@ -1,11 +1,11 @@
 # using Revise
-using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, Parameters, ForwardDiff
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, ForwardDiff
 const BK = BifurcationKit
 
 f1(u, v) = u^2 * v
 
 function Fbru!(f, x, p)
-    @unpack α, β, D1, D2, l = p
+    (; α, β, D1, D2, l) = p
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h
     c1 = D1 / l^2 / h2
@@ -31,7 +31,7 @@ end
 Fbru(x, p) = Fbru!(similar(x), x, p)
 
 function Jbru_sp(x, p)
-    @unpack α, β, D1, D2, l = p
+    (; α, β, D1, D2, l) = p
     # compute the Jacobian using a sparse representation
     n = div(length(x), 2)
     h = 1.0 / n; h2 = h*h

@@ -34,8 +34,8 @@ end
 
 function Base.show(io::IO, bp::Cusp)
     lens1, lens2 = bp.lens
-    p1 = get(bp.params, lens1)
-    p2 = get(bp.params, lens2)
+    p1 = _get(bp.params, lens1)
+    p2 = _get(bp.params, lens2)
     printstyled(io, "Cusp", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     # avoid aliasing with user defined parameters
@@ -48,8 +48,8 @@ end
 
 function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)
     lens1, lens2 = bp.lens
-    p1 = get(bp.params, lens1)
-    p2 = get(bp.params, lens2)
+    p1 = _get(bp.params, lens1)
+    p2 = _get(bp.params, lens2)
     printstyled(io, "Bautin", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     println(io, prefix*"ω = ", bp.nf.ω)
@@ -62,8 +62,8 @@ end
 
 function Base.show(io::IO, bp::ZeroHopf)
     lens1, lens2 = bp.lens
-    p1 = get(bp.params, lens1)
-    p2 = get(bp.params, lens2)
+    p1 = _get(bp.params, lens1)
+    p2 = _get(bp.params, lens2)
     printstyled(io, "Zero-Hopf", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     println(io, "null eigenvalue ≈ ", bp.nf.λ0)
@@ -76,8 +76,8 @@ end
 
 function Base.show(io::IO, bp::HopfHopf)
     lens1, lens2 = bp.lens
-    p1 = get(bp.params, lens1)
-    p2 = get(bp.params, lens2)
+    p1 = _get(bp.params, lens1)
+    p2 = _get(bp.params, lens2)
     printstyled(io, "Hopf-Hopf", color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).")
     println(io, "Eigenvalues:\nλ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
@@ -120,8 +120,8 @@ type(bp::BogdanovTakens) = :BogdanovTakens
 
 function Base.show(io::IO, bp::BogdanovTakens)
     lens1, lens2 = bp.lens
-    p1 = get(bp.params, lens1)
-    p2 = get(bp.params, lens2)
+    p1 = _get(bp.params, lens1)
+    p2 = _get(bp.params, lens2)
     printstyled(io, "Bogdanov-Takens", color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).")
     # avoid aliasing with user defined parameters

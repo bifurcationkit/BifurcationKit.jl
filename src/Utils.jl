@@ -8,6 +8,30 @@ struct BK_Plots <: AbstractPlotBackend end
 struct BK_Makie <: AbstractPlotBackend end
 get_plot_backend() = BK_NoPlot()
 ####################################################################################################
+# functions for parameter handling
+
+# getter for simplifying parameter handling interface
+_get(par, obj) = get(par, obj) # forward to Setfield.get
+
+function _set(obj, lenses::Tuple{<:Lens, <:Lens}, val::Tuple)
+    obj2 = set(obj, lenses[1], val[1])  # forward to Setfield.set
+    obj2 = set(obj2, lenses[2], val[2]) # forward to Setfield.set
+    obj2
+end
+
+
+get_lens_symbol(lens) = :p
+get_lens_symbol(lens::Setfield.PropertyLens{F}) where F = F
+get_lens_symbol(lens::Setfield.ComposedLens) = get_lens_symbol(lens.inner)
+get_lens_symbol(::Setfield.IdentityLens) = :p
+get_lens_symbol(::Setfield.IndexLens{Tuple{Int64}}) = :p
+
+function get_lens_symbol(lens1::Lens, lens2::Lens)
+    p1 = get_lens_symbol(lens1)
+    p2 = get_lens_symbol(lens2)
+    out = p1 == p2 ? (Symbol(String(p1)*"1"), Symbol(String(p2)*"2")) : (p1, p2)
+end
+####################################################################################################
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
@@ -69,13 +93,6 @@ function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
     # iteration number in eigen solver
     it_number = eiginfo[end]
     return it_number
-end
-####################################################################################################
-import Setfield: set
-function set(obj, lenses::Tuple{<:Lens,<:Lens}, val::Tuple)
-    obj2 = set(obj, lenses[1], val[1])
-    obj2 = set(obj2, lenses[2], val[2])
-    obj2
 end
 ####################################################################################################
 """

@@ -159,7 +159,7 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, c
         lenses = get_lenses(wrap_ma)
         p1, = getp(z.u, 𝐏𝐛)   # first parameter, ca bug pour Folds si p1,_ = getp(...)
         p2 = z.p              # second parameter
-        pars = set(getparams(prob_sh), lenses, (p1, p2))
+        pars = _set(getparams(prob_sh), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"
         updatesection!(prob_sh, x, pars)
     end

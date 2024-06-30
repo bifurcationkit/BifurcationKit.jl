@@ -238,7 +238,7 @@ function deflatedContinuation(dcIter::DefContIterable,
     alg = dcIter.alg
     par = getparams(contIt.prob)
     lens = getlens(contIt)
-    current_param = get(par, lens)
+    current_param = _get(par, lens)
 
     # extract the newton options
     optnewton = contParams.newton_options

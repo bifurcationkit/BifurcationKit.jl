@@ -272,7 +272,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     coll = pbwrap.prob
     N, m, Ntst = size(coll)
     par = pd.params
-    p₀ = get(par, lens)
+    p₀ = _get(par, lens)
     T = getperiod(coll, pd.x0, par)
     lens = getlens(coll)
     δ = getdelta(coll)

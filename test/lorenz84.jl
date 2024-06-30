@@ -1,11 +1,11 @@
 # using Revise
-using Test, ForwardDiff, Parameters, LinearAlgebra
+using Test, ForwardDiff, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
 ####################################################################################################
 function Lor(u, p, t = 0)
-    @unpack α,β,γ,δ,G,F,T = p
+    (; α,β,γ,δ,G,F,T) = p
     X,Y,Z,U = u
     [
         -Y^2 - Z^2 - α*X + α*F - γ*U^2,

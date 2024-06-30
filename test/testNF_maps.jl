@@ -1,6 +1,6 @@
 # using Revise
 # using Plots, Test
-using BifurcationKit, LinearAlgebra, ForwardDiff, Parameters
+using BifurcationKit, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
 ####################################################################################################
 struct EigMaps{T} <: BK.AbstractEigenSolver
@@ -69,7 +69,7 @@ pred = predictor(nf, 0.1)
 ####################################################################################################
 # case of the Neimark-Sacker
 function Fns!(f, u, p, t)
-    @unpack θ, μ, c3, a = p
+    (;θ, μ, c3, a) = p
     z = complex(u[1], u[2])
     dz = z * cis(θ) * (1 + a * μ + c3 * abs2(z))
 
