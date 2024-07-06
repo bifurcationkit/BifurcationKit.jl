@@ -73,6 +73,13 @@ Base.lastindex(br::DCResult) = lastindex(br.branches)
 Base.getindex(br::DCResult, k::Int) = getindex(br.branches, k)
 Base.length(br::DCResult) = length(br.branches)
 
+function Base.show(io::IO, brdc::DCResult; comment = "", prefix = " ")
+    printstyled(io, "Deflated continuation result, # branches = $(length(brdc.branches))", "\n", color=:cyan, bold = true)
+    for br in brdc.branches
+        show(io, br)
+    end
+end
+
 # state specific to Deflated Continuation, it is updated during the continuation process
 mutable struct DCState{T, Tstate}
     tmp::T

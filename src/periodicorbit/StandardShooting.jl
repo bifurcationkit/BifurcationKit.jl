@@ -417,7 +417,7 @@ Generate a periodic orbit problem from a solution.
 - `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
-- `sol` basically, and `ODEProblem
+- `sol` basically an `ODEProblem or a function `t -> sol(t)`
 - `tspan::Tuple` estimate of the period of the periodic orbit
 - `alg` algorithm for solving the Cauchy problem
 - `prob_mono` problem for monodromy
@@ -461,4 +461,5 @@ function generate_ci_problem(pb::ShootingProblem,
 
     return probsh, cish
 end
+
 generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); ksh...)

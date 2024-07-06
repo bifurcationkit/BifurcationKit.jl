@@ -100,8 +100,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         ζ★ = copy(ζ)
     else
-        _Jt = has_adjoint(prob) ? jad(prob, x0, parbif) : adjoint(L)
-        ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+        _Lt = has_adjoint(prob) ? jad(prob, x0, parbif) : adjoint(L)
+        ζ★, λ★ = get_adjoint_basis(_Lt, conj(λ), options.eigsolver; nev, verbose)
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
@@ -452,6 +452,8 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `autodiff = true` whether to use ForwardDiff for the differentiations w.r.t the parameters that are required to compute the normal form. Used for example for Bogdanov-Takens point. You can set to `autodiff = false` if you wish.
 - `detailed = true` whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
+- `bls_adjoint = bls` specify Bordered linear solver for the adjoint problem.
+- `bls_block = bls` specify Bordered linear solver when the border has dimension 2 (1 for `bls`).
 
 # Available method
 

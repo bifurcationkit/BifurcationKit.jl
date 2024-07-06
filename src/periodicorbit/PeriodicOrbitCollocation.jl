@@ -348,7 +348,7 @@ Generate a periodic orbit problem from a solution.
 ## Arguments
 - `pb` a `PeriodicOrbitOCollProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically, and `ODEProblem
+- `sol` basically an `ODEProblem or a function `t -> sol(t)`
 - `period` estimate of the period of the periodic orbit
 
 ## Output
@@ -357,7 +357,8 @@ Generate a periodic orbit problem from a solution.
 function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             bifprob::AbstractBifurcationProblem,
                             sol::AbstractTimeseriesSolution,
-                            period)
+                            period;
+                            optimal_period::Bool = true)
     u0 = sol(0)
     @assert u0 isa AbstractVector
     N = length(u0)
@@ -374,6 +375,12 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             ϕ = zeros(nunknows),
                             xπ = zeros(nunknows),
                             cache = POCollCache(eltype(pb), N, m))
+
+    # find best period candidate
+    if optimal_period
+        _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
+        period = _times[argmin(norm(sol(t) - sol(0)) for t in _times)]
+    end
 
     ci = generate_solution(pbcoll, t -> sol(t), period)
     pbcoll.ϕ .= @view ci[begin:end-1]

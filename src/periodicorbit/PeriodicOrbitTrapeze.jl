@@ -1125,7 +1125,9 @@ Generate a periodic orbit problem from a solution.
 """
 function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
                             bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution,
-                            tspan::Tuple; ktrap...)
+                            tspan::Tuple; 
+                            optimal_period::Bool = true,
+                            ktrap...)
     u0 = sol(0)
     @assert u0 isa AbstractVector
     N = length(u0)
@@ -1140,7 +1142,13 @@ function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
 
     period = tspan[2] - tspan[1]
 
-    ci = generate_solution(probtrap, t -> sol(tspan[1] + t*period/(2pi)), period)
+    # find best period candidate
+    if optimal_period
+        _times = LinRange(period * 0.8, period * 1.2, M)
+        period = _times[argmin(norm(sol(t) - sol(0)) for t in _times)]
+    end
+
+    ci = generate_solution(probtrap, t -> sol(tspan[1] + t * period / (2pi)), period)
     _sol = get_periodic_orbit(probtrap, ci, nothing)
     probtrap.xπ .= ci[begin:end-1]
     probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:,i], sol.prob.p) for i=1:probtrap.M])

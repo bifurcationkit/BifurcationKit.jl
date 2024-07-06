@@ -79,7 +79,7 @@ solpo = newton(probtrap, ci, NewtonPar(verbose = true))
 _sol = BK.get_periodic_orbit(probtrap, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8)
+opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8)
 @set! opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probtrap, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
@@ -139,7 +139,7 @@ fold_po_trap2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
 plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
     # plot!(pd_po_trap.branch.ϵ, pd_po_trap.branch.b0)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3; update_section_every_step = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3; update_section_every_step = 0), prob, sol, 2.; optimal_period = false)
 
 plot(sol)
 probcoll(ci, prob.params) |> plot
@@ -149,7 +149,7 @@ solpo = newton(probcoll, ci, NewtonPar(verbose = true))
 _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8, n_inversion = 6)
+opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8, n_inversion = 6)
 @set! opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
