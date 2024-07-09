@@ -185,7 +185,7 @@ args = (
         return true
     end,)
 
-optcontpo = setproperties(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
+optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
 @set! optcontpo.ds = -0.01
 @set! optcontpo.newton_options.verbose = false
 
@@ -210,6 +210,15 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
     verbosity = 0, plot = false,
     args...,
     );
+
+br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
+    verbosity = 0, plot = false,
+    args...,
+    linear_algo  = COPBLS(),
+    );
+
+newton(prob_col2, _ci, NewtonPar())
+newton(prob_col2, _ci, NewtonPar(linsolver=COPLS()))
 ####################################################################################################
 # test analytical jacobian
 Ntst = 10

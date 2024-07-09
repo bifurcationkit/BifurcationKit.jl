@@ -926,6 +926,10 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
         jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
     end
 
+    if options.linsolver isa COPLS
+        @set! options.linsolver = COPLS(probPO)
+    end
+
     prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
 
     if isnothing(defOp)
@@ -1014,7 +1018,18 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
                     kwargs...)
 
     jacPO = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
-    linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
+    if linear_algo isa COPBLS
+        linear_algo = COPBLS(probPO)
+        Npo = length(probPO) + 2
+        linear_algo = COPBLS(
+                        cache = linear_algo.cache,
+                        solver = FloquetWrapperLS(linear_algo.solver),
+                        J = similar(jacPO(orbitguess, getparams(probPO)).jacpb, Npo, Npo), 
+                        )
+        linear_algo.J .= 0
+    else
+        linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
+    end
     options = _contParams.newton_options
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 
