@@ -75,6 +75,11 @@ Bordered linear solver based on the condensation of parameters. `dim` in the str
 
 $TYPEDFIELDS
 
+## Constructors
+
+- `COPBLS()`
+- `COPBLS(coll::PeriodicOrbitOCollProblem; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
+
 ## Related
 
 See `solve_cop`.

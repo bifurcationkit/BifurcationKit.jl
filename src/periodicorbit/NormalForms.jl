@@ -879,7 +879,9 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     d += -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2
 
     nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2
-    return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, (@set ns.nf = nf), coll, false)
+    ns_new = (@set ns.nf = nf)
+    @set! ns_new.type = real(d) < 0 ? :SuperCritical : :SubCritical
+    return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, ns_new, coll, false)
 end
 
 function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },

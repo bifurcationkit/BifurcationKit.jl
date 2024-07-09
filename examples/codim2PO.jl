@@ -4,7 +4,7 @@ using Plots
 using Test, ForwardDiff, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
-###################################################################################################
+##################################################################################################
 function Pop!(du, X, p, t = 0)
     (;r,K,a,ϵ,b0,e,d) = p
     x, y, u, v = X
@@ -16,7 +16,6 @@ function Pop!(du, X, p, t = 0)
     du[4] = 2pi * u + v - s * v
     du
 end
-# Pop(u,p) = Pop!(similar(u),u,p,0)
 
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
@@ -31,7 +30,6 @@ opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_
 using DifferentialEquations
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
-# alg = Vern9()
 sol = solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
 sol = solve(prob_de, Rodas5())
@@ -139,17 +137,17 @@ fold_po_trap2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
 plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
     # plot!(pd_po_trap.branch.ϵ, pd_po_trap.branch.b0)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3; update_section_every_step = 0), prob, sol, 2.; optimal_period = false)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 2.; optimal_period = false)
 
 plot(sol)
 probcoll(ci, prob.params) |> plot
 
-solpo = newton(probcoll, ci, NewtonPar(verbose = true))
+solpo = newton(probcoll, ci, NewtonPar(verbose = true));
 
 _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
-opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8, n_inversion = 6)
+opts_po_cont = ContinuationPar(opts_br, max_steps = 50, tol_stability = 1e-8, n_inversion = 6)
 @set! opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
@@ -175,7 +173,13 @@ plot(brpo_pd, brpo_pd_sw)
 ########
 
 # codim 2 Fold
-opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 120, p_min = 0., p_max=1.2, n_inversion = 4, plot_every_step = 10)
+opts_pocoll_fold = ContinuationPar(brpo_fold.contparams,
+                                  detect_bifurcation = 3,
+                                  max_steps = 120,
+                                  p_min = 0.,
+                                  p_max = 1.2,
+                                  n_inversion = 4,
+                                  plot_every_step = 10)
 @set! opts_pocoll_fold.newton_options.tol = 1e-12
 fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
