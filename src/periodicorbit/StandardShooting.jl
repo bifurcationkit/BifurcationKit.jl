@@ -443,11 +443,22 @@ function generate_ci_problem(shooting::ShootingProblem,
     # points for the sections
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
 
+    # shooting kwargs
+    sh_kw = (lens = getlens(bifprob), 
+            jacobian = shooting.jacobian,
+            parallel = shooting.parallel,
+            update_section_every_step = shooting.update_section_every_step,
+            )
+
+    # do we provide an ODE alg for computing the monodromy?
     if isnothing(prob_mono)
-        probsh = ShootingProblem(prob_de, alg, centers; lens = getlens(bifprob), ksh...)
+        probsh = ShootingProblem(prob_de, alg, centers; 
+                            sh_kw..., 
+                            ksh...)
     else
-        @info "here" prob_mono
-        probsh = ShootingProblem(prob_de, alg, prob_mono, alg, centers; lens = getlens(bifprob), ksh...)
+        probsh = ShootingProblem(prob_de, alg, prob_mono, alg, centers; 
+                        sh_kw...,
+                        ksh...)
         @info has_mono_DE(probsh.flow)
     end
 
