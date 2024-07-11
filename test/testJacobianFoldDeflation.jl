@@ -43,7 +43,7 @@ deleteat!(deflationOp, 2)
 deflationOp = DeflationOperator(2, dot, 1.0, [out.u])
 chanDefPb = DeflatedProblem(prob, deflationOp, DefaultLS())
 
-opt_def = setproperties(opt_newton; tol = 1e-10, max_iterations = 1000, verbose = false)
+opt_def = NewtonPar(opt_newton; tol = 1e-10, max_iterations = 1000, verbose = false)
 outdef1 = newton((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def)
 # @test BK.converged(outdef1)
 outdef1 = newton((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def, Val(:autodiff))

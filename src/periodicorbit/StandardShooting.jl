@@ -427,7 +427,7 @@ Generate a periodic orbit problem from a solution.
 ## Output
 - returns a `ShootingProblem` and an initial guess.
 """
-function generate_ci_problem(pb::ShootingProblem, 
+function generate_ci_problem(shooting::ShootingProblem, 
                             bifprob::AbstractBifurcationProblem, 
                             prob_de, 
                             sol::AbstractTimeseriesSolution, 
@@ -438,7 +438,7 @@ function generate_ci_problem(pb::ShootingProblem,
                             use_bordered_array = false, 
                             ksh...)
     u0 = sol(0)
-    M = pb.M
+    M = shooting.M
 
     # points for the sections
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]

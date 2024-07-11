@@ -200,7 +200,6 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     @debug "" Fₘ.values F.values Fp.values
 
-    # @info "Essai de VP"
     # dΠ * ζ₋₁ + ζ₋₁ |> display # not good, need projector E
     # dΠ * ev₋₁ + ev₋₁ |> display
     # dΠ' * ev₋₁p + ev₋₁p |> display
