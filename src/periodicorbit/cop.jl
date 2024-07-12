@@ -302,9 +302,9 @@ end
         _ipiv2perm!(p, F.ipiv, size(F, 1))
         _invperm!(pinv, p)
 
-        @assert p[nbcoll+1] == nbcoll+1 "Pivoting strategy failed!!"
+        @assert p[nbcoll+1] == nbcoll+1 "Pivoting strategy failed!! Please report to the website of BifurcationKit. You may try the default linear solver `defaultLS` as a backup."
         if dim > 0
-            @assert p[nbcoll+2] == nbcoll+2 "Pivoting strategy failed!!"
+            @assert p[nbcoll+2] == nbcoll+2 "Pivoting strategy failed!! Please report to the website of BifurcationKit. You may try the default linear solver `defaultLS` as a backup."
         end
 
         # Lₜ = LowerTriangular(F.L) # zero allocation?

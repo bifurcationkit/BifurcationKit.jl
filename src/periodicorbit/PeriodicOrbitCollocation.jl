@@ -364,7 +364,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     N = length(u0)
 
     n, m, Ntst = size(pb)
-    nunknows = N * (1 + m * Ntst)
+    n_unknows = N * (1 + m * Ntst)
 
     par = sol.prob.p
     prob_vf = re_make(bifprob, params = par)
@@ -372,8 +372,8 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     pbcoll = setproperties(pb,
                             N = N,
                             prob_vf = prob_vf,
-                            ϕ = zeros(nunknows),
-                            xπ = zeros(nunknows),
+                            ϕ = zeros(n_unknows),
+                            xπ = zeros(n_unknows),
                             cache = POCollCache(eltype(pb), N, m))
 
     # find best period candidate

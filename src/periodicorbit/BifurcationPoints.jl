@@ -129,7 +129,7 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
     println(io, " bifurcation point of periodic orbit\n┌─ ", get_lens_symbol(ns.nf.lens)," ≈ $(ns.p).")
     println(io, "├─ Frequency θ ≈ ", ns.ω)
     println(io, "├─ Period at the periodic orbit T ≈ ", abs(ns.T))
-    println(io, "├─ Second period of the bifurcated torus ≈ ", abs(2pi/ns.ω))
+    println(io, "├─ Second period of the bifurcated torus ≈ ", abs(2pi*ns.ω*ns.T))
     if ns.prm
         println(io, "├─ Normal form z -> z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
     else

@@ -140,7 +140,7 @@ function plot(contres::AbstractBranchResult; kP...)
     ind1, ind2 = get_plot_vars(contres, nothing)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
-    fig = Figure(size = (1200, 700))
+    fig = Figure()
     ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
     
     plot!(ax1, contres; kP...)
@@ -153,7 +153,7 @@ function plot(brs::AbstractBranchResult...;
         branchlabel = fill("", length(brs)),
         kP...)
     if length(brs) == 0; return ;end
-    fig = Figure(size = (1200, 700))
+    fig = Figure()
     ax1 = fig[1, 1] = Axis(fig)
 
     for (id, contres) in pairs(brs)

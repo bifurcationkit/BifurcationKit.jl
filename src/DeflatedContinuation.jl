@@ -75,7 +75,8 @@ Base.length(br::DCResult) = length(br.branches)
 
 function Base.show(io::IO, brdc::DCResult; comment = "", prefix = " ")
     printstyled(io, "Deflated continuation result, # branches = $(length(brdc.branches))", "\n", color=:cyan, bold = true)
-    for br in brdc.branches
+    for (ii, br) in pairs(brdc.branches)
+        printstyled("\nBranch #", ii, ":\n", color = :cyan, bold = true)
         show(io, br)
     end
 end
