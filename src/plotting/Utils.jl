@@ -83,3 +83,11 @@ function filter_bifurcations(bifpt)
 
     return res[2:end]
 end
+
+function plot end
+function plot! end
+function plot_branch_cont end
+function plot_periodic_potrap end
+function plot_periodic_shooting! end
+function plot_periodic_shooting end
+function plot_eigenvals end

@@ -6,6 +6,7 @@ abstract type AbstractPlotBackend end
 struct BK_NoPlot <: AbstractPlotBackend end
 struct BK_Plots <: AbstractPlotBackend end
 struct BK_Makie <: AbstractPlotBackend end
+
 get_plot_backend() = BK_NoPlot()
 ####################################################################################################
 # functions for parameter handling

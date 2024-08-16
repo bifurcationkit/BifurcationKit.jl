@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file (hopefully).
 ## Near future
 - Setfield.jl has been changed to Accessors.jl
 
+## [0.3.7]
+- remove `Requires.jl` and use extensions. This requires julia>=1.9
+
 ## [0.3.5]
 - add field `save_solution` to `BifurcationProblem`. Allows to save problem state along with the current solution. Useful for periodic orbits for example where we can save the phase condition and the mesh when the latter is adapted.
 

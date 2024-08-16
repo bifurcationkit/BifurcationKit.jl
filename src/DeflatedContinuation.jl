@@ -72,6 +72,8 @@ end
 Base.lastindex(br::DCResult) = lastindex(br.branches)
 Base.getindex(br::DCResult, k::Int) = getindex(br.branches, k)
 Base.length(br::DCResult) = length(br.branches)
+get_plot_vars(br::DCResult, vars) = get_plot_vars(br[1], vars)
+_hasstability(br::DCResult) = _hasstability(br[1])
 
 function Base.show(io::IO, brdc::DCResult; comment = "", prefix = " ")
     printstyled(io, "Deflated continuation result, # branches = $(length(brdc.branches))", "\n", color=:cyan, bold = true)
@@ -164,12 +166,24 @@ function get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) wher
 end
 
 # plotting functions
-function plot_DCont_branch(branches, nbrs::Int, nactive::Int, nstep::Int)
-    plot(branches..., label = "", title  = "$nbrs branches, actives = $(nactive), step = $nstep")
-    for br in branches
-        length(br) > 1 && plot!([br.branch[end-1:end].param], [getproperty(br.branch,1)[end-1:end]], label = "", arrow = true, color = :red)
+function plot_DCont_branch(branches, 
+                            nbrs::Int, 
+                            nactive::Int,
+                            nstep::Int)
+    _bcd_plot = get_plot_backend()
+    if _bcd_plot == BK_Plots()
+        plot(branches...; label = "", title  = "$nbrs branches, actives = $(nactive), step = $nstep")
+    else
+        plot(branches...)
     end
-    scatter!([br.branch[1].param for br in branches], [br.branch[1][1] for br in branches], marker = :cross, color=:green, label = "") |> display
+    for br in branches
+        (length(br) > 1 && _bcd_plot == BK_Plots()) && plot!([br.branch[end-1:end].param], 
+                                [getproperty(br.branch,1)[end-1:end]], 
+                                label = "", arrow = true, color = :red)
+    end
+    _bcd_plot == BK_Plots() && scatter!([br.branch[1].param for br in branches], 
+             [br.branch[1][1] for br in branches], 
+             marker = :cross, color=:green, label = "") |> display
 end
 plotAllDCBranch(branches) = display(plot(branches..., label = ""))
 

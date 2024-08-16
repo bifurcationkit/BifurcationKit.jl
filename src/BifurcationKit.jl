@@ -1,5 +1,5 @@
 module BifurcationKit
-    using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays, Requires
+    using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays
     using Reexport
     @reexport using Setfield: @lens, @set, @set!, Lens
     import Setfield
@@ -103,85 +103,12 @@ module BifurcationKit
 
     # plotting
     include("plotting/Utils.jl")
+    include("plotting/RecipesPlots.jl")
 
     # wrappers for SciML
     include("Diffeqwrap.jl")
 
-    using Requires
-
-    function __init__()
-        # if Plots.jl is available, then we allow plotting of solutions
-        @require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
-            using .Plots
-            include("plotting/RecipesPlots.jl")
-            get_plot_backend() = BK_Plots()
-        end
-        @require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
-            using .AbstractPlotting: @recipe, layoutscene, Figure, Axis, lines!
-            include("plotting/RecipesMakie.jl")
-        end
-
-        @require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" begin
-            @info "Loading GLMakie code in BifurcationKit"
-            using .GLMakie: @recipe, Figure, Axis, lines!, PointBased, Point2f0, scatter!
-            include("plotting/RecipesMakie.jl")
-            get_plot_backend() = BK_Makie()
-        end
-
-        @require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
-            using .JLD2
-            """
-            Save solution / data in JLD2 file
-            - `filename` is for example "example.jld2"
-            - `sol` is the solution
-            - `p` is the parameter
-            - `i` is the index of the solution to be saved
-            """
-            function save_to_file(iter::AbstractContinuationIterable, sol, p, i::Int64, br::ContResult)
-                if iter.contparams.save_to_file == false; return nothing; end
-                filename = iter.filename
-                # this allows to save two branches forward/backward in case
-                # bothside = true is passed to continuation
-                fd = iter.contparams.ds >=0 ? "fw" : "bw"
-
-                # create a group in the JLD format
-                jldopen(filename*".jld2", "a+") do file
-                    if haskey(file, "sol-$fd-$i")
-                        delete!(file, "sol-$fd-$i")
-                    end
-                    mygroup = JLD2.Group(file, "sol-$fd-$i")
-                    mygroup["sol"] = sol
-                    mygroup["param"] = p
-                end
-
-                jldopen(filename*"-branch.jld2", "a+") do file
-                    if haskey(file, "branch"*fd)
-                        delete!(file, "branch"*fd)
-                    end
-                    file["branch"*fd] = br
-                end
-            end
-
-            # final save of branch, in case bothsided = true is used
-            function save_to_file(iter::AbstractContinuationIterable, br::ContResult)
-                if iter.contparams.save_to_file == false; return nothing; end
-                filename = iter.filename
-
-                jldopen(filename*"-branch.jld2", "a+") do file
-                    if haskey(file, "branchfw")
-                        delete!(file, "branchfw")
-                    end
-                    if haskey(file, "branchbw")
-                        delete!(file, "branchbw")
-                    end
-                    if haskey(file, "branch")
-                        delete!(file, "branch")
-                    end
-                    file["branch"] = br
-                end
-            end
-        end
-    end
+    function save_to_file end
 
     # linear solvers
     export norminf

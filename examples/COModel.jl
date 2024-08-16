@@ -27,7 +27,7 @@ br = @time continuation(prob, PALC(), opts_br;
     normC = norminf,
     bothside = true)
 
-BK.plot(br, plotfold=false, )#markersize=4, legend=:topright, ylims=(0,0.16))
+BK.plot(br)#markersize=4, legend=:topright, ylims=(0,0.16))
 ####################################################################################################
 # periodic orbits
 function plotSolution(x, p; k...)
@@ -42,7 +42,7 @@ end
 function plotSolution(ax, x, p; ax1 = nothing, k...)
     @info "plotsol Makie"
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-    lines!(ax1, br; putspecialptlegend = false)
+    lines!(ax1, br)
     lines!(ax, xtt.t, xtt[1,:]; k...)
     lines!(ax, xtt.t, xtt[2,:]; k...)
     lines!(ax, xtt.t, xtt[3,:]; k...)
@@ -99,7 +99,7 @@ brpo = @time continuation(br, 5, opts_po_cont,
     args_po...
     )
 
-BK.plot(br, brpo, putspecialptlegend = false, branchlabel = ["eq","max"])
+BK.plot(br, brpo, branchlabel = ["eq","max"])
 xlims!((1.037, 1.055))
 scatter!(br)
 plot!(brpo.param, brpo.min, label = "min", xlims = (1.037, 1.055))
