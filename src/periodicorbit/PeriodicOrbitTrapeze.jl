@@ -66,7 +66,7 @@ The structure can be created by calling `PeriodicOrbitTrapProblem(;kwargs...)`. 
 # Orbit guess
 You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
 
-Note that you can generate this guess from a function solution using `generateSolution`.
+Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
@@ -1117,7 +1117,7 @@ Generate a periodic orbit problem from a solution.
 ## Arguments
 - `pb` a `PeriodicOrbitTrapProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically, and `ODEProblem
+- `sol` basically, and `ODEProblem`
 - `tspan = (0,1.)` estimate of the time span (period) of the periodic orbit
 
 ## Output

@@ -42,7 +42,7 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
-Note that you can generate this guess from a function solution using `generate_solution`.
+Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
 
 ## Jacobian
 $DocStrjacobianPOSh
@@ -417,7 +417,7 @@ Generate a periodic orbit problem from a solution.
 - `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
-- `sol` basically an `ODEProblem or a function `t -> sol(t)`
+- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
 - `tspan::Tuple` estimate of the period of the periodic orbit
 - `alg` algorithm for solving the Cauchy problem
 - `prob_mono` problem for monodromy

@@ -176,7 +176,7 @@ You can evaluate the residual of the functional (and other things) by calling `p
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
 
-Note that you can generate this guess from a function using `generate_solution`.
+Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
@@ -348,7 +348,7 @@ Generate a periodic orbit problem from a solution.
 ## Arguments
 - `pb` a `PeriodicOrbitOCollProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically an `ODEProblem or a function `t -> sol(t)`
+- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
 - `period` estimate of the period of the periodic orbit
 
 ## Output
