@@ -136,7 +136,7 @@ for (op, at) in (
                 u0::Tu
                 "parameters"
                 params::Tp
-                "Typically a `Setfield.Lens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`."
+                "It can be of two types. Either it is an `Int` which specifies which component of `params` is used for continuation. Alternatively, one can use a `Setfield.Lens` which specifies which parameter axis among `params` is used for continuation. For example, if `params = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. Also, if you have an array of parameters `params = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`."
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
@@ -218,6 +218,8 @@ for (op, at) in (
                          delta = convert(eltype(u0), 1e-8),
                          save_solution = save_solution_default,
                          inplace = false)
+                @assert lens isa Int || Lens <: Lens
+                new_lens = lens isa Int ? (@lens _[lens]) : lens
                 if inplace
                     F = _F
                 else
@@ -243,7 +245,7 @@ for (op, at) in (
 
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.0) : d3F
                 VF = BifFunction(F, jvp, vjp, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
-                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution)
+                return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end
     end
